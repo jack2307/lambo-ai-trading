@@ -1,0 +1,5 @@
+# Normalise line endings so a Windows checkout does not rewrite every file.
+* text=auto eol=lf
+*.parquet binary
+*.png binary
+*.woff2 binary

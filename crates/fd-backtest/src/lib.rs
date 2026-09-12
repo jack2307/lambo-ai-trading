@@ -11,6 +11,7 @@
 pub mod context;
 pub mod control;
 pub mod engine;
+pub mod guards;
 pub mod sweep;
 pub mod timeline;
 
@@ -19,8 +20,9 @@ pub use control::RandomEntry;
 pub use timeline::{TimelineOptions, build_timeline, frame_from_snapshot};
 pub use engine::{
     BacktestResult, ExitKind, Metrics, Range, Trade, TradingRules, metrics_of, run_backtest,
-    trading_rules_for,
+    run_backtest_guarded, trading_rules_for,
 };
+pub use guards::{GuardState, Guards, Refusal};
 pub use sweep::{
     Fold, LeaderboardRow, PromisingGate, SelectBy, SweepCell, SweepResult, SweepSummary, Verdict,
     WalkForwardResult, compare_strategies, run_by_id, score_of, sweep_grid, sweep_strategy, verdict, walk_forward,

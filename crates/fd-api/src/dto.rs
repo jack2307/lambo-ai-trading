@@ -229,6 +229,10 @@ pub struct BacktestResponse {
     pub trades: Vec<TradeDto>,
     pub equity_curve: Vec<EquityPoint>,
     pub indicator_specs: Vec<IndicatorSpecDto>,
+    /// Entries a risk guard refused, by reason. Empty unless `guards` was
+    /// asked for — the default reproduces the oracle, which had none.
+    #[serde(skip_serializing_if = "BTreeMap::is_empty")]
+    pub skipped_by_guard: BTreeMap<String, usize>,
 }
 
 #[derive(Debug, Serialize)]
@@ -342,4 +346,8 @@ pub struct BacktestRequest {
     pub strategy: String,
     #[serde(default)]
     pub params: BTreeMap<String, f64>,
+    /// Enforce `[trading.guards]` at every entry. Off by default so the
+    /// browser sees the same numbers the oracle produced.
+    #[serde(default)]
+    pub guards: bool,
 }

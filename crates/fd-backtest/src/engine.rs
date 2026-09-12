@@ -27,6 +27,7 @@ use fd_strategy::registry::{BarContext, Exits, Intent, OpenPosition, OptionsView
 use serde::{Deserialize, Serialize};
 
 use crate::context::OptionsTimeline;
+use crate::guards::{GuardState, Guards};
 
 /// Costs and sizing, shared by every strategy in a run.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
@@ -132,6 +133,10 @@ pub struct BacktestResult {
     pub warmup: usize,
     /// Entries refused because no risk unit could be established.
     pub skipped_no_atr: usize,
+    /// Entries refused by a risk guard, by reason. Empty when the run had no
+    /// guards — which is the oracle-faithful default.
+    #[serde(default)]
+    pub skipped_by_guard: BTreeMap<String, usize>,
 }
 
 /// Restrict trading to a window. Indicators still warm up on earlier bars.
@@ -246,6 +251,26 @@ pub fn run_backtest_with(
     range: Range,
     shared: Option<&IndicatorSet>,
 ) -> BacktestResult {
+    run_backtest_guarded(bars, strategy, params, rules, None, timeline, range, shared)
+}
+
+/// The same run with position-level risk guards enforced at each entry.
+///
+/// `None` reproduces the oracle, whose backtest never applied guards; the
+/// parity gate depends on that. `Some` bounds the run the way the live loop is
+/// bounded — daily loss, daily trade cap, cooldown — and records every refusal
+/// in `skipped_by_guard`, so a guarded run can show how often the rules bit.
+#[allow(clippy::too_many_arguments)]
+pub fn run_backtest_guarded(
+    bars: &[Bar],
+    strategy: &dyn Strategy,
+    params: &Params,
+    rules: &TradingRules,
+    guards: Option<&Guards>,
+    timeline: Option<&OptionsTimeline>,
+    range: Range,
+    shared: Option<&IndicatorSet>,
+) -> BacktestResult {
     let mut owned;
     let ind: &IndicatorSet = match shared {
         Some(set) => set,
@@ -279,6 +304,10 @@ pub fn run_backtest_with(
     let mut position: Option<Live> = None;
     let mut pending: Option<Intent> = None;
     let mut skipped_no_atr = 0usize;
+    let mut skipped_by_guard: BTreeMap<String, usize> = BTreeMap::new();
+    // Kept whether or not guards are on: it is cheap, and it means a guarded
+    // and an unguarded run differ only in whether the check is consulted.
+    let mut guard_state = GuardState::default();
     // Forward cursor into the options timeline; see `OptionsTimeline::view_from`.
     let mut frame_cursor = 0usize;
     // A strategy that never reads the options frame should not pay to have one
@@ -306,9 +335,18 @@ pub fn run_backtest_with(
                         None => atr_series.get(i).copied(),
                     }
                     .filter(|v| v.is_finite());
-                    match open_position(side, stop, target, reason, bar, atr, equity, rules, self_managed) {
-                        Some(opened) => position = Some(opened),
-                        None => skipped_no_atr += 1,
+                    // The guard is asked before any sizing happens, so a refused
+                    // entry costs nothing and leaves no trace but its count.
+                    if let Some(why) = guards.and_then(|g| guard_state.refusal(g, bar.time, 0)) {
+                        *skipped_by_guard.entry(why.label().to_string()).or_default() += 1;
+                    } else {
+                        match open_position(side, stop, target, reason, bar, atr, equity, rules, self_managed) {
+                            Some(opened) => {
+                                guard_state.opened(opened.entry_time);
+                                position = Some(opened);
+                            }
+                            None => skipped_no_atr += 1,
+                        }
                     }
                 }
                 Intent::Exit { reason } if position.is_some() => {
@@ -319,6 +357,7 @@ pub fn run_backtest_with(
                         close_position(open, exit, bar.time, ExitKind::Signal, &reason, rules, &entry_reason);
                     equity += trade.pnl_usd;
                     equity_curve.push((bar.time, round2(equity)));
+                    guard_state.closed(trade.exit_time, trade.pnl_usd);
                     trades.push(trade);
                 }
                 _ => {}
@@ -333,6 +372,7 @@ pub fn run_backtest_with(
                 let trade = close_position(open, price, bar.time, kind, kind.label(), rules, &entry_reason);
                 equity += trade.pnl_usd;
                 equity_curve.push((bar.time, round2(equity)));
+                guard_state.closed(trade.exit_time, trade.pnl_usd);
                 trades.push(trade);
             } else {
                 track_excursion(open, bar);
@@ -383,6 +423,7 @@ pub fn run_backtest_with(
         );
         equity += trade.pnl_usd;
         equity_curve.push((last.time, round2(equity)));
+        guard_state.closed(trade.exit_time, trade.pnl_usd);
         trades.push(trade);
     }
 
@@ -396,6 +437,7 @@ pub fn run_backtest_with(
         bars: bars.len(),
         warmup,
         skipped_no_atr,
+        skipped_by_guard,
     }
 }
 

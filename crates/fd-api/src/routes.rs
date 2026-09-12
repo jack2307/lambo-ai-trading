@@ -10,7 +10,8 @@ use std::sync::Arc;
 
 use axum::Json;
 use axum::extract::{Query, State};
-use fd_backtest::engine::{Range, run_backtest};
+use fd_backtest::engine::{Range, run_backtest_guarded};
+use fd_backtest::Guards;
 use fd_backtest::sweep::{compare_strategies, verdict};
 use fd_core::types::Bar;
 use fd_indicators::{INDICATORS, IndicatorSpec, Pane, compute_indicators};
@@ -305,13 +306,16 @@ pub async fn backtest(
     }
 
     let rules = state.trading_rules(&market)?;
-    let result = run_backtest(
+    let guards = request.guards.then(|| Guards::from_config(&state.config));
+    let result = run_backtest_guarded(
         &series.bars,
         strategy,
         &params,
         &rules,
+        guards.as_ref(),
         timeline.as_deref(),
         Range::default(),
+        None,
     );
     let v = verdict(&result.metrics, &state.gate());
 
@@ -337,5 +341,6 @@ pub async fn backtest(
                 params: (!spec.params.is_empty()).then_some(spec.params),
             })
             .collect(),
+        skipped_by_guard: result.skipped_by_guard,
     }))
 }
