@@ -80,6 +80,7 @@ fd-ingest --bin collect --market=gold    # same for OTL: polls every 10 min, als
 python py/ingest/mt5_export.py           # Vantage XAUUSD/BTCUSD bars -> data/bars (read-only)
 fd-backtest --bin search --market=btc    # compare / sweep / wf / costs / null
 fd-backtest --bin search --market=xauusd # same, on the broker's own gold bars
-fd-backtest --bin search --market=xauusd --mode=hypotheses  # declared batch vs matched nulls
+fd-backtest --bin search --market=xauusd --mode=hypotheses  # declared batch vs matched nulls (--batch=gold-intraday|ict-m1|ict-m5|ict-oos)
+python py/ingest/dukascopy_to_parquet.py <csv> data/bars/XAUDUKA-1m.parquet  # four years of gold minutes, out-of-sample structure
 scripts/api-parity.py                    # prove the browser cannot tell backends apart
 ```

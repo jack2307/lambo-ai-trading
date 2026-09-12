@@ -233,6 +233,34 @@ min_premium_usd = 100_000
 floor = 5.0
 atr_fraction = 0.15
 
+[markets.xauduka]
+label = "Gold, Dukascopy bid feed (out-of-sample structure; Vantage costs)"
+bar_symbol = "XAUDUKA"
+bar_source = "dukascopy"
+options_source = "none"
+premium_in_underlying = false
+multiplier = 100
+underlying = "GC"
+
+[markets.xauduka.trading]
+# Vantage's costs applied to Dukascopy's bars: the question is whether a
+# structure found on three months of the broker's own minutes holds on four
+# years of someone else's, at the broker's price.
+symbol = "XAUUSD.sc"
+contract_size = 1.0
+spread = 0.28
+lot_step = 0.01
+min_lot = 0.01
+swap_long_per_lot = 0.0
+swap_short_per_lot = 0.0
+
+[markets.xauduka.big_trades]
+min_premium_usd = 100_000
+
+[markets.xauduka.levels.cluster]
+floor = 5.0
+atr_fraction = 0.15
+
 [markets.btcusd]
 label = "Vantage BTCUSD.sc CFD (MT5 bars + Deribit options)"
 bar_symbol = "BTCUSD"

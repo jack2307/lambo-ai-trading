@@ -41,6 +41,9 @@ pub fn batch(name: &str) -> Option<Vec<Hypothesis>> {
         "gold-intraday" => Some(gold_intraday_batch()),
         "ict-m1" => Some(ict_batch(15, "M1 entries, M15 gaps")),
         "ict-m5" => Some(ict_batch(3, "M5 entries, M15 gaps")),
+        // Pre-registered before the out-of-sample run: only the two presets
+        // that survived on the broker's three months of minutes.
+        "ict-oos" => Some(ict_batch(15, "M1 entries, M15 gaps").into_iter().filter(|h| h.label.starts_with("ict-B")).collect()),
         _ => None,
     }
 }

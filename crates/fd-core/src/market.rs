@@ -42,6 +42,10 @@ pub enum BarSource {
     /// broker's own OHLC with tick volume, as deep as the terminal holds. No
     /// live stream yet — the export is re-run to extend it.
     Mt5,
+    /// Dukascopy's free historical bid feed, converted by
+    /// `py/ingest/dukascopy_to_parquet.py`. A different venue from the one
+    /// traded: useful as out-of-sample *structure*, not as a quote.
+    Dukascopy,
 }
 
 /// Where a market's option prints come from.
