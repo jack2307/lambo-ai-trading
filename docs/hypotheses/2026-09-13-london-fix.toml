@@ -1,0 +1,34 @@
+[run]
+in_sample = "xauduka:5m"
+in_sample_to = "2025-04-10"
+out_of_sample = "xauusd:5m"
+seeds = 200
+direction_samples = 1000
+
+[[hypothesis]]
+label = "fix/pm-into"
+base = "session-hold"
+filters = ["weekdays", "hours:0930-0935"]
+overrides = { from = 930, to = 1000, side = -1 }
+why = "short into the afternoon fix: the published drift"
+
+[[hypothesis]]
+label = "fix/pm-after"
+base = "session-hold"
+filters = ["weekdays", "hours:1000-1005"]
+overrides = { from = 1000, to = 1030, side = 1 }
+why = "long out of the afternoon fix: the published recovery"
+
+[[hypothesis]]
+label = "fix/am-into"
+base = "session-hold"
+filters = ["weekdays", "hours:0530-0535"]
+overrides = { from = 530, to = 600, side = -1 }
+why = "the contrast: the morning fix, where the literature found little"
+
+[[hypothesis]]
+label = "fix/am-after"
+base = "session-hold"
+filters = ["weekdays", "hours:0600-0605"]
+overrides = { from = 600, to = 630, side = 1 }
+why = "its complement"
