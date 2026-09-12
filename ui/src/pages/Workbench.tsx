@@ -1,13 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { toast } from 'sonner'
 
 import { PriceChart, type ActiveIndicator } from '@/components/PriceChart'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   api,
   type BacktestResult,
@@ -21,8 +18,29 @@ import { day, money, num, pct, price, signClass } from '@/lib/format'
 import { useLiveBar, type LiveStatus } from '@/lib/useLiveBar'
 import { cn } from '@/lib/utils'
 
+/**
+ * Terminal mode (see ui/DESIGN.md). Three regions and no cards:
+ *
+ * ```
+ * ┌ rail 272px ──────┬ toolbar ─────────────────────────────────┐
+ * │ strategy          │ timeframe · indicators · overlays         │
+ * │ parameters        ├ chart (fills whatever is left) ──────────┤
+ * │ [run]             │                                           │
+ * │ ───────           ├ status strip ────────────────────────────┤
+ * │ result            ├ dock: leaderboard | trades | model ──────┤
+ * └───────────────────┴───────────────────────────────────────────┘
+ * ```
+ *
+ * The rail is what you *set*; the chart is what you *see*; the dock is what
+ * you *read*. Tables in the dock run the full width so a leaderboard row can
+ * carry seven figures with headers instead of four squeezed into a sidebar.
+ */
+
 /** One accent plus the data colours; indicator lines cycle through these. */
 const LINE_COLORS = ['#7d94e8', '#d99446', '#3fbcc0', '#e05d6a', '#46c98a', '#b48ae0', '#c9d1de']
+
+/** Height of the sticky app bar, which the page fills the rest of the viewport under. */
+const APP_BAR = 45
 
 interface Props {
   catalog: Catalog
@@ -45,6 +63,7 @@ export function Workbench({ catalog, market, onError }: Props) {
   const [showLevels, setShowLevels] = useState(true)
   const [showMarkers, setShowMarkers] = useState(true)
   const [showZones, setShowZones] = useState(true)
+  const [dock, setDock] = useState<'leaderboard' | 'trades' | 'model'>('leaderboard')
 
   const strategy = useMemo(
     () => catalog.strategies.find((s) => s.id === strategyId),
@@ -117,134 +136,162 @@ export function Workbench({ catalog, market, onError }: Props) {
   }, [catalog.indicators, indicatorPick])
 
   const runBacktest = useCallback(async () => {
-    if (!market || !strategyId) return
+    if (!market || !strategyId || running) return
     setRunning(true)
     try {
       const outcome = await api.backtest(market, timeframe, strategyId, params)
       setResult(outcome)
-      toast(`${outcome.name}: ${outcome.metrics.trades} trades`, {
-        description: outcome.verdict.promising
-          ? 'Promising in-sample — confirm with a walk-forward.'
-          : outcome.verdict.reasons[0],
-      })
+      // The rail's result block and the dock switching to the fills are the
+      // announcement; a toast on top of them covered the newest trades.
+      setDock('trades')
     } catch (err) {
       onError((err as Error).message)
     } finally {
       setRunning(false)
     }
-  }, [market, timeframe, strategyId, params, onError])
+  }, [market, timeframe, strategyId, params, running, onError])
+
+  // ⌘/Ctrl+Enter runs from anywhere on the page — the rail's inputs included.
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
+        event.preventDefault()
+        void runBacktest()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [runBacktest])
 
   return (
-    <div className="space-y-3 p-3">
-      <Card className="flex flex-wrap items-center gap-3 rounded-lg px-3 py-2">
-        <Field label="timeframe">
-          <Select value={timeframe} onValueChange={setTimeframe}>
-            <SelectTrigger size="sm" className="h-7 w-[86px] text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {catalog.timeframes.map((tf) => (
-                <SelectItem key={tf} value={tf}>
-                  {tf}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </Field>
-
-        <Field label="strategy">
+    <div
+      className="grid grid-cols-[272px_minmax(0,1fr)] overflow-hidden"
+      style={{ height: `calc(100dvh - ${APP_BAR}px)` }}
+    >
+      {/* ---------------------------------------------------------- rail */}
+      <aside className="flex min-h-0 flex-col overflow-y-auto border-r">
+        <section className="border-b px-3 pt-3 pb-3">
+          <RailHeading>Strategy</RailHeading>
           <Select value={strategyId} onValueChange={setStrategyId}>
-            <SelectTrigger size="sm" className="h-7 w-[210px] text-xs">
+            <SelectTrigger size="sm" className="h-7 w-full text-xs">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               {catalog.strategies.map((s) => (
                 <SelectItem key={s.id} value={s.id}>
                   {s.name}
-                  {s.needsOptions ? ' ·⚙' : ''}
+                  {s.needsOptions ? ' · needs tape' : ''}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
-        </Field>
+          {strategy && (
+            <p className="text-muted-foreground mt-2 text-[11px] leading-snug">{strategy.description}</p>
+          )}
+          {strategy?.needsOptions && !frame && (
+            <p className="text-caution mt-2 text-[11px] leading-snug">
+              Reads the options frame, and this market has no tape loaded — it will take no trades.
+            </p>
+          )}
+        </section>
 
-        <div className="flex flex-wrap items-center gap-2">
-          {Object.entries(params).map(([key, value]) => (
-            <label key={key} className="text-muted-foreground flex items-center gap-1 text-[11px]">
-              {key}
-              <input
-                type="number"
-                step="any"
-                value={value}
-                onChange={(e) =>
-                  setParams((current) => ({ ...current, [key]: Number(e.target.value) }))
-                }
-                className="border-input bg-background num h-7 w-[68px] rounded-md border px-2 text-xs"
-              />
-            </label>
-          ))}
-        </div>
-
-        <Button size="sm" className="h-7 text-xs" disabled={running} onClick={runBacktest}>
-          {running ? 'Running…' : 'Run backtest'}
-        </Button>
-
-        <div className="ml-auto flex items-center gap-3">
-          <Toggle checked={showLevels} onChange={setShowLevels} label="option levels" />
-          <Toggle checked={showMarkers} onChange={setShowMarkers} label="trade markers" />
-          <Toggle checked={showZones} onChange={setShowZones} label="stop / target" />
-        </div>
-      </Card>
-
-      <Card className="flex flex-wrap items-center gap-3 rounded-lg px-3 py-2">
-        <Field label="indicator">
-          <Select value={indicatorPick} onValueChange={setIndicatorPick}>
-            <SelectTrigger size="sm" className="h-7 w-[180px] text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {catalog.indicators.map((i) => (
-                <SelectItem key={i.id} value={i.id}>
-                  {i.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </Field>
-        <Button size="sm" variant="secondary" className="h-7 text-xs" onClick={addIndicator}>
-          Add
-        </Button>
-
-        <div className="flex flex-wrap gap-2">
-          {indicators.map((entry) => (
-            <Badge
-              key={entry.key}
-              variant="outline"
-              className="num gap-1 text-[11px]"
-              style={{ borderColor: entry.color, color: entry.color }}
+        <section className="border-b px-3 pt-3 pb-3">
+          <RailHeading>Parameters</RailHeading>
+          {Object.keys(params).length === 0 ? (
+            <p className="text-muted-foreground text-[11px]">This method has no parameters.</p>
+          ) : (
+            <div className="grid grid-cols-[1fr_84px] items-center gap-x-3 gap-y-1.5">
+              {Object.entries(params).map(([key, value]) => {
+                const grid = strategy?.grid?.[key]
+                return (
+                  <label key={key} className="contents">
+                    <span
+                      className="text-muted-foreground truncate text-[11px]"
+                      title={grid ? `sweep grid: ${grid.join(', ')}` : undefined}
+                    >
+                      {key}
+                      {grid && <span className="text-muted-foreground/60 ml-1">·{grid.length}</span>}
+                    </span>
+                    <input
+                      type="number"
+                      step="any"
+                      value={value}
+                      onChange={(e) => setParams((current) => ({ ...current, [key]: Number(e.target.value) }))}
+                      className="border-input bg-background num focus-visible:ring-ring/50 h-7 w-full rounded-md border px-2 text-right text-xs focus-visible:ring-[3px] focus-visible:outline-none"
+                    />
+                  </label>
+                )
+              })}
+            </div>
+          )}
+          <Button size="sm" className="mt-3 h-8 w-full text-xs" disabled={running} onClick={runBacktest}>
+            {running ? 'Running…' : 'Run backtest'}
+            <kbd className="text-primary-foreground/60 ml-auto font-mono text-[10px]">⌘⏎</kbd>
+          </Button>
+          {strategy && (
+            <button
+              type="button"
+              className="text-muted-foreground hover:text-foreground mt-1.5 w-full text-left text-[11px] underline-offset-2 hover:underline"
+              onClick={() => setParams({ ...strategy.params })}
             >
-              {entry.key}
-              <button
-                type="button"
-                aria-label={`Remove ${entry.key}`}
-                className="hover:text-bear px-0.5"
-                onClick={() => setIndicators((c) => c.filter((i) => i.key !== entry.key))}
+              reset to defaults
+            </button>
+          )}
+        </section>
+
+        <ResultSection result={result} />
+      </aside>
+
+      {/* -------------------------------------------------------- center */}
+      <div className="flex min-h-0 min-w-0 flex-col">
+        <div className="flex h-9 shrink-0 items-center gap-3 border-b px-3">
+          <Segmented value={timeframe} options={catalog.timeframes} onChange={setTimeframe} label="timeframe" />
+
+          <span className="bg-border h-4 w-px" aria-hidden />
+
+          <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto">
+            <Select value={indicatorPick} onValueChange={setIndicatorPick}>
+              <SelectTrigger size="sm" className="h-6 w-[150px] shrink-0 text-[11px]" aria-label="indicator">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {catalog.indicators.map((i) => (
+                  <SelectItem key={i.id} value={i.id}>
+                    {i.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button size="sm" variant="secondary" className="h-6 shrink-0 px-2 text-[11px]" onClick={addIndicator}>
+              + add
+            </Button>
+            {indicators.map((entry) => (
+              <span
+                key={entry.key}
+                className="num flex shrink-0 items-center gap-1 rounded-md border px-1.5 py-0.5 text-[11px]"
+                style={{ borderColor: entry.color, color: entry.color }}
               >
-                ×
-              </button>
-            </Badge>
-          ))}
+                {entry.key}
+                <button
+                  type="button"
+                  aria-label={`Remove ${entry.key}`}
+                  className="hover:text-bear px-0.5"
+                  onClick={() => setIndicators((c) => c.filter((i) => i.key !== entry.key))}
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
+
+          <div className="flex shrink-0 items-center gap-1.5">
+            <Toggle checked={showLevels} onChange={setShowLevels} label="levels" disabled={!frame} />
+            <Toggle checked={showMarkers} onChange={setShowMarkers} label="markers" />
+            <Toggle checked={showZones} onChange={setShowZones} label="stop / target" />
+          </div>
         </div>
 
-        <p className="text-muted-foreground ml-auto text-[11px]">
-          {bars?.synthetic
-            ? 'This timeframe is synthetic — the feed gives closes only. Pick 5m or higher.'
-            : 'Indicators are computed server-side by the same functions the strategies trade on.'}
-        </p>
-      </Card>
-
-      <div className="grid gap-3 xl:grid-cols-[minmax(520px,1fr)_360px]">
-        <Card className="relative h-[calc(100vh-260px)] min-h-[440px] overflow-hidden rounded-lg p-0">
+        <div className="relative min-h-0 flex-1">
           {bars ? (
             <PriceChart
               bars={bars.bars}
@@ -262,35 +309,221 @@ export function Workbench({ catalog, market, onError }: Props) {
               <Skeleton className="h-[85%] w-[95%]" />
             </div>
           )}
-          {bars && (
-            <div className="pointer-events-none absolute right-3 bottom-2 flex items-center gap-3">
-              <LiveBadge status={liveStatus} supported={bars.live} price={liveBar?.close} />
-              <p className="text-muted-foreground num text-[11px]">
-                {bars.market} · {bars.symbol} · {bars.bars.length} × {bars.timeframe} ·{' '}
-                {day(bars.stats.from)} → {day(bars.stats.to)}
-              </p>
-            </div>
-          )}
-        </Card>
-
-        <div className="space-y-3">
-          <ResultCard result={result} />
-          <LeaderboardCard
-            rows={leaderboard}
-            selected={result?.strategy}
-            onPick={(id) => setStrategyId(id)}
-          />
-          <TradesCard result={result} />
         </div>
+
+        <div className="text-muted-foreground flex h-7 shrink-0 items-center gap-3 border-t px-3 text-[11px]">
+          {bars ? (
+            <>
+              <LiveBadge status={liveStatus} supported={bars.live} price={liveBar?.close} />
+              <span className="num">
+                {bars.symbol} · {bars.bars.length.toLocaleString()} × {bars.timeframe} · {day(bars.stats.from)} →{' '}
+                {day(bars.stats.to)}
+                {bars.stats.gaps > 0 && ` · ${bars.stats.gaps} gaps`}
+              </span>
+              {bars.synthetic && (
+                <span className="text-caution">synthetic — closes only; pick 5m or higher for real ranges</span>
+              )}
+              <span className="ml-auto hidden xl:inline">
+                indicators are computed server-side by the functions the strategies trade on
+              </span>
+            </>
+          ) : (
+            <Skeleton className="h-3 w-64" />
+          )}
+        </div>
+
+        <Tabs
+          value={dock}
+          onValueChange={(v) => setDock(v as typeof dock)}
+          className="h-[248px] shrink-0 gap-0 border-t"
+        >
+          <TabsList variant="line" className="h-8 w-full shrink-0 justify-start gap-3 rounded-none border-b px-3">
+            <TabsTrigger value="leaderboard" className="h-full flex-none px-0 text-xs">
+              Leaderboard
+            </TabsTrigger>
+            <TabsTrigger value="trades" className="h-full flex-none px-0 text-xs">
+              Trades
+              {result && <span className="text-muted-foreground num ml-1">{result.trades.length}</span>}
+            </TabsTrigger>
+            <TabsTrigger value="model" className="h-full flex-none px-0 text-xs">
+              Fill model
+            </TabsTrigger>
+            <span className="text-muted-foreground ml-auto truncate text-[11px]">
+              {dock === 'leaderboard' &&
+                'every method at its defaults on this window — in-sample, a ranking, not a result'}
+              {dock === 'trades' && result && `${result.name} · ${result.timeframe} · newest first`}
+            </span>
+          </TabsList>
+          <TabsContent value="leaderboard" className="min-h-0 flex-1 overflow-auto">
+            <LeaderboardTable rows={leaderboard} selected={strategyId} onPick={setStrategyId} />
+          </TabsContent>
+          <TabsContent value="trades" className="min-h-0 flex-1 overflow-auto">
+            <TradesTable result={result} />
+          </TabsContent>
+          <TabsContent value="model" className="min-h-0 flex-1 overflow-auto">
+            <FillModel result={result} note={catalog.fillModel} />
+          </TabsContent>
+        </Tabs>
+      </div>
+    </div>
+  )
+}
+
+/* ------------------------------------------------------------------ rail */
+
+function RailHeading({ children }: { children: React.ReactNode }) {
+  return (
+    <h2 className="text-muted-foreground mb-2 text-[11px] font-semibold tracking-wide uppercase">{children}</h2>
+  )
+}
+
+function ResultSection({ result }: { result: BacktestResult | null }) {
+  if (!result) {
+    return (
+      <section className="px-3 pt-3 pb-3">
+        <RailHeading>Result</RailHeading>
+        <p className="text-muted-foreground text-[11px] leading-snug">
+          No run yet. Set the parameters and press <span className="num text-primary">Run backtest</span>; the
+          trades land on the chart and in the dock.
+        </p>
+      </section>
+    )
+  }
+
+  const m = result.metrics
+  const rows: [string, string, string][] = [
+    ['expectancy', `${num(m.expectancy)} R`, signClass(m.expectancy)],
+    ['avg R', num(m.avgR), signClass(m.avgR)],
+    ['total R', num(m.totalR), signClass(m.totalR)],
+    ['net P&L', money(m.netPnlUsd), signClass(m.netPnlUsd)],
+    ['return', `${num(m.returnPct)}%`, signClass(m.returnPct)],
+    ['max drawdown', money(m.maxDrawdownUsd), ''],
+    ['sharpe', num(m.sharpe), ''],
+    ['avg hold', `${num(m.avgHoldMin, 0)} min`, ''],
+    ['avg MAE / MFE', `${num(m.avgMae)} / ${num(m.avgMfe)} R`, ''],
+  ]
+  const exits = Object.entries(m.exits ?? {})
+
+  return (
+    <section className="px-3 pt-3 pb-3">
+      <div className="flex items-baseline justify-between">
+        <RailHeading>Result</RailHeading>
+        <span className="text-muted-foreground num mb-2 text-[11px]">{result.timeframe}</span>
       </div>
 
-      <p className="text-muted-foreground max-w-[92ch] px-1 text-[11px] leading-relaxed">
-        <strong className="text-foreground/80">How fills are modelled.</strong> A signal on one bar fills at the{' '}
-        <em>next</em> bar's open, never the close that produced it. Half the spread is charged each side. When a single
-        bar covers both stop and target the stop is taken, and a gap through the stop fills at the open — the
-        pessimistic reading, because OHLC cannot say what happened first inside a bar.
+      <div className="grid grid-cols-3 gap-2">
+        <Stat label="trades" value={String(m.trades)} caution={m.trades < 30 ? '< 30' : undefined} />
+        <Stat label="win rate" value={pct(m.winRate)} />
+        <Stat label="PF" value={num(m.profitFactor)} tone={signClass(m.profitFactor - 1)} />
+      </div>
+
+      <dl className="mt-3 grid grid-cols-[1fr_auto] gap-x-3 gap-y-[3px] text-xs">
+        {rows.map(([label, value, tone]) => (
+          <div key={label} className="contents">
+            <dt className="text-muted-foreground">{label}</dt>
+            <dd className={cn('num text-right', tone)}>{value}</dd>
+          </div>
+        ))}
+      </dl>
+
+      {exits.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-1">
+          {exits.map(([kind, count]) => (
+            <span key={kind} className="num rounded-sm border px-1.5 py-0.5 text-[10px]">
+              {kind.toLowerCase()} <span className="text-muted-foreground">{count}</span>
+            </span>
+          ))}
+        </div>
+      )}
+
+      <p
+        className={cn(
+          'mt-3 rounded-md border px-2.5 py-2 text-[11px] leading-snug',
+          result.verdict.promising ? 'border-bull/40 bg-bull/10' : 'border-caution/40 bg-caution/10',
+        )}
+      >
+        {result.verdict.promising
+          ? 'Promising in-sample. That is a ranking, not a result — confirm with a walk-forward and a null.'
+          : result.verdict.reasons.join('; ')}
       </p>
+    </section>
+  )
+}
+
+function Stat({ label, value, tone, caution }: { label: string; value: string; tone?: string; caution?: string }) {
+  return (
+    <div className="min-w-0">
+      <span className="text-muted-foreground block text-[10px] tracking-[0.07em] uppercase">{label}</span>
+      <span className={cn('num block truncate text-[19px] leading-tight font-semibold', tone)}>{value}</span>
+      {caution && <span className="text-caution num block text-[10px]">{caution}</span>}
     </div>
+  )
+}
+
+/* --------------------------------------------------------------- toolbar */
+
+function Segmented({
+  value,
+  options,
+  onChange,
+  label,
+}: {
+  value: string
+  options: string[]
+  onChange: (value: string) => void
+  label: string
+}) {
+  return (
+    <div role="radiogroup" aria-label={label} className="bg-background flex shrink-0 rounded-md border p-[2px]">
+      {options.map((option) => (
+        <button
+          key={option}
+          type="button"
+          role="radio"
+          aria-checked={option === value}
+          onClick={() => onChange(option)}
+          className={cn(
+            'num focus-visible:ring-ring/50 h-5 rounded-[4px] px-2 text-[11px] transition-colors focus-visible:ring-[3px] focus-visible:outline-none',
+            option === value ? 'bg-accent text-foreground' : 'text-muted-foreground hover:text-foreground',
+          )}
+        >
+          {option}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function Toggle({
+  checked,
+  onChange,
+  label,
+  disabled,
+}: {
+  checked: boolean
+  onChange: (value: boolean) => void
+  label: string
+  disabled?: boolean
+}) {
+  return (
+    <label
+      className={cn(
+        'flex cursor-pointer items-center gap-1.5 rounded-md border px-2 py-[3px] text-[11px] transition-colors',
+        checked && !disabled ? 'border-primary/50 text-foreground bg-primary/10' : 'text-muted-foreground',
+        disabled && 'cursor-not-allowed opacity-50',
+      )}
+      title={disabled ? 'No options tape for this market' : undefined}
+    >
+      <input
+        type="checkbox"
+        checked={checked}
+        disabled={disabled}
+        onChange={(e) => onChange(e.target.checked)}
+        className="sr-only"
+      />
+      <span className={cn('size-2 rounded-[2px]', checked && !disabled ? 'bg-primary' : 'bg-muted-foreground/40')} />
+      {label}
+    </label>
   )
 }
 
@@ -300,21 +533,9 @@ export function Workbench({ catalog, market, onError }: Props) {
  * never light up — the previous dashboard polled a static file every thirty
  * seconds and looked alive while nothing moved.
  */
-function LiveBadge({
-  status,
-  supported,
-  price: lastPrice,
-}: {
-  status: LiveStatus
-  supported: boolean
-  price?: number
-}) {
+function LiveBadge({ status, supported, price: lastPrice }: { status: LiveStatus; supported: boolean; price?: number }) {
   if (!supported) {
-    return (
-      <span className="text-muted-foreground rounded-full border px-2 py-0.5 text-[10px]">
-        snapshot · this feed has no stream
-      </span>
-    )
+    return <span className="text-muted-foreground rounded-full border px-2 py-px text-[10px]">snapshot · no stream</span>
   }
 
   const tone =
@@ -323,124 +544,22 @@ function LiveBadge({
       : status === 'connecting'
         ? 'border-caution/50 text-caution bg-caution/10'
         : 'border-bear/50 text-bear bg-bear/10'
-
   const label = status === 'live' ? 'live' : status === 'connecting' ? 'connecting' : 'reconnecting'
 
   return (
-    <span className={cn('flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px]', tone)}>
-      <span
-        className={cn('size-1.5 rounded-full bg-current', status === 'live' && 'animate-pulse')}
-        aria-hidden
-      />
+    <span className={cn('flex items-center gap-1.5 rounded-full border px-2 py-px text-[10px]', tone)}>
+      <span className={cn('size-1.5 rounded-full bg-current', status === 'live' && 'animate-pulse')} aria-hidden />
       {label}
       {status === 'live' && lastPrice != null && <span className="num">{price(lastPrice)}</span>}
     </span>
   )
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <label className="text-muted-foreground flex items-center gap-2 text-xs">
-      {label}
-      {children}
-    </label>
-  )
-}
+/* ------------------------------------------------------------------ dock */
 
-function Toggle({
-  checked,
-  onChange,
-  label,
-}: {
-  checked: boolean
-  onChange: (value: boolean) => void
-  label: string
-}) {
-  return (
-    <label
-      className={cn(
-        'flex cursor-pointer items-center gap-2 rounded-md border px-2 py-1 text-[11px] transition-colors',
-        checked ? 'border-primary/50 text-foreground bg-primary/10' : 'text-muted-foreground',
-      )}
-    >
-      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} className="sr-only" />
-      <span className={cn('size-2 rounded-[2px]', checked ? 'bg-primary' : 'bg-muted-foreground/40')} />
-      {label}
-    </label>
-  )
-}
+const LEADERBOARD_COLS = 'grid-cols-[minmax(160px,1.2fr)_64px_64px_72px_80px_96px_96px_minmax(120px,1fr)]'
 
-function ResultCard({ result }: { result: BacktestResult | null }) {
-  if (!result) {
-    return (
-      <Card className="rounded-lg p-4">
-        <h2 className="text-muted-foreground mb-2 text-xs font-semibold">Result</h2>
-        <p className="text-muted-foreground text-sm">
-          No run yet. Pick a strategy and press <span className="num text-primary">Run backtest</span>.
-        </p>
-      </Card>
-    )
-  }
-
-  const m = result.metrics
-  const rows: [string, string, string][] = [
-    ['avg R', num(m.avgR), signClass(m.avgR)],
-    ['total R', num(m.totalR), signClass(m.totalR)],
-    ['return', `${num(m.returnPct)}%`, signClass(m.returnPct)],
-    ['max drawdown', money(m.maxDrawdownUsd), ''],
-    ['sharpe', num(m.sharpe), ''],
-    ['avg hold', `${num(m.avgHoldMin)} min`, ''],
-    ['exits', Object.entries(m.exits ?? {}).map(([k, v]) => `${k.toLowerCase()} ${v}`).join(', ') || '—', ''],
-  ]
-
-  return (
-    <Card className="rounded-lg p-0">
-      <div className="flex items-center justify-between border-b px-4 py-2">
-        <h2 className="text-muted-foreground text-xs font-semibold">Result</h2>
-        <span className="text-muted-foreground num text-[11px]">
-          {result.strategy} · {result.timeframe}
-        </span>
-      </div>
-
-      <div className="grid grid-cols-3 gap-3 px-4 py-3">
-        <Stat label="trades" value={String(m.trades)} />
-        <Stat label="win rate" value={pct(m.winRate)} />
-        <Stat label="profit factor" value={num(m.profitFactor)} tone={signClass(m.profitFactor - 1)} />
-      </div>
-
-      <dl className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-0.5 px-4 pb-3 text-sm">
-        {rows.map(([label, value, tone]) => (
-          <div key={label} className="contents">
-            <dt className="text-muted-foreground">{label}</dt>
-            <dd className={cn('num text-right', tone)}>{value}</dd>
-          </div>
-        ))}
-      </dl>
-
-      <p
-        className={cn(
-          'mx-4 mb-4 rounded-md border px-3 py-2 text-[11px] leading-relaxed',
-          result.verdict.promising ? 'border-bull/40 bg-bull/10' : 'border-caution/40 bg-caution/10',
-        )}
-      >
-        {result.verdict.promising
-          ? '✔ Promising in-sample. Confirm with a walk-forward before believing it.'
-          : `✖ ${result.verdict.reasons.join('; ')}`}
-      </p>
-    </Card>
-  )
-}
-
-function Stat({ label, value, tone }: { label: string; value: string; tone?: string }) {
-  return (
-    <div>
-      <span className="text-muted-foreground block text-[10px] tracking-[0.07em] uppercase">{label}</span>
-      <span className={cn('num block text-[19px] leading-tight font-semibold', tone)}>{value}</span>
-    </div>
-  )
-}
-
-function LeaderboardCard({
+function LeaderboardTable({
   rows,
   selected,
   onPick,
@@ -450,88 +569,184 @@ function LeaderboardCard({
   onPick: (id: string) => void
 }) {
   return (
-    <Card className="rounded-lg p-0">
-      <div className="border-b px-4 py-2">
-        <h2 className="text-muted-foreground text-xs font-semibold">Leaderboard</h2>
-      </div>
-      <ScrollArea className="max-h-[240px]">
-        {!rows ? (
-          <div className="space-y-2 p-4">
-            <Skeleton className="h-3 w-full" />
-            <Skeleton className="h-3 w-full" />
-            <Skeleton className="h-3 w-2/3" />
-          </div>
-        ) : (
-          <div>
-            {rows.map((row) => (
-              <button
-                key={row.id}
-                type="button"
-                disabled={Boolean(row.skipped)}
-                onClick={() => onPick(row.id)}
-                aria-selected={row.id === selected}
-                className={cn(
-                  'hover:bg-accent grid w-full grid-cols-[1fr_34px_52px_64px] items-center gap-2 border-b px-4 py-1.5 text-left text-xs transition-colors last:border-0',
-                  row.id === selected && 'bg-primary/10 shadow-[inset_2px_0_0_var(--primary)]',
-                  row.skipped && 'cursor-default opacity-60',
-                )}
-              >
-                <span className="truncate">{row.id}</span>
-                {row.skipped ? (
-                  <span className="text-muted-foreground col-span-3 truncate text-[11px]">{row.skipped}</span>
-                ) : (
-                  <>
-                    <span className="num text-muted-foreground text-right">{row.metrics?.trades}</span>
-                    <span className={cn('num text-right', signClass((row.metrics?.profitFactor ?? 0) - 1))}>
-                      {num(row.metrics?.profitFactor)}
-                    </span>
-                    <span className={cn('num text-right', signClass(row.metrics?.netPnlUsd))}>
-                      {money(row.metrics?.netPnlUsd)}
-                    </span>
-                  </>
-                )}
-              </button>
-            ))}
-          </div>
+    <div className="min-w-[760px]">
+      <div
+        className={cn(
+          'text-muted-foreground bg-background sticky top-0 z-10 grid items-center gap-3 border-b px-3 py-1 text-[10px] tracking-wide uppercase',
+          LEADERBOARD_COLS,
         )}
-      </ScrollArea>
-    </Card>
-  )
-}
-
-function TradesCard({ result }: { result: BacktestResult | null }) {
-  const trades = result?.trades ?? []
-  return (
-    <Card className="rounded-lg p-0">
-      <div className="flex items-center justify-between border-b px-4 py-2">
-        <h2 className="text-muted-foreground text-xs font-semibold">Trades</h2>
-        {trades.length > 0 && <span className="text-muted-foreground text-[11px]">{trades.length} fills</span>}
+      >
+        <span>strategy</span>
+        <Th>trades</Th>
+        <Th>win</Th>
+        <Th>PF</Th>
+        <Th>expect</Th>
+        <Th>net P&L</Th>
+        <Th>max DD</Th>
+        <span>note</span>
       </div>
-      <ScrollArea className="max-h-[240px]">
-        {trades.length === 0 ? (
-          <p className="text-muted-foreground p-4 text-sm">
-            {result ? 'The strategy never triggered on this window.' : 'Run a backtest to see fills.'}
-          </p>
-        ) : (
-          <div>
-            {[...trades].reverse().map((trade, index) => (
-              <div
-                key={`${trade.entryTime}-${index}`}
-                title={trade.reason}
-                className="grid grid-cols-[1fr_48px_64px] items-center gap-2 border-b px-4 py-1.5 text-xs last:border-0"
-              >
-                <span className="text-muted-foreground truncate text-[11px]">
-                  {new Date(trade.entryTime).toISOString().slice(5, 16).replace('T', ' ')} · {trade.direction} ·{' '}
-                  {trade.exitReason.toLowerCase()}
+      {!rows ? (
+        <div className="space-y-2 px-3 py-3">
+          {[0, 1, 2, 3, 4].map((i) => (
+            <Skeleton key={i} className="h-3 w-full" />
+          ))}
+        </div>
+      ) : (
+        rows.map((row) => {
+          const m = row.metrics
+          const thin = (m?.trades ?? 0) > 0 && (m?.trades ?? 0) < 30
+          return (
+            <button
+              key={row.id}
+              type="button"
+              disabled={Boolean(row.skipped)}
+              onClick={() => onPick(row.id)}
+              aria-selected={row.id === selected}
+              className={cn(
+                'hover:bg-accent/60 grid w-full items-center gap-3 border-b px-3 py-[5px] text-left text-xs transition-colors last:border-0',
+                LEADERBOARD_COLS,
+                row.id === selected && 'bg-primary/10 shadow-[inset_2px_0_0_var(--primary)]',
+                row.skipped && 'cursor-default opacity-60',
+              )}
+            >
+              <span className="truncate">
+                {row.name}
+                <span className="text-muted-foreground num ml-2 text-[10px]">{row.id}</span>
+              </span>
+              {row.skipped || !m ? (
+                <span className="text-muted-foreground col-span-7 truncate text-[11px]">
+                  {row.skipped ?? 'no result'}
                 </span>
-                <span className={cn('num text-right', signClass(trade.pnlUsd))}>{trade.r}R</span>
-                <span className={cn('num text-right', signClass(trade.pnlUsd))}>{money(trade.pnlUsd)}</span>
-              </div>
-            ))}
-          </div>
-        )}
-      </ScrollArea>
-    </Card>
+              ) : (
+                <>
+                  <Td className={cn(thin && 'text-caution')}>{m.trades}</Td>
+                  <Td>{pct(m.winRate)}</Td>
+                  <Td className={signClass(m.profitFactor - 1)}>{num(m.profitFactor)}</Td>
+                  <Td className={signClass(m.expectancy)}>{num(m.expectancy)} R</Td>
+                  <Td className={signClass(m.netPnlUsd)}>{money(m.netPnlUsd)}</Td>
+                  <Td>{money(m.maxDrawdownUsd)}</Td>
+                  <span className="text-muted-foreground truncate text-[11px]">
+                    {thin ? 'too few trades to read' : m.profitFactor >= 1.2 ? 'clears the gate in-sample only' : ''}
+                  </span>
+                </>
+              )}
+            </button>
+          )
+        })
+      )}
+    </div>
   )
 }
 
+const TRADE_COLS = 'grid-cols-[110px_56px_96px_96px_64px_80px_120px_minmax(160px,1fr)]'
+
+function TradesTable({ result }: { result: BacktestResult | null }) {
+  const trades = result?.trades ?? []
+  if (trades.length === 0) {
+    return (
+      <p className="text-muted-foreground px-3 py-4 text-sm">
+        {result
+          ? 'The strategy never triggered on this window.'
+          : 'Run a backtest to see its fills here and on the chart.'}
+      </p>
+    )
+  }
+  return (
+    <div className="min-w-[820px]">
+      <div
+        className={cn(
+          'text-muted-foreground bg-background sticky top-0 z-10 grid items-center gap-3 border-b px-3 py-1 text-[10px] tracking-wide uppercase',
+          TRADE_COLS,
+        )}
+      >
+        <span>entry</span>
+        <span>side</span>
+        <Th>entry px</Th>
+        <Th>exit px</Th>
+        <Th>hold</Th>
+        <Th>R</Th>
+        <Th>P&L</Th>
+        <span>exit · reason</span>
+      </div>
+      {[...trades].reverse().map((trade, index) => (
+        <div
+          key={`${trade.entryTime}-${index}`}
+          className={cn('grid items-center gap-3 border-b px-3 py-[4px] text-xs last:border-0', TRADE_COLS)}
+        >
+          <span className="num text-muted-foreground">{stampShort(trade.entryTime)}</span>
+          <span className={cn('num', trade.direction === 'LONG' ? 'text-bull' : 'text-bear')}>{trade.direction}</span>
+          <Td>{price(trade.entryPrice)}</Td>
+          <Td>{price(trade.exitPrice)}</Td>
+          <Td className="text-muted-foreground">{holdLabel(trade.holdMs)}</Td>
+          <Td className={signClass(trade.pnlUsd)}>{num(trade.r)}</Td>
+          <Td className={signClass(trade.pnlUsd)}>{money(trade.pnlUsd)}</Td>
+          <span className="text-muted-foreground truncate text-[11px]" title={trade.reason}>
+            <span className="text-foreground/80">{trade.exitReason.toLowerCase()}</span> · {trade.reason}
+          </span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function FillModel({ result, note }: { result: BacktestResult | null; note?: string }) {
+  return (
+    <div className="grid gap-6 px-3 py-3 text-[11px] leading-relaxed md:grid-cols-2">
+      <div className="max-w-[64ch]">
+        <p>
+          <strong className="text-foreground/80">How fills are modelled.</strong>{' '}
+          {note ??
+            "A signal on one bar fills at the next bar's open, never the close that produced it. Half the spread is charged each side. When a single bar covers both stop and target the stop is taken, and a gap through the stop fills at the open — the pessimistic reading, because OHLC cannot say what happened first inside a bar."}
+        </p>
+        <p className="text-muted-foreground mt-2">
+          Every method runs through this one path, so the leaderboard compares methods rather than accidental
+          differences in fill assumptions. An in-sample number is a ranking; only a walk-forward read against a
+          null is a result.
+        </p>
+      </div>
+      {result && (
+        <dl className="num grid h-fit grid-cols-[auto_1fr] gap-x-4 gap-y-[3px]">
+          <dt className="text-muted-foreground">run</dt>
+          <dd>
+            {result.name} · {result.market} · {result.timeframe}
+          </dd>
+          {Object.entries(result.params).map(([k, v]) => (
+            <div key={k} className="contents">
+              <dt className="text-muted-foreground">{k}</dt>
+              <dd>{v}</dd>
+            </div>
+          ))}
+          {result.indicatorSpecs.length > 0 && (
+            <>
+              <dt className="text-muted-foreground">indicators</dt>
+              <dd className="text-muted-foreground">
+                {result.indicatorSpecs
+                  .map((s) => `${s.id}${s.params ? `(${Object.values(s.params).join(', ')})` : ''}`)
+                  .join(' · ')}
+              </dd>
+            </>
+          )}
+        </dl>
+      )}
+    </div>
+  )
+}
+
+function Th({ children }: { children: React.ReactNode }) {
+  return <span className="text-right">{children}</span>
+}
+
+function Td({ children, className }: { children: React.ReactNode; className?: string }) {
+  return <span className={cn('num text-right', className)}>{children}</span>
+}
+
+function stampShort(ms: number): string {
+  return new Date(ms).toISOString().slice(5, 16).replace('T', ' ')
+}
+
+function holdLabel(ms: number): string {
+  const minutes = Math.round(ms / 60_000)
+  if (minutes < 90) return `${minutes}m`
+  const hours = minutes / 60
+  return hours < 48 ? `${num(hours, 1)}h` : `${num(hours / 24, 1)}d`
+}

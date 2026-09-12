@@ -16,6 +16,13 @@ leading, a table that fills the viewport. Its job is to let someone already
 working read a lot of numbers without scrolling. Cards and padding are the enemy
 here.
 
+The Workbench is the model for terminal mode. Three regions, fixed to the
+viewport, no cards: a **rail** on the left for what you *set* (strategy,
+parameters, run, result), the **chart** filling the middle for what you *see*,
+and a **dock** along the bottom for what you *read* — full-width tables with
+headers, tabbed (leaderboard, trades, fill model). A number that belongs in a
+table goes in the dock, not in a sidebar card that can hold four columns.
+
 **Do not merge them.** An airy card layout over a tape reader wastes the screen
 someone is reading; a dense grid on an overview screen is a wall nobody parses.
 When adding a screen, decide which mode it is in first, then follow that mode's
