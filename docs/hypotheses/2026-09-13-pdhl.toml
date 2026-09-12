@@ -1,0 +1,27 @@
+[run]
+in_sample = "xauduka:5m"
+in_sample_to = "2025-04-10"
+out_of_sample = "xauusd:5m"
+seeds = 200
+direction_samples = 1000
+
+[[hypothesis]]
+label = "pdhl/fade-asia"
+base = "pdhl"
+filters = ["weekdays", "flat:1630-1815", "sessions:1900-0200"]
+overrides = { mode = 0 }
+why = "thin hours absorb a touch of yesterday's extreme; the null trades the same hours"
+
+[[hypothesis]]
+label = "pdhl/fade-allday"
+base = "pdhl"
+filters = ["weekdays", "flat:1630-1815"]
+overrides = { mode = 0 }
+why = "is the fade a session effect or a level effect?"
+
+[[hypothesis]]
+label = "pdhl/break-nyam"
+base = "pdhl"
+filters = ["weekdays", "flat:1630-1815", "hours:0800-1200"]
+overrides = { mode = 1 }
+why = "New York flow takes the stops beyond yesterday's extreme and continues"
