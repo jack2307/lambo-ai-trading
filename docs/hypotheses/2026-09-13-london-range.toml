@@ -1,0 +1,27 @@
+[run]
+in_sample = "xauusd:5m"
+out_of_sample = "xauduka:5m"
+out_of_sample_to = "2025-04-10"
+seeds = 200
+direction_samples = 1000
+
+[[hypothesis]]
+label = "london/nyam"
+base = "orb"
+filters = ["weekdays", "flat:1630-1815", "hours:0800-1200"]
+overrides = { rangeStart = 200, rangeMinutes = 360, entryUntil = 1200 }
+why = "the London range broken in the New York morning; the null trades the same window"
+
+[[hypothesis]]
+label = "london/early"
+base = "orb"
+filters = ["weekdays", "flat:1630-1815", "hours:0800-1000"]
+overrides = { rangeStart = 200, rangeMinutes = 360, entryUntil = 1000 }
+why = "only the first two hours: a late break is a different day"
+
+[[hypothesis]]
+label = "london/expansion"
+base = "orb"
+filters = ["weekdays", "flat:1630-1815", "hours:0800-1200", "vol:14/100:1.2-99"]
+overrides = { rangeStart = 200, rangeMinutes = 360, entryUntil = 1200 }
+why = "only when volatility is already expanding into the New York open"
