@@ -320,12 +320,15 @@ pub fn parse_backlog(text: &str) -> Backlog {
         } else {
             continue;
         };
-        let (title, note) = match rest.strip_prefix("**").and_then(|r| r.split_once("**")) {
-            Some((t, n)) => (t.trim_end_matches('.').to_string(), n.trim().to_string()),
-            None => (rest.to_string(), String::new()),
+        // Withdrawn items are struck through in the file; they read as closed.
+        let withdrawn = rest.starts_with("~~");
+        let plain = |t: &str| t.replace("~~", "").replace('`', "").replace("**", "").trim().to_string();
+        let (title, note) = match rest.trim_start_matches("~~").strip_prefix("**").and_then(|r| r.split_once("**")) {
+            Some((t, n)) => (plain(t).trim_end_matches('.').to_string(), plain(n)),
+            None => (plain(rest), String::new()),
         };
         let item = BacklogItem { title, note };
-        if open { backlog.open.push(item) } else { backlog.closed.push(item) }
+        if open && !withdrawn { backlog.open.push(item) } else { backlog.closed.push(item) }
     }
     backlog
 }
@@ -393,8 +396,17 @@ Survivors: ict-B-balanced/ict-sweep-mss-fvg — worth a decision record
 
     #[test]
     fn the_backlog_splits_open_from_closed_and_keeps_the_reason() {
-        let b = parse_backlog("## Open\n- [ ] **ORB.** the range is where flow was absorbed\n## Closed\n- [x] **ICT.** see record\n");
-        assert_eq!(b.open, vec![BacklogItem { title: "ORB".into(), note: "the range is where flow was absorbed".into() }]);
-        assert_eq!(b.closed.len(), 1);
+        let text = "## Open
+- [ ] **ORB.** the range is where flow was absorbed
+- [ ] ~~**Asia.**~~ Withdrawn
+- [ ] `run_null_control` skips **options**
+## Closed
+- [x] **ICT.** see record
+";
+        let b = parse_backlog(text);
+        assert_eq!(b.open[0], BacklogItem { title: "ORB".into(), note: "the range is where flow was absorbed".into() });
+        assert_eq!(b.open[1], BacklogItem { title: "run_null_control skips options".into(), note: String::new() });
+        assert_eq!(b.open.len(), 2, "a struck-through item is not open");
+        assert_eq!(b.closed.len(), 2);
     }
 }

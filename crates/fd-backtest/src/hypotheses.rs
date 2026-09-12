@@ -25,6 +25,7 @@ use rayon::prelude::*;
 use serde::Deserialize;
 
 use crate::control::RandomEntry;
+use crate::control_hold::RandomHold;
 use crate::engine::{Metrics, TradingRules};
 use crate::sweep::{PromisingGate, SelectBy, Verdict, verdict, walk_forward};
 
@@ -221,43 +222,29 @@ impl HypothesisReport {
     }
 }
 
-/// The random-entry control with a fixed seed as its default.
+/// The control matched to the base method's shape, at one seed.
 ///
-/// `walk_forward` expands the grid from `default_params`, so the seed has to
-/// live there for each null run to be a different world.
-struct SeededControl {
-    seed: f64,
-}
-
-impl Strategy for SeededControl {
-    fn id(&self) -> &'static str {
-        RandomEntry.id()
-    }
-    fn name(&self) -> &'static str {
-        RandomEntry.name()
-    }
-    fn description(&self) -> &'static str {
-        RandomEntry.description()
-    }
-    fn default_params(&self) -> Params {
+/// A method with stops and targets is read against random *entries* with
+/// the same; a method that only holds through a window (`Exits::Strategy`,
+/// no grid — a drift claim) is read against random *holds* of the same
+/// length. Reading a drift against random entries with ATR stops is how
+/// the first drift test produced a null with a 95th percentile near 3.
+fn control_for(base: &dyn Strategy, overrides: &[(String, f64)], seed: f64) -> (&'static dyn Strategy, Params) {
+    let drift = base.exits() == fd_strategy::registry::Exits::Strategy && base.grid().is_empty();
+    if drift {
+        let get = |k: &str| overrides.iter().find(|(key, _)| key == k).map(|(_, v)| *v);
+        let (from, to) = (get("from").unwrap_or(930.0), get("to").unwrap_or(1600.0));
+        let minutes = |v: f64| (v as i64 / 100) * 60 + v as i64 % 100;
+        let (a, b) = (minutes(from), minutes(to));
+        let hold = if b > a { b - a } else { 1440 - a + b };
+        let mut p = RandomHold.default_params();
+        p.set("holdMinutes", hold as f64);
+        p.set("seed", seed);
+        (&RandomHold, p)
+    } else {
         let mut p = RandomEntry.default_params();
-        p.set("seed", self.seed);
-        p
-    }
-    fn grid(&self) -> std::collections::BTreeMap<String, Vec<f64>> {
-        RandomEntry.grid()
-    }
-    fn indicators(&self, p: &Params) -> Vec<IndicatorSpec> {
-        RandomEntry.indicators(p)
-    }
-    fn warmup(&self, p: &Params) -> usize {
-        RandomEntry.warmup(p)
-    }
-    fn series(&self, p: &Params) -> Vec<String> {
-        RandomEntry.series(p)
-    }
-    fn on_bar(&self, ctx: &BarContext) -> Intent {
-        RandomEntry.on_bar(ctx)
+        p.set("seed", seed);
+        (&RandomEntry, p)
     }
 }
 
@@ -345,11 +332,10 @@ pub fn run_hypothesis_fixed(
     let mut null_pf: Vec<f64> = (0..seeds)
         .into_par_iter()
         .filter_map(|seed| {
-            let control = SeededControl { seed: seed as f64 + 1.0 };
+            let (inner, defaults) = control_for(base, &hypothesis.overrides, seed as f64 + 1.0);
+            let control = Preset { inner, defaults: defaults.clone() };
             let matched = Filtered { inner: &control, filters: hypothesis.filters.clone() };
-            let pf = run_backtest(bars, &matched, &control.default_params(), rules, None, Range::default())
-                .metrics
-                .profit_factor;
+            let pf = run_backtest(bars, &matched, &defaults, rules, None, Range::default()).metrics.profit_factor;
             pf.is_finite().then_some(pf)
         })
         .collect();
@@ -397,7 +383,8 @@ pub fn run_hypothesis(
     let mut null_pf: Vec<f64> = (0..seeds)
         .into_par_iter()
         .filter_map(|seed| {
-            let control = SeededControl { seed: seed as f64 + 1.0 };
+            let (inner, defaults) = control_for(base, &hypothesis.overrides, seed as f64 + 1.0);
+            let control = Preset { inner, defaults };
             let matched = Filtered { inner: &control, filters: hypothesis.filters.clone() };
             walk_forward(&matched, bars, rules, None, folds, select_by, min_trades_per_cell)
                 .map(|r| r.oos.profit_factor)

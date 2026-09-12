@@ -10,6 +10,7 @@
 
 pub mod context;
 pub mod control;
+pub mod control_hold;
 pub mod engine;
 pub mod guards;
 pub mod hypotheses;
@@ -18,6 +19,7 @@ pub mod timeline;
 
 pub use context::{Frame, OptionsTimeline};
 pub use control::RandomEntry;
+pub use control_hold::RandomHold;
 pub use timeline::{TimelineOptions, build_timeline, frame_from_snapshot};
 pub use engine::{
     BacktestResult, ExitKind, Metrics, Range, Trade, TradingRules, metrics_of, run_backtest,
