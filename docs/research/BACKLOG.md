@@ -14,15 +14,9 @@ Closed ideas move to the bottom with a pointer to their decision record, so
   target VWAP. Reason: intraday mean reversion to the volume-weighted average
   is where large orders are worked. Existing `vwap` indicator; NEW thin
   strategy.
-- [ ] **Asian-range breakout at London open.** Reason: the tightest range of
-  the day is broken by the first real volume. Same base as ORB, but the range
-  crosses New York midnight — `orb` needs a session-day anchor first.
-- [ ] **Volatility-conditional breakout.** Reason: three unrelated break
-  methods passed only in the 24%-vol year (2025–26) and failed at 13%
-  (2022–25); if a break's travel scales with volatility and the cost does
-  not, the edge is conditional on realised vol above an *absolute* level.
-  Must be registered with that level, the null gated the same way, and
-  survive on both windows — otherwise it is the same finding renamed.
+- [ ] ~~**Asian-range breakout at London open.**~~ Withdrawn 2026-09-13: the
+  breakout family is closed (`2026-09-13-volcond-breakout.md`); a fourth
+  range on the same mechanism needs a new reason, not a new window.
 - [ ] **ICT variant: order block instead of FVG.** Reason: the manual's own
   alternative entry zone; the chain is already ported.
 - [ ] **Options: cluster-at-level with the accumulated tape** — *blocked until
@@ -63,3 +57,6 @@ Closed ideas move to the bottom with a pointer to their decision record, so
 - [x] Previous-day high/low (fade and break) → 1st–6th percentile of the gated
   null on the long window; wick-tight stops lose to the spread.
   `2026-09-13-pdhl.md`.
+- [x] Volatility-conditional breakout → high- and low-volatility halves of
+  2022–25 indistinguishable, both inside; the breakout family is closed.
+  `2026-09-13-volcond-breakout.md`.

@@ -2,7 +2,7 @@
 
 **Registered:** 2026-09-13 03:20 — before any run; threshold chosen from the
 two windows' ATR distributions, not from any result
-**Status:** registered
+**Status:** decided → docs/decisions/2026-09-13-volcond-breakout.md (failed the primary window; confirmation not opened)
 **Batch file:** `docs/hypotheses/2026-09-13-volcond-breakout.toml`
 
 ## Claim

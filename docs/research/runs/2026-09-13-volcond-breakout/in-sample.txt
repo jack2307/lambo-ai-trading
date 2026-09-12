@@ -1,0 +1,24 @@
+$ E:\rust\flowdesk\target\release\search.exe --market=xauduka --interval=5m --mode=hypotheses --batch-file=E:\rust\flowdesk\docs\hypotheses\2026-09-13-volcond-breakout.toml --seeds=200 --to=2025-04-10
+
+bounds:   --from=… --to=2025-04-10 kept 198716 of 278169 bars
+bars:     198716 from 2022-06-16 00:00 to 2025-04-09 23:55
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+== hypotheses `E:\rust\flowdesk\docs\hypotheses\2026-09-13-volcond-breakout.toml`: 4 declared, walk-forward (4 folds), each against 200 matched null runs ==
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+hivol/london orb                   341   0.950  -0.015    0.909    1.091        0   70%  fail: profit factor 0.950 < 1.2; expectancy -0.015R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 08:00-12:00 + ATR14/close in [0.075%, 9%]  — the London-range break, only when ATR14/close is at or above 0.075%
+lowvol/london orb                   212   0.962  -0.020    0.816    1.241        0   77%  fail: profit factor 0.962 < 1.2; expectancy -0.020R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 08:00-12:00 + ATR14/close in [0%, 0.075%]  — the contrast: the same break below the line must not pass, or volatility was not the condition
+hivol/orb60  orb                   457   1.004   0.004    0.884    1.115        0   84%  fail: profit factor 1.004 < 1.2; expectancy 0.004R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 09:20-12:00 + ATR14/close in [0.075%, 9%]  — the New York opening-range break under the same condition
+lowvol/orb60 orb                    73   1.074   0.033    0.809    1.489        0   78%  fail: profit factor 1.074 < 1.2; expectancy 0.033R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 09:20-12:00 + ATR14/close in [0%, 0.075%]  — its contrast
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+

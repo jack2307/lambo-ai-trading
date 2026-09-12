@@ -1,0 +1,21 @@
+$ E:\rust\flowdesk\target\release\search.exe --market=xauduka --interval=5m --mode=null-dir --strategy=orb --samples=1000 --params=rangeStart=820,rangeMinutes=60,entryUntil=1200,maxRangeAtr=100 --filters=weekdays;flat:1630-1815;hours:0920-1200;volabs:14:0.075-9 --to=2025-04-10
+
+bounds:   --from=… --to=2025-04-10 kept 198716 of 278169 bars
+bars:     198716 from 2022-06-16 00:00 to 2025-04-09 23:55
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+  filters: MoTuWeThFr + flat 16:30-18:15 + NY 09:20-12:00 + ATR14/close in [0.075%, 9%]
+== direction control: orb, 579 trades, 1000 coin-flip assignments ==
+  preset: rangeStart=820,rangeMinutes=60,entryUntil=1200,maxRangeAtr=100
+  entries, stops and targets held fixed; only the side is randomised
+
+  profit factor of the same trades with random direction:
+    p05 0.776   p25 0.856   p50 0.916   p75 0.982   p95 1.080   max 1.308
+
+  actual: 1.043  ->  91th percentile  (p = 0.092)
+
+  Inside its own null. On this sample the direction rule has not been
+  distinguished from a coin flip, however good the profit factor looks.
+

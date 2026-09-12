@@ -124,6 +124,10 @@ ever placed by anything in this repository.
   session, not the method. The ORB pass reported 100th percentiles that were
   72nd–96th once gated.
 
+- **Closed families stay closed.** Range breaks on gold (opening, London,
+  ICT sweep, volatility-conditional) and yesterday's-level fades are closed
+  on the long window with direction nulls at 43rd–54th; a new variant needs
+  a new *mechanism*, not a new window, session, threshold or stop.
 - A failing gate is the result. Never re-tune to pass it.
 - The out-of-sample market is opened once, after the in-sample record exists.
 - Every number quoted in a record comes from a file under
