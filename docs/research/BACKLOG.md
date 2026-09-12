@@ -60,3 +60,6 @@ Closed ideas move to the bottom with a pointer to their decision record, so
 - [x] Volatility-conditional breakout → high- and low-volatility halves of
   2022–25 indistinguishable, both inside; the breakout family is closed.
   `2026-09-13-volcond-breakout.md`.
+- [x] BTC US equity-open range break → best row 84th percentile, direction
+  73rd, on two years of Binance 5m; not opened at Vantage cost.
+  `2026-09-13-btc-us-open.md`.

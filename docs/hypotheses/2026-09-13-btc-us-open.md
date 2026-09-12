@@ -1,7 +1,7 @@
 # 2026-09-13-btc-us-open: BTC breaks the range built around the US equity open
 
 **Registered:** 2026-09-13 04:05 — before any run
-**Status:** registered
+**Status:** decided → docs/decisions/2026-09-13-btc-us-open.md (failed the primary; confirmation not opened)
 **Batch file:** `docs/hypotheses/2026-09-13-btc-us-open.toml`
 
 ## Claim

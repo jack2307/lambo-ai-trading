@@ -1,0 +1,22 @@
+$ E:\rust\flowdesk\target\release\search.exe --market=btc --interval=5m --mode=hypotheses --batch-file=E:\rust\flowdesk\docs\hypotheses\2026-09-13-btc-us-open.toml --seeds=200
+
+bars:     218880 from 2024-08-13 19:00 to 2026-09-12 18:55
+timeline: 448 frames from 2026-09-11 05:36 to 2026-09-12 18:50
+          the tape covers 447 of 218880 bars (0.2%)
+
+tape:     15185 prints, 448 frames  <- a result is only comparable to another run over the same tape
+
+== hypotheses `E:\rust\flowdesk\docs\hypotheses\2026-09-13-btc-us-open.toml`: 3 declared, walk-forward (4 folds), each against 200 matched null runs ==
+swap: long 0.00 / short 0.00 USD per lot per night; spread 5.00
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+btc/eq-open-60m orb                   362   1.128   0.037    0.964    1.278        0   84%  fail: profit factor 1.128 < 1.2; expectancy 0.037R < 0.05R
+                                MoTuWeThFr + NY 10:30-13:00  — the first hour after the equity open; the null trades the same window
+btc/eq-open-30m orb                   415   1.046   0.019    0.975    1.233        0   71%  fail: profit factor 1.046 < 1.2; expectancy 0.019R < 0.05R
+                                MoTuWeThFr + NY 10:00-13:00  — the first half hour: earlier entries, more noise
+btc/data-0830-60m orb                   432   0.882  -0.050    0.993    1.216        0   21%  fail: profit factor 0.882 < 1.2; expectancy -0.050R < 0.05R
+                                MoTuWeThFr + NY 09:30-13:00  — the range around the 08:30 US data releases, broken into the equity open
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+
