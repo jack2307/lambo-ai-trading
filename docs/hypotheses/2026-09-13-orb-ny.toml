@@ -1,0 +1,26 @@
+[run]
+in_sample = "xauusd:5m"
+out_of_sample = "xauduka:5m"
+seeds = 200
+direction_samples = 1000
+
+[[hypothesis]]
+label = "orb/60m"
+base = "orb"
+filters = ["weekdays", "flat:1630-1815"]
+overrides = { rangeMinutes = 60 }
+why = "the classic: the first hour's range, broken before midday"
+
+[[hypothesis]]
+label = "orb/30m"
+base = "orb"
+filters = ["weekdays", "flat:1630-1815"]
+overrides = { rangeMinutes = 30 }
+why = "a tighter range gives more breaks and earlier entries; does the extra noise pay?"
+
+[[hypothesis]]
+label = "orb/60m-expansion"
+base = "orb"
+filters = ["weekdays", "flat:1630-1815", "vol:14/100:1.2-99"]
+overrides = { rangeMinutes = 60 }
+why = "only on days where volatility is already expanding: a break needs range to run into"
