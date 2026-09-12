@@ -11,6 +11,7 @@
 
 pub mod builtin;
 pub mod filter;
+pub mod ict;
 pub mod registry;
 
 pub use registry::{

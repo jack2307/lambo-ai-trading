@@ -162,6 +162,16 @@ pub static INDICATORS: &[IndicatorDef] = &[
         params: &[("period", 20.0), ("atrPeriod", 10.0), ("mult", 1.5)],
         outputs: &["upper", "middle", "lower"],
     },
+    // Confirmed swing points: the last swing high / low as of each bar, and
+    // the bar it formed on. A swing is confirmed only once `right` later bars
+    // have closed, so the series is causal and steps rather than repaints.
+    IndicatorDef {
+        id: "swing",
+        name: "Swing points",
+        pane: Pane::Overlay,
+        params: &[("left", 3.0), ("right", 3.0)],
+        outputs: &["high", "low", "highAt", "lowAt"],
+    },
 ];
 
 /// Look up a definition by id.
@@ -271,11 +281,53 @@ fn compute_one(def: &IndicatorDef, p: &[f64], source: Source, bars: &[Bar]) -> V
             let (upper, middle, lower) = keltner(bars, period("period"), period("atrPeriod"), def.param(p, "mult"));
             vec![("upper", upper), ("middle", middle), ("lower", lower)]
         }
+        "swing" => {
+            let (high, low, high_at, low_at) = swing(bars, period("left"), period("right"));
+            vec![("high", high), ("low", low), ("highAt", high_at), ("lowAt", low_at)]
+        }
         other => unreachable!("indicator {other} is registered but not implemented"),
     }
 }
 
 /* ---------------- primitives ---------------- */
+
+/// Last confirmed swing high and low as of each bar, with the bar each formed on.
+///
+/// Bar `k` is a swing high when its high is strictly above every high within
+/// `left` bars before and `right` bars after it; it becomes known at bar
+/// `k + right`, and from that bar on the series carries its level (and `k` as
+/// a float in the `*At` series) until a later swing replaces it. Nothing is
+/// known before the first confirmation, so the series start as NaN.
+#[must_use]
+pub fn swing(bars: &[Bar], left: usize, right: usize) -> (Vec<f64>, Vec<f64>, Vec<f64>, Vec<f64>) {
+    let n = bars.len();
+    let (mut high, mut low, mut high_at, mut low_at) = (nans(n), nans(n), nans(n), nans(n));
+    let (mut last_high, mut last_low) = (f64::NAN, f64::NAN);
+    let (mut last_high_at, mut last_low_at) = (f64::NAN, f64::NAN);
+    for i in 0..n {
+        // The swing confirmed on this bar, if any, formed `right` bars ago.
+        if i >= right && i - right >= left {
+            let k = i - right;
+            let window = &bars[k - left..=k + right];
+            let candidate = &bars[k];
+            let is_high = window.iter().enumerate().all(|(j, b)| j == left || b.high < candidate.high);
+            let is_low = window.iter().enumerate().all(|(j, b)| j == left || b.low > candidate.low);
+            if is_high {
+                last_high = candidate.high;
+                last_high_at = k as f64;
+            }
+            if is_low {
+                last_low = candidate.low;
+                last_low_at = k as f64;
+            }
+        }
+        high[i] = last_high;
+        low[i] = last_low;
+        high_at[i] = last_high_at;
+        low_at[i] = last_low_at;
+    }
+    (high, low, high_at, low_at)
+}
 
 fn nans(len: usize) -> Vec<f64> {
     vec![f64::NAN; len]
@@ -631,6 +683,27 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn swings_are_confirmed_late_and_never_repaint() {
+        // A peak at bar 5 (high 110) and a trough at bar 12 (low 90) in an
+        // otherwise flat series.
+        let mut bars: Vec<Bar> = (0..20).map(|i| Bar { time: i * 60_000, open: 100.0, high: 101.0, low: 99.0, close: 100.0, volume: None }).collect();
+        bars[5].high = 110.0;
+        bars[12].low = 90.0;
+        let (high, low, high_at, low_at) = swing(&bars, 3, 3);
+        // Known only from bar 8 = 5 + 3 onward.
+        assert!(high[7].is_nan());
+        assert_eq!(high[8], 110.0);
+        assert_eq!(high_at[8], 5.0);
+        assert_eq!(high[19], 110.0, "the level holds until a later swing replaces it");
+        assert!(low[14].is_nan());
+        assert_eq!(low[15], 90.0);
+        assert_eq!(low_at[15], 12.0);
+        // A flat top is not a swing: no bar is strictly above its neighbours.
+        let flat = swing(&bars[0..4], 1, 1);
+        assert!(flat.0.iter().all(|v| v.is_nan()));
     }
 
     #[test]

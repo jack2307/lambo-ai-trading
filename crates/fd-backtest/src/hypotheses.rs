@@ -27,8 +27,46 @@ pub struct Hypothesis {
     pub label: &'static str,
     pub base: &'static str,
     pub filters: Vec<Filter>,
+    /// Parameter defaults changed from the method's own — a preset. The grid
+    /// still sweeps around them.
+    pub overrides: Vec<(&'static str, f64)>,
     /// The reason it is on the list. A hypothesis without one is a search.
     pub why: &'static str,
+}
+
+/// The batches that can be asked for by name.
+#[must_use]
+pub fn batch(name: &str) -> Option<Vec<Hypothesis>> {
+    match name {
+        "gold-intraday" => Some(gold_intraday_batch()),
+        "ict-m1" => Some(ict_batch(15, "M1 entries, M15 gaps")),
+        "ict-m5" => Some(ict_batch(3, "M5 entries, M15 gaps")),
+        _ => None,
+    }
+}
+
+/// The ICT sweep → MSS → FVG expert's three presets, in and out of its kill
+/// zones.
+///
+/// Sessions are the expert's defaults on the broker's clock (UTC+3): London
+/// 08:00–12:00 and New York 13:00–17:00 server time are 01:00–05:00 and
+/// 06:00–10:00 in New York. `htf_factor` is how many entry bars make one
+/// higher-timeframe bar.
+#[must_use]
+pub fn ict_batch(htf_factor: usize, note: &'static str) -> Vec<Hypothesis> {
+    let base = "ict-sweep-mss-fvg";
+    let zones = || Filter::sessions(&[(100, 500), (600, 1000)]);
+    let factor = htf_factor as f64;
+    let tight = move || vec![("htfFactor", factor), ("minHtfFvgPips", 25.0), ("swingLeft", 5.0), ("swingRight", 5.0), ("displacementMult", 2.0), ("riskReward", 3.0)];
+    let balanced = move || vec![("htfFactor", factor), ("minHtfFvgPips", 15.0), ("swingLeft", 3.0), ("swingRight", 3.0), ("displacementMult", 1.5), ("riskReward", 2.0)];
+    let loose = move || vec![("htfFactor", factor), ("minHtfFvgPips", 8.0), ("swingLeft", 2.0), ("swingRight", 2.0), ("displacementMult", 1.2), ("riskReward", 1.5)];
+    let _ = note;
+    vec![
+        Hypothesis { label: "ict-A-tight", base, filters: vec![Filter::weekdays(), zones()], overrides: tight(), why: "the expert's strict preset, kill zones only" },
+        Hypothesis { label: "ict-B-balanced", base, filters: vec![Filter::weekdays(), zones()], overrides: balanced(), why: "the expert's default preset, kill zones only" },
+        Hypothesis { label: "ict-C-loose", base, filters: vec![Filter::weekdays()], overrides: loose(), why: "the expert's loose preset, sessions off as it ships" },
+        Hypothesis { label: "ict-B-allday", base, filters: vec![Filter::weekdays()], overrides: balanced(), why: "the default preset without the session gate: is the kill zone doing anything?" },
+    ]
 }
 
 /// The first batch: gold, intraday, flat over the break.
@@ -50,23 +88,23 @@ pub fn gold_intraday_batch() -> Vec<Hypothesis> {
     vec![
         // The flat rule on its own, on every base method: does removing the
         // overnight hold and the swap change the picture at all?
-        Hypothesis { label: "intraday", base: "ema-cross", filters: flat(), why: "the swap-free version of the trend baseline" },
-        Hypothesis { label: "intraday", base: "rsi-reversion", filters: flat(), why: "the swap-free version of the reversion baseline" },
-        Hypothesis { label: "intraday", base: "donchian-breakout", filters: flat(), why: "the swap-free version of the breakout baseline" },
-        Hypothesis { label: "intraday", base: "bb-fade", filters: flat(), why: "the swap-free version of the fade baseline" },
+        Hypothesis { label: "intraday", base: "ema-cross", filters: flat(), overrides: vec![], why: "the swap-free version of the trend baseline" },
+        Hypothesis { label: "intraday", base: "rsi-reversion", filters: flat(), overrides: vec![], why: "the swap-free version of the reversion baseline" },
+        Hypothesis { label: "intraday", base: "donchian-breakout", filters: flat(), overrides: vec![], why: "the swap-free version of the breakout baseline" },
+        Hypothesis { label: "intraday", base: "bb-fade", filters: flat(), overrides: vec![], why: "the swap-free version of the fade baseline" },
         // Sessions. Gold's volume lives in the New York morning; London's
         // open sets the day's range; Asia is thin and mean-reverting by repute.
-        Hypothesis { label: "ny-morning", base: "ema-cross", filters: with(Filter::hours(800, 1200)), why: "trend into the session with the volume" },
-        Hypothesis { label: "ny-morning", base: "donchian-breakout", filters: with(Filter::hours(800, 1200)), why: "breakouts where the liquidity is" },
-        Hypothesis { label: "london-open", base: "donchian-breakout", filters: with(Filter::hours(200, 600)), why: "London sets the range; trade the break of the Asian one" },
-        Hypothesis { label: "asia", base: "rsi-reversion", filters: with(Filter::hours(1900, 200)), why: "thin hours are said to mean-revert" },
-        Hypothesis { label: "asia", base: "bb-fade", filters: with(Filter::hours(1900, 200)), why: "same claim, band-based" },
+        Hypothesis { label: "ny-morning", base: "ema-cross", filters: with(Filter::hours(800, 1200)), overrides: vec![], why: "trend into the session with the volume" },
+        Hypothesis { label: "ny-morning", base: "donchian-breakout", filters: with(Filter::hours(800, 1200)), overrides: vec![], why: "breakouts where the liquidity is" },
+        Hypothesis { label: "london-open", base: "donchian-breakout", filters: with(Filter::hours(200, 600)), overrides: vec![], why: "London sets the range; trade the break of the Asian one" },
+        Hypothesis { label: "asia", base: "rsi-reversion", filters: with(Filter::hours(1900, 200)), overrides: vec![], why: "thin hours are said to mean-revert" },
+        Hypothesis { label: "asia", base: "bb-fade", filters: with(Filter::hours(1900, 200)), overrides: vec![], why: "same claim, band-based" },
         // Regimes. The same signal reads differently when the range is
         // expanding versus compressing.
-        Hypothesis { label: "expansion", base: "donchian-breakout", filters: with(expansion()), why: "breakouts only when volatility is already rising" },
-        Hypothesis { label: "expansion", base: "ema-cross", filters: with(expansion()), why: "trend only when there is range to trend in" },
-        Hypothesis { label: "compression", base: "rsi-reversion", filters: with(compression()), why: "fade only when the range is tight" },
-        Hypothesis { label: "compression", base: "bb-fade", filters: with(compression()), why: "same, band-based" },
+        Hypothesis { label: "expansion", base: "donchian-breakout", filters: with(expansion()), overrides: vec![], why: "breakouts only when volatility is already rising" },
+        Hypothesis { label: "expansion", base: "ema-cross", filters: with(expansion()), overrides: vec![], why: "trend only when there is range to trend in" },
+        Hypothesis { label: "compression", base: "rsi-reversion", filters: with(compression()), overrides: vec![], why: "fade only when the range is tight" },
+        Hypothesis { label: "compression", base: "bb-fade", filters: with(compression()), overrides: vec![], why: "same, band-based" },
     ]
 }
 
@@ -144,6 +182,48 @@ impl Strategy for SeededControl {
     }
 }
 
+/// A method with some defaults replaced: the expert's preset, as a strategy.
+struct Preset<'a> {
+    inner: &'a dyn Strategy,
+    defaults: Params,
+}
+
+impl Strategy for Preset<'_> {
+    fn id(&self) -> &'static str {
+        self.inner.id()
+    }
+    fn name(&self) -> &'static str {
+        self.inner.name()
+    }
+    fn description(&self) -> &'static str {
+        self.inner.description()
+    }
+    fn default_params(&self) -> Params {
+        self.defaults.clone()
+    }
+    fn grid(&self) -> std::collections::BTreeMap<String, Vec<f64>> {
+        self.inner.grid()
+    }
+    fn indicators(&self, p: &Params) -> Vec<IndicatorSpec> {
+        self.inner.indicators(p)
+    }
+    fn warmup(&self, p: &Params) -> usize {
+        self.inner.warmup(p)
+    }
+    fn series(&self, p: &Params) -> Vec<String> {
+        self.inner.series(p)
+    }
+    fn needs_options(&self) -> bool {
+        self.inner.needs_options()
+    }
+    fn exits(&self) -> fd_strategy::registry::Exits {
+        self.inner.exits()
+    }
+    fn on_bar(&self, ctx: &BarContext) -> Intent {
+        self.inner.on_bar(ctx)
+    }
+}
+
 /// Walk the hypothesis forward and its matched null `seeds` times.
 #[allow(clippy::too_many_arguments)]
 pub fn run_hypothesis(
@@ -158,7 +238,12 @@ pub fn run_hypothesis(
     seeds: usize,
 ) -> Option<HypothesisReport> {
     let base = registry.get(hypothesis.base).ok()?;
-    let filtered = Filtered { inner: base, filters: hypothesis.filters.clone() };
+    let mut defaults = base.default_params();
+    for (key, value) in &hypothesis.overrides {
+        defaults.set(key, *value);
+    }
+    let preset = Preset { inner: base, defaults };
+    let filtered = Filtered { inner: &preset, filters: hypothesis.filters.clone() };
     let result = walk_forward(&filtered, bars, rules, None, folds, select_by, min_trades_per_cell)?;
 
     let mut null_pf: Vec<f64> = (0..seeds)
@@ -205,6 +290,16 @@ mod tests {
             assert!(!h.why.is_empty(), "{}/{} has no reason", h.label, h.base);
             assert!(h.filters.iter().any(|f| matches!(f, Filter::Flat { .. })), "{}/{} is not intraday", h.label, h.base);
         }
+        for name in ["ict-m1", "ict-m5"] {
+            for h in batch(name).unwrap() {
+                let strategy = registry.get(h.base).expect(h.base);
+                let known = strategy.default_params();
+                for (key, _) in &h.overrides {
+                    assert!(known.contains(key), "{}/{} overrides unknown parameter {key}", h.label, h.base);
+                }
+            }
+        }
+        assert!(batch("nope").is_none());
     }
 
     #[test]

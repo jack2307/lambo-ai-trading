@@ -52,6 +52,8 @@ pub fn register_all(registry: &mut Registry) {
     registry.register(Box::new(FlowMomentum));
     registry.register(Box::new(FlowAtLevel));
     registry.register(Box::new(BuyAndHold));
+    // Structure-based, not indicator-based; lives in its own module.
+    registry.register(Box::new(crate::ict::IctSweepMssFvg));
 }
 
 /* ---------------- classic technical baselines ---------------- */

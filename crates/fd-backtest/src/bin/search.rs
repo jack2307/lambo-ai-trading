@@ -25,7 +25,7 @@ use std::path::PathBuf;
 use fd_backtest::engine::{Range, TradingRules, run_backtest};
 use fd_strategy::registry::Strategy as _;
 use fd_backtest::sweep::{SelectBy, compare_strategies, sweep_strategy, verdict, walk_forward};
-use fd_backtest::hypotheses::{gold_intraday_batch, run_hypothesis};
+use fd_backtest::hypotheses::{batch as hypothesis_batch, run_hypothesis};
 use fd_backtest::timeline::{TimelineOptions, build_timeline};
 use fd_backtest::{OptionsTimeline, PromisingGate};
 use fd_core::config::Config;
@@ -101,6 +101,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             config.backtest.min_trades_per_cell,
             &gate,
             arg("seeds", "200").parse().unwrap_or(200),
+            &arg("batch", "gold-intraday"),
         );
     }
     if mode == "null" {
@@ -644,9 +645,13 @@ fn run_hypotheses(
     min_trades_per_cell: usize,
     gate: &fd_backtest::PromisingGate,
     seeds: usize,
+    batch_name: &str,
 ) {
-    let batch = gold_intraday_batch();
-    println!("== hypotheses: {} declared, walk-forward ({folds} folds), each against {seeds} matched null runs ==", batch.len());
+    let Some(batch) = hypothesis_batch(batch_name) else {
+        println!("unknown batch `{batch_name}` (have: gold-intraday, ict-m1, ict-m5)");
+        return;
+    };
+    println!("== hypotheses `{batch_name}`: {} declared, walk-forward ({folds} folds), each against {seeds} matched null runs ==", batch.len());
     println!("swap: long {:.2} / short {:.2} USD per lot per night; spread {:.2}", rules.swap_long_per_lot, rules.swap_short_per_lot, rules.spread);
     println!();
     println!(

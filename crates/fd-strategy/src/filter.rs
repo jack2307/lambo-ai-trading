@@ -25,6 +25,8 @@ use crate::registry::{BarContext, Exits, Intent, Params, Strategy};
 pub enum Filter {
     /// Entries only while the New York clock is inside `[from, to)`.
     Hours { from_min: u32, to_min: u32 },
+    /// Entries only inside **any** of these windows — kill zones.
+    Sessions(Vec<(u32, u32)>),
     /// Entries only on these New York weekdays (bit `1 << weekday`, 0 = Sunday).
     Weekdays { mask: u8 },
     /// Inside `[from, to)` an open position is closed and no entry is taken.
@@ -41,6 +43,12 @@ impl Filter {
     #[must_use]
     pub const fn hours(from_hhmm: u32, to_hhmm: u32) -> Self {
         Self::Hours { from_min: hhmm(from_hhmm), to_min: hhmm(to_hhmm) }
+    }
+
+    /// Several `hhmm` windows, any of which admits an entry.
+    #[must_use]
+    pub fn sessions(windows: &[(u32, u32)]) -> Self {
+        Self::Sessions(windows.iter().map(|(a, b)| (hhmm(*a), hhmm(*b))).collect())
     }
 
     #[must_use]
@@ -60,6 +68,10 @@ impl Filter {
         let clock = |m: u32| format!("{:02}:{:02}", m / 60, m % 60);
         match self {
             Self::Hours { from_min, to_min } => format!("NY {}-{}", clock(*from_min), clock(*to_min)),
+            Self::Sessions(windows) => {
+                let parts: Vec<String> = windows.iter().map(|(a, b)| format!("{}-{}", clock(*a), clock(*b))).collect();
+                format!("NY {}", parts.join("|"))
+            }
             Self::Weekdays { mask } => {
                 let days = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
                 let on: Vec<&str> = (0..7).filter(|d| mask & (1 << d) != 0).map(|d| days[d as usize]).collect();
@@ -172,6 +184,7 @@ impl Strategy for Filtered<'_> {
         for filter in &self.filters {
             let allowed = match filter {
                 Filter::Hours { from_min, to_min } => in_window(minute, *from_min, *to_min),
+                Filter::Sessions(windows) => windows.iter().any(|(a, b)| in_window(minute, *a, *b)),
                 Filter::Weekdays { mask } => mask & (1 << weekday) != 0,
                 Filter::Flat { .. } => true,
                 Filter::VolRegime { min_ratio, max_ratio, .. } => {
