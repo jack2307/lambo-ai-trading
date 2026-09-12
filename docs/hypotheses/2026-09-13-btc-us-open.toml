@@ -1,0 +1,26 @@
+[run]
+in_sample = "btc:5m"
+out_of_sample = "btcusd:5m"
+seeds = 200
+direction_samples = 1000
+
+[[hypothesis]]
+label = "btc/eq-open-60m"
+base = "orb"
+filters = ["weekdays", "hours:1030-1300"]
+overrides = { rangeStart = 930, rangeMinutes = 60, entryUntil = 1300, maxRangeAtr = 100, pipSize = 1.0, minRangePips = 20 }
+why = "the first hour after the equity open; the null trades the same window"
+
+[[hypothesis]]
+label = "btc/eq-open-30m"
+base = "orb"
+filters = ["weekdays", "hours:1000-1300"]
+overrides = { rangeStart = 930, rangeMinutes = 30, entryUntil = 1300, maxRangeAtr = 100, pipSize = 1.0, minRangePips = 20 }
+why = "the first half hour: earlier entries, more noise"
+
+[[hypothesis]]
+label = "btc/data-0830-60m"
+base = "orb"
+filters = ["weekdays", "hours:0930-1300"]
+overrides = { rangeStart = 830, rangeMinutes = 60, entryUntil = 1300, maxRangeAtr = 100, pipSize = 1.0, minRangePips = 20 }
+why = "the range around the 08:30 US data releases, broken into the equity open"
