@@ -10,11 +10,6 @@ Closed ideas move to the bottom with a pointer to their decision record, so
 
 ## Open
 
-- [ ] **London-range breakout.** The 02:00–08:00 New York range broken in the
-  New York morning. Reason: the London session builds the range the New York
-  session resolves. Base method `orb` with `rangeStart = 0200`,
-  `rangeMinutes = 360`. *Only with the null gated to its window and a
-  disjoint out-of-sample (xauduka cut at 2025-04-10) — see the ORB record.*
 - [ ] **Previous-day high/low.** Fade the first touch of yesterday's high/low
   in the Asian session; break it in the New York session. Reason: resting
   orders sit at the prior day's extremes. NEW base (`pdhl`).
@@ -23,7 +18,14 @@ Closed ideas move to the bottom with a pointer to their decision record, so
   is where large orders are worked. Existing `vwap` indicator; NEW thin
   strategy.
 - [ ] **Asian-range breakout at London open.** Reason: the tightest range of
-  the day is broken by the first real volume. Same base as ORB.
+  the day is broken by the first real volume. Same base as ORB, but the range
+  crosses New York midnight — `orb` needs a session-day anchor first.
+- [ ] **Volatility-conditional breakout.** Reason: three unrelated break
+  methods passed only in the 24%-vol year (2025–26) and failed at 13%
+  (2022–25); if a break's travel scales with volatility and the cost does
+  not, the edge is conditional on realised vol above an *absolute* level.
+  Must be registered with that level, the null gated the same way, and
+  survive on both windows — otherwise it is the same finding renamed.
 - [ ] **ICT variant: order block instead of FVG.** Reason: the manual's own
   alternative entry zone; the chain is already ported.
 - [ ] **Options: cluster-at-level with the accumulated tape** — *blocked until
@@ -37,6 +39,13 @@ Closed ideas move to the bottom with a pointer to their decision record, so
   regenerated (2026-09-13). Records before this date ran on the filled series.
 - [x] The four unread `[trading]` keys deleted; they return with the code
   that enforces them (2026-09-13).
+- [ ] `null-dir` must apply the batch's filters (a `vol:` variant's direction
+  null was its unfiltered sibling's, byte for byte) (adversary, London pass).
+- [ ] Out-of-sample stage should also *replay* the in-sample-selected
+  parameters, not only re-fit walk-forward on the new window
+  (data-integrity, London pass).
+- [x] Dukascopy converter docstring: the CSV has no volume column; every
+  O=H=L=C bar is dropped (data-integrity, London pass).
 
 ## Closed
 
@@ -52,3 +61,6 @@ Closed ideas move to the bottom with a pointer to their decision record, so
 - [x] Opening-range breakout, New York → gate pass in-sample against a
   mis-matched null, inside the corrected one, fails four years out of sample,
   direction a coin flip. `2026-09-13-orb-ny.md`.
+- [x] London-range breakout → passes everything in-sample on 2025–26 (gated
+  null, direction null), fails the disjoint 2022–25 window; the window is a
+  volatility regime. `2026-09-13-london-range.md`.

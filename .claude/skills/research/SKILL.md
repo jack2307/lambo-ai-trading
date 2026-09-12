@@ -109,6 +109,15 @@ ever placed by anything in this repository.
 
 ## Standing rules while in this loop
 
+- **Long window first.** For gold, the primary in-sample is `xauduka:5m`
+  2022-06 → 2025-04-10 (three years, several regimes) and the confirmation is
+  `xauusd:5m` 2025-04 → 2026-09; survival is required on both. Three methods
+  passed the 2025–26 window alone and failed the long one — it is a
+  high-volatility regime, not a sample.
+- **An amendment is its own commit.** If a run is uninformative (zero trades,
+  a preset that cannot fire), fix the spec, commit `Amend <id>: <why>`, then
+  run. Never in the same commit as a result.
+
 - **The null must be matched to the window.** A method that only signals
   between 09:20 and 12:00 must be read against a control gated to
   `hours:0920-1200` (in the batch file), or the percentile measures the

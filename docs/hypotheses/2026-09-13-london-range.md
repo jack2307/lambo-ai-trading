@@ -1,7 +1,7 @@
 # 2026-09-13-london-range: the New York morning resolves the range London built
 
 **Registered:** 2026-09-13 01:30 — before any run
-**Status:** in-sample run — recorded; out-of-sample opened next
+**Status:** decided → docs/decisions/2026-09-13-london-range.md
 **Batch file:** `docs/hypotheses/2026-09-13-london-range.toml`
 
 ## Claim
@@ -66,3 +66,15 @@ Direction nulls, each on its own preset, 1000 assignments: nyam 1.246 →
 96th (p 0.042); early 1.268 → 96th (p 0.036); expansion 1.246 → 96th.
 All outside. Every in-sample condition of the falsifier is met for the first
 two rows. The out-of-sample window decides.
+
+## Out-of-sample result (xauduka:5m, 2022-06-16 → 2025-04-10, disjoint, 198,716 bars) — recorded 2026-09-13 02:05
+
+```
+hypothesis          trades  OOS PF  expect null p50 null p95   pct  verdict
+london/nyam            525   0.953  -0.018    0.890    1.073   77%  fail
+london/early           458   0.947  -0.021    0.895    1.133   66%  fail
+london/expansion       338   0.945  -0.017    0.894    1.119   66%  fail
+```
+
+Direction nulls on the out-of-sample window, per preset: nyam 0.957 → 46th;
+early 0.956 → 43rd; expansion 0.957 → 46th. Inside.

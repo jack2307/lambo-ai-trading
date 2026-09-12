@@ -12,11 +12,12 @@ caveat, recorded in the file's metadata, that it is a different venue's price.
 Timestamps are UTC milliseconds already. Volume is Dukascopy's traded-volume
 estimate, kept as-is.
 
-dukascopy-node fills the CME daily break (17:00-18:00 New York) with flat,
-zero-volume bars — open = high = low = close, volume 0. Those are not
-trades; they are dropped (data-integrity, 2026-09-13: 9,732 of them in four
-years, enough to depress an ATR). Pass `--also 5` to write a five-minute
-resample next to the minutes.
+dukascopy-node fills closed hours — weekends, holidays, the CME daily break —
+with flat bars, open = high = low = close. The m1 CSV carries no volume
+column, so the test is the flat shape alone: every such bar is dropped
+(334,406 in four years; 270,658 weekend, 48,660 in the 17:00 hour, 62
+genuine quiet minutes — data-integrity, 2026-09-13). Pass `--also=5` to
+write a five-minute resample next to the minutes.
 """
 
 from __future__ import annotations
