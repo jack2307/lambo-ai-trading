@@ -39,8 +39,7 @@ Closed ideas move to the bottom with a pointer to their decision record, so
   regenerated (2026-09-13). Records before this date ran on the filled series.
 - [x] The four unread `[trading]` keys deleted; they return with the code
   that enforces them (2026-09-13).
-- [ ] `null-dir` must apply the batch's filters (a `vol:` variant's direction
-  null was its unfiltered sibling's, byte for byte) (adversary, London pass).
+- [x] `null-dir` applies the batch's filters via `--filters=` (2026-09-13).
 - [ ] Out-of-sample stage should also *replay* the in-sample-selected
   parameters, not only re-fit walk-forward on the new window
   (data-integrity, London pass).

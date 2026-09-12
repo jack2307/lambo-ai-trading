@@ -13,6 +13,7 @@ pub mod builtin;
 pub mod filter;
 pub mod ict;
 pub mod orb;
+pub mod pdhl;
 pub mod registry;
 
 pub use registry::{

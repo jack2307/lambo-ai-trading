@@ -55,6 +55,7 @@ pub fn register_all(registry: &mut Registry) {
     // Structure-based, not indicator-based; lives in its own module.
     registry.register(Box::new(crate::ict::IctSweepMssFvg));
     registry.register(Box::new(crate::orb::OpeningRangeBreakout));
+    registry.register(Box::new(crate::pdhl::PreviousDayLevels));
 }
 
 /* ---------------- classic technical baselines ---------------- */

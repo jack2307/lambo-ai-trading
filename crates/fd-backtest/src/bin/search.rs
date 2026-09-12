@@ -371,17 +371,36 @@ fn run_direction_null(
             }
         }
     }
-    let actual = run_backtest(bars, strategy, &params, rules, timeline, Range::default());
+    // `--filters=weekdays;hours:0800-1200;vol:14/100:1.2-99` — the batch's own
+    // gates, so a filtered variant's control is its own and not its sibling's.
+    let filters: Vec<fd_strategy::filter::Filter> = match arg("filters", "")
+        .split(';')
+        .filter(|s| !s.is_empty())
+        .map(fd_strategy::filter::Filter::parse)
+        .collect::<Result<Vec<_>, _>>()
+    {
+        Ok(f) => f,
+        Err(e) => {
+            println!("{e}");
+            return;
+        }
+    };
+    let gated = fd_strategy::filter::Filtered { inner: strategy, filters: filters.clone() };
+    let actual = run_backtest(bars, &gated, &params, rules, timeline, Range::default());
     if actual.trades.is_empty() {
         println!("{id} took no trades; there is nothing to compare");
         return;
+    }
+    if !filters.is_empty() {
+        println!("  filters: {}", gated.describe());
     }
 
     let mut curve: Vec<f64> = (0..samples)
         .into_par_iter()
         .map(|seed| {
             let flipped = DirectionFlipped { inner: strategy, seed: seed as u64 + 1 };
-            run_backtest(bars, &flipped, &params, rules, timeline, Range::default())
+            let gated = fd_strategy::filter::Filtered { inner: &flipped, filters: filters.clone() };
+            run_backtest(bars, &gated, &params, rules, timeline, Range::default())
                 .metrics
                 .profit_factor
         })

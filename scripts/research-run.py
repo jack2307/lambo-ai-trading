@@ -106,8 +106,10 @@ def main() -> int:
         for h in spec["hypothesis"]:
             overrides = h.get("overrides", {})
             params = ",".join(f"{k}={v}" for k, v in overrides.items())
+            filters = ";".join(h.get("filters", []))
             slug = re.sub(r"[^A-Za-z0-9]+", "-", h["label"]).strip("-")
-            yield h["base"], slug, ([f"--params={params}"] if params else [])
+            extra = ([f"--params={params}"] if params else []) + ([f"--filters={filters}"] if filters else [])
+            yield h["base"], slug, extra
 
     if args.stage in ("in", "all"):
         market, tf = market_tf(run_cfg.get("in_sample", ""))
