@@ -118,14 +118,14 @@ pub struct TradingConfig {
     pub starting_equity_usd: f64,
     pub risk_per_trade_pct: f64,
     pub stop_atr: f64,
-    pub max_stop_atr: f64,
-    pub cluster_pad_atr: f64,
     pub reward_risk: f64,
-    pub min_reward_risk: f64,
     pub max_hold_ms: i64,
     pub lot_step: f64,
     pub min_lot: f64,
-    pub require_basis: bool,
+    // `max_stop_atr`, `cluster_pad_atr`, `min_reward_risk` and `require_basis`
+    // were here and read by nothing (risk review, 2026-09-13). They belong to
+    // the live planner the prototype had and this port does not yet; they
+    // come back when the code that enforces them does.
     pub guards: GuardsConfig,
 }
 
@@ -457,14 +457,10 @@ commission_per_lot = 0.0
 starting_equity_usd = 10000.0
 risk_per_trade_pct = 0.01
 stop_atr = 1.2
-max_stop_atr = 3.0
-cluster_pad_atr = 0.25
 reward_risk = 1.8
-min_reward_risk = 1.2
 max_hold_ms = 14400000
 lot_step = 0.01
 min_lot = 0.01
-require_basis = true
 [trading.guards]
 max_concurrent_positions = 1
 max_trades_per_day = 4

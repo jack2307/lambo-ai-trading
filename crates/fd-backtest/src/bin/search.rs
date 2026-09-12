@@ -48,9 +48,32 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let interval = arg("interval", &config.backtest.timeframe);
     let bars_path = data.join("bars").join(format!("{}-{interval}.parquet", spec.bar_symbol));
-    let bars = read_bars(&bars_path)?;
+    let mut bars = read_bars(&bars_path)?;
+    // `--from=YYYY-MM-DD --to=YYYY-MM-DD` (UTC, `to` exclusive) cut the series
+    // before anything runs: an out-of-sample feed that overlaps the in-sample
+    // one is only out of sample on the dates the in-sample feed never saw.
+    let bound = |name: &str| -> Option<i64> {
+        let text = arg(name, "");
+        if text.is_empty() {
+            return None;
+        }
+        let mut parts = text.split('-').map(|p| p.parse::<i64>());
+        let (y, m, d) = (parts.next()?.ok()?, parts.next()?.ok()?, parts.next()?.ok()?);
+        Some(fd_core::clock::days_from_civil(y, m as u32, d as u32) * 86_400_000)
+    };
+    let (from, to) = (bound("from"), bound("to"));
+    if from.is_some() || to.is_some() {
+        let before = bars.len();
+        bars.retain(|b| from.is_none_or(|f| b.time >= f) && to.is_none_or(|t| b.time < t));
+        println!(
+            "bounds:   --from={} --to={} kept {} of {before} bars",
+            arg("from", "…"),
+            arg("to", "…"),
+            bars.len()
+        );
+    }
     if bars.is_empty() {
-        println!("no bars at {} — run the backfill first", bars_path.display());
+        println!("no bars at {} (after bounds) — run the backfill first", bars_path.display());
         return Ok(());
     }
 

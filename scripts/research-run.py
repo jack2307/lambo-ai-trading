@@ -7,6 +7,8 @@ Reads the `[run]` table of the hypothesis file:
     [run]
     in_sample = "xauusd:1m"
     out_of_sample = "xauduka:1m"
+    out_of_sample_to = "2025-04-10"   # optional UTC date bounds (to is exclusive):
+    in_sample_from = "2025-04-11"     #   *_from / *_to for either stage
     seeds = 200             # matched-null runs per hypothesis
     direction_samples = 1000
 
@@ -55,6 +57,15 @@ def market_tf(spec: str) -> tuple[str, str]:
     return market, tf
 
 
+def bounds(run_cfg: dict, stage: str) -> list[str]:
+    """`--from/--to` for a stage, from `<stage>_from` / `<stage>_to`."""
+    out = []
+    for key, flag in ((f"{stage}_from", "--from"), (f"{stage}_to", "--to")):
+        if run_cfg.get(key):
+            out.append(f"{flag}={run_cfg[key]}")
+    return out
+
+
 def run(args: list[str], out_path: str) -> None:
     env = dict(os.environ)
     started = time.time()
@@ -92,14 +103,15 @@ def main() -> int:
     if args.stage in ("in", "all"):
         market, tf = market_tf(run_cfg.get("in_sample", ""))
         print(f"in-sample: {market} {tf}, {len(spec['hypothesis'])} hypotheses, {seeds} null seeds")
+        b = bounds(run_cfg, "in_sample")
         run(
-            [SEARCH, f"--market={market}", f"--interval={tf}", "--mode=hypotheses", f"--batch-file={path}", f"--seeds={seeds}"],
+            [SEARCH, f"--market={market}", f"--interval={tf}", "--mode=hypotheses", f"--batch-file={path}", f"--seeds={seeds}", *b],
             os.path.join(out_dir, "in-sample.txt"),
         )
         for base in bases:
             print(f"direction null: {base} on {market} {tf}, {direction} samples")
             run(
-                [SEARCH, f"--market={market}", f"--interval={tf}", "--mode=null-dir", f"--strategy={base}", f"--samples={direction}"],
+                [SEARCH, f"--market={market}", f"--interval={tf}", "--mode=null-dir", f"--strategy={base}", f"--samples={direction}", *b],
                 os.path.join(out_dir, f"direction-{base}.txt"),
             )
 
@@ -107,11 +119,17 @@ def main() -> int:
         if not os.path.exists(os.path.join(out_dir, "in-sample.txt")):
             sys.exit("out-of-sample refused: run the in-sample stage first and record its result")
         market, tf = market_tf(run_cfg.get("out_of_sample", ""))
-        print(f"out-of-sample: {market} {tf}")
+        b = bounds(run_cfg, "out_of_sample")
+        print(f"out-of-sample: {market} {tf} {' '.join(b)}")
         run(
-            [SEARCH, f"--market={market}", f"--interval={tf}", "--mode=hypotheses", f"--batch-file={path}", f"--seeds={seeds}"],
+            [SEARCH, f"--market={market}", f"--interval={tf}", "--mode=hypotheses", f"--batch-file={path}", f"--seeds={seeds}", *b],
             os.path.join(out_dir, "out-of-sample.txt"),
         )
+        for base in bases:
+            run(
+                [SEARCH, f"--market={market}", f"--interval={tf}", "--mode=null-dir", f"--strategy={base}", f"--samples={direction}", *b],
+                os.path.join(out_dir, f"direction-{base}-oos.txt"),
+            )
 
     # A one-line digest so the arbiter can read the verdicts without the tables.
     for name in ("in-sample.txt", "out-of-sample.txt"):

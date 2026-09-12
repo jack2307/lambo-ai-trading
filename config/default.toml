@@ -88,14 +88,13 @@ commission_per_lot = 0.0
 starting_equity_usd = 10_000.0
 risk_per_trade_pct = 0.01
 stop_atr = 1.2
-max_stop_atr = 3.0
-cluster_pad_atr = 0.25
 reward_risk = 1.8
-min_reward_risk = 1.2
 max_hold_ms = 14_400_000
 lot_step = 0.01
 min_lot = 0.01
-require_basis = true
+# max_stop_atr, cluster_pad_atr, min_reward_risk and require_basis were removed
+# on 2026-09-13: no code read them, and a limit nobody reads is an intention.
+# They return with the live planner that enforces them.
 
 [trading.guards]
 max_concurrent_positions = 1

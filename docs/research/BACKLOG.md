@@ -31,12 +31,12 @@ Closed ideas move to the bottom with a pointer to their decision record, so
 
 ## Infrastructure (found by reviews; not hypotheses)
 
-- [ ] `search --from/--to` so an out-of-sample market can be cut to dates
-  the in-sample feed does not cover (data-integrity, ORB pass).
-- [ ] `dukascopy_to_parquet.py`: drop flat-filled zero-volume bars (9,732 at
-  17:xx New York) (data-integrity, ORB pass).
-- [ ] `[trading] max_stop_atr, min_reward_risk, cluster_pad_atr,
-  require_basis` are read by no code: enforce or delete (risk, ORB pass).
+- [x] `search --from/--to` and `[run] *_from/*_to` in the runner (2026-09-13).
+- [x] `dukascopy_to_parquet.py` drops flat zero-volume bars — 334,406 of them
+  (weekends and breaks), not the 9,732 first counted; XAUDUKA-1m/5m
+  regenerated (2026-09-13). Records before this date ran on the filled series.
+- [x] The four unread `[trading]` keys deleted; they return with the code
+  that enforces them (2026-09-13).
 
 ## Closed
 
