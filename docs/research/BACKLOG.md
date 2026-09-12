@@ -31,9 +31,9 @@ Closed ideas move to the bottom with a pointer to their decision record, so
 - [x] The four unread `[trading]` keys deleted; they return with the code
   that enforces them (2026-09-13).
 - [x] `null-dir` applies the batch's filters via `--filters=` (2026-09-13).
-- [ ] Out-of-sample stage should also *replay* the in-sample-selected
-  parameters, not only re-fit walk-forward on the new window
-  (data-integrity, London pass).
+- [x] Out-of-sample stage also replays the registered parameters with no
+  re-selection (`search --mode=hypotheses --fixed`, receipt
+  `out-of-sample-fixed.txt`) (2026-09-13).
 - [x] Dukascopy converter docstring: the CSV has no volume column; every
   O=H=L=C bar is dropped (data-integrity, London pass).
 

@@ -17,6 +17,7 @@ and writes to docs/research/runs/<id>/:
     in-sample.txt        search --mode=hypotheses --batch-file=... on the in-sample market
     direction-<base>.txt search --mode=null-dir for each distinct base method (in-sample)
     out-of-sample.txt    the same batch on the out-of-sample market  (--stage oos or all)
+    out-of-sample-fixed.txt  the registered parameters replayed there, no re-selection
 
 The out-of-sample stage refuses to run until in-sample.txt exists: the order
 is the discipline. Nothing here decides anything; it runs the machinery and
@@ -141,6 +142,11 @@ def main() -> int:
                 [SEARCH, f"--market={market}", f"--interval={tf}", "--mode=null-dir", f"--strategy={base}", f"--samples={direction}", *preset, *b],
                 os.path.join(out_dir, f"direction-{slug}-oos.txt"),
             )
+        # The replay: registered parameters, no re-selection on the new window.
+        run(
+            [SEARCH, f"--market={market}", f"--interval={tf}", "--mode=hypotheses", "--fixed", f"--batch-file={path}", f"--seeds={seeds}", *b],
+            os.path.join(out_dir, "out-of-sample-fixed.txt"),
+        )
 
     # A one-line digest so the arbiter can read the verdicts without the tables.
     for name in ("in-sample.txt", "out-of-sample.txt"):

@@ -25,7 +25,7 @@ use std::path::PathBuf;
 use fd_backtest::engine::{Range, TradingRules, run_backtest};
 use fd_strategy::registry::Strategy as _;
 use fd_backtest::sweep::{SelectBy, compare_strategies, sweep_strategy, verdict, walk_forward};
-use fd_backtest::hypotheses::{batch as hypothesis_batch, batch_from_file, run_hypothesis};
+use fd_backtest::hypotheses::{batch as hypothesis_batch, batch_from_file, run_hypothesis, run_hypothesis_fixed};
 use fd_backtest::timeline::{TimelineOptions, build_timeline};
 use fd_backtest::{OptionsTimeline, PromisingGate};
 use fd_core::config::Config;
@@ -126,6 +126,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             arg("seeds", "200").parse().unwrap_or(200),
             &arg("batch", "gold-intraday"),
             arg("batch-file", "").as_str(),
+            std::env::args().any(|a| a == "--fixed"),
         );
     }
     if mode == "null" {
@@ -705,6 +706,7 @@ fn run_hypotheses(
     seeds: usize,
     batch_name: &str,
     batch_file: &str,
+    fixed: bool,
 ) {
     let (batch, shown) = if batch_file.is_empty() {
         match hypothesis_batch(batch_name) {
@@ -723,7 +725,11 @@ fn run_hypotheses(
             }
         }
     };
-    println!("== hypotheses `{shown}`: {} declared, walk-forward ({folds} folds), each against {seeds} matched null runs ==", batch.len());
+    if fixed {
+        println!("== hypotheses `{shown}`: {} declared, FIXED parameters over the whole window (no selection), each against {seeds} matched null runs ==", batch.len());
+    } else {
+        println!("== hypotheses `{shown}`: {} declared, walk-forward ({folds} folds), each against {seeds} matched null runs ==", batch.len());
+    }
     println!("swap: long {:.2} / short {:.2} USD per lot per night; spread {:.2}", rules.swap_long_per_lot, rules.swap_short_per_lot, rules.spread);
     println!();
     println!(
@@ -732,7 +738,12 @@ fn run_hypotheses(
     );
     let mut survivors = Vec::new();
     for hypothesis in &batch {
-        let report = match run_hypothesis(registry, hypothesis, bars, rules, folds, select_by, min_trades_per_cell, gate, seeds) {
+        let outcome = if fixed {
+            run_hypothesis_fixed(registry, hypothesis, bars, rules, gate, seeds).map(Some)
+        } else {
+            run_hypothesis(registry, hypothesis, bars, rules, folds, select_by, min_trades_per_cell, gate, seeds)
+        };
+        let report = match outcome {
             Ok(Some(report)) => report,
             Ok(None) => {
                 println!("{:<12} {:<18} not enough bars", hypothesis.label, hypothesis.base);

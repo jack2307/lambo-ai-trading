@@ -117,3 +117,10 @@ survives on *both* windows. Not another window on this one.
   it does not generalise, and the project cannot trade a year that has ended.
 - It does not say Dukascopy and Vantage disagree: they correlate 0.983 where
   they overlap.
+
+## Addendum — fixed-parameter replay on the out-of-sample window
+
+Data-integrity noted the out-of-sample receipt was a walk-forward re-fit on
+the new window. Replayed with the registered parameters and no selection
+(`--fixed`, 200 fixed nulls): nyam 0.957 (648 trades, 87th), early 0.956
+(557, 84th), expansion 0.955 (430, 78th). Same answer, stricter test.

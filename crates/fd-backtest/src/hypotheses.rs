@@ -319,6 +319,61 @@ pub fn preset_params(base: &dyn Strategy, overrides: &[(String, f64)]) -> Result
     Ok(defaults)
 }
 
+/// The hypothesis at its registered parameters over the whole window — no
+/// folds, no selection — against a null that gets none either.
+///
+/// A walk-forward on an out-of-sample window re-selects parameters on that
+/// window's own training folds, which is a more generous test than replaying
+/// what was registered. This is the replay. `percentile` is against
+/// `seeds` random-entry runs wrapped in the same filters, each at the
+/// control's defaults with a different seed.
+#[allow(clippy::too_many_arguments)]
+pub fn run_hypothesis_fixed(
+    registry: &Registry,
+    hypothesis: &Hypothesis,
+    bars: &[Bar],
+    rules: &TradingRules,
+    gate: &PromisingGate,
+    seeds: usize,
+) -> Result<HypothesisReport, String> {
+    use crate::engine::{Range, run_backtest};
+    let base = registry.get(&hypothesis.base).map_err(|e| e.to_string())?;
+    let preset = Preset { inner: base, defaults: preset_params(base, &hypothesis.overrides)? };
+    let filtered = Filtered { inner: &preset, filters: hypothesis.filters.clone() };
+    let result = run_backtest(bars, &filtered, &preset.defaults, rules, None, Range::default());
+
+    let mut null_pf: Vec<f64> = (0..seeds)
+        .into_par_iter()
+        .filter_map(|seed| {
+            let control = SeededControl { seed: seed as f64 + 1.0 };
+            let matched = Filtered { inner: &control, filters: hypothesis.filters.clone() };
+            let pf = run_backtest(bars, &matched, &control.default_params(), rules, None, Range::default())
+                .metrics
+                .profit_factor;
+            pf.is_finite().then_some(pf)
+        })
+        .collect();
+    null_pf.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+
+    let pf = result.metrics.profit_factor;
+    let percentile = if null_pf.is_empty() || !pf.is_finite() {
+        f64::NAN
+    } else {
+        100.0 * null_pf.iter().filter(|v| **v < pf).count() as f64 / null_pf.len() as f64
+    };
+    Ok(HypothesisReport {
+        label: hypothesis.label.clone(),
+        base: hypothesis.base.clone(),
+        filters: filtered.describe(),
+        why: hypothesis.why.clone(),
+        verdict: verdict(&result.metrics, gate),
+        swap_usd: result.trades.iter().map(|t| t.swap_usd).sum(),
+        oos: result.metrics,
+        null_pf,
+        percentile,
+    })
+}
+
 /// Walk the hypothesis forward and its matched null `seeds` times.
 #[allow(clippy::too_many_arguments)]
 pub fn run_hypothesis(
