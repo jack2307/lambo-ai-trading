@@ -120,7 +120,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let bars_dir = PathBuf::from(arg("bars", "../../nodejs/gold-options-flow/data/bars"));
     let out = PathBuf::from(arg("out", "data"));
 
-    for market in ["gold", "btc"] {
+    // `--market=gold` to redo one market; a re-migration after the tape's
+    // stamps change must not touch a store the collector has been filling.
+    let markets = arg("market", "gold,btc");
+    for market in markets.split(',').map(str::trim).filter(|m| !m.is_empty()) {
         let path = golden.join(format!("{market}-tape.json"));
         if !path.exists() {
             println!("{market}: no tape at {} — skipped", path.display());

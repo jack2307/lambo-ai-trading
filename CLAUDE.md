@@ -36,6 +36,19 @@ numbers before moving on, and `tests/golden/` holds what it published.
   inside the null distribution (`search --mode=null`, `--mode=null-dir`).
 - The Deribit public endpoint reaches back about a day. History not captured
   as it happens is gone; `fd-ingest --bin collect` is what captures it.
+- The OTL feed (gold tape and GC bars) renders times in the account's zone,
+  **UTC+7**, including the `+00:00`-suffixed expirations. Both the oracle and
+  the port read it that way until 2026-09-12; now `[sources.reference]
+  utc_offset_hours = 7` (and `reference.utcOffsetHours` in the oracle) is
+  subtracted at parse time. Do not remove it because a zone marker says UTC;
+  re-run the shift scan in `docs/decisions/2026-09-12-otl-timestamps.md` if
+  the feed or the account changes.
+- MT5 returns bar times on the **broker's clock** (Vantage: UTC+3 in NY
+  summer, UTC+2 in winter), and any request larger than the terminal's "Max
+  bars in chart" fails with `Invalid params` instead of truncating. The
+  exporter handles both; do not call the terminal directly.
+- The MT5 terminal on this machine is a **live** account. Read-only calls
+  only (`copy_rates_*`, `symbol_info`); no order function is ever imported.
 
 ## Toolchain
 
@@ -51,6 +64,8 @@ anything here; the workspace is portable and runs unchanged on Linux.
 fd-api --port=8138                       # API; the UI proxies here
 cd ui && npx vite --port=5180            # UI at http://localhost:5180 (IPv6 bind)
 fd-ingest --bin collect --market=btc     # accumulate the options tape
+python py/ingest/mt5_export.py           # Vantage XAUUSD/BTCUSD bars -> data/bars (read-only)
 fd-backtest --bin search --market=btc    # compare / sweep / wf / costs / null
+fd-backtest --bin search --market=xauusd # same, on the broker's own gold bars
 scripts/api-parity.py                    # prove the browser cannot tell backends apart
 ```

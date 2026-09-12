@@ -1,9 +1,9 @@
 {
   "bars": {
     "count": 449,
-    "from": 1788758100000,
+    "from": 1788732900000,
     "synthetic": false,
-    "to": 1789184700000
+    "to": 1789159500000
   },
   "config": {
     "backtest": {
@@ -104,9 +104,9 @@
       "OGV6",
       "OGX6"
     ],
-    "from": 1788757760000,
+    "from": 1788732560000,
     "prints": 11770,
-    "to": 1789185599000
+    "to": 1789160399000
   },
   "timeframe": "15m",
   "toleranceDecimals": 9

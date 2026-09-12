@@ -4,119 +4,119 @@
       "equityCurve": [
         {
           "equity": 10137.28,
-          "time": 1788792300000
+          "time": 1788767100000
         },
         {
           "equity": 10328.08,
-          "time": 1788801300000
+          "time": 1788776100000
         },
         {
           "equity": 10422.68,
-          "time": 1788829200000
+          "time": 1788804000000
         },
         {
           "equity": 10320.5,
-          "time": 1788856200000
+          "time": 1788831000000
         },
         {
           "equity": 10218.76,
-          "time": 1788873300000
+          "time": 1788848100000
         },
         {
           "equity": 10125.19,
-          "time": 1788879600000
+          "time": 1788854400000
         },
         {
           "equity": 10171.52,
-          "time": 1788899400000
+          "time": 1788874200000
         },
         {
           "equity": 10259.16,
-          "time": 1788912000000
+          "time": 1788886800000
         },
         {
           "equity": 10158.1,
-          "time": 1788918300000
+          "time": 1788893100000
         },
         {
           "equity": 10062.84,
-          "time": 1788921000000
+          "time": 1788895800000
         },
         {
           "equity": 9972.12,
-          "time": 1788925500000
+          "time": 1788900300000
         },
         {
           "equity": 9877.55,
-          "time": 1788955200000
+          "time": 1788930000000
         },
         {
           "equity": 9782.06,
-          "time": 1788958800000
+          "time": 1788933600000
         },
         {
           "equity": 9686.36,
-          "time": 1788965100000
+          "time": 1788939900000
         },
         {
           "equity": 9588.43,
-          "time": 1788984900000
+          "time": 1788959700000
         },
         {
           "equity": 9901.08,
-          "time": 1788991200000
+          "time": 1788966000000
         },
         {
           "equity": 9963.08,
-          "time": 1789040700000
+          "time": 1789015500000
         },
         {
           "equity": 10112.43,
-          "time": 1789046100000
+          "time": 1789020900000
         },
         {
           "equity": 10011.07,
-          "time": 1789061400000
+          "time": 1789036200000
         },
         {
           "equity": 9909.69,
-          "time": 1789068600000
+          "time": 1789043400000
         },
         {
           "equity": 10051.29,
-          "time": 1789080300000
+          "time": 1789055100000
         },
         {
           "equity": 9955.29,
-          "time": 1789092000000
+          "time": 1789066800000
         },
         {
           "equity": 9909.79,
-          "time": 1789108200000
+          "time": 1789083000000
         },
         {
           "equity": 9989.04,
-          "time": 1789114500000
+          "time": 1789089300000
         },
         {
           "equity": 10087.24,
-          "time": 1789124400000
+          "time": 1789099200000
         },
         {
           "equity": 10212.84,
-          "time": 1789143300000
+          "time": 1789118100000
         },
         {
           "equity": 10115.92,
-          "time": 1789153200000
+          "time": 1789128000000
         },
         {
           "equity": 9837.52,
-          "time": 1789155000000
+          "time": 1789129800000
         },
         {
           "equity": 9965.52,
-          "time": 1789168500000
+          "time": 1789143300000
         }
       ],
       "metrics": {
@@ -154,10 +154,10 @@
         {
           "direction": "LONG",
           "entryPrice": 4438.25,
-          "entryTime": 1788786000000,
+          "entryTime": 1788760800000,
           "exitPrice": 4450.73,
           "exitReason": "TARGET",
-          "exitTime": 1788792300000,
+          "exitTime": 1788767100000,
           "holdMs": 6300000,
           "lots": 0.11,
           "mae": -0.6468,
@@ -171,10 +171,10 @@
         {
           "direction": "SHORT",
           "entryPrice": 4464.75,
-          "entryTime": 1788794100000,
+          "entryTime": 1788768900000,
           "exitPrice": 4448.85,
           "exitReason": "middle band reached",
-          "exitTime": 1788801300000,
+          "exitTime": 1788776100000,
           "holdMs": 7200000,
           "lots": 0.12,
           "mae": -0.5719,
@@ -188,10 +188,10 @@
         {
           "direction": "SHORT",
           "entryPrice": 4461.85,
-          "entryTime": 1788818400000,
+          "entryTime": 1788793200000,
           "exitPrice": 4453.25,
           "exitReason": "middle band reached",
-          "exitTime": 1788829200000,
+          "exitTime": 1788804000000,
           "holdMs": 10800000,
           "lots": 0.11,
           "mae": -0.1102,
@@ -205,10 +205,10 @@
         {
           "direction": "SHORT",
           "entryPrice": 4470.95,
-          "entryTime": 1788849900000,
+          "entryTime": 1788824700000,
           "exitPrice": 4481.17,
           "exitReason": "STOP",
-          "exitTime": 1788856200000,
+          "exitTime": 1788831000000,
           "holdMs": 6300000,
           "lots": 0.1,
           "mae": -0.9982,
@@ -222,10 +222,10 @@
         {
           "direction": "LONG",
           "entryPrice": 4453.25,
-          "entryTime": 1788873300000,
+          "entryTime": 1788848100000,
           "exitPrice": 4445.42,
           "exitReason": "STOP",
-          "exitTime": 1788873300000,
+          "exitTime": 1788848100000,
           "holdMs": 0,
           "lots": 0.13,
           "mae": 0,
@@ -239,10 +239,10 @@
         {
           "direction": "LONG",
           "entryPrice": 4445.05,
-          "entryTime": 1788874200000,
+          "entryTime": 1788849000000,
           "exitPrice": 4433.35,
           "exitReason": "STOP",
-          "exitTime": 1788879600000,
+          "exitTime": 1788854400000,
           "holdMs": 5400000,
           "lots": 0.08,
           "mae": -0.8531,
@@ -256,10 +256,10 @@
         {
           "direction": "SHORT",
           "entryPrice": 4451.95,
-          "entryTime": 1788897600000,
+          "entryTime": 1788872400000,
           "exitPrice": 4442.68,
           "exitReason": "TARGET",
-          "exitTime": 1788899400000,
+          "exitTime": 1788874200000,
           "holdMs": 1800000,
           "lots": 0.05,
           "mae": -0.1259,
@@ -273,10 +273,10 @@
         {
           "direction": "LONG",
           "entryPrice": 4431.35,
-          "entryTime": 1788909300000,
+          "entryTime": 1788884100000,
           "exitPrice": 4443.87,
           "exitReason": "TARGET",
-          "exitTime": 1788912000000,
+          "exitTime": 1788886800000,
           "holdMs": 2700000,
           "lots": 0.07,
           "mae": -0.1155,
@@ -290,10 +290,10 @@
         {
           "direction": "LONG",
           "entryPrice": 4430.15,
-          "entryTime": 1788914700000,
+          "entryTime": 1788889500000,
           "exitPrice": 4417.52,
           "exitReason": "STOP",
-          "exitTime": 1788918300000,
+          "exitTime": 1788893100000,
           "holdMs": 3600000,
           "lots": 0.08,
           "mae": -0.2924,
@@ -307,10 +307,10 @@
         {
           "direction": "LONG",
           "entryPrice": 4416.95,
-          "entryTime": 1788919200000,
+          "entryTime": 1788894000000,
           "exitPrice": 4407.42,
           "exitReason": "STOP",
-          "exitTime": 1788921000000,
+          "exitTime": 1788895800000,
           "holdMs": 1800000,
           "lots": 0.1,
           "mae": -0.5813,
@@ -324,10 +324,10 @@
         {
           "direction": "LONG",
           "entryPrice": 4407.45,
-          "entryTime": 1788922800000,
+          "entryTime": 1788897600000,
           "exitPrice": 4392.33,
           "exitReason": "STOP",
-          "exitTime": 1788925500000,
+          "exitTime": 1788900300000,
           "holdMs": 2700000,
           "lots": 0.06,
           "mae": -0.4375,
@@ -341,10 +341,10 @@
         {
           "direction": "SHORT",
           "entryPrice": 4416.65,
-          "entryTime": 1788942600000,
+          "entryTime": 1788917400000,
           "exitPrice": 4427.16,
           "exitReason": "STOP",
-          "exitTime": 1788955200000,
+          "exitTime": 1788930000000,
           "holdMs": 12600000,
           "lots": 0.09,
           "mae": -0.9316,
@@ -358,10 +358,10 @@
         {
           "direction": "SHORT",
           "entryPrice": 4438.85,
-          "entryTime": 1788957900000,
+          "entryTime": 1788932700000,
           "exitPrice": 4448.4,
           "exitReason": "STOP",
-          "exitTime": 1788958800000,
+          "exitTime": 1788933600000,
           "holdMs": 900000,
           "lots": 0.1,
           "mae": -0.4841,
@@ -375,10 +375,10 @@
         {
           "direction": "SHORT",
           "entryPrice": 4445.85,
-          "entryTime": 1788959700000,
+          "entryTime": 1788934500000,
           "exitPrice": 4454.55,
           "exitReason": "STOP",
-          "exitTime": 1788965100000,
+          "exitTime": 1788939900000,
           "holdMs": 5400000,
           "lots": 0.11,
           "mae": -0.9557,
@@ -392,10 +392,10 @@
         {
           "direction": "SHORT",
           "entryPrice": 4456.95,
-          "entryTime": 1788984900000,
+          "entryTime": 1788959700000,
           "exitPrice": 4467.83,
           "exitReason": "STOP",
-          "exitTime": 1788984900000,
+          "exitTime": 1788959700000,
           "holdMs": 0,
           "lots": 0.09,
           "mae": 0,
@@ -409,10 +409,10 @@
         {
           "direction": "SHORT",
           "entryPrice": 4476.45,
-          "entryTime": 1788985800000,
+          "entryTime": 1788960600000,
           "exitPrice": 4445.19,
           "exitReason": "TARGET",
-          "exitTime": 1788991200000,
+          "exitTime": 1788966000000,
           "holdMs": 5400000,
           "lots": 0.1,
           "mae": -0.0497,
@@ -426,10 +426,10 @@
         {
           "direction": "SHORT",
           "entryPrice": 4456.35,
-          "entryTime": 1789028100000,
+          "entryTime": 1789002900000,
           "exitPrice": 4450.15,
           "exitReason": "middle band reached",
-          "exitTime": 1789040700000,
+          "exitTime": 1789015500000,
           "holdMs": 12600000,
           "lots": 0.1,
           "mae": -0.8372,
@@ -443,10 +443,10 @@
         {
           "direction": "SHORT",
           "entryPrice": 4471.35,
-          "entryTime": 1789044300000,
+          "entryTime": 1789019100000,
           "exitPrice": 4456.42,
           "exitReason": "TARGET",
-          "exitTime": 1789046100000,
+          "exitTime": 1789020900000,
           "holdMs": 1800000,
           "lots": 0.1,
           "mae": -0.4087,
@@ -460,10 +460,10 @@
         {
           "direction": "LONG",
           "entryPrice": 4436.65,
-          "entryTime": 1789055100000,
+          "entryTime": 1789029900000,
           "exitPrice": 4428.2,
           "exitReason": "STOP",
-          "exitTime": 1789061400000,
+          "exitTime": 1789036200000,
           "holdMs": 6300000,
           "lots": 0.12,
           "mae": -0.6208,
@@ -477,10 +477,10 @@
         {
           "direction": "LONG",
           "entryPrice": 4402.15,
-          "entryTime": 1789068600000,
+          "entryTime": 1789043400000,
           "exitPrice": 4395.39,
           "exitReason": "STOP",
-          "exitTime": 1789068600000,
+          "exitTime": 1789043400000,
           "holdMs": 0,
           "lots": 0.15,
           "mae": 0,
@@ -494,10 +494,10 @@
         {
           "direction": "LONG",
           "entryPrice": 4382.85,
-          "entryTime": 1789069500000,
+          "entryTime": 1789044300000,
           "exitPrice": 4406.45,
           "exitReason": "middle band reached",
-          "exitTime": 1789080300000,
+          "exitTime": 1789055100000,
           "holdMs": 10800000,
           "lots": 0.06,
           "mae": -0.2048,
@@ -511,10 +511,10 @@
         {
           "direction": "LONG",
           "entryPrice": 4383.65,
-          "entryTime": 1789089300000,
+          "entryTime": 1789064100000,
           "exitPrice": 4367.65,
           "exitReason": "STOP",
-          "exitTime": 1789092000000,
+          "exitTime": 1789066800000,
           "holdMs": 2700000,
           "lots": 0.06,
           "mae": -0.7112,
@@ -528,10 +528,10 @@
         {
           "direction": "LONG",
           "entryPrice": 4362.75,
-          "entryTime": 1789092900000,
+          "entryTime": 1789067700000,
           "exitPrice": 4356.25,
           "exitReason": "TIMEOUT",
-          "exitTime": 1789108200000,
+          "exitTime": 1789083000000,
           "holdMs": 15300000,
           "lots": 0.07,
           "mae": -0.5214,
@@ -545,10 +545,10 @@
         {
           "direction": "SHORT",
           "entryPrice": 4370.75,
-          "entryTime": 1789113600000,
+          "entryTime": 1789088400000,
           "exitPrice": 4361.95,
           "exitReason": "TARGET",
-          "exitTime": 1789114500000,
+          "exitTime": 1789089300000,
           "holdMs": 900000,
           "lots": 0.09,
           "mae": -0.8567,
@@ -562,10 +562,10 @@
         {
           "direction": "LONG",
           "entryPrice": 4350.35,
-          "entryTime": 1789122600000,
+          "entryTime": 1789097400000,
           "exitPrice": 4362.63,
           "exitReason": "TARGET",
-          "exitTime": 1789124400000,
+          "exitTime": 1789099200000,
           "holdMs": 1800000,
           "lots": 0.08,
           "mae": -0.6392,
@@ -579,10 +579,10 @@
         {
           "direction": "SHORT",
           "entryPrice": 4400.25,
-          "entryTime": 1789132500000,
+          "entryTime": 1789107300000,
           "exitPrice": 4384.55,
           "exitReason": "middle band reached",
-          "exitTime": 1789143300000,
+          "exitTime": 1789118100000,
           "holdMs": 10800000,
           "lots": 0.08,
           "mae": -0.0122,
@@ -596,10 +596,10 @@
         {
           "direction": "LONG",
           "entryPrice": 4382.25,
-          "entryTime": 1789149600000,
+          "entryTime": 1789124400000,
           "exitPrice": 4370.14,
           "exitReason": "STOP",
-          "exitTime": 1789153200000,
+          "exitTime": 1789128000000,
           "holdMs": 3600000,
           "lots": 0.08,
           "mae": -0.7898,
@@ -613,10 +613,10 @@
         {
           "direction": "LONG",
           "entryPrice": 4372.25,
-          "entryTime": 1789154100000,
+          "entryTime": 1789128900000,
           "exitPrice": 4337.45,
           "exitReason": "STOP",
-          "exitTime": 1789155000000,
+          "exitTime": 1789129800000,
           "holdMs": 900000,
           "lots": 0.08,
           "mae": -0.1086,
@@ -630,10 +630,10 @@
         {
           "direction": "SHORT",
           "entryPrice": 4429.55,
-          "entryTime": 1789156800000,
+          "entryTime": 1789131600000,
           "exitPrice": 4403.95,
           "exitReason": "middle band reached",
-          "exitTime": 1789168500000,
+          "exitTime": 1789143300000,
           "holdMs": 11700000,
           "lots": 0.05,
           "mae": -0.7448,
@@ -651,7 +651,7 @@
       "equityCurve": [
         {
           "equity": 9256.4,
-          "time": 1789184700000
+          "time": 1789159500000
         }
       ],
       "metrics": {
@@ -681,10 +681,10 @@
         {
           "direction": "LONG",
           "entryPrice": 4457.45,
-          "entryTime": 1788770700000,
+          "entryTime": 1788745500000,
           "exitPrice": 4389.85,
           "exitReason": "END_OF_DATA",
-          "exitTime": 1789184700000,
+          "exitTime": 1789159500000,
           "holdMs": 414000000,
           "lots": 0.11,
           "mae": -13.2536,
@@ -702,103 +702,103 @@
       "equityCurve": [
         {
           "equity": 9909.88,
-          "time": 1788792300000
+          "time": 1788767100000
         },
         {
           "equity": 9827.38,
-          "time": 1788801300000
+          "time": 1788776100000
         },
         {
           "equity": 9737.76,
-          "time": 1788811200000
+          "time": 1788786000000
         },
         {
           "equity": 9684.56,
-          "time": 1788830100000
+          "time": 1788804900000
         },
         {
           "equity": 9590.64,
-          "time": 1788850800000
+          "time": 1788825600000
         },
         {
           "equity": 9502.22,
-          "time": 1788860700000
+          "time": 1788835500000
         },
         {
           "equity": 9559.72,
-          "time": 1788888600000
+          "time": 1788863400000
         },
         {
           "equity": 9464.99,
-          "time": 1788899400000
+          "time": 1788874200000
         },
         {
           "equity": 9606.99,
-          "time": 1788924600000
+          "time": 1788899400000
         },
         {
           "equity": 9591.39,
-          "time": 1788940800000
+          "time": 1788915600000
         },
         {
           "equity": 9717.39,
-          "time": 1788957900000
+          "time": 1788932700000
         },
         {
           "equity": 9667.69,
-          "time": 1788973200000
+          "time": 1788948000000
         },
         {
           "equity": 9579.95,
-          "time": 1788985800000
+          "time": 1788960600000
         },
         {
           "equity": 9474.35,
-          "time": 1789027200000
+          "time": 1789002000000
         },
         {
           "equity": 9576.55,
-          "time": 1789043400000
+          "time": 1789018200000
         },
         {
           "equity": 9477.85,
-          "time": 1789046100000
+          "time": 1789020900000
         },
         {
           "equity": 9622.41,
-          "time": 1789067700000
+          "time": 1789042500000
         },
         {
           "equity": 9576.91,
-          "time": 1789074000000
+          "time": 1789048800000
         },
         {
           "equity": 9709.91,
-          "time": 1789104600000
+          "time": 1789079400000
         },
         {
           "equity": 9612.21,
-          "time": 1789111800000
+          "time": 1789086600000
         },
         {
           "equity": 9542.61,
-          "time": 1789125300000
+          "time": 1789100100000
         },
         {
           "equity": 9576.21,
-          "time": 1789146000000
+          "time": 1789120800000
         },
         {
           "equity": 9488.44,
-          "time": 1789155000000
+          "time": 1789129800000
         },
         {
           "equity": 9415.28,
-          "time": 1789164000000
+          "time": 1789138800000
         },
         {
           "equity": 9416.78,
-          "time": 1789184700000
+          "time": 1789159500000
         }
       ],
       "metrics": {
@@ -837,10 +837,10 @@
         {
           "direction": "SHORT",
           "entryPrice": 4439.05,
-          "entryTime": 1788786900000,
+          "entryTime": 1788761700000,
           "exitPrice": 4451.92,
           "exitReason": "STOP",
-          "exitTime": 1788792300000,
+          "exitTime": 1788767100000,
           "holdMs": 5400000,
           "lots": 0.07,
           "mae": -0.6562,
@@ -854,10 +854,10 @@
         {
           "direction": "LONG",
           "entryPrice": 4465.05,
-          "entryTime": 1788794100000,
+          "entryTime": 1788768900000,
           "exitPrice": 4448.55,
           "exitReason": "lost the channel midline",
-          "exitTime": 1788801300000,
+          "exitTime": 1788776100000,
           "holdMs": 7200000,
           "lots": 0.05,
           "mae": -0.9553,
@@ -871,10 +871,10 @@
         {
           "direction": "SHORT",
           "entryPrice": 4432.45,
-          "entryTime": 1788805800000,
+          "entryTime": 1788780600000,
           "exitPrice": 4447.39,
           "exitReason": "STOP",
-          "exitTime": 1788811200000,
+          "exitTime": 1788786000000,
           "holdMs": 5400000,
           "lots": 0.06,
           "mae": -0.6864,
@@ -888,10 +888,10 @@
         {
           "direction": "LONG",
           "entryPrice": 4458.45,
-          "entryTime": 1788817500000,
+          "entryTime": 1788792300000,
           "exitPrice": 4450.85,
           "exitReason": "lost the channel midline",
-          "exitTime": 1788830100000,
+          "exitTime": 1788804900000,
           "holdMs": 12600000,
           "lots": 0.07,
           "mae": -0.5925,
@@ -905,10 +905,10 @@
         {
           "direction": "LONG",
           "entryPrice": 4471.25,
-          "entryTime": 1788849900000,
+          "entryTime": 1788824700000,
           "exitPrice": 4464.03,
           "exitReason": "STOP",
-          "exitTime": 1788850800000,
+          "exitTime": 1788825600000,
           "holdMs": 900000,
           "lots": 0.13,
           "mae": -0.6573,
@@ -922,10 +922,10 @@
         {
           "direction": "LONG",
           "entryPrice": 4479.35,
-          "entryTime": 1788856200000,
+          "entryTime": 1788831000000,
           "exitPrice": 4466.72,
           "exitReason": "STOP",
-          "exitTime": 1788860700000,
+          "exitTime": 1788835500000,
           "holdMs": 4500000,
           "lots": 0.07,
           "mae": -0.9975,
@@ -939,10 +939,10 @@
         {
           "direction": "SHORT",
           "entryPrice": 4452.95,
-          "entryTime": 1788873300000,
+          "entryTime": 1788848100000,
           "exitPrice": 4441.45,
           "exitReason": "TIMEOUT",
-          "exitTime": 1788888600000,
+          "exitTime": 1788863400000,
           "holdMs": 15300000,
           "lots": 0.05,
           "mae": -0.0308,
@@ -956,10 +956,10 @@
         {
           "direction": "LONG",
           "entryPrice": 4452.25,
-          "entryTime": 1788897600000,
+          "entryTime": 1788872400000,
           "exitPrice": 4438.72,
           "exitReason": "STOP",
-          "exitTime": 1788899400000,
+          "exitTime": 1788874200000,
           "holdMs": 1800000,
           "lots": 0.07,
           "mae": -0.5642,
@@ -973,10 +973,10 @@
         {
           "direction": "SHORT",
           "entryPrice": 4431.05,
-          "entryTime": 1788909300000,
+          "entryTime": 1788884100000,
           "exitPrice": 4402.65,
           "exitReason": "TIMEOUT",
-          "exitTime": 1788924600000,
+          "exitTime": 1788899400000,
           "holdMs": 15300000,
           "lots": 0.05,
           "mae": -0.8119,
@@ -990,10 +990,10 @@
         {
           "direction": "SHORT",
           "entryPrice": 4401.05,
-          "entryTime": 1788930000000,
+          "entryTime": 1788904800000,
           "exitPrice": 4403.65,
           "exitReason": "reclaimed the channel midline",
-          "exitTime": 1788940800000,
+          "exitTime": 1788915600000,
           "holdMs": 10800000,
           "lots": 0.06,
           "mae": -0.5578,
@@ -1007,10 +1007,10 @@
         {
           "direction": "LONG",
           "entryPrice": 4416.95,
-          "entryTime": 1788942600000,
+          "entryTime": 1788917400000,
           "exitPrice": 4442.15,
           "exitReason": "TIMEOUT",
-          "exitTime": 1788957900000,
+          "exitTime": 1788932700000,
           "holdMs": 15300000,
           "lots": 0.05,
           "mae": -0.3386,
@@ -1024,10 +1024,10 @@
         {
           "direction": "LONG",
           "entryPrice": 4442.05,
-          "entryTime": 1788958800000,
+          "entryTime": 1788933600000,
           "exitPrice": 4434.95,
           "exitReason": "lost the channel midline",
-          "exitTime": 1788973200000,
+          "exitTime": 1788948000000,
           "holdMs": 14400000,
           "lots": 0.07,
           "mae": -0.7409,
@@ -1041,10 +1041,10 @@
         {
           "direction": "LONG",
           "entryPrice": 4476.75,
-          "entryTime": 1788985800000,
+          "entryTime": 1788960600000,
           "exitPrice": 4459.2,
           "exitReason": "STOP",
-          "exitTime": 1788985800000,
+          "exitTime": 1788960600000,
           "holdMs": 0,
           "lots": 0.05,
           "mae": 0,
@@ -1058,10 +1058,10 @@
         {
           "direction": "SHORT",
           "entryPrice": 4438.15,
-          "entryTime": 1789022700000,
+          "entryTime": 1788997500000,
           "exitPrice": 4451.35,
           "exitReason": "reclaimed the channel midline",
-          "exitTime": 1789027200000,
+          "exitTime": 1789002000000,
           "holdMs": 4500000,
           "lots": 0.08,
           "mae": -0.8945,
@@ -1075,10 +1075,10 @@
         {
           "direction": "LONG",
           "entryPrice": 4456.65,
-          "entryTime": 1789028100000,
+          "entryTime": 1789002900000,
           "exitPrice": 4471.25,
           "exitReason": "TIMEOUT",
-          "exitTime": 1789043400000,
+          "exitTime": 1789018200000,
           "holdMs": 15300000,
           "lots": 0.07,
           "mae": -0.5893,
@@ -1092,10 +1092,10 @@
         {
           "direction": "LONG",
           "entryPrice": 4471.65,
-          "entryTime": 1789044300000,
+          "entryTime": 1789019100000,
           "exitPrice": 4457.55,
           "exitReason": "lost the channel midline",
-          "exitTime": 1789046100000,
+          "exitTime": 1789020900000,
           "holdMs": 1800000,
           "lots": 0.07,
           "mae": -0.9463,
@@ -1109,10 +1109,10 @@
         {
           "direction": "SHORT",
           "entryPrice": 4436.35,
-          "entryTime": 1789055100000,
+          "entryTime": 1789029900000,
           "exitPrice": 4407.44,
           "exitReason": "TARGET",
-          "exitTime": 1789067700000,
+          "exitTime": 1789042500000,
           "holdMs": 12600000,
           "lots": 0.05,
           "mae": -0.3995,
@@ -1126,10 +1126,10 @@
         {
           "direction": "SHORT",
           "entryPrice": 4401.85,
-          "entryTime": 1789068600000,
+          "entryTime": 1789043400000,
           "exitPrice": 4410.95,
           "exitReason": "reclaimed the channel midline",
-          "exitTime": 1789074000000,
+          "exitTime": 1789048800000,
           "holdMs": 5400000,
           "lots": 0.05,
           "mae": -0.7422,
@@ -1143,10 +1143,10 @@
         {
           "direction": "SHORT",
           "entryPrice": 4383.35,
-          "entryTime": 1789089300000,
+          "entryTime": 1789064100000,
           "exitPrice": 4356.75,
           "exitReason": "TIMEOUT",
-          "exitTime": 1789104600000,
+          "exitTime": 1789079400000,
           "holdMs": 15300000,
           "lots": 0.05,
           "mae": -0.163,
@@ -1160,10 +1160,10 @@
         {
           "direction": "SHORT",
           "entryPrice": 4358.95,
-          "entryTime": 1789110000000,
+          "entryTime": 1789084800000,
           "exitPrice": 4366.47,
           "exitReason": "STOP",
-          "exitTime": 1789111800000,
+          "exitTime": 1789086600000,
           "holdMs": 1800000,
           "lots": 0.13,
           "mae": -0.7128,
@@ -1177,10 +1177,10 @@
         {
           "direction": "SHORT",
           "entryPrice": 4350.05,
-          "entryTime": 1789122600000,
+          "entryTime": 1789097400000,
           "exitPrice": 4361.65,
           "exitReason": "reclaimed the channel midline",
-          "exitTime": 1789125300000,
+          "exitTime": 1789100100000,
           "holdMs": 2700000,
           "lots": 0.06,
           "mae": -0.935,
@@ -1194,10 +1194,10 @@
         {
           "direction": "LONG",
           "entryPrice": 4382.35,
-          "entryTime": 1789130700000,
+          "entryTime": 1789105500000,
           "exitPrice": 4387.95,
           "exitReason": "TIMEOUT",
-          "exitTime": 1789146000000,
+          "exitTime": 1789120800000,
           "holdMs": 15300000,
           "lots": 0.06,
           "mae": -0.0099,
@@ -1211,10 +1211,10 @@
         {
           "direction": "SHORT",
           "entryPrice": 4381.95,
-          "entryTime": 1789149600000,
+          "entryTime": 1789124400000,
           "exitPrice": 4391.7,
           "exitReason": "STOP",
-          "exitTime": 1789155000000,
+          "exitTime": 1789129800000,
           "holdMs": 5400000,
           "lots": 0.09,
           "mae": -0.2239,
@@ -1228,10 +1228,10 @@
         {
           "direction": "LONG",
           "entryPrice": 4429.85,
-          "entryTime": 1789156800000,
+          "entryTime": 1789131600000,
           "exitPrice": 4405.46,
           "exitReason": "STOP",
-          "exitTime": 1789164000000,
+          "exitTime": 1789138800000,
           "holdMs": 7200000,
           "lots": 0.03,
           "mae": -0.9056,
@@ -1245,10 +1245,10 @@
         {
           "direction": "SHORT",
           "entryPrice": 4390.45,
-          "entryTime": 1789175700000,
+          "entryTime": 1789150500000,
           "exitPrice": 4390.15,
           "exitReason": "END_OF_DATA",
-          "exitTime": 1789184700000,
+          "exitTime": 1789159500000,
           "holdMs": 9000000,
           "lots": 0.05,
           "mae": -0.2434,
@@ -1266,43 +1266,43 @@
       "equityCurve": [
         {
           "equity": 9903.25,
-          "time": 1788829200000
+          "time": 1788804000000
         },
         {
           "equity": 9863.25,
-          "time": 1788893100000
+          "time": 1788867900000
         },
         {
           "equity": 9770.76,
-          "time": 1788973200000
+          "time": 1788948000000
         },
         {
           "equity": 9672.06,
-          "time": 1789026300000
+          "time": 1789001100000
         },
         {
           "equity": 9843.67,
-          "time": 1789043400000
+          "time": 1789018200000
         },
         {
           "equity": 10018.71,
-          "time": 1789065900000
+          "time": 1789040700000
         },
         {
           "equity": 9917.83,
-          "time": 1789151400000
+          "time": 1789126200000
         },
         {
           "equity": 9821.78,
-          "time": 1789154100000
+          "time": 1789128900000
         },
         {
           "equity": 9978.6,
-          "time": 1789159500000
+          "time": 1789134300000
         },
         {
           "equity": 9969.6,
-          "time": 1789184700000
+          "time": 1789159500000
         }
       ],
       "metrics": {
@@ -1340,10 +1340,10 @@
         {
           "direction": "LONG",
           "entryPrice": 4459.55,
-          "entryTime": 1788823800000,
+          "entryTime": 1788798600000,
           "exitPrice": 4452.11,
           "exitReason": "STOP",
-          "exitTime": 1788829200000,
+          "exitTime": 1788804000000,
           "holdMs": 5400000,
           "lots": 0.13,
           "mae": -0.9256,
@@ -1357,10 +1357,10 @@
         {
           "direction": "SHORT",
           "entryPrice": 4447.05,
-          "entryTime": 1788877800000,
+          "entryTime": 1788852600000,
           "exitPrice": 4451.05,
           "exitReason": "TIMEOUT",
-          "exitTime": 1788893100000,
+          "exitTime": 1788867900000,
           "holdMs": 15300000,
           "lots": 0.1,
           "mae": -0.5415,
@@ -1374,10 +1374,10 @@
         {
           "direction": "LONG",
           "entryPrice": 4442.05,
-          "entryTime": 1788958800000,
+          "entryTime": 1788933600000,
           "exitPrice": 4432.8,
           "exitReason": "STOP",
-          "exitTime": 1788973200000,
+          "exitTime": 1788948000000,
           "holdMs": 14400000,
           "lots": 0.1,
           "mae": -0.9946,
@@ -1391,10 +1391,10 @@
         {
           "direction": "SHORT",
           "entryPrice": 4435.55,
-          "entryTime": 1789023600000,
+          "entryTime": 1788998400000,
           "exitPrice": 4445.42,
           "exitReason": "STOP",
-          "exitTime": 1789026300000,
+          "exitTime": 1789001100000,
           "holdMs": 2700000,
           "lots": 0.1,
           "mae": -0.9311,
@@ -1408,10 +1408,10 @@
         {
           "direction": "LONG",
           "entryPrice": 4451.45,
-          "entryTime": 1789029000000,
+          "entryTime": 1789003800000,
           "exitPrice": 4464.65,
           "exitReason": "TARGET",
-          "exitTime": 1789043400000,
+          "exitTime": 1789018200000,
           "holdMs": 14400000,
           "lots": 0.13,
           "mae": -0.3438,
@@ -1425,10 +1425,10 @@
         {
           "direction": "SHORT",
           "entryPrice": 4436.45,
-          "entryTime": 1789056900000,
+          "entryTime": 1789031700000,
           "exitPrice": 4417,
           "exitReason": "TARGET",
-          "exitTime": 1789065900000,
+          "exitTime": 1789040700000,
           "holdMs": 9000000,
           "lots": 0.09,
           "mae": -0.5832,
@@ -1442,10 +1442,10 @@
         {
           "direction": "LONG",
           "entryPrice": 4387.95,
-          "entryTime": 1789138800000,
+          "entryTime": 1789113600000,
           "exitPrice": 4375.34,
           "exitReason": "STOP",
-          "exitTime": 1789151400000,
+          "exitTime": 1789126200000,
           "holdMs": 12600000,
           "lots": 0.08,
           "mae": -0.8306,
@@ -1459,10 +1459,10 @@
         {
           "direction": "SHORT",
           "entryPrice": 4371.95,
-          "entryTime": 1789154100000,
+          "entryTime": 1789128900000,
           "exitPrice": 4378.81,
           "exitReason": "STOP",
-          "exitTime": 1789154100000,
+          "exitTime": 1789128900000,
           "holdMs": 0,
           "lots": 0.14,
           "mae": 0,
@@ -1476,10 +1476,10 @@
         {
           "direction": "LONG",
           "entryPrice": 4401.35,
-          "entryTime": 1789155900000,
+          "entryTime": 1789130700000,
           "exitPrice": 4440.55,
           "exitReason": "TARGET",
-          "exitTime": 1789159500000,
+          "exitTime": 1789134300000,
           "holdMs": 3600000,
           "lots": 0.04,
           "mae": -0.0069,
@@ -1493,10 +1493,10 @@
         {
           "direction": "SHORT",
           "entryPrice": 4389.25,
-          "entryTime": 1789184700000,
+          "entryTime": 1789159500000,
           "exitPrice": 4390.15,
           "exitReason": "END_OF_DATA",
-          "exitTime": 1789184700000,
+          "exitTime": 1789159500000,
           "holdMs": 0,
           "lots": 0.1,
           "mae": -0.1716,
@@ -1514,35 +1514,35 @@
       "equityCurve": [
         {
           "equity": 10174.5,
-          "time": 1788925500000
+          "time": 1788900300000
         },
         {
           "equity": 10345,
-          "time": 1788930900000
+          "time": 1788905700000
         },
         {
           "equity": 10234.07,
-          "time": 1789040700000
+          "time": 1789015500000
         },
         {
           "equity": 10410.5,
-          "time": 1789041600000
+          "time": 1789016400000
         },
         {
           "equity": 10590.25,
-          "time": 1789054200000
+          "time": 1789029000000
         },
         {
           "equity": 10485.36,
-          "time": 1789064100000
+          "time": 1789038900000
         },
         {
           "equity": 10361.86,
-          "time": 1789078500000
+          "time": 1789053300000
         },
         {
           "equity": 10258.13,
-          "time": 1789169400000
+          "time": 1789144200000
         }
       ],
       "metrics": {
@@ -1580,10 +1580,10 @@
         {
           "direction": "SHORT",
           "entryPrice": 4416.65,
-          "entryTime": 1788919200000,
+          "entryTime": 1788894000000,
           "exitPrice": 4397.26,
           "exitReason": "TARGET",
-          "exitTime": 1788925500000,
+          "exitTime": 1788900300000,
           "holdMs": 6300000,
           "lots": 0.09,
           "mae": -0.2994,
@@ -1597,10 +1597,10 @@
         {
           "direction": "SHORT",
           "entryPrice": 4400.75,
-          "entryTime": 1788930900000,
+          "entryTime": 1788905700000,
           "exitPrice": 4398.31,
           "exitReason": "TARGET",
-          "exitTime": 1788930900000,
+          "exitTime": 1788905700000,
           "holdMs": 0,
           "lots": 0.7,
           "mae": 0,
@@ -1614,10 +1614,10 @@
         {
           "direction": "SHORT",
           "entryPrice": 4449.85,
-          "entryTime": 1789040700000,
+          "entryTime": 1789015500000,
           "exitPrice": 4451.87,
           "exitReason": "STOP",
-          "exitTime": 1789040700000,
+          "exitTime": 1789015500000,
           "holdMs": 0,
           "lots": 0.55,
           "mae": 0,
@@ -1631,10 +1631,10 @@
         {
           "direction": "LONG",
           "entryPrice": 4452.85,
-          "entryTime": 1789041600000,
+          "entryTime": 1789016400000,
           "exitPrice": 4460.87,
           "exitReason": "TARGET",
-          "exitTime": 1789041600000,
+          "exitTime": 1789016400000,
           "holdMs": 0,
           "lots": 0.22,
           "mae": 0,
@@ -1648,10 +1648,10 @@
         {
           "direction": "SHORT",
           "entryPrice": 4448.45,
-          "entryTime": 1789053300000,
+          "entryTime": 1789028100000,
           "exitPrice": 4442.03,
           "exitReason": "TARGET",
-          "exitTime": 1789054200000,
+          "exitTime": 1789029000000,
           "holdMs": 900000,
           "lots": 0.28,
           "mae": -0.4247,
@@ -1665,10 +1665,10 @@
         {
           "direction": "SHORT",
           "entryPrice": 4421.95,
-          "entryTime": 1789063200000,
+          "entryTime": 1789038000000,
           "exitPrice": 4427.19,
           "exitReason": "STOP",
-          "exitTime": 1789064100000,
+          "exitTime": 1789038900000,
           "holdMs": 900000,
           "lots": 0.2,
           "mae": -0.8342,
@@ -1682,10 +1682,10 @@
         {
           "direction": "SHORT",
           "entryPrice": 4397.95,
-          "entryTime": 1789076700000,
+          "entryTime": 1789051500000,
           "exitPrice": 4404.45,
           "exitReason": "STOP",
-          "exitTime": 1789078500000,
+          "exitTime": 1789053300000,
           "holdMs": 1800000,
           "lots": 0.19,
           "mae": -0.9728,
@@ -1699,10 +1699,10 @@
         {
           "direction": "SHORT",
           "entryPrice": 4398.05,
-          "entryTime": 1789169400000,
+          "entryTime": 1789144200000,
           "exitPrice": 4403.51,
           "exitReason": "STOP",
-          "exitTime": 1789169400000,
+          "exitTime": 1789144200000,
           "holdMs": 0,
           "lots": 0.19,
           "mae": 0,
@@ -1720,7 +1720,7 @@
       "equityCurve": [
         {
           "equity": 9902.25,
-          "time": 1788829200000
+          "time": 1788804000000
         }
       ],
       "metrics": {
@@ -1755,10 +1755,10 @@
         {
           "direction": "LONG",
           "entryPrice": 4459.65,
-          "entryTime": 1788822000000,
+          "entryTime": 1788796800000,
           "exitPrice": 4452.13,
           "exitReason": "STOP",
-          "exitTime": 1788829200000,
+          "exitTime": 1788804000000,
           "holdMs": 7200000,
           "lots": 0.13,
           "mae": -0.9295,
@@ -1776,87 +1776,87 @@
       "equityCurve": [
         {
           "equity": 9905.02,
-          "time": 1788877800000
+          "time": 1788852600000
         },
         {
           "equity": 9813.03,
-          "time": 1788892200000
+          "time": 1788867000000
         },
         {
           "equity": 9987.53,
-          "time": 1788925500000
+          "time": 1788900300000
         },
         {
           "equity": 9886.51,
-          "time": 1788930000000
+          "time": 1788904800000
         },
         {
           "equity": 10052.14,
-          "time": 1788930900000
+          "time": 1788905700000
         },
         {
           "equity": 9947.4,
-          "time": 1788935400000
+          "time": 1788910200000
         },
         {
           "equity": 9845.38,
-          "time": 1788939900000
+          "time": 1788914700000
         },
         {
           "equity": 9748.71,
-          "time": 1788955200000
+          "time": 1788930000000
         },
         {
           "equity": 9919.6,
-          "time": 1789038000000
+          "time": 1789012800000
         },
         {
           "equity": 9812.7,
-          "time": 1789040700000
+          "time": 1789015500000
         },
         {
           "equity": 9981.11,
-          "time": 1789041600000
+          "time": 1789016400000
         },
         {
           "equity": 9878.1,
-          "time": 1789050600000
+          "time": 1789025400000
         },
         {
           "equity": 10051.43,
-          "time": 1789054200000
+          "time": 1789029000000
         },
         {
           "equity": 9954.54,
-          "time": 1789065900000
+          "time": 1789040700000
         },
         {
           "equity": 9856.94,
-          "time": 1789072200000
+          "time": 1789047000000
         },
         {
           "equity": 9761.11,
-          "time": 1789077600000
+          "time": 1789052400000
         },
         {
           "equity": 9666.94,
-          "time": 1789087500000
+          "time": 1789062300000
         },
         {
           "equity": 9832.22,
-          "time": 1789132500000
+          "time": 1789107300000
         },
         {
           "equity": 9741.2,
-          "time": 1789168500000
+          "time": 1789143300000
         },
         {
           "equity": 9642.93,
-          "time": 1789169400000
+          "time": 1789144200000
         },
         {
           "equity": 9543.52,
-          "time": 1789174800000
+          "time": 1789149600000
         }
       ],
       "metrics": {
@@ -1892,10 +1892,10 @@
         {
           "direction": "LONG",
           "entryPrice": 4451.15,
-          "entryTime": 1788875100000,
+          "entryTime": 1788849900000,
           "exitPrice": 4437.58,
           "exitReason": "STOP",
-          "exitTime": 1788877800000,
+          "exitTime": 1788852600000,
           "holdMs": 2700000,
           "lots": 0.07,
           "mae": -0.3763,
@@ -1909,10 +1909,10 @@
         {
           "direction": "SHORT",
           "entryPrice": 4440.85,
-          "entryTime": 1788878700000,
+          "entryTime": 1788853500000,
           "exitPrice": 4452.35,
           "exitReason": "STOP",
-          "exitTime": 1788892200000,
+          "exitTime": 1788867000000,
           "holdMs": 13500000,
           "lots": 0.08,
           "mae": -0.771,
@@ -1926,10 +1926,10 @@
         {
           "direction": "SHORT",
           "entryPrice": 4416.65,
-          "entryTime": 1788919200000,
+          "entryTime": 1788894000000,
           "exitPrice": 4397.26,
           "exitReason": "TARGET",
-          "exitTime": 1788925500000,
+          "exitTime": 1788900300000,
           "holdMs": 6300000,
           "lots": 0.09,
           "mae": -0.2994,
@@ -1943,10 +1943,10 @@
         {
           "direction": "LONG",
           "entryPrice": 4401.35,
-          "entryTime": 1788930000000,
+          "entryTime": 1788904800000,
           "exitPrice": 4397.61,
           "exitReason": "STOP",
-          "exitTime": 1788930000000,
+          "exitTime": 1788904800000,
           "holdMs": 0,
           "lots": 0.27,
           "mae": 0,
@@ -1960,10 +1960,10 @@
         {
           "direction": "SHORT",
           "entryPrice": 4400.75,
-          "entryTime": 1788930900000,
+          "entryTime": 1788905700000,
           "exitPrice": 4398.31,
           "exitReason": "TARGET",
-          "exitTime": 1788930900000,
+          "exitTime": 1788905700000,
           "holdMs": 0,
           "lots": 0.68,
           "mae": 0,
@@ -1977,10 +1977,10 @@
         {
           "direction": "SHORT",
           "entryPrice": 4398.65,
-          "entryTime": 1788931800000,
+          "entryTime": 1788906600000,
           "exitPrice": 4402.26,
           "exitReason": "STOP",
-          "exitTime": 1788935400000,
+          "exitTime": 1788910200000,
           "holdMs": 3600000,
           "lots": 0.29,
           "mae": -0.6788,
@@ -1994,10 +1994,10 @@
         {
           "direction": "SHORT",
           "entryPrice": 4399.05,
-          "entryTime": 1788939900000,
+          "entryTime": 1788914700000,
           "exitPrice": 4402.14,
           "exitReason": "STOP",
-          "exitTime": 1788939900000,
+          "exitTime": 1788914700000,
           "holdMs": 0,
           "lots": 0.33,
           "mae": 0,
@@ -2011,10 +2011,10 @@
         {
           "direction": "SHORT",
           "entryPrice": 4416.65,
-          "entryTime": 1788942600000,
+          "entryTime": 1788917400000,
           "exitPrice": 4427.39,
           "exitReason": "STOP",
-          "exitTime": 1788955200000,
+          "exitTime": 1788930000000,
           "holdMs": 12600000,
           "lots": 0.09,
           "mae": -0.9111,
@@ -2028,10 +2028,10 @@
         {
           "direction": "LONG",
           "entryPrice": 4451.55,
-          "entryTime": 1789037100000,
+          "entryTime": 1789011900000,
           "exitPrice": 4457.44,
           "exitReason": "TARGET",
-          "exitTime": 1789038000000,
+          "exitTime": 1789012800000,
           "holdMs": 900000,
           "lots": 0.29,
           "mae": -0.3724,
@@ -2045,10 +2045,10 @@
         {
           "direction": "SHORT",
           "entryPrice": 4449.85,
-          "entryTime": 1789040700000,
+          "entryTime": 1789015500000,
           "exitPrice": 4451.87,
           "exitReason": "STOP",
-          "exitTime": 1789040700000,
+          "exitTime": 1789015500000,
           "holdMs": 0,
           "lots": 0.53,
           "mae": 0,
@@ -2062,10 +2062,10 @@
         {
           "direction": "LONG",
           "entryPrice": 4452.85,
-          "entryTime": 1789041600000,
+          "entryTime": 1789016400000,
           "exitPrice": 4460.87,
           "exitReason": "TARGET",
-          "exitTime": 1789041600000,
+          "exitTime": 1789016400000,
           "holdMs": 0,
           "lots": 0.21,
           "mae": 0,
@@ -2079,10 +2079,10 @@
         {
           "direction": "LONG",
           "entryPrice": 4452.15,
-          "entryTime": 1789050600000,
+          "entryTime": 1789025400000,
           "exitPrice": 4447.67,
           "exitReason": "STOP",
-          "exitTime": 1789050600000,
+          "exitTime": 1789025400000,
           "holdMs": 0,
           "lots": 0.23,
           "mae": 0,
@@ -2096,10 +2096,10 @@
         {
           "direction": "SHORT",
           "entryPrice": 4448.45,
-          "entryTime": 1789053300000,
+          "entryTime": 1789028100000,
           "exitPrice": 4442.03,
           "exitReason": "TARGET",
-          "exitTime": 1789054200000,
+          "exitTime": 1789029000000,
           "holdMs": 900000,
           "lots": 0.27,
           "mae": -0.4247,
@@ -2113,10 +2113,10 @@
         {
           "direction": "LONG",
           "entryPrice": 4426.65,
-          "entryTime": 1789062300000,
+          "entryTime": 1789037100000,
           "exitPrice": 4417.84,
           "exitReason": "STOP",
-          "exitTime": 1789065900000,
+          "exitTime": 1789040700000,
           "holdMs": 3600000,
           "lots": 0.11,
           "mae": -0.8374,
@@ -2130,10 +2130,10 @@
         {
           "direction": "SHORT",
           "entryPrice": 4397.85,
-          "entryTime": 1789072200000,
+          "entryTime": 1789047000000,
           "exitPrice": 4403.27,
           "exitReason": "STOP",
-          "exitTime": 1789072200000,
+          "exitTime": 1789047000000,
           "holdMs": 0,
           "lots": 0.18,
           "mae": 0,
@@ -2147,10 +2147,10 @@
         {
           "direction": "LONG",
           "entryPrice": 4404.55,
-          "entryTime": 1789074900000,
+          "entryTime": 1789049700000,
           "exitPrice": 4396.56,
           "exitReason": "STOP",
-          "exitTime": 1789077600000,
+          "exitTime": 1789052400000,
           "holdMs": 2700000,
           "lots": 0.12,
           "mae": -0.9762,
@@ -2164,10 +2164,10 @@
         {
           "direction": "LONG",
           "entryPrice": 4404.45,
-          "entryTime": 1789078500000,
+          "entryTime": 1789053300000,
           "exitPrice": 4396.6,
           "exitReason": "STOP",
-          "exitTime": 1789087500000,
+          "exitTime": 1789062300000,
           "holdMs": 9000000,
           "lots": 0.12,
           "mae": -0.9418,
@@ -2181,10 +2181,10 @@
         {
           "direction": "SHORT",
           "entryPrice": 4400.25,
-          "entryTime": 1789132500000,
+          "entryTime": 1789107300000,
           "exitPrice": 4396.31,
           "exitReason": "TARGET",
-          "exitTime": 1789132500000,
+          "exitTime": 1789107300000,
           "holdMs": 0,
           "lots": 0.42,
           "mae": 0,
@@ -2198,10 +2198,10 @@
         {
           "direction": "LONG",
           "entryPrice": 4406.25,
-          "entryTime": 1789164900000,
+          "entryTime": 1789139700000,
           "exitPrice": 4396.14,
           "exitReason": "STOP",
-          "exitTime": 1789168500000,
+          "exitTime": 1789143300000,
           "holdMs": 3600000,
           "lots": 0.09,
           "mae": -0.3262,
@@ -2215,10 +2215,10 @@
         {
           "direction": "SHORT",
           "entryPrice": 4398.05,
-          "entryTime": 1789169400000,
+          "entryTime": 1789144200000,
           "exitPrice": 4403.51,
           "exitReason": "STOP",
-          "exitTime": 1789169400000,
+          "exitTime": 1789144200000,
           "holdMs": 0,
           "lots": 0.18,
           "mae": 0,
@@ -2232,10 +2232,10 @@
         {
           "direction": "LONG",
           "entryPrice": 4400.05,
-          "entryTime": 1789174800000,
+          "entryTime": 1789149600000,
           "exitPrice": 4397.04,
           "exitReason": "STOP",
-          "exitTime": 1789174800000,
+          "exitTime": 1789149600000,
           "holdMs": 0,
           "lots": 0.33,
           "mae": 0,
@@ -2253,7 +2253,7 @@
       "equityCurve": [
         {
           "equity": 10048,
-          "time": 1789184700000
+          "time": 1789159500000
         }
       ],
       "metrics": {
@@ -2288,10 +2288,10 @@
         {
           "direction": "SHORT",
           "entryPrice": 4399.75,
-          "entryTime": 1789174800000,
+          "entryTime": 1789149600000,
           "exitPrice": 4390.15,
           "exitReason": "END_OF_DATA",
-          "exitTime": 1789184700000,
+          "exitTime": 1789159500000,
           "holdMs": 9900000,
           "lots": 0.05,
           "mae": -0.1352,
@@ -2309,59 +2309,59 @@
       "equityCurve": [
         {
           "equity": 9903.26,
-          "time": 1788855300000
+          "time": 1788830100000
         },
         {
           "equity": 9811.94,
-          "time": 1788862500000
+          "time": 1788837300000
         },
         {
           "equity": 9900.14,
-          "time": 1788894000000
+          "time": 1788868800000
         },
         {
           "equity": 9798.44,
-          "time": 1788937200000
+          "time": 1788912000000
         },
         {
           "equity": 9834.44,
-          "time": 1788940800000
+          "time": 1788915600000
         },
         {
           "equity": 9736.43,
-          "time": 1788963300000
+          "time": 1788938100000
         },
         {
           "equity": 9898.09,
-          "time": 1788972300000
+          "time": 1788947100000
         },
         {
           "equity": 10058.04,
-          "time": 1788991200000
+          "time": 1788966000000
         },
         {
           "equity": 9961.04,
-          "time": 1789066800000
+          "time": 1789041600000
         },
         {
           "equity": 9932.34,
-          "time": 1789087500000
+          "time": 1789062300000
         },
         {
           "equity": 9841.75,
-          "time": 1789109100000
+          "time": 1789083900000
         },
         {
           "equity": 9947.75,
-          "time": 1789113600000
+          "time": 1789088400000
         },
         {
           "equity": 10031.75,
-          "time": 1789148700000
+          "time": 1789123500000
         },
         {
           "equity": 10139.75,
-          "time": 1789168500000
+          "time": 1789143300000
         }
       ],
       "metrics": {
@@ -2401,10 +2401,10 @@
         {
           "direction": "SHORT",
           "entryPrice": 4466.75,
-          "entryTime": 1788850800000,
+          "entryTime": 1788825600000,
           "exitPrice": 4476.42,
           "exitReason": "STOP",
-          "exitTime": 1788855300000,
+          "exitTime": 1788830100000,
           "holdMs": 4500000,
           "lots": 0.1,
           "mae": -0.8872,
@@ -2418,10 +2418,10 @@
         {
           "direction": "SHORT",
           "entryPrice": 4471.85,
-          "entryTime": 1788858900000,
+          "entryTime": 1788833700000,
           "exitPrice": 4483.26,
           "exitReason": "STOP",
-          "exitTime": 1788862500000,
+          "exitTime": 1788837300000,
           "holdMs": 3600000,
           "lots": 0.08,
           "mae": -0.3773,
@@ -2435,10 +2435,10 @@
         {
           "direction": "LONG",
           "entryPrice": 4438.75,
-          "entryTime": 1788881400000,
+          "entryTime": 1788856200000,
           "exitPrice": 4448.55,
           "exitReason": "RSI back to midline",
-          "exitTime": 1788894000000,
+          "exitTime": 1788868800000,
           "holdMs": 12600000,
           "lots": 0.09,
           "mae": -0.2729,
@@ -2452,10 +2452,10 @@
         {
           "direction": "LONG",
           "entryPrice": 4401.65,
-          "entryTime": 1788935400000,
+          "entryTime": 1788910200000,
           "exitPrice": 4390.35,
           "exitReason": "STOP",
-          "exitTime": 1788937200000,
+          "exitTime": 1788912000000,
           "holdMs": 1800000,
           "lots": 0.09,
           "mae": -0.8548,
@@ -2469,10 +2469,10 @@
         {
           "direction": "LONG",
           "entryPrice": 4399.35,
-          "entryTime": 1788939900000,
+          "entryTime": 1788914700000,
           "exitPrice": 4403.35,
           "exitReason": "RSI back to midline",
-          "exitTime": 1788940800000,
+          "exitTime": 1788915600000,
           "holdMs": 900000,
           "lots": 0.09,
           "mae": -0.2359,
@@ -2486,10 +2486,10 @@
         {
           "direction": "SHORT",
           "entryPrice": 4441.45,
-          "entryTime": 1788960600000,
+          "entryTime": 1788935400000,
           "exitPrice": 4451.25,
           "exitReason": "STOP",
-          "exitTime": 1788963300000,
+          "exitTime": 1788938100000,
           "holdMs": 2700000,
           "lots": 0.1,
           "mae": -0.8963,
@@ -2503,10 +2503,10 @@
         {
           "direction": "SHORT",
           "entryPrice": 4447.85,
-          "entryTime": 1788966900000,
+          "entryTime": 1788941700000,
           "exitPrice": 4433.15,
           "exitReason": "TARGET",
-          "exitTime": 1788972300000,
+          "exitTime": 1788947100000,
           "holdMs": 5400000,
           "lots": 0.11,
           "mae": -0.0182,
@@ -2520,10 +2520,10 @@
         {
           "direction": "SHORT",
           "entryPrice": 4460.95,
-          "entryTime": 1788986700000,
+          "entryTime": 1788961500000,
           "exitPrice": 4438.1,
           "exitReason": "TARGET",
-          "exitTime": 1788991200000,
+          "exitTime": 1788966000000,
           "holdMs": 4500000,
           "lots": 0.07,
           "mae": -0.763,
@@ -2537,10 +2537,10 @@
         {
           "direction": "LONG",
           "entryPrice": 4426.05,
-          "entryTime": 1789064100000,
+          "entryTime": 1789038900000,
           "exitPrice": 4415.27,
           "exitReason": "STOP",
-          "exitTime": 1789066800000,
+          "exitTime": 1789041600000,
           "holdMs": 2700000,
           "lots": 0.09,
           "mae": -0.8798,
@@ -2554,10 +2554,10 @@
         {
           "direction": "LONG",
           "entryPrice": 4398.15,
-          "entryTime": 1789072200000,
+          "entryTime": 1789047000000,
           "exitPrice": 4394.05,
           "exitReason": "TIMEOUT",
-          "exitTime": 1789087500000,
+          "exitTime": 1789062300000,
           "holdMs": 15300000,
           "lots": 0.07,
           "mae": -0.1801,
@@ -2571,10 +2571,10 @@
         {
           "direction": "LONG",
           "entryPrice": 4367.05,
-          "entryTime": 1789093800000,
+          "entryTime": 1789068600000,
           "exitPrice": 4354.11,
           "exitReason": "STOP",
-          "exitTime": 1789109100000,
+          "exitTime": 1789083900000,
           "holdMs": 15300000,
           "lots": 0.07,
           "mae": -0.9264,
@@ -2588,10 +2588,10 @@
         {
           "direction": "LONG",
           "entryPrice": 4360.15,
-          "entryTime": 1789110900000,
+          "entryTime": 1789085700000,
           "exitPrice": 4370.75,
           "exitReason": "RSI back to midline",
-          "exitTime": 1789113600000,
+          "exitTime": 1789088400000,
           "holdMs": 2700000,
           "lots": 0.1,
           "mae": -0.2111,
@@ -2605,10 +2605,10 @@
         {
           "direction": "SHORT",
           "entryPrice": 4391.55,
-          "entryTime": 1789133400000,
+          "entryTime": 1789108200000,
           "exitPrice": 4379.55,
           "exitReason": "TIMEOUT",
-          "exitTime": 1789148700000,
+          "exitTime": 1789123500000,
           "holdMs": 15300000,
           "lots": 0.07,
           "mae": -0.4639,
@@ -2622,10 +2622,10 @@
         {
           "direction": "SHORT",
           "entryPrice": 4425.55,
-          "entryTime": 1789161300000,
+          "entryTime": 1789136100000,
           "exitPrice": 4403.95,
           "exitReason": "RSI back to midline",
-          "exitTime": 1789168500000,
+          "exitTime": 1789143300000,
           "holdMs": 7200000,
           "lots": 0.05,
           "mae": -0.0756,

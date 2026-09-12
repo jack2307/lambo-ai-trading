@@ -218,6 +218,18 @@ pub struct SourceConfig {
     #[serde(default)]
     pub ws_url: Option<String>,
     pub min_delay_ms: u64,
+    /// Hours the source's clock runs ahead of UTC. Zero for exchanges that
+    /// stamp in UTC; the OTL feed renders times in the account's local zone.
+    #[serde(default)]
+    pub utc_offset_hours: f64,
+}
+
+impl SourceConfig {
+    /// The clock offset in milliseconds, the unit every timestamp is in.
+    #[must_use]
+    pub fn utc_offset_ms(&self) -> i64 {
+        (self.utc_offset_hours * 3_600_000.0).round() as i64
+    }
 }
 
 /// Per-market override block from `[markets.<id>]`.

@@ -153,6 +153,9 @@ async fn backfill_deribit(
 async fn backfill_gold(out: &std::path::Path, days: i64) -> Result<(), Box<dyn std::error::Error>> {
     let base = std::env::var("OTL_BASE_URL").unwrap_or_else(|_| "https://live.otldata.com".to_string());
     let client = OtlClient::new(&base, Duration::from_millis(1500));
+    // The feed's clock is not UTC; the offset is measured and lives in config.
+    let config = fd_core::config::Config::load(arg("config", "config"))?;
+    let utc_offset_ms = config.sources.get("reference").map_or(0, |s| s.utc_offset_ms());
     let store = TapeStore::open(out, "gold")?;
 
     let contracts = client.active_contracts().await?;
@@ -164,7 +167,8 @@ async fn backfill_gold(out: &std::path::Path, days: i64) -> Result<(), Box<dyn s
     let mut total = 0usize;
     for contract in &contracts {
         let chart = client.chart_data(&contract.symbol, hours, 1).await?;
-        let trades = trades_from_chart_data(&chart, &contract.symbol, contract.expiration.as_deref());
+        let trades =
+            trades_from_chart_data(&chart, &contract.symbol, contract.expiration.as_deref(), utc_offset_ms);
         if trades.is_empty() {
             println!("  {}: nothing", contract.symbol);
             continue;

@@ -82,11 +82,14 @@ impl OtlClient {
     }
 }
 
-/// Milliseconds from the feed's several time spellings.
+/// Milliseconds from the feed's several time spellings, **on the feed's own
+/// clock**. Callers subtract the configured offset; see [`trades_from_chart_data`].
 ///
-/// A bare number may be seconds or milliseconds; `2026-09-07 05:12:37` is UTC
-/// with no zone marker, which is the spelling most likely to be read an hour
-/// out by a naive parser.
+/// A bare number may be seconds or milliseconds; `2026-09-07 05:12:37` has no
+/// zone marker and is read as if it were UTC — it is not, and neither is the
+/// `+00:00` the feed puts on expirations. The feed renders in the account's
+/// local zone (UTC+7 here), which is why the offset is applied afterwards to
+/// every spelling alike rather than trusting any marker.
 #[must_use]
 pub fn to_ms(value: &Value) -> Option<i64> {
     match value {
@@ -94,15 +97,18 @@ pub fn to_ms(value: &Value) -> Option<i64> {
             let v = n.as_f64()?;
             Some(if v > 1e12 { v as i64 } else { (v * 1000.0) as i64 })
         }
-        Value::String(s) => parse_utc(s),
+        Value::String(s) => parse_naive(s),
         _ => None,
     }
 }
 
-/// `YYYY-MM-DD[ T]HH:MM:SS[.fff][Z]`, always read as UTC.
-fn parse_utc(text: &str) -> Option<i64> {
+/// `YYYY-MM-DD[ T]HH:MM:SS[.fff][Z|+hh:mm]`, read as UTC and ignoring any zone
+/// suffix: the feed's suffix does not describe its clock.
+fn parse_naive(text: &str) -> Option<i64> {
     let text = text.trim().trim_end_matches('Z');
     let (date, time) = text.split_once(['T', ' ']).unwrap_or((text, "00:00:00"));
+    // Drop a `+hh:mm` / `-hh:mm` suffix: the clock is applied by the caller.
+    let time = time.split(['+', '-']).next().unwrap_or(time);
     let mut date_parts = date.split('-');
     let year: i64 = date_parts.next()?.parse().ok()?;
     let month: i64 = date_parts.next()?.parse().ok()?;
@@ -129,12 +135,23 @@ fn parse_utc(text: &str) -> Option<i64> {
 /// from the feed, so that one classification rule governs both markets. The
 /// feed's own `class` column is the instrument class ("C"/"P"), which is what
 /// it is used for here.
+///
+/// `utc_offset_ms` is how far the feed's clock runs ahead of UTC
+/// (`config.sources["reference"].utc_offset_ms()`); it is subtracted from the
+/// prints and the expiration alike, so DTE is unchanged by it.
 #[must_use]
-pub fn trades_from_chart_data(chart: &Value, symbol: &str, expiration: Option<&str>) -> Vec<OptionTrade> {
+pub fn trades_from_chart_data(
+    chart: &Value,
+    symbol: &str,
+    expiration: Option<&str>,
+    utc_offset_ms: i64,
+) -> Vec<OptionTrade> {
     let trades = &chart["trades"];
     let Some(x) = trades["x"].as_array() else { return Vec::new() };
-    let expiration_ms =
-        expiration.and_then(parse_utc).or_else(|| to_ms(&chart["expiration"])).unwrap_or_default();
+    let expiration_ms = expiration
+        .and_then(parse_naive)
+        .or_else(|| to_ms(&chart["expiration"]))
+        .map_or(0, |ms| ms - utc_offset_ms);
     let underlying = chart["underlying"].as_str().unwrap_or_default().to_string();
 
     let column = |name: &str| trades[name].as_array().cloned().unwrap_or_default();
@@ -148,7 +165,7 @@ pub fn trades_from_chart_data(chart: &Value, symbol: &str, expiration: Option<&s
     // Indexed rather than zipped: this is a columnar payload and every other
     // column is addressed by the same `i`.
     for (i, when) in x.iter().enumerate() {
-        let timestamp = to_ms(when).unwrap_or_default();
+        let timestamp = to_ms(when).map_or(0, |ms| ms - utc_offset_ms);
         // The feed's `class` column is the instrument class — "C" or "P" — not
         // the LC/LP/SC/SP flow class that shares the word elsewhere in this
         // codebase. Anything unreadable is treated as a call, matching the
@@ -210,7 +227,7 @@ pub fn trades_from_chart_data(chart: &Value, symbol: &str, expiration: Option<&s
 /// The feed publishes closes, so every bar is flat. [`Bar::is_synthetic`] says
 /// so rather than letting a zero range read as a quiet minute.
 #[must_use]
-pub fn bars_from_chart_data(chart: &Value) -> Vec<Bar> {
+pub fn bars_from_chart_data(chart: &Value, utc_offset_ms: i64) -> Vec<Bar> {
     let ohlcv = &chart["ohlcv"];
     let Some(x) = ohlcv["x"].as_array() else { return Vec::new() };
     let column = |name: &str| ohlcv[name].as_array().cloned().unwrap_or_default();
@@ -219,7 +236,7 @@ pub fn bars_from_chart_data(chart: &Value) -> Vec<Bar> {
 
     let mut out: Vec<Bar> = (0..x.len())
         .filter_map(|i| {
-            let time = to_ms(&x[i])?;
+            let time = to_ms(&x[i])? - utc_offset_ms;
             let value = |col: &Vec<Value>| col.get(i).and_then(Value::as_f64);
             let close_price = value(&close).or_else(|| value(&open))?;
             Some(match (value(&open), value(&high), value(&low)) {
@@ -257,10 +274,13 @@ mod tests {
     use super::*;
 
     #[test]
-    fn the_feeds_time_spellings_all_land_on_utc() {
-        assert_eq!(parse_utc("1970-01-01 00:00:00"), Some(0));
-        assert_eq!(parse_utc("2026-09-07 05:12:37"), Some(1_788_757_957_000));
-        assert_eq!(parse_utc("2026-09-07T05:12:37Z"), Some(1_788_757_957_000));
+    fn the_feeds_time_spellings_all_parse_on_one_clock() {
+        assert_eq!(parse_naive("1970-01-01 00:00:00"), Some(0));
+        assert_eq!(parse_naive("2026-09-07 05:12:37"), Some(1_788_757_957_000));
+        assert_eq!(parse_naive("2026-09-07T05:12:37Z"), Some(1_788_757_957_000));
+        // The feed's "+00:00" on expirations is a label, not a fact; it is
+        // ignored so the configured offset applies to every spelling alike.
+        assert_eq!(parse_naive("2026-09-07T05:12:37+00:00"), Some(1_788_757_957_000));
         // A bare number may be seconds or milliseconds.
         assert_eq!(to_ms(&serde_json::json!(1_788_757_957_i64)), Some(1_788_757_957_000));
         assert_eq!(to_ms(&serde_json::json!(1_788_757_957_000_i64)), Some(1_788_757_957_000));
@@ -282,7 +302,7 @@ mod tests {
                 "n_fills": [1, 3],
             }
         });
-        let trades = trades_from_chart_data(&chart, "OGV6", Some("2026-11-24 00:00:00"));
+        let trades = trades_from_chart_data(&chart, "OGV6", Some("2026-11-24 00:00:00"), 0);
         assert_eq!(trades.len(), 2);
         // "C"/"P" is what the feed actually sends in this column.
         assert_eq!(trades[0].option_type, OptionType::Call);
@@ -295,15 +315,37 @@ mod tests {
     }
 
     #[test]
+    fn the_clock_offset_moves_prints_and_expiry_together() {
+        let chart = serde_json::json!({
+            "underlying": "GC",
+            "trades": {
+                "x": ["2026-09-07 05:12:37"], "strike": [4500.0], "class": ["C"], "price": [12.5],
+                "size": [10.0], "side": ["LONG"], "premium": [12500.0], "underlying_price": [4480.0], "n_fills": [1],
+            },
+            "ohlcv": { "x": ["2026-09-07 05:12:00"], "close": [4480.0] }
+        });
+        let offset = 7 * 3_600_000;
+        let plain = trades_from_chart_data(&chart, "OGV6", Some("2026-09-25T00:30:00+00:00"), 0);
+        let fixed = trades_from_chart_data(&chart, "OGV6", Some("2026-09-25T00:30:00+00:00"), offset);
+        assert_eq!(fixed[0].timestamp, plain[0].timestamp - offset);
+        assert_eq!(fixed[0].expiration, plain[0].expiration - offset);
+        // 00:30 on the feed's clock is 17:30 UTC — 13:30 ET, the COMEX expiry.
+        assert_eq!(fixed[0].expiration % 86_400_000, 17 * 3_600_000 + 30 * 60_000);
+        assert!(fd_core::parity_eq(fixed[0].dte, plain[0].dte), "DTE must not move with the clock");
+        assert_ne!(fixed[0].id, plain[0].id, "the id hashes the timestamp, so a re-stamped print is a new print");
+        assert_eq!(bars_from_chart_data(&chart, offset)[0].time, bars_from_chart_data(&chart, 0)[0].time - offset);
+    }
+
+    #[test]
     fn an_empty_payload_yields_nothing_rather_than_panicking() {
-        assert!(trades_from_chart_data(&serde_json::json!({}), "OGV6", None).is_empty());
-        assert!(bars_from_chart_data(&serde_json::json!({})).is_empty());
+        assert!(trades_from_chart_data(&serde_json::json!({}), "OGV6", None, 0).is_empty());
+        assert!(bars_from_chart_data(&serde_json::json!({}), 0).is_empty());
     }
 
     #[test]
     fn closes_only_candles_are_marked_synthetic() {
         let chart = serde_json::json!({"ohlcv": {"x": [0, 60_000], "close": [4500.0, 4501.0]}});
-        let bars = bars_from_chart_data(&chart);
+        let bars = bars_from_chart_data(&chart, 0);
         assert_eq!(bars.len(), 2);
         assert!(bars.iter().all(Bar::is_synthetic), "a close-only bar has no range of its own");
     }
