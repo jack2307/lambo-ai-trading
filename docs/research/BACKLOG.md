@@ -10,9 +10,6 @@ Closed ideas move to the bottom with a pointer to their decision record, so
 
 ## Open
 
-- [ ] **Previous-day high/low.** Fade the first touch of yesterday's high/low
-  in the Asian session; break it in the New York session. Reason: resting
-  orders sit at the prior day's extremes. NEW base (`pdhl`).
 - [ ] **VWAP fade.** Enter against a stretch of > k·ATR from the session VWAP,
   target VWAP. Reason: intraday mean reversion to the volume-weighted average
   is where large orders are worked. Existing `vwap` indicator; NEW thin
@@ -63,3 +60,6 @@ Closed ideas move to the bottom with a pointer to their decision record, so
 - [x] London-range breakout → passes everything in-sample on 2025–26 (gated
   null, direction null), fails the disjoint 2022–25 window; the window is a
   volatility regime. `2026-09-13-london-range.md`.
+- [x] Previous-day high/low (fade and break) → 1st–6th percentile of the gated
+  null on the long window; wick-tight stops lose to the spread.
+  `2026-09-13-pdhl.md`.
