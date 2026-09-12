@@ -1,7 +1,7 @@
 # 2026-09-13-btc-us-hours: BTC's return is earned during US equity hours
 
 **Registered:** 2026-09-13 04:25 — before any run
-**Status:** registered
+**Status:** decided → docs/decisions/2026-09-13-btc-us-hours.md (failed the primary; confirmation not opened)
 **Batch file:** `docs/hypotheses/2026-09-13-btc-us-hours.toml`
 
 ## Claim

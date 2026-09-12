@@ -37,6 +37,12 @@ Closed ideas move to the bottom with a pointer to their decision record, so
 - [x] Dukascopy converter docstring: the CSV has no volume column; every
   O=H=L=C bar is dropped (data-integrity, London pass).
 
+- [ ] A null for **drift** claims: random hold windows of the same length
+  and side, not random entries with ATR stops (btc-us-hours pass).
+- [ ] `run_null_control` (`search --mode=null`) skips options strategies;
+  when the tape covers months this is the control the founding thesis needs
+  (adversary, 2026-09-12).
+
 ## Closed
 
 - [x] Technical baselines (ema-cross, rsi-reversion, donchian, bb-fade) on GC,
@@ -63,3 +69,5 @@ Closed ideas move to the bottom with a pointer to their decision record, so
 - [x] BTC US equity-open range break → best row 84th percentile, direction
   73rd, on two years of Binance 5m; not opened at Vantage cost.
   `2026-09-13-btc-us-open.md`.
+- [x] BTC US-hours drift (hold 09:30–16:00) → PF 0.78 over 435 sessions,
+  complement 0.95; no drift by hour in 2024–26. `2026-09-13-btc-us-hours.md`.
