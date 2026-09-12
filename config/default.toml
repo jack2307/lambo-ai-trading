@@ -281,6 +281,13 @@ atr_fraction = 0.15
 [sources.reference]
 base_url = "https://live.otldata.com"
 min_delay_ms = 1500
+# MEASURED 2026-09-12: the feed renders every time — bare strings and the
+# "+00:00"-suffixed expirations alike — in the account's zone, UTC+7. Fingerprints:
+# GC closes correlate 0.987 with a UTC-verified XAUUSD series only at -7h; the
+# daily gap sits at 04:00 (17:00 ET CME break); expiries stamp 00:30 (13:30 ET).
+# Re-run the shift scan if the feed or the account changes. Pinned by a test in
+# fd-ingest: docs/decisions/2026-09-12-otl-timestamps.md
+utc_offset_hours = 7
 
 [sources.binance]
 base_url = "https://api.binance.com"

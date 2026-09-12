@@ -337,6 +337,21 @@ mod tests {
     }
 
     #[test]
+    fn the_workspace_config_carries_the_measured_feed_offset() {
+        // The feed's clock is UTC+7 (decision 2026-09-12-otl-timestamps). A
+        // config without this line would store every gold print seven hours
+        // late and nothing else would notice — it happened once, during a
+        // commit split, and a collector wrote 15k mis-stamped prints before
+        // the log line was read. So the number is pinned here.
+        let config = fd_core::config::Config::load(
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("..").join("..").join("config"),
+        )
+        .expect("the workspace config");
+        let reference = config.sources.get("reference").expect("[sources.reference]");
+        assert_eq!(reference.utc_offset_ms(), 7 * 3_600_000, "utc_offset_hours must stay 7 until re-measured");
+    }
+
+    #[test]
     fn an_empty_payload_yields_nothing_rather_than_panicking() {
         assert!(trades_from_chart_data(&serde_json::json!({}), "OGV6", None, 0).is_empty());
         assert!(bars_from_chart_data(&serde_json::json!({}), 0).is_empty());
