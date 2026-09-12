@@ -260,7 +260,10 @@ mod tests {
         // Today's own high so far must not be "yesterday's": push a big high
         // early today, then check the level used at a later bar is still 4420.
         let mut b = bars.clone();
+        // A bar that closes above the level is not a fade touch, so it does
+        // not use up today's one signal at that level.
         b[today + 2].high = 4450.0;
+        b[today + 2].close = 4450.0;
         b[today + 18].high = 4423.0;
         b[today + 18].close = 4415.0;
         assert!(matches!(intent_at(&b, &params(0.0), today + 18), Intent::Enter { side: Side::Short, .. }));
