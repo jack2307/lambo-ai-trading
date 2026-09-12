@@ -1,0 +1,20 @@
+$ E:\rust\flowdesk\target\release\search.exe --market=xauusd --interval=5m --mode=hypotheses --batch-file=E:\rust\flowdesk\docs\hypotheses\2026-09-13-orb-ny.toml --seeds=200
+
+bars:     100749 from 2025-04-11 01:05 to 2026-09-11 20:55
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+== hypotheses `E:\rust\flowdesk\docs\hypotheses\2026-09-13-orb-ny.toml`: 3 declared, walk-forward (4 folds), each against 200 matched null runs ==
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+orb/60m      orb                    84   1.249   0.102    0.941    1.049        0  100%  SURVIVES
+                                MoTuWeThFr + flat 16:30-18:15  — the classic: the first hour's range, broken before midday
+orb/30m      orb                   164   0.897  -0.073    0.941    1.049        0   27%  fail: profit factor 0.897 < 1.2; expectancy -0.073R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15  — a tighter range gives more breaks and earlier entries; does the extra noise pay?
+orb/60m-expansion orb                    48   1.284   0.109    0.960    1.244        0   96%  SURVIVES
+                                MoTuWeThFr + flat 16:30-18:15 + ATR14/ATR100 in [1.2, 99]  — only on days where volatility is already expanding: a break needs range to run into
+
+Survivors: orb/60m/orb, orb/60m-expansion/orb — worth a decision record and a direction null before anything else.
+
