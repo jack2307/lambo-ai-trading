@@ -1,7 +1,7 @@
 # 2026-09-13-london-fix: gold drifts down into the afternoon fix and recovers after it
 
-**Registered:** (commit time is authoritative) — before any run
-**Status:** registered
+**Registered:** 2026-09-13 02:12 (commit d98576d) — before any run
+**Status:** decided → docs/decisions/2026-09-13-london-fix.md (failed the primary; confirmation not opened)
 **Batch file:** `docs/hypotheses/2026-09-13-london-fix.toml`
 
 ## Claim

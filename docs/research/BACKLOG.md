@@ -37,8 +37,9 @@ Closed ideas move to the bottom with a pointer to their decision record, so
 - [x] Dukascopy converter docstring: the CSV has no volume column; every
   O=H=L=C bar is dropped (data-integrity, London pass).
 
-- [ ] A null for **drift** claims: random hold windows of the same length
-  and side, not random entries with ATR stops (btc-us-hours pass).
+- [x] A null for drift claims: `null-hold`, random holds of the row's window
+  length, chosen automatically for `Exits::Strategy` methods with no grid
+  (2026-09-13).
 - [ ] `run_null_control` (`search --mode=null`) skips options strategies;
   when the tape covers months this is the control the founding thesis needs
   (adversary, 2026-09-12).
@@ -71,3 +72,6 @@ Closed ideas move to the bottom with a pointer to their decision record, so
   `2026-09-13-btc-us-open.md`.
 - [x] BTC US-hours drift (hold 09:30–16:00) → PF 0.78 over 435 sessions,
   complement 0.95; no drift by hour in 2024–26. `2026-09-13-btc-us-hours.md`.
+- [x] London fix drift (into / out of the PM fix, AM contrast) → 74th–84th
+  percentile of random holds, PF < 1 on every row, 2022–25.
+  `2026-09-13-london-fix.md`.
