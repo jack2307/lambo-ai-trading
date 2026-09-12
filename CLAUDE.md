@@ -38,8 +38,14 @@ numbers before moving on, and `tests/golden/` holds what it published.
   same `Filtered` gates): noise traded only in the New York morning clears the
   1.2 gate 5% of the time on its own. Hypotheses are declared in
   `fd-backtest/src/hypotheses.rs` with a reason each; that file is not a grid.
-- Swap is charged (`Trade::swap_usd`, 17:00 New York, Wednesday x3). Zero in
-  config means unknown, not free.
+- Swap is charged (`Trade::swap_usd`, 17:00 New York, Wednesday x3) from the
+  market config. The Vantage account here is **swap-free — measured from its
+  own deal history**, so the config says zero; `symbol_info.swap_long` shows
+  the generic rate in **points** (`swap_mode=1`), not dollars. Read the mode
+  before trusting the number.
+- The MT5 account currency is **USC** (cents); `contract_size` 1.0 on
+  `XAUUSD.sc` is one ounce in dollar terms. Spread, swap and P&L per lot in
+  this workspace are per ounce; multiply by 100 for a standard 100 oz lot.
 - The Deribit public endpoint reaches back about a day. History not captured
   as it happens is gone; `fd-ingest --bin collect` is what captures it.
 - The OTL feed (gold tape and GC bars) renders times in the account's zone,

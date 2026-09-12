@@ -13,9 +13,14 @@ the list is closed.
 
 - Data: `XAUUSD-15m.parquet`, 100,249 bars, 2022-06-16 → 2026-09-11, UTC,
   from the live Vantage terminal (`2026-09-12-vantage-bars-baselines.md`).
-- Costs: spread $0.28, **swap −$82.76 long / +$31.98 short per lot per night,
-  Wednesday ×3** — charged for the first time in this project (`fd-core::clock::swap_nights`,
-  `Trade::swap_usd`). Contract 1 oz.
+- Costs: spread $0.28, contract 1 oz. Swap was charged in this run at
+  −82.76 / +31.98 per lot-night — **a misreading**: `symbol_info` reports that
+  rate in points (`swap_mode=1`), i.e. −$0.83 per oz per night, and this
+  account's own history (87 overnight positions, swap 0.00) shows it pays none.
+  The swap column below is therefore ~100× too large and applies to nights this
+  account is not charged for; every verdict stands regardless, since the
+  intraday rows carry almost none of it and every row fails the gate on the
+  price alone. Re-run with the corrected config in the addendum.
 - Machinery: `fd_strategy::filter::Filtered` wraps an unchanged base method
   with gates on the New York clock (`fd_core::clock`); `search --mode=hypotheses`
   runs each through the 4-fold walk-forward and against **200 runs of the
@@ -64,9 +69,9 @@ would close it; it does not change any verdict here.
   against thirteen nulls carries its own multiplicity: at 95% one false survivor
   in twenty is expected, so a single survivor at 95–97% would have needed a
   direction null before belief. None reached even that.
-- **risk:** NO OBJECTION. Points at the swap column as the finding of the day:
-  the *overnight* versions of these methods (previous record) were paying this
-  and the model was not charging it. 1.9% of notional per night on a long.
+- **risk:** NO OBJECTION. Withdraws the swap remark made on the first pass:
+  the rate was read in the wrong unit and the account turns out to be
+  swap-free (measured). The billing machinery stays for accounts that pay.
 - **researcher:** the filters were applied to signals that were already inside
   the noise; a gate cannot create a signal, only select from one. Batch 2 should
   test signals that are intraday by construction — opening-range breakout,
@@ -88,5 +93,29 @@ every session and both regimes have been read.
 - It does not say gold has no intraday structure. It says these four signals
   do not find it in these windows.
 - It does not say the options thesis failed; no options strategy ran.
-- It does not say the swap numbers are stable — they were read once, on
-  2026-09-12, and brokers change them.
+- It does not say swap never matters: this account is swap-free today; the
+  generic Vantage rate is −$0.83/oz/night and a different account type pays it.
+
+## Addendum — corrected run, swap at zero (same day)
+
+```
+hypothesis   base               trades  OOS PF  expect null p50 null p95   pct
+intraday     ema-cross            1026   0.768  -0.132    0.911    1.020    1%
+intraday     rsi-reversion        1269   0.890  -0.057    0.911    1.020   38%
+intraday     donchian-breakout    3493   0.902  -0.030    0.911    1.020   42%
+intraday     bb-fade              3352   0.889  -0.069    0.911    1.020   36%
+ny-morning   ema-cross             281   0.859  -0.076    0.923    1.167   27%
+ny-morning   donchian-breakout    1194   0.930  -0.023    0.923    1.167   52%
+london-open  donchian-breakout     693   0.872  -0.051    0.883    1.160   48%
+asia         rsi-reversion         386   0.937  -0.031    0.914    1.136   59%
+asia         bb-fade               720   0.920  -0.045    0.914    1.136   54%
+expansion    donchian-breakout     925   0.856  -0.068    0.898    1.207   41%
+expansion    ema-cross             218   0.895  -0.055    0.898    1.207   49%
+compression  rsi-reversion         318   0.661  -0.148    0.870    1.122    3%
+compression  bb-fade              1278   0.815  -0.102    0.870    1.122   32%
+```
+
+Zero survivors, best percentile 59th. The nulls moved up (p50 0.91 instead of
+0.84 on the intraday rows) because noise was no longer paying a phantom
+financing bill; the methods moved with them. The early-close remark above is
+moot on this account. Verdict unchanged.

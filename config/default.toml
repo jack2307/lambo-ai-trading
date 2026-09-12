@@ -218,11 +218,13 @@ contract_size = 1.0
 spread = 0.28
 lot_step = 0.01
 min_lot = 0.01
-# READ from the terminal 2026-09-12: USD per lot per rollover night, Wednesday
-# triple. On a 1 oz contract at ~$4,400 that is 1.9% of notional per night for a
-# long. Holding gold overnight on this account is not a cost, it is a decision.
-swap_long_per_lot = -82.76
-swap_short_per_lot = 31.98
+# MEASURED from this account's own history (2026-04-21 -> 2026-09-08: 340
+# closed positions, 87 held overnight, swap 0.00, commission 0.00): the account
+# is swap-free. symbol_info shows the generic rate (-82.76 points = -$0.83 per
+# oz per night, swap_mode=1 means POINTS, not dollars) and this account does not
+# pay it. Set the real rate here for an account that does.
+swap_long_per_lot = 0.0
+swap_short_per_lot = 0.0
 
 [markets.xauusd.big_trades]
 min_premium_usd = 100_000
@@ -248,7 +250,10 @@ contract_size = 0.01
 spread = 17.05                      # MEASURED: 3.4x the 5.00 assumed for the Binance market
 lot_step = 0.01
 min_lot = 0.01
-swap_long_per_lot = -20.0           # READ from the terminal 2026-09-12; per lot (0.01 BTC) per night
+# Swap-free on this account too (measured, same history). The symbol's generic
+# terms are swap_mode=5: -20% a year of position value, ~-$0.64 per 0.01 BTC
+# lot per night at $115k — for an account that pays it.
+swap_long_per_lot = 0.0
 swap_short_per_lot = 0.0
 
 [markets.btcusd.big_trades]

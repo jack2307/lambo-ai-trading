@@ -70,9 +70,9 @@ different data, so not a like-for-like move, and still under the gate.
 - **researcher:** the interesting number is not any PF but the *spread*: $17 on
   BTCUSD.sc is 0.015% of price, comparable to Binance taker fees, so the CFD
   is not obviously worse — the edge is absent, not eaten.
-- **execution-realist:** the gold spread of $0.28 on a 1 oz contract is small;
-  swaps (long −$82.76, short +$31.98 per lot per night on XAUUSD.sc) are not
-  in the model and matter for any hold over a session close.
+- **execution-realist:** the gold spread of $0.28 on a 1 oz contract is small.
+  (Corrected later the same day: the swap figures first quoted here were in
+  points, not dollars, and the account's own history shows it is swap-free.)
 - **portfolio:** two markets, four methods, eight walk-forwards, zero survivors.
   Nothing to size.
 - **historian:** third time this question has been asked (GC reference,
