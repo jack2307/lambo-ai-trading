@@ -22,6 +22,8 @@ futures-util = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
+# The research endpoint reads hypothesis batch files.
+toml = { workspace = true }
 
 [dev-dependencies]
 tempfile = { workspace = true }

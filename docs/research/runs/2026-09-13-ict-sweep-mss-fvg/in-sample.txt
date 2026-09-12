@@ -1,0 +1,20 @@
+bars:     100000 from 2026-06-02 20:15 to 2026-09-11 20:56
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+== hypotheses `ict-m1`: 4 declared, walk-forward (4 folds), each against 200 matched null runs ==
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+ict-A-tight  ict-sweep-mss-fvg      33   0.917  -0.051    0.888    1.058        0   62%  fail: profit factor 0.917 < 1.2; expectancy -0.051R < 0.05R
+                                MoTuWeThFr + NY 01:00-05:00|06:00-10:00  — the expert's strict preset, kill zones only
+ict-B-balanced ict-sweep-mss-fvg      62   1.261   0.145    0.888    1.058        0  100%  SURVIVES
+                                MoTuWeThFr + NY 01:00-05:00|06:00-10:00  — the expert's default preset, kill zones only
+ict-C-loose  ict-sweep-mss-fvg     223   1.005  -0.003    0.883    0.986        0   96%  fail: profit factor 1.005 < 1.2; expectancy -0.003R < 0.05R
+                                MoTuWeThFr  — the expert's loose preset, sessions off as it ships
+ict-B-allday ict-sweep-mss-fvg     157   1.350   0.178    0.883    0.986        0  100%  SURVIVES
+                                MoTuWeThFr  — the default preset without the session gate: is the kill zone doing anything?
+
+Survivors: ict-B-balanced/ict-sweep-mss-fvg, ict-B-allday/ict-sweep-mss-fvg — worth a decision record and a direction null before anything else.
+

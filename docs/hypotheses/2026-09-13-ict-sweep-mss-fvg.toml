@@ -1,0 +1,37 @@
+# Reconstructed after the fact from the built-in `ict-m1` / `ict-oos` batches,
+# so the dashboard shows the first full pass of the loop. The in-sample run
+# used --batch=ict-m1 (all four presets); the out-of-sample run used
+# --batch=ict-oos (the two survivors), pre-registered before it was looked at.
+[run]
+in_sample = "xauusd:1m"
+out_of_sample = "xauduka:1m"
+seeds = 200
+direction_samples = 2000
+
+[[hypothesis]]
+label = "ict-A-tight"
+base = "ict-sweep-mss-fvg"
+filters = ["weekdays", "sessions:0100-0500|0600-1000"]
+overrides = { htfFactor = 15, minHtfFvgPips = 25, swingLeft = 5, swingRight = 5, displacementMult = 2.0, riskReward = 3.0 }
+why = "the expert's strict preset, kill zones only"
+
+[[hypothesis]]
+label = "ict-B-balanced"
+base = "ict-sweep-mss-fvg"
+filters = ["weekdays", "sessions:0100-0500|0600-1000"]
+overrides = { htfFactor = 15, minHtfFvgPips = 15, swingLeft = 3, swingRight = 3, displacementMult = 1.5, riskReward = 2.0 }
+why = "the expert's default preset, kill zones only"
+
+[[hypothesis]]
+label = "ict-C-loose"
+base = "ict-sweep-mss-fvg"
+filters = ["weekdays"]
+overrides = { htfFactor = 15, minHtfFvgPips = 8, swingLeft = 2, swingRight = 2, displacementMult = 1.2, riskReward = 1.5 }
+why = "the expert's loose preset, sessions off as it ships"
+
+[[hypothesis]]
+label = "ict-B-allday"
+base = "ict-sweep-mss-fvg"
+filters = ["weekdays"]
+overrides = { htfFactor = 15, minHtfFvgPips = 15, swingLeft = 3, swingRight = 3, displacementMult = 1.5, riskReward = 2.0 }
+why = "the default preset without the session gate: is the kill zone doing anything?"

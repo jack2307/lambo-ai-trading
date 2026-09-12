@@ -20,6 +20,8 @@ pub const TIMEFRAMES: [&str; 7] = ["1m", "5m", "15m", "30m", "1h", "4h", "1d"];
 pub struct AppState {
     pub config: Config,
     pub data: PathBuf,
+    /// Where the research loop writes: hypotheses, run receipts, decisions.
+    pub docs: PathBuf,
     pub registry: Registry,
     /// Resampled series, keyed by `market/timeframe`.
     ///
@@ -44,12 +46,20 @@ impl AppState {
     pub fn new(config: Config, data: PathBuf) -> Self {
         Self {
             config,
+            docs: PathBuf::from("docs"),
             data,
             registry: Registry::with_builtins(),
             bars: RwLock::new(HashMap::new()),
             timelines: RwLock::new(HashMap::new()),
             live: crate::live::LiveHub::default(),
         }
+    }
+
+    /// Point the research endpoint at a docs directory other than `./docs`.
+    #[must_use]
+    pub fn with_docs(mut self, docs: PathBuf) -> Self {
+        self.docs = docs;
+        self
     }
 
     /// Trading rules for one market.

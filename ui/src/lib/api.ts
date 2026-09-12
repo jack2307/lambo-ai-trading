@@ -153,6 +153,52 @@ export interface IndicatorPoint {
   value: number
 }
 
+export interface ResearchRunRow {
+  label: string
+  base: string
+  trades: number
+  profitFactor: number
+  expectancy: number
+  nullP50: number | null
+  nullP95: number | null
+  percentile: number | null
+  verdict: string
+}
+
+export interface ResearchRun {
+  rows: ResearchRunRow[]
+  survivors: string[]
+  concluded: boolean
+  modifiedAt: number
+}
+
+export interface ResearchDirection {
+  base: string
+  trades: number | null
+  actualPf: number
+  percentile: number | null
+  outside: boolean
+}
+
+export interface ResearchHypothesis {
+  id: string
+  claim: string
+  status: string
+  registered: string
+  inSample: string | null
+  outOfSample: string | null
+  batch: { label: string; base: string; why: string }[]
+  runs: { inSample: ResearchRun | null; outOfSample: ResearchRun | null; direction: ResearchDirection[] }
+  modifiedAt: number
+}
+
+export interface Research {
+  updatedAt: number
+  hypotheses: ResearchHypothesis[]
+  backlog: { open: { title: string; note: string }[]; closed: { title: string; note: string }[] }
+  decisions: { file: string; date: string; title: string }[]
+}
+
 /** A failed request carries the server's message, not a status code alone. */
 export class ApiError extends Error {}
 
@@ -203,4 +249,6 @@ export const api = {
 
   backtest: (market: string, tf: string, strategy: string, params: Record<string, number>) =>
     post<BacktestResult>('/api/chart/backtest', { market, tf, strategy, params }),
+
+  research: () => request<Research>('/api/research'),
 }

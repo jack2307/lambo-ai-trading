@@ -7,6 +7,7 @@
 pub mod dto;
 pub mod error;
 pub mod live;
+pub mod research;
 pub mod routes;
 pub mod state;
 
@@ -36,6 +37,7 @@ pub fn router(state: Arc<AppState>, ui: Option<PathBuf>) -> Router {
         .route("/api/chart/backtest", post(routes::backtest))
         .route("/api/live", get(live::stream))
         .route("/api/live/status", get(live::status))
+        .route("/api/research", get(research::research))
         .with_state(state);
 
     match ui.filter(|dir| dir.is_dir()) {

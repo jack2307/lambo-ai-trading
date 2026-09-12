@@ -1,0 +1,16 @@
+bars:     100000 from 2026-06-02 20:15 to 2026-09-11 20:56
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+== direction control: ict-sweep-mss-fvg, 198 trades, 2000 coin-flip assignments ==
+  entries, stops and targets held fixed; only the side is randomised
+
+  profit factor of the same trades with random direction:
+    p05 0.720   p25 0.834   p50 0.927   p75 1.022   p95 1.155   max 1.389
+
+  actual: 1.045  ->  79th percentile  (p = 0.210)
+
+  Inside its own null. On this sample the direction rule has not been
+  distinguished from a coin flip, however good the profit factor looks.
+

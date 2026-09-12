@@ -1,0 +1,17 @@
+bars:     1723696 from 2022-06-16 00:00 to 2026-05-31 23:59
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+== hypotheses `ict-oos`: 2 declared, walk-forward (4 folds), each against 100 matched null runs ==
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+ict-B-balanced ict-sweep-mss-fvg     613   0.773  -0.171    0.770    0.828        0   52%  fail: profit factor 0.773 < 1.2; expectancy -0.171R < 0.05R
+                                MoTuWeThFr + NY 01:00-05:00|06:00-10:00  — the expert's default preset, kill zones only
+ict-B-allday ict-sweep-mss-fvg    1428   0.746  -0.190    0.705    0.746        0   95%  fail: profit factor 0.746 < 1.2; expectancy -0.190R < 0.05R
+                                MoTuWeThFr  — the default preset without the session gate: is the kill zone doing anything?
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+

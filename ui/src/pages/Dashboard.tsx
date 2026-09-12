@@ -26,8 +26,9 @@ import {
   SectionHeader,
 } from '@/components/dashboard/primitives'
 import type { Piece } from '@/components/dashboard/ChessBoard'
+import { ResearchPanel } from '@/components/dashboard/ResearchPanel'
 import { Skeleton } from '@/components/ui/skeleton'
-import { api, type BarsResponse, type Catalog, type LeaderboardRow, type OptionsFrame } from '@/lib/api'
+import { api, type BarsResponse, type Catalog, type LeaderboardRow, type OptionsFrame, type Research } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
 interface Props {
@@ -96,6 +97,31 @@ export function Dashboard({ catalog, market, onError }: Props) {
   const [bars, setBars] = useState<BarsResponse | null>(null)
   const [levels, setLevels] = useState<{ frame: OptionsFrame | null; frames?: number } | null>(null)
   const [filter, setFilter] = useState<Filter>('all')
+  const [research, setResearch] = useState<Research | null>(null)
+  const [now, setNow] = useState(() => Date.now())
+
+  // The research files change when the loop writes them; re-read every
+  // fifteen seconds and say how old the reading is. Not a stream — nothing
+  // pushes — and the label says so.
+  useEffect(() => {
+    let cancelled = false
+    const load = () =>
+      api
+        .research()
+        .then((r) => {
+          if (!cancelled) {
+            setResearch(r)
+            setNow(Date.now())
+          }
+        })
+        .catch(() => {})
+    load()
+    const timer = window.setInterval(load, 15_000)
+    return () => {
+      cancelled = true
+      window.clearInterval(timer)
+    }
+  }, [])
 
   const timeframe = catalog.defaults.timeframe
 
@@ -218,6 +244,18 @@ export function Dashboard({ catalog, market, onError }: Props) {
           </ul>
         </Panel>
       </div>
+
+      {/* ---- research: what the loop is doing ---- */}
+      <section>
+        <SectionHeader
+          title="Research"
+          subtitle="One hypothesis at a time through the six steps. The tables are the run receipts, quoted; the loop never widens a grid to pass a gate."
+        />
+        <ResearchPanel
+          research={research}
+          updatedAgo={research ? `${Math.max(0, Math.round((now - research.updatedAt) / 60_000))} min since the files changed` : '…'}
+        />
+      </section>
 
       {/* ---- row two: the board ---- */}
       <section>
@@ -343,16 +381,18 @@ export function Dashboard({ catalog, market, onError }: Props) {
                           <Figure value={String(m.trades)} />
                         </td>
                         <td className="px-4 py-2.5 text-right">
-                          <Figure value={`${(m.winRate * 100).toFixed(1)}%`} />
+                          <Figure value={Number.isFinite(m.winRate) ? `${(m.winRate * 100).toFixed(1)}%` : '—'} />
                         </td>
                         <td className="px-4 py-2.5 text-right">
                           <Figure value={Number.isFinite(m.profitFactor) ? m.profitFactor.toFixed(3) : '—'} />
                         </td>
                         <td className="px-4 py-2.5 text-right">
+                          {/* A metric the server could not compute (NaN) arrives as null:
+                              a method with one trade has no expectancy to show. */}
                           <Figure
-                            value={`${m.expectancy >= 0 ? '+' : ''}${m.expectancy.toFixed(3)}`}
+                            value={Number.isFinite(m.expectancy) ? `${m.expectancy >= 0 ? '+' : ''}${m.expectancy.toFixed(3)}` : '—'}
                             unit="R"
-                            tone={m.expectancy >= 0 ? 'up' : 'down'}
+                            tone={!Number.isFinite(m.expectancy) ? 'neutral' : m.expectancy >= 0 ? 'up' : 'down'}
                           />
                         </td>
                         <td className="px-4 py-2.5 text-right">

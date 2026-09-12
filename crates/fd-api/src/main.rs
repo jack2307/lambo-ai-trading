@@ -17,9 +17,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let port: u16 = arg("port", "8138").parse()?;
     let data = PathBuf::from(arg("data", "data"));
     let ui = PathBuf::from(arg("ui", "ui/dist"));
+    let docs = PathBuf::from(arg("docs", "docs"));
 
     let config = Config::load(arg("config", "config"))?;
-    let state = Arc::new(AppState::new(config, data.clone()));
+    let state = Arc::new(AppState::new(config, data.clone()).with_docs(docs));
 
     let serving_ui = ui.is_dir();
     let app = router(Arc::clone(&state), Some(ui.clone()));
