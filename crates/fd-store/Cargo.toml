@@ -1,0 +1,19 @@
+[package]
+name = "fd-store"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Parquet store for tapes and bar series"
+
+[dependencies]
+fd-core = { workspace = true }
+arrow = { workspace = true }
+parquet = { workspace = true }
+thiserror = { workspace = true }
+# The JSON migration tool ships with the store; the lib itself reads only Parquet.
+serde_json = { workspace = true }
+
+[dev-dependencies]
+fd-engine = { workspace = true }
+tempfile = { workspace = true }

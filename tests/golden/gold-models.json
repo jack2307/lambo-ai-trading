@@ -1,0 +1,168 @@
+{
+  "breakEven": {
+    "G2MU6": {
+      "aggregate-payoff": {
+        "call": 4436.9387713,
+        "put": 4318.843606688
+      },
+      "net-positioning": {
+        "call": 4445.218406593,
+        "put": 4270.059649123
+      },
+      "premium-weighted": {
+        "call": 4461.442640821,
+        "put": 4309.005731035
+      },
+      "premium-weighted-long": {
+        "call": 4441.956221014,
+        "put": 4303.246132738
+      },
+      "size-weighted": {
+        "call": 4490.798632634,
+        "put": 4288.716483998
+      }
+    },
+    "OG3U6": {
+      "aggregate-payoff": {
+        "call": 4527.527239089,
+        "put": 4247.071444954
+      },
+      "net-positioning": {
+        "call": 4560.984894614,
+        "put": 4135.249407115
+      },
+      "premium-weighted": {
+        "call": 4521.069543637,
+        "put": 4245.719085773
+      },
+      "premium-weighted-long": {
+        "call": 4500.406964828,
+        "put": 4262.34848846
+      },
+      "size-weighted": {
+        "call": 4579.578028504,
+        "put": 4174.384216397
+      }
+    },
+    "OGV6": {
+      "aggregate-payoff": {
+        "call": 4553.85420939,
+        "put": 4255.749343913
+      },
+      "net-positioning": {
+        "call": 4692.893666107,
+        "put": 4203.491704835
+      },
+      "premium-weighted": {
+        "call": 4567.813706512,
+        "put": 4258.048522505
+      },
+      "premium-weighted-long": {
+        "call": 4567.821469447,
+        "put": 4256.801988068
+      },
+      "size-weighted": {
+        "call": 4671.741849037,
+        "put": 4151.416589813
+      }
+    },
+    "OGX6": {
+      "aggregate-payoff": {
+        "call": 4735.532248641,
+        "put": 4202.273932806
+      },
+      "net-positioning": {
+        "call": 4877.200729927,
+        "put": 4145.896855895
+      },
+      "premium-weighted": {
+        "call": 4758.099245506,
+        "put": 4205.946388838
+      },
+      "premium-weighted-long": {
+        "call": 4750.050447493,
+        "put": 4206.010818668
+      },
+      "size-weighted": {
+        "call": 4982.960503118,
+        "put": 4056.386770653
+      }
+    }
+  },
+  "maxPain": {
+    "G2MU6": {
+      "netPositioning": 4385,
+      "volumeWeighted": 4370
+    },
+    "OG3U6": {
+      "netPositioning": 4350,
+      "volumeWeighted": 4350
+    },
+    "OGV6": {
+      "netPositioning": 4400,
+      "volumeWeighted": 4400
+    },
+    "OGX6": {
+      "netPositioning": 4450,
+      "volumeWeighted": 4450
+    }
+  },
+  "whale": {
+    "G2MU6": {
+      "largest-print": {
+        "resistance": 4400,
+        "support": 4350
+      },
+      "net-long-whale": {
+        "resistance": 4400,
+        "support": 4325
+      },
+      "premium-concentration": {
+        "resistance": 4400,
+        "support": 4350
+      }
+    },
+    "OG3U6": {
+      "largest-print": {
+        "resistance": 4525,
+        "support": 4150
+      },
+      "net-long-whale": {
+        "resistance": 4550,
+        "support": 4075
+      },
+      "premium-concentration": {
+        "resistance": 4525,
+        "support": 4300
+      }
+    },
+    "OGV6": {
+      "largest-print": {
+        "resistance": 4700,
+        "support": 4340
+      },
+      "net-long-whale": {
+        "resistance": 4600,
+        "support": 4200
+      },
+      "premium-concentration": {
+        "resistance": 4500,
+        "support": 4300
+      }
+    },
+    "OGX6": {
+      "largest-print": {
+        "resistance": 4650,
+        "support": 4250
+      },
+      "net-long-whale": {
+        "resistance": 4900,
+        "support": 4350
+      },
+      "premium-concentration": {
+        "resistance": 4900,
+        "support": 4350
+      }
+    }
+  }
+}

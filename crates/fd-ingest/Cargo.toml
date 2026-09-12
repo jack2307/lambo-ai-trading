@@ -1,0 +1,22 @@
+[package]
+name = "fd-ingest"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "REST backfill and websocket feeds for tapes and bars"
+
+[dependencies]
+fd-core = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true }
+tokio-tungstenite = { workspace = true }
+futures-util = { workspace = true }
+reqwest = { workspace = true }
+# The backfill tool writes what it fetches; the library itself stays transport-only.
+fd-store = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }

@@ -1,0 +1,960 @@
+{
+  "asOf": 1789185599000,
+  "bigTrades": [
+    {
+      "contracts": 63,
+      "flowClass": "LP",
+      "multiLeg": false,
+      "optionType": "PUT",
+      "premiumUsd": 63000,
+      "strike": 4325,
+      "symbol": "G2MU6",
+      "timestamp": 1789184544000
+    },
+    {
+      "contracts": 10,
+      "flowClass": "LP",
+      "multiLeg": false,
+      "optionType": "PUT",
+      "premiumUsd": 62500,
+      "strike": 4200,
+      "symbol": "OGX6",
+      "timestamp": 1789181035000
+    },
+    {
+      "contracts": 9,
+      "flowClass": "LP",
+      "multiLeg": false,
+      "optionType": "PUT",
+      "premiumUsd": 56250,
+      "strike": 4200,
+      "symbol": "OGX6",
+      "timestamp": 1789181035000
+    },
+    {
+      "contracts": 7,
+      "flowClass": "LP",
+      "multiLeg": false,
+      "optionType": "PUT",
+      "premiumUsd": 122360,
+      "strike": 4450,
+      "symbol": "OGX6",
+      "timestamp": 1789179752000
+    },
+    {
+      "contracts": 23,
+      "flowClass": "SP",
+      "multiLeg": false,
+      "optionType": "PUT",
+      "premiumUsd": 49450,
+      "strike": 4350,
+      "symbol": "G2MU6",
+      "timestamp": 1789178779000
+    },
+    {
+      "contracts": 24,
+      "flowClass": "SP",
+      "multiLeg": false,
+      "optionType": "PUT",
+      "premiumUsd": 50879,
+      "strike": 4350,
+      "symbol": "G2MU6",
+      "timestamp": 1789178459000
+    },
+    {
+      "contracts": 11,
+      "flowClass": "SP",
+      "multiLeg": false,
+      "optionType": "PUT",
+      "premiumUsd": 98780,
+      "strike": 4275,
+      "symbol": "OGX6",
+      "timestamp": 1789177232000
+    },
+    {
+      "contracts": 5,
+      "flowClass": "SC",
+      "multiLeg": false,
+      "optionType": "CALL",
+      "premiumUsd": 60350,
+      "strike": 4275,
+      "symbol": "OGV6",
+      "timestamp": 1789176767000
+    },
+    {
+      "contracts": 10,
+      "flowClass": "SP",
+      "multiLeg": false,
+      "optionType": "PUT",
+      "premiumUsd": 63500,
+      "strike": 4200,
+      "symbol": "OGX6",
+      "timestamp": 1789175737000
+    },
+    {
+      "contracts": 1,
+      "flowClass": "SP",
+      "multiLeg": false,
+      "optionType": "PUT",
+      "premiumUsd": 69660,
+      "strike": 5075,
+      "symbol": "OGX6",
+      "timestamp": 1789175706000
+    },
+    {
+      "contracts": 1,
+      "flowClass": "SP",
+      "multiLeg": false,
+      "optionType": "PUT",
+      "premiumUsd": 72500,
+      "strike": 5105,
+      "symbol": "OGX6",
+      "timestamp": 1789175683000
+    },
+    {
+      "contracts": 1,
+      "flowClass": "SC",
+      "multiLeg": false,
+      "optionType": "CALL",
+      "premiumUsd": 47050,
+      "strike": 3935,
+      "symbol": "OGX6",
+      "timestamp": 1789175668000
+    },
+    {
+      "contracts": 107,
+      "flowClass": "SC",
+      "multiLeg": false,
+      "optionType": "CALL",
+      "premiumUsd": 52430,
+      "strike": 4740,
+      "symbol": "OGV6",
+      "timestamp": 1789175179000
+    },
+    {
+      "contracts": 11,
+      "flowClass": "LC",
+      "multiLeg": false,
+      "optionType": "CALL",
+      "premiumUsd": 89430,
+      "strike": 4570,
+      "symbol": "OGX6",
+      "timestamp": 1789175076000
+    },
+    {
+      "contracts": 11,
+      "flowClass": "LC",
+      "multiLeg": false,
+      "optionType": "CALL",
+      "premiumUsd": 92620,
+      "strike": 4560,
+      "symbol": "OGX6",
+      "timestamp": 1789175076000
+    },
+    {
+      "contracts": 21,
+      "flowClass": "LC",
+      "multiLeg": false,
+      "optionType": "CALL",
+      "premiumUsd": 152880,
+      "strike": 4600,
+      "symbol": "OGX6",
+      "timestamp": 1789175076000
+    },
+    {
+      "contracts": 17,
+      "flowClass": "LC",
+      "multiLeg": false,
+      "optionType": "CALL",
+      "premiumUsd": 123759,
+      "strike": 4600,
+      "symbol": "OGX6",
+      "timestamp": 1789175076000
+    },
+    {
+      "contracts": 12,
+      "flowClass": "LC",
+      "multiLeg": false,
+      "optionType": "CALL",
+      "premiumUsd": 87359,
+      "strike": 4600,
+      "symbol": "OGX6",
+      "timestamp": 1789175076000
+    },
+    {
+      "contracts": 9,
+      "flowClass": "LC",
+      "multiLeg": false,
+      "optionType": "CALL",
+      "premiumUsd": 65519,
+      "strike": 4600,
+      "symbol": "OGX6",
+      "timestamp": 1789175076000
+    },
+    {
+      "contracts": 31,
+      "flowClass": "SC",
+      "multiLeg": false,
+      "optionType": "CALL",
+      "premiumUsd": 225990,
+      "strike": 4600,
+      "symbol": "OGX6",
+      "timestamp": 1789175076000
+    },
+    {
+      "contracts": 24,
+      "flowClass": "SC",
+      "multiLeg": false,
+      "optionType": "CALL",
+      "premiumUsd": 174719,
+      "strike": 4600,
+      "symbol": "OGX6",
+      "timestamp": 1789175076000
+    },
+    {
+      "contracts": 8,
+      "flowClass": "SP",
+      "multiLeg": false,
+      "optionType": "PUT",
+      "premiumUsd": 57279,
+      "strike": 4235,
+      "symbol": "OGX6",
+      "timestamp": 1789174293000
+    },
+    {
+      "contracts": 5,
+      "flowClass": "LP",
+      "multiLeg": false,
+      "optionType": "PUT",
+      "premiumUsd": 50700,
+      "strike": 4420,
+      "symbol": "OGV6",
+      "timestamp": 1789173403000
+    },
+    {
+      "contracts": 90,
+      "flowClass": "SP",
+      "multiLeg": false,
+      "optionType": "PUT",
+      "premiumUsd": 127800,
+      "strike": 4350,
+      "symbol": "G2MU6",
+      "timestamp": 1789173015000
+    },
+    {
+      "contracts": 62,
+      "flowClass": "SP",
+      "multiLeg": false,
+      "optionType": "PUT",
+      "premiumUsd": 86180,
+      "strike": 4350,
+      "symbol": "G2MU6",
+      "timestamp": 1789172959000
+    },
+    {
+      "contracts": 5,
+      "flowClass": "LP",
+      "multiLeg": false,
+      "optionType": "PUT",
+      "premiumUsd": 45450,
+      "strike": 4400,
+      "symbol": "OGV6",
+      "timestamp": 1789172935000
+    },
+    {
+      "contracts": 10,
+      "flowClass": "LP",
+      "multiLeg": false,
+      "optionType": "PUT",
+      "premiumUsd": 122500,
+      "strike": 4450,
+      "symbol": "OGV6",
+      "timestamp": 1789172890000
+    },
+    {
+      "contracts": 10,
+      "flowClass": "LP",
+      "multiLeg": false,
+      "optionType": "PUT",
+      "premiumUsd": 74800,
+      "strike": 4370,
+      "symbol": "OGV6",
+      "timestamp": 1789172890000
+    },
+    {
+      "contracts": 5,
+      "flowClass": "LP",
+      "multiLeg": false,
+      "optionType": "PUT",
+      "premiumUsd": 44150,
+      "strike": 4395,
+      "symbol": "OGV6",
+      "timestamp": 1789172890000
+    },
+    {
+      "contracts": 12,
+      "flowClass": "LC",
+      "multiLeg": false,
+      "optionType": "CALL",
+      "premiumUsd": 61079,
+      "strike": 4440,
+      "symbol": "OGV6",
+      "timestamp": 1789172890000
+    },
+    {
+      "contracts": 19,
+      "flowClass": "SC",
+      "multiLeg": false,
+      "optionType": "CALL",
+      "premiumUsd": 96710,
+      "strike": 4440,
+      "symbol": "OGV6",
+      "timestamp": 1789172889000
+    },
+    {
+      "contracts": 18,
+      "flowClass": "SC",
+      "multiLeg": false,
+      "optionType": "CALL",
+      "premiumUsd": 91800,
+      "strike": 4440,
+      "symbol": "OGV6",
+      "timestamp": 1789172889000
+    },
+    {
+      "contracts": 27,
+      "flowClass": "SC",
+      "multiLeg": false,
+      "optionType": "CALL",
+      "premiumUsd": 137970,
+      "strike": 4440,
+      "symbol": "OGV6",
+      "timestamp": 1789172889000
+    },
+    {
+      "contracts": 40,
+      "flowClass": "LC",
+      "multiLeg": false,
+      "optionType": "CALL",
+      "premiumUsd": 70000,
+      "strike": 4600,
+      "symbol": "OGV6",
+      "timestamp": 1789172033000
+    },
+    {
+      "contracts": 50,
+      "flowClass": "LC",
+      "multiLeg": false,
+      "optionType": "CALL",
+      "premiumUsd": 87500,
+      "strike": 4600,
+      "symbol": "OGV6",
+      "timestamp": 1789172033000
+    },
+    {
+      "contracts": 50,
+      "flowClass": "LC",
+      "multiLeg": false,
+      "optionType": "CALL",
+      "premiumUsd": 87500,
+      "strike": 4600,
+      "symbol": "OGV6",
+      "timestamp": 1789172025000
+    },
+    {
+      "contracts": 69,
+      "flowClass": "LC",
+      "multiLeg": false,
+      "optionType": "CALL",
+      "premiumUsd": 120750,
+      "strike": 4600,
+      "symbol": "OGV6",
+      "timestamp": 1789172022000
+    },
+    {
+      "contracts": 72,
+      "flowClass": "LC",
+      "multiLeg": false,
+      "optionType": "CALL",
+      "premiumUsd": 126000,
+      "strike": 4600,
+      "symbol": "OGV6",
+      "timestamp": 1789172012000
+    },
+    {
+      "contracts": 65,
+      "flowClass": "LC",
+      "multiLeg": false,
+      "optionType": "CALL",
+      "premiumUsd": 113750,
+      "strike": 4600,
+      "symbol": "OGV6",
+      "timestamp": 1789171997000
+    },
+    {
+      "contracts": 53,
+      "flowClass": "SC",
+      "multiLeg": false,
+      "optionType": "CALL",
+      "premiumUsd": 46640,
+      "strike": 4700,
+      "symbol": "OGV6",
+      "timestamp": 1789171717000
+    },
+    {
+      "contracts": 53,
+      "flowClass": "SC",
+      "multiLeg": false,
+      "optionType": "CALL",
+      "premiumUsd": 47700,
+      "strike": 4700,
+      "symbol": "OGV6",
+      "timestamp": 1789171712000
+    },
+    {
+      "contracts": 30,
+      "flowClass": "SC",
+      "multiLeg": false,
+      "optionType": "CALL",
+      "premiumUsd": 265800,
+      "strike": 4355,
+      "symbol": "OGV6",
+      "timestamp": 1789171634000
+    },
+    {
+      "contracts": 28,
+      "flowClass": "LC",
+      "multiLeg": false,
+      "optionType": "CALL",
+      "premiumUsd": 134400,
+      "strike": 4400,
+      "symbol": "OG3U6",
+      "timestamp": 1789171465000
+    },
+    {
+      "contracts": 14,
+      "flowClass": "LC",
+      "multiLeg": false,
+      "optionType": "CALL",
+      "premiumUsd": 67200,
+      "strike": 4400,
+      "symbol": "OG3U6",
+      "timestamp": 1789171465000
+    },
+    {
+      "contracts": 50,
+      "flowClass": "LC",
+      "multiLeg": false,
+      "optionType": "CALL",
+      "premiumUsd": 44500,
+      "strike": 4700,
+      "symbol": "OGV6",
+      "timestamp": 1789170211000
+    },
+    {
+      "contracts": 100,
+      "flowClass": "SC",
+      "multiLeg": false,
+      "optionType": "CALL",
+      "premiumUsd": 89000,
+      "strike": 4700,
+      "symbol": "OGV6",
+      "timestamp": 1789169924000
+    },
+    {
+      "contracts": 1,
+      "flowClass": "SP",
+      "multiLeg": false,
+      "optionType": "PUT",
+      "premiumUsd": 76710,
+      "strike": 5160,
+      "symbol": "OGX6",
+      "timestamp": 1789169569000
+    },
+    {
+      "contracts": 46,
+      "flowClass": "LC",
+      "multiLeg": false,
+      "optionType": "CALL",
+      "premiumUsd": 289800,
+      "strike": 4400,
+      "symbol": "OGV6",
+      "timestamp": 1789169426000
+    },
+    {
+      "contracts": 9,
+      "flowClass": "LP",
+      "multiLeg": false,
+      "optionType": "PUT",
+      "premiumUsd": 157320,
+      "strike": 4445,
+      "symbol": "OGX6",
+      "timestamp": 1789169402000
+    },
+    {
+      "contracts": 15,
+      "flowClass": "LC",
+      "multiLeg": false,
+      "optionType": "CALL",
+      "premiumUsd": 93750,
+      "strike": 4400,
+      "symbol": "OGV6",
+      "timestamp": 1789169165000
+    }
+  ],
+  "clusterDistance": 5,
+  "clusters": [
+    {
+      "center": 4400,
+      "distinctExpirations": 3,
+      "distinctTypes": 4,
+      "high": 4400,
+      "levels": [
+        {
+          "experimental": false,
+          "price": 4400,
+          "symbol": "G2MU6",
+          "type": "POC",
+          "weight": 1.15
+        },
+        {
+          "experimental": true,
+          "price": 4400,
+          "symbol": "G2MU6",
+          "type": "WRES",
+          "weight": 1.035
+        },
+        {
+          "experimental": false,
+          "price": 4400,
+          "symbol": "OG3U6",
+          "type": "ABOVE_POC",
+          "weight": 0.6
+        },
+        {
+          "experimental": false,
+          "price": 4400,
+          "symbol": "OGV6",
+          "type": "MAX_PAIN",
+          "weight": 0.8
+        }
+      ],
+      "low": 4400,
+      "score": 10.665375
+    },
+    {
+      "center": 4350,
+      "distinctExpirations": 2,
+      "distinctTypes": 3,
+      "high": 4350,
+      "levels": [
+        {
+          "experimental": false,
+          "price": 4350,
+          "symbol": "OG3U6",
+          "type": "MAX_PAIN",
+          "weight": 1
+        },
+        {
+          "experimental": false,
+          "price": 4350,
+          "symbol": "OG3U6",
+          "type": "POC",
+          "weight": 1
+        },
+        {
+          "experimental": true,
+          "price": 4350,
+          "symbol": "OGX6",
+          "type": "WSUP",
+          "weight": 0.72
+        }
+      ],
+      "low": 4350,
+      "score": 5.508
+    },
+    {
+      "center": 4460.903755534,
+      "distinctExpirations": 2,
+      "distinctTypes": 2,
+      "high": 4461.442640821,
+      "levels": [
+        {
+          "experimental": false,
+          "price": 4460,
+          "symbol": "OGX6",
+          "type": "ABOVE_POC",
+          "weight": 0.48
+        },
+        {
+          "experimental": true,
+          "price": 4461.442640821,
+          "symbol": "G2MU6",
+          "type": "CALL_BE",
+          "weight": 0.805
+        }
+      ],
+      "low": 4460,
+      "score": 2.1684375
+    },
+    {
+      "center": 4450,
+      "distinctExpirations": 1,
+      "distinctTypes": 2,
+      "high": 4450,
+      "levels": [
+        {
+          "experimental": false,
+          "price": 4450,
+          "symbol": "OGX6",
+          "type": "MAX_PAIN",
+          "weight": 0.8
+        },
+        {
+          "experimental": false,
+          "price": 4450,
+          "symbol": "OGX6",
+          "type": "POC",
+          "weight": 0.8
+        }
+      ],
+      "low": 4450,
+      "score": 2
+    },
+    {
+      "center": 4370,
+      "distinctExpirations": 1,
+      "distinctTypes": 1,
+      "high": 4370,
+      "levels": [
+        {
+          "experimental": false,
+          "price": 4370,
+          "symbol": "G2MU6",
+          "type": "MAX_PAIN",
+          "weight": 1.15
+        }
+      ],
+      "low": 4370,
+      "score": 1.15
+    },
+    {
+      "center": 4325,
+      "distinctExpirations": 1,
+      "distinctTypes": 1,
+      "high": 4325,
+      "levels": [
+        {
+          "experimental": true,
+          "price": 4325,
+          "symbol": "G2MU6",
+          "type": "WSUP",
+          "weight": 1.035
+        }
+      ],
+      "low": 4325,
+      "score": 1.035
+    },
+    {
+      "center": 4075,
+      "distinctExpirations": 1,
+      "distinctTypes": 1,
+      "high": 4075,
+      "levels": [
+        {
+          "experimental": true,
+          "price": 4075,
+          "symbol": "OG3U6",
+          "type": "WSUP",
+          "weight": 0.9
+        }
+      ],
+      "low": 4075,
+      "score": 0.9
+    },
+    {
+      "center": 4550,
+      "distinctExpirations": 1,
+      "distinctTypes": 1,
+      "high": 4550,
+      "levels": [
+        {
+          "experimental": true,
+          "price": 4550,
+          "symbol": "OG3U6",
+          "type": "WRES",
+          "weight": 0.9
+        }
+      ],
+      "low": 4550,
+      "score": 0.9
+    },
+    {
+      "center": 4309.005731035,
+      "distinctExpirations": 1,
+      "distinctTypes": 1,
+      "high": 4309.005731035,
+      "levels": [
+        {
+          "experimental": true,
+          "price": 4309.005731035,
+          "symbol": "G2MU6",
+          "type": "PUT_BE",
+          "weight": 0.805
+        }
+      ],
+      "low": 4309.005731035,
+      "score": 0.805
+    },
+    {
+      "center": 4500,
+      "distinctExpirations": 1,
+      "distinctTypes": 1,
+      "high": 4500,
+      "levels": [
+        {
+          "experimental": false,
+          "price": 4500,
+          "symbol": "OGV6",
+          "type": "POC",
+          "weight": 0.8
+        }
+      ],
+      "low": 4500,
+      "score": 0.8
+    },
+    {
+      "center": 4200,
+      "distinctExpirations": 1,
+      "distinctTypes": 1,
+      "high": 4200,
+      "levels": [
+        {
+          "experimental": true,
+          "price": 4200,
+          "symbol": "OGV6",
+          "type": "WSUP",
+          "weight": 0.72
+        }
+      ],
+      "low": 4200,
+      "score": 0.72
+    },
+    {
+      "center": 4600,
+      "distinctExpirations": 1,
+      "distinctTypes": 1,
+      "high": 4600,
+      "levels": [
+        {
+          "experimental": true,
+          "price": 4600,
+          "symbol": "OGV6",
+          "type": "WRES",
+          "weight": 0.72
+        }
+      ],
+      "low": 4600,
+      "score": 0.72
+    }
+  ],
+  "contexts": [
+    {
+      "abovePoc": 4425,
+      "callBE": 4461.442640821,
+      "dte": 2.8542,
+      "expirationType": "DAILY",
+      "flow": {
+        "bearPremium": 4028814,
+        "bullPremium": 4533102,
+        "bullRatio": 0.529449483,
+        "contracts": 4475,
+        "lcPremium": 2272435,
+        "lpPremium": 1521076,
+        "netDirectionalPremium": 504288,
+        "scPremium": 2507738,
+        "spPremium": 2260667,
+        "trades": 1011
+      },
+      "maxPain": 4370,
+      "poc": 4400,
+      "putBE": 4309.005731035,
+      "symbol": "G2MU6",
+      "trades": 1011,
+      "underPoc": 4390,
+      "vah": 4425,
+      "val": 4290,
+      "wRes": 4400,
+      "wSup": 4325
+    },
+    {
+      "abovePoc": 4400,
+      "callBE": 4521.069543637,
+      "dte": 6.8542,
+      "expirationType": "WEEKLY",
+      "flow": {
+        "bearPremium": 3998573,
+        "bullPremium": 7405668,
+        "bullRatio": 0.64937842,
+        "contracts": 4319,
+        "lcPremium": 4361285,
+        "lpPremium": 1743487,
+        "netDirectionalPremium": 3407095,
+        "scPremium": 2255086,
+        "spPremium": 3044383,
+        "trades": 929
+      },
+      "maxPain": 4350,
+      "poc": 4350,
+      "putBE": 4245.719085773,
+      "symbol": "OG3U6",
+      "trades": 929,
+      "underPoc": 4300,
+      "vah": 4525,
+      "val": 4250,
+      "wRes": 4550,
+      "wSup": 4075
+    },
+    {
+      "abovePoc": 4510,
+      "callBE": 4567.813706512,
+      "dte": 12.8542,
+      "expirationType": "MONTHLY",
+      "flow": {
+        "bearPremium": 47995691,
+        "bullPremium": 45269491,
+        "bullRatio": 0.485384685,
+        "contracts": 24804,
+        "lcPremium": 27495003,
+        "lpPremium": 24529639,
+        "netDirectionalPremium": -2726200,
+        "scPremium": 23466052,
+        "spPremium": 17774488,
+        "trades": 7698
+      },
+      "maxPain": 4400,
+      "poc": 4500,
+      "putBE": 4258.048522505,
+      "symbol": "OGV6",
+      "trades": 7698,
+      "underPoc": 4490,
+      "vah": 4550,
+      "val": 4235,
+      "wRes": 4600,
+      "wSup": 4200
+    },
+    {
+      "abovePoc": 4460,
+      "callBE": 4758.099245506,
+      "dte": 45.8542,
+      "expirationType": "MONTHLY",
+      "flow": {
+        "bearPremium": 27382953,
+        "bullPremium": 19914711,
+        "bullRatio": 0.421050625,
+        "contracts": 8113,
+        "lcPremium": 11296044,
+        "lpPremium": 15142150,
+        "netDirectionalPremium": -7468242,
+        "scPremium": 12240803,
+        "spPremium": 8618667,
+        "trades": 2132
+      },
+      "maxPain": 4450,
+      "poc": 4450,
+      "putBE": 4205.946388838,
+      "symbol": "OGX6",
+      "trades": 2132,
+      "underPoc": 4435,
+      "vah": 4735,
+      "val": 4120,
+      "wRes": 4900,
+      "wSup": 4350
+    }
+  ],
+  "flow": {
+    "bias": "BALANCED",
+    "overall": {
+      "bearPremium": 83406031,
+      "bullPremium": 77122972,
+      "bullRatio": 0.480430144,
+      "contracts": 41711,
+      "lcPremium": 45424767,
+      "lpPremium": 42936352,
+      "netDirectionalPremium": -6283059,
+      "scPremium": 40469679,
+      "spPremium": 31698205,
+      "trades": 11770
+    },
+    "velocity": {
+      "bearVelocity": 32049,
+      "bullVelocity": 10442,
+      "current": -137808,
+      "previous": -116201,
+      "velocity": -21607
+    },
+    "windows": {
+      "15m": {
+        "bearPremium": 257258,
+        "bullPremium": 119450,
+        "bullRatio": 0.317089098,
+        "contracts": 135,
+        "lcPremium": 55600,
+        "lpPremium": 112050,
+        "netDirectionalPremium": -137808,
+        "scPremium": 145208,
+        "spPremium": 63850,
+        "trades": 46
+      },
+      "30m": {
+        "bearPremium": 482467,
+        "bullPremium": 228458,
+        "bullRatio": 0.321353167,
+        "contracts": 313,
+        "lcPremium": 127578,
+        "lpPremium": 297459,
+        "netDirectionalPremium": -254009,
+        "scPremium": 185008,
+        "spPremium": 100880,
+        "trades": 100
+      },
+      "5m": {
+        "bearPremium": 126829,
+        "bullPremium": 61760,
+        "bullRatio": 0.327484636,
+        "contracts": 85,
+        "lcPremium": 53670,
+        "lpPremium": 42150,
+        "netDirectionalPremium": -65069,
+        "scPremium": 84679,
+        "spPremium": 8090,
+        "trades": 22
+      },
+      "60m": {
+        "bearPremium": 671855,
+        "bullPremium": 352954,
+        "bullRatio": 0.344409544,
+        "contracts": 400,
+        "lcPremium": 189126,
+        "lpPremium": 441838,
+        "netDirectionalPremium": -318901,
+        "scPremium": 230017,
+        "spPremium": 163828,
+        "trades": 141
+      },
+      "session": {
+        "bearPremium": 12357925,
+        "bullPremium": 15653167,
+        "bullRatio": 0.558820306,
+        "contracts": 9670,
+        "lcPremium": 11040313,
+        "lpPremium": 5343927,
+        "netDirectionalPremium": 3295242,
+        "scPremium": 7013998,
+        "spPremium": 4612854,
+        "trades": 2291
+      }
+    }
+  },
+  "spot": 4356.3
+}

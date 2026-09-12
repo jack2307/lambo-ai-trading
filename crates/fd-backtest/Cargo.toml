@@ -1,0 +1,31 @@
+[package]
+name = "fd-backtest"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Bar-driven backtest engine, parameter sweeps and walk-forward"
+
+[dependencies]
+fd-core = { workspace = true }
+fd-indicators = { workspace = true }
+fd-engine = { workspace = true }
+# The search tool reads what the store holds; the library stays storage-free.
+fd-store = { workspace = true }
+fd-strategy = { workspace = true }
+rayon = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+fd-indicators = { workspace = true }
+fd-engine = { workspace = true }
+# The search tool reads what the store holds; the library stays storage-free.
+fd-store = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+criterion = { workspace = true }
+
+[[bench]]
+name = "sweep"
+harness = false

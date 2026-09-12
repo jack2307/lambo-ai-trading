@@ -1,0 +1,248 @@
+{
+  "breakEven": {
+    "BTC-12SEP26": {
+      "aggregate-payoff": {
+        "call": 76985.493597793,
+        "put": 78970.261853896
+      },
+      "net-positioning": {
+        "call": 79848.559219451,
+        "put": 76654.250528556
+      },
+      "premium-weighted": {
+        "call": 78465.573993112,
+        "put": 76902.58540807
+      },
+      "premium-weighted-long": {
+        "call": 78386.535466592,
+        "put": 76704.316090415
+      },
+      "size-weighted": {
+        "call": 79499.899036756,
+        "put": 76011.581364033
+      }
+    },
+    "BTC-18SEP26": {
+      "aggregate-payoff": {
+        "call": 75351.355571021,
+        "put": 81262.433039548
+      },
+      "net-positioning": {
+        "call": 82507.114891843,
+        "put": 74082.592191462
+      },
+      "premium-weighted": {
+        "call": 80237.27731093,
+        "put": 77161.792254152
+      },
+      "premium-weighted-long": {
+        "call": 79547.924936571,
+        "put": 77838.201963761
+      },
+      "size-weighted": {
+        "call": 82667.63666755,
+        "put": 73891.50574352
+      }
+    },
+    "BTC-25DEC26": {
+      "aggregate-payoff": {
+        "call": 77043.19995038,
+        "put": 83585.111073571
+      },
+      "net-positioning": {
+        "call": 97562.876179713,
+        "put": 55575.211399421
+      },
+      "premium-weighted": {
+        "call": 84330.025580401,
+        "put": 74322.84198539
+      },
+      "premium-weighted-long": {
+        "call": 83237.497372449,
+        "put": 72587.10270439
+      },
+      "size-weighted": {
+        "call": 90576.686506728,
+        "put": 62867.955861111
+      }
+    },
+    "BTC-25SEP26": {
+      "aggregate-payoff": {
+        "call": 68017.788778972,
+        "put": 78995.642775945
+      },
+      "net-positioning": {
+        "call": 84919.903529652,
+        "put": 76156.031008059
+      },
+      "premium-weighted": {
+        "call": 79083.788887591,
+        "put": 77215.296379479
+      },
+      "premium-weighted-long": {
+        "call": 79841.827979573,
+        "put": 78003.418027887
+      },
+      "size-weighted": {
+        "call": 84295.673766917,
+        "put": 73459.628108683
+      }
+    },
+    "BTC-27NOV26": {
+      "aggregate-payoff": {
+        "call": 77840.274315777,
+        "put": 81959.249923333
+      },
+      "net-positioning": {
+        "call": 86796.102247406,
+        "put": 79617.248703971
+      },
+      "premium-weighted": {
+        "call": 80808.057735872,
+        "put": 77422.570973558
+      },
+      "premium-weighted-long": {
+        "call": 82435.343834391,
+        "put": 78924.552225538
+      },
+      "size-weighted": {
+        "call": 82819.492777257,
+        "put": 74006.34527438
+      }
+    },
+    "BTC-30OCT26": {
+      "aggregate-payoff": {
+        "call": 66301.278640858,
+        "put": 81566.831644168
+      },
+      "net-positioning": {
+        "call": 90593.098353896,
+        "put": 70811.482637792
+      },
+      "premium-weighted": {
+        "call": 80899.331226385,
+        "put": 74918.30678135
+      },
+      "premium-weighted-long": {
+        "call": 81400.711748112,
+        "put": 73750.644330372
+      },
+      "size-weighted": {
+        "call": 85234.483295477,
+        "put": 71691.156579351
+      }
+    }
+  },
+  "maxPain": {
+    "BTC-12SEP26": {
+      "netPositioning": 77500,
+      "volumeWeighted": 77500
+    },
+    "BTC-18SEP26": {
+      "netPositioning": 78000,
+      "volumeWeighted": 78000
+    },
+    "BTC-25DEC26": {
+      "netPositioning": 78000,
+      "volumeWeighted": 78000
+    },
+    "BTC-25SEP26": {
+      "netPositioning": 79000,
+      "volumeWeighted": 79000
+    },
+    "BTC-27NOV26": {
+      "netPositioning": 82000,
+      "volumeWeighted": 79000
+    },
+    "BTC-30OCT26": {
+      "netPositioning": 78000,
+      "volumeWeighted": 79000
+    }
+  },
+  "whale": {
+    "BTC-12SEP26": {
+      "largest-print": {
+        "resistance": 78000,
+        "support": 76500
+      },
+      "net-long-whale": {
+        "resistance": 78000,
+        "support": 77000
+      },
+      "premium-concentration": {
+        "resistance": 78000,
+        "support": 77000
+      }
+    },
+    "BTC-18SEP26": {
+      "largest-print": {
+        "resistance": 78000,
+        "support": 77000
+      },
+      "net-long-whale": {
+        "resistance": 85000,
+        "support": 77000
+      },
+      "premium-concentration": {
+        "resistance": 78000,
+        "support": 77000
+      }
+    },
+    "BTC-25DEC26": {
+      "largest-print": {
+        "resistance": 85000,
+        "support": 74000
+      },
+      "net-long-whale": {
+        "resistance": 106000,
+        "support": 65000
+      },
+      "premium-concentration": {
+        "resistance": 80000,
+        "support": 74000
+      }
+    },
+    "BTC-25SEP26": {
+      "largest-print": {
+        "resistance": 81000,
+        "support": 76000
+      },
+      "net-long-whale": {
+        "resistance": 82000,
+        "support": 76000
+      },
+      "premium-concentration": {
+        "resistance": 81000,
+        "support": 75000
+      }
+    },
+    "BTC-27NOV26": {
+      "largest-print": {
+        "resistance": 78000,
+        "support": 70000
+      },
+      "net-long-whale": {
+        "resistance": 83000,
+        "support": null
+      },
+      "premium-concentration": {
+        "resistance": 79000,
+        "support": 69000
+      }
+    },
+    "BTC-30OCT26": {
+      "largest-print": {
+        "resistance": 78000,
+        "support": 76000
+      },
+      "net-long-whale": {
+        "resistance": 78000,
+        "support": 69000
+      },
+      "premium-concentration": {
+        "resistance": 81000,
+        "support": 72000
+      }
+    }
+  }
+}

@@ -1,0 +1,18 @@
+[package]
+name = "fd-model"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Logistic baseline, written out so the decision path stays auditable"
+
+[dependencies]
+serde = { workspace = true }
+thiserror = { workspace = true }
+# The evaluation tool reads the golden feature table; the library itself has no
+# opinion about where its rows came from.
+serde_json = { workspace = true }
+
+[dev-dependencies]
+fd-core = { workspace = true }
+fd-features = { workspace = true }

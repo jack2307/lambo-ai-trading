@@ -1,0 +1,285 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/geist";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * flowdesk theme.
+ *
+ * Carried over from the prototype's design pass, and the two rules that pass
+ * settled on:
+ *
+ *  1. ONE chrome accent. Green / teal / red / amber exist only as *data
+ *     encodings* for the four flow classes — never for buttons, links or
+ *     headers. A green button in a trading app reads as "bullish" and quietly
+ *     destroys the chart legend's meaning.
+ *  2. Numbers are monospace with tabular figures; prose is not. Mixing them
+ *     made every label look like output.
+ *
+ * Density is deliberate. This is a tape reader, not a landing page.
+ */
+
+@theme inline {
+    --font-heading: var(--font-sans);
+    --font-sans: 'Geist Variable', sans-serif;
+    --font-mono: ui-monospace, 'Cascadia Mono', 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+
+    /* Data encodings — desaturated to sit in the same family as the surfaces. */
+    --color-lc: var(--lc);
+    --color-sp: var(--sp);
+    --color-lp: var(--lp);
+    --color-sc: var(--sc);
+    --color-bull: var(--lc);
+    --color-bear: var(--lp);
+    --color-caution: var(--caution);
+
+    /* One step above --card, for a hero or an active row. Three elevation
+     * levels exist and no more; a fourth stops being a hierarchy. */
+    --color-elevated: var(--elevated);
+
+    /* Backcom's second brand colour. Gradients and glows ONLY — never a
+     * control, and never beside the tape's teal, which it would be mistaken
+     * for. See DESIGN.md. */
+    --color-brand-mint: var(--brand-mint);
+
+    --color-sidebar-ring: var(--sidebar-ring);
+    --color-sidebar-border: var(--sidebar-border);
+    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+    --color-sidebar-accent: var(--sidebar-accent);
+    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+    --color-sidebar-primary: var(--sidebar-primary);
+    --color-sidebar-foreground: var(--sidebar-foreground);
+    --color-sidebar: var(--sidebar);
+    --color-chart-5: var(--chart-5);
+    --color-chart-4: var(--chart-4);
+    --color-chart-3: var(--chart-3);
+    --color-chart-2: var(--chart-2);
+    --color-chart-1: var(--chart-1);
+    --color-ring: var(--ring);
+    --color-input: var(--input);
+    --color-border: var(--border);
+    --color-destructive: var(--destructive);
+    --color-accent-foreground: var(--accent-foreground);
+    --color-accent: var(--accent);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-muted: var(--muted);
+    --color-secondary-foreground: var(--secondary-foreground);
+    --color-secondary: var(--secondary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-primary: var(--primary);
+    --color-popover-foreground: var(--popover-foreground);
+    --color-popover: var(--popover);
+    --color-card-foreground: var(--card-foreground);
+    --color-card: var(--card);
+    --color-foreground: var(--foreground);
+    --color-background: var(--background);
+    --radius-sm: calc(var(--radius) * 0.6);
+    --radius-md: calc(var(--radius) * 0.8);
+    --radius-lg: var(--radius);
+    --radius-xl: calc(var(--radius) * 1.4);
+}
+
+/*
+ * The terminal is dark. A light mode is defined so the app is not broken for
+ * anyone who forces it, but the product is a dark room with a tape in it.
+ */
+:root {
+    --background: #f4f6f2;
+    --foreground: #0a0a0a;
+    --card: #ffffff;
+    --card-foreground: #0a0a0a;
+    --elevated: #eef2ea;
+    --popover: #ffffff;
+    --popover-foreground: #0a0a0a;
+    /* Brand lime is unreadable on white; light mode carries the same hue,
+     * darkened until text on it can be the brand's own #071400. */
+    --primary: #5c9e06;
+    --primary-foreground: #071400;
+    --brand-mint: #0aa878;
+    --secondary: #e6eae2;
+    --secondary-foreground: #0a0a0a;
+    --muted: #e6eae2;
+    --muted-foreground: #5f665f;
+    --accent: #e3efd6;
+    --accent-foreground: #0a0a0a;
+    --destructive: #c2323f;
+    --border: #d6dbd2;
+    --input: #d6dbd2;
+    --ring: #5c9e06;
+
+    --lc: #1f9c63;
+    --sp: #178e92;
+    --lp: #c2323f;
+    --sc: #a86b1c;
+    --caution: #8a6d15;
+
+    --chart-1: #5c9e06;
+    --chart-2: #178e92;
+    --chart-3: #a86b1c;
+    --chart-4: #1f9c63;
+    --chart-5: #c2323f;
+    --radius: 0.5rem;
+
+    --sidebar: #ffffff;
+    --sidebar-foreground: #0a0a0a;
+    --sidebar-primary: #5c9e06;
+    --sidebar-primary-foreground: #071400;
+    --sidebar-accent: #e6eae2;
+    --sidebar-accent-foreground: #0a0a0a;
+    --sidebar-border: #d6dbd2;
+    --sidebar-ring: #5c9e06;
+}
+
+.dark {
+    /* Backcom: lime on near-black. The ground is a NEUTRAL black — the
+     * previous blue-black would tint the lime toward teal and collide with the
+     * tape's own SP colour. Greys are lifted from backcom.io's CSS. */
+    --background: #0a0a0a;
+    --foreground: #ffffff;
+    --card: #131413;
+    --card-foreground: #ffffff;
+    --elevated: #1a1c1a;
+    --popover: #131413;
+    --popover-foreground: #ffffff;
+    --primary: #8dff08;
+    /* Text on lime is the brand's own near-black, never white. */
+    --primary-foreground: #071400;
+    --brand-mint: #08ffb5;
+    --secondary: #1a1c1a;
+    --secondary-foreground: #ffffff;
+    --muted: #1a1c1a;
+    --muted-foreground: #9aa39a;
+    --accent: #202320;
+    --accent-foreground: #ffffff;
+    --destructive: #e05d6a;
+    --border: #242724;
+    --input: #242724;
+    --ring: #8dff08;
+
+    --lc: #46c98a;
+    --sp: #3fbcc0;
+    --lp: #e05d6a;
+    --sc: #d99446;
+    --caution: #d9b04a;
+
+    --chart-1: #8dff08;
+    --chart-2: #3fbcc0;
+    --chart-3: #d99446;
+    --chart-4: #46c98a;
+    --chart-5: #e05d6a;
+
+    --sidebar: #10141c;
+    --sidebar-foreground: #e3e8f0;
+    --sidebar-primary: #7d94e8;
+    --sidebar-primary-foreground: #0a0d13;
+    --sidebar-accent: #1a202b;
+    --sidebar-accent-foreground: #e3e8f0;
+    --sidebar-border: #232a38;
+    --sidebar-ring: #7d94e8;
+}
+
+@layer base {
+    * {
+        @apply border-border outline-ring/50;
+    }
+
+    body {
+        @apply bg-background text-foreground;
+        /* A faint wash so the page does not read as one flat slab. */
+        background-image: radial-gradient(120% 70% at 50% -10%, color-mix(in srgb, var(--primary) 7%, transparent), transparent 60%);
+        background-attachment: fixed;
+    }
+
+    html {
+        @apply font-sans;
+    }
+
+    /* Every number in the app is column-aligned. */
+    .tabular,
+    td,
+    th {
+        font-variant-numeric: tabular-nums;
+    }
+}
+
+@utility num {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+}
+
+/*
+ * Overview-mode utilities.
+ *
+ * Terminal mode (Workbench, Tape) deliberately uses none of these — see
+ * DESIGN.md. Density and elevation are the two things that must not be mixed
+ * between the modes.
+ */
+
+/* Tabular figures. Every number in the product goes through this: a column of
+ * proportional digits does not line up, which is the only reason a column of
+ * numbers exists. */
+.tnum {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum';
+}
+
+/* A raised panel. The shadow is tinted with the background hue rather than
+ * black — black shadow on a blue-black ground reads as dirt, not depth. */
+.panel {
+    background-color: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xl);
+    box-shadow: 0 8px 32px -12px rgb(4 6 4 / 0.75);
+}
+
+/* Interactive version. Lifts by a pixel and lightens its edge; nothing scales,
+ * because a card that grows displaces every card beside it. */
+.panel-interactive {
+    transition:
+        transform 160ms ease,
+        border-color 160ms ease,
+        box-shadow 160ms ease;
+}
+
+.panel-interactive:hover {
+    transform: translateY(-1px);
+    border-color: color-mix(in oklab, var(--border) 40%, var(--foreground));
+    box-shadow: 0 14px 40px -14px rgb(4 6 4 / 0.9);
+}
+
+.panel-interactive:active {
+    transform: scale(0.985);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .panel-interactive,
+    .panel-interactive:hover,
+    .panel-interactive:active {
+        transform: none;
+        transition: none;
+    }
+}
+
+/* The one gradient per screen: backcom.io's own pairing, mint into lime at
+ * its own 324°, laid as two radial washes so it sits under content rather
+ * than competing with it. This is the only place mint touches a surface. */
+.hero-gradient {
+    background:
+        radial-gradient(120% 90% at 12% 8%, color-mix(in oklab, var(--primary) 34%, transparent), transparent 62%),
+        radial-gradient(90% 120% at 88% 96%, color-mix(in oklab, var(--brand-mint) 26%, transparent), transparent 58%),
+        linear-gradient(324deg, color-mix(in oklab, var(--brand-mint) 10%, transparent), color-mix(in oklab, var(--primary) 10%, transparent)),
+        var(--elevated);
+}
+
+/* Uppercase micro-label. Positive tracking, because uppercase at 11px without
+ * it is a smear. */
+.label-micro {
+    font-size: 11px;
+    line-height: 1.2;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted-foreground);
+}

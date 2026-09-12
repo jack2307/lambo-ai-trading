@@ -1,0 +1,115 @@
+{
+  "bars": {
+    "count": 673,
+    "from": 1788586200000,
+    "synthetic": false,
+    "to": 1789191000000
+  },
+  "config": {
+    "backtest": {
+      "fallbackAtrPeriod": 14,
+      "minTradesPerCell": 5,
+      "note": "Signals fill at the NEXT bar's open; stop wins when a bar covers both stop and target.",
+      "optionsStepMs": 300000,
+      "promising": {
+        "minExpectancyR": 0.05,
+        "minProfitFactor": 1.2,
+        "minTrades": 30
+      },
+      "selectBy": "expectancy",
+      "timeframe": "15m",
+      "walkForwardFolds": 4
+    },
+    "bigTrades": {
+      "limit": 200,
+      "minContracts": null,
+      "minPremiumUsd": 25000,
+      "percentile": 0.95,
+      "percentileWindow": 2000
+    },
+    "flow": {
+      "thresholds": {
+        "moderateBear": 0.45,
+        "moderateBull": 0.55,
+        "strongBear": 0.4,
+        "strongBull": 0.6
+      },
+      "velocityWindowMs": 900000,
+      "windows": {
+        "15m": 900000,
+        "30m": 1800000,
+        "5m": 300000,
+        "60m": 3600000,
+        "session": 28800000
+      }
+    },
+    "levels": {
+      "cluster": {
+        "atrFraction": 0.15,
+        "floor": 100
+      },
+      "maxClusters": 12,
+      "typeWeights": {
+        "ABOVE_POC": 0.6,
+        "CALL_BE": 0.7,
+        "GAMMA_WALL": 0.8,
+        "MAX_PAIN": 1,
+        "POC": 1,
+        "PUT_BE": 0.7,
+        "UNDER_POC": 0.6,
+        "WRES": 0.9,
+        "WSUP": 0.9
+      }
+    },
+    "models": {
+      "breakEven": "premium-weighted",
+      "maxPainAbsolute": true,
+      "whale": "net-long-whale"
+    },
+    "multiplier": 1,
+    "profile": {
+      "mode": "PREMIUM",
+      "valueAreaPct": 0.7
+    },
+    "trading": {
+      "clusterPadAtr": 0.25,
+      "commissionPerLot": 0,
+      "contractSize": 1,
+      "guards": {
+        "cooldownMs": 1800000,
+        "dailyLossLimitUsd": 300,
+        "maxConcurrentPositions": 1,
+        "maxTradesPerDay": 4
+      },
+      "lotStep": 0.001,
+      "maxHoldMs": 14400000,
+      "maxStopAtr": 3,
+      "minLot": 0.001,
+      "minRewardRisk": 1.2,
+      "requireBasis": true,
+      "rewardRisk": 1.8,
+      "riskPerTradePct": 0.01,
+      "spread": 5,
+      "startingEquityUsd": 10000,
+      "stopAtr": 1.2,
+      "symbol": "BTCUSD"
+    }
+  },
+  "generator": "research/export-golden.js",
+  "market": "btc",
+  "tape": {
+    "contracts": [
+      "BTC-12SEP26",
+      "BTC-18SEP26",
+      "BTC-25DEC26",
+      "BTC-25SEP26",
+      "BTC-27NOV26",
+      "BTC-30OCT26"
+    ],
+    "from": 1789104996063,
+    "prints": 6440,
+    "to": 1789191240277
+  },
+  "timeframe": "15m",
+  "toleranceDecimals": 9
+}

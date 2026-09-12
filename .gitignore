@@ -1,0 +1,20 @@
+/target
+**/*.rs.bk
+
+# Data is fetched, not committed — except the golden files, which are the
+# parity oracle for the port and must be version controlled.
+/data
+!/tests/golden
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+py/models/*.onnx
+
+# UI
+node_modules/
+ui/dist/
+
+# Local overrides
+config/local.toml

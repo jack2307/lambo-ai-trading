@@ -1,0 +1,15 @@
+[package]
+name = "fd-features"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Feature extraction shared by research and live"
+
+[dependencies]
+fd-core = { workspace = true }
+fd-engine = { workspace = true }
+
+[dev-dependencies]
+fd-store = { workspace = true }
+serde_json = { workspace = true }

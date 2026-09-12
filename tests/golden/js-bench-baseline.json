@@ -1,0 +1,172 @@
+{
+  "generator": "research/bench-sweep.js",
+  "node": "v24.14.1",
+  "repeats": 3,
+  "markets": {
+    "gold": {
+      "bars": 449,
+      "frames": 1427,
+      "sweeps": {
+        "ema-cross": {
+          "cells": 9,
+          "ms": 2.7468
+        },
+        "rsi-reversion": {
+          "cells": 9,
+          "ms": 1.8845
+        },
+        "donchian-breakout": {
+          "cells": 9,
+          "ms": 2.9468
+        },
+        "bb-fade": {
+          "cells": 9,
+          "ms": 3.1398
+        },
+        "level-reversion": {
+          "cells": 9,
+          "ms": 1.9088
+        },
+        "maxpain-magnet": {
+          "cells": 9,
+          "ms": 1.001
+        },
+        "flow-momentum": {
+          "cells": 9,
+          "ms": 0.9132
+        },
+        "flow-at-level": {
+          "cells": 18,
+          "ms": 3.874
+        },
+        "buy-and-hold": {
+          "cells": 1,
+          "ms": 0.1368
+        }
+      },
+      "walkForward": {
+        "ema-cross": {
+          "ms": 5.251
+        },
+        "rsi-reversion": {
+          "ms": 4.8633
+        },
+        "donchian-breakout": {
+          "ms": 5.8759
+        },
+        "bb-fade": {
+          "ms": 6.4292
+        },
+        "level-reversion": {
+          "ms": 3.6099
+        },
+        "maxpain-magnet": {
+          "ms": 2.1952
+        },
+        "flow-momentum": {
+          "ms": 2.0864
+        },
+        "flow-at-level": {
+          "ms": 5.44
+        },
+        "buy-and-hold": {
+          "ms": 0.3352
+        }
+      },
+      "totalSweepMs": 18.5517,
+      "totalCells": 82,
+      "totalWalkForwardMs": 36.0861
+    },
+    "btc": {
+      "bars": 673,
+      "frames": 288,
+      "sweeps": {
+        "ema-cross": {
+          "cells": 9,
+          "ms": 3.1437
+        },
+        "rsi-reversion": {
+          "cells": 9,
+          "ms": 2.3032
+        },
+        "donchian-breakout": {
+          "cells": 9,
+          "ms": 3.0204
+        },
+        "bb-fade": {
+          "cells": 9,
+          "ms": 3.1246
+        },
+        "level-reversion": {
+          "cells": 9,
+          "ms": 0.981
+        },
+        "maxpain-magnet": {
+          "cells": 9,
+          "ms": 0.8053
+        },
+        "flow-momentum": {
+          "cells": 9,
+          "ms": 0.7751
+        },
+        "flow-at-level": {
+          "cells": 18,
+          "ms": 2.5467
+        },
+        "buy-and-hold": {
+          "cells": 1,
+          "ms": 0.0427
+        }
+      },
+      "walkForward": {
+        "ema-cross": {
+          "ms": 5.9266
+        },
+        "rsi-reversion": {
+          "ms": 4.5789
+        },
+        "donchian-breakout": {
+          "ms": 7.7836
+        },
+        "bb-fade": {
+          "ms": 8.4118
+        },
+        "level-reversion": {
+          "ms": 1.6341
+        },
+        "maxpain-magnet": {
+          "ms": 1.6124
+        },
+        "flow-momentum": {
+          "ms": 1.6162
+        },
+        "flow-at-level": {
+          "ms": 3.3578
+        },
+        "buy-and-hold": {
+          "ms": 0.1274
+        }
+      },
+      "dense": {
+        "16": {
+          "ms": 4.3467
+        },
+        "64": {
+          "ms": 16.3585
+        },
+        "144": {
+          "ms": 36.7945
+        },
+        "400": {
+          "ms": 101.4114
+        },
+        "728": {
+          "ms": 185.6421
+        }
+      },
+      "totalSweepMs": 16.7427,
+      "totalCells": 82,
+      "totalWalkForwardMs": 35.0488
+    }
+  }
+}

@@ -1,0 +1,1135 @@
+{
+  "asOf": 1789191240277,
+  "bigTrades": [
+    {
+      "contracts": 3,
+      "flowClass": "SP",
+      "multiLeg": false,
+      "optionType": "PUT",
+      "premiumUsd": 13123.787664,
+      "strike": 81000,
+      "symbol": "BTC-25SEP26",
+      "timestamp": 1789179718290
+    },
+    {
+      "contracts": 13,
+      "flowClass": "LP",
+      "multiLeg": false,
+      "optionType": "PUT",
+      "premiumUsd": 54257.35536,
+      "strike": 78000,
+      "symbol": "BTC-30OCT26",
+      "timestamp": 1789179718290
+    },
+    {
+      "contracts": 7,
+      "flowClass": "LC",
+      "multiLeg": false,
+      "optionType": "CALL",
+      "premiumUsd": 21316.493744,
+      "strike": 80000,
+      "symbol": "BTC-30OCT26",
+      "timestamp": 1789179718290
+    },
+    {
+      "contracts": 10,
+      "flowClass": "SP",
+      "multiLeg": false,
+      "optionType": "PUT",
+      "premiumUsd": 23109.61432,
+      "strike": 78000,
+      "symbol": "BTC-25SEP26",
+      "timestamp": 1789179718290
+    },
+    {
+      "contracts": 2,
+      "flowClass": "SC",
+      "multiLeg": false,
+      "optionType": "CALL",
+      "premiumUsd": 8884.6148,
+      "strike": 80000,
+      "symbol": "BTC-27NOV26",
+      "timestamp": 1789174858230
+    },
+    {
+      "contracts": 2,
+      "flowClass": "SC",
+      "multiLeg": false,
+      "optionType": "CALL",
+      "premiumUsd": 8886.6319,
+      "strike": 80000,
+      "symbol": "BTC-27NOV26",
+      "timestamp": 1789174804602
+    },
+    {
+      "contracts": 2,
+      "flowClass": "SC",
+      "multiLeg": false,
+      "optionType": "CALL",
+      "premiumUsd": 8886.04655,
+      "strike": 80000,
+      "symbol": "BTC-27NOV26",
+      "timestamp": 1789174288017
+    },
+    {
+      "contracts": 20,
+      "flowClass": "LC",
+      "multiLeg": false,
+      "optionType": "CALL",
+      "premiumUsd": 77888.44224,
+      "strike": 78000,
+      "symbol": "BTC-30OCT26",
+      "timestamp": 1789173778349
+    },
+    {
+      "contracts": 40,
+      "flowClass": "SC",
+      "multiLeg": false,
+      "optionType": "CALL",
+      "premiumUsd": 72324.98208,
+      "strike": 84000,
+      "symbol": "BTC-30OCT26",
+      "timestamp": 1789173778349
+    },
+    {
+      "contracts": 40,
+      "flowClass": "SP",
+      "multiLeg": false,
+      "optionType": "PUT",
+      "premiumUsd": 70161.41424,
+      "strike": 72000,
+      "symbol": "BTC-30OCT26",
+      "timestamp": 1789173778349
+    },
+    {
+      "contracts": 20,
+      "flowClass": "LP",
+      "multiLeg": false,
+      "optionType": "PUT",
+      "premiumUsd": 73561.30656,
+      "strike": 77000,
+      "symbol": "BTC-30OCT26",
+      "timestamp": 1789173778349
+    },
+    {
+      "contracts": 5,
+      "flowClass": "SP",
+      "multiLeg": false,
+      "optionType": "PUT",
+      "premiumUsd": 23596.60255,
+      "strike": 75000,
+      "symbol": "BTC-25DEC26",
+      "timestamp": 1789160873414
+    },
+    {
+      "contracts": 5,
+      "flowClass": "LP",
+      "multiLeg": false,
+      "optionType": "PUT",
+      "premiumUsd": 11024.1306,
+      "strike": 70000,
+      "symbol": "BTC-27NOV26",
+      "timestamp": 1789160856902
+    },
+    {
+      "contracts": 3.1,
+      "flowClass": "LC",
+      "multiLeg": false,
+      "optionType": "CALL",
+      "premiumUsd": 12348.1340395,
+      "strike": 78000,
+      "symbol": "BTC-30OCT26",
+      "timestamp": 1789160841427
+    },
+    {
+      "contracts": 3,
+      "flowClass": "SC",
+      "multiLeg": false,
+      "optionType": "CALL",
+      "premiumUsd": 9273.7896,
+      "strike": 84000,
+      "symbol": "BTC-27NOV26",
+      "timestamp": 1789159842805
+    },
+    {
+      "contracts": 4.9,
+      "flowClass": "SC",
+      "multiLeg": false,
+      "optionType": "CALL",
+      "premiumUsd": 17040.396555,
+      "strike": 79000,
+      "symbol": "BTC-30OCT26",
+      "timestamp": 1789159825659
+    },
+    {
+      "contracts": 25,
+      "flowClass": "SC",
+      "multiLeg": false,
+      "optionType": "CALL",
+      "premiumUsd": 13539.729,
+      "strike": 80000,
+      "symbol": "BTC-18SEP26",
+      "timestamp": 1789158000123
+    },
+    {
+      "contracts": 18.3,
+      "flowClass": "SC",
+      "multiLeg": false,
+      "optionType": "CALL",
+      "premiumUsd": 9909.979968,
+      "strike": 80000,
+      "symbol": "BTC-18SEP26",
+      "timestamp": 1789157927454
+    },
+    {
+      "contracts": 3.1,
+      "flowClass": "LP",
+      "multiLeg": false,
+      "optionType": "PUT",
+      "premiumUsd": 8518.9143745,
+      "strike": 75000,
+      "symbol": "BTC-30OCT26",
+      "timestamp": 1789157445176
+    },
+    {
+      "contracts": 5.4,
+      "flowClass": "LP",
+      "multiLeg": false,
+      "optionType": "PUT",
+      "premiumUsd": 9397.100385,
+      "strike": 72000,
+      "symbol": "BTC-30OCT26",
+      "timestamp": 1789156488770
+    },
+    {
+      "contracts": 23.4,
+      "flowClass": "LP",
+      "multiLeg": false,
+      "optionType": "PUT",
+      "premiumUsd": 40720.768335,
+      "strike": 72000,
+      "symbol": "BTC-30OCT26",
+      "timestamp": 1789156488760
+    },
+    {
+      "contracts": 17.9,
+      "flowClass": "LP",
+      "multiLeg": false,
+      "optionType": "PUT",
+      "premiumUsd": 31149.6475725,
+      "strike": 72000,
+      "symbol": "BTC-30OCT26",
+      "timestamp": 1789156488760
+    },
+    {
+      "contracts": 187.5,
+      "flowClass": "LC",
+      "multiLeg": false,
+      "optionType": "CALL",
+      "premiumUsd": 115972.215,
+      "strike": 82000,
+      "symbol": "BTC-25SEP26",
+      "timestamp": 1789156226130
+    },
+    {
+      "contracts": 125,
+      "flowClass": "SC",
+      "multiLeg": false,
+      "optionType": "CALL",
+      "premiumUsd": 473575.2,
+      "strike": 85000,
+      "symbol": "BTC-25DEC26",
+      "timestamp": 1789156226130
+    },
+    {
+      "contracts": 8,
+      "flowClass": "LP",
+      "multiLeg": false,
+      "optionType": "PUT",
+      "premiumUsd": 14802.34944,
+      "strike": 72000,
+      "symbol": "BTC-30OCT26",
+      "timestamp": 1789154226526
+    },
+    {
+      "contracts": 5.9,
+      "flowClass": "LP",
+      "multiLeg": false,
+      "optionType": "PUT",
+      "premiumUsd": 10694.138279,
+      "strike": 72000,
+      "symbol": "BTC-30OCT26",
+      "timestamp": 1789154185484
+    },
+    {
+      "contracts": 3.1,
+      "flowClass": "LP",
+      "multiLeg": false,
+      "optionType": "PUT",
+      "premiumUsd": 8856.479063,
+      "strike": 75000,
+      "symbol": "BTC-30OCT26",
+      "timestamp": 1789150803439
+    },
+    {
+      "contracts": 8,
+      "flowClass": "LP",
+      "multiLeg": false,
+      "optionType": "PUT",
+      "premiumUsd": 22855.42984,
+      "strike": 75000,
+      "symbol": "BTC-30OCT26",
+      "timestamp": 1789150803439
+    },
+    {
+      "contracts": 3.1,
+      "flowClass": "LP",
+      "multiLeg": false,
+      "optionType": "PUT",
+      "premiumUsd": 13165.244455,
+      "strike": 78000,
+      "symbol": "BTC-30OCT26",
+      "timestamp": 1789150782510
+    },
+    {
+      "contracts": 1.4,
+      "flowClass": "LP",
+      "multiLeg": false,
+      "optionType": "PUT",
+      "premiumUsd": 10309.024068,
+      "strike": 80000,
+      "symbol": "BTC-25DEC26",
+      "timestamp": 1789150561353
+    },
+    {
+      "contracts": 1.4,
+      "flowClass": "LP",
+      "multiLeg": false,
+      "optionType": "PUT",
+      "premiumUsd": 11982.967038,
+      "strike": 82000,
+      "symbol": "BTC-25DEC26",
+      "timestamp": 1789150555615
+    },
+    {
+      "contracts": 13.3,
+      "flowClass": "LP",
+      "multiLeg": false,
+      "optionType": "PUT",
+      "premiumUsd": 58441.784961,
+      "strike": 74000,
+      "symbol": "BTC-25DEC26",
+      "timestamp": 1789150261825
+    },
+    {
+      "contracts": 9.1,
+      "flowClass": "SP",
+      "multiLeg": false,
+      "optionType": "PUT",
+      "premiumUsd": 39986.484447,
+      "strike": 74000,
+      "symbol": "BTC-25DEC26",
+      "timestamp": 1789150261814
+    },
+    {
+      "contracts": 2,
+      "flowClass": "SC",
+      "multiLeg": false,
+      "optionType": "CALL",
+      "premiumUsd": 8865.56045,
+      "strike": 80000,
+      "symbol": "BTC-27NOV26",
+      "timestamp": 1789150260511
+    },
+    {
+      "contracts": 10.9,
+      "flowClass": "SC",
+      "multiLeg": false,
+      "optionType": "CALL",
+      "premiumUsd": 28957.843065,
+      "strike": 76000,
+      "symbol": "BTC-25SEP26",
+      "timestamp": 1789150226678
+    },
+    {
+      "contracts": 14.1,
+      "flowClass": "SC",
+      "multiLeg": false,
+      "optionType": "CALL",
+      "premiumUsd": 37471.749408,
+      "strike": 76000,
+      "symbol": "BTC-25SEP26",
+      "timestamp": 1789150224769
+    },
+    {
+      "contracts": 23.3,
+      "flowClass": "LP",
+      "multiLeg": false,
+      "optionType": "PUT",
+      "premiumUsd": 41284.224762,
+      "strike": 65000,
+      "symbol": "BTC-25DEC26",
+      "timestamp": 1789150218054
+    },
+    {
+      "contracts": 300,
+      "flowClass": "SC",
+      "multiLeg": false,
+      "optionType": "CALL",
+      "premiumUsd": 127120.026,
+      "strike": 83000,
+      "symbol": "BTC-25SEP26",
+      "timestamp": 1789150217050
+    },
+    {
+      "contracts": 3.1,
+      "flowClass": "LP",
+      "multiLeg": false,
+      "optionType": "PUT",
+      "premiumUsd": 13601.807628,
+      "strike": 78000,
+      "symbol": "BTC-30OCT26",
+      "timestamp": 1789149963460
+    },
+    {
+      "contracts": 2,
+      "flowClass": "SC",
+      "multiLeg": false,
+      "optionType": "CALL",
+      "premiumUsd": 8866.16535,
+      "strike": 80000,
+      "symbol": "BTC-27NOV26",
+      "timestamp": 1789149909692
+    },
+    {
+      "contracts": 3.1,
+      "flowClass": "SP",
+      "multiLeg": false,
+      "optionType": "PUT",
+      "premiumUsd": 16738.97638,
+      "strike": 80000,
+      "symbol": "BTC-30OCT26",
+      "timestamp": 1789149803336
+    },
+    {
+      "contracts": 20,
+      "flowClass": "LP",
+      "multiLeg": true,
+      "optionType": "PUT",
+      "premiumUsd": 30361.6131,
+      "strike": 78000,
+      "symbol": "BTC-18SEP26",
+      "timestamp": 1789147692101
+    },
+    {
+      "contracts": 20,
+      "flowClass": "SP",
+      "multiLeg": true,
+      "optionType": "PUT",
+      "premiumUsd": 112104.4176,
+      "strike": 79000,
+      "symbol": "BTC-27NOV26",
+      "timestamp": 1789147692101
+    },
+    {
+      "contracts": 3,
+      "flowClass": "SC",
+      "multiLeg": false,
+      "optionType": "CALL",
+      "premiumUsd": 17863.70166,
+      "strike": 80000,
+      "symbol": "BTC-25DEC26",
+      "timestamp": 1789146742302
+    },
+    {
+      "contracts": 10,
+      "flowClass": "LC",
+      "multiLeg": false,
+      "optionType": "CALL",
+      "premiumUsd": 23737.47595,
+      "strike": 83000,
+      "symbol": "BTC-30OCT26",
+      "timestamp": 1789146733913
+    },
+    {
+      "contracts": 4.8,
+      "flowClass": "SC",
+      "multiLeg": false,
+      "optionType": "CALL",
+      "premiumUsd": 11205.04896,
+      "strike": 83000,
+      "symbol": "BTC-30OCT26",
+      "timestamp": 1789146718002
+    },
+    {
+      "contracts": 5.2,
+      "flowClass": "LC",
+      "multiLeg": false,
+      "optionType": "CALL",
+      "premiumUsd": 12138.80304,
+      "strike": 83000,
+      "symbol": "BTC-30OCT26",
+      "timestamp": 1789146717992
+    },
+    {
+      "contracts": 6.9,
+      "flowClass": "LC",
+      "multiLeg": false,
+      "optionType": "CALL",
+      "premiumUsd": 16106.39262,
+      "strike": 83000,
+      "symbol": "BTC-30OCT26",
+      "timestamp": 1789146716048
+    },
+    {
+      "contracts": 2,
+      "flowClass": "LP",
+      "multiLeg": false,
+      "optionType": "PUT",
+      "premiumUsd": 13538.84604,
+      "strike": 81000,
+      "symbol": "BTC-27NOV26",
+      "timestamp": 1789146700563
+    },
+    {
+      "contracts": 2,
+      "flowClass": "LP",
+      "multiLeg": false,
+      "optionType": "PUT",
+      "premiumUsd": 12371.70414,
+      "strike": 80000,
+      "symbol": "BTC-27NOV26",
+      "timestamp": 1789146700563
+    }
+  ],
+  "clusterDistance": 100,
+  "clusters": [
+    {
+      "center": 79008.593732061,
+      "distinctExpirations": 4,
+      "distinctTypes": 4,
+      "high": 79083.788887591,
+      "levels": [
+        {
+          "experimental": false,
+          "price": 79000,
+          "symbol": "BTC-12SEP26",
+          "type": "ABOVE_POC",
+          "weight": 0.9
+        },
+        {
+          "experimental": false,
+          "price": 79000,
+          "symbol": "BTC-25SEP26",
+          "type": "MAX_PAIN",
+          "weight": 0.8
+        },
+        {
+          "experimental": false,
+          "price": 79000,
+          "symbol": "BTC-25SEP26",
+          "type": "POC",
+          "weight": 0.8
+        },
+        {
+          "experimental": false,
+          "price": 79000,
+          "symbol": "BTC-30OCT26",
+          "type": "MAX_PAIN",
+          "weight": 0.8
+        },
+        {
+          "experimental": false,
+          "price": 79000,
+          "symbol": "BTC-27NOV26",
+          "type": "MAX_PAIN",
+          "weight": 0.8
+        },
+        {
+          "experimental": false,
+          "price": 79000,
+          "symbol": "BTC-27NOV26",
+          "type": "POC",
+          "weight": 0.8
+        },
+        {
+          "experimental": true,
+          "price": 79083.788887591,
+          "symbol": "BTC-25SEP26",
+          "type": "CALL_BE",
+          "weight": 0.56
+        }
+      ],
+      "low": 79000,
+      "score": 19.58775
+    },
+    {
+      "center": 78000,
+      "distinctExpirations": 4,
+      "distinctTypes": 4,
+      "high": 78000,
+      "levels": [
+        {
+          "experimental": true,
+          "price": 78000,
+          "symbol": "BTC-12SEP26",
+          "type": "WRES",
+          "weight": 1.35
+        },
+        {
+          "experimental": false,
+          "price": 78000,
+          "symbol": "BTC-18SEP26",
+          "type": "MAX_PAIN",
+          "weight": 1
+        },
+        {
+          "experimental": false,
+          "price": 78000,
+          "symbol": "BTC-18SEP26",
+          "type": "POC",
+          "weight": 1
+        },
+        {
+          "experimental": false,
+          "price": 78000,
+          "symbol": "BTC-30OCT26",
+          "type": "UNDER_POC",
+          "weight": 0.48
+        },
+        {
+          "experimental": true,
+          "price": 78000,
+          "symbol": "BTC-30OCT26",
+          "type": "WRES",
+          "weight": 0.72
+        },
+        {
+          "experimental": false,
+          "price": 78000,
+          "symbol": "BTC-25DEC26",
+          "type": "MAX_PAIN",
+          "weight": 0.8
+        }
+      ],
+      "low": 78000,
+      "score": 19.193125
+    },
+    {
+      "center": 77487.820153144,
+      "distinctExpirations": 2,
+      "distinctTypes": 3,
+      "high": 77500,
+      "levels": [
+        {
+          "experimental": true,
+          "price": 77422.570973558,
+          "symbol": "BTC-27NOV26",
+          "type": "PUT_BE",
+          "weight": 0.56
+        },
+        {
+          "experimental": false,
+          "price": 77500,
+          "symbol": "BTC-12SEP26",
+          "type": "MAX_PAIN",
+          "weight": 1.5
+        },
+        {
+          "experimental": false,
+          "price": 77500,
+          "symbol": "BTC-12SEP26",
+          "type": "POC",
+          "weight": 1.5
+        }
+      ],
+      "low": 77422.570973558,
+      "score": 7.209
+    },
+    {
+      "center": 76969.004448022,
+      "distinctExpirations": 2,
+      "distinctTypes": 2,
+      "high": 77000,
+      "levels": [
+        {
+          "experimental": true,
+          "price": 76902.58540807,
+          "symbol": "BTC-12SEP26",
+          "type": "PUT_BE",
+          "weight": 1.05
+        },
+        {
+          "experimental": true,
+          "price": 77000,
+          "symbol": "BTC-12SEP26",
+          "type": "WSUP",
+          "weight": 1.35
+        },
+        {
+          "experimental": true,
+          "price": 77000,
+          "symbol": "BTC-18SEP26",
+          "type": "WSUP",
+          "weight": 0.9
+        }
+      ],
+      "low": 76902.58540807,
+      "score": 5.56875
+    },
+    {
+      "center": 74977.792134736,
+      "distinctExpirations": 3,
+      "distinctTypes": 2,
+      "high": 75000,
+      "levels": [
+        {
+          "experimental": true,
+          "price": 74918.30678135,
+          "symbol": "BTC-30OCT26",
+          "type": "PUT_BE",
+          "weight": 0.56
+        },
+        {
+          "experimental": false,
+          "price": 75000,
+          "symbol": "BTC-12SEP26",
+          "type": "UNDER_POC",
+          "weight": 0.9
+        },
+        {
+          "experimental": false,
+          "price": 75000,
+          "symbol": "BTC-18SEP26",
+          "type": "UNDER_POC",
+          "weight": 0.6
+        }
+      ],
+      "low": 74918.30678135,
+      "score": 4.3775
+    },
+    {
+      "center": 85000,
+      "distinctExpirations": 2,
+      "distinctTypes": 2,
+      "high": 85000,
+      "levels": [
+        {
+          "experimental": true,
+          "price": 85000,
+          "symbol": "BTC-18SEP26",
+          "type": "WRES",
+          "weight": 0.9
+        },
+        {
+          "experimental": false,
+          "price": 85000,
+          "symbol": "BTC-25DEC26",
+          "type": "ABOVE_POC",
+          "weight": 0.48
+        }
+      ],
+      "low": 85000,
+      "score": 2.32875
+    },
+    {
+      "center": 82000,
+      "distinctExpirations": 2,
+      "distinctTypes": 2,
+      "high": 82000,
+      "levels": [
+        {
+          "experimental": false,
+          "price": 82000,
+          "symbol": "BTC-18SEP26",
+          "type": "ABOVE_POC",
+          "weight": 0.6
+        },
+        {
+          "experimental": true,
+          "price": 82000,
+          "symbol": "BTC-25SEP26",
+          "type": "WRES",
+          "weight": 0.72
+        }
+      ],
+      "low": 82000,
+      "score": 2.2275
+    },
+    {
+      "center": 80000,
+      "distinctExpirations": 2,
+      "distinctTypes": 1,
+      "high": 80000,
+      "levels": [
+        {
+          "experimental": false,
+          "price": 80000,
+          "symbol": "BTC-30OCT26",
+          "type": "POC",
+          "weight": 0.8
+        },
+        {
+          "experimental": false,
+          "price": 80000,
+          "symbol": "BTC-25DEC26",
+          "type": "POC",
+          "weight": 0.8
+        }
+      ],
+      "low": 80000,
+      "score": 2.16
+    },
+    {
+      "center": 83000,
+      "distinctExpirations": 2,
+      "distinctTypes": 2,
+      "high": 83000,
+      "levels": [
+        {
+          "experimental": false,
+          "price": 83000,
+          "symbol": "BTC-30OCT26",
+          "type": "ABOVE_POC",
+          "weight": 0.48
+        },
+        {
+          "experimental": true,
+          "price": 83000,
+          "symbol": "BTC-27NOV26",
+          "type": "WRES",
+          "weight": 0.72
+        }
+      ],
+      "low": 83000,
+      "score": 2.025
+    },
+    {
+      "center": 77185.571865409,
+      "distinctExpirations": 2,
+      "distinctTypes": 1,
+      "high": 77215.296379479,
+      "levels": [
+        {
+          "experimental": true,
+          "price": 77161.792254152,
+          "symbol": "BTC-18SEP26",
+          "type": "PUT_BE",
+          "weight": 0.7
+        },
+        {
+          "experimental": true,
+          "price": 77215.296379479,
+          "symbol": "BTC-25SEP26",
+          "type": "PUT_BE",
+          "weight": 0.56
+        }
+      ],
+      "low": 77161.792254152,
+      "score": 1.701
+    },
+    {
+      "center": 80853.694481129,
+      "distinctExpirations": 2,
+      "distinctTypes": 1,
+      "high": 80899.331226385,
+      "levels": [
+        {
+          "experimental": true,
+          "price": 80808.057735872,
+          "symbol": "BTC-27NOV26",
+          "type": "CALL_BE",
+          "weight": 0.56
+        },
+        {
+          "experimental": true,
+          "price": 80899.331226385,
+          "symbol": "BTC-30OCT26",
+          "type": "CALL_BE",
+          "weight": 0.56
+        }
+      ],
+      "low": 80808.057735872,
+      "score": 1.512
+    },
+    {
+      "center": 76000,
+      "distinctExpirations": 1,
+      "distinctTypes": 2,
+      "high": 76000,
+      "levels": [
+        {
+          "experimental": false,
+          "price": 76000,
+          "symbol": "BTC-25SEP26",
+          "type": "UNDER_POC",
+          "weight": 0.48
+        },
+        {
+          "experimental": true,
+          "price": 76000,
+          "symbol": "BTC-25SEP26",
+          "type": "WSUP",
+          "weight": 0.72
+        }
+      ],
+      "low": 76000,
+      "score": 1.5
+    }
+  ],
+  "contexts": [
+    {
+      "abovePoc": 79000,
+      "callBE": 78465.573993112,
+      "dte": 0.1014,
+      "expirationType": "DAILY",
+      "flow": {
+        "bearPremium": 423877.4203858,
+        "bullPremium": 614558.635274601,
+        "bullRatio": 0.591811727,
+        "contracts": 4981.2,
+        "lcPremium": 426458.4478376,
+        "lpPremium": 228904.0630483,
+        "netDirectionalPremium": 190681.214888801,
+        "scPremium": 194973.3573375,
+        "spPremium": 188100.187437,
+        "trades": 2009
+      },
+      "maxPain": 77500,
+      "poc": 77500,
+      "putBE": 76902.58540807,
+      "symbol": "BTC-12SEP26",
+      "trades": 2009,
+      "underPoc": 75000,
+      "vah": 79000,
+      "val": 76500,
+      "wRes": 78000,
+      "wSup": 77000
+    },
+    {
+      "abovePoc": 82000,
+      "callBE": 80237.27731093,
+      "dte": 6.1014,
+      "expirationType": "WEEKLY",
+      "flow": {
+        "bearPremium": 1328526.334695999,
+        "bullPremium": 1226271.007583501,
+        "bullRatio": 0.479987585,
+        "contracts": 4949.9,
+        "lcPremium": 919832.3342221,
+        "lpPremium": 525106.8597457,
+        "netDirectionalPremium": -102255.327112498,
+        "scPremium": 803419.474950299,
+        "spPremium": 306438.6733614,
+        "trades": 1345
+      },
+      "maxPain": 78000,
+      "poc": 78000,
+      "putBE": 77161.792254152,
+      "symbol": "BTC-18SEP26",
+      "trades": 1345,
+      "underPoc": 75000,
+      "vah": 83000,
+      "val": 77000,
+      "wRes": 85000,
+      "wSup": 77000
+    },
+    {
+      "abovePoc": 81000,
+      "callBE": 79083.788887591,
+      "dte": 13.1014,
+      "expirationType": "MONTHLY",
+      "flow": {
+        "bearPremium": 3611324.308500201,
+        "bullPremium": 1817157.549628799,
+        "bullRatio": 0.334745072,
+        "contracts": 5023.5,
+        "lcPremium": 1018023.496867401,
+        "lpPremium": 2452626.353134201,
+        "netDirectionalPremium": -1794166.758871402,
+        "scPremium": 1158697.955366001,
+        "spPremium": 799134.052761402,
+        "trades": 1751
+      },
+      "maxPain": 79000,
+      "poc": 79000,
+      "putBE": 77215.296379479,
+      "symbol": "BTC-25SEP26",
+      "trades": 1751,
+      "underPoc": 76000,
+      "vah": 83000,
+      "val": 76000,
+      "wRes": 82000,
+      "wSup": 76000
+    },
+    {
+      "abovePoc": 83000,
+      "callBE": 80899.331226385,
+      "dte": 48.1014,
+      "expirationType": "MONTHLY",
+      "flow": {
+        "bearPremium": 1478586.9750237,
+        "bullPremium": 1196266.134482101,
+        "bullRatio": 0.447226852,
+        "contracts": 1187.3,
+        "lcPremium": 496512.1844058,
+        "lpPremium": 660741.1399893,
+        "netDirectionalPremium": -282320.8405416,
+        "scPremium": 817845.8350344,
+        "spPremium": 699753.9500763,
+        "trades": 449
+      },
+      "maxPain": 79000,
+      "poc": 80000,
+      "putBE": 74918.30678135,
+      "symbol": "BTC-30OCT26",
+      "trades": 449,
+      "underPoc": 78000,
+      "vah": 85000,
+      "val": 75000,
+      "wRes": 78000,
+      "wSup": 69000
+    },
+    {
+      "abovePoc": 81000,
+      "callBE": 80808.057735872,
+      "dte": 76.1014,
+      "expirationType": "MONTHLY",
+      "flow": {
+        "bearPremium": 1263836.878829,
+        "bullPremium": 1007113.0454721,
+        "bullRatio": 0.443476553,
+        "contracts": 568.1,
+        "lcPremium": 368173.3254056,
+        "lpPremium": 329927.9095015,
+        "netDirectionalPremium": -256723.8333569,
+        "scPremium": 933908.9693275,
+        "spPremium": 638939.7200665,
+        "trades": 322
+      },
+      "maxPain": 79000,
+      "poc": 79000,
+      "putBE": 77422.570973558,
+      "symbol": "BTC-27NOV26",
+      "trades": 322,
+      "underPoc": 73000,
+      "vah": 82000,
+      "val": 78000,
+      "wRes": 83000,
+      "wSup": null
+    },
+    {
+      "abovePoc": 85000,
+      "callBE": 84330.025580401,
+      "dte": 104.1014,
+      "expirationType": "MONTHLY",
+      "flow": {
+        "bearPremium": 1772720.059186099,
+        "bullPremium": 1146375.4385384,
+        "bullRatio": 0.392715976,
+        "contracts": 832.3,
+        "lcPremium": 892285.7612781,
+        "lpPremium": 294525.8899327,
+        "netDirectionalPremium": -626344.620647699,
+        "scPremium": 1478194.1692534,
+        "spPremium": 254089.6772603,
+        "trades": 564
+      },
+      "maxPain": 78000,
+      "poc": 80000,
+      "putBE": 74322.84198539,
+      "symbol": "BTC-25DEC26",
+      "trades": 564,
+      "underPoc": 74000,
+      "vah": 85000,
+      "val": 74000,
+      "wRes": 106000,
+      "wSup": 65000
+    }
+  ],
+  "flow": {
+    "bias": "MODERATE_BEAR",
+    "overall": {
+      "bearPremium": 9878871.976620777,
+      "bullPremium": 7007741.810979513,
+      "bullRatio": 0.414987984,
+      "contracts": 17542.3,
+      "lcPremium": 4121285.550016609,
+      "lpPremium": 4491832.215351709,
+      "netDirectionalPremium": -2871130.165641264,
+      "scPremium": 5387039.761269107,
+      "spPremium": 2886456.260962896,
+      "trades": 6440
+    },
+    "velocity": {
+      "bearVelocity": 263.2565188,
+      "bullVelocity": 79.2430466,
+      "current": 2834.9657862,
+      "previous": 3018.9792584,
+      "velocity": -184.0134722
+    },
+    "windows": {
+      "15m": {
+        "bearPremium": 423.8205298,
+        "bullPremium": 3258.786316,
+        "bullRatio": 0.884912903,
+        "contracts": 5.8,
+        "lcPremium": 3181.5767444,
+        "lpPremium": 86.4758072,
+        "netDirectionalPremium": 2834.9657862,
+        "scPremium": 337.3447226,
+        "spPremium": 77.2095716,
+        "trades": 14
+      },
+      "30m": {
+        "bearPremium": 584.3845408,
+        "bullPremium": 6438.3295854,
+        "bullRatio": 0.916786512,
+        "contracts": 9.2,
+        "lcPremium": 6244.5832892,
+        "lpPremium": 138.953012,
+        "netDirectionalPremium": 5853.9450446,
+        "scPremium": 445.4315288,
+        "spPremium": 193.7462962,
+        "trades": 26
+      },
+      "5m": {
+        "bearPremium": 157.5084292,
+        "bullPremium": 154.42036,
+        "bullRatio": 0.495050041,
+        "contracts": 3.2,
+        "lcPremium": 77.2107884,
+        "lpPremium": 86.4758072,
+        "netDirectionalPremium": -3.0880692,
+        "scPremium": 71.032622,
+        "spPremium": 77.2095716,
+        "trades": 8
+      },
+      "60m": {
+        "bearPremium": 1235.4884956,
+        "bullPremium": 7248.5829783,
+        "bullRatio": 0.85437552,
+        "contracts": 32,
+        "lcPremium": 6726.6059529,
+        "lpPremium": 138.953012,
+        "netDirectionalPremium": 6013.0944827,
+        "scPremium": 1096.5354836,
+        "spPremium": 521.9770254,
+        "trades": 53
+      },
+      "session": {
+        "bearPremium": 390777.6390642,
+        "bullPremium": 292060.1585298,
+        "bullRatio": 0.427715278,
+        "contracts": 636,
+        "lcPremium": 146644.4016107,
+        "lpPremium": 173816.1896423,
+        "netDirectionalPremium": -98717.4805344,
+        "scPremium": 216961.4494219,
+        "spPremium": 145415.7569191,
+        "trades": 464
+      }
+    }
+  },
+  "spot": 77211.87
+}

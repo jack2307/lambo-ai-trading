@@ -1,0 +1,2688 @@
+{
+  "strategies": {
+    "bb-fade": {
+      "equityCurve": [
+        {
+          "equity": 10090.34,
+          "time": 1788615000000
+        },
+        {
+          "equity": 9987.26,
+          "time": 1788625800000
+        },
+        {
+          "equity": 9885.42,
+          "time": 1788626700000
+        },
+        {
+          "equity": 10011.11,
+          "time": 1788637500000
+        },
+        {
+          "equity": 10146.9,
+          "time": 1788668100000
+        },
+        {
+          "equity": 10279.14,
+          "time": 1788685200000
+        },
+        {
+          "equity": 10174.4,
+          "time": 1788704100000
+        },
+        {
+          "equity": 10070.97,
+          "time": 1788705000000
+        },
+        {
+          "equity": 10173.25,
+          "time": 1788716700000
+        },
+        {
+          "equity": 10291.38,
+          "time": 1788732000000
+        },
+        {
+          "equity": 10187.1,
+          "time": 1788735600000
+        },
+        {
+          "equity": 10084.07,
+          "time": 1788737400000
+        },
+        {
+          "equity": 10266.72,
+          "time": 1788742800000
+        },
+        {
+          "equity": 10321.77,
+          "time": 1788782400000
+        },
+        {
+          "equity": 10414.33,
+          "time": 1788787800000
+        },
+        {
+          "equity": 10309.12,
+          "time": 1788791400000
+        },
+        {
+          "equity": 10204.81,
+          "time": 1788795000000
+        },
+        {
+          "equity": 10349.73,
+          "time": 1788803100000
+        },
+        {
+          "equity": 10557.84,
+          "time": 1788824700000
+        },
+        {
+          "equity": 10677.28,
+          "time": 1788865200000
+        },
+        {
+          "equity": 10861.01,
+          "time": 1788878700000
+        },
+        {
+          "equity": 11013.85,
+          "time": 1788893100000
+        },
+        {
+          "equity": 11075.34,
+          "time": 1788923700000
+        },
+        {
+          "equity": 10963.43,
+          "time": 1788940800000
+        },
+        {
+          "equity": 11198.64,
+          "time": 1788946200000
+        },
+        {
+          "equity": 11154.51,
+          "time": 1788982200000
+        },
+        {
+          "equity": 11042.41,
+          "time": 1788991200000
+        },
+        {
+          "equity": 11159.66,
+          "time": 1788997500000
+        },
+        {
+          "equity": 11047.09,
+          "time": 1789038000000
+        },
+        {
+          "equity": 10935.79,
+          "time": 1789044300000
+        },
+        {
+          "equity": 11028.48,
+          "time": 1789059600000
+        },
+        {
+          "equity": 10917.25,
+          "time": 1789081200000
+        },
+        {
+          "equity": 11103.19,
+          "time": 1789092000000
+        },
+        {
+          "equity": 10991.1,
+          "time": 1789114500000
+        },
+        {
+          "equity": 10880.01,
+          "time": 1789125300000
+        },
+        {
+          "equity": 10770.8,
+          "time": 1789130700000
+        },
+        {
+          "equity": 10662.67,
+          "time": 1789134300000
+        },
+        {
+          "equity": 10555.94,
+          "time": 1789135200000
+        },
+        {
+          "equity": 10800.4,
+          "time": 1789141500000
+        }
+      ],
+      "metrics": {
+        "avgHoldMin": 91.92,
+        "avgLossR": -0.9793,
+        "avgMae": -0.4123,
+        "avgMfe": 0.8463,
+        "avgR": 0.2054,
+        "avgWinR": 1.3308,
+        "exits": {
+          "STOP": 18,
+          "TARGET": 11,
+          "TIMEOUT": 2,
+          "middle band reached": 8
+        },
+        "expectancy": 0.2054,
+        "maxDrawdownPct": 5.7391,
+        "maxDrawdownUsd": 642.7,
+        "netPnlUsd": 800.4,
+        "profitFactor": 1.4042,
+        "returnPct": 8.004,
+        "sharpe": 1.0462,
+        "totalR": 8.0093,
+        "trades": 39,
+        "winRate": 0.512820513
+      },
+      "params": {
+        "atrPeriod": 14,
+        "mult": 2,
+        "period": 20,
+        "stopAtr": 1.5
+      },
+      "skippedNoAtr": 0,
+      "trades": [
+        {
+          "direction": "SHORT",
+          "entryPrice": 79751.56,
+          "entryTime": 1788615000000,
+          "exitPrice": 79661.22,
+          "exitReason": "TARGET",
+          "exitTime": 1788615000000,
+          "holdMs": 0,
+          "lots": 1,
+          "mae": 0,
+          "mfe": 0,
+          "pnlUsd": 90.34,
+          "r": 0.9038,
+          "reason": "closed above the upper band",
+          "stop": 79851.51,
+          "target": 79658.72
+        },
+        {
+          "direction": "SHORT",
+          "entryPrice": 79803.5,
+          "entryTime": 1788624000000,
+          "exitPrice": 79919.46,
+          "exitReason": "STOP",
+          "exitTime": 1788625800000,
+          "holdMs": 1800000,
+          "lots": 0.889,
+          "mae": -0.8646,
+          "mfe": 0.4363,
+          "pnlUsd": -103.08,
+          "r": -1.022,
+          "reason": "closed above the upper band",
+          "stop": 79916.96,
+          "target": 79688.98
+        },
+        {
+          "direction": "SHORT",
+          "entryPrice": 79934.24,
+          "entryTime": 1788626700000,
+          "exitPrice": 80059.2,
+          "exitReason": "STOP",
+          "exitTime": 1788626700000,
+          "holdMs": 0,
+          "lots": 0.815,
+          "mae": 0,
+          "mfe": 0,
+          "pnlUsd": -101.84,
+          "r": -1.0204,
+          "reason": "closed above the upper band",
+          "stop": 80056.7,
+          "target": 79725.55
+        },
+        {
+          "direction": "SHORT",
+          "entryPrice": 80039.49,
+          "entryTime": 1788627600000,
+          "exitPrice": 79857.85,
+          "exitReason": "middle band reached",
+          "exitTime": 1788637500000,
+          "holdMs": 9900000,
+          "lots": 0.692,
+          "mae": -0.8598,
+          "mfe": 1.951,
+          "pnlUsd": 125.69,
+          "r": 1.2717,
+          "reason": "closed above the upper band",
+          "stop": 80182.32,
+          "target": 79747.19
+        },
+        {
+          "direction": "SHORT",
+          "entryPrice": 80105.49,
+          "entryTime": 1788666300000,
+          "exitPrice": 79904.32,
+          "exitReason": "TARGET",
+          "exitTime": 1788668100000,
+          "holdMs": 1800000,
+          "lots": 0.675,
+          "mae": -0.0169,
+          "mfe": 1.0012,
+          "pnlUsd": 135.79,
+          "r": 1.3566,
+          "reason": "closed above the upper band",
+          "stop": 80253.78,
+          "target": 79901.82
+        },
+        {
+          "direction": "LONG",
+          "entryPrice": 79681.01,
+          "entryTime": 1788678900000,
+          "exitPrice": 79900.31,
+          "exitReason": "TARGET",
+          "exitTime": 1788685200000,
+          "holdMs": 6300000,
+          "lots": 0.603,
+          "mae": -0.0199,
+          "mfe": 1.2436,
+          "pnlUsd": 132.24,
+          "r": 1.305,
+          "reason": "closed below the lower band",
+          "stop": 79512.97,
+          "target": 79902.81
+        },
+        {
+          "direction": "LONG",
+          "entryPrice": 79796.73,
+          "entryTime": 1788702300000,
+          "exitPrice": 79662.97,
+          "exitReason": "STOP",
+          "exitTime": 1788704100000,
+          "holdMs": 1800000,
+          "lots": 0.783,
+          "mae": -0.4017,
+          "mfe": 0.369,
+          "pnlUsd": -104.74,
+          "r": -1.019,
+          "reason": "closed below the lower band",
+          "stop": 79665.47,
+          "target": 79918.93
+        },
+        {
+          "direction": "LONG",
+          "entryPrice": 79674.32,
+          "entryTime": 1788705000000,
+          "exitPrice": 79528.02,
+          "exitReason": "STOP",
+          "exitTime": 1788705000000,
+          "holdMs": 0,
+          "lots": 0.707,
+          "mae": 0,
+          "mfe": 0,
+          "pnlUsd": -103.43,
+          "r": -1.0174,
+          "reason": "closed below the lower band",
+          "stop": 79530.52,
+          "target": 79894.88
+        },
+        {
+          "direction": "LONG",
+          "entryPrice": 79545.57,
+          "entryTime": 1788706800000,
+          "exitPrice": 79745.72,
+          "exitReason": "middle band reached",
+          "exitTime": 1788716700000,
+          "holdMs": 9900000,
+          "lots": 0.511,
+          "mae": -0.8243,
+          "mfe": 1.2215,
+          "pnlUsd": 102.28,
+          "r": 1.0169,
+          "reason": "closed below the lower band",
+          "stop": 79348.74,
+          "target": 79870.85
+        },
+        {
+          "direction": "SHORT",
+          "entryPrice": 79913.96,
+          "entryTime": 1788719400000,
+          "exitPrice": 79716.09,
+          "exitReason": "TARGET",
+          "exitTime": 1788732000000,
+          "holdMs": 12600000,
+          "lots": 0.597,
+          "mae": -0.7045,
+          "mfe": 0.8062,
+          "pnlUsd": 118.13,
+          "r": 1.1613,
+          "reason": "closed above the upper band",
+          "stop": 80084.35,
+          "target": 79713.59
+        },
+        {
+          "direction": "SHORT",
+          "entryPrice": 80052.68,
+          "entryTime": 1788735600000,
+          "exitPrice": 80239.23,
+          "exitReason": "STOP",
+          "exitTime": 1788735600000,
+          "holdMs": 0,
+          "lots": 0.559,
+          "mae": 0,
+          "mfe": 0,
+          "pnlUsd": -104.28,
+          "r": -1.0136,
+          "reason": "closed above the upper band",
+          "stop": 80236.73,
+          "target": 79899.92
+        },
+        {
+          "direction": "SHORT",
+          "entryPrice": 80189.16,
+          "entryTime": 1788736500000,
+          "exitPrice": 80399.43,
+          "exitReason": "STOP",
+          "exitTime": 1788737400000,
+          "holdMs": 900000,
+          "lots": 0.49,
+          "mae": -0.4372,
+          "mfe": 0.4291,
+          "pnlUsd": -103.03,
+          "r": -1.012,
+          "reason": "closed above the upper band",
+          "stop": 80396.93,
+          "target": 79917.7
+        },
+        {
+          "direction": "SHORT",
+          "entryPrice": 80380.75,
+          "entryTime": 1788738300000,
+          "exitPrice": 79951.99,
+          "exitReason": "TARGET",
+          "exitTime": 1788742800000,
+          "holdMs": 4500000,
+          "lots": 0.426,
+          "mae": -0.7577,
+          "mfe": 1.3597,
+          "pnlUsd": 182.65,
+          "r": 1.8125,
+          "reason": "closed above the upper band",
+          "stop": 80617.3,
+          "target": 79949.49
+        },
+        {
+          "direction": "LONG",
+          "entryPrice": 79286.5,
+          "entryTime": 1788767100000,
+          "exitPrice": 79423.11,
+          "exitReason": "TIMEOUT",
+          "exitTime": 1788782400000,
+          "holdMs": 15300000,
+          "lots": 0.403,
+          "mae": -0.0177,
+          "mfe": 1.0357,
+          "pnlUsd": 55.05,
+          "r": 0.537,
+          "reason": "closed below the lower band",
+          "stop": 79032.09,
+          "target": 79688.74
+        },
+        {
+          "direction": "SHORT",
+          "entryPrice": 79604.34,
+          "entryTime": 1788786000000,
+          "exitPrice": 79447.46,
+          "exitReason": "TARGET",
+          "exitTime": 1788787800000,
+          "holdMs": 1800000,
+          "lots": 0.59,
+          "mae": -0.2241,
+          "mfe": 0.4254,
+          "pnlUsd": 92.56,
+          "r": 0.8978,
+          "reason": "closed above the upper band",
+          "stop": 79779.08,
+          "target": 79444.96
+        },
+        {
+          "direction": "LONG",
+          "entryPrice": 79178.83,
+          "entryTime": 1788790500000,
+          "exitPrice": 78971.32,
+          "exitReason": "STOP",
+          "exitTime": 1788791400000,
+          "holdMs": 900000,
+          "lots": 0.507,
+          "mae": -0.6479,
+          "mfe": 0.2106,
+          "pnlUsd": -105.21,
+          "r": -1.0122,
+          "reason": "closed below the lower band",
+          "stop": 78973.82,
+          "target": 79434.54
+        },
+        {
+          "direction": "LONG",
+          "entryPrice": 79032.67,
+          "entryTime": 1788792300000,
+          "exitPrice": 78819.79,
+          "exitReason": "STOP",
+          "exitTime": 1788795000000,
+          "holdMs": 2700000,
+          "lots": 0.49,
+          "mae": -0.9538,
+          "mfe": 1.1611,
+          "pnlUsd": -104.31,
+          "r": -1.0119,
+          "reason": "closed below the lower band",
+          "stop": 78822.29,
+          "target": 79395.13
+        },
+        {
+          "direction": "LONG",
+          "entryPrice": 78778.93,
+          "entryTime": 1788795900000,
+          "exitPrice": 79150.51,
+          "exitReason": "middle band reached",
+          "exitTime": 1788803100000,
+          "holdMs": 7200000,
+          "lots": 0.39,
+          "mae": -0.3022,
+          "mfe": 1.5073,
+          "pnlUsd": 144.92,
+          "r": 1.4226,
+          "reason": "closed below the lower band",
+          "stop": 78517.73,
+          "target": 79319.29
+        },
+        {
+          "direction": "LONG",
+          "entryPrice": 78815.46,
+          "entryTime": 1788821100000,
+          "exitPrice": 79186.43,
+          "exitReason": "TARGET",
+          "exitTime": 1788824700000,
+          "holdMs": 3600000,
+          "lots": 0.561,
+          "mae": -0.0136,
+          "mfe": 1.9014,
+          "pnlUsd": 208.11,
+          "r": 2.0122,
+          "reason": "closed below the lower band",
+          "stop": 78631.1,
+          "target": 79188.93
+        },
+        {
+          "direction": "SHORT",
+          "entryPrice": 78845.43,
+          "entryTime": 1788863400000,
+          "exitPrice": 78533.56,
+          "exitReason": "TARGET",
+          "exitTime": 1788865200000,
+          "holdMs": 1800000,
+          "lots": 0.383,
+          "mae": -0.0937,
+          "mfe": 1.0071,
+          "pnlUsd": 119.44,
+          "r": 1.1321,
+          "reason": "closed above the upper band",
+          "stop": 79120.9,
+          "target": 78531.06
+        },
+        {
+          "direction": "LONG",
+          "entryPrice": 77846.77,
+          "entryTime": 1788875100000,
+          "exitPrice": 78405.23,
+          "exitReason": "middle band reached",
+          "exitTime": 1788878700000,
+          "holdMs": 3600000,
+          "lots": 0.329,
+          "mae": -0.7005,
+          "mfe": 1.8078,
+          "pnlUsd": 183.73,
+          "r": 1.7251,
+          "reason": "closed below the lower band",
+          "stop": 77523.04,
+          "target": 78470
+        },
+        {
+          "direction": "SHORT",
+          "entryPrice": 78901.5,
+          "entryTime": 1788883200000,
+          "exitPrice": 78393.74,
+          "exitReason": "TARGET",
+          "exitTime": 1788893100000,
+          "holdMs": 9900000,
+          "lots": 0.301,
+          "mae": -0.2131,
+          "mfe": 1.1128,
+          "pnlUsd": 152.84,
+          "r": 1.4072,
+          "reason": "closed above the upper band",
+          "stop": 79262.32,
+          "target": 78391.24
+        },
+        {
+          "direction": "SHORT",
+          "entryPrice": 78716.73,
+          "entryTime": 1788912900000,
+          "exitPrice": 78594.96,
+          "exitReason": "middle band reached",
+          "exitTime": 1788923700000,
+          "holdMs": 10800000,
+          "lots": 0.505,
+          "mae": -0.9718,
+          "mfe": 0.696,
+          "pnlUsd": 61.49,
+          "r": 0.5584,
+          "reason": "closed above the upper band",
+          "stop": 78934.8,
+          "target": 78515.31
+        },
+        {
+          "direction": "SHORT",
+          "entryPrice": 79192.57,
+          "entryTime": 1788929100000,
+          "exitPrice": 79420.49,
+          "exitReason": "STOP",
+          "exitTime": 1788940800000,
+          "holdMs": 11700000,
+          "lots": 0.491,
+          "mae": -0.9202,
+          "mfe": 1.5614,
+          "pnlUsd": -111.91,
+          "r": -1.0111,
+          "reason": "closed above the upper band",
+          "stop": 79417.99,
+          "target": 78750.83
+        },
+        {
+          "direction": "SHORT",
+          "entryPrice": 79680.88,
+          "entryTime": 1788942600000,
+          "exitPrice": 79120.85,
+          "exitReason": "TARGET",
+          "exitTime": 1788946200000,
+          "holdMs": 3600000,
+          "lots": 0.42,
+          "mae": -0.3035,
+          "mfe": 0.9603,
+          "pnlUsd": 235.21,
+          "r": 2.1483,
+          "reason": "closed above the upper band",
+          "stop": 79941.57,
+          "target": 79118.35
+        },
+        {
+          "direction": "LONG",
+          "entryPrice": 78480.51,
+          "entryTime": 1788966900000,
+          "exitPrice": 78294.32,
+          "exitReason": "TIMEOUT",
+          "exitTime": 1788982200000,
+          "holdMs": 15300000,
+          "lots": 0.237,
+          "mae": -0.8935,
+          "mfe": 0.9733,
+          "pnlUsd": -44.13,
+          "r": -0.3956,
+          "reason": "closed below the lower band",
+          "stop": 78009.9,
+          "target": 79177.29
+        },
+        {
+          "direction": "LONG",
+          "entryPrice": 78237.44,
+          "entryTime": 1788984000000,
+          "exitPrice": 77908.71,
+          "exitReason": "STOP",
+          "exitTime": 1788991200000,
+          "holdMs": 7200000,
+          "lots": 0.341,
+          "mae": -0.982,
+          "mfe": 0.3144,
+          "pnlUsd": -112.1,
+          "r": -1.0077,
+          "reason": "closed below the lower band",
+          "stop": 77911.21,
+          "target": 78596.69
+        },
+        {
+          "direction": "LONG",
+          "entryPrice": 77862.24,
+          "entryTime": 1788992100000,
+          "exitPrice": 78227.5,
+          "exitReason": "middle band reached",
+          "exitTime": 1788997500000,
+          "holdMs": 5400000,
+          "lots": 0.321,
+          "mae": -0.2661,
+          "mfe": 1.1558,
+          "pnlUsd": 117.25,
+          "r": 1.0631,
+          "reason": "closed below the lower band",
+          "stop": 77518.65,
+          "target": 78389.6
+        },
+        {
+          "direction": "LONG",
+          "entryPrice": 78027.88,
+          "entryTime": 1789025400000,
+          "exitPrice": 77753.98,
+          "exitReason": "STOP",
+          "exitTime": 1789038000000,
+          "holdMs": 12600000,
+          "lots": 0.411,
+          "mae": -0.7615,
+          "mfe": 0.7419,
+          "pnlUsd": -112.57,
+          "r": -1.0092,
+          "reason": "closed below the lower band",
+          "stop": 77756.48,
+          "target": 78342.79
+        },
+        {
+          "direction": "LONG",
+          "entryPrice": 77132.76,
+          "entryTime": 1789044300000,
+          "exitPrice": 76807.31,
+          "exitReason": "STOP",
+          "exitTime": 1789044300000,
+          "holdMs": 0,
+          "lots": 0.342,
+          "mae": 0,
+          "mfe": 0,
+          "pnlUsd": -111.3,
+          "r": -1.0077,
+          "reason": "closed below the lower band",
+          "stop": 76809.81,
+          "target": 77960.49
+        },
+        {
+          "direction": "LONG",
+          "entryPrice": 76898.51,
+          "entryTime": 1789045200000,
+          "exitPrice": 77197.5,
+          "exitReason": "middle band reached",
+          "exitTime": 1789059600000,
+          "holdMs": 14400000,
+          "lots": 0.31,
+          "mae": -0.4354,
+          "mfe": 1.4933,
+          "pnlUsd": 92.69,
+          "r": 0.8481,
+          "reason": "closed below the lower band",
+          "stop": 76545.96,
+          "target": 77899.69
+        },
+        {
+          "direction": "LONG",
+          "entryPrice": 76865.49,
+          "entryTime": 1789080300000,
+          "exitPrice": 76621.56,
+          "exitReason": "STOP",
+          "exitTime": 1789081200000,
+          "holdMs": 900000,
+          "lots": 0.456,
+          "mae": -0.1984,
+          "mfe": 0.4364,
+          "pnlUsd": -111.23,
+          "r": -1.0104,
+          "reason": "closed below the lower band",
+          "stop": 76624.06,
+          "target": 77182.25
+        },
+        {
+          "direction": "LONG",
+          "entryPrice": 76518.73,
+          "entryTime": 1789082100000,
+          "exitPrice": 76968.94,
+          "exitReason": "middle band reached",
+          "exitTime": 1789092000000,
+          "holdMs": 9900000,
+          "lots": 0.413,
+          "mae": -0.2074,
+          "mfe": 1.8235,
+          "pnlUsd": 185.94,
+          "r": 1.7058,
+          "reason": "closed below the lower band",
+          "stop": 76254.81,
+          "target": 77132.45
+        },
+        {
+          "direction": "SHORT",
+          "entryPrice": 77180.91,
+          "entryTime": 1789101000000,
+          "exitPrice": 77443.43,
+          "exitReason": "STOP",
+          "exitTime": 1789114500000,
+          "holdMs": 13500000,
+          "lots": 0.427,
+          "mae": -0.9637,
+          "mfe": 0.4302,
+          "pnlUsd": -112.09,
+          "r": -1.0096,
+          "reason": "closed above the upper band",
+          "stop": 77440.93,
+          "target": 76870.32
+        },
+        {
+          "direction": "LONG",
+          "entryPrice": 76966.73,
+          "entryTime": 1789119900000,
+          "exitPrice": 76745.88,
+          "exitReason": "STOP",
+          "exitTime": 1789125300000,
+          "holdMs": 5400000,
+          "lots": 0.503,
+          "mae": -0.9409,
+          "mfe": 0.9,
+          "pnlUsd": -111.09,
+          "r": -1.0114,
+          "reason": "closed below the lower band",
+          "stop": 76748.38,
+          "target": 77246.55
+        },
+        {
+          "direction": "SHORT",
+          "entryPrice": 77587.51,
+          "entryTime": 1789130700000,
+          "exitPrice": 78009.17,
+          "exitReason": "STOP",
+          "exitTime": 1789130700000,
+          "holdMs": 0,
+          "lots": 0.259,
+          "mae": 0,
+          "mfe": 0,
+          "pnlUsd": -109.21,
+          "r": -1.006,
+          "reason": "closed above the upper band",
+          "stop": 78006.67,
+          "target": 77117.48
+        },
+        {
+          "direction": "SHORT",
+          "entryPrice": 78030.48,
+          "entryTime": 1789131600000,
+          "exitPrice": 78484.8,
+          "exitReason": "STOP",
+          "exitTime": 1789134300000,
+          "holdMs": 2700000,
+          "lots": 0.238,
+          "mae": -0.0056,
+          "mfe": 1.719,
+          "pnlUsd": -108.13,
+          "r": -1.0055,
+          "reason": "closed above the upper band",
+          "stop": 78482.3,
+          "target": 77157.6
+        },
+        {
+          "direction": "SHORT",
+          "entryPrice": 79240.06,
+          "entryTime": 1789135200000,
+          "exitPrice": 79886.92,
+          "exitReason": "STOP",
+          "exitTime": 1789135200000,
+          "holdMs": 0,
+          "lots": 0.165,
+          "mae": 0,
+          "mfe": 0,
+          "pnlUsd": -106.73,
+          "r": -1.0039,
+          "reason": "closed above the upper band",
+          "stop": 79884.42,
+          "target": 77308.4
+        },
+        {
+          "direction": "SHORT",
+          "entryPrice": 79062.96,
+          "entryTime": 1789136100000,
+          "exitPrice": 77399.97,
+          "exitReason": "TARGET",
+          "exitTime": 1789141500000,
+          "holdMs": 5400000,
+          "lots": 0.147,
+          "mae": -0.1769,
+          "mfe": 0.8117,
+          "pnlUsd": 244.46,
+          "r": 2.3304,
+          "reason": "closed above the upper band",
+          "stop": 79776.57,
+          "target": 77397.47
+        }
+      ],
+      "warmup": 25
+    },
+    "buy-and-hold": {
+      "equityCurve": [
+        {
+          "equity": 6993.07,
+          "time": 1789191000000
+        }
+      ],
+      "metrics": {
+        "avgHoldMin": 9870,
+        "avgLossR": -30.0753,
+        "avgMae": -45.1192,
+        "avgMfe": 11.3549,
+        "avgR": -30.0753,
+        "avgWinR": "NaN",
+        "exits": {
+          "END_OF_DATA": 1
+        },
+        "expectancy": -30.0753,
+        "maxDrawdownPct": 30.0693,
+        "maxDrawdownUsd": 3006.93,
+        "netPnlUsd": -3006.93,
+        "profitFactor": 0,
+        "returnPct": -30.0693,
+        "sharpe": "NaN",
+        "totalR": -30.0753,
+        "trades": 1,
+        "winRate": 0
+      },
+      "params": {},
+      "skippedNoAtr": 12,
+      "trades": [
+        {
+          "direction": "LONG",
+          "entryPrice": 79652.51,
+          "entryTime": 1788598800000,
+          "exitPrice": 77248.89,
+          "exitReason": "END_OF_DATA",
+          "exitTime": 1789191000000,
+          "holdMs": 592200000,
+          "lots": 1.251,
+          "mae": -45.1192,
+          "mfe": 11.3549,
+          "pnlUsd": -3006.93,
+          "r": -30.0753,
+          "reason": "baseline",
+          "stop": null,
+          "target": null
+        }
+      ],
+      "warmup": 1
+    },
+    "donchian-breakout": {
+      "equityCurve": [
+        {
+          "equity": 10178.12,
+          "time": 1788626700000
+        },
+        {
+          "equity": 10075.17,
+          "time": 1788636600000
+        },
+        {
+          "equity": 10029.63,
+          "time": 1788662700000
+        },
+        {
+          "equity": 9928.14,
+          "time": 1788668100000
+        },
+        {
+          "equity": 9827.56,
+          "time": 1788672600000
+        },
+        {
+          "equity": 10003.03,
+          "time": 1788705000000
+        },
+        {
+          "equity": 9902.1,
+          "time": 1788732000000
+        },
+        {
+          "equity": 10078.96,
+          "time": 1788738300000
+        },
+        {
+          "equity": 10118.45,
+          "time": 1788768000000
+        },
+        {
+          "equity": 10016.38,
+          "time": 1788787800000
+        },
+        {
+          "equity": 10195.49,
+          "time": 1788795000000
+        },
+        {
+          "equity": 10092.97,
+          "time": 1788800400000
+        },
+        {
+          "equity": 10017.05,
+          "time": 1788818400000
+        },
+        {
+          "equity": 9916.08,
+          "time": 1788822000000
+        },
+        {
+          "equity": 9816.25,
+          "time": 1788834600000
+        },
+        {
+          "equity": 9991.97,
+          "time": 1788853500000
+        },
+        {
+          "equity": 9891.88,
+          "time": 1788876900000
+        },
+        {
+          "equity": 9792.92,
+          "time": 1788893100000
+        },
+        {
+          "equity": 9748.51,
+          "time": 1788923700000
+        },
+        {
+          "equity": 9659.66,
+          "time": 1788932700000
+        },
+        {
+          "equity": 9562.47,
+          "time": 1788946200000
+        },
+        {
+          "equity": 9501.88,
+          "time": 1788974100000
+        },
+        {
+          "equity": 9424.2,
+          "time": 1788997500000
+        },
+        {
+          "equity": 9361.4,
+          "time": 1789052400000
+        },
+        {
+          "equity": 9346.68,
+          "time": 1789088400000
+        },
+        {
+          "equity": 9394.34,
+          "time": 1789116300000
+        },
+        {
+          "equity": 9299.77,
+          "time": 1789128900000
+        },
+        {
+          "equity": 9466.1,
+          "time": 1789134300000
+        },
+        {
+          "equity": 9371.41,
+          "time": 1789141500000
+        },
+        {
+          "equity": 9367.34,
+          "time": 1789165800000
+        }
+      ],
+      "metrics": {
+        "avgHoldMin": 110.5,
+        "avgLossR": -0.8188,
+        "avgMae": -0.5833,
+        "avgMfe": 0.6827,
+        "avgR": -0.2125,
+        "avgWinR": 1.455,
+        "exits": {
+          "STOP": 13,
+          "TARGET": 6,
+          "TIMEOUT": 3,
+          "lost the channel midline": 4,
+          "reclaimed the channel midline": 4
+        },
+        "expectancy": -0.2125,
+        "maxDrawdownPct": 8.7855,
+        "maxDrawdownUsd": 895.72,
+        "netPnlUsd": -632.66,
+        "profitFactor": 0.6429,
+        "returnPct": -6.3266,
+        "sharpe": -1.0613,
+        "totalR": -6.3742,
+        "trades": 30,
+        "winRate": 0.266666667
+      },
+      "params": {
+        "atrPeriod": 14,
+        "period": 20,
+        "stopAtr": 2
+      },
+      "skippedNoAtr": 0,
+      "trades": [
+        {
+          "direction": "LONG",
+          "entryPrice": 79808.5,
+          "entryTime": 1788624000000,
+          "exitPrice": 80076.75,
+          "exitReason": "TARGET",
+          "exitTime": 1788626700000,
+          "holdMs": 2700000,
+          "lots": 0.664,
+          "mae": -0.3623,
+          "mfe": 1.2001,
+          "pnlUsd": 178.12,
+          "r": 1.7834,
+          "reason": "broke the 20-bar high",
+          "stop": 79658.08,
+          "target": 80079.25
+        },
+        {
+          "direction": "LONG",
+          "entryPrice": 80044.49,
+          "entryTime": 1788627600000,
+          "exitPrice": 79852.41,
+          "exitReason": "STOP",
+          "exitTime": 1788636600000,
+          "holdMs": 9000000,
+          "lots": 0.536,
+          "mae": -0.7305,
+          "mfe": 0.6214,
+          "pnlUsd": -102.95,
+          "r": -1.0132,
+          "reason": "broke the 20-bar high",
+          "stop": 79854.91,
+          "target": 80385.73
+        },
+        {
+          "direction": "LONG",
+          "entryPrice": 79964.5,
+          "entryTime": 1788657300000,
+          "exitPrice": 79875.55,
+          "exitReason": "lost the channel midline",
+          "exitTime": 1788662700000,
+          "holdMs": 5400000,
+          "lots": 0.512,
+          "mae": -0.4394,
+          "mfe": 0.5233,
+          "pnlUsd": -45.54,
+          "r": -0.4521,
+          "reason": "broke the 20-bar high",
+          "stop": 79767.77,
+          "target": 80318.62
+        },
+        {
+          "direction": "LONG",
+          "entryPrice": 80110.49,
+          "entryTime": 1788666300000,
+          "exitPrice": 79911.11,
+          "exitReason": "STOP",
+          "exitTime": 1788668100000,
+          "holdMs": 1800000,
+          "lots": 0.509,
+          "mae": -0.7794,
+          "mfe": 0,
+          "pnlUsd": -101.49,
+          "r": -1.0127,
+          "reason": "broke the 20-bar high",
+          "stop": 79913.61,
+          "target": 80464.88
+        },
+        {
+          "direction": "SHORT",
+          "entryPrice": 79801.5,
+          "entryTime": 1788671700000,
+          "exitPrice": 79991.99,
+          "exitReason": "STOP",
+          "exitTime": 1788672600000,
+          "holdMs": 900000,
+          "lots": 0.528,
+          "mae": -0.3962,
+          "mfe": 0.0293,
+          "pnlUsd": -100.58,
+          "r": -1.0133,
+          "reason": "broke the 20-bar low",
+          "stop": 79989.49,
+          "target": 79463.12
+        },
+        {
+          "direction": "SHORT",
+          "entryPrice": 79747.49,
+          "entryTime": 1788704100000,
+          "exitPrice": 79436.93,
+          "exitReason": "TARGET",
+          "exitTime": 1788705000000,
+          "holdMs": 900000,
+          "lots": 0.565,
+          "mae": -0.2789,
+          "mfe": 0.8975,
+          "pnlUsd": 175.47,
+          "r": 1.7856,
+          "reason": "broke the 20-bar low",
+          "stop": 79921.41,
+          "target": 79434.43
+        },
+        {
+          "direction": "LONG",
+          "entryPrice": 79918.96,
+          "entryTime": 1788719400000,
+          "exitPrice": 79690.09,
+          "exitReason": "STOP",
+          "exitTime": 1788732000000,
+          "holdMs": 12600000,
+          "lots": 0.441,
+          "mae": -0.6289,
+          "mfe": 0.5082,
+          "pnlUsd": -100.93,
+          "r": -1.011,
+          "reason": "broke the 20-bar high",
+          "stop": 79692.59,
+          "target": 80326.43
+        },
+        {
+          "direction": "LONG",
+          "entryPrice": 80057.68,
+          "entryTime": 1788735600000,
+          "exitPrice": 80495.45,
+          "exitReason": "TARGET",
+          "exitTime": 1788738300000,
+          "holdMs": 2700000,
+          "lots": 0.404,
+          "mae": -0.1949,
+          "mfe": 1.7572,
+          "pnlUsd": 176.86,
+          "r": 1.7898,
+          "reason": "broke the 20-bar high",
+          "stop": 79813.08,
+          "target": 80497.95
+        },
+        {
+          "direction": "SHORT",
+          "entryPrice": 79629.38,
+          "entryTime": 1788752700000,
+          "exitPrice": 79468.84,
+          "exitReason": "TIMEOUT",
+          "exitTime": 1788768000000,
+          "holdMs": 15300000,
+          "lots": 0.246,
+          "mae": -0.7242,
+          "mfe": 1.5337,
+          "pnlUsd": 39.49,
+          "r": 0.3919,
+          "reason": "broke the 20-bar low",
+          "stop": 80039.03,
+          "target": 78892.01
+        },
+        {
+          "direction": "LONG",
+          "entryPrice": 79609.34,
+          "entryTime": 1788786000000,
+          "exitPrice": 79374.69,
+          "exitReason": "STOP",
+          "exitTime": 1788787800000,
+          "holdMs": 1800000,
+          "lots": 0.435,
+          "mae": -0.3418,
+          "mfe": 0.1471,
+          "pnlUsd": -102.07,
+          "r": -1.0108,
+          "reason": "broke the 20-bar high",
+          "stop": 79377.19,
+          "target": 80027.2
+        },
+        {
+          "direction": "SHORT",
+          "entryPrice": 79173.83,
+          "entryTime": 1788790500000,
+          "exitPrice": 78685.8,
+          "exitReason": "TARGET",
+          "exitTime": 1788795000000,
+          "holdMs": 4500000,
+          "lots": 0.367,
+          "mae": -0.3784,
+          "mfe": 1.2544,
+          "pnlUsd": 179.11,
+          "r": 1.7908,
+          "reason": "broke the 20-bar low",
+          "stop": 79446.34,
+          "target": 78683.3
+        },
+        {
+          "direction": "SHORT",
+          "entryPrice": 78773.93,
+          "entryTime": 1788795900000,
+          "exitPrice": 79123.84,
+          "exitReason": "STOP",
+          "exitTime": 1788800400000,
+          "holdMs": 4500000,
+          "lots": 0.293,
+          "mae": -0.7521,
+          "mfe": 0.2128,
+          "pnlUsd": -102.52,
+          "r": -1.0072,
+          "reason": "broke the 20-bar low",
+          "stop": 79121.34,
+          "target": 78148.6
+        },
+        {
+          "direction": "LONG",
+          "entryPrice": 79344.88,
+          "entryTime": 1788810300000,
+          "exitPrice": 79161.51,
+          "exitReason": "lost the channel midline",
+          "exitTime": 1788818400000,
+          "holdMs": 8100000,
+          "lots": 0.414,
+          "mae": -0.7425,
+          "mfe": 0.2054,
+          "pnlUsd": -75.92,
+          "r": -0.7527,
+          "reason": "broke the 20-bar high",
+          "stop": 79101.28,
+          "target": 79783.37
+        },
+        {
+          "direction": "SHORT",
+          "entryPrice": 78810.46,
+          "entryTime": 1788821100000,
+          "exitPrice": 79057.94,
+          "exitReason": "STOP",
+          "exitTime": 1788822000000,
+          "holdMs": 900000,
+          "lots": 0.408,
+          "mae": -0.6346,
+          "mfe": 0,
+          "pnlUsd": -100.97,
+          "r": -1.0102,
+          "reason": "broke the 20-bar low",
+          "stop": 79055.44,
+          "target": 78369.49
+        },
+        {
+          "direction": "LONG",
+          "entryPrice": 79400.5,
+          "entryTime": 1788831000000,
+          "exitPrice": 79106.87,
+          "exitReason": "STOP",
+          "exitTime": 1788834600000,
+          "holdMs": 3600000,
+          "lots": 0.34,
+          "mae": -0.5032,
+          "mfe": 0.2903,
+          "pnlUsd": -99.83,
+          "r": -1.0086,
+          "reason": "broke the 20-bar high",
+          "stop": 79109.37,
+          "target": 79924.53
+        },
+        {
+          "direction": "SHORT",
+          "entryPrice": 78770.86,
+          "entryTime": 1788838200000,
+          "exitPrice": 78194.72,
+          "exitReason": "TARGET",
+          "exitTime": 1788853500000,
+          "holdMs": 15300000,
+          "lots": 0.305,
+          "mae": -0.6817,
+          "mfe": 1.5841,
+          "pnlUsd": 175.72,
+          "r": 1.7922,
+          "reason": "broke the 20-bar low",
+          "stop": 79092.33,
+          "target": 78192.22
+        },
+        {
+          "direction": "SHORT",
+          "entryPrice": 77841.77,
+          "entryTime": 1788875100000,
+          "exitPrice": 78275.07,
+          "exitReason": "STOP",
+          "exitTime": 1788876900000,
+          "holdMs": 1800000,
+          "lots": 0.231,
+          "mae": -0.8083,
+          "mfe": 0.5148,
+          "pnlUsd": -100.09,
+          "r": -1.0058,
+          "reason": "broke the 20-bar low",
+          "stop": 78272.57,
+          "target": 77066.32
+        },
+        {
+          "direction": "LONG",
+          "entryPrice": 78906.5,
+          "entryTime": 1788883200000,
+          "exitPrice": 78423.74,
+          "exitReason": "STOP",
+          "exitTime": 1788893100000,
+          "holdMs": 9900000,
+          "lots": 0.205,
+          "mae": -0.8464,
+          "mfe": 0.1497,
+          "pnlUsd": -98.96,
+          "r": -1.0052,
+          "reason": "broke the 20-bar high",
+          "stop": 78426.24,
+          "target": 79770.96
+        },
+        {
+          "direction": "LONG",
+          "entryPrice": 78721.73,
+          "entryTime": 1788912900000,
+          "exitPrice": 78589.96,
+          "exitReason": "lost the channel midline",
+          "exitTime": 1788923700000,
+          "holdMs": 10800000,
+          "lots": 0.337,
+          "mae": -0.5407,
+          "mfe": 0.7136,
+          "pnlUsd": -44.41,
+          "r": -0.4545,
+          "reason": "broke the 20-bar high",
+          "stop": 78431.78,
+          "target": 79243.64
+        },
+        {
+          "direction": "LONG",
+          "entryPrice": 79197.57,
+          "entryTime": 1788929100000,
+          "exitPrice": 78924.18,
+          "exitReason": "lost the channel midline",
+          "exitTime": 1788932700000,
+          "holdMs": 3600000,
+          "lots": 0.325,
+          "mae": -0.9928,
+          "mfe": 0.5753,
+          "pnlUsd": -88.85,
+          "r": -0.9121,
+          "reason": "broke the 20-bar high",
+          "stop": 78897.84,
+          "target": 79737.09
+        },
+        {
+          "direction": "LONG",
+          "entryPrice": 79413.95,
+          "entryTime": 1788941700000,
+          "exitPrice": 79085.61,
+          "exitReason": "STOP",
+          "exitTime": 1788946200000,
+          "holdMs": 4500000,
+          "lots": 0.296,
+          "mae": -0.0428,
+          "mfe": 1.062,
+          "pnlUsd": -97.19,
+          "r": -1.0077,
+          "reason": "broke the 20-bar high",
+          "stop": 79088.11,
+          "target": 80000.45
+        },
+        {
+          "direction": "SHORT",
+          "entryPrice": 78475.51,
+          "entryTime": 1788966900000,
+          "exitPrice": 78874.12,
+          "exitReason": "reclaimed the channel midline",
+          "exitTime": 1788974100000,
+          "holdMs": 7200000,
+          "lots": 0.152,
+          "mae": -0.7389,
+          "mfe": 0.663,
+          "pnlUsd": -60.59,
+          "r": -0.6361,
+          "reason": "broke the 20-bar low",
+          "stop": 79102.15,
+          "target": 77347.55
+        },
+        {
+          "direction": "SHORT",
+          "entryPrice": 77857.24,
+          "entryTime": 1788992100000,
+          "exitPrice": 78232.5,
+          "exitReason": "reclaimed the channel midline",
+          "exitTime": 1788997500000,
+          "holdMs": 5400000,
+          "lots": 0.207,
+          "mae": -0.8794,
+          "mfe": 0.189,
+          "pnlUsd": -77.68,
+          "r": -0.8207,
+          "reason": "broke the 20-bar low",
+          "stop": 78314.5,
+          "target": 77034.16
+        },
+        {
+          "direction": "SHORT",
+          "entryPrice": 77127.76,
+          "entryTime": 1789044300000,
+          "exitPrice": 77414.51,
+          "exitReason": "reclaimed the channel midline",
+          "exitTime": 1789052400000,
+          "holdMs": 8100000,
+          "lots": 0.219,
+          "mae": -0.6916,
+          "mfe": 1.0511,
+          "pnlUsd": -62.8,
+          "r": -0.6673,
+          "reason": "broke the 20-bar low",
+          "stop": 77557.51,
+          "target": 76354.22
+        },
+        {
+          "direction": "SHORT",
+          "entryPrice": 76860.49,
+          "entryTime": 1789080300000,
+          "exitPrice": 76911.09,
+          "exitReason": "reclaimed the channel midline",
+          "exitTime": 1789088400000,
+          "holdMs": 8100000,
+          "lots": 0.291,
+          "mae": -0.3437,
+          "mfe": 1.2349,
+          "pnlUsd": -14.72,
+          "r": -0.1576,
+          "reason": "broke the 20-bar low",
+          "stop": 77181.56,
+          "target": 76282.57
+        },
+        {
+          "direction": "LONG",
+          "entryPrice": 77185.91,
+          "entryTime": 1789101000000,
+          "exitPrice": 77362.43,
+          "exitReason": "TIMEOUT",
+          "exitTime": 1789116300000,
+          "holdMs": 15300000,
+          "lots": 0.27,
+          "mae": -0.3379,
+          "mfe": 0.9082,
+          "pnlUsd": 47.66,
+          "r": 0.5104,
+          "reason": "broke the 20-bar high",
+          "stop": 76840.06,
+          "target": 77808.45
+        },
+        {
+          "direction": "SHORT",
+          "entryPrice": 76961.73,
+          "entryTime": 1789119900000,
+          "exitPrice": 77254.51,
+          "exitReason": "STOP",
+          "exitTime": 1789128900000,
+          "holdMs": 9000000,
+          "lots": 0.323,
+          "mae": -0.6942,
+          "mfe": 0.7399,
+          "pnlUsd": -94.57,
+          "r": -1.0086,
+          "reason": "broke the 20-bar low",
+          "stop": 77252.01,
+          "target": 76439.22
+        },
+        {
+          "direction": "LONG",
+          "entryPrice": 77592.51,
+          "entryTime": 1789130700000,
+          "exitPrice": 78594.5,
+          "exitReason": "TARGET",
+          "exitTime": 1789134300000,
+          "holdMs": 3600000,
+          "lots": 0.166,
+          "mae": -0.607,
+          "mfe": 0.9967,
+          "pnlUsd": 166.33,
+          "r": 1.7955,
+          "reason": "broke the 20-bar high",
+          "stop": 77034.46,
+          "target": 78597
+        },
+        {
+          "direction": "LONG",
+          "entryPrice": 79245.06,
+          "entryTime": 1789135200000,
+          "exitPrice": 78384.24,
+          "exitReason": "STOP",
+          "exitTime": 1789141500000,
+          "holdMs": 6300000,
+          "lots": 0.11,
+          "mae": -0.887,
+          "mfe": 0.7514,
+          "pnlUsd": -94.69,
+          "r": -1.0029,
+          "reason": "broke the 20-bar high",
+          "stop": 78386.74,
+          "target": 80790.03
+        },
+        {
+          "direction": "SHORT",
+          "entryPrice": 77085.51,
+          "entryTime": 1789150500000,
+          "exitPrice": 77120.61,
+          "exitReason": "TIMEOUT",
+          "exitTime": 1789165800000,
+          "holdMs": 15300000,
+          "lots": 0.116,
+          "mae": -0.5189,
+          "mfe": 0.1658,
+          "pnlUsd": -4.07,
+          "r": -0.0435,
+          "reason": "broke the 20-bar low",
+          "stop": 77891.98,
+          "target": 75633.87
+        }
+      ],
+      "warmup": 25
+    },
+    "ema-cross": {
+      "equityCurve": [
+        {
+          "equity": 9938.64,
+          "time": 1788686100000
+        },
+        {
+          "equity": 10115.77,
+          "time": 1788705000000
+        },
+        {
+          "equity": 10012.8,
+          "time": 1788732000000
+        },
+        {
+          "equity": 9911.88,
+          "time": 1788758100000
+        },
+        {
+          "equity": 10089.12,
+          "time": 1788928200000
+        },
+        {
+          "equity": 10165.48,
+          "time": 1788984000000
+        },
+        {
+          "equity": 10062.65,
+          "time": 1789119000000
+        },
+        {
+          "equity": 9960.86,
+          "time": 1789128900000
+        },
+        {
+          "equity": 9860.91,
+          "time": 1789131600000
+        },
+        {
+          "equity": 9860.43,
+          "time": 1789171200000
+        }
+      ],
+      "metrics": {
+        "avgHoldMin": 108,
+        "avgLossR": -0.8109,
+        "avgMae": -0.5205,
+        "avgMfe": 0.5611,
+        "avgR": -0.1347,
+        "avgWinR": 1.443,
+        "exits": {
+          "STOP": 5,
+          "TARGET": 2,
+          "TIMEOUT": 2,
+          "opposite cross": 1
+        },
+        "expectancy": -0.1347,
+        "maxDrawdownPct": 3.0008,
+        "maxDrawdownUsd": 305.05,
+        "netPnlUsd": -139.57,
+        "profitFactor": 0.7553,
+        "returnPct": -1.3957,
+        "sharpe": -0.365,
+        "totalR": -1.3471,
+        "trades": 10,
+        "winRate": 0.3
+      },
+      "params": {
+        "atrPeriod": 14,
+        "fast": 21,
+        "slow": 55,
+        "stopAtr": 1.5
+      },
+      "skippedNoAtr": 0,
+      "trades": [
+        {
+          "direction": "SHORT",
+          "entryPrice": 79834.67,
+          "entryTime": 1788685200000,
+          "exitPrice": 79930.25,
+          "exitReason": "opposite cross",
+          "exitTime": 1788686100000,
+          "holdMs": 900000,
+          "lots": 0.642,
+          "mae": -0.5983,
+          "mfe": 0.1842,
+          "pnlUsd": -61.36,
+          "r": -0.6144,
+          "reason": "fast EMA crossed below slow",
+          "stop": 79990.25,
+          "target": 79554.63
+        },
+        {
+          "direction": "SHORT",
+          "entryPrice": 79669.32,
+          "entryTime": 1788705000000,
+          "exitPrice": 79412.98,
+          "exitReason": "TARGET",
+          "exitTime": 1788705000000,
+          "holdMs": 0,
+          "lots": 0.691,
+          "mae": 0,
+          "mfe": 0,
+          "pnlUsd": 177.13,
+          "r": 1.7826,
+          "reason": "fast EMA crossed below slow",
+          "stop": 79813.12,
+          "target": 79410.48
+        },
+        {
+          "direction": "LONG",
+          "entryPrice": 79956.5,
+          "entryTime": 1788727500000,
+          "exitPrice": 79818.09,
+          "exitReason": "STOP",
+          "exitTime": 1788732000000,
+          "holdMs": 4500000,
+          "lots": 0.744,
+          "mae": -0.5979,
+          "mfe": 0.5703,
+          "pnlUsd": -102.97,
+          "r": -1.0184,
+          "reason": "fast EMA crossed above slow",
+          "stop": 79820.59,
+          "target": 80201.13
+        },
+        {
+          "direction": "SHORT",
+          "entryPrice": 79593.88,
+          "entryTime": 1788753600000,
+          "exitPrice": 79895.13,
+          "exitReason": "STOP",
+          "exitTime": 1788758100000,
+          "holdMs": 4500000,
+          "lots": 0.335,
+          "mae": -0.6194,
+          "mfe": 0.1791,
+          "pnlUsd": -100.92,
+          "r": -1.0084,
+          "reason": "fast EMA crossed below slow",
+          "stop": 79892.63,
+          "target": 79056.13
+        },
+        {
+          "direction": "LONG",
+          "entryPrice": 78742.5,
+          "entryTime": 1788916500000,
+          "exitPrice": 79126.14,
+          "exitReason": "TARGET",
+          "exitTime": 1788928200000,
+          "holdMs": 11700000,
+          "lots": 0.462,
+          "mae": -0.9045,
+          "mfe": 0.9486,
+          "pnlUsd": 177.24,
+          "r": 1.7883,
+          "reason": "fast EMA crossed above slow",
+          "stop": 78527.98,
+          "target": 79128.64
+        },
+        {
+          "direction": "SHORT",
+          "entryPrice": 78640.9,
+          "entryTime": 1788968700000,
+          "exitPrice": 78257.17,
+          "exitReason": "TIMEOUT",
+          "exitTime": 1788984000000,
+          "holdMs": 15300000,
+          "lots": 0.199,
+          "mae": -0.588,
+          "mfe": 0.9697,
+          "pnlUsd": 76.36,
+          "r": 0.758,
+          "reason": "fast EMA crossed below slow",
+          "stop": 79147.14,
+          "target": 77729.67
+        },
+        {
+          "direction": "LONG",
+          "entryPrice": 77338.51,
+          "entryTime": 1789111800000,
+          "exitPrice": 77136.49,
+          "exitReason": "STOP",
+          "exitTime": 1789119000000,
+          "holdMs": 7200000,
+          "lots": 0.509,
+          "mae": -0.9719,
+          "mfe": 0.8094,
+          "pnlUsd": -102.83,
+          "r": -1.0125,
+          "reason": "fast EMA crossed above slow",
+          "stop": 77138.99,
+          "target": 77697.65
+        },
+        {
+          "direction": "SHORT",
+          "entryPrice": 77014.88,
+          "entryTime": 1789123500000,
+          "exitPrice": 77228.28,
+          "exitReason": "STOP",
+          "exitTime": 1789128900000,
+          "holdMs": 5400000,
+          "lots": 0.477,
+          "mae": -0.5221,
+          "mfe": 1.2704,
+          "pnlUsd": -101.79,
+          "r": -1.0119,
+          "reason": "fast EMA crossed below slow",
+          "stop": 77225.78,
+          "target": 76635.25
+        },
+        {
+          "direction": "LONG",
+          "entryPrice": 78035.48,
+          "entryTime": 1789131600000,
+          "exitPrice": 77581.18,
+          "exitReason": "STOP",
+          "exitTime": 1789131600000,
+          "holdMs": 0,
+          "lots": 0.22,
+          "mae": 0,
+          "mfe": 0,
+          "pnlUsd": -99.95,
+          "r": -1.0055,
+          "reason": "fast EMA crossed above slow",
+          "stop": 77583.68,
+          "target": 78848.71
+        },
+        {
+          "direction": "SHORT",
+          "entryPrice": 77304.16,
+          "entryTime": 1789155900000,
+          "exitPrice": 77306.57,
+          "exitReason": "TIMEOUT",
+          "exitTime": 1789171200000,
+          "holdMs": 15300000,
+          "lots": 0.198,
+          "mae": -0.4028,
+          "mfe": 0.6792,
+          "pnlUsd": -0.48,
+          "r": -0.0049,
+          "reason": "fast EMA crossed below slow",
+          "stop": 77800.35,
+          "target": 76411.02
+        }
+      ],
+      "warmup": 60
+    },
+    "flow-at-level": {
+      "equityCurve": [
+        {
+          "equity": 9897.01,
+          "time": 1789119900000
+        },
+        {
+          "equity": 10070.1,
+          "time": 1789124400000
+        },
+        {
+          "equity": 9966.35,
+          "time": 1789128000000
+        }
+      ],
+      "metrics": {
+        "avgHoldMin": 0,
+        "avgLossR": -1.0308,
+        "avgMae": 0,
+        "avgMfe": 0,
+        "avgR": -0.1043,
+        "avgWinR": 1.7489,
+        "exits": {
+          "STOP": 2,
+          "TARGET": 1
+        },
+        "expectancy": -0.1043,
+        "maxDrawdownPct": 1.0303,
+        "maxDrawdownUsd": 103.75,
+        "netPnlUsd": -33.65,
+        "profitFactor": 0.8372,
+        "returnPct": -0.3365,
+        "sharpe": -0.1125,
+        "totalR": -0.3128,
+        "trades": 3,
+        "winRate": 0.333333333
+      },
+      "params": {
+        "atrPeriod": 14,
+        "entryAtr": 0.4,
+        "minBullRatio": 0.55,
+        "minClusterScore": 3,
+        "requireReclaim": 1,
+        "stopAtr": 1.5
+      },
+      "skippedNoAtr": 0,
+      "trades": [
+        {
+          "direction": "SHORT",
+          "entryPrice": 76961.73,
+          "entryTime": 1789119900000,
+          "exitPrice": 77045.67,
+          "exitReason": "STOP",
+          "exitTime": 1789119900000,
+          "holdMs": 0,
+          "lots": 1.227,
+          "mae": 0,
+          "mfe": 0,
+          "pnlUsd": -102.99,
+          "r": -1.0307,
+          "reason": "bear flow 0.89 at resistance 77000.0-77000.0",
+          "stop": 77043.17,
+          "target": 76815.14
+        },
+        {
+          "direction": "SHORT",
+          "entryPrice": 76990.75,
+          "entryTime": 1789124400000,
+          "exitPrice": 76905.11,
+          "exitReason": "TARGET",
+          "exitTime": 1789124400000,
+          "holdMs": 0,
+          "lots": 2.021,
+          "mae": 0,
+          "mfe": 0,
+          "pnlUsd": 173.09,
+          "r": 1.7489,
+          "reason": "bear flow 0.75 at resistance 77000.0-77000.0",
+          "stop": 77039.72,
+          "target": 76902.61
+        },
+        {
+          "direction": "LONG",
+          "entryPrice": 77038.62,
+          "entryTime": 1789128000000,
+          "exitPrice": 76955.56,
+          "exitReason": "STOP",
+          "exitTime": 1789128000000,
+          "holdMs": 0,
+          "lots": 1.249,
+          "mae": 0,
+          "mfe": 0,
+          "pnlUsd": -103.75,
+          "r": -1.031,
+          "reason": "bull flow 0.90 at support 77000.0-77000.0",
+          "stop": 76958.06,
+          "target": 77183.63
+        }
+      ],
+      "warmup": 42
+    },
+    "flow-momentum": {
+      "equityCurve": [
+        {
+          "equity": 9898.92,
+          "time": 1789119000000
+        },
+        {
+          "equity": 9798.89,
+          "time": 1789128900000
+        },
+        {
+          "equity": 9700.64,
+          "time": 1789130700000
+        }
+      ],
+      "metrics": {
+        "avgHoldMin": 115,
+        "avgLossR": -1.0098,
+        "avgMae": -0.3661,
+        "avgMfe": 0.8384,
+        "avgR": -1.0098,
+        "avgWinR": "NaN",
+        "exits": {
+          "STOP": 3
+        },
+        "expectancy": -1.0098,
+        "maxDrawdownPct": 2.9936,
+        "maxDrawdownUsd": 299.36,
+        "netPnlUsd": -299.36,
+        "profitFactor": 0,
+        "returnPct": -2.9936,
+        "sharpe": -531.4737,
+        "totalR": -3.0294,
+        "trades": 3,
+        "winRate": 0
+      },
+      "params": {
+        "atrPeriod": 14,
+        "minBullRatio": 0.6,
+        "minVelocity": 0.05,
+        "stopAtr": 1.5
+      },
+      "skippedNoAtr": 0,
+      "trades": [
+        {
+          "direction": "LONG",
+          "entryPrice": 77255.37,
+          "entryTime": 1789106400000,
+          "exitPrice": 77039.84,
+          "exitReason": "STOP",
+          "exitTime": 1789119000000,
+          "holdMs": 12600000,
+          "lots": 0.469,
+          "mae": -0.52,
+          "mfe": 1.1483,
+          "pnlUsd": -101.08,
+          "r": -1.0117,
+          "reason": "bull flow 0.64, velocity 0.27",
+          "stop": 77042.34,
+          "target": 77638.83
+        },
+        {
+          "direction": "SHORT",
+          "entryPrice": 77039.5,
+          "entryTime": 1789120800000,
+          "exitPrice": 77256.01,
+          "exitReason": "STOP",
+          "exitTime": 1789128900000,
+          "holdMs": 8100000,
+          "lots": 0.462,
+          "mae": -0.5783,
+          "mfe": 1.367,
+          "pnlUsd": -100.03,
+          "r": -1.0117,
+          "reason": "bear flow 0.80, velocity -0.07",
+          "stop": 77253.51,
+          "target": 76654.29
+        },
+        {
+          "direction": "SHORT",
+          "entryPrice": 77587.51,
+          "entryTime": 1789130700000,
+          "exitPrice": 78009.17,
+          "exitReason": "STOP",
+          "exitTime": 1789130700000,
+          "holdMs": 0,
+          "lots": 0.233,
+          "mae": 0,
+          "mfe": 0,
+          "pnlUsd": -98.25,
+          "r": -1.006,
+          "reason": "bear flow 0.87, velocity -0.26",
+          "stop": 78006.67,
+          "target": 76833.02
+        }
+      ],
+      "warmup": 42
+    },
+    "level-reversion": {
+      "equityCurve": [
+        {
+          "equity": 9897.01,
+          "time": 1789119900000
+        },
+        {
+          "equity": 9795.21,
+          "time": 1789124400000
+        },
+        {
+          "equity": 9694.29,
+          "time": 1789128000000
+        },
+        {
+          "equity": 9595.47,
+          "time": 1789131600000
+        },
+        {
+          "equity": 9498.49,
+          "time": 1789137000000
+        },
+        {
+          "equity": 9668.14,
+          "time": 1789148700000
+        },
+        {
+          "equity": 9667.16,
+          "time": 1789167600000
+        }
+      ],
+      "metrics": {
+        "avgHoldMin": 53.57,
+        "avgLossR": -0.8554,
+        "avgMae": -0.3143,
+        "avgMfe": 0.6661,
+        "avgR": -0.4777,
+        "avgWinR": 1.7886,
+        "exits": {
+          "STOP": 5,
+          "TARGET": 1,
+          "TIMEOUT": 1
+        },
+        "expectancy": -0.4777,
+        "maxDrawdownPct": 5.0151,
+        "maxDrawdownUsd": 501.51,
+        "netPnlUsd": -332.84,
+        "profitFactor": 0.3376,
+        "returnPct": -3.3284,
+        "sharpe": -1.1829,
+        "totalR": -3.3439,
+        "trades": 7,
+        "winRate": 0.142857143
+      },
+      "params": {
+        "atrPeriod": 14,
+        "entryAtr": 0.35,
+        "minClusterScore": 3,
+        "stopAtr": 1.5
+      },
+      "skippedNoAtr": 0,
+      "trades": [
+        {
+          "direction": "SHORT",
+          "entryPrice": 76961.73,
+          "entryTime": 1789119900000,
+          "exitPrice": 77045.67,
+          "exitReason": "STOP",
+          "exitTime": 1789119900000,
+          "holdMs": 0,
+          "lots": 1.227,
+          "mae": 0,
+          "mfe": 0,
+          "pnlUsd": -102.99,
+          "r": -1.0307,
+          "reason": "resistance cluster 77000.0-77000.0 score 5.9",
+          "stop": 77043.17,
+          "target": 76815.14
+        },
+        {
+          "direction": "LONG",
+          "entryPrice": 77044.5,
+          "entryTime": 1789120800000,
+          "exitPrice": 76955.2,
+          "exitReason": "STOP",
+          "exitTime": 1789124400000,
+          "holdMs": 3600000,
+          "lots": 1.14,
+          "mae": -0.9044,
+          "mfe": 1.3681,
+          "pnlUsd": -101.8,
+          "r": -1.0288,
+          "reason": "support cluster 77000.0-77000.0 score 5.4",
+          "stop": 76957.7,
+          "target": 77200.74
+        },
+        {
+          "direction": "LONG",
+          "entryPrice": 77038.62,
+          "entryTime": 1789128000000,
+          "exitPrice": 76955.56,
+          "exitReason": "STOP",
+          "exitTime": 1789128000000,
+          "holdMs": 0,
+          "lots": 1.215,
+          "mae": 0,
+          "mfe": 0,
+          "pnlUsd": -100.92,
+          "r": -1.031,
+          "reason": "support cluster 77000.0-77000.0 score 9.1",
+          "stop": 76958.06,
+          "target": 77183.63
+        },
+        {
+          "direction": "LONG",
+          "entryPrice": 78035.48,
+          "entryTime": 1789131600000,
+          "exitPrice": 77907.64,
+          "exitReason": "STOP",
+          "exitTime": 1789131600000,
+          "holdMs": 0,
+          "lots": 0.773,
+          "mae": 0,
+          "mfe": 0,
+          "pnlUsd": -98.82,
+          "r": -1.0199,
+          "reason": "support cluster 78000.0-78114.8 score 35.3",
+          "stop": 77910.14,
+          "target": 78261.09
+        },
+        {
+          "direction": "LONG",
+          "entryPrice": 79067.96,
+          "entryTime": 1789136100000,
+          "exitPrice": 78855.28,
+          "exitReason": "STOP",
+          "exitTime": 1789137000000,
+          "holdMs": 900000,
+          "lots": 0.456,
+          "mae": -0.5657,
+          "mfe": 0.5767,
+          "pnlUsd": -96.98,
+          "r": -1.0119,
+          "reason": "support cluster 79000.0-79000.0 score 6.8",
+          "stop": 78857.78,
+          "target": 79446.29
+        },
+        {
+          "direction": "SHORT",
+          "entryPrice": 77913.5,
+          "entryTime": 1789146000000,
+          "exitPrice": 77521.7,
+          "exitReason": "TARGET",
+          "exitTime": 1789148700000,
+          "holdMs": 2700000,
+          "lots": 0.433,
+          "mae": -0.2123,
+          "mfe": 1.5407,
+          "pnlUsd": 169.65,
+          "r": 1.7886,
+          "reason": "resistance cluster 78000.0-78000.0 score 14.4",
+          "stop": 78132.56,
+          "target": 77519.2
+        },
+        {
+          "direction": "LONG",
+          "entryPrice": 77120.51,
+          "entryTime": 1789152300000,
+          "exitPrice": 77117.19,
+          "exitReason": "TIMEOUT",
+          "exitTime": 1789167600000,
+          "holdMs": 15300000,
+          "lots": 0.296,
+          "mae": -0.5179,
+          "mfe": 1.177,
+          "pnlUsd": -0.98,
+          "r": -0.0102,
+          "reason": "support cluster 76906.5-77000.0 score 5.0",
+          "stop": 76794.69,
+          "target": 77706.98
+        }
+      ],
+      "warmup": 42
+    },
+    "maxpain-magnet": {
+      "equityCurve": [
+        {
+          "equity": 10085.47,
+          "time": 1789115400000
+        },
+        {
+          "equity": 10239.66,
+          "time": 1789119000000
+        },
+        {
+          "equity": 10315.31,
+          "time": 1789127100000
+        },
+        {
+          "equity": 10212.17,
+          "time": 1789130700000
+        },
+        {
+          "equity": 10110.08,
+          "time": 1789134300000
+        },
+        {
+          "equity": 10371.87,
+          "time": 1789149600000
+        },
+        {
+          "equity": 10408.91,
+          "time": 1789179300000
+        },
+        {
+          "equity": 10391.84,
+          "time": 1789191000000
+        }
+      ],
+      "metrics": {
+        "avgHoldMin": 118.13,
+        "avgLossR": -0.7243,
+        "avgMae": -0.2651,
+        "avgMfe": 0.8148,
+        "avgR": 0.4897,
+        "avgWinR": 1.2181,
+        "exits": {
+          "END_OF_DATA": 1,
+          "STOP": 2,
+          "TARGET": 4,
+          "TIMEOUT": 1
+        },
+        "expectancy": 0.4897,
+        "maxDrawdownPct": 1.9717,
+        "maxDrawdownUsd": 205.23,
+        "netPnlUsd": 391.84,
+        "profitFactor": 2.7627,
+        "returnPct": 3.9184,
+        "sharpe": 1.1218,
+        "totalR": 3.9174,
+        "trades": 8,
+        "winRate": 0.625
+      },
+      "params": {
+        "atrPeriod": 14,
+        "maxDte": 3,
+        "minDistanceAtr": 1.5,
+        "stopAtr": 2
+      },
+      "skippedNoAtr": 0,
+      "trades": [
+        {
+          "direction": "LONG",
+          "entryPrice": 77255.37,
+          "entryTime": 1789106400000,
+          "exitPrice": 77497.5,
+          "exitReason": "TARGET",
+          "exitTime": 1789115400000,
+          "holdMs": 9000000,
+          "lots": 0.353,
+          "mae": -0.3912,
+          "mfe": 0.7418,
+          "pnlUsd": 85.47,
+          "r": 0.855,
+          "reason": "max pain 77500.0 is 1.8 ATR away, 1.1 DTE",
+          "stop": 76972.17,
+          "target": 77500
+        },
+        {
+          "direction": "SHORT",
+          "entryPrice": 77421.5,
+          "entryTime": 1789116300000,
+          "exitPrice": 77002.5,
+          "exitReason": "TARGET",
+          "exitTime": 1789119000000,
+          "holdMs": 2700000,
+          "lots": 0.368,
+          "mae": -0.0092,
+          "mfe": 0.9916,
+          "pnlUsd": 154.19,
+          "r": 1.5304,
+          "reason": "max pain 77000.0 is 3.1 ATR away, 1.0 DTE",
+          "stop": 77695.29,
+          "target": 77000
+        },
+        {
+          "direction": "LONG",
+          "entryPrice": 76788.51,
+          "entryTime": 1789125300000,
+          "exitPrice": 76997.5,
+          "exitReason": "TARGET",
+          "exitTime": 1789127100000,
+          "holdMs": 1800000,
+          "lots": 0.362,
+          "mae": -0.1471,
+          "mfe": 0.4372,
+          "pnlUsd": 75.65,
+          "r": 0.7398,
+          "reason": "max pain 77000.0 is 1.5 ATR away, 0.9 DTE",
+          "stop": 76506.02,
+          "target": 77000
+        },
+        {
+          "direction": "SHORT",
+          "entryPrice": 77587.51,
+          "entryTime": 1789130700000,
+          "exitPrice": 78148.06,
+          "exitReason": "STOP",
+          "exitTime": 1789130700000,
+          "holdMs": 0,
+          "lots": 0.184,
+          "mae": 0,
+          "mfe": 0,
+          "pnlUsd": -103.14,
+          "r": -1.0045,
+          "reason": "max pain 77000.0 is 2.1 ATR away, 0.8 DTE",
+          "stop": 78145.56,
+          "target": 77000
+        },
+        {
+          "direction": "SHORT",
+          "entryPrice": 78030.48,
+          "entryTime": 1789131600000,
+          "exitPrice": 78634.56,
+          "exitReason": "STOP",
+          "exitTime": 1789134300000,
+          "holdMs": 2700000,
+          "lots": 0.169,
+          "mae": -0.0042,
+          "mfe": 1.2911,
+          "pnlUsd": -102.09,
+          "r": -1.0042,
+          "reason": "max pain 77000.0 is 3.4 ATR away, 0.8 DTE",
+          "stop": 78632.06,
+          "target": 77000
+        },
+        {
+          "direction": "SHORT",
+          "entryPrice": 79240.06,
+          "entryTime": 1789135200000,
+          "exitPrice": 77002.5,
+          "exitReason": "TARGET",
+          "exitTime": 1789149600000,
+          "holdMs": 14400000,
+          "lots": 0.117,
+          "mae": -0.7572,
+          "mfe": 2.2568,
+          "pnlUsd": 261.79,
+          "r": 2.6069,
+          "reason": "max pain 77000.0 is 5.2 ATR away, 0.8 DTE",
+          "stop": 80098.38,
+          "target": 77000
+        },
+        {
+          "direction": "LONG",
+          "entryPrice": 77110.51,
+          "entryTime": 1789164000000,
+          "exitPrice": 77283.59,
+          "exitReason": "TIMEOUT",
+          "exitTime": 1789179300000,
+          "holdMs": 15300000,
+          "lots": 0.214,
+          "mae": -0.2968,
+          "mfe": 0.5546,
+          "pnlUsd": 37.04,
+          "r": 0.3583,
+          "reason": "max pain 77500.0 is 1.6 ATR away, 0.4 DTE",
+          "stop": 76627.5,
+          "target": 77500
+        },
+        {
+          "direction": "LONG",
+          "entryPrice": 77288.59,
+          "entryTime": 1789180200000,
+          "exitPrice": 77248.89,
+          "exitReason": "END_OF_DATA",
+          "exitTime": 1789191000000,
+          "holdMs": 10800000,
+          "lots": 0.43,
+          "mae": -0.5154,
+          "mfe": 0.2452,
+          "pnlUsd": -17.07,
+          "r": -0.1643,
+          "reason": "max pain 77500.0 is 1.8 ATR away, 0.2 DTE",
+          "stop": 77046.99,
+          "target": 77500
+        }
+      ],
+      "warmup": 42
+    },
+    "rsi-reversion": {
+      "equityCurve": [
+        {
+          "equity": 10107.11,
+          "time": 1788637500000
+        },
+        {
+          "equity": 10246.3,
+          "time": 1788804000000
+        },
+        {
+          "equity": 10388.45,
+          "time": 1788828300000
+        },
+        {
+          "equity": 10524.34,
+          "time": 1788860700000
+        },
+        {
+          "equity": 10418.13,
+          "time": 1788937200000
+        },
+        {
+          "equity": 10592.71,
+          "time": 1788947100000
+        },
+        {
+          "equity": 10679.94,
+          "time": 1789000200000
+        },
+        {
+          "equity": 10731.59,
+          "time": 1789062300000
+        },
+        {
+          "equity": 10820.27,
+          "time": 1789092000000
+        },
+        {
+          "equity": 10711.94,
+          "time": 1789134300000
+        },
+        {
+          "equity": 10903.38,
+          "time": 1789141500000
+        }
+      ],
+      "metrics": {
+        "avgHoldMin": 115.91,
+        "avgLossR": -1.0082,
+        "avgMae": -0.5067,
+        "avgMfe": 1.2452,
+        "avgR": 0.7951,
+        "avgWinR": 1.1959,
+        "exits": {
+          "RSI back to midline": 8,
+          "STOP": 2,
+          "TARGET": 1
+        },
+        "expectancy": 0.7951,
+        "maxDrawdownPct": 0.9935,
+        "maxDrawdownUsd": 108.33,
+        "netPnlUsd": 903.38,
+        "profitFactor": 5.2108,
+        "returnPct": 9.0338,
+        "sharpe": 2.7173,
+        "totalR": 8.7466,
+        "trades": 11,
+        "winRate": 0.818181818
+      },
+      "params": {
+        "atrPeriod": 14,
+        "exitLevel": 50,
+        "overbought": 70,
+        "oversold": 30,
+        "period": 14,
+        "stopAtr": 1.5
+      },
+      "skippedNoAtr": 0,
+      "trades": [
+        {
+          "direction": "SHORT",
+          "entryPrice": 80026.8,
+          "entryTime": 1788629400000,
+          "exitPrice": 79857.85,
+          "exitReason": "RSI back to midline",
+          "exitTime": 1788637500000,
+          "holdMs": 8100000,
+          "lots": 0.634,
+          "mae": -0.6812,
+          "mfe": 1.6878,
+          "pnlUsd": 107.11,
+          "r": 1.0721,
+          "reason": "RSI turned down out of 70",
+          "stop": 80184.39,
+          "target": 79743.15
+        },
+        {
+          "direction": "LONG",
+          "entryPrice": 78824.5,
+          "entryTime": 1788796800000,
+          "exitPrice": 79183.24,
+          "exitReason": "RSI back to midline",
+          "exitTime": 1788804000000,
+          "holdMs": 7200000,
+          "lots": 0.388,
+          "mae": -0.0646,
+          "mfe": 1.5346,
+          "pnlUsd": 139.19,
+          "r": 1.3797,
+          "reason": "RSI turned up out of 30",
+          "stop": 78564.48,
+          "target": 79292.53
+        },
+        {
+          "direction": "LONG",
+          "entryPrice": 78954.68,
+          "entryTime": 1788822000000,
+          "exitPrice": 79215.5,
+          "exitReason": "RSI back to midline",
+          "exitTime": 1788828300000,
+          "holdMs": 6300000,
+          "lots": 0.545,
+          "mae": -0.0868,
+          "mfe": 1.7327,
+          "pnlUsd": 142.15,
+          "r": 1.3892,
+          "reason": "RSI turned up out of 30",
+          "stop": 78766.93,
+          "target": 79292.63
+        },
+        {
+          "direction": "LONG",
+          "entryPrice": 78428.87,
+          "entryTime": 1788849900000,
+          "exitPrice": 78759.5,
+          "exitReason": "RSI back to midline",
+          "exitTime": 1788860700000,
+          "holdMs": 10800000,
+          "lots": 0.411,
+          "mae": -0.986,
+          "mfe": 1.391,
+          "pnlUsd": 135.89,
+          "r": 1.3098,
+          "reason": "RSI turned up out of 30",
+          "stop": 78176.44,
+          "target": 78883.25
+        },
+        {
+          "direction": "SHORT",
+          "entryPrice": 79169,
+          "entryTime": 1788930000000,
+          "exitPrice": 79395.46,
+          "exitReason": "STOP",
+          "exitTime": 1788937200000,
+          "holdMs": 7200000,
+          "lots": 0.469,
+          "mae": -0.8975,
+          "mfe": 1.4664,
+          "pnlUsd": -106.21,
+          "r": -1.0112,
+          "reason": "RSI turned down out of 70",
+          "stop": 79392.96,
+          "target": 78765.87
+        },
+        {
+          "direction": "SHORT",
+          "entryPrice": 79531.87,
+          "entryTime": 1788945300000,
+          "exitPrice": 79085.37,
+          "exitReason": "RSI back to midline",
+          "exitTime": 1788947100000,
+          "holdMs": 1800000,
+          "lots": 0.391,
+          "mae": -0.0732,
+          "mfe": 1.737,
+          "pnlUsd": 174.58,
+          "r": 1.6771,
+          "reason": "RSI turned down out of 70",
+          "stop": 79798.1,
+          "target": 79052.66
+        },
+        {
+          "direction": "LONG",
+          "entryPrice": 78033.96,
+          "entryTime": 1788993000000,
+          "exitPrice": 78322.8,
+          "exitReason": "RSI back to midline",
+          "exitTime": 1789000200000,
+          "holdMs": 7200000,
+          "lots": 0.302,
+          "mae": -0.3313,
+          "mfe": 0.9954,
+          "pnlUsd": 87.23,
+          "r": 0.8253,
+          "reason": "RSI turned up out of 30",
+          "stop": 77683.97,
+          "target": 78663.94
+        },
+        {
+          "direction": "LONG",
+          "entryPrice": 77176.93,
+          "entryTime": 1789048800000,
+          "exitPrice": 77359.44,
+          "exitReason": "RSI back to midline",
+          "exitTime": 1789062300000,
+          "holdMs": 13500000,
+          "lots": 0.283,
+          "mae": -0.9887,
+          "mfe": 0.9758,
+          "pnlUsd": 51.65,
+          "r": 0.4852,
+          "reason": "RSI turned up out of 30",
+          "stop": 76800.74,
+          "target": 77854.08
+        },
+        {
+          "direction": "LONG",
+          "entryPrice": 76736.79,
+          "entryTime": 1789083000000,
+          "exitPrice": 76968.94,
+          "exitReason": "RSI back to midline",
+          "exitTime": 1789092000000,
+          "holdMs": 9000000,
+          "lots": 0.382,
+          "mae": -0.6873,
+          "mfe": 0.9391,
+          "pnlUsd": 88.68,
+          "r": 0.8283,
+          "reason": "RSI turned up out of 30",
+          "stop": 76456.51,
+          "target": 77241.29
+        },
+        {
+          "direction": "SHORT",
+          "entryPrice": 77723.5,
+          "entryTime": 1789132500000,
+          "exitPrice": 78196.57,
+          "exitReason": "STOP",
+          "exitTime": 1789134300000,
+          "holdMs": 1800000,
+          "lots": 0.229,
+          "mae": -0.456,
+          "mfe": 0.9981,
+          "pnlUsd": -108.33,
+          "r": -1.0053,
+          "reason": "RSI turned down out of 70",
+          "stop": 78194.07,
+          "target": 76876.47
+        },
+        {
+          "direction": "SHORT",
+          "entryPrice": 78649.51,
+          "entryTime": 1789137900000,
+          "exitPrice": 77406.4,
+          "exitReason": "TARGET",
+          "exitTime": 1789141500000,
+          "holdMs": 3600000,
+          "lots": 0.154,
+          "mae": -0.3215,
+          "mfe": 0.2396,
+          "pnlUsd": 191.44,
+          "r": 1.7964,
+          "reason": "RSI turned down out of 70",
+          "stop": 79341.52,
+          "target": 77403.9
+        }
+      ],
+      "warmup": 42
+    }
+  },
+  "timeframe": "15m"
+}

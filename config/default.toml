@@ -1,0 +1,232 @@
+# flowdesk — default configuration
+#
+# Ported from the JavaScript prototype's config/default.json. Two deliberate
+# changes: keys are snake_case (Rust/serde idiom), and the per-market overrides
+# that lived in src/markets.js are data here rather than code.
+#
+# Numbers that were *measured* rather than chosen carry a note saying so. A
+# threshold with no evidence behind it is a placeholder, and the comments say
+# which is which — that distinction is the whole discipline of this project.
+
+multiplier = 100            # overridden per market
+underlying = "GC"
+market = "gold"             # default market; --market=<id> overrides
+
+[models]
+# Swappable model registries. Only the profile mode and the max-pain proxy have
+# been calibrated against the reference feed; break-even and whale remain
+# unverified candidates (docs/formulas.md in the prototype).
+break_even = "premium-weighted"     # UNVERIFIED — 5 candidates, no winner across contracts
+whale = "net-long-whale"            # UNVERIFIED — reproduced wSup on OGV6, wRes only on OGX6
+max_pain_absolute = true            # CALIBRATED: volume-weighted proxy beat net-positioning on 3 of 4 contracts
+
+[profile]
+mode = "PREMIUM"                    # CALIBRATED: closest to the reference POC/VAH/VAL on all four contracts
+value_area_pct = 0.7
+
+[big_trades]
+min_premium_usd = 100_000           # per-market; BTC premiums run ~1000x smaller
+# min_contracts = 0                 # unset = no contract floor
+percentile = 0.95
+percentile_window = 2000
+limit = 200
+
+[flow]
+velocity_window_ms = 900_000
+
+[flow.thresholds]                   # PLACEHOLDERS — never backtested
+strong_bull = 0.60
+moderate_bull = 0.55
+moderate_bear = 0.45
+strong_bear = 0.40
+
+[flow.windows]
+"5m" = 300_000
+"15m" = 900_000
+"30m" = 1_800_000
+"60m" = 3_600_000
+session = 28_800_000
+
+[levels]
+max_clusters = 12
+
+[levels.cluster]
+floor = 5.0                         # dollars; per-market (BTC moves in hundreds)
+atr_fraction = 0.15
+
+[levels.type_weights]               # PLACEHOLDERS — encode hypotheses H1/H2/H5
+MAX_PAIN = 1.0
+POC = 1.0
+ABOVE_POC = 0.6
+UNDER_POC = 0.6
+CALL_BE = 0.7
+PUT_BE = 0.7
+WSUP = 0.9
+WRES = 0.9
+GAMMA_WALL = 0.8
+
+[backtest]
+# Fill model: a signal fills at the NEXT bar's open; when one bar covers both
+# stop and target the stop is taken; a gap through the stop fills at the open.
+timeframe = "15m"
+options_step_ms = 300_000
+fallback_atr_period = 14
+min_trades_per_cell = 5
+walk_forward_folds = 4
+select_by = "expectancy"
+
+[backtest.promising]
+min_trades = 30
+min_profit_factor = 1.2
+min_expectancy_r = 0.05
+
+[trading]
+symbol = "XAUUSD"                   # per-market
+contract_size = 100.0               # per-market
+spread = 0.3                        # per-market
+commission_per_lot = 0.0
+starting_equity_usd = 10_000.0
+risk_per_trade_pct = 0.01
+stop_atr = 1.2
+max_stop_atr = 3.0
+cluster_pad_atr = 0.25
+reward_risk = 1.8
+min_reward_risk = 1.2
+max_hold_ms = 14_400_000
+lot_step = 0.01
+min_lot = 0.01
+require_basis = true
+
+[trading.guards]
+max_concurrent_positions = 1
+max_trades_per_day = 4
+daily_loss_limit_usd = 300.0
+cooldown_ms = 1_800_000
+
+[ai]
+# ATR bar width must match the trade horizon. Computing ATR on one-minute closes
+# against a 60-minute horizon produced a ~$0.60 stop and a 5-minute average hold
+# — the backtest was measuring noise until this was fixed.
+atr_bar_ms = 900_000
+atr_period = 14
+dataset_step_ms = 300_000
+warmup_ms = 7_200_000
+horizon = "60m"
+label_band_atr = 0.5
+folds = 4
+big_trade_window_ms = 1_800_000
+long_threshold = 0.58
+short_threshold = 0.42
+cycle_ms = 300_000
+live_contracts = 4
+
+[ai.horizons_ms]
+"15m" = 900_000
+"30m" = 1_800_000
+"60m" = 3_600_000
+"240m" = 14_400_000
+
+[ai.train]
+epochs = 800
+lr = 0.1
+l2 = 2.0
+class_weight = true
+
+[ai.gate]
+# A live signal is suppressed unless the walk-forward result clears every number
+# here. As of the last run on five days of gold tape it does NOT: out-of-sample
+# AUC 0.521, profit factor 1.049.
+min_auc = 0.55
+min_trades = 30
+min_profit_factor = 1.2
+min_expectancy_r = 0.05
+
+[ai.analyst]
+# Writes the case for and against a plan it did not create. It may veto or cut
+# size; it can never raise size or move a price.
+enabled = true
+model = "claude-opus-5"
+effort = "high"
+max_tokens = 4000
+can_veto = true
+required_for_signal = false
+min_confidence = 0.4
+scales_size = true
+full_size_confidence = 0.8
+min_size_scale = 0.4
+
+[alerts.telegram]
+bot_token = ""
+chat_id = ""
+
+[server]
+host = "127.0.0.1"
+port = 8137
+
+# ---------------------------------------------------------------------------
+# Markets. Everything above is the baseline; these override it per market.
+# ---------------------------------------------------------------------------
+
+[markets.gold]
+label = "COMEX gold (OTL tape + XAUUSD CFD)"
+bar_symbol = "GC"
+bar_source = "reference"
+options_source = "reference"
+premium_in_underlying = false       # premium = price x size x 100
+multiplier = 100
+underlying = "GC"
+
+[markets.gold.trading]
+symbol = "XAUUSD"
+contract_size = 100.0
+spread = 0.3
+lot_step = 0.01
+min_lot = 0.01
+
+[markets.gold.big_trades]
+min_premium_usd = 100_000
+
+[markets.gold.levels.cluster]
+floor = 5.0
+atr_fraction = 0.15
+
+[markets.btc]
+label = "BTC (Deribit options + Binance spot)"
+bar_symbol = "BTCUSDT"
+bar_source = "binance"
+options_source = "deribit"
+premium_in_underlying = true        # premium = price(BTC) x index(USD/BTC) x size
+multiplier = 1
+underlying = "BTC"
+
+[markets.btc.trading]
+symbol = "BTCUSD"
+contract_size = 1.0
+spread = 5.0
+lot_step = 0.001
+min_lot = 0.001
+
+[markets.btc.big_trades]
+min_premium_usd = 25_000
+
+[markets.btc.levels.cluster]
+floor = 100.0
+atr_fraction = 0.15
+
+# ---------------------------------------------------------------------------
+# Data sources. All public, unauthenticated, read-only market data.
+# ---------------------------------------------------------------------------
+
+[sources.reference]
+base_url = "https://live.otldata.com"
+min_delay_ms = 1500
+
+[sources.binance]
+base_url = "https://api.binance.com"
+ws_url = "wss://stream.binance.com:9443/ws"
+min_delay_ms = 300
+
+[sources.deribit]
+base_url = "https://www.deribit.com/api/v2"
+ws_url = "wss://www.deribit.com/ws/api/v2"
+min_delay_ms = 400

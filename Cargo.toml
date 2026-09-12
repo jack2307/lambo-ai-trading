@@ -1,0 +1,70 @@
+[workspace]
+resolver = "3"
+members = [
+    "crates/fd-core",
+    "crates/fd-indicators",
+    "crates/fd-engine",
+    "crates/fd-strategy",
+    "crates/fd-backtest",
+    "crates/fd-store",
+    "crates/fd-ingest",
+    "crates/fd-api",
+    "crates/fd-features",
+    "crates/fd-model",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+license = "MIT"
+repository = "https://github.com/jackpro2307/flowdesk"
+
+[workspace.dependencies]
+fd-core = { path = "crates/fd-core" }
+fd-indicators = { path = "crates/fd-indicators" }
+fd-engine = { path = "crates/fd-engine" }
+fd-strategy = { path = "crates/fd-strategy" }
+fd-backtest = { path = "crates/fd-backtest" }
+fd-store = { path = "crates/fd-store" }
+fd-ingest = { path = "crates/fd-ingest" }
+fd-api = { path = "crates/fd-api" }
+fd-features = { path = "crates/fd-features" }
+fd-model = { path = "crates/fd-model" }
+
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = "0.8"
+thiserror = "2"
+anyhow = "1"
+rayon = "1.10"
+chrono = { version = "0.4", features = ["serde"] }
+arrow = "56"
+parquet = { version = "56", default-features = false, features = ["arrow", "zstd", "base64"] }
+tempfile = "3"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "time", "sync", "signal"] }
+# rustls rather than the platform TLS: this toolchain has no MSVC and no
+# system OpenSSL, and a vendored one would need a C compiler at build time.
+tokio-tungstenite = { version = "0.24", default-features = false, features = ["connect", "rustls-tls-webpki-roots"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "gzip"] }
+futures-util = { version = "0.3", default-features = false, features = ["sink", "std"] }
+axum = { version = "0.8", features = ["json", "tokio", "http1"] }
+tower-http = { version = "0.6", features = ["fs", "cors", "trace"] }
+tokio-stream = { version = "0.1", features = ["sync"] }
+criterion = { version = "0.5", features = ["html_reports"] }
+
+[profile.release]
+# The hot path is latency-sensitive: one codegen unit and fat LTO buy real
+# inlining across crate boundaries, and panic=abort removes unwinding tables.
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+
+[profile.bench]
+lto = "fat"
+codegen-units = 1
+
+# Parity tests replay whole tapes through the engine. Without optimising the
+# dependencies, a debug-mode test run takes minutes instead of seconds.
+[profile.test.package."*"]
+opt-level = 2
