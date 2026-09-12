@@ -1,0 +1,18 @@
+$ E:\rust\flowdesk\target\release\search.exe --market=xauusd --interval=5m --mode=null-dir --strategy=orb --samples=1000 --params=rangeStart=200,rangeMinutes=360,entryUntil=1000,maxRangeAtr=100
+
+bars:     100749 from 2025-04-11 01:05 to 2026-09-11 20:55
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+== direction control: orb, 258 trades, 1000 coin-flip assignments ==
+  preset: rangeStart=200,rangeMinutes=360,entryUntil=1000,maxRangeAtr=100
+  entries, stops and targets held fixed; only the side is randomised
+
+  profit factor of the same trades with random direction:
+    p05 0.744   p25 0.853   p50 0.962   p75 1.086   p95 1.242   max 1.511
+
+  actual: 1.268  ->  96th percentile  (p = 0.036)
+
+  Outside its own null. That is a finding worth taking further.
+

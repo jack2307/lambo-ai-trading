@@ -358,7 +358,19 @@ fn run_direction_null(
         println!("{id} needs an options timeline and the store has no tape");
         return;
     }
-    let params = strategy.default_params();
+    // `--params=key=value,key=value` applies a preset, so the control can be
+    // run on the hypothesis actually tested rather than on the method's
+    // defaults.
+    let mut params = strategy.default_params();
+    for pair in arg("params", "").split(',').filter(|s| !s.is_empty()) {
+        match pair.split_once('=').and_then(|(k, v)| v.parse::<f64>().ok().map(|v| (k, v))) {
+            Some((key, value)) if params.contains(key) => params.set(key, value),
+            _ => {
+                println!("bad or unknown --params entry `{pair}` for {id}");
+                return;
+            }
+        }
+    }
     let actual = run_backtest(bars, strategy, &params, rules, timeline, Range::default());
     if actual.trades.is_empty() {
         println!("{id} took no trades; there is nothing to compare");
@@ -383,6 +395,9 @@ fn run_direction_null(
     let percentile = 100.0 * below as f64 / curve.len() as f64;
 
     println!("== direction control: {id}, {} trades, {samples} coin-flip assignments ==", actual.trades.len());
+    if !arg("params", "").is_empty() {
+        println!("  preset: {}", arg("params", ""));
+    }
     println!("  entries, stops and targets held fixed; only the side is randomised
 ");
     println!("  profit factor of the same trades with random direction:");

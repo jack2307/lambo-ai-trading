@@ -1,7 +1,7 @@
 # 2026-09-13-london-range: the New York morning resolves the range London built
 
 **Registered:** 2026-09-13 01:30 — before any run
-**Status:** registered
+**Status:** in-sample run — recorded; out-of-sample opened next
 **Batch file:** `docs/hypotheses/2026-09-13-london-range.toml`
 
 ## Claim
@@ -43,3 +43,26 @@ in-sample opportunities. ≥ 60 out-of-sample trades across the folds.
   proposal.
 - Survives in-sample only → closed, the ORB pattern again.
 - Fails in-sample → closed. No wider grid, no second window.
+
+## Amendment before any result was read (2026-09-13 01:40)
+
+The first in-sample run produced **0 trades** on every row: `orb`'s default
+`maxRangeAtr = 3` was written for a one-hour range and refuses a six-hour
+one (≈ $20 against 3 × ATR14 ≈ $8). The preset now sets `maxRangeAtr = 100`
+(the gate off). A run with no trades carries no information, so this is a
+correction of the specification, not a tuning step; the first receipt is
+kept as `in-sample-0trades.txt`.
+
+## In-sample result (xauusd:5m, 4 folds, 200 window-matched nulls) — recorded 2026-09-13 01:50, before the out-of-sample run
+
+```
+hypothesis          trades  OOS PF  expect null p50 null p95   pct  verdict
+london/nyam            257   1.317   0.086    0.956    1.241   98%  SURVIVES
+london/early           203   1.309   0.084    0.942    1.293   96%  SURVIVES
+london/expansion       131   1.209   0.054    0.951    1.374   88%  gate pass, inside
+```
+
+Direction nulls, each on its own preset, 1000 assignments: nyam 1.246 →
+96th (p 0.042); early 1.268 → 96th (p 0.036); expansion 1.246 → 96th.
+All outside. Every in-sample condition of the falsifier is met for the first
+two rows. The out-of-sample window decides.

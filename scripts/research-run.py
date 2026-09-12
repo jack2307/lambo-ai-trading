@@ -100,6 +100,15 @@ def main() -> int:
     if not bases:
         sys.exit("no [[hypothesis]] tables")
 
+    # Direction nulls run per hypothesis, with its preset: a control on the
+    # method's defaults says nothing about the variant actually tested.
+    def direction_runs():
+        for h in spec["hypothesis"]:
+            overrides = h.get("overrides", {})
+            params = ",".join(f"{k}={v}" for k, v in overrides.items())
+            slug = re.sub(r"[^A-Za-z0-9]+", "-", h["label"]).strip("-")
+            yield h["base"], slug, ([f"--params={params}"] if params else [])
+
     if args.stage in ("in", "all"):
         market, tf = market_tf(run_cfg.get("in_sample", ""))
         print(f"in-sample: {market} {tf}, {len(spec['hypothesis'])} hypotheses, {seeds} null seeds")
@@ -108,11 +117,11 @@ def main() -> int:
             [SEARCH, f"--market={market}", f"--interval={tf}", "--mode=hypotheses", f"--batch-file={path}", f"--seeds={seeds}", *b],
             os.path.join(out_dir, "in-sample.txt"),
         )
-        for base in bases:
-            print(f"direction null: {base} on {market} {tf}, {direction} samples")
+        for base, slug, preset in direction_runs():
+            print(f"direction null: {slug} ({base}) on {market} {tf}, {direction} samples")
             run(
-                [SEARCH, f"--market={market}", f"--interval={tf}", "--mode=null-dir", f"--strategy={base}", f"--samples={direction}", *b],
-                os.path.join(out_dir, f"direction-{base}.txt"),
+                [SEARCH, f"--market={market}", f"--interval={tf}", "--mode=null-dir", f"--strategy={base}", f"--samples={direction}", *preset, *b],
+                os.path.join(out_dir, f"direction-{slug}.txt"),
             )
 
     if args.stage in ("oos", "all"):
@@ -125,10 +134,10 @@ def main() -> int:
             [SEARCH, f"--market={market}", f"--interval={tf}", "--mode=hypotheses", f"--batch-file={path}", f"--seeds={seeds}", *b],
             os.path.join(out_dir, "out-of-sample.txt"),
         )
-        for base in bases:
+        for base, slug, preset in direction_runs():
             run(
-                [SEARCH, f"--market={market}", f"--interval={tf}", "--mode=null-dir", f"--strategy={base}", f"--samples={direction}", *b],
-                os.path.join(out_dir, f"direction-{base}-oos.txt"),
+                [SEARCH, f"--market={market}", f"--interval={tf}", "--mode=null-dir", f"--strategy={base}", f"--samples={direction}", *preset, *b],
+                os.path.join(out_dir, f"direction-{slug}-oos.txt"),
             )
 
     # A one-line digest so the arbiter can read the verdicts without the tables.

@@ -1,0 +1,20 @@
+$ E:\rust\flowdesk\target\release\search.exe --market=xauusd --interval=5m --mode=hypotheses --batch-file=E:\rust\flowdesk\docs\hypotheses\2026-09-13-london-range.toml --seeds=200
+
+bars:     100749 from 2025-04-11 01:05 to 2026-09-11 20:55
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+== hypotheses `E:\rust\flowdesk\docs\hypotheses\2026-09-13-london-range.toml`: 3 declared, walk-forward (4 folds), each against 200 matched null runs ==
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+london/nyam  orb                   257   1.317   0.086    0.956    1.241        0   98%  SURVIVES
+                                MoTuWeThFr + flat 16:30-18:15 + NY 08:00-12:00  — the London range broken in the New York morning; the null trades the same window
+london/early orb                   203   1.309   0.084    0.942    1.293        0   96%  SURVIVES
+                                MoTuWeThFr + flat 16:30-18:15 + NY 08:00-10:00  — only the first two hours: a late break is a different day
+london/expansion orb                   131   1.209   0.054    0.951    1.374        0   88%  gate pass, inside the noise
+                                MoTuWeThFr + flat 16:30-18:15 + NY 08:00-12:00 + ATR14/ATR100 in [1.2, 99]  — only when volatility is already expanding into the New York open
+
+Survivors: london/nyam/orb, london/early/orb — worth a decision record and a direction null before anything else.
+
