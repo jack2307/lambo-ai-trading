@@ -15,6 +15,7 @@ pub mod ict;
 pub mod orb;
 pub mod pdhl;
 pub mod registry;
+pub mod session_hold;
 
 pub use registry::{
     BarContext, Exits, Intent, Params, Registry, Side, Strategy, StrategyError, parameter_combinations,

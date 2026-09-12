@@ -1,0 +1,26 @@
+[run]
+in_sample = "btc:5m"
+out_of_sample = "btcusd:5m"
+seeds = 200
+direction_samples = 1000
+
+[[hypothesis]]
+label = "hold/us-hours"
+base = "session-hold"
+filters = ["weekdays", "hours:0930-0935"]
+overrides = { from = 930, to = 1600, side = 1 }
+why = "long through US equity hours; the null may enter only at the open bar too"
+
+[[hypothesis]]
+label = "hold/off-hours"
+base = "session-hold"
+filters = ["weekdays", "hours:1600-1605"]
+overrides = { from = 1600, to = 930, side = 1 }
+why = "the complement: long from the close to the next open; if this passes too, the hours are not the story"
+
+[[hypothesis]]
+label = "hold/asia"
+base = "session-hold"
+filters = ["weekdays", "hours:1900-1905"]
+overrides = { from = 1900, to = 200, side = 1 }
+why = "the Asian window on its own, where the claim says the drift is absent"
