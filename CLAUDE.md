@@ -63,7 +63,8 @@ anything here; the workspace is portable and runs unchanged on Linux.
 ```
 fd-api --port=8138                       # API; the UI proxies here
 cd ui && npx vite --port=5180            # UI at http://localhost:5180 (IPv6 bind)
-fd-ingest --bin collect --market=btc     # accumulate the options tape
+fd-ingest --bin collect --market=btc     # accumulate the options tape (Deribit websocket)
+fd-ingest --bin collect --market=gold    # same for OTL: polls every 10 min, also grows GC-1m bars
 python py/ingest/mt5_export.py           # Vantage XAUUSD/BTCUSD bars -> data/bars (read-only)
 fd-backtest --bin search --market=btc    # compare / sweep / wf / costs / null
 fd-backtest --bin search --market=xauusd # same, on the broker's own gold bars
