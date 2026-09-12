@@ -109,6 +109,12 @@ ever placed by anything in this repository.
 
 ## Standing rules while in this loop
 
+- **The null must be matched to the window.** A method that only signals
+  between 09:20 and 12:00 must be read against a control gated to
+  `hours:0920-1200` (in the batch file), or the percentile measures the
+  session, not the method. The ORB pass reported 100th percentiles that were
+  72nd–96th once gated.
+
 - A failing gate is the result. Never re-tune to pass it.
 - The out-of-sample market is opened once, after the in-sample record exists.
 - Every number quoted in a record comes from a file under

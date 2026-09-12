@@ -1,0 +1,18 @@
+$ E:\rust\flowdesk\target\release\search.exe --market=xauusd --interval=5m --mode=null-dir --strategy=orb --samples=200
+
+bars:     100749 from 2025-04-11 01:05 to 2026-09-11 20:55
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+== direction control: orb, 102 trades, 200 coin-flip assignments ==
+  entries, stops and targets held fixed; only the side is randomised
+
+  profit factor of the same trades with random direction:
+    p05 0.739   p25 0.865   p50 1.010   p75 1.147   p95 1.382   max 1.525
+
+  actual: 0.897  ->  30th percentile  (p = 0.700)
+
+  Inside its own null. On this sample the direction rule has not been
+  distinguished from a coin flip, however good the profit factor looks.
+

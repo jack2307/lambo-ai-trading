@@ -10,13 +10,11 @@ Closed ideas move to the bottom with a pointer to their decision record, so
 
 ## Open
 
-- [ ] **Opening-range breakout, New York.** The first 30–60 minutes after 08:20
-  New York set the day's liquidity; a close outside that range with the range
-  as stop. Reason: institutional order flow arrives at the open; the range is
-  where it was absorbed. Needs a NEW base method (`orb`).
 - [ ] **London-range breakout.** The 02:00–08:00 New York range broken in the
   New York morning. Reason: the London session builds the range the New York
-  session resolves. Same base method as ORB with a different window.
+  session resolves. Base method `orb` with `rangeStart = 0200`,
+  `rangeMinutes = 360`. *Only with the null gated to its window and a
+  disjoint out-of-sample (xauduka cut at 2025-04-10) — see the ORB record.*
 - [ ] **Previous-day high/low.** Fade the first touch of yesterday's high/low
   in the Asian session; break it in the New York session. Reason: resting
   orders sit at the prior day's extremes. NEW base (`pdhl`).
@@ -31,6 +29,15 @@ Closed ideas move to the bottom with a pointer to their decision record, so
 - [ ] **Options: cluster-at-level with the accumulated tape** — *blocked until
   the collector has months of tape*; check `search --market=btc` tape line.
 
+## Infrastructure (found by reviews; not hypotheses)
+
+- [ ] `search --from/--to` so an out-of-sample market can be cut to dates
+  the in-sample feed does not cover (data-integrity, ORB pass).
+- [ ] `dukascopy_to_parquet.py`: drop flat-filled zero-volume bars (9,732 at
+  17:xx New York) (data-integrity, ORB pass).
+- [ ] `[trading] max_stop_atr, min_reward_risk, cluster_pad_atr,
+  require_basis` are read by no code: enforce or delete (risk, ORB pass).
+
 ## Closed
 
 - [x] Technical baselines (ema-cross, rsi-reversion, donchian, bb-fade) on GC,
@@ -42,3 +49,6 @@ Closed ideas move to the bottom with a pointer to their decision record, so
   months, fails four years. `2026-09-13-ict-sweep-mss-fvg.md`.
 - [x] Logistic model on the 24 features → does not generalise.
   `2026-09-12-logistic-does-not-generalise.md`.
+- [x] Opening-range breakout, New York → gate pass in-sample against a
+  mis-matched null, inside the corrected one, fails four years out of sample,
+  direction a coin flip. `2026-09-13-orb-ny.md`.
