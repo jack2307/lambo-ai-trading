@@ -239,6 +239,9 @@ pub struct MarketConfig {
     pub bar_symbol: String,
     pub bar_source: BarSource,
     pub options_source: OptionsSource,
+    /// Tape store shared with another market (its id). Default: own id.
+    #[serde(default)]
+    pub tape: Option<String>,
     pub premium_in_underlying: bool,
     pub multiplier: f64,
     pub underlying: String,
@@ -337,6 +340,7 @@ impl Config {
             bar_symbol: m.bar_symbol.clone(),
             bar_source: m.bar_source,
             options_source: m.options_source,
+            tape: m.tape.clone(),
             premium_in_underlying: m.premium_in_underlying,
             multiplier: m.multiplier,
             underlying: m.underlying.clone(),

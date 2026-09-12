@@ -65,7 +65,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let timeline = load_timeline(&data, &market, &config, &bars);
     describe(&bars, timeline.as_ref());
-    let prints = fd_store::TapeStore::open(&data, &market).and_then(|s| s.all()).map_or(0, |t| t.len());
+    let prints = spec
+        .tape_id()
+        .and_then(|tape| fd_store::TapeStore::open(&data, tape).and_then(|s| s.all()).ok())
+        .map_or(0, |t| t.len());
     describe_tape(timeline.as_ref(), prints);
 
     let registry = Registry::with_builtins();
@@ -149,7 +152,8 @@ fn load_timeline(
     config: &Config,
     bars: &[Bar],
 ) -> Option<OptionsTimeline> {
-    let store = TapeStore::open(data, market).ok()?;
+    let tape = config.market(market).ok()?.tape_id()?.to_string();
+    let store = TapeStore::open(data, &tape).ok()?;
     let trades = store.all().ok()?;
     if trades.is_empty() {
         return None;

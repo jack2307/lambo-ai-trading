@@ -71,7 +71,7 @@ export default function App() {
       ) : view === 'workbench' ? (
         <Workbench catalog={catalog} market={market} onError={setError} />
       ) : (
-        <Tape market={market} onError={setError} />
+        <Tape market={market} info={catalog.markets.find((m) => m.id === market)} onError={setError} />
       )}
 
       <Toaster position="bottom-right" />

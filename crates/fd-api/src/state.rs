@@ -141,7 +141,10 @@ impl AppState {
     }
 
     fn build_timeline(&self, market: &str) -> Option<OptionsTimeline> {
-        let store = TapeStore::open(&self.data, market).ok()?;
+        // A market with no options feed has no timeline; one sharing a feed
+        // reads the store that feed is collected into.
+        let tape = self.config.market(market).ok()?.tape_id()?.to_string();
+        let store = TapeStore::open(&self.data, &tape).ok()?;
         let trades = store.all().ok()?;
         if trades.is_empty() {
             return None;

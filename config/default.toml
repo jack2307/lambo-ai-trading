@@ -238,8 +238,10 @@ label = "Vantage BTCUSD.sc CFD (MT5 bars + Deribit options)"
 bar_symbol = "BTCUSD"
 bar_source = "mt5"
 # Deribit strikes are in USD index terms and 1,000 apart; the CFD tracks the
-# index within a few dollars, so the tape's levels transfer.
+# index within a few dollars, so the tape's levels transfer. The tape is the
+# one the `btc` market collects; it is not collected twice.
 options_source = "deribit"
+tape = "btc"
 premium_in_underlying = true
 multiplier = 1
 underlying = "BTC"

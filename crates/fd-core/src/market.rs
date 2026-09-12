@@ -84,6 +84,10 @@ pub struct Market {
     pub bar_symbol: String,
     pub bar_source: BarSource,
     pub options_source: OptionsSource,
+    /// The tape store this market reads (`data/<tape>`), when it is not its
+    /// own id. Two markets can share one options feed — Binance BTC and
+    /// Vantage BTC both read the Deribit tape — and a tape is collected once.
+    pub tape: Option<String>,
     /// True when the option is quoted in the underlying rather than in USD.
     pub premium_in_underlying: bool,
     /// Contract multiplier for fixed-multiplier markets. Ignored when
@@ -102,6 +106,15 @@ pub struct Market {
 }
 
 impl Market {
+    /// The tape store to read, or `None` for a market with no options feed.
+    #[must_use]
+    pub fn tape_id(&self) -> Option<&str> {
+        match self.options_source {
+            OptionsSource::None => None,
+            _ => Some(self.tape.as_deref().unwrap_or(self.id.as_str())),
+        }
+    }
+
     /// Premium in USD for one print of this market.
     ///
     /// `index_price` is the underlying at the time of the print; it is only
@@ -144,6 +157,7 @@ mod tests {
             bar_symbol: "GC".into(),
             bar_source: BarSource::Reference,
             options_source: OptionsSource::Reference,
+            tape: None,
             premium_in_underlying: false,
             multiplier: 100.0,
             underlying: "GC".into(),
@@ -161,6 +175,7 @@ mod tests {
             bar_symbol: "BTCUSDT".into(),
             bar_source: BarSource::Binance,
             options_source: OptionsSource::Deribit,
+            tape: None,
             premium_in_underlying: true,
             multiplier: 1.0,
             underlying: "BTC".into(),

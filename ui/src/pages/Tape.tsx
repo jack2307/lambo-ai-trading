@@ -2,15 +2,18 @@ import { Card } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
 import { num, pct, price, stamp } from '@/lib/format'
+import type { MarketInfo } from '@/lib/api'
 import { useLiveLevels, type LevelsSource } from '@/lib/useLiveLevels'
 import { cn } from '@/lib/utils'
 
 interface Props {
   market: string
+  /** The catalog entry, so the empty state can say why there is no tape. */
+  info?: MarketInfo
   onError: (message: string) => void
 }
 
-export function Tape({ market }: Props) {
+export function Tape({ market, info }: Props) {
   const { frame, source, prints, lastPrintAt } = useLiveLevels(market)
   const loading = source === 'loading' && !frame
 
@@ -28,11 +31,20 @@ export function Tape({ market }: Props) {
   }
 
   if (!frame) {
+    // Two different absences. A market with no options feed will never have
+    // a tape; one with a feed has a tape once the collector has run.
+    const technicalOnly = info?.optionsSource === 'none'
     return (
       <Card className="m-3 rounded-lg p-8 text-center">
-        <p className="font-medium">No options tape for this market</p>
+        <p className="font-medium">{technicalOnly ? 'No options feed for this market' : 'No options tape for this market yet'}</p>
         <p className="text-muted-foreground mt-1 text-sm">
-          Fetch one first: <span className="num text-primary">gof fetch --market={market || '<id>'}</span>
+          {technicalOnly ? (
+            <>Technical strategies only — levels and flow need an options tape, and {info?.label ?? market} has none.</>
+          ) : (
+            <>
+              Start the collector: <span className="num text-primary">collect --market={market || '<id>'}</span>
+            </>
+          )}
         </p>
       </Card>
     )
