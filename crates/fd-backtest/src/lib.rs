@@ -12,6 +12,7 @@ pub mod context;
 pub mod control;
 pub mod engine;
 pub mod guards;
+pub mod hypotheses;
 pub mod sweep;
 pub mod timeline;
 

@@ -130,6 +130,9 @@ pub fn rules_from_manifest(market: &str) -> Option<TradingRules> {
         lot_step: num(&trading["lotStep"]),
         min_lot: num(&trading["minLot"]),
         fallback_atr_period: num(&backtest["fallbackAtrPeriod"]) as usize,
+        // The oracle never charged financing; the golden trades carry none.
+        swap_long_per_lot: 0.0,
+        swap_short_per_lot: 0.0,
     })
 }
 

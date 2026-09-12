@@ -69,6 +69,11 @@ pub struct TradingSpec {
     pub spread: f64,
     pub lot_step: f64,
     pub min_lot: f64,
+    /// USD per lot per rollover night, sign as the broker charges it
+    /// (negative = paid). Zero when unknown — which is worse than a number,
+    /// because it makes holding overnight look free.
+    pub swap_long_per_lot: f64,
+    pub swap_short_per_lot: f64,
 }
 
 /// One market's conventions.
@@ -142,7 +147,7 @@ mod tests {
             premium_in_underlying: false,
             multiplier: 100.0,
             underlying: "GC".into(),
-            trading: TradingSpec { symbol: "XAUUSD".into(), contract_size: 100.0, spread: 0.3, lot_step: 0.01, min_lot: 0.01 },
+            trading: TradingSpec { symbol: "XAUUSD".into(), contract_size: 100.0, spread: 0.3, lot_step: 0.01, min_lot: 0.01, swap_long_per_lot: 0.0, swap_short_per_lot: 0.0 },
             big_trade_min_premium_usd: 100_000.0,
             cluster_floor: 5.0,
             cluster_atr_fraction: 0.15,
@@ -159,7 +164,7 @@ mod tests {
             premium_in_underlying: true,
             multiplier: 1.0,
             underlying: "BTC".into(),
-            trading: TradingSpec { symbol: "BTCUSD".into(), contract_size: 1.0, spread: 5.0, lot_step: 0.001, min_lot: 0.001 },
+            trading: TradingSpec { symbol: "BTCUSD".into(), contract_size: 1.0, spread: 5.0, lot_step: 0.001, min_lot: 0.001, swap_long_per_lot: 0.0, swap_short_per_lot: 0.0 },
             big_trade_min_premium_usd: 25_000.0,
             cluster_floor: 100.0,
             cluster_atr_fraction: 0.15,

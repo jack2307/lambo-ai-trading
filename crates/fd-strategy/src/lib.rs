@@ -10,6 +10,7 @@
 //! past it into the future, because there is nothing there to reach.
 
 pub mod builtin;
+pub mod filter;
 pub mod registry;
 
 pub use registry::{

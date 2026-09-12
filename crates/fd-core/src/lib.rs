@@ -20,6 +20,7 @@
 //! a decimal type at that boundary — not here.
 
 pub mod classify;
+pub mod clock;
 pub mod config;
 pub mod market;
 pub mod premium;

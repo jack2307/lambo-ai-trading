@@ -34,6 +34,12 @@ numbers before moving on, and `tests/golden/` holds what it published.
   Use `fd_core::js_round_to` / `js_to_fixed`; never `(x * scale).round()`.
 - An in-sample score is not a result. Quote the walk-forward, and place it
   inside the null distribution (`search --mode=null`, `--mode=null-dir`).
+- A session or regime gate needs a **matched** null (the control wrapped in the
+  same `Filtered` gates): noise traded only in the New York morning clears the
+  1.2 gate 5% of the time on its own. Hypotheses are declared in
+  `fd-backtest/src/hypotheses.rs` with a reason each; that file is not a grid.
+- Swap is charged (`Trade::swap_usd`, 17:00 New York, Wednesday x3). Zero in
+  config means unknown, not free.
 - The Deribit public endpoint reaches back about a day. History not captured
   as it happens is gone; `fd-ingest --bin collect` is what captures it.
 - The OTL feed (gold tape and GC bars) renders times in the account's zone,
@@ -68,5 +74,6 @@ fd-ingest --bin collect --market=gold    # same for OTL: polls every 10 min, als
 python py/ingest/mt5_export.py           # Vantage XAUUSD/BTCUSD bars -> data/bars (read-only)
 fd-backtest --bin search --market=btc    # compare / sweep / wf / costs / null
 fd-backtest --bin search --market=xauusd # same, on the broker's own gold bars
+fd-backtest --bin search --market=xauusd --mode=hypotheses  # declared batch vs matched nulls
 scripts/api-parity.py                    # prove the browser cannot tell backends apart
 ```

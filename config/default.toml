@@ -218,6 +218,11 @@ contract_size = 1.0
 spread = 0.28
 lot_step = 0.01
 min_lot = 0.01
+# READ from the terminal 2026-09-12: USD per lot per rollover night, Wednesday
+# triple. On a 1 oz contract at ~$4,400 that is 1.9% of notional per night for a
+# long. Holding gold overnight on this account is not a cost, it is a decision.
+swap_long_per_lot = -82.76
+swap_short_per_lot = 31.98
 
 [markets.xauusd.big_trades]
 min_premium_usd = 100_000
@@ -243,6 +248,8 @@ contract_size = 0.01
 spread = 17.05                      # MEASURED: 3.4x the 5.00 assumed for the Binance market
 lot_step = 0.01
 min_lot = 0.01
+swap_long_per_lot = -20.0           # READ from the terminal 2026-09-12; per lot (0.01 BTC) per night
+swap_short_per_lot = 0.0
 
 [markets.btcusd.big_trades]
 min_premium_usd = 25_000

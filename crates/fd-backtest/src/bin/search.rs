@@ -25,6 +25,7 @@ use std::path::PathBuf;
 use fd_backtest::engine::{Range, TradingRules, run_backtest};
 use fd_strategy::registry::Strategy as _;
 use fd_backtest::sweep::{SelectBy, compare_strategies, sweep_strategy, verdict, walk_forward};
+use fd_backtest::hypotheses::{gold_intraday_batch, run_hypothesis};
 use fd_backtest::timeline::{TimelineOptions, build_timeline};
 use fd_backtest::{OptionsTimeline, PromisingGate};
 use fd_core::config::Config;
@@ -82,6 +83,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             timeline.as_ref(),
             arg("strategy", "maxpain-magnet"),
             arg("samples", "2000").parse().unwrap_or(2000),
+        );
+    }
+    if mode == "hypotheses" {
+        run_hypotheses(
+            &registry,
+            &bars,
+            &rules,
+            config.backtest.walk_forward_folds,
+            select_by,
+            config.backtest.min_trades_per_cell,
+            &gate,
+            arg("seeds", "200").parse().unwrap_or(200),
         );
     }
     if mode == "null" {
@@ -530,6 +543,68 @@ fn run_null_control(
     println!();
     println!("  A method at the 80th percentile of a coin flip is what picking the best");
     println!("  of several coin flips looks like. Only the ones outside have said anything.");
+    println!();
+}
+
+/// A declared batch of hypotheses, each read against its matched null.
+#[allow(clippy::too_many_arguments)]
+fn run_hypotheses(
+    registry: &Registry,
+    bars: &[Bar],
+    rules: &TradingRules,
+    folds: usize,
+    select_by: SelectBy,
+    min_trades_per_cell: usize,
+    gate: &fd_backtest::PromisingGate,
+    seeds: usize,
+) {
+    let batch = gold_intraday_batch();
+    println!("== hypotheses: {} declared, walk-forward ({folds} folds), each against {seeds} matched null runs ==", batch.len());
+    println!("swap: long {:.2} / short {:.2} USD per lot per night; spread {:.2}", rules.swap_long_per_lot, rules.swap_short_per_lot, rules.spread);
+    println!();
+    println!(
+        "{:<12} {:<18} {:>6} {:>7} {:>7} {:>8} {:>8} {:>8} {:>5}  verdict",
+        "hypothesis", "base", "trades", "OOS PF", "expect", "null p50", "null p95", "swap$", "pct"
+    );
+    let mut survivors = Vec::new();
+    for hypothesis in &batch {
+        let Some(report) = run_hypothesis(registry, hypothesis, bars, rules, folds, select_by, min_trades_per_cell, gate, seeds)
+        else {
+            println!("{:<12} {:<18} could not run", hypothesis.label, hypothesis.base);
+            continue;
+        };
+        let m = &report.oos;
+        let verdict = if report.survives() {
+            "SURVIVES".to_string()
+        } else if report.verdict.promising {
+            "gate pass, inside the noise".to_string()
+        } else {
+            format!("fail: {}", report.verdict.reasons.join("; "))
+        };
+        println!(
+            "{:<12} {:<18} {:>6} {:>7.3} {:>7.3} {:>8.3} {:>8.3} {:>8.0} {:>4.0}%  {verdict}",
+            report.label,
+            report.base,
+            m.trades,
+            m.profit_factor,
+            m.expectancy,
+            report.null_quantile(0.5),
+            report.null_quantile(0.95),
+            report.swap_usd,
+            report.percentile
+        );
+        println!("{:<12} {:<18} {}  — {}", "", "", report.filters, report.why);
+        if report.survives() {
+            survivors.push(format!("{}/{}", report.label, report.base));
+        }
+    }
+    println!();
+    if survivors.is_empty() {
+        println!("Nothing survived: no hypothesis is both past the gate and outside its own null.");
+        println!("That is the result. The list is closed; add a hypothesis only with a new reason.");
+    } else {
+        println!("Survivors: {} — worth a decision record and a direction null before anything else.", survivors.join(", "));
+    }
     println!();
 }
 

@@ -254,6 +254,13 @@ pub struct MarketTradingOverride {
     pub spread: f64,
     pub lot_step: f64,
     pub min_lot: f64,
+    /// USD per lot per rollover night; negative is a charge. Default zero,
+    /// which the prototype's markets never stated and which the parity gate
+    /// therefore expects.
+    #[serde(default)]
+    pub swap_long_per_lot: f64,
+    #[serde(default)]
+    pub swap_short_per_lot: f64,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -339,6 +346,8 @@ impl Config {
                 spread: m.trading.spread,
                 lot_step: m.trading.lot_step,
                 min_lot: m.trading.min_lot,
+                swap_long_per_lot: m.trading.swap_long_per_lot,
+                swap_short_per_lot: m.trading.swap_short_per_lot,
             },
             big_trade_min_premium_usd: m.big_trades.min_premium_usd,
             cluster_floor: m.levels.cluster.floor,

@@ -46,6 +46,11 @@ pub struct TradingRules {
     pub min_lot: f64,
     /// ATR period used when the strategy declares none.
     pub fallback_atr_period: usize,
+    /// Overnight financing, USD per lot per rollover crossed (17:00 New York;
+    /// Wednesday counts three). Negative is a charge. The prototype charged
+    /// nothing, so zero reproduces it.
+    pub swap_long_per_lot: f64,
+    pub swap_short_per_lot: f64,
 }
 
 impl Default for TradingRules {
@@ -62,6 +67,8 @@ impl Default for TradingRules {
             lot_step: 0.01,
             min_lot: 0.01,
             fallback_atr_period: 14,
+            swap_long_per_lot: 0.0,
+            swap_short_per_lot: 0.0,
         }
     }
 }
@@ -86,7 +93,12 @@ pub struct Trade {
     pub stop: f64,
     pub target: Option<f64>,
     pub lots: f64,
+    /// Net of spread, commission and swap.
     pub pnl_usd: f64,
+    /// The financing part of `pnl_usd`; zero for a trade closed inside its
+    /// session. Kept separate so a report can say how much the overnight cost.
+    #[serde(default)]
+    pub swap_usd: f64,
     /// Result in units of the risk taken.
     pub r: f64,
     /// Worst and best excursion, also in R.
@@ -182,6 +194,8 @@ pub fn trading_rules_for(config: &Config, market: &str) -> Result<TradingRules, 
         spread: spec.trading.spread,
         lot_step: spec.trading.lot_step,
         min_lot: spec.trading.min_lot,
+        swap_long_per_lot: spec.trading.swap_long_per_lot,
+        swap_short_per_lot: spec.trading.swap_short_per_lot,
         // The rest is policy rather than venue convention, and is shared.
         commission_per_lot: config.trading.commission_per_lot,
         starting_equity_usd: config.trading.starting_equity_usd,
@@ -576,7 +590,10 @@ fn close_position(
     let points =
         if position.side.is_long() { exit_price - position.entry_price } else { position.entry_price - exit_price };
     let commission = rules.commission_per_lot * position.lots * 2.0;
-    let pnl = points * position.lots * rules.contract_size - commission;
+    let nights = fd_core::clock::swap_nights(position.entry_time, exit_time);
+    let per_night = if position.side.is_long() { rules.swap_long_per_lot } else { rules.swap_short_per_lot };
+    let swap = per_night * position.lots * f64::from(nights);
+    let pnl = points * position.lots * rules.contract_size - commission + swap;
 
     Trade {
         direction: position.side,
@@ -590,6 +607,7 @@ fn close_position(
         target: position.target.map(round2),
         lots: position.lots,
         pnl_usd: round2(pnl),
+        swap_usd: round2(swap),
         r: round4(points / position.risk),
         mae: round4(position.mae / position.risk),
         mfe: round4(position.mfe / position.risk),
