@@ -37,6 +37,11 @@ pub enum Filter {
     /// A regime gate: `min` above one asks for expansion, `max` below one for
     /// compression.
     VolRegime { fast: usize, slow: usize, min_ratio: f64, max_ratio: f64 },
+    /// Entries only while `ATR(period) / close`, in percent, is inside
+    /// `[min, max]`. An **absolute** volatility gate, unlike `VolRegime`,
+    /// which is relative to the recent past: a year twice as volatile as
+    /// another reads as "high" here and as "normal" there.
+    VolAbs { period: usize, min_pct: f64, max_pct: f64 },
 }
 
 impl Filter {
@@ -89,6 +94,13 @@ impl Filter {
                 }
                 Ok(Self::sessions(&windows))
             }
+            Some(("volabs", rest)) => {
+                let (period, range) = rest.split_once(':').ok_or_else(|| format!("filter `{spec}`: expected volabs:P:min-max"))?;
+                let (lo, hi) = range.split_once('-').ok_or_else(|| format!("filter `{spec}`: expected min-max"))?;
+                let num = |t: &str| t.trim().parse::<f64>().map_err(|_| format!("filter `{spec}`: `{t}` is not a number"));
+                let period = period.trim().parse::<usize>().map_err(|_| format!("filter `{spec}`: `{period}` is not a period"))?;
+                Ok(Self::VolAbs { period, min_pct: num(lo)?, max_pct: num(hi)? })
+            }
             Some(("vol", rest)) => {
                 let (periods, range) = rest.split_once(':').ok_or_else(|| format!("filter `{spec}`: expected vol:F/S:min-max"))?;
                 let (fast, slow) = periods.split_once('/').ok_or_else(|| format!("filter `{spec}`: expected F/S"))?;
@@ -120,6 +132,7 @@ impl Filter {
             Self::VolRegime { fast, slow, min_ratio, max_ratio } => {
                 format!("ATR{fast}/ATR{slow} in [{min_ratio}, {max_ratio}]")
             }
+            Self::VolAbs { period, min_pct, max_pct } => format!("ATR{period}/close in [{min_pct}%, {max_pct}%]"),
         }
     }
 }
@@ -154,6 +167,15 @@ impl Filtered<'_> {
         })
     }
 
+    /// The single ATRs the absolute-volatility filters need, after the regime
+    /// pairs.
+    fn absolutes(&self) -> impl Iterator<Item = usize> + '_ {
+        self.filters.iter().filter_map(|f| match f {
+            Filter::VolAbs { period, .. } => Some(*period),
+            _ => None,
+        })
+    }
+
     #[must_use]
     pub fn describe(&self) -> String {
         self.filters.iter().map(Filter::describe).collect::<Vec<_>>().join(" + ")
@@ -182,17 +204,24 @@ impl Strategy for Filtered<'_> {
             specs.push(IndicatorSpec::new("atr").with("period", fast as f64));
             specs.push(IndicatorSpec::new("atr").with("period", slow as f64));
         }
+        for period in self.absolutes() {
+            specs.push(IndicatorSpec::new("atr").with("period", period as f64));
+        }
         specs
     }
     fn warmup(&self, p: &Params) -> usize {
         let regime = self.regimes().map(|(_, slow, _, _)| slow + 5).max().unwrap_or(0);
-        self.inner.warmup(p).max(regime)
+        let absolute = self.absolutes().map(|p| p + 5).max().unwrap_or(0);
+        self.inner.warmup(p).max(regime).max(absolute)
     }
     fn series(&self, p: &Params) -> Vec<String> {
         let mut series = self.inner.series(p);
         for (fast, slow, _, _) in self.regimes() {
             series.push(atr_key(fast));
             series.push(atr_key(slow));
+        }
+        for period in self.absolutes() {
+            series.push(atr_key(period));
         }
         series
     }
@@ -220,6 +249,7 @@ impl Strategy for Filtered<'_> {
 
         let inner_slots = self.inner.series(ctx.params).len();
         let mut regime_slot = inner_slots;
+        let mut abs_slot = inner_slots + 2 * self.regimes().count();
         for filter in &self.filters {
             let allowed = match filter {
                 Filter::Hours { from_min, to_min } => in_window(minute, *from_min, *to_min),
@@ -232,6 +262,12 @@ impl Strategy for Filtered<'_> {
                     let ratio = fast / slow;
                     // NaN fails closed: no regime reading, no trade.
                     ratio.is_finite() && ratio >= *min_ratio && ratio <= *max_ratio
+                }
+                Filter::VolAbs { min_pct, max_pct, .. } => {
+                    let atr = ctx.s(abs_slot);
+                    abs_slot += 1;
+                    let pct = 100.0 * atr / ctx.bar.close;
+                    pct.is_finite() && pct >= *min_pct && pct <= *max_pct
                 }
             };
             if !allowed {
@@ -343,8 +379,25 @@ mod tests {
             Filter::parse("vol:14/100:1.2-99").unwrap(),
             Filter::VolRegime { fast: 14, slow: 100, min_ratio: 1.2, max_ratio: 99.0 }
         );
+        assert_eq!(Filter::parse("volabs:14:0.075-9").unwrap(), Filter::VolAbs { period: 14, min_pct: 0.075, max_pct: 9.0 });
         assert!(Filter::parse("hours:0860-1200").unwrap_err().contains("clock"));
         assert!(Filter::parse("moon:full").unwrap_err().contains("unknown"));
+    }
+
+    #[test]
+    fn the_absolute_volatility_filter_reads_atr_over_price() {
+        let f = Filtered { inner: &Always, filters: vec![Filter::VolAbs { period: 14, min_pct: 0.075, max_pct: 9.0 }] };
+        assert_eq!(f.series(&Params::default()), vec!["atr_14".to_string()]);
+        let bar = Bar::flat(monday_utc(13, 0), 4000.0);
+        let bars = [bar];
+        let ind = fd_indicators::IndicatorSet::new();
+        let params = Params::default();
+        let low: &[f64] = &[2.0]; // 0.05% of price: below the gate
+        let high: &[f64] = &[4.0]; // 0.10%: above it
+        let ctx_low = BarContext { bar: &bars[0], i: 0, bars: &bars, ind: &ind, series: &[low], options: None, position: None, params: &params };
+        let ctx_high = BarContext { bar: &bars[0], i: 0, bars: &bars, ind: &ind, series: &[high], options: None, position: None, params: &params };
+        assert!(matches!(f.on_bar(&ctx_low), Intent::None));
+        assert!(matches!(f.on_bar(&ctx_high), Intent::Enter { .. }));
     }
 
     #[test]
