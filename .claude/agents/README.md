@@ -67,3 +67,27 @@ directory. Invoke by name, or let the manager fan out.
 Run them on a *result*, not on a plan. "Here is the walk-forward output for
 ema-cross over two years, tell me what is wrong with it" gets a useful answer.
 "Should we trade EMA crosses" does not.
+
+## The research loop
+
+`/research <idea>` (or `/research next` for the top of
+`docs/research/BACKLOG.md`) runs one hypothesis through the whole discipline
+with the manager orchestrating and the team judging. The order is the point:
+
+1. **Pre-register** — `researcher` writes the claim, the falsifier, the base
+   method, and *both* markets (in-sample and out-of-sample) into
+   `docs/hypotheses/<id>.md` + `<id>.toml`, committed before any run.
+2. **Implement** — `strategy-implementer` builds a new base method with tests
+   that prove it cannot read the future. Code only; no opinion on results.
+3. **In-sample** — `scripts/research-run.py --stage in`: walk-forward against
+   the matched null and the direction null. Receipts in
+   `docs/research/runs/<id>/`.
+4. **Out-of-sample** — survivors only, the pre-registered market only, once.
+5. **Review** — the three veto roles on three different artefacts; advisory
+   roles on one question each.
+6. **Record** — `docs/decisions/<date>-<id>.md`, backlog updated, committed.
+
+The loop never widens a grid to pass a gate, never opens a second
+out-of-sample market, and never proposes anything beyond a paper run. Its
+first full pass (the ICT chain, 2026-09-13) produced a survivor at step 3 and
+a failure at step 4 — which is the loop working, not failing.

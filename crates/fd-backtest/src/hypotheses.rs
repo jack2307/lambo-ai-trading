@@ -1,4 +1,4 @@
-//! Hypotheses: a base method, a set of filters, and a matched null.
+//! Hypotheses: a base method, a set of filters, a preset, and a matched null.
 //!
 //! The leaderboard asks "which method?"; a hypothesis asks "does *this gate*
 //! change anything?" — trade only in the New York morning, stay flat over the
@@ -9,29 +9,45 @@
 //! would flatter any method traded inside it; the matched null is what keeps
 //! that from being reported as an edge.
 //!
-//! A batch is declared in code, not searched for. Thirteen hypotheses is a
+//! A batch is declared, not searched for: in code for the built-in ones, or
+//! in a TOML file (`docs/hypotheses/<id>.toml`) written **before** the run —
+//! which is what lets a batch be pre-registered. Thirteen hypotheses is a
 //! list someone wrote down with a reason each; a thousand is a search, and a
 //! search always finds something.
+
+use std::path::Path;
 
 use fd_core::types::Bar;
 use fd_indicators::IndicatorSpec;
 use fd_strategy::filter::{Filter, Filtered};
 use fd_strategy::registry::{BarContext, Intent, Params, Registry, Strategy};
 use rayon::prelude::*;
+use serde::Deserialize;
 
 use crate::control::RandomEntry;
 use crate::engine::{Metrics, TradingRules};
 use crate::sweep::{PromisingGate, SelectBy, Verdict, verdict, walk_forward};
 
+#[derive(Debug, Clone)]
 pub struct Hypothesis {
-    pub label: &'static str,
-    pub base: &'static str,
+    pub label: String,
+    pub base: String,
     pub filters: Vec<Filter>,
     /// Parameter defaults changed from the method's own — a preset. The grid
     /// still sweeps around them.
-    pub overrides: Vec<(&'static str, f64)>,
+    pub overrides: Vec<(String, f64)>,
     /// The reason it is on the list. A hypothesis without one is a search.
-    pub why: &'static str,
+    pub why: String,
+}
+
+fn hyp(label: &str, base: &str, filters: Vec<Filter>, overrides: &[(&str, f64)], why: &str) -> Hypothesis {
+    Hypothesis {
+        label: label.to_string(),
+        base: base.to_string(),
+        filters,
+        overrides: overrides.iter().map(|(k, v)| ((*k).to_string(), *v)).collect(),
+        why: why.to_string(),
+    }
 }
 
 /// The batches that can be asked for by name.
@@ -39,38 +55,73 @@ pub struct Hypothesis {
 pub fn batch(name: &str) -> Option<Vec<Hypothesis>> {
     match name {
         "gold-intraday" => Some(gold_intraday_batch()),
-        "ict-m1" => Some(ict_batch(15, "M1 entries, M15 gaps")),
-        "ict-m5" => Some(ict_batch(3, "M5 entries, M15 gaps")),
+        "ict-m1" => Some(ict_batch(15)),
+        "ict-m5" => Some(ict_batch(3)),
         // Pre-registered before the out-of-sample run: only the two presets
         // that survived on the broker's three months of minutes.
-        "ict-oos" => Some(ict_batch(15, "M1 entries, M15 gaps").into_iter().filter(|h| h.label.starts_with("ict-B")).collect()),
+        "ict-oos" => Some(ict_batch(15).into_iter().filter(|h| h.label.starts_with("ict-B")).collect()),
         _ => None,
     }
 }
 
-/// The ICT sweep → MSS → FVG expert's three presets, in and out of its kill
-/// zones.
-///
-/// Sessions are the expert's defaults on the broker's clock (UTC+3): London
-/// 08:00–12:00 and New York 13:00–17:00 server time are 01:00–05:00 and
-/// 06:00–10:00 in New York. `htf_factor` is how many entry bars make one
-/// higher-timeframe bar.
-#[must_use]
-pub fn ict_batch(htf_factor: usize, note: &'static str) -> Vec<Hypothesis> {
-    let base = "ict-sweep-mss-fvg";
-    let zones = || Filter::sessions(&[(100, 500), (600, 1000)]);
-    let factor = htf_factor as f64;
-    let tight = move || vec![("htfFactor", factor), ("minHtfFvgPips", 25.0), ("swingLeft", 5.0), ("swingRight", 5.0), ("displacementMult", 2.0), ("riskReward", 3.0)];
-    let balanced = move || vec![("htfFactor", factor), ("minHtfFvgPips", 15.0), ("swingLeft", 3.0), ("swingRight", 3.0), ("displacementMult", 1.5), ("riskReward", 2.0)];
-    let loose = move || vec![("htfFactor", factor), ("minHtfFvgPips", 8.0), ("swingLeft", 2.0), ("swingRight", 2.0), ("displacementMult", 1.2), ("riskReward", 1.5)];
-    let _ = note;
-    vec![
-        Hypothesis { label: "ict-A-tight", base, filters: vec![Filter::weekdays(), zones()], overrides: tight(), why: "the expert's strict preset, kill zones only" },
-        Hypothesis { label: "ict-B-balanced", base, filters: vec![Filter::weekdays(), zones()], overrides: balanced(), why: "the expert's default preset, kill zones only" },
-        Hypothesis { label: "ict-C-loose", base, filters: vec![Filter::weekdays()], overrides: loose(), why: "the expert's loose preset, sessions off as it ships" },
-        Hypothesis { label: "ict-B-allday", base, filters: vec![Filter::weekdays()], overrides: balanced(), why: "the default preset without the session gate: is the kill zone doing anything?" },
-    ]
+/* ------------------------------------------------------------ from a file */
+
+/// One `[[hypothesis]]` table of a batch file.
+#[derive(Debug, Deserialize)]
+struct HypothesisFile {
+    label: String,
+    base: String,
+    #[serde(default)]
+    filters: Vec<String>,
+    #[serde(default)]
+    overrides: std::collections::BTreeMap<String, f64>,
+    why: String,
 }
+
+#[derive(Debug, Deserialize)]
+struct BatchFile {
+    #[serde(default)]
+    hypothesis: Vec<HypothesisFile>,
+}
+
+/// Read a batch from a TOML file.
+///
+/// ```toml
+/// [[hypothesis]]
+/// label = "orb/ny"
+/// base = "donchian-breakout"
+/// filters = ["weekdays", "sessions:0930-1130", "flat:1630-1815", "vol:14/100:1.2-99"]
+/// overrides = { period = 12 }
+/// why = "the first hour's range is the day's liquidity"
+/// ```
+///
+/// Other tables (a `[run]` block naming markets and seeds, say) are ignored
+/// here and read by the scripts that drive a run.
+pub fn batch_from_file(path: &Path) -> Result<Vec<Hypothesis>, String> {
+    let text = std::fs::read_to_string(path).map_err(|e| format!("{}: {e}", path.display()))?;
+    let file: BatchFile = toml::from_str(&text).map_err(|e| format!("{}: {e}", path.display()))?;
+    if file.hypothesis.is_empty() {
+        return Err(format!("{}: no [[hypothesis]] tables", path.display()));
+    }
+    file.hypothesis
+        .into_iter()
+        .map(|h| {
+            if h.why.trim().is_empty() {
+                return Err(format!("{}/{}: a hypothesis needs a reason", h.label, h.base));
+            }
+            let filters = h.filters.iter().map(|s| Filter::parse(s)).collect::<Result<Vec<_>, _>>()?;
+            Ok(Hypothesis {
+                label: h.label,
+                base: h.base,
+                filters,
+                overrides: h.overrides.into_iter().collect(),
+                why: h.why,
+            })
+        })
+        .collect()
+}
+
+/* ------------------------------------------------------------ built-in batches */
 
 /// The first batch: gold, intraday, flat over the break.
 ///
@@ -90,26 +141,51 @@ pub fn gold_intraday_batch() -> Vec<Hypothesis> {
 
     vec![
         // The flat rule on its own, on every base method: does removing the
-        // overnight hold and the swap change the picture at all?
-        Hypothesis { label: "intraday", base: "ema-cross", filters: flat(), overrides: vec![], why: "the swap-free version of the trend baseline" },
-        Hypothesis { label: "intraday", base: "rsi-reversion", filters: flat(), overrides: vec![], why: "the swap-free version of the reversion baseline" },
-        Hypothesis { label: "intraday", base: "donchian-breakout", filters: flat(), overrides: vec![], why: "the swap-free version of the breakout baseline" },
-        Hypothesis { label: "intraday", base: "bb-fade", filters: flat(), overrides: vec![], why: "the swap-free version of the fade baseline" },
+        // overnight hold change the picture at all?
+        hyp("intraday", "ema-cross", flat(), &[], "the swap-free version of the trend baseline"),
+        hyp("intraday", "rsi-reversion", flat(), &[], "the swap-free version of the reversion baseline"),
+        hyp("intraday", "donchian-breakout", flat(), &[], "the swap-free version of the breakout baseline"),
+        hyp("intraday", "bb-fade", flat(), &[], "the swap-free version of the fade baseline"),
         // Sessions. Gold's volume lives in the New York morning; London's
         // open sets the day's range; Asia is thin and mean-reverting by repute.
-        Hypothesis { label: "ny-morning", base: "ema-cross", filters: with(Filter::hours(800, 1200)), overrides: vec![], why: "trend into the session with the volume" },
-        Hypothesis { label: "ny-morning", base: "donchian-breakout", filters: with(Filter::hours(800, 1200)), overrides: vec![], why: "breakouts where the liquidity is" },
-        Hypothesis { label: "london-open", base: "donchian-breakout", filters: with(Filter::hours(200, 600)), overrides: vec![], why: "London sets the range; trade the break of the Asian one" },
-        Hypothesis { label: "asia", base: "rsi-reversion", filters: with(Filter::hours(1900, 200)), overrides: vec![], why: "thin hours are said to mean-revert" },
-        Hypothesis { label: "asia", base: "bb-fade", filters: with(Filter::hours(1900, 200)), overrides: vec![], why: "same claim, band-based" },
+        hyp("ny-morning", "ema-cross", with(Filter::hours(800, 1200)), &[], "trend into the session with the volume"),
+        hyp("ny-morning", "donchian-breakout", with(Filter::hours(800, 1200)), &[], "breakouts where the liquidity is"),
+        hyp("london-open", "donchian-breakout", with(Filter::hours(200, 600)), &[], "London sets the range; trade the break of the Asian one"),
+        hyp("asia", "rsi-reversion", with(Filter::hours(1900, 200)), &[], "thin hours are said to mean-revert"),
+        hyp("asia", "bb-fade", with(Filter::hours(1900, 200)), &[], "same claim, band-based"),
         // Regimes. The same signal reads differently when the range is
         // expanding versus compressing.
-        Hypothesis { label: "expansion", base: "donchian-breakout", filters: with(expansion()), overrides: vec![], why: "breakouts only when volatility is already rising" },
-        Hypothesis { label: "expansion", base: "ema-cross", filters: with(expansion()), overrides: vec![], why: "trend only when there is range to trend in" },
-        Hypothesis { label: "compression", base: "rsi-reversion", filters: with(compression()), overrides: vec![], why: "fade only when the range is tight" },
-        Hypothesis { label: "compression", base: "bb-fade", filters: with(compression()), overrides: vec![], why: "same, band-based" },
+        hyp("expansion", "donchian-breakout", with(expansion()), &[], "breakouts only when volatility is already rising"),
+        hyp("expansion", "ema-cross", with(expansion()), &[], "trend only when there is range to trend in"),
+        hyp("compression", "rsi-reversion", with(compression()), &[], "fade only when the range is tight"),
+        hyp("compression", "bb-fade", with(compression()), &[], "same, band-based"),
     ]
 }
+
+/// The ICT sweep → MSS → FVG expert's three presets, in and out of its kill
+/// zones.
+///
+/// Sessions are the expert's defaults on the broker's clock (UTC+3): London
+/// 08:00–12:00 and New York 13:00–17:00 server time are 01:00–05:00 and
+/// 06:00–10:00 in New York. `htf_factor` is how many entry bars make one
+/// higher-timeframe bar.
+#[must_use]
+pub fn ict_batch(htf_factor: usize) -> Vec<Hypothesis> {
+    let base = "ict-sweep-mss-fvg";
+    let zones = || Filter::sessions(&[(100, 500), (600, 1000)]);
+    let factor = htf_factor as f64;
+    let tight = [("htfFactor", factor), ("minHtfFvgPips", 25.0), ("swingLeft", 5.0), ("swingRight", 5.0), ("displacementMult", 2.0), ("riskReward", 3.0)];
+    let balanced = [("htfFactor", factor), ("minHtfFvgPips", 15.0), ("swingLeft", 3.0), ("swingRight", 3.0), ("displacementMult", 1.5), ("riskReward", 2.0)];
+    let loose = [("htfFactor", factor), ("minHtfFvgPips", 8.0), ("swingLeft", 2.0), ("swingRight", 2.0), ("displacementMult", 1.2), ("riskReward", 1.5)];
+    vec![
+        hyp("ict-A-tight", base, vec![Filter::weekdays(), zones()], &tight, "the expert's strict preset, kill zones only"),
+        hyp("ict-B-balanced", base, vec![Filter::weekdays(), zones()], &balanced, "the expert's default preset, kill zones only"),
+        hyp("ict-C-loose", base, vec![Filter::weekdays()], &loose, "the expert's loose preset, sessions off as it ships"),
+        hyp("ict-B-allday", base, vec![Filter::weekdays()], &balanced, "the default preset without the session gate: is the kill zone doing anything?"),
+    ]
+}
+
+/* ------------------------------------------------------------ running one */
 
 /// One hypothesis, measured.
 #[derive(Debug, Clone)]
@@ -185,10 +261,10 @@ impl Strategy for SeededControl {
     }
 }
 
-/// A method with some defaults replaced: the expert's preset, as a strategy.
-struct Preset<'a> {
-    inner: &'a dyn Strategy,
-    defaults: Params,
+/// A method with some defaults replaced: a preset, as a strategy.
+pub struct Preset<'a> {
+    pub inner: &'a dyn Strategy,
+    pub defaults: Params,
 }
 
 impl Strategy for Preset<'_> {
@@ -227,6 +303,22 @@ impl Strategy for Preset<'_> {
     }
 }
 
+/// The hypothesis's defaults: the base method's, with the preset applied.
+///
+/// An override naming a parameter the method does not declare is an error,
+/// not a no-op — a misspelt preset that silently tested the defaults would
+/// be reported as if the preset had been tested.
+pub fn preset_params(base: &dyn Strategy, overrides: &[(String, f64)]) -> Result<Params, String> {
+    let mut defaults = base.default_params();
+    for (key, value) in overrides {
+        if !defaults.contains(key) {
+            return Err(format!("{} has no parameter `{key}`", base.id()));
+        }
+        defaults.set(key, *value);
+    }
+    Ok(defaults)
+}
+
 /// Walk the hypothesis forward and its matched null `seeds` times.
 #[allow(clippy::too_many_arguments)]
 pub fn run_hypothesis(
@@ -239,15 +331,13 @@ pub fn run_hypothesis(
     min_trades_per_cell: usize,
     gate: &PromisingGate,
     seeds: usize,
-) -> Option<HypothesisReport> {
-    let base = registry.get(hypothesis.base).ok()?;
-    let mut defaults = base.default_params();
-    for (key, value) in &hypothesis.overrides {
-        defaults.set(key, *value);
-    }
-    let preset = Preset { inner: base, defaults };
+) -> Result<Option<HypothesisReport>, String> {
+    let base = registry.get(&hypothesis.base).map_err(|e| e.to_string())?;
+    let preset = Preset { inner: base, defaults: preset_params(base, &hypothesis.overrides)? };
     let filtered = Filtered { inner: &preset, filters: hypothesis.filters.clone() };
-    let result = walk_forward(&filtered, bars, rules, None, folds, select_by, min_trades_per_cell)?;
+    let Some(result) = walk_forward(&filtered, bars, rules, None, folds, select_by, min_trades_per_cell) else {
+        return Ok(None);
+    };
 
     let mut null_pf: Vec<f64> = (0..seeds)
         .into_par_iter()
@@ -268,17 +358,17 @@ pub fn run_hypothesis(
         100.0 * null_pf.iter().filter(|v| **v < pf).count() as f64 / null_pf.len() as f64
     };
 
-    Some(HypothesisReport {
-        label: hypothesis.label.to_string(),
-        base: hypothesis.base.to_string(),
+    Ok(Some(HypothesisReport {
+        label: hypothesis.label.clone(),
+        base: hypothesis.base.clone(),
         filters: filtered.describe(),
-        why: hypothesis.why.to_string(),
+        why: hypothesis.why.clone(),
         verdict: verdict(&result.oos, gate),
         swap_usd: result.oos_trades.iter().map(|t| t.swap_usd).sum(),
         oos: result.oos,
         null_pf,
         percentile,
-    })
+    }))
 }
 
 #[cfg(test)]
@@ -286,23 +376,56 @@ mod tests {
     use super::*;
 
     #[test]
-    fn the_batch_names_only_registered_methods_and_gives_every_entry_a_reason() {
+    fn the_batches_name_only_registered_methods_and_give_every_entry_a_reason() {
         let registry = Registry::with_builtins();
         for h in gold_intraday_batch() {
-            assert!(registry.get(h.base).is_ok(), "{} is not a strategy", h.base);
+            assert!(registry.get(&h.base).is_ok(), "{} is not a strategy", h.base);
             assert!(!h.why.is_empty(), "{}/{} has no reason", h.label, h.base);
             assert!(h.filters.iter().any(|f| matches!(f, Filter::Flat { .. })), "{}/{} is not intraday", h.label, h.base);
         }
-        for name in ["ict-m1", "ict-m5"] {
+        for name in ["ict-m1", "ict-m5", "ict-oos"] {
             for h in batch(name).unwrap() {
-                let strategy = registry.get(h.base).expect(h.base);
-                let known = strategy.default_params();
-                for (key, _) in &h.overrides {
-                    assert!(known.contains(key), "{}/{} overrides unknown parameter {key}", h.label, h.base);
-                }
+                let strategy = registry.get(&h.base).expect(&h.base);
+                preset_params(strategy, &h.overrides).unwrap();
             }
         }
         assert!(batch("nope").is_none());
+    }
+
+    #[test]
+    fn a_batch_file_parses_filters_and_refuses_a_reasonless_hypothesis() {
+        let dir = std::env::temp_dir().join(format!("fd-batch-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let good = dir.join("good.toml");
+        std::fs::write(
+            &good,
+            r#"
+[run]
+in_sample = "xauusd:1m"
+
+[[hypothesis]]
+label = "orb/ny"
+base = "donchian-breakout"
+filters = ["weekdays", "sessions:0930-1130|1300-1500", "flat:1630-1815", "vol:14/100:1.2-99"]
+overrides = { period = 12 }
+why = "the first hour's range is the day's liquidity"
+"#,
+        )
+        .unwrap();
+        let batch = batch_from_file(&good).unwrap();
+        assert_eq!(batch.len(), 1);
+        assert_eq!(batch[0].filters.len(), 4);
+        assert!(matches!(batch[0].filters[1], Filter::Sessions(ref w) if w.len() == 2));
+        assert_eq!(batch[0].overrides, vec![("period".to_string(), 12.0)]);
+
+        let bad = dir.join("bad.toml");
+        std::fs::write(&bad, "[[hypothesis]]\nlabel = \"x\"\nbase = \"ema-cross\"\nwhy = \"  \"\n").unwrap();
+        assert!(batch_from_file(&bad).unwrap_err().contains("reason"));
+
+        let registry = Registry::with_builtins();
+        let err = preset_params(registry.get("ema-cross").unwrap(), &[("nope".into(), 1.0)]).unwrap_err();
+        assert!(err.contains("nope"));
+        let _ = std::fs::remove_dir_all(dir);
     }
 
     #[test]

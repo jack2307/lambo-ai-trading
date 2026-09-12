@@ -1,0 +1,13 @@
+# Plumbing check for scripts/research-run.py; not a research question.
+[run]
+in_sample = "xauusd:15m"
+out_of_sample = "xauduka:1m"
+seeds = 3
+direction_samples = 20
+
+[[hypothesis]]
+label = "smoke"
+base = "ema-cross"
+filters = ["weekdays", "flat:1630-1815", "hours:0800-1200"]
+overrides = { fast = 13 }
+why = "exercise every code path of the runner with a run that finishes in seconds"

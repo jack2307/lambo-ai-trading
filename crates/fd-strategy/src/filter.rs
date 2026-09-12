@@ -62,6 +62,45 @@ impl Filter {
         Self::Weekdays { mask: 0b011_1110 }
     }
 
+    /// A filter from its one-line spelling, as a batch file writes it:
+    /// `weekdays`, `hours:0800-1200`, `sessions:0100-0500|0600-1000`,
+    /// `flat:1630-1815`, `vol:14/100:1.2-99`. Times are New York `hhmm`.
+    pub fn parse(spec: &str) -> Result<Self, String> {
+        let spec = spec.trim();
+        let bad = |why: &str| Err(format!("filter `{spec}`: {why}"));
+        let window = |text: &str| -> Result<(u32, u32), String> {
+            let (a, b) = text.split_once('-').ok_or_else(|| format!("filter `{spec}`: expected hhmm-hhmm"))?;
+            let parse = |t: &str| t.trim().parse::<u32>().map_err(|_| format!("filter `{spec}`: `{t}` is not hhmm"));
+            let (a, b) = (parse(a)?, parse(b)?);
+            if a % 100 >= 60 || b % 100 >= 60 || a / 100 > 24 || b / 100 > 24 {
+                return Err(format!("filter `{spec}`: `{text}` is not a clock time"));
+            }
+            Ok((a, b))
+        };
+        match spec.split_once(':') {
+            None if spec == "weekdays" => Ok(Self::weekdays()),
+            None => bad("unknown filter"),
+            Some(("hours", w)) => window(w).map(|(a, b)| Self::hours(a, b)),
+            Some(("flat", w)) => window(w).map(|(a, b)| Self::flat(a, b)),
+            Some(("sessions", list)) => {
+                let windows = list.split('|').map(window).collect::<Result<Vec<_>, _>>()?;
+                if windows.is_empty() {
+                    return bad("no windows");
+                }
+                Ok(Self::sessions(&windows))
+            }
+            Some(("vol", rest)) => {
+                let (periods, range) = rest.split_once(':').ok_or_else(|| format!("filter `{spec}`: expected vol:F/S:min-max"))?;
+                let (fast, slow) = periods.split_once('/').ok_or_else(|| format!("filter `{spec}`: expected F/S"))?;
+                let (lo, hi) = range.split_once('-').ok_or_else(|| format!("filter `{spec}`: expected min-max"))?;
+                let num = |t: &str| t.trim().parse::<f64>().map_err(|_| format!("filter `{spec}`: `{t}` is not a number"));
+                let period = |t: &str| t.trim().parse::<usize>().map_err(|_| format!("filter `{spec}`: `{t}` is not a period"));
+                Ok(Self::VolRegime { fast: period(fast)?, slow: period(slow)?, min_ratio: num(lo)?, max_ratio: num(hi)? })
+            }
+            Some(_) => bad("unknown filter"),
+        }
+    }
+
     /// The label a report prints.
     #[must_use]
     pub fn describe(&self) -> String {
@@ -292,6 +331,20 @@ mod tests {
         assert!(matches!(intent_at(&f, monday_utc(13, 0), None), Intent::Enter { .. }));
         // Sunday 23:00 UTC is Sunday 19:00 New York — the open, but a Sunday.
         assert!(matches!(intent_at(&f, monday_utc(-1, 0), None), Intent::None));
+    }
+
+    #[test]
+    fn filters_parse_from_their_batch_file_spelling() {
+        assert_eq!(Filter::parse("weekdays").unwrap(), Filter::weekdays());
+        assert_eq!(Filter::parse("hours:0800-1200").unwrap(), Filter::hours(800, 1200));
+        assert_eq!(Filter::parse("flat:1630-1815").unwrap(), Filter::flat(1630, 1815));
+        assert_eq!(Filter::parse("sessions:0100-0500|0600-1000").unwrap(), Filter::sessions(&[(100, 500), (600, 1000)]));
+        assert_eq!(
+            Filter::parse("vol:14/100:1.2-99").unwrap(),
+            Filter::VolRegime { fast: 14, slow: 100, min_ratio: 1.2, max_ratio: 99.0 }
+        );
+        assert!(Filter::parse("hours:0860-1200").unwrap_err().contains("clock"));
+        assert!(Filter::parse("moon:full").unwrap_err().contains("unknown"));
     }
 
     #[test]

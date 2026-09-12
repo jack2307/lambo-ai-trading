@@ -25,7 +25,7 @@ use std::path::PathBuf;
 use fd_backtest::engine::{Range, TradingRules, run_backtest};
 use fd_strategy::registry::Strategy as _;
 use fd_backtest::sweep::{SelectBy, compare_strategies, sweep_strategy, verdict, walk_forward};
-use fd_backtest::hypotheses::{batch as hypothesis_batch, run_hypothesis};
+use fd_backtest::hypotheses::{batch as hypothesis_batch, batch_from_file, run_hypothesis};
 use fd_backtest::timeline::{TimelineOptions, build_timeline};
 use fd_backtest::{OptionsTimeline, PromisingGate};
 use fd_core::config::Config;
@@ -102,6 +102,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             &gate,
             arg("seeds", "200").parse().unwrap_or(200),
             &arg("batch", "gold-intraday"),
+            arg("batch-file", "").as_str(),
         );
     }
     if mode == "null" {
@@ -646,12 +647,26 @@ fn run_hypotheses(
     gate: &fd_backtest::PromisingGate,
     seeds: usize,
     batch_name: &str,
+    batch_file: &str,
 ) {
-    let Some(batch) = hypothesis_batch(batch_name) else {
-        println!("unknown batch `{batch_name}` (have: gold-intraday, ict-m1, ict-m5)");
-        return;
+    let (batch, shown) = if batch_file.is_empty() {
+        match hypothesis_batch(batch_name) {
+            Some(b) => (b, batch_name.to_string()),
+            None => {
+                println!("unknown batch `{batch_name}` (have: gold-intraday, ict-m1, ict-m5, ict-oos; or --batch-file=<toml>)");
+                return;
+            }
+        }
+    } else {
+        match batch_from_file(std::path::Path::new(batch_file)) {
+            Ok(b) => (b, batch_file.to_string()),
+            Err(e) => {
+                println!("{e}");
+                return;
+            }
+        }
     };
-    println!("== hypotheses `{batch_name}`: {} declared, walk-forward ({folds} folds), each against {seeds} matched null runs ==", batch.len());
+    println!("== hypotheses `{shown}`: {} declared, walk-forward ({folds} folds), each against {seeds} matched null runs ==", batch.len());
     println!("swap: long {:.2} / short {:.2} USD per lot per night; spread {:.2}", rules.swap_long_per_lot, rules.swap_short_per_lot, rules.spread);
     println!();
     println!(
@@ -660,10 +675,16 @@ fn run_hypotheses(
     );
     let mut survivors = Vec::new();
     for hypothesis in &batch {
-        let Some(report) = run_hypothesis(registry, hypothesis, bars, rules, folds, select_by, min_trades_per_cell, gate, seeds)
-        else {
-            println!("{:<12} {:<18} could not run", hypothesis.label, hypothesis.base);
-            continue;
+        let report = match run_hypothesis(registry, hypothesis, bars, rules, folds, select_by, min_trades_per_cell, gate, seeds) {
+            Ok(Some(report)) => report,
+            Ok(None) => {
+                println!("{:<12} {:<18} not enough bars", hypothesis.label, hypothesis.base);
+                continue;
+            }
+            Err(e) => {
+                println!("{:<12} {:<18} refused: {e}", hypothesis.label, hypothesis.base);
+                continue;
+            }
         };
         let m = &report.oos;
         let verdict = if report.survives() {

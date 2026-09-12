@@ -16,6 +16,8 @@ fd-strategy = { workspace = true }
 rayon = { workspace = true }
 serde = { workspace = true }
 thiserror = { workspace = true }
+# Hypothesis batches are declared in TOML so they can be written before a run.
+toml = { workspace = true }
 
 [dev-dependencies]
 fd-indicators = { workspace = true }
