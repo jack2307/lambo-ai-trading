@@ -54,6 +54,7 @@ pub fn register_all(registry: &mut Registry) {
     registry.register(Box::new(BuyAndHold));
     // Structure-based, not indicator-based; lives in its own module.
     registry.register(Box::new(crate::ict::IctSweepMssFvg));
+    registry.register(Box::new(crate::orb::OpeningRangeBreakout));
 }
 
 /* ---------------- classic technical baselines ---------------- */

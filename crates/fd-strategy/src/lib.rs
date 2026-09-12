@@ -12,6 +12,7 @@
 pub mod builtin;
 pub mod filter;
 pub mod ict;
+pub mod orb;
 pub mod registry;
 
 pub use registry::{
