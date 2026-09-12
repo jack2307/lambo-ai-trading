@@ -46,6 +46,8 @@ export function ResearchPanel({ research, updatedAgo }: { research: Research | n
           <span className="text-muted-foreground text-[11px]">read from docs/ · {updatedAgo}</span>
         </div>
 
+        {research && research.hypotheses.length > 1 && <Ledger hypotheses={research.hypotheses} />}
+
         {!research ? (
           <p className="text-muted-foreground text-[13px]">Reading the research files…</p>
         ) : !current ? (
@@ -106,6 +108,40 @@ export function ResearchPanel({ research, updatedAgo }: { research: Research | n
           </ul>
         </Panel>
       </div>
+    </div>
+  )
+}
+
+/** Every pass on file, one line each: what it claimed, where it died. */
+function Ledger({ hypotheses }: { hypotheses: ResearchHypothesis[] }) {
+  const outcome = (h: ResearchHypothesis) => {
+    const ins = h.runs.inSample
+    const oos = h.runs.outOfSample
+    if (!ins) return { text: 'no run yet', tone: 'neutral' as const }
+    if (!ins.concluded) return { text: 'in-sample running', tone: 'live' as const }
+    if (ins.survivors.length === 0) return { text: 'failed in-sample', tone: 'neutral' as const }
+    if (!oos) return { text: `${ins.survivors.length} in-sample survivor${ins.survivors.length === 1 ? '' : 's'} · out-of-sample pending`, tone: 'caution' as const }
+    if (!oos.concluded) return { text: 'out-of-sample running', tone: 'live' as const }
+    if (oos.survivors.length === 0) return { text: 'survived in-sample, failed out-of-sample', tone: 'neutral' as const }
+    return { text: `SURVIVED both · ${oos.survivors.join(', ')}`, tone: 'live' as const }
+  }
+  return (
+    <div className="border-border mb-4 border-b pb-4">
+      <Label className="mb-2">Ledger</Label>
+      <ul className="space-y-1">
+        {hypotheses.map((h) => {
+          const o = outcome(h)
+          return (
+            <li key={h.id} className="flex items-baseline gap-3 text-[12px]">
+              <span className="num text-muted-foreground w-[210px] shrink-0 truncate">{h.id}</span>
+              <span className="min-w-0 flex-1 truncate" title={h.claim}>
+                {h.claim}
+              </span>
+              <Pill tone={o.tone}>{o.text}</Pill>
+            </li>
+          )
+        })}
+      </ul>
     </div>
   )
 }

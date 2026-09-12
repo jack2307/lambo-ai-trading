@@ -134,6 +134,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             &registry,
             &bars,
             &rules,
+            timeline.as_ref(),
             config.backtest.walk_forward_folds,
             select_by,
             config.backtest.min_trades_per_cell,
@@ -515,6 +516,7 @@ fn run_null_control(
     registry: &Registry,
     bars: &[Bar],
     rules: &TradingRules,
+    timeline: Option<&OptionsTimeline>,
     folds: usize,
     select_by: SelectBy,
     min_trades_per_cell: usize,
@@ -589,12 +591,16 @@ fn run_null_control(
     let curve: Vec<f64> = results.iter().map(|(pf, _, _)| *pf).collect();
     println!("  where each method falls inside that distribution:");
     println!("  {:<20} {:>10} {:>12}", "strategy", "OOS PF", "percentile");
+    // Options strategies are placed inside the same noise: the control never
+    // reads the tape, so its distribution is the one they have to beat too.
+    // They are skipped only when there is no tape to run them on. Bound the
+    // bars to the tape's span with --from/--to for a fair count.
     for strategy in registry.all() {
-        if strategy.needs_options() {
+        if strategy.needs_options() && timeline.is_none() {
             continue;
         }
         let Some(result) =
-            walk_forward(strategy.as_ref(), bars, rules, None, folds, select_by, min_trades_per_cell)
+            walk_forward(strategy.as_ref(), bars, rules, timeline, folds, select_by, min_trades_per_cell)
         else {
             continue;
         };

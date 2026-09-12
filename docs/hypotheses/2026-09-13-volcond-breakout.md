@@ -1,6 +1,6 @@
 # 2026-09-13-volcond-breakout: a range break pays only when volatility is high in absolute terms
 
-**Registered:** 2026-09-13 03:20 — before any run; threshold chosen from the
+**Registered:** 2026-09-13 01:50 (commit time; the times first typed here were estimates) — before any run; threshold chosen from the
 two windows' ATR distributions, not from any result
 **Status:** decided → docs/decisions/2026-09-13-volcond-breakout.md (failed the primary window; confirmation not opened)
 **Batch file:** `docs/hypotheses/2026-09-13-volcond-breakout.toml`

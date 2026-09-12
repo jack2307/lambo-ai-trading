@@ -1,6 +1,6 @@
 # 2026-09-13-london-range: the New York morning resolves the range London built
 
-**Registered:** 2026-09-13 01:30 — before any run
+**Registered:** 2026-09-13 01:20 (commit time; the times first typed here were estimates) — before any run
 **Status:** decided → docs/decisions/2026-09-13-london-range.md
 **Batch file:** `docs/hypotheses/2026-09-13-london-range.toml`
 
