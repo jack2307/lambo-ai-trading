@@ -38,6 +38,10 @@ pub enum BarSource {
     Reference,
     /// Binance klines: real OHLCV, deep history.
     Binance,
+    /// A MetaTrader 5 terminal, exported by `py/ingest/mt5_export.py`: the
+    /// broker's own OHLC with tick volume, as deep as the terminal holds. No
+    /// live stream yet — the export is re-run to extend it.
+    Mt5,
 }
 
 /// Where a market's option prints come from.
@@ -46,13 +50,21 @@ pub enum BarSource {
 pub enum OptionsSource {
     Reference,
     Deribit,
+    /// No options feed. Levels and options strategies are unavailable; only
+    /// the technical strategies run. Used for a CFD whose bars are not the
+    /// options' underlying (XAUUSD spot vs COMEX GC carries a basis of tens of
+    /// dollars, wider than the strike spacing the levels are built from).
+    None,
 }
 
 /// Trading conventions for the instrument actually bought and sold.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct TradingSpec {
     pub symbol: String,
-    /// Units of underlying per lot: 100 oz for XAUUSD, 1 BTC for BTCUSD.
+    /// Units of underlying per lot. Venue-specific: 100 oz for a standard
+    /// XAUUSD contract, 1 oz on Vantage's `.sc` (cent) symbols, 0.01 BTC on
+    /// `BTCUSD.sc`. Read it from the broker (`symbol_info.trade_contract_size`),
+    /// never assume it.
     pub contract_size: f64,
     pub spread: f64,
     pub lot_step: f64,

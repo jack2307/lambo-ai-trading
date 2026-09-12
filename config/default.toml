@@ -1,4 +1,4 @@
-# flowdesk — default configuration
+# flowdesk â€” default configuration
 #
 # Ported from the JavaScript prototype's config/default.json. Two deliberate
 # changes: keys are snake_case (Rust/serde idiom), and the per-market overrides
@@ -6,7 +6,7 @@
 #
 # Numbers that were *measured* rather than chosen carry a note saying so. A
 # threshold with no evidence behind it is a placeholder, and the comments say
-# which is which — that distinction is the whole discipline of this project.
+# which is which â€” that distinction is the whole discipline of this project.
 
 multiplier = 100            # overridden per market
 underlying = "GC"
@@ -16,8 +16,8 @@ market = "gold"             # default market; --market=<id> overrides
 # Swappable model registries. Only the profile mode and the max-pain proxy have
 # been calibrated against the reference feed; break-even and whale remain
 # unverified candidates (docs/formulas.md in the prototype).
-break_even = "premium-weighted"     # UNVERIFIED — 5 candidates, no winner across contracts
-whale = "net-long-whale"            # UNVERIFIED — reproduced wSup on OGV6, wRes only on OGX6
+break_even = "premium-weighted"     # UNVERIFIED â€” 5 candidates, no winner across contracts
+whale = "net-long-whale"            # UNVERIFIED â€” reproduced wSup on OGV6, wRes only on OGX6
 max_pain_absolute = true            # CALIBRATED: volume-weighted proxy beat net-positioning on 3 of 4 contracts
 
 [profile]
@@ -34,7 +34,7 @@ limit = 200
 [flow]
 velocity_window_ms = 900_000
 
-[flow.thresholds]                   # PLACEHOLDERS — never backtested
+[flow.thresholds]                   # PLACEHOLDERS â€” never backtested
 strong_bull = 0.60
 moderate_bull = 0.55
 moderate_bear = 0.45
@@ -54,7 +54,7 @@ max_clusters = 12
 floor = 5.0                         # dollars; per-market (BTC moves in hundreds)
 atr_fraction = 0.15
 
-[levels.type_weights]               # PLACEHOLDERS — encode hypotheses H1/H2/H5
+[levels.type_weights]               # PLACEHOLDERS â€” encode hypotheses H1/H2/H5
 MAX_PAIN = 1.0
 POC = 1.0
 ABOVE_POC = 0.6
@@ -106,7 +106,7 @@ cooldown_ms = 1_800_000
 [ai]
 # ATR bar width must match the trade horizon. Computing ATR on one-minute closes
 # against a 60-minute horizon produced a ~$0.60 stop and a 5-minute average hold
-# — the backtest was measuring noise until this was fixed.
+# â€” the backtest was measuring noise until this was fixed.
 atr_bar_ms = 900_000
 atr_period = 14
 dataset_step_ms = 300_000
@@ -188,6 +188,67 @@ min_premium_usd = 100_000
 
 [markets.gold.levels.cluster]
 floor = 5.0
+atr_fraction = 0.15
+
+# --- Vantage MT5 markets -----------------------------------------------------
+# The instruments the system will eventually trade, on the broker's own bars
+# (py/ingest/mt5_export.py, read-only from the terminal). Contract sizes and
+# spreads below were READ from the terminal on 2026-09-12 (VantageMarkets-Live
+# 21, `.sc` cent symbols), not assumed:
+#   XAUUSD.sc  contract 1 oz     spread 28 pts    = $0.28
+#   BTCUSD.sc  contract 0.01 BTC spread ~1705 pts = $17.05
+# Spreads are per unit of underlying; times contract size for the per-lot cost.
+
+[markets.xauusd]
+label = "Vantage XAUUSD.sc CFD (MT5 bars, no options)"
+bar_symbol = "XAUUSD"
+bar_source = "mt5"
+# The OTL tape is COMEX GC. Spot XAUUSD trades tens of dollars below GC (the
+# basis), wider than the strike spacing the levels come from, so attaching the
+# gold tape here would place every level on the wrong price. Basis-adjusted
+# levels are a research task; until then this market is technical-only.
+options_source = "none"
+premium_in_underlying = false
+multiplier = 100
+underlying = "GC"
+
+[markets.xauusd.trading]
+symbol = "XAUUSD.sc"
+contract_size = 1.0
+spread = 0.28
+lot_step = 0.01
+min_lot = 0.01
+
+[markets.xauusd.big_trades]
+min_premium_usd = 100_000
+
+[markets.xauusd.levels.cluster]
+floor = 5.0
+atr_fraction = 0.15
+
+[markets.btcusd]
+label = "Vantage BTCUSD.sc CFD (MT5 bars + Deribit options)"
+bar_symbol = "BTCUSD"
+bar_source = "mt5"
+# Deribit strikes are in USD index terms and 1,000 apart; the CFD tracks the
+# index within a few dollars, so the tape's levels transfer.
+options_source = "deribit"
+premium_in_underlying = true
+multiplier = 1
+underlying = "BTC"
+
+[markets.btcusd.trading]
+symbol = "BTCUSD.sc"
+contract_size = 0.01
+spread = 17.05                      # MEASURED: 3.4x the 5.00 assumed for the Binance market
+lot_step = 0.01
+min_lot = 0.01
+
+[markets.btcusd.big_trades]
+min_premium_usd = 25_000
+
+[markets.btcusd.levels.cluster]
+floor = 100.0
 atr_fraction = 0.15
 
 [markets.btc]
