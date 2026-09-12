@@ -85,6 +85,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             arg("samples", "2000").parse().unwrap_or(2000),
         );
     }
+    if mode == "volume" {
+        run_volume(&registry, &bars, &rules, timeline.as_ref());
+    }
     if mode == "hypotheses" {
         run_hypotheses(
             &registry,
@@ -543,6 +546,86 @@ fn run_null_control(
     println!();
     println!("  A method at the 80th percentile of a coin flip is what picking the best");
     println!("  of several coin flips looks like. Only the ones outside have said anything.");
+    println!();
+}
+
+/// The rebate question, asked of the machine that can answer it.
+///
+/// An introducing broker is paid per lot, so a bot that trades often is worth
+/// something to the broker even with no edge — *as long as the client's
+/// account survives*. The number that decides that is what the client loses
+/// per lot after costs. This prints, for every method at its defaults, for its
+/// intraday version (flat over the break, so no swap), and for the random-entry
+/// control, the trades it makes per year and what one lot of it costs the
+/// client on average — both lot-weighted (what the venue sees) and per trade at
+/// a fixed lot (what a client running fixed size feels). The last column is
+/// the rebate per lot at which that client breaks even. Compare it with the
+/// actual rebate; nothing else here is a judgement.
+fn run_volume(registry: &Registry, bars: &[Bar], rules: &TradingRules, timeline: Option<&OptionsTimeline>) {
+    use fd_strategy::filter::{Filter, Filtered};
+
+    let span_years = (bars[bars.len() - 1].time - bars[0].time) as f64 / (365.25 * 86_400_000.0);
+    let round_trip = rules.spread * rules.contract_size + 2.0 * rules.commission_per_lot;
+    println!("== volume economics: what one lot costs the client, and the rebate that would cover it ==");
+    println!(
+        "contract {} | spread {:.2} + commission {:.2}/side = {:.2} USD per lot round trip | swap {:.2}/{:.2} per lot-night | {span_years:.2} years",
+        rules.contract_size, rules.spread, rules.commission_per_lot, round_trip, rules.swap_long_per_lot, rules.swap_short_per_lot
+    );
+    println!("all figures per lot of this contract; on a 100 oz standard lot multiply gold by 100");
+    println!();
+    println!(
+        "{:<28} {:>7} {:>9} {:>9} {:>9} {:>9} {:>10} {:>11}",
+        "strategy", "trades", "trades/yr", "swap/lot", "net/lot", "ex-swap", "fixed-lot", "breakeven$"
+    );
+
+    let intraday = || vec![Filter::weekdays(), Filter::flat(1630, 1815)];
+    let mut rows: Vec<(String, fd_backtest::BacktestResult)> = Vec::new();
+    for s in registry.all() {
+        if s.needs_options() && timeline.is_none() || s.id() == "buy-and-hold" {
+            continue;
+        }
+        let p = s.default_params();
+        rows.push((s.id().to_string(), run_backtest(bars, s.as_ref(), &p, rules, timeline, Range::default())));
+        let flat = Filtered { inner: s.as_ref(), filters: intraday() };
+        rows.push((format!("{}/intraday", s.id()), run_backtest(bars, &flat, &p, rules, timeline, Range::default())));
+    }
+    let control = fd_backtest::RandomEntry;
+    let mut p = control.default_params();
+    p.set("entryRate", 0.1);
+    p.set("seed", 7.0);
+    rows.push(("null-random".to_string(), run_backtest(bars, &control, &p, rules, timeline, Range::default())));
+    let flat = Filtered { inner: &control, filters: intraday() };
+    rows.push(("null-random/intraday".to_string(), run_backtest(bars, &flat, &p, rules, timeline, Range::default())));
+
+    for (id, result) in rows {
+        let trades = result.trades.len();
+        if trades == 0 {
+            println!("{id:<28} no trades");
+            continue;
+        }
+        let lots: f64 = result.trades.iter().map(|t| t.lots).sum();
+        let swap: f64 = result.trades.iter().map(|t| t.swap_usd).sum();
+        let net: f64 = result.trades.iter().map(|t| t.pnl_usd).sum();
+        // Lot-weighted: the venue's view of a dollar per lot turned over.
+        let (swap_per_lot, net_per_lot) = (swap / lots, net / lots);
+        // Fixed-lot: the same trades at one lot each, which is what a client
+        // running a fixed size experiences. Sizing by risk weights tight-stop
+        // trades more heavily and the two can disagree.
+        let fixed: f64 = result.trades.iter().map(|t| t.pnl_usd / t.lots).sum::<f64>() / trades as f64;
+        println!(
+            "{id:<28} {trades:>7} {:>9.0} {:>9.2} {:>9.2} {:>9.2} {:>10.2} {:>11.2}",
+            trades as f64 / span_years,
+            swap_per_lot,
+            net_per_lot,
+            net_per_lot - swap_per_lot,
+            fixed,
+            -fixed
+        );
+    }
+    println!();
+    println!("net/lot is what a lot of this bot cost the client, all in; ex-swap is the same with the");
+    println!("financing removed, i.e. what the intraday version could at best reach; fixed-lot is per");
+    println!("trade at one lot. breakeven$ is the rebate per lot that leaves a fixed-lot client flat.");
     println!();
 }
 
