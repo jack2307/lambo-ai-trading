@@ -525,7 +525,9 @@ export function OfficeFloor({ departments, animate, carModel, modelsBase = '/mod
           // hips land on the seat.
           inst.group.updateMatrixWorld(true)
           const posed = new THREE.Box3().setFromObject(inst.group)
-          const y = seated ? -posed.min.y : 0
+          // The sit clip keeps the feet at the floor; lift the figure so the
+          // hips land on the seat, a little over a third of the seat height.
+          const y = seated ? -posed.min.y + pose.seat * 0.36 : 0
           inst.group.position.set(x, y, z)
           inst.group.rotation.y = yaw + CHAR_YAW
           scene.add(inst.group)
