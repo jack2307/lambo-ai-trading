@@ -23,6 +23,8 @@ import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
+import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js'
 
 export type Tone = 'arbiter' | 'veto' | 'advisory' | 'ops' | 'public'
 
@@ -61,6 +63,13 @@ interface Props {
    * reduced-motion setting and an explicit override; the scene only obeys.
    */
   animate: boolean
+  /**
+   * A glTF/GLB to stand on the lobby's plinth instead of the built-in car.
+   * Loaded after the floor is up; the primitive car holds the spot until
+   * then, so a slow network shows a car either way. Scaled to the plinth
+   * from its bounding box, whatever units it was made in.
+   */
+  carModel?: string
   className?: string
 }
 
@@ -164,7 +173,7 @@ interface Led {
   lit: boolean
 }
 
-export function OfficeFloor({ departments, animate, className }: Props) {
+export function OfficeFloor({ departments, animate, carModel, className }: Props) {
   const container = useRef<HTMLDivElement>(null)
   const labels = useRef<HTMLDivElement>(null)
 
@@ -310,6 +319,21 @@ export function OfficeFloor({ departments, animate, className }: Props) {
     const leds: Led[] = []
     const rackTags: { label: HTMLDivElement; at: THREE.Vector3 }[] = []
     let showCar: THREE.Group | null = null
+    let disposed = false
+    /** Geometry, materials and every texture a material holds. */
+    const disposeObject = (root: THREE.Object3D) => {
+      root.traverse((object) => {
+        if (object instanceof THREE.Mesh || object instanceof THREE.Sprite || object instanceof THREE.Line) {
+          object.geometry?.dispose()
+          const materials = Array.isArray(object.material) ? object.material : [object.material]
+          for (const m of materials as THREE.Material[]) {
+            if (!m) continue
+            for (const value of Object.values(m)) if (value instanceof THREE.Texture) value.dispose()
+            m.dispose()
+          }
+        }
+      })
+    }
     const leaf = new THREE.MeshPhysicalMaterial({ color: colors.mint.clone().lerp(colors.background, 0.55), roughness: 0.7 })
     const pot = new THREE.MeshPhysicalMaterial({ color: colors.elevated.clone().lerp(colors.caution, 0.12), roughness: 0.6 })
 
@@ -657,14 +681,53 @@ export function OfficeFloor({ departments, animate, className }: Props) {
         const plinthTop = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.5, 0.02, 48), equipment)
         plinthTop.position.set(dept.x, 0.13, dept.z)
         scene.add(plinthTop)
-        const car = raceCar()
-        car.position.set(dept.x, 0.14, dept.z)
-        car.rotation.y = 0.5
-        scene.add(car)
-        showCar = car
+        // The car stands in a holder that turns; the primitive car fills it
+        // now and the model replaces it when it arrives.
+        const holder = new THREE.Group()
+        holder.position.set(dept.x, 0.14, dept.z)
+        holder.rotation.y = 0.5
+        scene.add(holder)
+        const standIn = raceCar()
+        holder.add(standIn)
+        showCar = holder
+        if (carModel) {
+          const loader = new GLTFLoader()
+          loader.setMeshoptDecoder(MeshoptDecoder)
+          loader.load(
+            carModel,
+            (gltf) => {
+              if (disposed) return
+              const model = gltf.scene
+              model.traverse((o) => {
+                if (o instanceof THREE.Mesh) {
+                  o.castShadow = true
+                  o.receiveShadow = true
+                }
+              })
+              // Fit the longest side to the plinth and stand it on the top.
+              const box = new THREE.Box3().setFromObject(model)
+              const size = box.getSize(new THREE.Vector3())
+              const longest = Math.max(size.x, size.z) || 1
+              model.scale.setScalar(2.7 / longest)
+              box.setFromObject(model)
+              const centre = box.getCenter(new THREE.Vector3())
+              model.position.set(-centre.x, -box.min.y, -centre.z)
+              // The model's nose points along −z after Sketchfab's export;
+              // turn it to run along the plinth like the stand-in did.
+              if (size.z > size.x) model.rotation.y = Math.PI / 2
+              holder.remove(standIn)
+              disposeObject(standIn)
+              holder.add(model)
+            },
+            undefined,
+            () => {
+              /* the stand-in stays; a missing model is not an error worth a console line */
+            },
+          )
+        }
         const carLight = new THREE.SpotLight(colors.foreground, 4.5, 8, 0.5, 0.7, 1.2)
         carLight.position.set(dept.x, 4.2, dept.z)
-        carLight.target = car
+        carLight.target = holder
         carLight.castShadow = true
         carLight.shadow.mapSize.set(1024, 1024)
         scene.add(carLight)
@@ -1035,19 +1098,13 @@ export function OfficeFloor({ departments, animate, className }: Props) {
     frame = requestAnimationFrame(render)
 
     return () => {
+      disposed = true
       cancelAnimationFrame(frame)
       for (const t of timers) window.clearTimeout(t)
       observer.disconnect()
       controls.dispose()
       scene.environment?.dispose()
-      scene.traverse((object) => {
-        if (object instanceof THREE.Mesh || object instanceof THREE.Sprite || object instanceof THREE.Line) {
-          object.geometry?.dispose()
-          const material = object.material as THREE.Material | THREE.Material[]
-          if (Array.isArray(material)) material.forEach((m) => m.dispose())
-          else material?.dispose()
-        }
-      })
+      disposeObject(scene)
       ringGeometry.dispose()
       ledGeometry.dispose()
       glow.dispose()
@@ -1056,7 +1113,7 @@ export function OfficeFloor({ departments, animate, className }: Props) {
       renderer.dispose()
       renderer.domElement.remove()
     }
-  }, [departments, animate])
+  }, [departments, animate, carModel])
 
   return (
     <div

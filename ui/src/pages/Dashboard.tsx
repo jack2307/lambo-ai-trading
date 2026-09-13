@@ -108,6 +108,21 @@ const OfficeFloor = lazy(() => import('@/components/dashboard/OfficeFloor').then
 type Filter = 'all' | 'promising' | 'thin'
 
 /**
+ * The show car in the lobby. A Sketchfab model, CC BY-NC 4.0: the author is
+ * credited under the scene, and it may not ship in anything sold — this
+ * dashboard is the owner's own tool. Swap the file and the credit together.
+ */
+const CAR_MODEL = {
+  path: '/models/f1-75.glb',
+  title: 'Ferrari F1-75',
+  url: 'https://sketchfab.com/3d-models/ferrari-f1-75-06454e0f23a44fcdabcc7808aee6caf9',
+  author: 'Sketcher',
+  authorUrl: 'https://sketchfab.com/sketcher987654321',
+  license: 'CC BY-NC 4.0',
+  licenseUrl: 'http://creativecommons.org/licenses/by-nc/4.0/',
+} as const
+
+/**
  * Motion on the floor: follows the system's reduced-motion setting unless
  * the reader has said otherwise here. Windows with "animation effects" off
  * reports reduced motion, and the floor then stands still — which reads as
@@ -315,7 +330,7 @@ export function Dashboard({ catalog, market, onError }: Props) {
         <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
           <Panel className="relative min-h-[460px] overflow-hidden">
             <Suspense fallback={<Skeleton className="absolute inset-0 rounded-[inherit]" />}>
-              <OfficeFloor departments={DEPARTMENTS} animate={animate} className="absolute inset-0" />
+              <OfficeFloor departments={DEPARTMENTS} animate={animate} carModel={CAR_MODEL.path} className="absolute inset-0" />
             </Suspense>
             {/* Which model each wing runs on. The arbiter's is the session's
                 and is set by hand; the rest are read from the agent
@@ -404,6 +419,21 @@ export function Dashboard({ catalog, market, onError }: Props) {
             <p className="text-muted-foreground border-border mt-4 border-t pt-3 text-[11px] leading-relaxed">
               No walls but one: the veto desks sit in a row between the engine and the glass office, and a file
               passes all three or goes back to the archive. The gates are not up for a vote at any desk.
+            </p>
+            <p className="text-muted-foreground mt-2 text-[10px] leading-relaxed">
+              Show car:{' '}
+              <a href={CAR_MODEL.url} className="hover:text-foreground underline underline-offset-2" target="_blank" rel="noreferrer">
+                {CAR_MODEL.title}
+              </a>{' '}
+              by{' '}
+              <a href={CAR_MODEL.authorUrl} className="hover:text-foreground underline underline-offset-2" target="_blank" rel="noreferrer">
+                {CAR_MODEL.author}
+              </a>
+              ,{' '}
+              <a href={CAR_MODEL.licenseUrl} className="hover:text-foreground underline underline-offset-2" target="_blank" rel="noreferrer">
+                {CAR_MODEL.license}
+              </a>
+              .
             </p>
           </Panel>
         </div>
