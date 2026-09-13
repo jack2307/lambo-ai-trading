@@ -9,9 +9,12 @@
 //! * **They are opt-in for a backtest.** The prototype's backtest engine never
 //!   applied them — only its live decision path did — and the parity gate
 //!   proves this port reproduces that engine. So `run_backtest` takes `None`
-//!   and reproduces the oracle; `search`, the API and the live loop pass the
-//!   configured guards and get the bounded behaviour. A backtest with guards
-//!   and one without are different questions, and both are worth asking.
+//!   and reproduces the oracle; the API passes the configured guards when a
+//!   request asks for them (`guards: true`, off by default). `search` and the
+//!   examples run unguarded, so every receipt under `docs/research/runs/` is
+//!   an unguarded number; and there is no live loop yet. A backtest with
+//!   guards and one without are different questions, and both are worth
+//!   asking.
 //! * **They were configuration with no reader.** `GuardsConfig` existed in
 //!   `config/default.toml` and nothing in the engine read it. A limit that is
 //!   read by no code is not a limit, it is an intention — and the day that
