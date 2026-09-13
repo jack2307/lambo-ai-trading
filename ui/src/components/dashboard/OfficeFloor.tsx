@@ -19,7 +19,7 @@
  * in code are those tokens lightened or darkened.
  */
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
@@ -127,6 +127,8 @@ interface Cluster {
   /** Where the aisle meets the cluster. */
   aisle: THREE.Vector3
   rugMaterial: THREE.MeshPhysicalMaterial
+  /** The rug, which is what a click on the department hits. */
+  rug: THREE.Mesh
   label: HTMLDivElement
   figures: Figure[]
   glow: number
@@ -176,6 +178,8 @@ interface Led {
 export function OfficeFloor({ departments, animate, carModel, className }: Props) {
   const container = useRef<HTMLDivElement>(null)
   const labels = useRef<HTMLDivElement>(null)
+  const [zoomed, setZoomed] = useState(false)
+  const resetRef = useRef<() => void>(() => {})
 
   useEffect(() => {
     const host = container.current
@@ -229,7 +233,12 @@ export function OfficeFloor({ departments, animate, carModel, className }: Props
     camera.position.set(17, 21, 31)
 
     const controls = new OrbitControls(camera, renderer.domElement)
+    // The wheel zooms only once the scene has been clicked (or with Ctrl
+    // held), so scrolling the page over the panel still scrolls the page.
     controls.enableZoom = false
+    controls.zoomToCursor = true
+    controls.minDistance = 5
+    controls.maxDistance = 52
     controls.enablePan = false
     controls.enableDamping = true
     controls.dampingFactor = 0.06
@@ -320,6 +329,7 @@ export function OfficeFloor({ departments, animate, carModel, className }: Props
     const rackTags: { label: HTMLDivElement; at: THREE.Vector3 }[] = []
     let showCar: THREE.Group | null = null
     const fans: THREE.Mesh[] = []
+    const rugMeshes: THREE.Mesh[] = []
     let disposed = false
     /** Geometry, materials and every texture a material holds. */
     const disposeObject = (root: THREE.Object3D) => {
@@ -670,6 +680,7 @@ export function OfficeFloor({ departments, animate, carModel, className }: Props
       mat.position.set(dept.x, 0.006, dept.z)
       mat.receiveShadow = true
       scene.add(mat)
+      rugMeshes.push(mat)
 
       const facing: 1 | -1 = dept.z < 0 ? 1 : -1 // toward the aisle
       const centre = new THREE.Vector3(dept.x, 0, dept.z)
@@ -678,6 +689,7 @@ export function OfficeFloor({ departments, animate, carModel, className }: Props
         centre,
         aisle: new THREE.Vector3(dept.x, 0, 0),
         rugMaterial,
+        rug: mat,
         label: document.createElement('div'),
         figures: [],
         glow: 0,
@@ -1284,6 +1296,88 @@ export function OfficeFloor({ departments, animate, carModel, className }: Props
       return out.copy(segment[segment.length - 1])
     }
 
+    /* ---- the view: click a department to fly to it, double-click to come back ---- */
+    const home = { position: camera.position.clone(), target: controls.target.clone() }
+    let goal: { position: THREE.Vector3; target: THREE.Vector3 } | null = null
+    let focused = false
+    let hovered: Cluster | null = null
+    const raycaster = new THREE.Raycaster()
+    const pointer = new THREE.Vector2()
+    const pressed = { x: 0, y: 0 }
+
+    const pick = (event: PointerEvent): Cluster | null => {
+      const rect = renderer.domElement.getBoundingClientRect()
+      pointer.set(((event.clientX - rect.left) / rect.width) * 2 - 1, -((event.clientY - rect.top) / rect.height) * 2 + 1)
+      raycaster.setFromCamera(pointer, camera)
+      const hit = raycaster.intersectObjects(rugMeshes, false)[0]
+      return hit ? (clusters.find((c) => c.rug === hit.object) ?? null) : null
+    }
+    const flyTo = (c: Cluster) => {
+      // Close enough to read the desks, from the same side the floor is seen.
+      const span = Math.max(c.dept.w, c.dept.d)
+      const distance = span * 1.35 + 4.5
+      const from = new THREE.Vector3(0.5, 0.72, 0.85).normalize()
+      const target = c.centre.clone().setY(0.6)
+      goal = { target, position: target.clone().add(from.multiplyScalar(distance)) }
+      controls.autoRotate = false
+      setZoomed(true)
+    }
+    const resetView = () => {
+      goal = { position: home.position.clone(), target: home.target.clone() }
+      controls.autoRotate = !reduceMotion
+      setZoomed(false)
+    }
+    resetRef.current = resetView
+
+    const onWheel = (event: WheelEvent) => {
+      controls.enableZoom = focused || event.ctrlKey || event.metaKey
+      if (controls.enableZoom) {
+        goal = null
+        controls.autoRotate = false
+        setZoomed(true)
+      }
+    }
+    const onPointerDown = (event: PointerEvent) => {
+      focused = true
+      pressed.x = event.clientX
+      pressed.y = event.clientY
+    }
+    let pickTimer = 0
+    const onPointerUp = (event: PointerEvent) => {
+      // A drag orbits; a click (no travel) picks — after a beat, so the two
+      // clicks of a double-click do not fly somewhere before the reset.
+      if (Math.hypot(event.clientX - pressed.x, event.clientY - pressed.y) > 5) return
+      const c = pick(event)
+      window.clearTimeout(pickTimer)
+      if (c) pickTimer = window.setTimeout(() => flyTo(c), 260)
+    }
+    const onPointerMove = (event: PointerEvent) => {
+      hovered = pick(event)
+      host.style.cursor = hovered ? 'pointer' : 'grab'
+    }
+    const onPointerLeave = () => {
+      focused = false
+      hovered = null
+      controls.enableZoom = false
+    }
+    const onDoubleClick = () => {
+      window.clearTimeout(pickTimer)
+      resetView()
+    }
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') resetView()
+    }
+    host.addEventListener('wheel', onWheel, { capture: true, passive: true })
+    host.addEventListener('pointerdown', onPointerDown)
+    host.addEventListener('pointerup', onPointerUp)
+    host.addEventListener('pointermove', onPointerMove)
+    host.addEventListener('pointerleave', onPointerLeave)
+    host.addEventListener('dblclick', onDoubleClick)
+    host.addEventListener('keydown', onKey)
+    host.tabIndex = 0
+    host.style.cursor = 'grab'
+    host.style.outline = 'none'
+
     /* ---- resize ---- */
     const resize = () => {
       const { width, height } = host.getBoundingClientRect()
@@ -1401,6 +1495,15 @@ export function OfficeFloor({ departments, animate, carModel, className }: Props
         }
       }
 
+      if (goal) {
+        // Exponential ease toward the goal, frame-rate independent.
+        const k = 1 - Math.pow(0.002, dt)
+        camera.position.lerp(goal.position, k)
+        controls.target.lerp(goal.target, k)
+        if (camera.position.distanceTo(goal.position) < 0.03 && controls.target.distanceTo(goal.target) < 0.03) goal = null
+      }
+      if (hovered) hovered.glow = Math.max(hovered.glow, 0.3)
+
       controls.update()
       renderer.render(scene, camera)
 
@@ -1425,6 +1528,15 @@ export function OfficeFloor({ departments, animate, carModel, className }: Props
 
     return () => {
       disposed = true
+      window.clearTimeout(pickTimer)
+      host.removeEventListener('wheel', onWheel, { capture: true })
+      host.removeEventListener('pointerdown', onPointerDown)
+      host.removeEventListener('pointerup', onPointerUp)
+      host.removeEventListener('pointermove', onPointerMove)
+      host.removeEventListener('pointerleave', onPointerLeave)
+      host.removeEventListener('dblclick', onDoubleClick)
+      host.removeEventListener('keydown', onKey)
+      host.style.cursor = ''
       cancelAnimationFrame(frame)
       for (const t of timers) window.clearTimeout(t)
       observer.disconnect()
@@ -1449,6 +1561,16 @@ export function OfficeFloor({ departments, animate, carModel, className }: Props
     >
       <div ref={container} className="absolute inset-0 [&>canvas]:block [&>canvas]:h-full [&>canvas]:w-full" />
       <div ref={labels} className="pointer-events-none absolute inset-0" aria-hidden />
+      {zoomed && (
+        <button
+          type="button"
+          onClick={() => resetRef.current()}
+          className="bg-background/70 border-border hover:bg-accent/60 absolute top-3 right-4 rounded-full border px-2.5 py-1 text-[11px] backdrop-blur transition-colors"
+          title="Back to the whole floor (double-click or Esc)"
+        >
+          ↩ whole floor
+        </button>
+      )}
     </div>
   )
 }

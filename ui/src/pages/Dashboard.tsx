@@ -368,7 +368,7 @@ export function Dashboard({ catalog, market, onError }: Props) {
               <span className="flex items-center gap-1.5">
                 <span className="bg-primary size-2 rounded-full" aria-hidden /> on the arbiter's desk
               </span>
-              <span className="text-muted-foreground">drag to orbit</span>
+              <span className="text-muted-foreground">drag to orbit · click a department to zoom in · double-click to come back</span>
             </div>
             {/* Motion: the one control on the scene. Reads the system setting,
                 says so when that is what stopped it, and lets the reader
