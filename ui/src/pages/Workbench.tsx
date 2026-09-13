@@ -246,6 +246,41 @@ export function Workbench({ catalog, market, onError }: Props) {
               className="border-input bg-background num focus-visible:ring-ring/50 mt-1 w-full resize-none rounded-md border px-2 py-1 text-[11px] focus-visible:ring-[3px] focus-visible:outline-none"
             />
           </label>
+          {/* Quick ranges: back from today, in UTC. */}
+          <div className="mt-2 flex flex-wrap gap-1">
+            {(
+              [
+                ['1W', 0, 7], ['2W', 0, 14], ['1M', 1, 0], ['2M', 2, 0], ['3M', 3, 0], ['6M', 6, 0],
+                ['1Y', 12, 0], ['2Y', 24, 0], ['3Y', 36, 0], ['YTD', -1, 0], ['All', -2, 0],
+              ] as [string, number, number][]
+            ).map(([label, months, days]) => {
+              const iso = (d: Date) => d.toISOString().slice(0, 10)
+              const pick = () => {
+                const now = new Date()
+                if (months === -2) {
+                  setRangeFrom('')
+                  setRangeTo('')
+                  return
+                }
+                const from = new Date(now)
+                if (months === -1) from.setUTCMonth(0, 1)
+                else if (days) from.setUTCDate(from.getUTCDate() - days)
+                else from.setUTCMonth(from.getUTCMonth() - months)
+                setRangeFrom(iso(from))
+                setRangeTo(iso(now))
+              }
+              return (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={pick}
+                  className="border-border bg-background hover:bg-accent/60 rounded border px-1.5 py-0.5 font-mono text-[10px] transition-colors"
+                >
+                  {label}
+                </button>
+              )
+            })}
+          </div>
           <div className="mt-2 grid grid-cols-2 gap-2">
             <label className="block">
               <span className="text-muted-foreground block text-[11px]">from (UTC)</span>
