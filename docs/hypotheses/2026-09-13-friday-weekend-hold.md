@@ -88,3 +88,15 @@ and written into the batch's receipt header (the runner prints it).
 - Passes the primary and not the confirmation, or the reverse → closed for
   good; the row is a property of some years and not others.
 - Fails the primary → closed for good; the 2018–2025 pass was the decade.
+
+## Coverage, counted before the run
+
+`xauduka` 15m, 2010-06-01 → 2018-06-15: 191,893 bars on 2,505 days (the
+converter dropped 677,967 flat closed-market minutes). Fridays with a 16:15
+New York bar: 402 of 411 Friday days with bars; Monday–Thursday: 1,624 of
+1,680. Friday's last bar is 16:45 New York in every year and season (the
+17:00 close held throughout); Sunday's first bar is 18:00 in every year. The
+weekday daily break did not exist on this feed before 2013 — Monday–Thursday
+carry bars at 17:00–17:45 through 2012 — so the prediction row's "across the
+close" is literal only from 2013; the Friday row's structure is the same in
+all eight years. Fridays by year: 2010 31, 2011–2017 48–51, 2018 23.
