@@ -750,6 +750,7 @@ export function OfficeFloor({ departments, animate, carModel, modelsBase = '/mod
 
     let plantCount = 0
     const plant = (x: number, z: number, scale = 1) => {
+      if (NO_PLANTS) return
       const inVase = ['pachira', 'fern', 'anthurium', 'sorrel'] as const
       const kind = inVase[plantCount % inVase.length]
       const low = photo('vaseLow', { height: 0.4 * scale })
@@ -788,7 +789,10 @@ export function OfficeFloor({ departments, animate, carModel, modelsBase = '/mod
     }
 
     /** A tall floor plant: the big potted one when it is here, else a palm of cones. */
+    /** No plants on this floor, by the owner's word. The builders stay for when that changes. */
+    const NO_PLANTS = true
     const palm = (x: number, z: number, scale = 1) => {
+      if (NO_PLANTS) return
       // A money tree standing in a tall ceramic pot, its crown at head
       // height and above; the potted plant when it is not here.
       const vase = photo('vaseTall', { height: 0.62 * scale })
