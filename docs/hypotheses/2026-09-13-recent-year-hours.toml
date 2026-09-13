@@ -1,0 +1,177 @@
+[run]
+in_sample = "xauusd:15m"
+in_sample_from = "2025-09-13"
+in_sample_to = "2026-09-12"
+out_of_sample = "xauduka:15m"
+out_of_sample_from = "2022-06-16"
+out_of_sample_to = "2025-04-10"
+seeds = 200
+direction_samples = 1000
+
+[[hypothesis]]
+label = "hold/00-02-long"
+base = "session-hold"
+filters = ["weekdays", "hours:0000-0005"]
+overrides = { from = 0, to = 200, side = 1 }
+why = "long from 00:00 to 02:00 New York; the null holds random sides from the same bar"
+
+[[hypothesis]]
+label = "hold/00-02-short"
+base = "session-hold"
+filters = ["weekdays", "hours:0000-0005"]
+overrides = { from = 0, to = 200, side = -1 }
+why = "short from 00:00 to 02:00 New York; the null holds random sides from the same bar"
+
+[[hypothesis]]
+label = "hold/02-04-long"
+base = "session-hold"
+filters = ["weekdays", "hours:0200-0205"]
+overrides = { from = 200, to = 400, side = 1 }
+why = "long from 02:00 to 04:00 New York; the null holds random sides from the same bar"
+
+[[hypothesis]]
+label = "hold/02-04-short"
+base = "session-hold"
+filters = ["weekdays", "hours:0200-0205"]
+overrides = { from = 200, to = 400, side = -1 }
+why = "short from 02:00 to 04:00 New York; the null holds random sides from the same bar"
+
+[[hypothesis]]
+label = "hold/04-06-long"
+base = "session-hold"
+filters = ["weekdays", "hours:0400-0405"]
+overrides = { from = 400, to = 600, side = 1 }
+why = "long from 04:00 to 06:00 New York; the null holds random sides from the same bar"
+
+[[hypothesis]]
+label = "hold/04-06-short"
+base = "session-hold"
+filters = ["weekdays", "hours:0400-0405"]
+overrides = { from = 400, to = 600, side = -1 }
+why = "short from 04:00 to 06:00 New York; the null holds random sides from the same bar"
+
+[[hypothesis]]
+label = "hold/06-08-long"
+base = "session-hold"
+filters = ["weekdays", "hours:0600-0605"]
+overrides = { from = 600, to = 800, side = 1 }
+why = "long from 06:00 to 08:00 New York; the null holds random sides from the same bar"
+
+[[hypothesis]]
+label = "hold/06-08-short"
+base = "session-hold"
+filters = ["weekdays", "hours:0600-0605"]
+overrides = { from = 600, to = 800, side = -1 }
+why = "short from 06:00 to 08:00 New York; the null holds random sides from the same bar"
+
+[[hypothesis]]
+label = "hold/08-10-long"
+base = "session-hold"
+filters = ["weekdays", "hours:0800-0805"]
+overrides = { from = 800, to = 1000, side = 1 }
+why = "long from 08:00 to 10:00 New York; the null holds random sides from the same bar"
+
+[[hypothesis]]
+label = "hold/08-10-short"
+base = "session-hold"
+filters = ["weekdays", "hours:0800-0805"]
+overrides = { from = 800, to = 1000, side = -1 }
+why = "short from 08:00 to 10:00 New York; the null holds random sides from the same bar"
+
+[[hypothesis]]
+label = "hold/10-12-long"
+base = "session-hold"
+filters = ["weekdays", "hours:1000-1005"]
+overrides = { from = 1000, to = 1200, side = 1 }
+why = "long from 10:00 to 12:00 New York; the null holds random sides from the same bar"
+
+[[hypothesis]]
+label = "hold/10-12-short"
+base = "session-hold"
+filters = ["weekdays", "hours:1000-1005"]
+overrides = { from = 1000, to = 1200, side = -1 }
+why = "short from 10:00 to 12:00 New York; the null holds random sides from the same bar"
+
+[[hypothesis]]
+label = "hold/12-14-long"
+base = "session-hold"
+filters = ["weekdays", "hours:1200-1205"]
+overrides = { from = 1200, to = 1400, side = 1 }
+why = "long from 12:00 to 14:00 New York; the null holds random sides from the same bar"
+
+[[hypothesis]]
+label = "hold/12-14-short"
+base = "session-hold"
+filters = ["weekdays", "hours:1200-1205"]
+overrides = { from = 1200, to = 1400, side = -1 }
+why = "short from 12:00 to 14:00 New York; the null holds random sides from the same bar"
+
+[[hypothesis]]
+label = "hold/14-16-long"
+base = "session-hold"
+filters = ["weekdays", "hours:1400-1405"]
+overrides = { from = 1400, to = 1600, side = 1 }
+why = "long from 14:00 to 16:00 New York; the null holds random sides from the same bar"
+
+[[hypothesis]]
+label = "hold/14-16-short"
+base = "session-hold"
+filters = ["weekdays", "hours:1400-1405"]
+overrides = { from = 1400, to = 1600, side = -1 }
+why = "short from 14:00 to 16:00 New York; the null holds random sides from the same bar"
+
+[[hypothesis]]
+label = "hold/16-18-long"
+base = "session-hold"
+filters = ["weekdays", "hours:1600-1605"]
+overrides = { from = 1600, to = 1800, side = 1 }
+why = "long from 16:00 to 18:00 New York; the null holds random sides from the same bar"
+
+[[hypothesis]]
+label = "hold/16-18-short"
+base = "session-hold"
+filters = ["weekdays", "hours:1600-1605"]
+overrides = { from = 1600, to = 1800, side = -1 }
+why = "short from 16:00 to 18:00 New York; the null holds random sides from the same bar"
+
+[[hypothesis]]
+label = "hold/18-20-long"
+base = "session-hold"
+filters = ["weekdays", "hours:1800-1805"]
+overrides = { from = 1800, to = 2000, side = 1 }
+why = "long from 18:00 to 20:00 New York; the null holds random sides from the same bar"
+
+[[hypothesis]]
+label = "hold/18-20-short"
+base = "session-hold"
+filters = ["weekdays", "hours:1800-1805"]
+overrides = { from = 1800, to = 2000, side = -1 }
+why = "short from 18:00 to 20:00 New York; the null holds random sides from the same bar"
+
+[[hypothesis]]
+label = "hold/20-22-long"
+base = "session-hold"
+filters = ["weekdays", "hours:2000-2005"]
+overrides = { from = 2000, to = 2200, side = 1 }
+why = "long from 20:00 to 22:00 New York; the null holds random sides from the same bar"
+
+[[hypothesis]]
+label = "hold/20-22-short"
+base = "session-hold"
+filters = ["weekdays", "hours:2000-2005"]
+overrides = { from = 2000, to = 2200, side = -1 }
+why = "short from 20:00 to 22:00 New York; the null holds random sides from the same bar"
+
+[[hypothesis]]
+label = "hold/22-00-long"
+base = "session-hold"
+filters = ["weekdays", "hours:2200-2205"]
+overrides = { from = 2200, to = 0, side = 1 }
+why = "long from 22:00 to 00:00 New York; the null holds random sides from the same bar"
+
+[[hypothesis]]
+label = "hold/22-00-short"
+base = "session-hold"
+filters = ["weekdays", "hours:2200-2205"]
+overrides = { from = 2200, to = 0, side = -1 }
+why = "short from 22:00 to 00:00 New York; the null holds random sides from the same bar"

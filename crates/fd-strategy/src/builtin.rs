@@ -63,6 +63,11 @@ pub fn register_all(registry: &mut Registry) {
     registry.register(Box::new(crate::gap_fade::GapFade));
     registry.register(Box::new(crate::trend_pullback::TrendPullback));
     registry.register(Box::new(crate::volume_thrust::VolumeThrust));
+    registry.register(Box::new(crate::screen::KeltnerBreak));
+    registry.register(Box::new(crate::screen::MacdCross));
+    registry.register(Box::new(crate::screen::Rsi2Pullback));
+    registry.register(Box::new(crate::screen::SqueezeBreak));
+    registry.register(Box::new(crate::screen::StochReversal));
 }
 
 /* ---------------- classic technical baselines ---------------- */

@@ -1,0 +1,247 @@
+[run]
+in_sample = "xauusd:15m"
+in_sample_from = "2025-09-13"
+in_sample_to = "2026-09-12"
+out_of_sample = "xauduka:15m"
+out_of_sample_from = "2022-06-16"
+out_of_sample_to = "2025-04-10"
+seeds = 200
+direction_samples = 1000
+
+[[hypothesis]]
+label = "ema-cross/all"
+base = "ema-cross"
+filters = ["weekdays", "flat:1630-1815"]
+overrides = {}
+why = "the moving-average cross baseline, all day"
+
+[[hypothesis]]
+label = "ema-cross/ny"
+base = "ema-cross"
+filters = ["weekdays", "flat:1630-1815", "hours:0800-1600"]
+overrides = {}
+why = "the moving-average cross baseline, New York hours"
+
+[[hypothesis]]
+label = "rsi-reversion/all"
+base = "rsi-reversion"
+filters = ["weekdays", "flat:1630-1815"]
+overrides = {}
+why = "the RSI reversion baseline, all day"
+
+[[hypothesis]]
+label = "rsi-reversion/ny"
+base = "rsi-reversion"
+filters = ["weekdays", "flat:1630-1815", "hours:0800-1600"]
+overrides = {}
+why = "the RSI reversion baseline, New York hours"
+
+[[hypothesis]]
+label = "donchian-breakout/all"
+base = "donchian-breakout"
+filters = ["weekdays", "flat:1630-1815"]
+overrides = {}
+why = "the channel breakout baseline, all day"
+
+[[hypothesis]]
+label = "donchian-breakout/ny"
+base = "donchian-breakout"
+filters = ["weekdays", "flat:1630-1815", "hours:0800-1600"]
+overrides = {}
+why = "the channel breakout baseline, New York hours"
+
+[[hypothesis]]
+label = "bb-fade/all"
+base = "bb-fade"
+filters = ["weekdays", "flat:1630-1815"]
+overrides = {}
+why = "the Bollinger fade baseline, all day"
+
+[[hypothesis]]
+label = "bb-fade/ny"
+base = "bb-fade"
+filters = ["weekdays", "flat:1630-1815", "hours:0800-1600"]
+overrides = {}
+why = "the Bollinger fade baseline, New York hours"
+
+[[hypothesis]]
+label = "orb/all"
+base = "orb"
+filters = ["weekdays", "flat:1630-1815"]
+overrides = {}
+why = "the opening-range breakout, all day"
+
+[[hypothesis]]
+label = "orb/ny"
+base = "orb"
+filters = ["weekdays", "flat:1630-1815", "hours:0800-1600"]
+overrides = {}
+why = "the opening-range breakout, New York hours"
+
+[[hypothesis]]
+label = "pdhl/all"
+base = "pdhl"
+filters = ["weekdays", "flat:1630-1815"]
+overrides = {}
+why = "previous-day high and low, fade and break, all day"
+
+[[hypothesis]]
+label = "pdhl/ny"
+base = "pdhl"
+filters = ["weekdays", "flat:1630-1815", "hours:0800-1600"]
+overrides = {}
+why = "previous-day high and low, fade and break, New York hours"
+
+[[hypothesis]]
+label = "vwap-fade/all"
+base = "vwap-fade"
+filters = ["weekdays", "flat:1630-1815"]
+overrides = {}
+why = "a stretch from session VWAP fades, all day"
+
+[[hypothesis]]
+label = "vwap-fade/ny"
+base = "vwap-fade"
+filters = ["weekdays", "flat:1630-1815", "hours:0800-1600"]
+overrides = {}
+why = "a stretch from session VWAP fades, New York hours"
+
+[[hypothesis]]
+label = "doji-reversal/all"
+base = "doji-reversal"
+filters = ["weekdays", "flat:1630-1815"]
+overrides = {}
+why = "a doji at the end of a move fades, all day"
+
+[[hypothesis]]
+label = "doji-reversal/ny"
+base = "doji-reversal"
+filters = ["weekdays", "flat:1630-1815", "hours:0800-1600"]
+overrides = {}
+why = "a doji at the end of a move fades, New York hours"
+
+[[hypothesis]]
+label = "trend-pullback/all"
+base = "trend-pullback"
+filters = ["weekdays", "flat:1630-1815"]
+overrides = {}
+why = "the first pullback in a slow trend continues it, all day"
+
+[[hypothesis]]
+label = "trend-pullback/ny"
+base = "trend-pullback"
+filters = ["weekdays", "flat:1630-1815", "hours:0800-1600"]
+overrides = {}
+why = "the first pullback in a slow trend continues it, New York hours"
+
+[[hypothesis]]
+label = "gap-fade/all"
+base = "gap-fade"
+filters = ["weekdays", "flat:1630-1815"]
+overrides = {}
+why = "the reopen gap fills, all day"
+
+[[hypothesis]]
+label = "gap-fade/ny"
+base = "gap-fade"
+filters = ["weekdays", "flat:1630-1815", "hours:0800-1600"]
+overrides = {}
+why = "the reopen gap fills, New York hours"
+
+[[hypothesis]]
+label = "volume-thrust/all"
+base = "volume-thrust"
+filters = ["weekdays", "flat:1630-1815"]
+overrides = {}
+why = "a bar on unusual volume that closes at its extreme continues, all day"
+
+[[hypothesis]]
+label = "volume-thrust/ny"
+base = "volume-thrust"
+filters = ["weekdays", "flat:1630-1815", "hours:0800-1600"]
+overrides = {}
+why = "a bar on unusual volume that closes at its extreme continues, New York hours"
+
+[[hypothesis]]
+label = "ict-sweep-mss-fvg/all"
+base = "ict-sweep-mss-fvg"
+filters = ["weekdays", "flat:1630-1815"]
+overrides = {}
+why = "sweep, shift, gap: the ICT chain, all day"
+
+[[hypothesis]]
+label = "ict-sweep-mss-fvg/ny"
+base = "ict-sweep-mss-fvg"
+filters = ["weekdays", "flat:1630-1815", "hours:0800-1600"]
+overrides = {}
+why = "sweep, shift, gap: the ICT chain, New York hours"
+
+[[hypothesis]]
+label = "keltner-break/all"
+base = "keltner-break"
+filters = ["weekdays", "flat:1630-1815"]
+overrides = {}
+why = "a close outside the Keltner channel continues, all day"
+
+[[hypothesis]]
+label = "keltner-break/ny"
+base = "keltner-break"
+filters = ["weekdays", "flat:1630-1815", "hours:0800-1600"]
+overrides = {}
+why = "a close outside the Keltner channel continues, New York hours"
+
+[[hypothesis]]
+label = "macd-cross/all"
+base = "macd-cross"
+filters = ["weekdays", "flat:1630-1815"]
+overrides = {}
+why = "the MACD line crossing its signal, all day"
+
+[[hypothesis]]
+label = "macd-cross/ny"
+base = "macd-cross"
+filters = ["weekdays", "flat:1630-1815", "hours:0800-1600"]
+overrides = {}
+why = "the MACD line crossing its signal, New York hours"
+
+[[hypothesis]]
+label = "rsi2-pullback/all"
+base = "rsi2-pullback"
+filters = ["weekdays", "flat:1630-1815"]
+overrides = {}
+why = "RSI(2) extremes with the SMA200 trend, all day"
+
+[[hypothesis]]
+label = "rsi2-pullback/ny"
+base = "rsi2-pullback"
+filters = ["weekdays", "flat:1630-1815", "hours:0800-1600"]
+overrides = {}
+why = "RSI(2) extremes with the SMA200 trend, New York hours"
+
+[[hypothesis]]
+label = "squeeze-break/all"
+base = "squeeze-break"
+filters = ["weekdays", "flat:1630-1815"]
+overrides = {}
+why = "a Bollinger squeeze, then a close outside the bands, all day"
+
+[[hypothesis]]
+label = "squeeze-break/ny"
+base = "squeeze-break"
+filters = ["weekdays", "flat:1630-1815", "hours:0800-1600"]
+overrides = {}
+why = "a Bollinger squeeze, then a close outside the bands, New York hours"
+
+[[hypothesis]]
+label = "stoch-reversal/all"
+base = "stoch-reversal"
+filters = ["weekdays", "flat:1630-1815"]
+overrides = {}
+why = "stochastic crossing from an extreme, all day"
+
+[[hypothesis]]
+label = "stoch-reversal/ny"
+base = "stoch-reversal"
+filters = ["weekdays", "flat:1630-1815", "hours:0800-1600"]
+overrides = {}
+why = "stochastic crossing from an extreme, New York hours"
