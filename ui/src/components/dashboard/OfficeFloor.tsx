@@ -24,7 +24,7 @@ import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 
-export type Tone = 'arbiter' | 'veto' | 'advisory' | 'ops'
+export type Tone = 'arbiter' | 'veto' | 'advisory' | 'ops' | 'public'
 
 export interface Occupant {
   id: string
@@ -48,7 +48,7 @@ export interface Department {
   occupants: Occupant[]
   /** Desks in one row facing the aisle, or two rows facing each other. */
   arrange?: 'row' | 'grid'
-  furniture?: 'racks' | 'engine' | 'shelves'
+  furniture?: 'racks' | 'engine' | 'shelves' | 'lounge' | 'meeting'
   /** One rack per feed, named on the floor in front of it. */
   racks?: string[]
 }
@@ -64,8 +64,11 @@ interface Props {
   className?: string
 }
 
-const FLOOR_W = 19
+const FLOOR_W = 25
 const FLOOR_D = 11.5
+/** The aisle runs from the reception at the west end to the east wall. */
+const AISLE_X0 = -8.6
+const AISLE_X1 = 12.0
 const GLASS_H = 1.35
 
 function token(name: string, fallback: string): string {
@@ -184,7 +187,15 @@ export function OfficeFloor({ departments, animate, className }: Props) {
       elevated: new THREE.Color(token('--elevated', '#1a1c1a')),
     }
     const toneColor = (tone: Tone) =>
-      tone === 'arbiter' ? colors.primary : tone === 'veto' ? colors.caution : tone === 'ops' ? colors.mint : colors.foreground.clone().lerp(colors.muted, 0.3)
+      tone === 'arbiter'
+        ? colors.primary
+        : tone === 'veto'
+          ? colors.caution
+          : tone === 'ops'
+            ? colors.mint
+            : tone === 'public'
+              ? colors.muted.clone().lerp(colors.foreground, 0.25)
+              : colors.foreground.clone().lerp(colors.muted, 0.3)
 
     /* ---- renderer ---- */
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'low-power' })
@@ -198,7 +209,7 @@ export function OfficeFloor({ departments, animate, className }: Props) {
     host.appendChild(renderer.domElement)
 
     const scene = new THREE.Scene()
-    scene.fog = new THREE.Fog(colors.card, 26, 46)
+    scene.fog = new THREE.Fog(colors.card, 34, 60)
 
     const pmrem = new THREE.PMREMGenerator(renderer)
     scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture
@@ -206,7 +217,7 @@ export function OfficeFloor({ departments, animate, className }: Props) {
     pmrem.dispose()
 
     const camera = new THREE.PerspectiveCamera(28, 1, 0.1, 120)
-    camera.position.set(12.5, 14.5, 20.5)
+    camera.position.set(17.5, 20.5, 28.5)
 
     const controls = new OrbitControls(camera, renderer.domElement)
     controls.enableZoom = false
@@ -217,7 +228,7 @@ export function OfficeFloor({ departments, animate, className }: Props) {
     controls.autoRotateSpeed = 0.12
     controls.minPolarAngle = Math.PI * 0.2
     controls.maxPolarAngle = Math.PI * 0.36
-    controls.target.set(0.4, 0.2, 0.4)
+    controls.target.set(0.2, 0.2, 0.6)
 
     /* ---- light: a warm key as if from a window wall, a cool fill ---- */
     scene.add(new THREE.HemisphereLight(colors.foreground, colors.background, 0.45))
@@ -225,10 +236,10 @@ export function OfficeFloor({ departments, animate, className }: Props) {
     key.position.set(-10, 15, 8)
     key.castShadow = true
     key.shadow.mapSize.set(2048, 2048)
-    key.shadow.camera.left = -13
-    key.shadow.camera.right = 13
-    key.shadow.camera.top = 13
-    key.shadow.camera.bottom = -13
+    key.shadow.camera.left = -16
+    key.shadow.camera.right = 16
+    key.shadow.camera.top = 16
+    key.shadow.camera.bottom = -16
     key.shadow.camera.near = 1
     key.shadow.camera.far = 50
     key.shadow.bias = -0.0004
@@ -263,11 +274,11 @@ export function OfficeFloor({ departments, animate, className }: Props) {
       scene.add(line)
     }
     const aisle = new THREE.Mesh(
-      new THREE.PlaneGeometry(FLOOR_W - 1.5, 1.2),
+      new THREE.PlaneGeometry(AISLE_X1 - AISLE_X0, 1.2),
       new THREE.MeshPhysicalMaterial({ color: colors.elevated.clone().lerp(colors.foreground, 0.1), roughness: 0.35, clearcoat: 0.8, clearcoatRoughness: 0.2 }),
     )
     aisle.rotation.x = -Math.PI / 2
-    aisle.position.y = 0.004
+    aisle.position.set((AISLE_X0 + AISLE_X1) / 2, 0.004, 0)
     aisle.receiveShadow = true
     scene.add(aisle)
 
@@ -298,6 +309,7 @@ export function OfficeFloor({ departments, animate, className }: Props) {
     const ledGeometry = new THREE.BoxGeometry(0.06, 0.035, 0.012)
     const leds: Led[] = []
     const rackTags: { label: HTMLDivElement; at: THREE.Vector3 }[] = []
+    let showCar: THREE.Group | null = null
     const leaf = new THREE.MeshPhysicalMaterial({ color: colors.mint.clone().lerp(colors.background, 0.55), roughness: 0.7 })
     const pot = new THREE.MeshPhysicalMaterial({ color: colors.elevated.clone().lerp(colors.caution, 0.12), roughness: 0.6 })
 
@@ -305,6 +317,19 @@ export function OfficeFloor({ departments, animate, className }: Props) {
       mesh.castShadow = true
       mesh.receiveShadow = true
       return mesh
+    }
+
+    /** A chair at (x, z) whose back is on the −facing side. */
+    const chair = (x: number, z: number, facing: 1 | -1) => {
+      const seat = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.06, 24), chairMaterial))
+      seat.position.set(x, 0.45, z)
+      scene.add(seat)
+      const back = shadowed(new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.42, 0.05), chairMaterial))
+      back.position.set(x, 0.72, z - facing * 0.2)
+      scene.add(back)
+      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.42, 12), deskLeg)
+      post.position.set(x, 0.22, z)
+      scene.add(post)
     }
 
     /** A desk with a monitor and a chair; the person sits facing `facing` along z. */
@@ -325,15 +350,7 @@ export function OfficeFloor({ departments, animate, className }: Props) {
       scene.add(stand)
       // The chair, on the near side of the desk.
       const cz = z - facing * 0.62
-      const seat = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.06, 24), chairMaterial))
-      seat.position.set(x, 0.45, cz)
-      scene.add(seat)
-      const back = shadowed(new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.42, 0.05), chairMaterial))
-      back.position.set(x, 0.72, cz - facing * 0.2)
-      scene.add(back)
-      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.42, 12), deskLeg)
-      post.position.set(x, 0.22, cz)
-      scene.add(post)
+      chair(x, cz, facing)
       // The person.
       const body = shadowed(new THREE.Mesh(new THREE.CapsuleGeometry(0.17, 0.3, 6, 18), material))
       body.position.set(x, 0.76, cz + facing * 0.02)
@@ -341,6 +358,57 @@ export function OfficeFloor({ departments, animate, className }: Props) {
       const head = shadowed(new THREE.Mesh(new THREE.SphereGeometry(0.135, 20, 20), material))
       head.position.set(x, 1.16, cz + facing * 0.02)
       scene.add(head)
+    }
+
+    /**
+     * A show car: a single-seater built from primitives, nose to the +x side.
+     * Papaya body (the caution token), dark tyres, a wing at each end, a halo
+     * over the cockpit. Returned as a group so the plinth can turn it.
+     */
+    const raceCar = (): THREE.Group => {
+      const g = new THREE.Group()
+      const body = new THREE.MeshPhysicalMaterial({ color: colors.caution.clone().lerp(colors.foreground, 0.05), roughness: 0.25, metalness: 0.2, clearcoat: 1, clearcoatRoughness: 0.08 })
+      const dark = new THREE.MeshPhysicalMaterial({ color: colors.background.clone().lerp(colors.foreground, 0.08), roughness: 0.55 })
+      const tyre = new THREE.MeshPhysicalMaterial({ color: colors.background.clone().lerp(colors.foreground, 0.05), roughness: 0.9 })
+      const rim = new THREE.MeshPhysicalMaterial({ color: colors.foreground.clone().lerp(colors.muted, 0.4), roughness: 0.3, metalness: 0.8 })
+      const add = (geometry: THREE.BufferGeometry, material: THREE.Material, x: number, y: number, z: number, rx = 0, ry = 0, rz = 0) => {
+        const m = shadowed(new THREE.Mesh(geometry, material))
+        m.position.set(x, y, z)
+        m.rotation.set(rx, ry, rz)
+        g.add(m)
+        return m
+      }
+      // Monocoque: a tapered tub, a nose cone, the engine cover behind the seat.
+      add(new THREE.BoxGeometry(1.5, 0.16, 0.34), body, 0.05, 0.2, 0)
+      add(new THREE.CylinderGeometry(0.02, 0.15, 0.7, 20), body, 1.1, 0.19, 0, 0, 0, -Math.PI / 2)
+      add(new THREE.BoxGeometry(0.7, 0.14, 0.26), body, -0.55, 0.32, 0)
+      add(new THREE.BoxGeometry(0.28, 0.1, 0.08), dark, -0.85, 0.4, 0) // airbox
+      // Sidepods and the floor edges.
+      for (const s of [-1, 1]) {
+        add(new THREE.BoxGeometry(0.85, 0.14, 0.2), body, -0.25, 0.19, s * 0.27)
+        add(new THREE.BoxGeometry(1.7, 0.02, 0.12), dark, 0.05, 0.11, s * 0.36)
+      }
+      // Cockpit opening, headrest and the halo.
+      add(new THREE.BoxGeometry(0.34, 0.03, 0.2), dark, 0.05, 0.285, 0)
+      add(new THREE.TorusGeometry(0.16, 0.018, 8, 24, Math.PI), rim, 0.05, 0.3, 0, 0, 0, 0)
+      add(new THREE.CylinderGeometry(0.018, 0.018, 0.2, 8), rim, 0.2, 0.36, 0, 0, 0, Math.PI / 2 - 0.7)
+      // Wings: front low and wide, rear high on two endplates.
+      add(new THREE.BoxGeometry(0.1, 0.02, 0.9), body, 1.32, 0.09, 0)
+      add(new THREE.BoxGeometry(0.06, 0.02, 0.9), dark, 1.22, 0.11, 0)
+      add(new THREE.BoxGeometry(0.14, 0.03, 0.8), body, -1.0, 0.5, 0)
+      add(new THREE.BoxGeometry(0.1, 0.02, 0.8), dark, -0.96, 0.44, 0)
+      for (const s of [-1, 1]) add(new THREE.BoxGeometry(0.22, 0.24, 0.02), dark, -0.98, 0.4, s * 0.4)
+      // Wheels, with a rim disc each.
+      for (const [wx, wz] of [[0.85, 0.5], [0.85, -0.5], [-0.65, 0.52], [-0.65, -0.52]] as [number, number][]) {
+        const rear = wx < 0
+        add(new THREE.CylinderGeometry(rear ? 0.19 : 0.17, rear ? 0.19 : 0.17, rear ? 0.2 : 0.16, 24), tyre, wx, rear ? 0.19 : 0.17, wz, Math.PI / 2)
+        add(new THREE.CylinderGeometry(0.1, 0.1, (rear ? 0.2 : 0.16) + 0.01, 16), rim, wx, rear ? 0.19 : 0.17, wz, Math.PI / 2)
+      }
+      // Suspension arms to the tub.
+      for (const [wx, wz] of [[0.85, 0.3], [0.85, -0.3], [-0.65, 0.3], [-0.65, -0.3]] as [number, number][]) {
+        add(new THREE.BoxGeometry(0.03, 0.02, 0.3), dark, wx, 0.2, wz)
+      }
+      return g
     }
 
     const plant = (x: number, z: number, scale = 1) => {
@@ -541,6 +609,81 @@ export function OfficeFloor({ departments, animate, className }: Props) {
         const vent = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.02, 0.6), frameMaterial)
         vent.position.set(dept.x, 0.86, core.position.z)
         scene.add(vent)
+      } else if (dept.furniture === 'lounge') {
+        // Reception: a desk by the aisle, two sofas around a low table, and
+        // the show car on a slowly turning plinth under its own light.
+        const sofaMaterial = new THREE.MeshPhysicalMaterial({ color: colors.elevated.clone().lerp(colors.muted, 0.35), roughness: 0.85 })
+        const sofa = (sx: number, sz: number, f: 1 | -1) => {
+          const seat = shadowed(new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.3, 0.6), sofaMaterial))
+          seat.position.set(sx, 0.2, sz)
+          scene.add(seat)
+          const back = shadowed(new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.35, 0.16), sofaMaterial))
+          back.position.set(sx, 0.5, sz - f * 0.24)
+          scene.add(back)
+          for (const ax of [-1, 1]) {
+            const arm = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.2, 0.6), sofaMaterial)
+            arm.position.set(sx + ax * 0.7, 0.45, sz)
+            scene.add(arm)
+          }
+        }
+        const lx = dept.x
+        sofa(lx, dept.z - 1.6, 1)
+        sofa(lx, dept.z + 0.1, -1)
+        const table = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.05, 32), deskTop))
+        table.position.set(lx, 0.4, dept.z - 0.75)
+        scene.add(table)
+        const tableLeg = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.12, 0.38, 16), deskLeg)
+        tableLeg.position.set(lx, 0.19, dept.z - 0.75)
+        scene.add(tableLeg)
+        // Reception desk facing the aisle end.
+        const counter = shadowed(new THREE.Mesh(new THREE.BoxGeometry(0.5, 1.0, 2.0), deskTop))
+        counter.position.set(dept.x + dept.w / 2 - 0.45, 0.5, dept.z - 1.0)
+        scene.add(counter)
+        const counterTop = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.04, 2.1), frameMaterial)
+        counterTop.position.set(counter.position.x, 1.02, counter.position.z)
+        scene.add(counterTop)
+        // The car.
+        const plinth = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(1.45, 1.5, 0.12, 48), frameMaterial))
+        plinth.position.set(lx, 0.06, dept.z + 2.0)
+        scene.add(plinth)
+        const plinthTop = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.4, 0.02, 48), equipment)
+        plinthTop.position.set(lx, 0.13, dept.z + 2.0)
+        scene.add(plinthTop)
+        const car = raceCar()
+        car.position.set(lx, 0.14, dept.z + 2.0)
+        car.rotation.y = 0.5
+        scene.add(car)
+        showCar = car
+        const carLight = new THREE.SpotLight(colors.foreground, 4.5, 8, 0.5, 0.7, 1.2)
+        carLight.position.set(lx, 4.2, dept.z + 2.0)
+        carLight.target = car
+        carLight.castShadow = true
+        carLight.shadow.mapSize.set(1024, 1024)
+        scene.add(carLight)
+        const carHalo = haloFor(colors.caution, 1.6)
+        carHalo.material.opacity = 0.18
+        carHalo.position.set(lx, 0.5, dept.z + 2.0)
+        plant(dept.x - dept.w / 2 + 0.5, dept.z + dept.d / 2 - 0.5, 1.1)
+      } else if (dept.furniture === 'meeting') {
+        // A long table, three chairs a side, a screen on the back glass.
+        const tableW = dept.w - 1.2
+        const table = shadowed(new THREE.Mesh(new THREE.BoxGeometry(tableW, 0.05, 0.95), deskTop))
+        table.position.set(dept.x, 0.72, dept.z)
+        scene.add(table)
+        for (const sx of [-1, 1]) {
+          const legSlab = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.7, 0.8), deskLeg)
+          legSlab.position.set(dept.x + (sx * (tableW - 0.4)) / 2, 0.35, dept.z)
+          scene.add(legSlab)
+        }
+        for (let i = 0; i < 3; i++) {
+          const cx = dept.x - (tableW - 0.9) / 2 + (i * (tableW - 0.9)) / 2
+          chair(cx, dept.z - 0.85, 1)
+          chair(cx, dept.z + 0.85, -1)
+        }
+        const screen = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.68, 0.04), screenMaterial)
+        screen.position.set(dept.x, 1.1, dept.z - facing * (dept.d / 2 + 0.16))
+        scene.add(screen)
+        plant(dept.x + dept.w / 2 - 0.4, dept.z - facing * (dept.d / 2 - 0.4), 0.9)
       } else if (dept.furniture === 'shelves') {
         for (let i = 0; i < 2; i++) {
           const zz = dept.z - facing * (0.75 - i * 1.3)
@@ -585,9 +728,9 @@ export function OfficeFloor({ departments, animate, className }: Props) {
     }
 
     // Plants along the edge, where an open plan keeps them.
-    plant(-FLOOR_W / 2 + 0.6, FLOOR_D / 2 - 0.6)
-    plant(FLOOR_W / 2 - 0.6, -FLOOR_D / 2 + 0.6)
     plant(FLOOR_W / 2 - 0.6, FLOOR_D / 2 - 0.6, 0.85)
+    plant(FLOOR_W / 2 - 2.2, FLOOR_D / 2 - 1.2, 1.1)
+    plant(FLOOR_W / 2 - 0.6, 1.2, 0.9)
     plant(2.6, -FLOOR_D / 2 + 0.5, 0.9)
 
     const byId = (id: string) => clusters.find((c) => c.dept.id === id)
@@ -788,6 +931,7 @@ export function OfficeFloor({ departments, animate, className }: Props) {
         }
         fileGroup.position.y = Y + Math.sin(now * 3) * 0.04
         sheet.rotation.y = now * 0.8
+        if (showCar) showCar.rotation.y += dt * 0.25
 
         for (let i = arcs.length - 1; i >= 0; i--) {
           const a = arcs[i]
@@ -864,7 +1008,7 @@ export function OfficeFloor({ departments, animate, className }: Props) {
       }
       for (const c of clusters) {
         projected.copy(c.centre)
-        projected.y = c.dept.enclosed ? GLASS_H + 0.5 : c.dept.furniture === 'racks' ? 2.55 : 1.75
+        projected.y = c.dept.enclosed ? GLASS_H + 0.5 : c.dept.furniture === 'racks' ? 2.55 : c.dept.furniture === 'lounge' ? 2.3 : 1.75
         projected.project(camera)
         c.label.style.opacity = projected.z > 1 ? '0' : '1'
         c.label.style.left = `${((projected.x + 1) / 2) * width}px`

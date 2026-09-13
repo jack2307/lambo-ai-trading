@@ -82,6 +82,10 @@ const seat = (id: (typeof TEAM)[number]['id']) => {
   return { id: agent.id, title: agent.title, model: agent.model.name }
 }
 const DEPARTMENTS: Department[] = [
+  // The west end: reception, open to the aisle, the show car on its plinth.
+  { id: 'reception', title: 'Reception', line: 'Public lounge, with the show car.', tone: 'public', x: -10.4, z: 0.2, w: 3.6, d: 8.6, occupants: [], furniture: 'lounge' },
+  // The east end: the meeting room, glass like the office.
+  { id: 'meeting', title: 'Meeting room', line: 'Where a decision is argued before it is written.', tone: 'public', x: 10.4, z: -3.0, w: 3.4, d: 3.4, enclosed: true, occupants: [], furniture: 'meeting' },
   // North of the aisle: the glass office, the advisory desks, the archive.
   { id: 'arbiter', title: "Arbiter's office", line: 'Reads the receipts and the vetoes; decides last.', tone: 'arbiter', x: -6.6, z: -3.0, w: 3.4, d: 3.2, enclosed: true, occupants: [{ id: 'arbiter', title: 'Arbiter', model: SESSION_MODEL.name }] },
   { id: 'advisory', title: 'Advisory', line: 'Notes to the arbiter; none of them can stop anything alone.', tone: 'advisory', x: -0.6, z: -3.0, w: 5.2, d: 3.6, arrange: 'grid', occupants: [seat('researcher'), seat('execution-realist'), seat('portfolio'), seat('historian')] },
@@ -333,6 +337,10 @@ export function Dashboard({ catalog, market, onError }: Props) {
                 <span className="text-brand-mint font-medium">Operations</span>
                 <span className="text-muted-foreground"> · data, lab, engine, archive</span>
               </span>
+              <span className="bg-background/70 border-border rounded-full border px-2 py-0.5 backdrop-blur">
+                <span className="font-medium">Public</span>
+                <span className="text-muted-foreground"> · reception, meeting room</span>
+              </span>
             </div>
             {/* The things the scene cannot say on its own. */}
             <div className="pointer-events-none absolute bottom-3 left-4 flex flex-wrap items-center gap-3 text-[11px]">
@@ -380,7 +388,15 @@ export function Dashboard({ catalog, market, onError }: Props) {
                     </span>
                   </span>
                   <Pill tone={dept.tone === 'veto' ? 'caution' : 'neutral'}>
-                    {dept.tone === 'veto' ? 'Veto' : dept.tone === 'arbiter' ? 'Decides' : dept.tone === 'advisory' ? 'Advisory' : 'Ops'}
+                    {dept.tone === 'veto'
+                      ? 'Veto'
+                      : dept.tone === 'arbiter'
+                        ? 'Decides'
+                        : dept.tone === 'advisory'
+                          ? 'Advisory'
+                          : dept.tone === 'public'
+                            ? 'Public'
+                            : 'Ops'}
                   </Pill>
                 </li>
               ))}
