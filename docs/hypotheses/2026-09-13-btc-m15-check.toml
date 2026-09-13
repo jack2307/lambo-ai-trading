@@ -1,0 +1,19 @@
+[run]
+in_sample = "btc:15m"
+out_of_sample = "btcusd:15m"
+seeds = 200
+direction_samples = 1000
+
+[[hypothesis]]
+label = "m15/eq-open-60m"
+base = "orb"
+filters = ["weekdays", "hours:1030-1300"]
+overrides = { rangeStart = 930, rangeMinutes = 60, entryUntil = 1300, maxRangeAtr = 100, pipSize = 1.0, minRangePips = 20 }
+why = "the equity-open range on 15-minute closes"
+
+[[hypothesis]]
+label = "m15/vwap-allday"
+base = "vwap-fade"
+filters = []
+overrides = { stretchAtr = 1.5 }
+why = "VWAP reversion on 15-minute closes"

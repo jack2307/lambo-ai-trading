@@ -1,0 +1,35 @@
+[run]
+in_sample = "xauduka:15m"
+in_sample_to = "2025-04-10"
+out_of_sample = "xauusd:15m"
+out_of_sample_from = "2025-04-11"
+seeds = 200
+direction_samples = 1000
+
+[[hypothesis]]
+label = "m15/orb-60m"
+base = "orb"
+filters = ["weekdays", "flat:1630-1815", "hours:0920-1200"]
+overrides = { rangeStart = 820, rangeMinutes = 60, entryUntil = 1200, maxRangeAtr = 100 }
+why = "the New York opening-range break on 15-minute closes"
+
+[[hypothesis]]
+label = "m15/london"
+base = "orb"
+filters = ["weekdays", "flat:1630-1815", "hours:0800-1200"]
+overrides = { rangeStart = 200, rangeMinutes = 360, entryUntil = 1200, maxRangeAtr = 100 }
+why = "the London-range break on 15-minute closes"
+
+[[hypothesis]]
+label = "m15/pdhl-fade"
+base = "pdhl"
+filters = ["weekdays", "flat:1630-1815"]
+overrides = { mode = 0 }
+why = "yesterday's level faded on a 15-minute close back inside"
+
+[[hypothesis]]
+label = "m15/pdhl-break"
+base = "pdhl"
+filters = ["weekdays", "flat:1630-1815", "hours:0800-1200"]
+overrides = { mode = 1 }
+why = "yesterday's level broken on a 15-minute close"
