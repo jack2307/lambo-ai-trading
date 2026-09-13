@@ -126,10 +126,10 @@ const FLOOR_W = 24
  * the north and west edges.
  */
 const FLOOR_Z0 = -6.4
-const FLOOR_Z1 = 5.6
+const FLOOR_Z1 = 8.6
 const FLOOR_D = FLOOR_Z1 - FLOOR_Z0
 const FLOOR_ZC = (FLOOR_Z0 + FLOOR_Z1) / 2
-const AISLE_Z = 1.3
+const AISLE_Z = 4.3
 const AISLE_X0 = -11.4
 const AISLE_X1 = 11.4
 const GLASS_H = 1.35
@@ -315,7 +315,7 @@ export function OfficeFloor({ departments, animate, carModel, modelsBase = '/mod
     pmrem.dispose()
 
     const camera = new THREE.PerspectiveCamera(28, 1, 0.1, 120)
-    camera.position.set(18.5, 22, 31.5)
+    camera.position.set(19, 23, 33)
 
     const controls = new OrbitControls(camera, renderer.domElement)
     // The wheel zooms only once the scene has been clicked (or with Ctrl
@@ -331,7 +331,7 @@ export function OfficeFloor({ departments, animate, carModel, modelsBase = '/mod
     controls.autoRotateSpeed = 0.12
     controls.minPolarAngle = Math.PI * 0.2
     controls.maxPolarAngle = Math.PI * 0.36
-    controls.target.set(0.6, 0.2, -0.3)
+    controls.target.set(0.6, 0.2, 1.0)
 
     /* ---- light: a warm key as if from a window wall, a cool fill ---- */
     scene.add(new THREE.HemisphereLight(colors.foreground, colors.background, 0.45))
@@ -1260,7 +1260,7 @@ export function OfficeFloor({ departments, animate, carModel, modelsBase = '/mod
         // the wall, the front desk to the west of it, a sofa group either
         // side, coffee and the screen to the east, plants at the ends.
         const cx = dept.x
-        const cz = dept.z - 0.7
+        const cz = dept.z - 1.4
         // The car, centre of the long wall, on its plinth under its own light.
         const plinth = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(1.45, 1.5, 0.12, 48), frameMaterial))
         plinth.position.set(cx, 0.06, cz)
@@ -1323,7 +1323,7 @@ export function OfficeFloor({ departments, animate, carModel, modelsBase = '/mod
         carHalo.position.set(cx, 0.5, cz)
         // The front desk, west of the car, facing the floor.
         const counter = shadowed(new THREE.Mesh(new THREE.BoxGeometry(2.2, 1.0, 0.55), deskTop))
-        counter.position.set(dept.x - dept.w / 2 + 1.7, 0.5, dept.z + 1.2)
+        counter.position.set(dept.x - dept.w / 2 + 1.7, 0.5, dept.z + 1.9)
         scene.add(counter)
         const counterTop = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.04, 0.65), frameMaterial)
         counterTop.position.set(counter.position.x, 1.02, counter.position.z)
@@ -1334,7 +1334,7 @@ export function OfficeFloor({ departments, animate, carModel, modelsBase = '/mod
         person(counter.position.x, counter.position.z - 0.75, 0, new THREE.MeshPhysicalMaterial({ color: colors.foreground.clone().lerp(colors.muted, 0.2), roughness: 0.6 }), { kind: 'standing' })
         const rack = models.instance('coatRackStanding', { height: 1.7 })
         if (rack) {
-          rack.group.position.set(dept.x - dept.w / 2 + 0.5, 0, dept.z - 1.3)
+          rack.group.position.set(dept.x - dept.w / 2 + 0.5, 0, dept.z - 1.9)
           scene.add(rack.group)
         }
         // Sofa groups either side of the car, facing each other across a table.
@@ -1362,13 +1362,13 @@ export function OfficeFloor({ departments, animate, carModel, modelsBase = '/mod
         person(dept.x + 4.6 - 0.45, dept.z - 1.15, 0, new THREE.MeshPhysicalMaterial({ color: colors.muted.clone().lerp(colors.foreground, 0.1), roughness: 0.6 }), { kind: 'seated', seat: 0.42, armsOnDesk: false })
         person(dept.x - 2.3, dept.z + 0.9, Math.PI / 2 + 0.4, new THREE.MeshPhysicalMaterial({ color: colors.mint.clone().lerp(colors.background, 0.35), roughness: 0.6 }), { kind: 'standing' })
         // Coffee and the screen at the east end.
-        if (!place(photo('coffeeCart', { height: 1.1 }), dept.x + dept.w / 2 - 1.6, 0, dept.z - 1.1, Math.PI)) {
-          coffeeStation(dept.x + dept.w / 2 - 1.6, dept.z - 1.1, 1)
+        if (!place(photo('coffeeCart', { height: 1.1 }), dept.x + dept.w / 2 - 1.6, 0, dept.z - 1.8, Math.PI)) {
+          coffeeStation(dept.x + dept.w / 2 - 1.6, dept.z - 1.8, 1)
         }
-        waterCooler(dept.x + dept.w / 2 - 0.5, dept.z - 1.1)
-        television(dept.x + dept.w / 2 - 1.6, dept.z + 1.3, 1)
-        floorLamp(dept.x - dept.w / 2 + 0.5, dept.z + 1.5)
-        floorLamp(dept.x + 2.6, dept.z + 1.5)
+        waterCooler(dept.x + dept.w / 2 - 0.5, dept.z - 1.8)
+        television(dept.x + dept.w / 2 - 1.6, dept.z + 1.9, 1)
+        floorLamp(dept.x - dept.w / 2 + 0.5, dept.z + 2.2)
+        floorLamp(dept.x + 2.6, dept.z + 2.2)
         palm(dept.x - dept.w / 2 + 0.6, dept.z - dept.d / 2 + 0.5, 1.0)
         palm(dept.x + dept.w / 2 - 0.5, dept.z + dept.d / 2 - 0.4, 0.9)
         plant(dept.x - 2.4, dept.z - 1.2, 0.8)
@@ -1414,11 +1414,19 @@ export function OfficeFloor({ departments, animate, carModel, modelsBase = '/mod
         whiteboard(dept.x + dept.w / 2 - 0.35, dept.z, 1)
         plant(dept.x - dept.w / 2 + 0.4, dept.z + facing * (dept.d / 2 - 0.4), 0.9)
       } else if (dept.furniture === 'shelves' && real.has(PHOTOREAL.shelves.name)) {
+        // Two rows of units. A rug deeper than it is wide (the corner) runs
+        // them along z with their fronts toward the floor; otherwise along x.
+        const alongZ = dept.d > dept.w
+        const run = (alongZ ? dept.d : dept.w) - 0.3
+        const n = Math.max(1, Math.floor(run / 1.45))
         for (let i = 0; i < 2; i++) {
-          const zz = dept.z - facing * (0.75 - i * 1.3)
-          const n = 3
           for (let k = 0; k < n; k++) {
-            place(photo('shelves', { width: 1.4 }), dept.x - ((n - 1) * 1.45) / 2 + k * 1.45, 0, zz, facing === 1 ? 0 : Math.PI)
+            const along = -((n - 1) * 1.45) / 2 + k * 1.45
+            if (alongZ) {
+              place(photo('shelves', { width: 1.4 }), dept.x - 0.65 + i * 1.3, 0, dept.z + along, -Math.PI / 2)
+            } else {
+              place(photo('shelves', { width: 1.4 }), dept.x + along, 0, dept.z - facing * (0.75 - i * 1.3), facing === 1 ? 0 : Math.PI)
+            }
           }
         }
       } else if (dept.furniture === 'shelves') {
@@ -1562,10 +1570,10 @@ export function OfficeFloor({ departments, animate, carModel, modelsBase = '/mod
 
     // Plants along the edge, where an open plan keeps them.
     palm(FLOOR_W / 2 - 0.7, FLOOR_Z1 - 0.7, 1.0)
-    palm(FLOOR_W / 2 - 2.4, 3.6, 0.9)
-    plant(FLOOR_W / 2 - 0.6, 2.2, 0.9)
+    palm(FLOOR_W / 2 - 2.4, AISLE_Z + 2.3, 0.9)
+    plant(FLOOR_W / 2 - 0.6, AISLE_Z + 0.9, 0.9)
     planter(FLOOR_W / 2 - 2.2, FLOOR_Z1 - 0.4, 3.2)
-    plant(-FLOOR_W / 2 + 0.6, 1.1, 0.9)
+    plant(-FLOOR_W / 2 + 0.6, AISLE_Z - 0.2, 0.9)
     plant(-FLOOR_W / 2 + 0.6, FLOOR_Z1 - 0.6, 0.9)
 
     const byId = (id: string) => clusters.find((c) => c.dept.id === id)
