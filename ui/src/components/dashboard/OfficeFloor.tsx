@@ -129,7 +129,7 @@ const FLOOR_Z0 = -6.4
 const FLOOR_Z1 = 5.6
 const FLOOR_D = FLOOR_Z1 - FLOOR_Z0
 const FLOOR_ZC = (FLOOR_Z0 + FLOOR_Z1) / 2
-const AISLE_Z = 1.1
+const AISLE_Z = 1.3
 const AISLE_X0 = -11.4
 const AISLE_X1 = 11.4
 const GLASS_H = 1.35
@@ -1260,7 +1260,7 @@ export function OfficeFloor({ departments, animate, carModel, modelsBase = '/mod
         // the wall, the front desk to the west of it, a sofa group either
         // side, coffee and the screen to the east, plants at the ends.
         const cx = dept.x
-        const cz = dept.z - 0.25
+        const cz = dept.z - 0.7
         // The car, centre of the long wall, on its plinth under its own light.
         const plinth = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(1.45, 1.5, 0.12, 48), frameMaterial))
         plinth.position.set(cx, 0.06, cz)
@@ -1323,7 +1323,7 @@ export function OfficeFloor({ departments, animate, carModel, modelsBase = '/mod
         carHalo.position.set(cx, 0.5, cz)
         // The front desk, west of the car, facing the floor.
         const counter = shadowed(new THREE.Mesh(new THREE.BoxGeometry(2.2, 1.0, 0.55), deskTop))
-        counter.position.set(dept.x - dept.w / 2 + 1.7, 0.5, dept.z + 0.9)
+        counter.position.set(dept.x - dept.w / 2 + 1.7, 0.5, dept.z + 1.2)
         scene.add(counter)
         const counterTop = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.04, 0.65), frameMaterial)
         counterTop.position.set(counter.position.x, 1.02, counter.position.z)
@@ -1334,20 +1334,20 @@ export function OfficeFloor({ departments, animate, carModel, modelsBase = '/mod
         person(counter.position.x, counter.position.z - 0.75, 0, new THREE.MeshPhysicalMaterial({ color: colors.foreground.clone().lerp(colors.muted, 0.2), roughness: 0.6 }), { kind: 'standing' })
         const rack = models.instance('coatRackStanding', { height: 1.7 })
         if (rack) {
-          rack.group.position.set(dept.x - dept.w / 2 + 0.5, 0, dept.z - 0.9)
+          rack.group.position.set(dept.x - dept.w / 2 + 0.5, 0, dept.z - 1.3)
           scene.add(rack.group)
         }
         // Sofa groups either side of the car, facing each other across a table.
         const group = (gx: number) => {
           if (real.has(PHOTOREAL.loungeSofa.name)) {
-            for (const f of [1, -1] as const) place(photo('loungeSofa', { width: 2.0 }), gx, 0, dept.z - f * 1.0, f === 1 ? 0 : Math.PI)
+            for (const f of [1, -1] as const) place(photo('loungeSofa', { width: 2.0 }), gx, 0, dept.z - f * 1.15, f === 1 ? 0 : Math.PI)
             place(photo('tableCoffee', { width: 1.0 }), gx, 0, dept.z)
             return
           }
           for (const f of [1, -1] as const) {
             const inst = models.instance('loungeSofa', { width: 1.9 })
             if (!inst) break
-            inst.group.position.set(gx, 0, dept.z - f * 1.0)
+            inst.group.position.set(gx, 0, dept.z - f * 1.15)
             inst.group.rotation.y = (f === 1 ? 0 : Math.PI) + KENNEY_YAW
             scene.add(inst.group)
           }
@@ -1359,16 +1359,16 @@ export function OfficeFloor({ departments, animate, carModel, modelsBase = '/mod
         }
         group(dept.x - 4.6)
         group(dept.x + 4.6)
-        person(dept.x + 4.6 - 0.45, dept.z - 1.0, 0, new THREE.MeshPhysicalMaterial({ color: colors.muted.clone().lerp(colors.foreground, 0.1), roughness: 0.6 }), { kind: 'seated', seat: 0.42, armsOnDesk: false })
+        person(dept.x + 4.6 - 0.45, dept.z - 1.15, 0, new THREE.MeshPhysicalMaterial({ color: colors.muted.clone().lerp(colors.foreground, 0.1), roughness: 0.6 }), { kind: 'seated', seat: 0.42, armsOnDesk: false })
         person(dept.x - 2.3, dept.z + 0.9, Math.PI / 2 + 0.4, new THREE.MeshPhysicalMaterial({ color: colors.mint.clone().lerp(colors.background, 0.35), roughness: 0.6 }), { kind: 'standing' })
         // Coffee and the screen at the east end.
-        if (!place(photo('coffeeCart', { height: 1.1 }), dept.x + dept.w / 2 - 1.6, 0, dept.z - 0.7, Math.PI)) {
-          coffeeStation(dept.x + dept.w / 2 - 1.6, dept.z - 0.7, 1)
+        if (!place(photo('coffeeCart', { height: 1.1 }), dept.x + dept.w / 2 - 1.6, 0, dept.z - 1.1, Math.PI)) {
+          coffeeStation(dept.x + dept.w / 2 - 1.6, dept.z - 1.1, 1)
         }
-        waterCooler(dept.x + dept.w / 2 - 0.5, dept.z - 0.7)
-        television(dept.x + dept.w / 2 - 1.6, dept.z + 0.9, 1)
-        floorLamp(dept.x - dept.w / 2 + 0.5, dept.z + 1.1)
-        floorLamp(dept.x + 2.6, dept.z + 1.2)
+        waterCooler(dept.x + dept.w / 2 - 0.5, dept.z - 1.1)
+        television(dept.x + dept.w / 2 - 1.6, dept.z + 1.3, 1)
+        floorLamp(dept.x - dept.w / 2 + 0.5, dept.z + 1.5)
+        floorLamp(dept.x + 2.6, dept.z + 1.5)
         palm(dept.x - dept.w / 2 + 0.6, dept.z - dept.d / 2 + 0.5, 1.0)
         palm(dept.x + dept.w / 2 - 0.5, dept.z + dept.d / 2 - 0.4, 0.9)
         plant(dept.x - 2.4, dept.z - 1.2, 0.8)

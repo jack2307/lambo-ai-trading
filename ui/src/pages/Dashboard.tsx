@@ -83,20 +83,21 @@ const seat = (id: (typeof TEAM)[number]['id']) => {
   return { id: agent.id, title: agent.title, model: agent.model.name }
 }
 const DEPARTMENTS: Department[] = [
-  // The strip along the long north wall: reception and the show car, one public space.
-  { id: 'reception', title: 'Reception & showcase', line: 'The front desk, the show car, sofas, coffee, the tape on a screen.', tone: 'public', x: 0, z: -4.6, w: 23.4, d: 3.2, occupants: [], furniture: 'showcase' },
-  // North wing, in front of it: the glass office, the advisory desks, the archive, the meeting room.
-  { id: 'arbiter', title: "Arbiter's office", line: 'Reads the receipts and the vetoes; decides last.', tone: 'arbiter', x: -9.6, z: -1.2, w: 3.4, d: 2.9, enclosed: true, occupants: [{ id: 'arbiter', title: 'Arbiter', model: SESSION_MODEL.name }] },
-  { id: 'advisory', title: 'Advisory', line: 'Notes to the arbiter; none of them can stop anything alone.', tone: 'advisory', x: -3.7, z: -1.2, w: 5.4, d: 2.9, arrange: 'grid', occupants: [seat('researcher'), seat('execution-realist'), seat('portfolio'), seat('historian')] },
-  { id: 'archive', title: 'Archive', line: 'Hypotheses, run receipts, decisions, backlog.', tone: 'ops', x: 2.6, z: -1.2, w: 5.2, d: 2.9, occupants: [], furniture: 'shelves' },
-  { id: 'meeting', title: 'Meeting room', line: 'Where a decision is argued before it is written.', tone: 'public', x: 9.3, z: -1.2, w: 3.4, d: 2.9, enclosed: true, occupants: [], furniture: 'meeting' },
-  // South wing, along the aisle: data, the lab, the engine bay, then the veto desks in a row.
-  { id: 'data', title: 'Data room', line: 'Broker bars, two free feeds, the tape collectors.', tone: 'ops', x: -9.0, z: 3.4, w: 3.4, d: 3.0, occupants: [], furniture: 'racks', racks: ['MT5 · Vantage', 'Dukascopy', 'Binance', 'OTL tape'] },
-  { id: 'lab', title: 'Strategy lab', line: 'Pre-registers, implements, tests for look-ahead.', tone: 'ops', x: -5.6, z: 3.4, w: 2.6, d: 3.0, occupants: [{ id: 'strategy-implementer', title: 'Implementer', model: MODELS.sonnet.name }] },
-  { id: 'engine', title: 'Engine room', line: 'Backtest, walk-forward, nulls; the search binary.', tone: 'ops', x: -2.4, z: 3.4, w: 3.0, d: 3.0, occupants: [], furniture: 'engine' },
-  { id: 'data-integrity', title: 'Data Integrity', line: 'Veto', tone: 'veto', x: 1.2, z: 3.4, w: 1.7, d: 3.0, occupants: [seat('data-integrity')] },
-  { id: 'adversary', title: 'Adversary', line: 'Veto', tone: 'veto', x: 3.5, z: 3.4, w: 1.7, d: 3.0, occupants: [seat('adversary')] },
-  { id: 'risk', title: 'Risk', line: 'Veto', tone: 'veto', x: 5.8, z: 3.4, w: 1.7, d: 3.0, occupants: [seat('risk')] },
+  // The north-west corner: the archive, whose shelves are tall, against both walls.
+  { id: 'archive', title: 'Archive', line: 'Hypotheses, run receipts, decisions, backlog.', tone: 'ops', x: -10.4, z: -4.3, w: 3.0, d: 4.0, occupants: [], furniture: 'shelves' },
+  // The rest of the long north wall: reception and the show car, one public space.
+  { id: 'reception', title: 'Reception & showcase', line: 'The front desk, the show car, sofas, coffee, the tape on a screen.', tone: 'public', x: 1.6, z: -4.3, w: 20.4, d: 4.0, occupants: [], furniture: 'showcase' },
+  // North wing, in front of it: the glass office, the advisory desks, the engine bay, the meeting room.
+  { id: 'arbiter', title: "Arbiter's office", line: 'Reads the receipts and the vetoes; decides last.', tone: 'arbiter', x: -9.6, z: -0.7, w: 3.4, d: 2.8, enclosed: true, occupants: [{ id: 'arbiter', title: 'Arbiter', model: SESSION_MODEL.name }] },
+  { id: 'advisory', title: 'Advisory', line: 'Notes to the arbiter; none of them can stop anything alone.', tone: 'advisory', x: -4.2, z: -0.7, w: 5.8, d: 2.8, arrange: 'grid', occupants: [seat('researcher'), seat('execution-realist'), seat('portfolio'), seat('historian')] },
+  { id: 'engine', title: 'Engine room', line: 'Backtest, walk-forward, nulls; the search binary.', tone: 'ops', x: 1.4, z: -0.7, w: 3.2, d: 2.8, occupants: [], furniture: 'engine' },
+  { id: 'meeting', title: 'Meeting room', line: 'Where a decision is argued before it is written.', tone: 'public', x: 8.6, z: -0.7, w: 3.4, d: 2.8, enclosed: true, occupants: [], furniture: 'meeting' },
+  // South wing, along the aisle: data, the lab, then the veto desks in a row.
+  { id: 'data', title: 'Data room', line: 'Broker bars, two free feeds, the tape collectors.', tone: 'ops', x: -9.0, z: 3.5, w: 3.4, d: 3.0, occupants: [], furniture: 'racks', racks: ['MT5 · Vantage', 'Dukascopy', 'Binance', 'OTL tape'] },
+  { id: 'lab', title: 'Strategy lab', line: 'Pre-registers, implements, tests for look-ahead.', tone: 'ops', x: -5.4, z: 3.5, w: 2.8, d: 3.0, occupants: [{ id: 'strategy-implementer', title: 'Implementer', model: MODELS.sonnet.name }] },
+  { id: 'data-integrity', title: 'Data Integrity', line: 'Veto', tone: 'veto', x: -1.6, z: 3.5, w: 1.7, d: 3.0, occupants: [seat('data-integrity')] },
+  { id: 'adversary', title: 'Adversary', line: 'Veto', tone: 'veto', x: 0.7, z: 3.5, w: 1.7, d: 3.0, occupants: [seat('adversary')] },
+  { id: 'risk', title: 'Risk', line: 'Veto', tone: 'veto', x: 3.0, z: 3.5, w: 1.7, d: 3.0, occupants: [seat('risk')] },
 ]
 
 /**
