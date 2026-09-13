@@ -1260,12 +1260,14 @@ export function OfficeFloor({ departments, animate, carModel, modelsBase = '/mod
         // the wall, the front desk to the west of it, a sofa group either
         // side, coffee and the screen to the east, plants at the ends.
         const cx = dept.x
-        const cz = dept.z - 1.4
+        const cz = dept.z - 0.75
+        // A single-seater is three body-lengths long next to these people.
+        const CAR_LENGTH = 4.0
         // The car, centre of the long wall, on its plinth under its own light.
-        const plinth = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(1.45, 1.5, 0.12, 48), frameMaterial))
+        const plinth = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(2.0, 2.05, 0.12, 64), frameMaterial))
         plinth.position.set(cx, 0.06, cz)
         scene.add(plinth)
-        const plinthTop = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.4, 0.02, 48), equipment)
+        const plinthTop = new THREE.Mesh(new THREE.CylinderGeometry(1.95, 1.95, 0.02, 64), equipment)
         plinthTop.position.set(cx, 0.13, cz)
         scene.add(plinthTop)
         // The car stands in a holder that turns; the primitive car fills it
@@ -1275,6 +1277,7 @@ export function OfficeFloor({ departments, animate, carModel, modelsBase = '/mod
         holder.rotation.y = 0.5
         scene.add(holder)
         const standIn = raceCar()
+        standIn.scale.setScalar(CAR_LENGTH / 2.7)
         holder.add(standIn)
         showCar = holder
         if (carModel) {
@@ -1295,7 +1298,7 @@ export function OfficeFloor({ departments, animate, carModel, modelsBase = '/mod
               const box = new THREE.Box3().setFromObject(model)
               const size = box.getSize(new THREE.Vector3())
               const longest = Math.max(size.x, size.z) || 1
-              model.scale.setScalar(2.7 / longest)
+              model.scale.setScalar(CAR_LENGTH / longest)
               box.setFromObject(model)
               const centre = box.getCenter(new THREE.Vector3())
               model.position.set(-centre.x, -box.min.y, -centre.z)
@@ -1312,13 +1315,13 @@ export function OfficeFloor({ departments, animate, carModel, modelsBase = '/mod
             },
           )
         }
-        const carLight = new THREE.SpotLight(colors.foreground, 4.5, 8, 0.5, 0.7, 1.2)
-        carLight.position.set(cx, 4.2, cz)
+        const carLight = new THREE.SpotLight(colors.foreground, 6, 9, 0.6, 0.7, 1.2)
+        carLight.position.set(cx, 4.6, cz)
         carLight.target = holder
         carLight.castShadow = true
         carLight.shadow.mapSize.set(1024, 1024)
         scene.add(carLight)
-        const carHalo = haloFor(colors.caution, 1.6)
+        const carHalo = haloFor(colors.caution, 2.4)
         carHalo.material.opacity = 0.18
         carHalo.position.set(cx, 0.5, cz)
         // The front desk, west of the car, facing the floor.
