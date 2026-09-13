@@ -249,6 +249,11 @@ fn control_for(base: &dyn Strategy, overrides: &[(String, f64)], seed: f64) -> (
 }
 
 /// A method with some defaults replaced: a preset, as a strategy.
+///
+/// A preset on a parameter the method also sweeps **pins** it: the grid
+/// loses that axis. Otherwise the walk-forward would replace the registered
+/// value with the grid's and the row would test something else — which it
+/// did, once (`2026-09-13-vwap-fade.md`).
 pub struct Preset<'a> {
     pub inner: &'a dyn Strategy,
     pub defaults: Params,
@@ -268,7 +273,12 @@ impl Strategy for Preset<'_> {
         self.defaults.clone()
     }
     fn grid(&self) -> std::collections::BTreeMap<String, Vec<f64>> {
-        self.inner.grid()
+        let base = self.inner.default_params();
+        self.inner
+            .grid()
+            .into_iter()
+            .filter(|(key, _)| self.defaults.get(key).to_bits() == base.get(key).to_bits())
+            .collect()
     }
     fn indicators(&self, p: &Params) -> Vec<IndicatorSpec> {
         self.inner.indicators(p)
@@ -468,6 +478,17 @@ why = "the first hour's range is the day's liquidity"
         let err = preset_params(registry.get("ema-cross").unwrap(), &[("nope".into(), 1.0)]).unwrap_err();
         assert!(err.contains("nope"));
         let _ = std::fs::remove_dir_all(dir);
+    }
+
+    #[test]
+    fn a_preset_on_a_gridded_parameter_pins_it() {
+        let registry = Registry::with_builtins();
+        let base = registry.get("ema-cross").unwrap();
+        let untouched = Preset { inner: base, defaults: base.default_params() };
+        assert_eq!(untouched.grid().len(), base.grid().len());
+        let pinned = Preset { inner: base, defaults: preset_params(base, &[("fast".into(), 13.0)]).unwrap() };
+        assert!(!pinned.grid().contains_key("fast"), "a pinned axis leaves the grid");
+        assert!(pinned.grid().contains_key("slow"));
     }
 
     #[test]

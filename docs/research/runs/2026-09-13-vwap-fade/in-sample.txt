@@ -1,0 +1,22 @@
+$ E:\rust\flowdesk\target\release\search.exe --market=btc --interval=5m --mode=hypotheses --batch-file=E:\rust\flowdesk\docs\hypotheses\2026-09-13-vwap-fade.toml --seeds=200
+
+bars:     218880 from 2024-08-13 19:00 to 2026-09-12 18:55
+timeline: 508 frames from 2026-09-11 05:36 to 2026-09-12 23:50
+          the tape covers 448 of 218880 bars (0.2%)
+
+tape:     15422 prints, 508 frames  <- a result is only comparable to another run over the same tape
+
+== hypotheses `E:\rust\flowdesk\docs\hypotheses\2026-09-13-vwap-fade.toml`: 3 declared, walk-forward (4 folds), each against 200 matched null runs ==
+swap: long 0.00 / short 0.00 USD per lot per night; spread 5.00
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+vwap/allday  vwap-fade            5828   0.951  -0.029    0.957    1.021        0   44%  fail: profit factor 0.951 < 1.2; expectancy -0.029R < 0.05R
+                                  — reversion to the UTC-day VWAP, any hour
+vwap/us-hours vwap-fade            1392   0.917  -0.054    0.963    1.119        0   24%  fail: profit factor 0.917 < 1.2; expectancy -0.054R < 0.05R
+                                NY 09:30-16:00  — only where the benchmarked flow is; the null trades the same hours
+vwap/wide    vwap-fade            5828   0.951  -0.029    0.957    1.021        0   44%  fail: profit factor 0.951 < 1.2; expectancy -0.029R < 0.05R
+                                  — a wider stretch: fewer, larger dislocations
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+

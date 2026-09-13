@@ -10,10 +10,6 @@ Closed ideas move to the bottom with a pointer to their decision record, so
 
 ## Open
 
-- [ ] **VWAP fade.** Enter against a stretch of > k·ATR from the session VWAP,
-  target VWAP. Reason: intraday mean reversion to the volume-weighted average
-  is where large orders are worked. Existing `vwap` indicator; NEW thin
-  strategy.
 - [ ] ~~**Asian-range breakout at London open.**~~ Withdrawn 2026-09-13: the
   breakout family is closed (`2026-09-13-volcond-breakout.md`); a fourth
   range on the same mechanism needs a new reason, not a new window.
@@ -75,3 +71,5 @@ Closed ideas move to the bottom with a pointer to their decision record, so
 - [x] London fix drift (into / out of the PM fix, AM contrast) → 74th–84th
   percentile of random holds, PF < 1 on every row, 2022–25.
   `2026-09-13-london-fix.md`.
+- [x] VWAP fade (BTC, real volume) → PF 0.95 on 5,828 trades, direction null
+  13th: a stretch continues rather than reverts. `2026-09-13-vwap-fade.md`.

@@ -1,0 +1,21 @@
+$ E:\rust\flowdesk\target\release\search.exe --market=btc --interval=5m --mode=null-dir --strategy=vwap-fade --samples=1000 --params=stretchAtr=1.5 --filters=hours:0930-1600
+
+bars:     218880 from 2024-08-13 19:00 to 2026-09-12 18:55
+timeline: 508 frames from 2026-09-11 05:36 to 2026-09-12 23:50
+          the tape covers 448 of 218880 bars (0.2%)
+
+tape:     15422 prints, 508 frames  <- a result is only comparable to another run over the same tape
+
+  filters: NY 09:30-16:00
+== direction control: vwap-fade, 1982 trades, 1000 coin-flip assignments ==
+  preset: stretchAtr=1.5
+  entries, stops and targets held fixed; only the side is randomised
+
+  profit factor of the same trades with random direction:
+    p05 0.922   p25 0.953   p50 0.978   p75 1.001   p95 1.028   max 1.050
+
+  actual: 0.942  ->  15th percentile  (p = 0.850)
+
+  Inside its own null. On this sample the direction rule has not been
+  distinguished from a coin flip, however good the profit factor looks.
+
