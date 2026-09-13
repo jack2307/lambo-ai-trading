@@ -1,0 +1,17 @@
+bounds:   --from=2018-06-16 --to=2022-12-31 kept 106844 of 186856 bars
+bars:     106844 from 2018-06-17 22:00 to 2022-12-30 21:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+  filters: MoTuWeTh + NY 16:15-16:20
+== direction control: session-hold, 904 trades, 1000 coin-flip assignments ==
+  preset: from=1615,to=1815,side=1,riskDailyRanges=1,rangeDays=20
+  the method's own trades — entry, exit, lots, costs — with each side a coin flip
+  profit factor of the same trades with random direction:
+    p05 0.487   p25 0.545   p50 0.579   p75 0.613   p95 0.684   max 0.740
+
+  actual: 0.996  ->  100th percentile  (p = 0.000)
+
+  Outside its own null. That is a finding worth taking further.
+
