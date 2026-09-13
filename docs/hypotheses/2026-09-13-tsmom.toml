@@ -1,0 +1,27 @@
+[run]
+in_sample = "xauduka:5m"
+in_sample_to = "2025-04-10"
+out_of_sample = "xauusd:5m"
+seeds = 200
+direction_samples = 1000
+
+[[hypothesis]]
+label = "tsmom/60d"
+base = "tsmom"
+filters = ["weekdays", "hours:1800-1900"]
+overrides = { lookbackDays = 60 }
+why = "the canonical lookback; the null holds random sides from the same rebalance bar"
+
+[[hypothesis]]
+label = "tsmom/20d"
+base = "tsmom"
+filters = ["weekdays", "hours:1800-1900"]
+overrides = { lookbackDays = 20 }
+why = "a one-month lookback: more flips, more cost"
+
+[[hypothesis]]
+label = "tsmom/120d"
+base = "tsmom"
+filters = ["weekdays", "hours:1800-1900"]
+overrides = { lookbackDays = 120 }
+why = "a half-year lookback: nearly buy-and-hold in a rising sample, which the drift null must expose"
