@@ -1,0 +1,63 @@
+$ E:\rust\flowdesk\target\release\search.exe --market=xauduka --interval=15m --mode=hypotheses --batch-file=E:\rust\flowdesk\docs\hypotheses\2026-09-13-recent-year-hours.toml --seeds=200 --from=2022-06-16 --to=2025-04-10
+
+bounds:   --from=2022-06-16 --to=2025-04-10 kept 66243 of 186856 bars
+bars:     66243 from 2022-06-16 00:00 to 2025-04-09 23:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+== hypotheses `E:\rust\flowdesk\docs\hypotheses\2026-09-13-recent-year-hours.toml`: 24 declared, walk-forward (4 folds), each against 200 matched null runs ==
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+hold/00-02-long session-hold          578   0.929  -0.050    0.836    1.004        0   78%  fail: profit factor 0.929 < 1.2; expectancy -0.050R < 0.05R
+                                MoTuWeThFr + NY 00:00-00:05  — long from 00:00 to 02:00 New York; the null holds random sides from the same bar
+hold/00-02-short session-hold          578   0.716  -0.214    0.836    1.004        0    9%  fail: profit factor 0.716 < 1.2; expectancy -0.214R < 0.05R
+                                MoTuWeThFr + NY 00:00-00:05  — short from 00:00 to 02:00 New York; the null holds random sides from the same bar
+hold/02-04-long session-hold          578   0.910  -0.067    0.856    1.049        0   66%  fail: profit factor 0.910 < 1.2; expectancy -0.067R < 0.05R
+                                MoTuWeThFr + NY 02:00-02:05  — long from 02:00 to 04:00 New York; the null holds random sides from the same bar
+hold/02-04-short session-hold          578   0.777  -0.189    0.856    1.049        0   20%  fail: profit factor 0.777 < 1.2; expectancy -0.189R < 0.05R
+                                MoTuWeThFr + NY 02:00-02:05  — short from 02:00 to 04:00 New York; the null holds random sides from the same bar
+hold/04-06-long session-hold          578   1.139   0.070    0.837    0.994        0  100%  fail: profit factor 1.139 < 1.2
+                                MoTuWeThFr + NY 04:00-04:05  — long from 04:00 to 06:00 New York; the null holds random sides from the same bar
+hold/04-06-short session-hold          578   0.588  -0.292    0.837    0.994        0    0%  fail: profit factor 0.588 < 1.2; expectancy -0.292R < 0.05R
+                                MoTuWeThFr + NY 04:00-04:05  — short from 04:00 to 06:00 New York; the null holds random sides from the same bar
+hold/06-08-long session-hold          578   0.869  -0.086    0.863    1.009        0   54%  fail: profit factor 0.869 < 1.2; expectancy -0.086R < 0.05R
+                                MoTuWeThFr + NY 06:00-06:05  — long from 06:00 to 08:00 New York; the null holds random sides from the same bar
+hold/06-08-short session-hold          578   0.797  -0.137    0.863    1.009        0   26%  fail: profit factor 0.797 < 1.2; expectancy -0.137R < 0.05R
+                                MoTuWeThFr + NY 06:00-06:05  — short from 06:00 to 08:00 New York; the null holds random sides from the same bar
+hold/08-10-long session-hold          578   0.884  -0.150    0.933    1.133        0   34%  fail: profit factor 0.884 < 1.2; expectancy -0.150R < 0.05R
+                                MoTuWeThFr + NY 08:00-08:05  — long from 08:00 to 10:00 New York; the null holds random sides from the same bar
+hold/08-10-short session-hold          578   0.918  -0.066    0.933    1.133        0   46%  fail: profit factor 0.918 < 1.2; expectancy -0.066R < 0.05R
+                                MoTuWeThFr + NY 08:00-08:05  — short from 08:00 to 10:00 New York; the null holds random sides from the same bar
+hold/10-12-long session-hold          578   0.831  -0.117    0.899    1.044        0   30%  fail: profit factor 0.831 < 1.2; expectancy -0.117R < 0.05R
+                                MoTuWeThFr + NY 10:00-10:05  — long from 10:00 to 12:00 New York; the null holds random sides from the same bar
+hold/10-12-short session-hold          578   0.953  -0.023    0.899    1.044        0   72%  fail: profit factor 0.953 < 1.2; expectancy -0.023R < 0.05R
+                                MoTuWeThFr + NY 10:00-10:05  — short from 10:00 to 12:00 New York; the null holds random sides from the same bar
+hold/12-14-long session-hold          579   0.931  -0.027    0.842    1.017        0   82%  fail: profit factor 0.931 < 1.2; expectancy -0.027R < 0.05R
+                                MoTuWeThFr + NY 12:00-12:05  — long from 12:00 to 14:00 New York; the null holds random sides from the same bar
+hold/12-14-short session-hold          579   0.768  -0.112    0.842    1.017        0   22%  fail: profit factor 0.768 < 1.2; expectancy -0.112R < 0.05R
+                                MoTuWeThFr + NY 12:00-12:05  — short from 12:00 to 14:00 New York; the null holds random sides from the same bar
+hold/14-16-long session-hold          575   0.862  -0.051    0.799    0.981        0   74%  fail: profit factor 0.862 < 1.2; expectancy -0.051R < 0.05R
+                                MoTuWeThFr + NY 14:00-14:05  — long from 14:00 to 16:00 New York; the null holds random sides from the same bar
+hold/14-16-short session-hold          575   0.719  -0.111    0.799    0.981        0   18%  fail: profit factor 0.719 < 1.2; expectancy -0.111R < 0.05R
+                                MoTuWeThFr + NY 14:00-14:05  — short from 14:00 to 16:00 New York; the null holds random sides from the same bar
+hold/16-18-long session-hold          560   1.508   0.104    0.697    0.888        0  100%  SURVIVES
+                                MoTuWeThFr + NY 16:00-16:05  — long from 16:00 to 18:00 New York; the null holds random sides from the same bar
+hold/16-18-short session-hold          560   0.315  -0.300    0.697    0.888        0    0%  fail: profit factor 0.315 < 1.2; expectancy -0.300R < 0.05R
+                                MoTuWeThFr + NY 16:00-16:05  — short from 16:00 to 18:00 New York; the null holds random sides from the same bar
+hold/18-20-long session-hold          464   1.140   0.045    0.751    0.924        0  100%  fail: profit factor 1.140 < 1.2; expectancy 0.045R < 0.05R
+                                MoTuWeThFr + NY 18:00-18:05  — long from 18:00 to 20:00 New York; the null holds random sides from the same bar
+hold/18-20-short session-hold          464   0.479  -0.272    0.751    0.924        0    0%  fail: profit factor 0.479 < 1.2; expectancy -0.272R < 0.05R
+                                MoTuWeThFr + NY 18:00-18:05  — short from 18:00 to 20:00 New York; the null holds random sides from the same bar
+hold/20-22-long session-hold          463   1.238   0.121    0.828    1.038        0  100%  SURVIVES
+                                MoTuWeThFr + NY 20:00-20:05  — long from 20:00 to 22:00 New York; the null holds random sides from the same bar
+hold/20-22-short session-hold          463   0.595  -0.392    0.828    1.038        0    1%  fail: profit factor 0.595 < 1.2; expectancy -0.392R < 0.05R
+                                MoTuWeThFr + NY 20:00-20:05  — short from 20:00 to 22:00 New York; the null holds random sides from the same bar
+hold/22-00-long session-hold          463   0.836  -0.091    0.781    0.951        0   72%  fail: profit factor 0.836 < 1.2; expectancy -0.091R < 0.05R
+                                MoTuWeThFr + NY 22:00-22:05  — long from 22:00 to 00:00 New York; the null holds random sides from the same bar
+hold/22-00-short session-hold          463   0.721  -0.158    0.781    0.951        0   28%  fail: profit factor 0.721 < 1.2; expectancy -0.158R < 0.05R
+                                MoTuWeThFr + NY 22:00-22:05  — short from 22:00 to 00:00 New York; the null holds random sides from the same bar
+
+Survivors: hold/16-18-long/session-hold, hold/20-22-long/session-hold — worth a decision record and a direction null before anything else.
+

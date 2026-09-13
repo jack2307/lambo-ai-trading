@@ -1,0 +1,19 @@
+$ E:\rust\flowdesk\target\release\search.exe --market=xauusd --interval=5m --mode=null-dir --strategy=volume-thrust --samples=1000 --filters=weekdays;flat:1630-1815;hours:1800-0200 --from=2025-09-13 --to=2026-09-12
+
+bounds:   --from=2025-09-13 --to=2026-09-12 kept 70590 of 100749 bars
+bars:     70590 from 2025-09-14 22:00 to 2026-09-11 20:55
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+  filters: MoTuWeThFr + flat 16:30-18:15 + NY 18:00-02:00
+== direction control: volume-thrust, 19 trades, 1000 coin-flip assignments ==
+  entries, stops and targets held fixed; only the side is randomised
+  profit factor of the same trades with random direction:
+    p05 0.537   p25 0.906   p50 1.140   p75 1.429   p95 2.127   max 3.703
+
+  actual: 0.623  ->  8th percentile  (p = 0.921)
+
+  Inside its own null. On this sample the direction rule has not been
+  distinguished from a coin flip, however good the profit factor looks.
+

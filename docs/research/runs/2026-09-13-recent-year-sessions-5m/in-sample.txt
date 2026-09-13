@@ -1,0 +1,80 @@
+$ E:\rust\flowdesk\target\release\search.exe --market=xauusd --interval=5m --mode=hypotheses --batch-file=E:\rust\flowdesk\docs\hypotheses\2026-09-13-recent-year-sessions-5m.toml --seeds=200 --from=2025-09-13 --to=2026-09-12
+
+bounds:   --from=2025-09-13 --to=2026-09-12 kept 70590 of 100749 bars
+bars:     70590 from 2025-09-14 22:00 to 2026-09-11 20:55
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+== hypotheses `E:\rust\flowdesk\docs\hypotheses\2026-09-13-recent-year-sessions-5m.toml`: 32 declared, walk-forward (4 folds), each against 200 matched null runs ==
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+ema-cross/asia ema-cross             190   0.964  -0.020    0.997    1.221        0   40%  fail: profit factor 0.964 < 1.2; expectancy -0.020R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 18:00-02:00  — the moving-average cross baseline, the Asian session, 18:00-02:00 New York
+ema-cross/london ema-cross             286   0.940  -0.050    0.922    1.141        0   56%  fail: profit factor 0.940 < 1.2; expectancy -0.050R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 03:00-11:00  — the moving-average cross baseline, the London session, 03:00-11:00 New York
+rsi-reversion/asia rsi-reversion         173   0.916  -0.048    0.997    1.221        0   32%  fail: profit factor 0.916 < 1.2; expectancy -0.048R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 18:00-02:00  — the RSI reversion baseline, the Asian session, 18:00-02:00 New York
+rsi-reversion/london rsi-reversion         969   0.927  -0.033    0.922    1.141        0   52%  fail: profit factor 0.927 < 1.2; expectancy -0.033R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 03:00-11:00  — the RSI reversion baseline, the London session, 03:00-11:00 New York
+donchian-breakout/asia donchian-breakout     739   1.092   0.053    0.997    1.221        0   75%  fail: profit factor 1.092 < 1.2
+                                MoTuWeThFr + flat 16:30-18:15 + NY 18:00-02:00  — the channel breakout baseline, the Asian session, 18:00-02:00 New York
+donchian-breakout/london donchian-breakout     677   0.801  -0.104    0.922    1.141        0    8%  fail: profit factor 0.801 < 1.2; expectancy -0.104R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 03:00-11:00  — the channel breakout baseline, the London session, 03:00-11:00 New York
+bb-fade/asia bb-fade              1093   0.885  -0.062    0.997    1.221        0   18%  fail: profit factor 0.885 < 1.2; expectancy -0.062R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 18:00-02:00  — the Bollinger fade baseline, the Asian session, 18:00-02:00 New York
+bb-fade/london bb-fade               847   0.947  -0.028    0.922    1.141        0   61%  fail: profit factor 0.947 < 1.2; expectancy -0.028R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 03:00-11:00  — the Bollinger fade baseline, the London session, 03:00-11:00 New York
+orb/asia     orb                     0     NaN     NaN    0.997    1.221       -0  NaN%  fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 18:00-02:00  — the opening-range breakout, the Asian session, 18:00-02:00 New York
+orb/london   orb                    64   1.057   0.028    0.922    1.141        0   88%  fail: profit factor 1.057 < 1.2; expectancy 0.028R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 03:00-11:00  — the opening-range breakout, the London session, 03:00-11:00 New York
+pdhl/asia    pdhl                   68   0.783  -0.141    0.997    1.221        0    6%  fail: profit factor 0.783 < 1.2; expectancy -0.141R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 18:00-02:00  — previous-day high and low, fade and break, the Asian session, 18:00-02:00 New York
+pdhl/london  pdhl                   61   0.513  -0.345    0.922    1.141        0    0%  fail: profit factor 0.513 < 1.2; expectancy -0.345R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 03:00-11:00  — previous-day high and low, fade and break, the London session, 03:00-11:00 New York
+vwap-fade/asia vwap-fade             658   0.827  -0.085    0.997    1.221        0    9%  fail: profit factor 0.827 < 1.2; expectancy -0.085R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 18:00-02:00  — a stretch from session VWAP fades, the Asian session, 18:00-02:00 New York
+vwap-fade/london vwap-fade             644   0.868  -0.067    0.922    1.141        0   30%  fail: profit factor 0.868 < 1.2; expectancy -0.067R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 03:00-11:00  — a stretch from session VWAP fades, the London session, 03:00-11:00 New York
+doji-reversal/asia doji-reversal         338   0.758  -0.179    0.997    1.221        0    4%  fail: profit factor 0.758 < 1.2; expectancy -0.179R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 18:00-02:00  — a doji at the end of a move fades, the Asian session, 18:00-02:00 New York
+doji-reversal/london doji-reversal         136   0.954  -0.025    0.922    1.141        0   62%  fail: profit factor 0.954 < 1.2; expectancy -0.025R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 03:00-11:00  — a doji at the end of a move fades, the London session, 03:00-11:00 New York
+trend-pullback/asia trend-pullback        610   0.549  -0.357    0.997    1.221        0    0%  fail: profit factor 0.549 < 1.2; expectancy -0.357R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 18:00-02:00  — the first pullback in a slow trend continues it, the Asian session, 18:00-02:00 New York
+trend-pullback/london trend-pullback       1100   0.598  -0.300    0.922    1.141        0    0%  fail: profit factor 0.598 < 1.2; expectancy -0.300R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 03:00-11:00  — the first pullback in a slow trend continues it, the London session, 03:00-11:00 New York
+volume-thrust/asia volume-thrust          42   1.202   0.105    0.997    1.221        0   94%  gate pass, inside the noise
+                                MoTuWeThFr + flat 16:30-18:15 + NY 18:00-02:00  — a bar on unusual volume that closes at its extreme continues, the Asian session, 18:00-02:00 New York
+volume-thrust/london volume-thrust           5   1.562   0.211    0.922    1.141        0  100%  fail: only 5 trades (need 30)
+                                MoTuWeThFr + flat 16:30-18:15 + NY 03:00-11:00  — a bar on unusual volume that closes at its extreme continues, the London session, 03:00-11:00 New York
+ict-sweep-mss-fvg/asia ict-sweep-mss-fvg      36   0.909  -0.056    0.997    1.221        0   29%  fail: profit factor 0.909 < 1.2; expectancy -0.056R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 18:00-02:00  — sweep, shift, gap: the ICT chain, the Asian session, 18:00-02:00 New York
+ict-sweep-mss-fvg/london ict-sweep-mss-fvg      26   0.676  -0.207    0.922    1.141        0    0%  fail: only 26 trades (need 30); profit factor 0.676 < 1.2; expectancy -0.207R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 03:00-11:00  — sweep, shift, gap: the ICT chain, the London session, 03:00-11:00 New York
+keltner-break/asia keltner-break         515   1.129   0.075    0.997    1.221        0   85%  fail: profit factor 1.129 < 1.2
+                                MoTuWeThFr + flat 16:30-18:15 + NY 18:00-02:00  — a close outside the Keltner channel continues, the Asian session, 18:00-02:00 New York
+keltner-break/london keltner-break         373   0.850  -0.084    0.922    1.141        0   24%  fail: profit factor 0.850 < 1.2; expectancy -0.084R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 03:00-11:00  — a close outside the Keltner channel continues, the London session, 03:00-11:00 New York
+macd-cross/asia macd-cross            868   0.886  -0.065    0.997    1.221        0   18%  fail: profit factor 0.886 < 1.2; expectancy -0.065R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 18:00-02:00  — the MACD line crossing its signal, the Asian session, 18:00-02:00 New York
+macd-cross/london macd-cross           1273   0.851  -0.095    0.922    1.141        0   24%  fail: profit factor 0.851 < 1.2; expectancy -0.095R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 03:00-11:00  — the MACD line crossing its signal, the London session, 03:00-11:00 New York
+rsi2-pullback/asia rsi2-pullback         409   0.764  -0.140    0.997    1.221        0    4%  fail: profit factor 0.764 < 1.2; expectancy -0.140R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 18:00-02:00  — RSI(2) extremes with the SMA200 trend, the Asian session, 18:00-02:00 New York
+rsi2-pullback/london rsi2-pullback         495   1.016   0.011    0.922    1.141        0   81%  fail: profit factor 1.016 < 1.2; expectancy 0.011R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 03:00-11:00  — RSI(2) extremes with the SMA200 trend, the London session, 03:00-11:00 New York
+squeeze-break/asia squeeze-break         170   1.068   0.044    0.997    1.221        0   72%  fail: profit factor 1.068 < 1.2; expectancy 0.044R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 18:00-02:00  — a Bollinger squeeze, then a close outside the bands, the Asian session, 18:00-02:00 New York
+squeeze-break/london squeeze-break         180   0.580  -0.284    0.922    1.141        0    0%  fail: profit factor 0.580 < 1.2; expectancy -0.284R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 03:00-11:00  — a Bollinger squeeze, then a close outside the bands, the London session, 03:00-11:00 New York
+stoch-reversal/asia stoch-reversal       1027   0.924  -0.043    0.997    1.221        0   32%  fail: profit factor 0.924 < 1.2; expectancy -0.043R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 18:00-02:00  — stochastic crossing from an extreme, the Asian session, 18:00-02:00 New York
+stoch-reversal/london stoch-reversal       1155   0.951  -0.030    0.922    1.141        0   61%  fail: profit factor 0.951 < 1.2; expectancy -0.030R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 03:00-11:00  — stochastic crossing from an extreme, the London session, 03:00-11:00 New York
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+

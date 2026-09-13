@@ -1,0 +1,20 @@
+$ E:\rust\flowdesk\target\release\search.exe --market=xauusd --interval=5m --mode=hypotheses --batch-file=E:\rust\flowdesk\docs\hypotheses\2026-09-13-recent-year-gap.toml --seeds=200 --from=2025-09-13 --to=2026-09-12
+
+bounds:   --from=2025-09-13 --to=2026-09-12 kept 70590 of 100749 bars
+bars:     70590 from 2025-09-14 22:00 to 2026-09-11 20:55
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+== hypotheses `E:\rust\flowdesk\docs\hypotheses\2026-09-13-recent-year-gap.toml`: 2 declared, walk-forward (4 folds), each against 200 matched null runs ==
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+gap-fade/reopen gap-fade               33   0.371  -0.230    0.915    1.529        0    0%  fail: profit factor 0.371 < 1.2; expectancy -0.230R < 0.05R
+                                NY 17:00-19:00  — the reopen gap fills; gated to the reopen hour only
+gap-fade/reopen-2atr gap-fade               19   0.732  -0.094    0.915    1.529        0   21%  fail: only 19 trades (need 30); profit factor 0.732 < 1.2; expectancy -0.094R < 0.05R
+                                NY 17:00-19:00  — only the large gaps
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+

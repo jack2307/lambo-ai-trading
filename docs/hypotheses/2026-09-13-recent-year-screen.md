@@ -1,7 +1,7 @@
 # 2026-09-13-recent-year-screen: every mechanism in the registry on the last twelve months at Vantage
 
 **Registered:** (commit time is authoritative) — before any run
-**Status:** registered
+**Status:** decided → docs/decisions/2026-09-13-recent-year-screen.md (one row of ~170 passes, noise by the registration's own count; the long-window context shows an evening drift, registered next as 2026-09-13-close-reopen-drift)
 **Batch files:** `docs/hypotheses/2026-09-13-recent-year-screen.toml` (15m), `2026-09-13-recent-year-screen-5m.toml` (5m), `2026-09-13-recent-year-hours.toml` (hour-of-day holds), `2026-09-13-recent-year-sessions.toml` / `-5m` (each mechanism per session: Asia 18:00–02:00, London 03:00–11:00 New York; added at the owner's request after the first receipts), `2026-09-13-recent-year-gap.toml` (the gap rows, amended)
 
 ## The criterion changed, and by whom

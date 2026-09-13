@@ -23,6 +23,14 @@ Closed ideas move to the bottom with a pointer to their decision record, so
 - [ ] **Trend pullback on BTC with a time exit**: the side beat its mirror
   (99th) while the swing-stop structure lost 0.38R a trade; a re-registration
   needs an exit with a reason, not a wider stop. `2026-09-13-trend-pullback.md`.
+- [ ] **Close-to-reopen drift on gold** (registered `2026-09-13-close-reopen-drift`):
+  long across the 17:00 New York close and the early evening, 100th
+  percentile of both nulls on 2022–25 in the recent-year screen's context;
+  the proper test with the Friday leg separated and daily-range sizing.
+- [ ] **Direction null on the walk-forward's selected cell** (adversary,
+  recent-year screen): `null-dir` runs the defaults over the whole window,
+  so for a gridded row it scores different trades than the table. An
+  instrument change.
 - [ ] **Options: cluster-at-level with the accumulated tape** — *blocked until
   the collector has months of tape*; check `search --market=btc` tape line.
 
@@ -112,3 +120,7 @@ Closed ideas move to the bottom with a pointer to their decision record, so
 - [x] Trend pullback (EMA20 in an EMA200 trend, swing stop; gold 2018–25,
   BTC 2024–26) → PF 0.38 / 0.51, 0th percentile on both; trend-following on
   intraday bars closed as a family. `2026-09-13-trend-pullback.md`.
+- [x] The recent-year screen (owner's criterion: the last twelve months at
+  Vantage; 17 mechanisms × 4 sessions × 2 timeframes + 24 hour-holds) → one
+  row of ~170 passes, noise by the registration's own count; five indicator
+  mechanisms added to the registry. `2026-09-13-recent-year-screen.md`.
