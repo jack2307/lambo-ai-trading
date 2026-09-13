@@ -260,6 +260,63 @@ min_premium_usd = 100_000
 floor = 5.0
 atr_fraction = 0.15
 
+[markets.xagduka]
+label = "Silver, Dukascopy bid feed (a second seven-year asset; Vantage costs)"
+bar_symbol = "XAGDUKA"
+bar_source = "dukascopy"
+options_source = "none"
+premium_in_underlying = false
+multiplier = 100
+underlying = "SI"
+
+[markets.xagduka.trading]
+# Vantage XAGUSD.sc, measured 2026-09-13 from 205k ticks over three days
+# (read-only): spread p50/p90 $0.021 an ounce; the account is swap-free
+# (the same deal-history measurement as gold). Contract unit one ounce, the
+# convention every Dukascopy-fed market here uses, so "lots" are ounces.
+symbol = "XAGUSD.sc"
+contract_size = 1.0
+spread = 0.021
+lot_step = 0.01
+min_lot = 0.01
+swap_long_per_lot = 0.0
+swap_short_per_lot = 0.0
+
+[markets.xagduka.big_trades]
+min_premium_usd = 100_000
+
+[markets.xagduka.levels.cluster]
+floor = 0.05
+atr_fraction = 0.15
+
+[markets.eurduka]
+label = "EURUSD, Dukascopy bid feed (a second seven-year asset; Vantage costs)"
+bar_symbol = "EURDUKA"
+bar_source = "dukascopy"
+options_source = "none"
+premium_in_underlying = false
+multiplier = 100
+underlying = "6E"
+
+[markets.eurduka.trading]
+# Vantage EURUSD.sc, measured 2026-09-13 from 119k ticks over three days
+# (read-only): spread p50/p90 0.00014. Swap-free account. Contract unit one
+# euro, so "lots" are euros and P&L is in dollars.
+symbol = "EURUSD.sc"
+contract_size = 1.0
+spread = 0.00014
+lot_step = 0.01
+min_lot = 0.01
+swap_long_per_lot = 0.0
+swap_short_per_lot = 0.0
+
+[markets.eurduka.big_trades]
+min_premium_usd = 100_000
+
+[markets.eurduka.levels.cluster]
+floor = 0.0005
+atr_fraction = 0.15
+
 [markets.btcusd]
 label = "Vantage BTCUSD.sc CFD (MT5 bars + Deribit options)"
 bar_symbol = "BTCUSD"
