@@ -71,34 +71,32 @@ const TEAM = [
 ] as const
 
 /**
- * The floor: open plan, one desk cluster per department on its own rug, and
- * a single glass office for the arbiter. North of the aisle: the office, the
- * advisory desks, the archive. South: the data racks, the strategy desk, the
- * engine bay and the three veto desks in a row. A file leaves the archive
- * and comes back to it, as a record or as closed.
+ * The floor: open plan on a timber field with two flat walls, north and
+ * west. Along the long north wall, the reception and the show car. In front
+ * of it the north wing — the glass office, the advisory desks, the archive,
+ * the meeting room — then the aisle, then the south wing: the data racks,
+ * the strategy desk, the engine bay and the three veto desks in a row. A
+ * file leaves the archive and comes back to it, as a record or as closed.
  */
 const seat = (id: (typeof TEAM)[number]['id']) => {
   const agent = TEAM.find((a) => a.id === id)!
   return { id: agent.id, title: agent.title, model: agent.model.name }
 }
 const DEPARTMENTS: Department[] = [
-  // The corner where the two walls meet: reception, with the show car.
-  { id: 'reception', title: 'Reception', line: 'The front desk and the show car, in the corner.', tone: 'public', x: -9.9, z: -3.0, w: 3.9, d: 3.4, occupants: [], furniture: 'reception' },
-  // The lobby runs the length of the south edge, where the doors are.
-  { id: 'lobby', title: 'Lobby', line: 'Sofas, coffee, the tape on a screen.', tone: 'public', x: -0.2, z: 7.4, w: 22.6, d: 3.4, occupants: [], furniture: 'lounge' },
-  // The east end of the south wing: the meeting room, glass like the office.
-  { id: 'meeting', title: 'Meeting room', line: 'Where a decision is argued before it is written.', tone: 'public', x: 10.4, z: 3.0, w: 3.0, d: 3.2, enclosed: true, occupants: [], furniture: 'meeting' },
-  // North of the aisle: the glass office, the advisory desks, the archive.
-  { id: 'arbiter', title: "Arbiter's office", line: 'Reads the receipts and the vetoes; decides last.', tone: 'arbiter', x: -6.6, z: -3.0, w: 3.4, d: 3.2, enclosed: true, occupants: [{ id: 'arbiter', title: 'Arbiter', model: SESSION_MODEL.name }] },
-  { id: 'advisory', title: 'Advisory', line: 'Notes to the arbiter; none of them can stop anything alone.', tone: 'advisory', x: -0.6, z: -3.0, w: 5.2, d: 3.6, arrange: 'grid', occupants: [seat('researcher'), seat('execution-realist'), seat('portfolio'), seat('historian')] },
-  { id: 'archive', title: 'Archive', line: 'Hypotheses, run receipts, decisions, backlog.', tone: 'ops', x: 6.4, z: -3.0, w: 5.2, d: 3.4, occupants: [], furniture: 'shelves' },
-  // South of the aisle: data, the lab, the engine bay, then the veto desks in a row.
-  { id: 'data', title: 'Data room', line: 'Broker bars, two free feeds, the tape collectors.', tone: 'ops', x: -6.8, z: 3.0, w: 3.4, d: 3.0, occupants: [], furniture: 'racks', racks: ['MT5 · Vantage', 'Dukascopy', 'Binance', 'OTL tape'] },
-  { id: 'lab', title: 'Strategy lab', line: 'Pre-registers, implements, tests for look-ahead.', tone: 'ops', x: -3.4, z: 3.0, w: 2.6, d: 3.0, occupants: [{ id: 'strategy-implementer', title: 'Implementer', model: MODELS.sonnet.name }] },
-  { id: 'engine', title: 'Engine room', line: 'Backtest, walk-forward, nulls; the search binary.', tone: 'ops', x: -0.2, z: 3.0, w: 3.0, d: 3.0, occupants: [], furniture: 'engine' },
-  { id: 'data-integrity', title: 'Data Integrity', line: 'Veto', tone: 'veto', x: 3.4, z: 3.0, w: 1.6, d: 3.0, occupants: [seat('data-integrity')] },
-  { id: 'adversary', title: 'Adversary', line: 'Veto', tone: 'veto', x: 5.6, z: 3.0, w: 1.6, d: 3.0, occupants: [seat('adversary')] },
-  { id: 'risk', title: 'Risk', line: 'Veto', tone: 'veto', x: 7.8, z: 3.0, w: 1.6, d: 3.0, occupants: [seat('risk')] },
+  // The strip along the long north wall: reception and the show car, one public space.
+  { id: 'reception', title: 'Reception & showcase', line: 'The front desk, the show car, sofas, coffee, the tape on a screen.', tone: 'public', x: 0, z: -4.6, w: 23.4, d: 3.2, occupants: [], furniture: 'showcase' },
+  // North wing, in front of it: the glass office, the advisory desks, the archive, the meeting room.
+  { id: 'arbiter', title: "Arbiter's office", line: 'Reads the receipts and the vetoes; decides last.', tone: 'arbiter', x: -9.6, z: -1.2, w: 3.4, d: 2.9, enclosed: true, occupants: [{ id: 'arbiter', title: 'Arbiter', model: SESSION_MODEL.name }] },
+  { id: 'advisory', title: 'Advisory', line: 'Notes to the arbiter; none of them can stop anything alone.', tone: 'advisory', x: -3.7, z: -1.2, w: 5.4, d: 2.9, arrange: 'grid', occupants: [seat('researcher'), seat('execution-realist'), seat('portfolio'), seat('historian')] },
+  { id: 'archive', title: 'Archive', line: 'Hypotheses, run receipts, decisions, backlog.', tone: 'ops', x: 2.6, z: -1.2, w: 5.2, d: 2.9, occupants: [], furniture: 'shelves' },
+  { id: 'meeting', title: 'Meeting room', line: 'Where a decision is argued before it is written.', tone: 'public', x: 9.3, z: -1.2, w: 3.4, d: 2.9, enclosed: true, occupants: [], furniture: 'meeting' },
+  // South wing, along the aisle: data, the lab, the engine bay, then the veto desks in a row.
+  { id: 'data', title: 'Data room', line: 'Broker bars, two free feeds, the tape collectors.', tone: 'ops', x: -9.0, z: 3.4, w: 3.4, d: 3.0, occupants: [], furniture: 'racks', racks: ['MT5 · Vantage', 'Dukascopy', 'Binance', 'OTL tape'] },
+  { id: 'lab', title: 'Strategy lab', line: 'Pre-registers, implements, tests for look-ahead.', tone: 'ops', x: -5.6, z: 3.4, w: 2.6, d: 3.0, occupants: [{ id: 'strategy-implementer', title: 'Implementer', model: MODELS.sonnet.name }] },
+  { id: 'engine', title: 'Engine room', line: 'Backtest, walk-forward, nulls; the search binary.', tone: 'ops', x: -2.4, z: 3.4, w: 3.0, d: 3.0, occupants: [], furniture: 'engine' },
+  { id: 'data-integrity', title: 'Data Integrity', line: 'Veto', tone: 'veto', x: 1.2, z: 3.4, w: 1.7, d: 3.0, occupants: [seat('data-integrity')] },
+  { id: 'adversary', title: 'Adversary', line: 'Veto', tone: 'veto', x: 3.5, z: 3.4, w: 1.7, d: 3.0, occupants: [seat('adversary')] },
+  { id: 'risk', title: 'Risk', line: 'Veto', tone: 'veto', x: 5.8, z: 3.4, w: 1.7, d: 3.0, occupants: [seat('risk')] },
 ]
 
 /**
@@ -327,7 +325,7 @@ export function Dashboard({ catalog, market, onError }: Props) {
       <section>
         <SectionHeader
           title="The floor"
-          subtitle="The company as an open-plan floor; only the arbiter sits behind glass. A file leaves the archive, is written up in the lab, run in the engine bay, and passes three desks that can each send it back before it reaches the office."
+          subtitle="An open-plan floor with the reception and the show car along its long wall. A file leaves the archive, is written up in the lab, run in the engine bay, and passes three desks that can each send it back before it reaches the glass office."
         />
         <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
           <Panel className="relative min-h-[460px] overflow-hidden">
@@ -356,7 +354,7 @@ export function Dashboard({ catalog, market, onError }: Props) {
               </span>
               <span className="bg-background/70 border-border rounded-full border px-2 py-0.5 backdrop-blur">
                 <span className="font-medium">Public</span>
-                <span className="text-muted-foreground"> · reception, lobby, meeting room</span>
+                <span className="text-muted-foreground"> · reception & showcase, meeting room</span>
               </span>
             </div>
             {/* The things the scene cannot say on its own. */}
