@@ -244,3 +244,22 @@ not; the row is closed and the way back in is written below.
   between Friday and Sunday.
 - Every number above is unguarded: the research runner does not apply the
   configured guards, and this record is the first to say so.
+
+## Amendment (2026-09-13, later the same night): the spread reading is wrong
+
+`2026-09-13-friday-weekend-hold` put the weekday break row on Dukascopy
+2010-06 → 2018-06 as a prediction of the Reading above: side right, net near
+zero. The side came in right (100th on direction, 1,621 sessions) and the
+net did not: −$1,459, PF 0.733, negative in every year but 2013. The mean
+move per ounce was $0.13 there against about $0.28 on 2018–22 (net −$10 on
+904 sessions) — 2.2× smaller at a price 1.15× lower — and the Friday hold's
+$0.25 an ounce on 2010–18 against $1.31 on 2018–25, 5.2× smaller at 1.4×
+lower. The drift is not proportional to price; "a fixed spread eating a
+proportional move" does not describe it. What the receipts support is only
+what they said: the side is right in every year since 2010, the size of
+the move varies by period and is below the spread in most of them, and
+2023–2025 is the period it was not. "In every year since 2018" in the title
+stands; the sentence in Reading beginning "The side is right in every year
+since 2018 … only from 2023, at $2,000–5,000, does the same proportional
+move clear it" is withdrawn as an explanation. Nothing in the verdict
+changes: closed, no paper run.
