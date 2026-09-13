@@ -146,6 +146,8 @@ interface Stop {
 /** One activity light on a rack: flips on and off at its own rate. */
 interface Led {
   material: THREE.MeshBasicMaterial
+  /** A halo that shows when the light is on; sprites face the camera, so it reads from any angle. */
+  halo: THREE.Sprite
   on: THREE.Color
   off: THREE.Color
   /** Expected flips per second. */
@@ -279,8 +281,15 @@ export function OfficeFloor({ departments, className }: Props) {
     const chairMaterial = new THREE.MeshPhysicalMaterial({ color: colors.background.clone().lerp(colors.foreground, 0.16), roughness: 0.6 })
     const screenMaterial = new THREE.MeshPhysicalMaterial({ color: colors.background, roughness: 0.15, emissive: colors.mint.clone(), emissiveIntensity: 0.4 })
     const equipment = new THREE.MeshPhysicalMaterial({ color: colors.elevated.clone().lerp(colors.foreground, 0.14), roughness: 0.45, metalness: 0.35 })
+    const glow = glowTexture()
+    const haloFor = (color: THREE.Color, size: number) => {
+      const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: glow, color, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }))
+      sprite.scale.setScalar(size)
+      scene.add(sprite)
+      return sprite
+    }
     const rackUnit = new THREE.MeshPhysicalMaterial({ color: colors.elevated.clone().lerp(colors.foreground, 0.3), roughness: 0.5, metalness: 0.4 })
-    const ledGeometry = new THREE.BoxGeometry(0.055, 0.032, 0.012)
+    const ledGeometry = new THREE.BoxGeometry(0.07, 0.04, 0.012)
     const leds: Led[] = []
     const rackTags: { label: HTMLDivElement; at: THREE.Vector3 }[] = []
     const leaf = new THREE.MeshPhysicalMaterial({ color: colors.mint.clone().lerp(colors.background, 0.55), roughness: 0.7 })
@@ -456,15 +465,20 @@ export function OfficeFloor({ departments, className }: Props) {
             scene.add(bay)
             for (let k = 0; k < 3; k++) {
               const warn = k === 2
+              const on = warn ? colors.caution.clone() : colors.mint.clone()
               const material = new THREE.MeshBasicMaterial({ color: colors.background })
               const dot = new THREE.Mesh(ledGeometry, material)
-              dot.position.set(rx - 0.19 + k * 0.08, uy + 0.03, rz + front * 0.365)
+              dot.position.set(rx - 0.19 + k * 0.09, uy + 0.03, rz + front * 0.365)
               scene.add(dot)
+              const halo = haloFor(on, 0.22)
+              halo.position.copy(dot.position).add(new THREE.Vector3(0, 0, front * 0.03))
               leds.push({
                 material,
-                on: warn ? colors.caution.clone() : colors.mint.clone(),
-                off: colors.background.clone().lerp(warn ? colors.caution : colors.mint, 0.12),
-                rate: warn ? 0.08 : 1.5 + Math.random() * 4,
+                halo,
+                on,
+                off: colors.background.clone().lerp(on, 0.1),
+                // Activity lights chatter; the amber one changes state about once a second.
+                rate: warn ? 0.9 : 2 + Math.random() * 5,
                 lit: Math.random() < 0.5,
               })
             }
@@ -496,11 +510,14 @@ export function OfficeFloor({ departments, className }: Props) {
         sw.position.set(dept.x, 1.535, dept.z - front * 0.2)
         scene.add(sw)
         for (let k = 0; k < 8; k++) {
+          const on = k % 4 === 3 ? colors.caution.clone() : colors.mint.clone()
           const material = new THREE.MeshBasicMaterial({ color: colors.background })
           const dot = new THREE.Mesh(ledGeometry, material)
           dot.position.set(dept.x - 0.21 + k * 0.06, 1.55, dept.z - front * 0.2 + front * 0.205)
           scene.add(dot)
-          leds.push({ material, on: colors.mint.clone(), off: colors.background.clone().lerp(colors.mint, 0.12), rate: 4 + Math.random() * 8, lit: Math.random() < 0.5 })
+          const halo = haloFor(on, 0.18)
+          halo.position.copy(dot.position).add(new THREE.Vector3(0, 0, front * 0.03))
+          leds.push({ material, halo, on, off: colors.background.clone().lerp(on, 0.1), rate: 4 + Math.random() * 8, lit: Math.random() < 0.5 })
         }
       } else if (dept.furniture === 'engine') {
         const core = shadowed(new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.85, 1.0), equipment))
@@ -570,7 +587,6 @@ export function OfficeFloor({ departments, className }: Props) {
     const engine = byId('engine')
 
     /* ---- the file ---- */
-    const glow = glowTexture()
     const fileGroup = new THREE.Group()
     const fileMaterial = new THREE.MeshPhysicalMaterial({ color: colors.foreground, roughness: 0.4, emissive: colors.mint.clone(), emissiveIntensity: 0.3 })
     const sheet = shadowed(new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.02, 0.4), fileMaterial))
@@ -808,6 +824,7 @@ export function OfficeFloor({ departments, className }: Props) {
           if (Math.random() < l.rate * dt) {
             l.lit = !l.lit
             l.material.color.copy(l.lit ? l.on : l.off)
+            l.halo.material.opacity = l.lit ? 0.85 : 0
           }
         }
       }
