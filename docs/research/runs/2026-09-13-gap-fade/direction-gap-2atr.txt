@@ -1,0 +1,21 @@
+$ E:\rust\flowdesk\target\release\search.exe --market=xauduka --interval=5m --mode=null-dir --strategy=gap-fade --samples=1000 --params=minGapAtr=2.0,stopGapMult=1.0 --filters=hours:1700-1900 --from=2018-06-16 --to=2025-04-10
+
+bounds:   --from=2018-06-16 --to=2025-04-10 kept 481044 of 560497 bars
+bars:     481044 from 2018-06-17 22:00 to 2025-04-09 23:55
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+  filters: NY 17:00-19:00
+== direction control: gap-fade, 109 trades, 1000 coin-flip assignments ==
+  preset: minGapAtr=2.0,stopGapMult=1.0
+  entries, stops and targets held fixed; only the side is randomised
+
+  profit factor of the same trades with random direction:
+    p05 0.495   p25 0.605   p50 0.701   p75 0.801   p95 0.937   max 1.345
+
+  actual: 0.768  ->  66th percentile  (p = 0.335)
+
+  Inside its own null. On this sample the direction rule has not been
+  distinguished from a coin flip, however good the profit factor looks.
+

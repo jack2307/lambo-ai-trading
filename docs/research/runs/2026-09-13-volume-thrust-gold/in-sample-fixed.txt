@@ -1,0 +1,22 @@
+$ E:\rust\flowdesk\target\release\search.exe --market=xauusd --interval=15m --mode=hypotheses --fixed --batch-file=E:\rust\flowdesk\docs\hypotheses\2026-09-13-volume-thrust-gold.toml --seeds=200 --from=2022-06-16 --to=2025-04-10
+
+bounds:   --from=2022-06-16 --to=2025-04-10 kept 66568 of 100249 bars
+bars:     66568 from 2022-06-16 10:30 to 2025-04-09 23:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+== hypotheses `E:\rust\flowdesk\docs\hypotheses\2026-09-13-volume-thrust-gold.toml`: 3 declared, FIXED parameters over the whole window (no selection), each against 200 matched null runs ==
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+vt-gold/fixed volume-thrust         297   0.931  -0.027    0.839    1.032        0   78%  fail: profit factor 0.931 < 1.2; expectancy -0.027R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15  — the defaults pinned on the broker's tick volume, all hours
+vt-gold/all  volume-thrust         297   0.931  -0.027    0.839    1.032        0   78%  fail: profit factor 0.931 < 1.2; expectancy -0.027R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15  — the grid walked forward, all hours
+vt-gold/ny   volume-thrust         139   0.777  -0.098    0.853    1.175        0   30%  fail: profit factor 0.777 < 1.2; expectancy -0.098R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 08:00-16:00  — New York hours, where tick volume means participation rather than a thin print
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+

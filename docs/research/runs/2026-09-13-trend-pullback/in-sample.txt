@@ -1,0 +1,22 @@
+$ E:\rust\flowdesk\target\release\search.exe --market=xauduka --interval=15m --mode=hypotheses --batch-file=E:\rust\flowdesk\docs\hypotheses\2026-09-13-trend-pullback.toml --seeds=200 --from=2018-06-16 --to=2025-04-10
+
+bounds:   --from=2018-06-16 --to=2025-04-10 kept 160368 of 186856 bars
+bars:     160368 from 2018-06-17 22:00 to 2025-04-09 23:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+== hypotheses `E:\rust\flowdesk\docs\hypotheses\2026-09-13-trend-pullback.toml`: 3 declared, walk-forward (4 folds), each against 200 matched null runs ==
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+tp/fixed     trend-pullback       4651   0.452  -0.384    0.858    0.944        0    0%  fail: profit factor 0.452 < 1.2; expectancy -0.384R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15  — the defaults pinned: EMA20 pullbacks in an EMA200 trend, 1.5R, wherever they print
+tp/allday    trend-pullback       6048   0.560  -0.318    0.858    0.944        0    0%  fail: profit factor 0.560 < 1.2; expectancy -0.318R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15  — the grid (fast EMA x reward) walked forward, all hours
+tp/ny        trend-pullback       2236   0.604  -0.293    0.863    1.002        0    0%  fail: profit factor 0.604 < 1.2; expectancy -0.293R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 08:00-16:00  — New York hours only, where a pullback has participants to continue it
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+

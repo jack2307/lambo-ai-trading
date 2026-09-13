@@ -1,20 +1,20 @@
 $ E:\rust\flowdesk\target\release\search.exe --market=btc --interval=5m --mode=hypotheses --batch-file=E:\rust\flowdesk\docs\hypotheses\2026-09-13-btc-us-hours.toml --seeds=200
 
 bars:     218880 from 2024-08-13 19:00 to 2026-09-12 18:55
-timeline: 449 frames from 2026-09-11 05:36 to 2026-09-12 18:55
+timeline: 573 frames from 2026-09-11 05:36 to 2026-09-13 05:15
           the tape covers 448 of 218880 bars (0.2%)
 
-tape:     15192 prints, 449 frames  <- a result is only comparable to another run over the same tape
+tape:     15646 prints, 573 frames  <- a result is only comparable to another run over the same tape
 
 == hypotheses `E:\rust\flowdesk\docs\hypotheses\2026-09-13-btc-us-hours.toml`: 3 declared, walk-forward (4 folds), each against 200 matched null runs ==
 swap: long 0.00 / short 0.00 USD per lot per night; spread 5.00
 
 hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
-hold/us-hours session-hold          435   0.781  -0.740    0.994    2.976        0   37%  fail: profit factor 0.781 < 1.2; expectancy -0.740R < 0.05R
+hold/us-hours session-hold          435   0.881  -0.173    0.958    1.237        0   26%  fail: profit factor 0.881 < 1.2; expectancy -0.173R < 0.05R
                                 MoTuWeThFr + NY 09:30-09:35  — long through US equity hours; the null may enter only at the open bar too
-hold/off-hours session-hold          435   0.946  -0.151    0.995    2.963        0   47%  fail: profit factor 0.946 < 1.2; expectancy -0.151R < 0.05R
+hold/off-hours session-hold          435   0.946  -0.151    0.963    1.194        0   43%  fail: profit factor 0.946 < 1.2; expectancy -0.151R < 0.05R
                                 MoTuWeThFr + NY 16:00-16:05  — the complement: long from the close to the next open; if this passes too, the hours are not the story
-hold/asia    session-hold          435   0.892  -0.337    0.882    2.550        0   51%  fail: profit factor 0.892 < 1.2; expectancy -0.337R < 0.05R
+hold/asia    session-hold          435   0.892  -0.337    0.941    1.240        0   32%  fail: profit factor 0.892 < 1.2; expectancy -0.337R < 0.05R
                                 MoTuWeThFr + NY 19:00-19:05  — the Asian window on its own, where the claim says the drift is absent
 
 Nothing survived: no hypothesis is both past the gate and outside its own null.

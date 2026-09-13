@@ -1,0 +1,21 @@
+$ E:\rust\flowdesk\target\release\search.exe --market=btc --interval=15m --mode=null-dir --strategy=volume-thrust --samples=1000 --params=volMult=2.5,riskReward=1.5,pipSize=1.0 --to=2025-12-31
+
+bounds:   --from=… --to=2025-12-31 kept 45559 of 70080 bars
+bars:     45559 from 2024-09-12 10:15 to 2025-12-30 23:45
+timeline: 573 frames from 2026-09-11 05:36 to 2026-09-13 05:15
+          the tape covers 0 of 45559 bars (0.0%)
+
+tape:     15646 prints, 573 frames  <- a result is only comparable to another run over the same tape
+
+== direction control: volume-thrust, 840 trades, 1000 coin-flip assignments ==
+  preset: volMult=2.5,riskReward=1.5,pipSize=1.0
+  entries, stops and targets held fixed; only the side is randomised
+
+  profit factor of the same trades with random direction:
+    p05 0.878   p25 0.951   p50 0.998   p75 1.046   p95 1.130   max 1.292
+
+  actual: 0.960  ->  30th percentile  (p = 0.697)
+
+  Inside its own null. On this sample the direction rule has not been
+  distinguished from a coin flip, however good the profit factor looks.
+

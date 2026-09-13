@@ -52,3 +52,13 @@ not random entries with stops. The second is an infrastructure item.
 - It does not say the anomaly never existed; the literature's samples end
   before this one begins.
 - It does not say anything about the Vantage feed; not opened.
+
+## Addendum (2026-09-13, late morning) — re-run after the fold-boundary fix
+
+The engine let a hold open at a walk-forward fold's end run to the end of
+the data (`2026-09-13-instrument-faults.md`). Re-run at `9fde7c1` on the
+same window: `hold/us-hours` PF 0.781 → **0.881** (26th percentile),
+`hold/off-hours` 0.946 (43rd), `hold/asia` 0.892 (32nd); the null's 95th
+percentile fell from 2.98 to 1.24. Every row still fails the gate; the
+verdict stands. The record's original receipts are kept under
+`docs/research/runs/2026-09-13-btc-us-hours/before-fold-close/`.

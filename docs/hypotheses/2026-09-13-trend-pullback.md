@@ -1,7 +1,7 @@
 # 2026-09-13-trend-pullback: the first pullback against a slow trend continues it
 
 **Registered:** (commit time is authoritative) — before any run
-**Status:** registered
+**Status:** decided → docs/decisions/2026-09-13-trend-pullback.md (gold PF 0.379, 0th percentile; BTC 0.511, 0th; closed on both)
 **Batch file:** `docs/hypotheses/2026-09-13-trend-pullback.toml` (gold), `2026-09-13-trend-pullback-btc.toml` (BTC)
 
 ## Claim

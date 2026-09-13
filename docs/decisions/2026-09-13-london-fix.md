@@ -56,3 +56,15 @@ cost below $0.10. Not more days of five-minute bars.
 - It does not say the fix has no price impact within the minute; five-minute
   bars cannot see that and this project does not trade it.
 - It does not say the 2025–26 window would agree; not opened.
+
+## Addendum (2026-09-13, late morning) — re-run after the fold-boundary fix
+
+The engine let a hold open at a fold's end run to the end of the data
+(`2026-09-13-instrument-faults.md`). The batch file has no lower bound and
+the Dukascopy file has since been extended back to 2018, so the re-run at
+`9fde7c1` is on 2018-06 → 2025-04 (1,401 holds per row), not this record's
+2022–25 (578): `fix/pm-into` 0.935 (92nd), `fix/pm-after` 0.932 (96th, gate
+fail on profit factor), `fix/am-into` 0.536 (0th), `fix/am-after` 0.683
+(52nd). No row passes the gate on the longer window either; the verdict
+stands. The 2022–25 receipts are kept under
+`docs/research/runs/2026-09-13-london-fix/before-fold-close/`.

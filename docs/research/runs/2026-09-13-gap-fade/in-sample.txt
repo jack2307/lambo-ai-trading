@@ -1,0 +1,22 @@
+$ E:\rust\flowdesk\target\release\search.exe --market=xauduka --interval=5m --mode=hypotheses --batch-file=E:\rust\flowdesk\docs\hypotheses\2026-09-13-gap-fade.toml --seeds=200 --from=2018-06-16 --to=2025-04-10
+
+bounds:   --from=2018-06-16 --to=2025-04-10 kept 481044 of 560497 bars
+bars:     481044 from 2018-06-17 22:00 to 2025-04-09 23:55
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+== hypotheses `E:\rust\flowdesk\docs\hypotheses\2026-09-13-gap-fade.toml`: 3 declared, walk-forward (4 folds), each against 200 matched null runs ==
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+gap/1atr     gap-fade              166   0.361  -0.289    0.736    0.966        0    0%  fail: profit factor 0.361 < 1.2; expectancy -0.289R < 0.05R
+                                NY 17:00-19:00  — the registered preset: fade any gap of at least one ATR, stop one gap beyond the open
+gap/2atr     gap-fade               83   0.638  -0.131    0.736    0.966        0   14%  fail: profit factor 0.638 < 1.2; expectancy -0.131R < 0.05R
+                                NY 17:00-19:00  — only the large gaps: fewer trades, the ones the story is about
+gap/wf       gap-fade               83   0.638  -0.131    0.736    0.966        0   14%  fail: profit factor 0.638 < 1.2; expectancy -0.131R < 0.05R
+                                NY 17:00-19:00  — the grid (gap size x stop) selected by walk-forward: a check on whether the preset is a lucky cell
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+

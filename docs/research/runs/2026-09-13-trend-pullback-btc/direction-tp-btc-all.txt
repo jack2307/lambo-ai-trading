@@ -1,0 +1,19 @@
+$ E:\rust\flowdesk\target\release\search.exe --market=btc --interval=15m --mode=null-dir --strategy=trend-pullback --samples=1000 --params=pipSize=1.0
+
+bars:     70080 from 2024-09-12 10:15 to 2026-09-12 10:00
+timeline: 573 frames from 2026-09-11 05:36 to 2026-09-13 05:15
+          the tape covers 114 of 70080 bars (0.2%)
+
+tape:     15646 prints, 573 frames  <- a result is only comparable to another run over the same tape
+
+== direction control: trend-pullback, 2931 trades, 1000 coin-flip assignments ==
+  preset: pipSize=1.0
+  entries, stops and targets held fixed; only the side is randomised
+
+  profit factor of the same trades with random direction:
+    p05 0.404   p25 0.428   p50 0.447   p75 0.466   p95 0.492   max 0.534
+
+  actual: 0.511  ->  99th percentile  (p = 0.009)
+
+  Outside its own null. That is a finding worth taking further.
+

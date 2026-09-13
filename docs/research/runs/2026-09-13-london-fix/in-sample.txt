@@ -1,7 +1,7 @@
 $ E:\rust\flowdesk\target\release\search.exe --market=xauduka --interval=5m --mode=hypotheses --batch-file=E:\rust\flowdesk\docs\hypotheses\2026-09-13-london-fix.toml --seeds=200 --to=2025-04-10
 
-bounds:   --from=… --to=2025-04-10 kept 198716 of 278169 bars
-bars:     198716 from 2022-06-16 00:00 to 2025-04-09 23:55
+bounds:   --from=… --to=2025-04-10 kept 481044 of 560497 bars
+bars:     481044 from 2018-06-17 22:00 to 2025-04-09 23:55
 timeline: none — options strategies will be skipped
 
 tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
@@ -10,13 +10,13 @@ tape:     0 prints, 0 frames  <- a result is only comparable to another run over
 swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
 
 hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
-fix/pm-into  session-hold          578   0.961  -0.037    0.860    1.020        0   84%  fail: profit factor 0.961 < 1.2; expectancy -0.037R < 0.05R
+fix/pm-into  session-hold         1401   0.935  -0.046    0.844    0.950        0   92%  fail: profit factor 0.935 < 1.2; expectancy -0.046R < 0.05R
                                 MoTuWeThFr + NY 09:30-09:35  — short into the afternoon fix: the published drift
-fix/pm-after session-hold          578   0.904  -0.061    0.837    1.008        0   74%  fail: profit factor 0.904 < 1.2; expectancy -0.061R < 0.05R
+fix/pm-after session-hold         1401   0.932  -0.037    0.821    0.927        0   96%  fail: profit factor 0.932 < 1.2; expectancy -0.037R < 0.05R
                                 MoTuWeThFr + NY 10:00-10:05  — long out of the afternoon fix: the published recovery
-fix/am-into  session-hold          578   0.491  -0.312    0.698    0.837        0    0%  fail: profit factor 0.491 < 1.2; expectancy -0.312R < 0.05R
+fix/am-into  session-hold         1401   0.536  -0.264    0.670    0.745        0    0%  fail: profit factor 0.536 < 1.2; expectancy -0.264R < 0.05R
                                 MoTuWeThFr + NY 05:30-05:35  — the contrast: the morning fix, where the literature found little
-fix/am-after session-hold          578   0.811  -0.123    0.715    0.891        0   84%  fail: profit factor 0.811 < 1.2; expectancy -0.123R < 0.05R
+fix/am-after session-hold         1401   0.683  -0.201    0.681    0.767        0   52%  fail: profit factor 0.683 < 1.2; expectancy -0.201R < 0.05R
                                 MoTuWeThFr + NY 06:00-06:05  — its complement
 
 Nothing survived: no hypothesis is both past the gate and outside its own null.

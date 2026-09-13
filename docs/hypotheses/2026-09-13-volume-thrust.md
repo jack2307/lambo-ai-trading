@@ -1,7 +1,7 @@
 # 2026-09-13-volume-thrust: a bar on unusual volume that closes at its extreme continues
 
 **Registered:** (commit time is authoritative) — before any run
-**Status:** registered
+**Status:** decided → docs/decisions/2026-09-13-volume-thrust.md (BTC PF 0.960 / 50th, gold 0.931 / 78th; closed on both primaries)
 **Batch file:** `docs/hypotheses/2026-09-13-volume-thrust.toml` (BTC, Binance volume), `2026-09-13-volume-thrust-gold.toml` (gold, Vantage tick volume)
 
 ## Claim

@@ -1,10 +1,10 @@
 $ E:\rust\flowdesk\target\release\search.exe --market=btc --interval=5m --mode=null-dir --strategy=session-hold --samples=1000 --params=from=930,to=1600,side=1 --filters=weekdays;hours:0930-0935
 
 bars:     218880 from 2024-08-13 19:00 to 2026-09-12 18:55
-timeline: 449 frames from 2026-09-11 05:36 to 2026-09-12 18:55
+timeline: 573 frames from 2026-09-11 05:36 to 2026-09-13 05:15
           the tape covers 448 of 218880 bars (0.2%)
 
-tape:     15192 prints, 449 frames  <- a result is only comparable to another run over the same tape
+tape:     15646 prints, 573 frames  <- a result is only comparable to another run over the same tape
 
   filters: MoTuWeThFr + NY 09:30-09:35
 == direction control: session-hold, 543 trades, 1000 coin-flip assignments ==
