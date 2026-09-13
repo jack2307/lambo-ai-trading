@@ -11,22 +11,22 @@ fixed = true
 [[hypothesis]]
 label = "close/1630-1815"
 base = "session-hold"
-filters = ["weekdays:MoTuWeTh", "hours:1625-1630"]
-overrides = { from = 1625, to = 1815, side = 1, riskDailyRanges = 1, rangeDays = 20 }
+filters = ["weekdays:MoTuWeTh", "hours:1615-1620"]
+overrides = { from = 1615, to = 1815, side = 1, riskDailyRanges = 1, rangeDays = 20 }
 why = "the break itself: long from the last bars before the close to the first after the reopen, Monday to Thursday"
 
 [[hypothesis]]
 label = "close/1630-2000"
 base = "session-hold"
-filters = ["weekdays:MoTuWeTh", "hours:1625-1630"]
-overrides = { from = 1625, to = 2000, side = 1, riskDailyRanges = 1, rangeDays = 20 }
+filters = ["weekdays:MoTuWeTh", "hours:1615-1620"]
+overrides = { from = 1615, to = 2000, side = 1, riskDailyRanges = 1, rangeDays = 20 }
 why = "the break plus the first hours of Asia"
 
 [[hypothesis]]
 label = "close/1630-2200"
 base = "session-hold"
-filters = ["weekdays:MoTuWeTh", "hours:1625-1630"]
-overrides = { from = 1625, to = 2200, side = 1, riskDailyRanges = 1, rangeDays = 20 }
+filters = ["weekdays:MoTuWeTh", "hours:1615-1620"]
+overrides = { from = 1615, to = 2200, side = 1, riskDailyRanges = 1, rangeDays = 20 }
 why = "the whole evening from before the close"
 
 [[hypothesis]]
@@ -46,6 +46,6 @@ why = "the afternoon before the close: the contrast that says whether it is just
 [[hypothesis]]
 label = "close/fri-1630-1815"
 base = "session-hold"
-filters = ["weekdays:Fr", "hours:1625-1630"]
-overrides = { from = 1625, to = 1815, side = 1, riskDailyRanges = 1, rangeDays = 20 }
+filters = ["weekdays:Fr", "hours:1615-1620"]
+overrides = { from = 1615, to = 1815, side = 1, riskDailyRanges = 1, rangeDays = 20 }
 why = "the Friday leg alone: a hold across the weekend, which the screen's 16-18 row hid inside its count"

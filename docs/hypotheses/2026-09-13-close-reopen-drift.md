@@ -46,8 +46,10 @@ excludes the Friday leg; the `Fr` row carries it alone.
 
 ## Rows
 
-- `close/1630-1815` — the break itself, Mon–Thu (entry signalled 16:25,
-  filled 16:30; exit at the first bar ≥ 18:15, filled 18:20).
+- `close/1630-1815` — the break itself, Mon–Thu (entry signalled on the
+  16:15 bar, filled at the 16:30 open; exit signalled on the 18:15 bar,
+  filled at the 18:30 open). Amended once: the first spelling gated 16:25,
+  a minute no 15-minute bar carries, and took no trades.
 - `close/1630-2000`, `close/1630-2200` — the break plus the evening.
 - `close/1815-2200` — the evening without the break (the contrast).
 - `close/1400-1630` — the afternoon before the close (the contrast).
