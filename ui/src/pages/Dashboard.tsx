@@ -103,6 +103,25 @@ const OfficeFloor = lazy(() => import('@/components/dashboard/OfficeFloor').then
 
 type Filter = 'all' | 'promising' | 'thin'
 
+/**
+ * Motion on the floor: follows the system's reduced-motion setting unless
+ * the reader has said otherwise here. Windows with "animation effects" off
+ * reports reduced motion, and the floor then stands still — which reads as
+ * broken to someone who came to see it run. The choice is kept per browser.
+ */
+type Motion = 'auto' | 'on' | 'off'
+const MOTION_KEY = 'fd.floor.motion'
+const readMotion = (): Motion => {
+  try {
+    const v = localStorage.getItem(MOTION_KEY)
+    return v === 'on' || v === 'off' ? v : 'auto'
+  } catch {
+    return 'auto'
+  }
+}
+const systemReducedMotion = () =>
+  typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
 /** Below this a metric is a sample, not a measurement. Mirrors the gate. */
 const THIN_TRADES = 30
 
@@ -111,6 +130,18 @@ export function Dashboard({ catalog, market, onError }: Props) {
   const [bars, setBars] = useState<BarsResponse | null>(null)
   const [levels, setLevels] = useState<{ frame: OptionsFrame | null; frames?: number } | null>(null)
   const [filter, setFilter] = useState<Filter>('all')
+  const [motion, setMotion] = useState<Motion>(readMotion)
+  const reduced = systemReducedMotion()
+  const animate = motion === 'on' || (motion === 'auto' && !reduced)
+  const cycleMotion = () => {
+    const next: Motion = animate ? 'off' : 'on'
+    setMotion(next)
+    try {
+      localStorage.setItem(MOTION_KEY, next)
+    } catch {
+      /* private mode: the choice lasts the page */
+    }
+  }
   const [research, setResearch] = useState<Research | null>(null)
   const [now, setNow] = useState(() => Date.now())
 
@@ -280,7 +311,7 @@ export function Dashboard({ catalog, market, onError }: Props) {
         <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
           <Panel className="relative min-h-[460px] overflow-hidden">
             <Suspense fallback={<Skeleton className="absolute inset-0 rounded-[inherit]" />}>
-              <OfficeFloor departments={DEPARTMENTS} className="absolute inset-0" />
+              <OfficeFloor departments={DEPARTMENTS} animate={animate} className="absolute inset-0" />
             </Suspense>
             {/* Which model each wing runs on. The arbiter's is the session's
                 and is set by hand; the rest are read from the agent
@@ -316,6 +347,19 @@ export function Dashboard({ catalog, market, onError }: Props) {
               </span>
               <span className="text-muted-foreground">drag to orbit</span>
             </div>
+            {/* Motion: the one control on the scene. Reads the system setting,
+                says so when that is what stopped it, and lets the reader
+                override it. */}
+            <button
+              type="button"
+              onClick={cycleMotion}
+              className="bg-background/70 border-border hover:bg-accent/60 absolute right-4 bottom-3 flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] backdrop-blur transition-colors"
+              aria-pressed={animate}
+              title={reduced && motion === 'auto' ? 'Your system asks for reduced motion; the floor is standing still. Click to run it anyway.' : 'Toggle motion on the floor'}
+            >
+              <span className={cn('size-2 rounded-full', animate ? 'bg-brand-mint' : 'bg-muted-foreground')} aria-hidden />
+              {animate ? 'running' : reduced && motion === 'auto' ? 'paused by system · run' : 'paused · run'}
+            </button>
           </Panel>
 
           <Panel className="p-4">

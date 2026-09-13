@@ -171,9 +171,11 @@ dashboard is the model; a second scene on the same page is decoration.
   enough visits.
 - **Lazy-loaded.** three.js is half a megabyte. `React.lazy` + `Suspense` with a
   skeleton, so screens that draw no triangle never download the renderer.
-- **`prefers-reduced-motion` stops auto-rotation, idle motion and pulses.** The
-  scene still renders and still responds to drag; it simply does not move on
-  its own.
+- **`prefers-reduced-motion` stops auto-rotation, idle motion and pulses** by
+  default, and the scene says so and offers one control to run anyway. The
+  scene still renders and still responds to drag. A Windows machine with
+  animation effects off reports reduced motion, and a floor that silently
+  stands still on it reads as broken, not considerate.
 - **`powerPreference: 'low-power'`, pixel ratio capped at 2.** This is a
   dashboard, not a game.
 - **Labels are DOM, positioned by projection.** Crisper than canvas text, and in

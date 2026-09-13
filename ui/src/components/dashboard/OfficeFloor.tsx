@@ -55,6 +55,12 @@ export interface Department {
 
 interface Props {
   departments: Department[]
+  /**
+   * Whether the scene moves on its own: the camera drifts, the file walks,
+   * the rack lights blink. The page decides this from the system's
+   * reduced-motion setting and an explicit override; the scene only obeys.
+   */
+  animate: boolean
   className?: string
 }
 
@@ -155,7 +161,7 @@ interface Led {
   lit: boolean
 }
 
-export function OfficeFloor({ departments, className }: Props) {
+export function OfficeFloor({ departments, animate, className }: Props) {
   const container = useRef<HTMLDivElement>(null)
   const labels = useRef<HTMLDivElement>(null)
 
@@ -164,7 +170,7 @@ export function OfficeFloor({ departments, className }: Props) {
     const labelHost = labels.current
     if (!host || !labelHost) return
 
-    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const reduceMotion = !animate
 
     const colors = {
       card: new THREE.Color(token('--card', '#131413')),
@@ -472,6 +478,9 @@ export function OfficeFloor({ departments, className }: Props) {
               scene.add(dot)
               const halo = haloFor(on, 0.22)
               halo.position.copy(dot.position).add(new THREE.Vector3(0, 0, front * 0.03))
+              const lit = Math.random() < 0.5
+              material.color.copy(lit ? on : colors.background.clone().lerp(on, 0.1))
+              halo.material.opacity = lit ? 0.85 : 0
               leds.push({
                 material,
                 halo,
@@ -479,7 +488,7 @@ export function OfficeFloor({ departments, className }: Props) {
                 off: colors.background.clone().lerp(on, 0.1),
                 // Activity lights chatter; the amber one changes state about once a second.
                 rate: warn ? 0.9 : 2 + Math.random() * 5,
-                lit: Math.random() < 0.5,
+                lit,
               })
             }
           }
@@ -517,7 +526,10 @@ export function OfficeFloor({ departments, className }: Props) {
           scene.add(dot)
           const halo = haloFor(on, 0.18)
           halo.position.copy(dot.position).add(new THREE.Vector3(0, 0, front * 0.03))
-          leds.push({ material, halo, on, off: colors.background.clone().lerp(on, 0.1), rate: 4 + Math.random() * 8, lit: Math.random() < 0.5 })
+          const lit = Math.random() < 0.5
+          material.color.copy(lit ? on : colors.background.clone().lerp(on, 0.1))
+          halo.material.opacity = lit ? 0.85 : 0
+          leds.push({ material, halo, on, off: colors.background.clone().lerp(on, 0.1), rate: 4 + Math.random() * 8, lit })
         }
       } else if (dept.furniture === 'engine') {
         const core = shadowed(new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.85, 1.0), equipment))
@@ -884,7 +896,7 @@ export function OfficeFloor({ departments, className }: Props) {
       renderer.dispose()
       renderer.domElement.remove()
     }
-  }, [departments])
+  }, [departments, animate])
 
   return (
     <div
