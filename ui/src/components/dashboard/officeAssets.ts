@@ -14,6 +14,7 @@
 
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
+import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js'
 import { clone as cloneSkeleton } from 'three/examples/jsm/utils/SkeletonUtils.js'
 
 interface Loaded {
@@ -85,6 +86,8 @@ export class ModelSet {
  */
 export function loadModels(base: string, names: string[], deadlineMs = 8000): Promise<ModelSet> {
   const loader = new GLTFLoader()
+  // The packed sets are meshopt-compressed; the decoder is pure JS/wasm inside three.
+  loader.setMeshoptDecoder(MeshoptDecoder)
   const entries: [string, Loaded][] = []
   const one = (name: string) =>
     new Promise<void>((resolve) => {
@@ -112,7 +115,10 @@ export function loadModels(base: string, names: string[], deadlineMs = 8000): Pr
           resolve()
         },
         undefined,
-        () => resolve(),
+        (error) => {
+          console.warn(`floor model ${name} did not load`, error)
+          resolve()
+        },
       )
     })
   const all = Promise.all(names.map(one)).then(() => undefined)

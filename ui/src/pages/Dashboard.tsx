@@ -82,10 +82,12 @@ const seat = (id: (typeof TEAM)[number]['id']) => {
   return { id: agent.id, title: agent.title, model: agent.model.name }
 }
 const DEPARTMENTS: Department[] = [
+  // The corner where the two walls meet: reception, with the show car.
+  { id: 'reception', title: 'Reception', line: 'The front desk and the show car, in the corner.', tone: 'public', x: -9.9, z: -3.0, w: 3.9, d: 3.4, occupants: [], furniture: 'reception' },
   // The lobby runs the length of the south edge, where the doors are.
-  { id: 'reception', title: 'Lobby', line: 'Public reception, with the show car.', tone: 'public', x: -0.2, z: 7.4, w: 22.6, d: 3.4, occupants: [], furniture: 'lounge' },
-  // The west end of the north wing: the meeting room, glass like the office.
-  { id: 'meeting', title: 'Meeting room', line: 'Where a decision is argued before it is written.', tone: 'public', x: -10.0, z: -3.0, w: 3.0, d: 3.4, enclosed: true, occupants: [], furniture: 'meeting' },
+  { id: 'lobby', title: 'Lobby', line: 'Sofas, coffee, the tape on a screen.', tone: 'public', x: -0.2, z: 7.4, w: 22.6, d: 3.4, occupants: [], furniture: 'lounge' },
+  // The east end of the south wing: the meeting room, glass like the office.
+  { id: 'meeting', title: 'Meeting room', line: 'Where a decision is argued before it is written.', tone: 'public', x: 10.4, z: 3.0, w: 3.0, d: 3.2, enclosed: true, occupants: [], furniture: 'meeting' },
   // North of the aisle: the glass office, the advisory desks, the archive.
   { id: 'arbiter', title: "Arbiter's office", line: 'Reads the receipts and the vetoes; decides last.', tone: 'arbiter', x: -6.6, z: -3.0, w: 3.4, d: 3.2, enclosed: true, occupants: [{ id: 'arbiter', title: 'Arbiter', model: SESSION_MODEL.name }] },
   { id: 'advisory', title: 'Advisory', line: 'Notes to the arbiter; none of them can stop anything alone.', tone: 'advisory', x: -0.6, z: -3.0, w: 5.2, d: 3.6, arrange: 'grid', occupants: [seat('researcher'), seat('execution-realist'), seat('portfolio'), seat('historian')] },
@@ -354,7 +356,7 @@ export function Dashboard({ catalog, market, onError }: Props) {
               </span>
               <span className="bg-background/70 border-border rounded-full border px-2 py-0.5 backdrop-blur">
                 <span className="font-medium">Public</span>
-                <span className="text-muted-foreground"> · lobby, meeting room</span>
+                <span className="text-muted-foreground"> · reception, lobby, meeting room</span>
               </span>
             </div>
             {/* The things the scene cannot say on its own. */}
@@ -433,11 +435,15 @@ export function Dashboard({ catalog, market, onError }: Props) {
               <a href={CAR_MODEL.licenseUrl} className="hover:text-foreground underline underline-offset-2" target="_blank" rel="noreferrer">
                 {CAR_MODEL.license}
               </a>
-              . Furniture and people:{' '}
+              . Furniture:{' '}
+              <a href="https://polyhaven.com/models" className="hover:text-foreground underline underline-offset-2" target="_blank" rel="noreferrer">
+                Poly Haven
+              </a>{' '}
+              and{' '}
               <a href="https://kenney.nl" className="hover:text-foreground underline underline-offset-2" target="_blank" rel="noreferrer">
                 Kenney
-              </a>{' '}
-              (CC0).
+              </a>
+              ; people: Kenney (all CC0).
             </p>
           </Panel>
         </div>

@@ -177,7 +177,8 @@ dashboard is the model; a second scene on the same page is decoration.
   animation effects off reports reduced motion, and a floor that silently
   stands still on it reads as broken, not considerate.
 - **`powerPreference: 'low-power'`, pixel ratio capped at 2.** This is a
-  dashboard, not a game.
+  dashboard, not a game. `?floor=lite` drops shadows and the photoreal set
+  for weak machines and for headless layout checks.
 - **Labels are DOM, positioned by projection.** Crisper than canvas text, and in
   the product's own font.
 - **Models are fitted, never trusted for scale.** A glTF is placed by the size
