@@ -127,6 +127,16 @@ ever placed by anything in this repository.
   session, not the method. The ORB pass reported 100th percentiles that were
   72nd–96th once gated.
 
+- **The instrument is a suspect before the market is.** Three engine faults
+  were found by reading trade lists, not tables, in one pass (2026-09-13):
+  a sizing stop on a strategy-managed hold was being enforced; a preset that
+  named a parameter at its default was not pinned; a hold open at a fold's
+  end ran to the end of the data. When a walk-forward and a fixed replay of
+  the *same* pinned row disagree by more than the fold structure explains,
+  dump the trades (`cargo run --example` on the row) before reading either.
+- **For a strategy-managed hold, the fixed receipt is the test** and the
+  walk-forward is a check: with the grid pinned there is nothing to select,
+  and the folds only cut the holds.
 - **Closed families stay closed.** Range breaks on gold (opening, London,
   ICT sweep, volatility-conditional) and yesterday's-level fades are closed
   on the long window with direction nulls at 43rd–54th; a new variant needs

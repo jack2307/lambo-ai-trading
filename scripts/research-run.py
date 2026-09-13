@@ -15,7 +15,8 @@ Reads the `[run]` table of the hypothesis file:
 and writes to docs/research/runs/<id>/:
 
     in-sample.txt        search --mode=hypotheses --batch-file=... on the in-sample market
-    direction-<base>.txt search --mode=null-dir for each distinct base method (in-sample)
+    in-sample-fixed.txt  the registered parameters replayed there, when `[run] fixed = true`
+    direction-<slug>.txt search --mode=null-dir per hypothesis row (in-sample; --stage dir re-runs only these)
     out-of-sample.txt    the same batch on the out-of-sample market  (--stage oos or all)
     out-of-sample-fixed.txt  the registered parameters replayed there, no re-selection
 
@@ -80,7 +81,7 @@ def run(args: list[str], out_path: str) -> None:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("hypothesis", help="docs/hypotheses/<id>.toml")
-    ap.add_argument("--stage", choices=["in", "oos", "all"], default="in")
+    ap.add_argument("--stage", choices=["in", "dir", "oos", "all"], default="in", help="dir = the in-sample direction nulls only (after a null amendment)")
     ap.add_argument("--seeds", type=int, default=None)
     ap.add_argument("--direction-samples", type=int, default=None)
     args = ap.parse_args()
@@ -127,6 +128,9 @@ def main() -> int:
                 [SEARCH, f"--market={market}", f"--interval={tf}", "--mode=hypotheses", "--fixed", f"--batch-file={path}", f"--seeds={seeds}", *b],
                 os.path.join(out_dir, "in-sample-fixed.txt"),
             )
+    if args.stage in ("in", "dir", "all"):
+        market, tf = market_tf(run_cfg.get("in_sample", ""))
+        b = bounds(run_cfg, "in_sample")
         for base, slug, preset in direction_runs():
             print(f"direction null: {slug} ({base}) on {market} {tf}, {direction} samples")
             run(

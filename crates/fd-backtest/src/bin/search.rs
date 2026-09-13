@@ -397,9 +397,19 @@ fn run_direction_null(
         println!("  filters: {}", gated.describe());
     }
 
+    // A strategy that manages its own exits decides them from the side it
+    // holds — a momentum rule flips when the position disagrees with the
+    // sign — so replaying it with a coin-flip side keeps the method's exit
+    // rule inside the null (the tsmom-2 pass read a null median of 1.56).
+    // For those, the null is the method's own trades with their sides
+    // permuted: same intervals, same lots, same costs, only the side.
+    let self_managed = strategy.exits() == fd_strategy::registry::Exits::Strategy;
     let mut curve: Vec<f64> = (0..samples)
         .into_par_iter()
         .map(|seed| {
+            if self_managed {
+                return permuted_sides_pf(&actual.trades, rules, seed as u64 + 1);
+            }
             let flipped = DirectionFlipped { inner: strategy, seed: seed as u64 + 1 };
             let gated = fd_strategy::filter::Filtered { inner: &flipped, filters: filters.clone() };
             run_backtest(bars, &gated, &params, rules, timeline, Range::default())
@@ -419,8 +429,11 @@ fn run_direction_null(
     if !arg("params", "").is_empty() {
         println!("  preset: {}", arg("params", ""));
     }
-    println!("  entries, stops and targets held fixed; only the side is randomised
-");
+    if self_managed {
+        println!("  the method's own trades — entry, exit, lots, costs — with each side a coin flip");
+    } else {
+        println!("  entries, stops and targets held fixed; only the side is randomised");
+    }
     println!("  profit factor of the same trades with random direction:");
     println!("    p05 {:.3}   p25 {:.3}   p50 {:.3}   p75 {:.3}   p95 {:.3}   max {:.3}",
         quantile(0.05), quantile(0.25), quantile(0.50), quantile(0.75), quantile(0.95), curve[curve.len() - 1]);
@@ -434,6 +447,23 @@ fn run_direction_null(
         println!("  distinguished from a coin flip, however good the profit factor looks.");
     }
     println!();
+}
+
+/// The profit factor of `trades` with each side re-drawn by coin flip: the
+/// price move over the same interval reversed, the spread paid again.
+fn permuted_sides_pf(trades: &[fd_backtest::Trade], rules: &TradingRules, seed: u64) -> f64 {
+    let (mut wins, mut losses) = (0.0f64, 0.0f64);
+    for t in trades {
+        let mut hash = seed ^ (t.entry_time as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15);
+        hash ^= hash >> 29;
+        hash = hash.wrapping_mul(0xBF58_476D_1CE4_E5B9);
+        let spread = rules.spread * t.lots * rules.contract_size;
+        // pnl = move − spread (+ swap, which does not flip with the side here:
+        // this account charges none). The flipped trade earns −move − spread.
+        let pnl = if hash >> 63 == 0 { t.pnl_usd } else { -(t.pnl_usd + spread) - spread };
+        if pnl > 0.0 { wins += pnl } else { losses -= pnl }
+    }
+    if losses > 0.0 { wins / losses } else { f64::INFINITY }
 }
 
 /// A strategy with its entry direction replaced by a coin flip.
