@@ -2,7 +2,7 @@
 
 **Registered:** (commit time is authoritative) — before any run of this batch;
 the data for the window was fetched first and no backtest has touched it
-**Status:** in-sample run — the Friday row fails the primary; closed, under review
+**Status:** decided — closed for good; `docs/decisions/2026-09-13-friday-weekend-hold.md`
 **Batch file:** `docs/hypotheses/2026-09-13-friday-weekend-hold.toml`
 
 ## Where this comes from

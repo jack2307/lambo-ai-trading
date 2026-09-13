@@ -1,0 +1,10 @@
+per-ounce (fixed 1 oz, after $0.28 spread) PF 1.136, net $73.45/oz over 401 holds
+  2010 30 PF 1.34 net $11.15/oz
+  2011 51 PF 2.26 net $96.39/oz
+  2012 50 PF 1.03 net $2.43/oz
+  2013 50 PF 2.30 net $66.09/oz
+  2014 49 PF 0.84 net $-10.65/oz
+  2015 48 PF 0.73 net $-16.97/oz
+  2016 50 PF 0.58 net $-36.85/oz
+  2017 50 PF 0.67 net $-22.04/oz
+  2018 23 PF 0.22 net $-16.08/oz
