@@ -768,8 +768,13 @@ export function OfficeFloor({ departments, animate, carModel, modelsBase = '/mod
       }
     }
 
-    /** A palm: a slim trunk and a crown of leaning cones. */
+    /** A tall floor plant: the big potted one when it is here, else a palm of cones. */
     const palm = (x: number, z: number, scale = 1) => {
+      const tall = photo('plant1', { height: 1.75 * scale })
+      if (tall) {
+        place(tall, x, 0, z, (x * 3 + z) % (Math.PI * 2))
+        return
+      }
       const p = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(0.26 * scale, 0.22 * scale, 0.5 * scale, 16), pot))
       p.position.set(x, 0.25 * scale, z)
       scene.add(p)
@@ -782,19 +787,6 @@ export function OfficeFloor({ departments, animate, carModel, modelsBase = '/mod
         frond.position.set(x + Math.cos(a) * 0.32 * scale, 1.95 * scale, z + Math.sin(a) * 0.32 * scale)
         frond.rotation.set(Math.sin(a) * 1.15, 0, -Math.cos(a) * 1.15)
         scene.add(frond)
-      }
-    }
-
-    /** A long planter with a row of bushes, along x. */
-    const planter = (x: number, z: number, length: number) => {
-      const box = shadowed(new THREE.Mesh(new THREE.BoxGeometry(length, 0.42, 0.4), pot))
-      box.position.set(x, 0.21, z)
-      scene.add(box)
-      const n = Math.max(2, Math.round(length / 0.95))
-      for (let i = 0; i < n; i++) {
-        const bush = shadowed(new THREE.Mesh(new THREE.SphereGeometry(0.2 + (i % 2) * 0.04, 12, 12), i % 2 ? leaf : leafDark))
-        bush.position.set(x - length / 2 + 0.3 + (i * (length - 0.6)) / (n - 1), 0.56, z + ((i % 2) - 0.5) * 0.08)
-        scene.add(bush)
       }
     }
 
@@ -1204,7 +1196,8 @@ export function OfficeFloor({ departments, animate, carModel, modelsBase = '/mod
           postMesh.position.set(px, (GLASS_H + 0.05) / 2, pz)
           scene.add(postMesh)
         }
-        plant(x0 + 0.45, backZ + facing * 0.45, 1.1)
+        palm(x0 + 0.5, backZ + facing * 0.5, 0.85)
+        plant(x1 + 0.4, doorZ - facing * 0.15, 0.9)
       }
 
       const n = dept.occupants.length
@@ -1475,10 +1468,10 @@ export function OfficeFloor({ departments, animate, carModel, modelsBase = '/mod
         television(dept.x + dept.w / 2 - 1.6, dept.z + 1.9, 1)
         floorLamp(dept.x - dept.w / 2 + 0.5, dept.z + 2.2)
         floorLamp(dept.x + 2.6, dept.z + 2.2)
-        palm(dept.x - dept.w / 2 + 0.6, dept.z - dept.d / 2 + 0.5, 1.0)
-        palm(dept.x + dept.w / 2 - 0.5, dept.z + dept.d / 2 - 0.4, 0.9)
-        plant(dept.x - 2.4, dept.z - 1.2, 0.8)
-        plant(dept.x + 2.4, dept.z - 1.2, 0.8)
+        palm(dept.x - dept.w / 2 + 0.6, dept.z - dept.d / 2 + 0.6, 1.0)
+        palm(dept.x + dept.w / 2 - 0.6, dept.z - dept.d / 2 + 0.6, 1.0)
+        plant(cx - 2.8, cz + 0.9, 1.05)
+        plant(cx + 2.8, cz + 0.9, 1.05)
       } else if (dept.furniture === 'meeting') {
         // A long table, three chairs a side, a screen on the back glass.
         const tableW = dept.w - 1.2
@@ -1629,7 +1622,6 @@ export function OfficeFloor({ departments, animate, carModel, modelsBase = '/mod
         }
         case 'lab': {
           whiteboard(dept.x + dept.w / 2 - 0.7, back, facing)
-          plant(dept.x - dept.w / 2 + 0.4, back, 0.8)
           break
         }
         case 'engine': {
@@ -1677,12 +1669,9 @@ export function OfficeFloor({ departments, animate, carModel, modelsBase = '/mod
     }
 
     // Plants along the edge, where an open plan keeps them.
-    palm(FLOOR_W / 2 - 0.7, FLOOR_Z1 - 0.7, 1.0)
-    palm(FLOOR_W / 2 - 2.4, AISLE_Z + 2.3, 0.9)
-    plant(FLOOR_W / 2 - 0.6, AISLE_Z + 0.9, 0.9)
-    planter(FLOOR_W / 2 - 2.2, FLOOR_Z1 - 0.4, 3.2)
-    plant(-FLOOR_W / 2 + 0.6, AISLE_Z - 0.2, 0.9)
-    plant(-FLOOR_W / 2 + 0.6, FLOOR_Z1 - 0.6, 0.9)
+    palm(FLOOR_W / 2 - 0.8, FLOOR_Z1 - 0.8, 1.0)
+    palm(-FLOOR_W / 2 + 0.8, FLOOR_Z1 - 0.8, 0.95)
+    plant(FLOOR_W / 2 - 0.7, AISLE_Z + 0.2, 1.0)
 
     /* ---- where people go, and how they get there ---- */
     const WALKWAY_Z = 0.05
