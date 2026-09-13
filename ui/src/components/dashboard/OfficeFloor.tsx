@@ -539,8 +539,10 @@ export function OfficeFloor({ departments, animate, carModel, modelsBase = '/mod
             goal: 'home',
             path: [],
             leg: 0,
-            dwell: rand(4, 30),
-            restless: seated ? 0.35 : 0.6,
+            // Desk workers work: a long sit before the first errand, and
+            // most errand rolls come up empty. Standing people move more.
+            dwell: seated ? rand(40, 150) : rand(6, 30),
+            restless: seated ? 0.12 : 0.45,
           })
           return inst.group
         }
@@ -1708,16 +1710,6 @@ export function OfficeFloor({ departments, animate, carModel, modelsBase = '/mod
       pois.push({ at: new THREE.Vector3(d.x + 2.9, 0, d.z - 0.4), yaw: -Math.PI / 2 })
       pois.push({ at: new THREE.Vector3(d.x - d.w / 2 + 1.7, 0, d.z + 2.9), yaw: Math.PI })
     }
-    // Three people with no desk, on the move between the others.
-    for (let i = 0; i < 3 && pois.length > 0; i++) {
-      const p = pois[(i * 3) % pois.length]
-      const g = person(p.at.x, p.at.z, p.yaw, new THREE.MeshPhysicalMaterial({ color: colors.muted.clone().lerp(colors.foreground, 0.2), roughness: 0.6 }), { kind: 'standing' })
-      const agent = agents.find((a) => a.group === g)
-      if (agent) {
-        agent.restless = 0.9
-        agent.dwell = rand(1, 8)
-      }
-    }
     const WALK_SPEED = 1.25
     const fadeTo = (agent: Agent, next: 'sit' | 'idle' | 'walk') => {
       if (agent.current === next) return
@@ -1748,7 +1740,7 @@ export function OfficeFloor({ departments, animate, carModel, modelsBase = '/mod
           if (agent.dwell > 0) continue
           if (agent.state === 'home') {
             if (Math.random() < agent.restless && pois.length > 0) startTrip(agent, 'away')
-            else agent.dwell = rand(6, 30)
+            else agent.dwell = agent.home.seated ? rand(40, 120) : rand(8, 30)
           } else startTrip(agent, 'home')
           continue
         }
@@ -1759,10 +1751,10 @@ export function OfficeFloor({ departments, animate, carModel, modelsBase = '/mod
             agent.group.position.set(agent.home.x, agent.home.y, agent.home.z)
             agent.group.rotation.y = agent.home.yaw
             fadeTo(agent, agent.home.seated ? 'sit' : 'idle')
-            agent.dwell = rand(15, 70)
+            agent.dwell = agent.home.seated ? rand(60, 180) : rand(10, 40)
           } else {
             fadeTo(agent, 'idle')
-            agent.dwell = rand(5, 16)
+            agent.dwell = agent.home.seated ? rand(3, 8) : rand(6, 18)
           }
           continue
         }
