@@ -1,0 +1,22 @@
+$ E:\rust\flowdesk\target\release\search.exe --market=xauusd --interval=15m --mode=hypotheses --batch-file=E:\rust\flowdesk\docs\hypotheses\2026-09-13-doji.toml --seeds=200 --from=2025-04-11
+
+bounds:   --from=2025-04-11 --to=… kept 33589 of 100249 bars
+bars:     33589 from 2025-04-11 00:00 to 2026-09-11 20:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+== hypotheses `E:\rust\flowdesk\docs\hypotheses\2026-09-13-doji.toml`: 3 declared, walk-forward (4 folds), each against 200 matched null runs ==
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+doji/allday  doji-reversal         120   0.677  -0.222    0.960    1.172        0    0%  fail: profit factor 0.677 < 1.2; expectancy -0.222R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15  — the pattern wherever it prints
+doji/ny      doji-reversal          64   0.916  -0.053    0.971    1.310        0   36%  fail: profit factor 0.916 < 1.2; expectancy -0.053R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 08:00-16:00  — only in New York hours, where a full-ATR bar means participation
+doji/strict  doji-reversal          18   1.175   0.091    0.960    1.172        0   95%  fail: only 18 trades (need 30); profit factor 1.175 < 1.2
+                                MoTuWeThFr + flat 16:30-18:15  — a stricter doji: near-zero body on a large bar
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+

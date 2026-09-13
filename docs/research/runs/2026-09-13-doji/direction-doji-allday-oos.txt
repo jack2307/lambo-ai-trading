@@ -1,0 +1,20 @@
+$ E:\rust\flowdesk\target\release\search.exe --market=xauusd --interval=15m --mode=null-dir --strategy=doji-reversal --samples=1000 --filters=weekdays;flat:1630-1815 --from=2025-04-11
+
+bounds:   --from=2025-04-11 --to=… kept 33589 of 100249 bars
+bars:     33589 from 2025-04-11 00:00 to 2026-09-11 20:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+  filters: MoTuWeThFr + flat 16:30-18:15
+== direction control: doji-reversal, 321 trades, 1000 coin-flip assignments ==
+  entries, stops and targets held fixed; only the side is randomised
+
+  profit factor of the same trades with random direction:
+    p05 0.636   p25 0.698   p50 0.744   p75 0.794   p95 0.863   max 1.084
+
+  actual: 0.614  ->  3th percentile  (p = 0.973)
+
+  Inside its own null. On this sample the direction rule has not been
+  distinguished from a coin flip, however good the profit factor looks.
+
