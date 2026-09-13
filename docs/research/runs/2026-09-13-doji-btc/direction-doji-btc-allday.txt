@@ -1,0 +1,20 @@
+$ E:\rust\flowdesk\target\release\search.exe --market=btc --interval=15m --mode=null-dir --strategy=doji-reversal --samples=1000 --params=pipSize=1.0
+
+bars:     70080 from 2024-09-12 10:15 to 2026-09-12 10:00
+timeline: 558 frames from 2026-09-11 05:36 to 2026-09-13 04:01
+          the tape covers 114 of 70080 bars (0.2%)
+
+tape:     15587 prints, 558 frames  <- a result is only comparable to another run over the same tape
+
+== direction control: doji-reversal, 693 trades, 1000 coin-flip assignments ==
+  preset: pipSize=1.0
+  entries, stops and targets held fixed; only the side is randomised
+
+  profit factor of the same trades with random direction:
+    p05 0.686   p25 0.736   p50 0.769   p75 0.807   p95 0.857   max 0.893
+
+  actual: 0.731  ->  23th percentile  (p = 0.774)
+
+  Inside its own null. On this sample the direction rule has not been
+  distinguished from a coin flip, however good the profit factor looks.
+

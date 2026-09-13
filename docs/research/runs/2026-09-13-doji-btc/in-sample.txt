@@ -1,0 +1,20 @@
+$ E:\rust\flowdesk\target\release\search.exe --market=btc --interval=15m --mode=hypotheses --batch-file=E:\rust\flowdesk\docs\hypotheses\2026-09-13-doji-btc.toml --seeds=200
+
+bars:     70080 from 2024-09-12 10:15 to 2026-09-12 10:00
+timeline: 558 frames from 2026-09-11 05:36 to 2026-09-13 04:01
+          the tape covers 114 of 70080 bars (0.2%)
+
+tape:     15587 prints, 558 frames  <- a result is only comparable to another run over the same tape
+
+== hypotheses `E:\rust\flowdesk\docs\hypotheses\2026-09-13-doji-btc.toml`: 2 declared, walk-forward (4 folds), each against 200 matched null runs ==
+swap: long 0.00 / short 0.00 USD per lot per night; spread 5.00
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+doji/btc-allday doji-reversal         236   0.786  -0.148    0.958    1.073        0    0%  fail: profit factor 0.786 < 1.2; expectancy -0.148R < 0.05R
+                                  — the same pattern on BTC 15-minute bars
+doji/btc-us  doji-reversal         109   0.808  -0.133    0.951    1.169        0   10%  fail: profit factor 0.808 < 1.2; expectancy -0.133R < 0.05R
+                                NY 08:00-16:00  — US hours only
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+
