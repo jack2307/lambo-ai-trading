@@ -42,8 +42,8 @@ A row that fails is closed for this program.
 ## Multiplicity
 
 This is a screen: about 36 rows on 15m, 36 on 5m, 24 hour-holds, and 32
-session rows per timeframe — some 170 looks at one year. At the 95th percentile, five would pass by
-luck. The record will say how many passed and how many were expected by
+session rows per timeframe — some 170 looks at one year. At the 95th percentile, eight or nine would
+pass by luck. The record will say how many passed and how many were expected by
 chance, and a candidate list shorter than that expectation is noise.
 
 ## Data
