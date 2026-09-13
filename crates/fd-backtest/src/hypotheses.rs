@@ -253,7 +253,16 @@ fn matched_rate(bars: &[Bar], rules: &TradingRules, filters: &[Filter], target_t
     (PROBE * target_trades as f64 / got as f64).clamp(0.0005, 1.0)
 }
 
-fn control_for(base: &dyn Strategy, overrides: &[(String, f64)], seed: f64, realised_hold: Option<f64>) -> (&'static dyn Strategy, Params) {
+/// `realised_hold` is the method's own hold distribution on this window, as
+/// `hold_distribution` measures it: (geometric mean in minutes, standard
+/// deviation of ln minutes). It sets the null's `holdMinutes` (log-median)
+/// and `holdLogSd`; every other source of a hold length is a fixed hold.
+fn control_for(
+    base: &dyn Strategy,
+    overrides: &[(String, f64)],
+    seed: f64,
+    realised_hold: Option<(f64, f64)>,
+) -> (&'static dyn Strategy, Params) {
     // Judged on the preset, not the bare method: a pinned grid is empty.
     let preset = Preset::new(base, overrides).ok();
     let pinned = preset.as_ref().map(|p| p.defaults.clone());
@@ -264,21 +273,29 @@ fn control_for(base: &dyn Strategy, overrides: &[(String, f64)], seed: f64, real
         let minutes = |v: f64| (v as i64 / 100) * 60 + v as i64 % 100;
         // Hold length: a window's span when the preset names one; otherwise
         // what the method actually held on this window, when the caller has
-        // run it (the mean realised hold); failing that, half the lookback
-        // for a rebalanced hold, 390 minutes otherwise. The guess was the
-        // null for tsmom until 2026-09-13: it held 27% less than the 20-day
-        // row and 2.4x more than the 120-day row (`2026-09-13-tsmom-silver.md`).
-        let hold = match (get("from"), get("to"), realised_hold, get("lookbackDays")) {
+        // run it — the realised hold *distribution*, geometric mean as the
+        // log-median and the sd of the logs as the spread; failing that, half
+        // the lookback for a rebalanced hold, 390 minutes otherwise. The
+        // guess was the null for tsmom until 2026-09-13: it held 27% less
+        // than the 20-day row and 2.4x more than the 120-day row
+        // (`2026-09-13-tsmom-silver.md`). The mean, fixed, was the null until
+        // 2026-09-14: it could not produce the 356-day hold that carried the
+        // EURUSD row, so its PF was bounded where the method's was not
+        // (`2026-09-14-tsmom-eurusd.md`).
+        let (hold, log_sd) = match (get("from"), get("to"), realised_hold, get("lookbackDays")) {
             (Some(from), Some(to), _, _) => {
                 let (a, b) = (minutes(from), minutes(to));
-                if b > a { b - a } else { 1440 - a + b }
+                (if b > a { b - a } else { 1440 - a + b }, 0.0)
             }
-            (_, _, Some(minutes), _) if minutes.is_finite() && minutes > 0.0 => minutes.round() as i64,
-            (_, _, _, Some(days)) => (days * 1440.0 / 2.0) as i64,
-            _ => 390,
+            (_, _, Some((median, log_sd)), _) if median.is_finite() && median > 0.0 => {
+                (median.round() as i64, if log_sd.is_finite() && log_sd > 0.0 { log_sd } else { 0.0 })
+            }
+            (_, _, _, Some(days)) => ((days * 1440.0 / 2.0) as i64, 0.0),
+            _ => (390, 0.0),
         };
         let mut p = RandomHold.default_params();
         p.set("holdMinutes", hold as f64);
+        p.set("holdLogSd", log_sd);
         p.set("seed", seed);
         // Sized like the method when the method sizes on daily ranges.
         if let Some(pinned) = &pinned
@@ -295,13 +312,29 @@ fn control_for(base: &dyn Strategy, overrides: &[(String, f64)], seed: f64, real
     }
 }
 
-/// The mean hold of a trade list in minutes; `None` when there are no trades.
-fn mean_hold_minutes(trades: &[crate::engine::Trade]) -> Option<f64> {
-    if trades.is_empty() {
+/// The realised hold distribution of a trade list: (geometric mean of the
+/// holds in minutes, population standard deviation of ln minutes). `None`
+/// when no trade held for a positive time.
+///
+/// Geometric, not arithmetic: the null draws its holds log-normally, and
+/// the geometric mean is the log-median that draw is centred on — so the
+/// null's holds sit where the method's typical hold sits and spread as far
+/// as the method's longest. The arithmetic mean would centre the null above
+/// the typical hold and still stop short of the tail.
+fn hold_distribution(trades: &[crate::engine::Trade]) -> Option<(f64, f64)> {
+    let logs: Vec<f64> = trades
+        .iter()
+        .map(|t| (t.exit_time - t.entry_time) as f64 / 60_000.0)
+        .filter(|minutes| *minutes > 0.0)
+        .map(f64::ln)
+        .collect();
+    if logs.is_empty() {
         return None;
     }
-    let total: i64 = trades.iter().map(|t| t.exit_time - t.entry_time).sum();
-    Some(total as f64 / trades.len() as f64 / 60_000.0)
+    let n = logs.len() as f64;
+    let mean = logs.iter().sum::<f64>() / n;
+    let variance = logs.iter().map(|l| (l - mean).powi(2)).sum::<f64>() / n;
+    Some((mean.exp(), variance.sqrt()))
 }
 
 /// `control_for`, with the random-entry rate matched to the method's count.
@@ -310,7 +343,7 @@ fn matched_control_for(
     overrides: &[(String, f64)],
     seed: f64,
     rate: Option<f64>,
-    realised_hold: Option<f64>,
+    realised_hold: Option<(f64, f64)>,
 ) -> (&'static dyn Strategy, Params) {
     let (inner, mut p) = control_for(base, overrides, seed, realised_hold);
     if let Some(rate) = rate
@@ -423,7 +456,7 @@ pub fn run_hypothesis_fixed(
     let result = run_backtest(bars, &filtered, &preset.defaults, rules, None, Range::default());
     let drift = base.exits() == fd_strategy::registry::Exits::Strategy && preset.grid().is_empty();
     let rate = (!drift).then(|| matched_rate(bars, rules, &hypothesis.filters, result.trades.len()));
-    let hold = drift.then(|| mean_hold_minutes(&result.trades)).flatten();
+    let hold = drift.then(|| hold_distribution(&result.trades)).flatten();
 
     let mut null_pf: Vec<f64> = (0..seeds)
         .into_par_iter()
@@ -482,7 +515,7 @@ pub fn run_hypothesis(
     let whole = crate::engine::run_backtest(bars, &filtered, &preset.defaults, rules, None, crate::engine::Range::default());
     let drift = base.exits() == fd_strategy::registry::Exits::Strategy && preset.grid().is_empty();
     let rate = (!drift).then(|| matched_rate(bars, rules, &hypothesis.filters, whole.trades.len()));
-    let hold = drift.then(|| mean_hold_minutes(&whole.trades)).flatten();
+    let hold = drift.then(|| hold_distribution(&whole.trades)).flatten();
 
     let mut null_pf: Vec<f64> = (0..seeds)
         .into_par_iter()
@@ -526,9 +559,47 @@ mod tests {
         let overrides = vec![("lookbackDays".to_string(), 20.0), ("riskDailyRanges".to_string(), 2.0), ("rangeDays".to_string(), 20.0)];
         let (_, guessed) = super::control_for(base, &overrides, 1.0, None);
         assert_eq!(guessed.get("holdMinutes"), 20.0 * 1440.0 / 2.0, "no realised hold: half the lookback");
-        let (_, realised) = super::control_for(base, &overrides, 1.0, Some(19_829.4));
-        assert_eq!(realised.get("holdMinutes"), 19_829.0, "the method's own mean hold, rounded");
+        assert_eq!(guessed.get("holdLogSd"), 0.0, "a guessed hold is a fixed hold");
+        let (_, realised) = super::control_for(base, &overrides, 1.0, Some((19_829.4, 0.8)));
+        assert_eq!(realised.get("holdMinutes"), 19_829.0, "the method's own log-median hold, rounded");
+        assert_eq!(realised.get("holdLogSd"), 0.8, "and the spread of its logs");
         assert_eq!(realised.get("riskDailyRanges"), 2.0, "sized like the method");
+        let (_, degenerate) = super::control_for(base, &overrides, 1.0, Some((19_829.4, f64::NAN)));
+        assert_eq!(degenerate.get("holdLogSd"), 0.0, "a spread that is not a number falls back to the fixed hold");
+    }
+
+    /// A trade that held for `minutes`; nothing else about it matters here.
+    fn held_for(minutes: i64) -> crate::engine::Trade {
+        crate::engine::Trade {
+            direction: fd_strategy::registry::Side::Long,
+            entry_time: 1_600_000_000_000,
+            entry_price: 1.0,
+            exit_time: 1_600_000_000_000 + minutes * 60_000,
+            exit_price: 1.0,
+            exit_reason: "hold elapsed".into(),
+            exit_kind: crate::engine::ExitKind::Signal,
+            stop: f64::NAN,
+            target: None,
+            lots: 1.0,
+            pnl_usd: 0.0,
+            swap_usd: 0.0,
+            r: 0.0,
+            mae: 0.0,
+            mfe: 0.0,
+            hold_ms: minutes * 60_000,
+            reason: "test".into(),
+        }
+    }
+
+    #[test]
+    fn the_hold_distribution_is_the_geometric_mean_and_the_sd_of_the_logs() {
+        assert_eq!(super::hold_distribution(&[]), None, "no trades, no distribution");
+        let (median, log_sd) = super::hold_distribution(&[held_for(1_000), held_for(10_000)]).unwrap();
+        assert!((median - 3_162.28).abs() < 0.01, "geometric mean of 1,000 and 10,000 is sqrt(10^7) = 3,162.28, got {median}");
+        assert!((log_sd - 1.1513).abs() < 0.001, "population sd of ln(1000), ln(10000) is ln(10)/2 = 1.1513, got {log_sd}");
+        let (same, none) = super::hold_distribution(&[held_for(390), held_for(390), held_for(390)]).unwrap();
+        assert!((same - 390.0).abs() < 1e-9 && none < 1e-9, "identical holds: their value, no spread (got {same}, {none})");
+        assert_eq!(super::hold_distribution(&[held_for(0)]), None, "a zero-length hold has no log and is not a hold");
     }
 
     use super::*;
