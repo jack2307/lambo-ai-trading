@@ -1,3 +1,3 @@
 Models in this folder are from Poly Haven (https://polyhaven.com), licensed CC0 1.0
 (https://creativecommons.org/publicdomain/zero/1.0/). Repacked at 1k with gltf-transform.
-Assets: metal_office_desk, modern_arm_chair_01, dining_chair_02, desk_lamp_arm_01, classic_laptop, office_notepads, metal_trash_can, wall_clock, wooden_bookshelf_worn, steel_frame_shelves_01, sofa_02, modern_coffee_table_01, coffee_table_round_01, CoffeeCart_01, Television_01, standing_chalkboard_01, drawer_cabinet, WoodenTable_01, potted_plant_01, potted_plant_02, potted_plant_04, calathea_orbifolia_01
+Assets: pachira_aquatica_01, fern_02, anthurium_botany_01, shrub_sorrel_01, tree_small_02, ceramic_vase_01, ceramic_vase_03

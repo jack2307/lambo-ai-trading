@@ -63,6 +63,14 @@ const PHOTOREAL: Record<string, { name: string; yaw: number }> = {
   plant2: { name: 'potted_plant_02', yaw: 0 },
   plant3: { name: 'potted_plant_04', yaw: 0 },
   plant4: { name: 'calathea_orbifolia_01', yaw: 0 },
+  // Greenery that stands in a vase: a money tree, a fern, an anthurium, a
+  // sorrel; two modern ceramic pots. The money tree, larger, fills the corners.
+  pachira: { name: 'pachira_aquatica_01', yaw: 0 },
+  fern: { name: 'fern_02', yaw: 0 },
+  anthurium: { name: 'anthurium_botany_01', yaw: 0 },
+  sorrel: { name: 'shrub_sorrel_01', yaw: 0 },
+  vaseTall: { name: 'ceramic_vase_01', yaw: 0 },
+  vaseLow: { name: 'ceramic_vase_03', yaw: 0 },
 }
 /** Kenney's models face +z. */
 const KENNEY_YAW = 0
@@ -742,6 +750,17 @@ export function OfficeFloor({ departments, animate, carModel, modelsBase = '/mod
 
     let plantCount = 0
     const plant = (x: number, z: number, scale = 1) => {
+      const inVase = ['pachira', 'fern', 'anthurium', 'sorrel'] as const
+      const kind = inVase[plantCount % inVase.length]
+      const low = photo('vaseLow', { height: 0.4 * scale })
+      const green = photo(kind, { height: (kind === 'pachira' ? 1.05 : 0.7) * scale })
+      if (low && green) {
+        plantCount += 1
+        const yaw = (plantCount * 1.9) % (Math.PI * 2)
+        place(low, x, 0, z, yaw)
+        place(green, x, low.size.y - 0.08 * scale, z, yaw)
+        return
+      }
       const realKinds = ['plant1', 'plant2', 'plant3', 'plant4'] as const
       const realPlant = photo(realKinds[plantCount % realKinds.length], { height: 0.9 * scale })
       if (realPlant) {
@@ -770,6 +789,15 @@ export function OfficeFloor({ departments, animate, carModel, modelsBase = '/mod
 
     /** A tall floor plant: the big potted one when it is here, else a palm of cones. */
     const palm = (x: number, z: number, scale = 1) => {
+      // A money tree standing in a tall ceramic pot, its crown at head
+      // height and above; the potted plant when it is not here.
+      const vase = photo('vaseTall', { height: 0.62 * scale })
+      const tree = photo('pachira', { height: 1.55 * scale })
+      if (vase && tree) {
+        place(vase, x, 0, z, (x * 3 + z) % (Math.PI * 2))
+        place(tree, x, vase.size.y - 0.12 * scale, z, (x * 5 + z * 2) % (Math.PI * 2))
+        return
+      }
       const tall = photo('plant1', { height: 1.75 * scale })
       if (tall) {
         place(tall, x, 0, z, (x * 3 + z) % (Math.PI * 2))
