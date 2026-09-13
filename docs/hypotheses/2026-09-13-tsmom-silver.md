@@ -2,7 +2,7 @@
 
 **Registered:** (commit time is authoritative) — before any run of this batch;
 the silver bars were fetched and converted first and no backtest has read them
-**Status:** registered
+**Status:** in-sample run — the 20-day row survives the primary; confirmation running
 **Batch file:** `docs/hypotheses/2026-09-13-tsmom-silver.toml`
 
 ## Where this comes from
@@ -107,3 +107,24 @@ profit in three; the permuted null exists for that.
 primary: 190968 bars, 2503 days; weekdays with a 16:15 NY bar 2017 of 2089
 confirmation: 183220 bars, 2468 days; weekdays with a 16:15 NY bar 1935 of 2056
 ```
+
+## In-sample (2010-06-01 → 2018-06-15, `xagduka` 15m)
+
+Fixed replay (`in-sample-fixed.txt`, 300 sized random holds) with the
+direction percentile from `direction-tsmom-*.txt` (1,000 permutations):
+
+```
+hypothesis     trades  OOS PF  expect  null p50 null p95   pct  direction   verdict
+tsmom/20d         189   1.341   0.118    0.945    1.199  100%   98th       SURVIVES
+tsmom/60d         105   1.129   0.060    0.933    1.355   75%   75th       fail: profit factor 1.129 < 1.2
+tsmom/120d        108   0.406  -0.272    0.893    1.733    2%    0th       fail: profit factor 0.406 < 1.2
+```
+
+Walk-forward (`in-sample.txt`): 20d 166 trades PF 1.265 (95%, "gate pass,
+inside the noise"); 60d 1.054 (66%); 120d 0.301 (0%).
+
+One of three lookbacks passes the primary on all three conditions, as the
+registration said it would have to be read: one of three draws. The 120-day
+row is not noise either — 0th percentile on both nulls, the sign of silver's
+trailing four months predicted the *opposite* of its next weeks on 2010–2018.
+The confirmation (2018-06-16 → 2026-05-31) is opened now, for all three rows.

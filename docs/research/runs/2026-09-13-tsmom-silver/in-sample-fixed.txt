@@ -1,0 +1,21 @@
+$ E:\rust\flowdesk\target\release\search.exe --market=xagduka --interval=15m --mode=hypotheses --fixed --batch-file=E:\rust\flowdesk\docs\hypotheses\2026-09-13-tsmom-silver.toml --seeds=300 --from=2010-06-01 --to=2018-06-15
+
+bounds:   --from=2010-06-01 --to=2018-06-15 kept 190884 of 374188 bars
+bars:     190884 from 2010-06-01 00:00 to 2018-06-14 23:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+== hypotheses `E:\rust\flowdesk\docs\hypotheses\2026-09-13-tsmom-silver.toml`: 3 declared, FIXED parameters over the whole window (no selection), each against 300 matched null runs ==
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.02
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+tsmom/20d    tsmom                 189   1.341   0.118    0.945    1.199        0  100%  SURVIVES
+                                MoTuWeThFr + NY 16:15-17:00  — the 20-day sign, decided on the last bars before each weekday's close, Friday included
+tsmom/60d    tsmom                 105   1.129   0.060    0.933    1.355        0   75%  fail: profit factor 1.129 < 1.2
+                                MoTuWeThFr + NY 16:15-17:00  — the 60-day sign, the row that passed the gate on gold and failed its permuted null
+tsmom/120d   tsmom                 108   0.406  -0.272    0.893    1.733        0    2%  fail: profit factor 0.406 < 1.2; expectancy -0.272R < 0.05R
+                                MoTuWeThFr + NY 16:15-17:00  — the 120-day sign; may not reach 30 trades on one window, which is a fact about the row
+
+Survivors: tsmom/20d/tsmom — worth a decision record and a direction null before anything else.
+

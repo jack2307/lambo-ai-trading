@@ -1,0 +1,19 @@
+$ E:\rust\flowdesk\target\release\search.exe --market=xagduka --interval=15m --mode=null-dir --strategy=tsmom --samples=1000 --params=lookbackDays=20,rebalanceHHMM=1615,riskDailyRanges=2,rangeDays=20 --filters=weekdays;hours:1615-1700 --from=2010-06-01 --to=2018-06-15
+
+bounds:   --from=2010-06-01 --to=2018-06-15 kept 190884 of 374188 bars
+bars:     190884 from 2010-06-01 00:00 to 2018-06-14 23:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+  filters: MoTuWeThFr + NY 16:15-17:00
+== direction control: tsmom, 189 trades, 1000 coin-flip assignments ==
+  preset: lookbackDays=20,rebalanceHHMM=1615,riskDailyRanges=2,rangeDays=20
+  the method's own trades — entry, exit, lots, costs — with each side a coin flip
+  profit factor of the same trades with random direction:
+    p05 0.682   p25 0.799   p50 0.928   p75 1.068   p95 1.260   max 1.787
+
+  actual: 1.341  ->  98th percentile  (p = 0.024)
+
+  Outside its own null. That is a finding worth taking further.
+
