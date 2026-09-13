@@ -357,4 +357,11 @@ pub struct BacktestRequest {
     /// row are the same computation.
     #[serde(default)]
     pub filters: Vec<String>,
+    /// UTC dates, `YYYY-MM-DD`, both inclusive; absent means the whole
+    /// stored series. The same bounds `search --from/--to` takes, so a
+    /// Workbench run over a month is the batch's computation over a month.
+    #[serde(default)]
+    pub from: Option<String>,
+    #[serde(default)]
+    pub to: Option<String>,
 }

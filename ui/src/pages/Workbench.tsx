@@ -67,6 +67,8 @@ export function Workbench({ catalog, market, onError }: Props) {
   // Gates in the research loop's spelling, one per line or comma-separated.
   const [filtersText, setFiltersText] = useState('')
   const [guards, setGuards] = useState(false)
+  const [rangeFrom, setRangeFrom] = useState('')
+  const [rangeTo, setRangeTo] = useState('')
 
   const strategy = useMemo(
     () => catalog.strategies.find((s) => s.id === strategyId),
@@ -147,7 +149,7 @@ export function Workbench({ catalog, market, onError }: Props) {
         .flatMap((chunk) => chunk.split(String.fromCharCode(10)))
         .map((f) => f.trim())
         .filter(Boolean)
-      const outcome = await api.backtest(market, timeframe, strategyId, params, filters, guards)
+      const outcome = await api.backtest(market, timeframe, strategyId, params, filters, guards, { from: rangeFrom, to: rangeTo })
       setResult(outcome)
       // The rail's result block and the dock switching to the fills are the
       // announcement; a toast on top of them covered the newest trades.
@@ -157,7 +159,7 @@ export function Workbench({ catalog, market, onError }: Props) {
     } finally {
       setRunning(false)
     }
-  }, [market, timeframe, strategyId, params, filtersText, guards, running, onError])
+  }, [market, timeframe, strategyId, params, filtersText, guards, rangeFrom, rangeTo, running, onError])
 
   // ⌘/Ctrl+Enter runs from anywhere on the page — the rail's inputs included.
   useEffect(() => {
@@ -244,6 +246,27 @@ export function Workbench({ catalog, market, onError }: Props) {
               className="border-input bg-background num focus-visible:ring-ring/50 mt-1 w-full resize-none rounded-md border px-2 py-1 text-[11px] focus-visible:ring-[3px] focus-visible:outline-none"
             />
           </label>
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            <label className="block">
+              <span className="text-muted-foreground block text-[11px]">from (UTC)</span>
+              <input
+                type="date"
+                value={rangeFrom}
+                onChange={(e) => setRangeFrom(e.target.value)}
+                className="border-input bg-background num focus-visible:ring-ring/50 mt-1 h-7 w-full rounded-md border px-2 text-[11px] focus-visible:ring-[3px] focus-visible:outline-none"
+              />
+            </label>
+            <label className="block">
+              <span className="text-muted-foreground block text-[11px]">to (UTC)</span>
+              <input
+                type="date"
+                value={rangeTo}
+                onChange={(e) => setRangeTo(e.target.value)}
+                className="border-input bg-background num focus-visible:ring-ring/50 mt-1 h-7 w-full rounded-md border px-2 text-[11px] focus-visible:ring-[3px] focus-visible:outline-none"
+              />
+            </label>
+          </div>
+          <p className="text-muted-foreground/70 mt-1 text-[10px]">empty = the whole stored series for this market and timeframe</p>
           <label className="text-muted-foreground mt-2 flex items-center gap-2 text-[11px]">
             <input type="checkbox" checked={guards} onChange={(e) => setGuards(e.target.checked)} className="accent-[var(--primary)]" />
             enforce [trading.guards] (daily cap, loss limit, cooldown)

@@ -320,6 +320,23 @@ pub async fn backtest(
 
     let rules = state.trading_rules(&market)?;
     let guards = request.guards.then(|| Guards::from_config(&state.config));
+    // A date bound is a UTC day; `to` runs to the end of its day.
+    let day = |text: &Option<String>, end: bool| -> Result<Option<i64>, ApiError> {
+        let Some(text) = text.as_deref().map(str::trim).filter(|t| !t.is_empty()) else { return Ok(None) };
+        let mut parts = text.split('-').map(|p| p.parse::<i64>());
+        let (y, m, d) = match (parts.next(), parts.next(), parts.next()) {
+            (Some(Ok(y)), Some(Ok(m)), Some(Ok(d))) if (1..=12).contains(&m) && (1..=31).contains(&d) => (y, m, d),
+            _ => return Err(ApiError::BadRequest(format!("bad date `{text}`: expected YYYY-MM-DD"))),
+        };
+        let ms = fd_core::clock::days_from_civil(y, m as u32, d as u32) * 86_400_000;
+        Ok(Some(if end { ms + 86_399_999 } else { ms }))
+    };
+    let range = Range { from: day(&request.from, false)?, to: day(&request.to, true)? };
+    if let (Some(a), Some(b)) = (range.from, range.to)
+        && a > b
+    {
+        return Err(ApiError::BadRequest("`from` is after `to`".into()));
+    }
     let result = run_backtest_guarded(
         &series.bars,
         strategy,
@@ -327,7 +344,7 @@ pub async fn backtest(
         &rules,
         guards.as_ref(),
         timeline.as_deref(),
-        Range::default(),
+        range,
         None,
     );
     let v = verdict(&result.metrics, &state.gate());

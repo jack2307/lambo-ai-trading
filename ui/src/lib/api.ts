@@ -247,8 +247,15 @@ export const api = {
       specs,
     }),
 
-  backtest: (market: string, tf: string, strategy: string, params: Record<string, number>, filters: string[] = [], guards = false) =>
-    post<BacktestResult>('/api/chart/backtest', { market, tf, strategy, params, filters, guards }),
+  backtest: (
+    market: string,
+    tf: string,
+    strategy: string,
+    params: Record<string, number>,
+    filters: string[] = [],
+    guards = false,
+    range: { from?: string; to?: string } = {},
+  ) => post<BacktestResult>('/api/chart/backtest', { market, tf, strategy, params, filters, guards, from: range.from || undefined, to: range.to || undefined }),
 
   research: () => request<Research>('/api/research'),
 }
