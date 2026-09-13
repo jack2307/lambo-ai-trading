@@ -1,0 +1,22 @@
+$ E:\rust\flowdesk\target\release\search.exe --market=xauduka --interval=15m --mode=hypotheses --fixed --batch-file=E:\rust\flowdesk\docs\hypotheses\2026-09-13-tsmom-2.toml --seeds=200 --from=2018-06-16 --to=2025-04-10
+
+bounds:   --from=2018-06-16 --to=2025-04-10 kept 160368 of 186856 bars
+bars:     160368 from 2018-06-17 22:00 to 2025-04-09 23:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+== hypotheses `E:\rust\flowdesk\docs\hypotheses\2026-09-13-tsmom-2.toml`: 3 declared, FIXED parameters over the whole window (no selection), each against 200 matched null runs ==
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+tsmom2/60d   tsmom                1237   0.947  -0.002    0.761    0.869        0  100%  fail: profit factor 0.947 < 1.2; expectancy -0.002R < 0.05R
+                                MoTuWeThFr + NY 18:00-19:00  — the canonical lookback, sized on two daily ranges; the null holds random sides from the same bar, sized the same
+tsmom2/20d   tsmom                1337   0.929  -0.003    0.852    0.958        0   92%  fail: profit factor 0.929 < 1.2; expectancy -0.003R < 0.05R
+                                MoTuWeThFr + NY 18:00-19:00  — one month: more flips, more cost, more trades
+tsmom2/120d  tsmom                1086   0.949  -0.002    0.852    0.958        0   94%  fail: profit factor 0.949 < 1.2; expectancy -0.002R < 0.05R
+                                MoTuWeThFr + NY 18:00-19:00  — half a year: near buy-and-hold in a rising sample, which the sized drift null must expose
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+

@@ -528,7 +528,9 @@ fn open_position(
 fn check_exit(position: &Live, bar: &Bar, rules: &TradingRules) -> Option<(f64, ExitKind)> {
     // A self-managed position has no engine stop, target or clock: the strategy
     // must issue its own exit, and the final bar closes whatever is left.
-    if position.self_managed && position.stop.is_none() {
+    // A stop on a self-managed entry is a risk unit for sizing and R, not
+    // an order: the strategy owns every exit (tsmom-2 pass, 2026-09-13).
+    if position.self_managed {
         return None;
     }
     let long = position.side.is_long();

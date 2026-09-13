@@ -255,8 +255,9 @@ fn matched_rate(bars: &[Bar], rules: &TradingRules, filters: &[Filter], target_t
 
 fn control_for(base: &dyn Strategy, overrides: &[(String, f64)], seed: f64) -> (&'static dyn Strategy, Params) {
     // Judged on the preset, not the bare method: a pinned grid is empty.
-    let pinned = preset_params(base, overrides).ok();
-    let grid_empty = pinned.as_ref().is_some_and(|p| Preset { inner: base, defaults: p.clone() }.grid().is_empty());
+    let preset = Preset::new(base, overrides).ok();
+    let pinned = preset.as_ref().map(|p| p.defaults.clone());
+    let grid_empty = preset.as_ref().is_some_and(|p| p.grid().is_empty());
     let drift = base.exits() == fd_strategy::registry::Exits::Strategy && grid_empty;
     if drift {
         let get = |k: &str| overrides.iter().find(|(key, _)| key == k).map(|(_, v)| *v);
@@ -311,10 +312,25 @@ fn matched_control_for(
 /// A preset on a parameter the method also sweeps **pins** it: the grid
 /// loses that axis. Otherwise the walk-forward would replace the registered
 /// value with the grid's and the row would test something else — which it
-/// did, once (`2026-09-13-vwap-fade.md`).
+/// did, once (`2026-09-13-vwap-fade.md`). Pinned means *named in the
+/// overrides*, whatever the value: a preset that names the default is still
+/// a preset (the first gap-fade and tsmom-2 receipts were re-selected because
+/// the pin was read as "differs from the default", 2026-09-13).
 pub struct Preset<'a> {
     pub inner: &'a dyn Strategy,
     pub defaults: Params,
+    pub pinned: Vec<String>,
+}
+
+impl<'a> Preset<'a> {
+    /// The method with `overrides` applied and every override pinned.
+    pub fn new(inner: &'a dyn Strategy, overrides: &[(String, f64)]) -> Result<Self, String> {
+        Ok(Self { inner, defaults: preset_params(inner, overrides)?, pinned: overrides.iter().map(|(k, _)| k.clone()).collect() })
+    }
+    /// The method as it is: nothing overridden, nothing pinned.
+    pub fn bare(inner: &'a dyn Strategy, defaults: Params) -> Self {
+        Self { inner, defaults, pinned: Vec::new() }
+    }
 }
 
 impl Strategy for Preset<'_> {
@@ -331,12 +347,7 @@ impl Strategy for Preset<'_> {
         self.defaults.clone()
     }
     fn grid(&self) -> std::collections::BTreeMap<String, Vec<f64>> {
-        let base = self.inner.default_params();
-        self.inner
-            .grid()
-            .into_iter()
-            .filter(|(key, _)| self.defaults.get(key).to_bits() == base.get(key).to_bits())
-            .collect()
+        self.inner.grid().into_iter().filter(|(key, _)| !self.pinned.contains(key)).collect()
     }
     fn indicators(&self, p: &Params) -> Vec<IndicatorSpec> {
         self.inner.indicators(p)
@@ -393,17 +404,17 @@ pub fn run_hypothesis_fixed(
 ) -> Result<HypothesisReport, String> {
     use crate::engine::{Range, run_backtest};
     let base = registry.get(&hypothesis.base).map_err(|e| e.to_string())?;
-    let preset = Preset { inner: base, defaults: preset_params(base, &hypothesis.overrides)? };
+    let preset = Preset::new(base, &hypothesis.overrides)?;
     let filtered = Filtered { inner: &preset, filters: hypothesis.filters.clone() };
     let result = run_backtest(bars, &filtered, &preset.defaults, rules, None, Range::default());
-    let drift = base.exits() == fd_strategy::registry::Exits::Strategy && Preset { inner: base, defaults: preset.defaults.clone() }.grid().is_empty();
+    let drift = base.exits() == fd_strategy::registry::Exits::Strategy && preset.grid().is_empty();
     let rate = (!drift).then(|| matched_rate(bars, rules, &hypothesis.filters, result.trades.len()));
 
     let mut null_pf: Vec<f64> = (0..seeds)
         .into_par_iter()
         .filter_map(|seed| {
             let (inner, defaults) = matched_control_for(base, &hypothesis.overrides, seed as f64 + 1.0, rate);
-            let control = Preset { inner, defaults: defaults.clone() };
+            let control = Preset::bare(inner, defaults.clone());
             let matched = Filtered { inner: &control, filters: hypothesis.filters.clone() };
             let pf = run_backtest(bars, &matched, &defaults, rules, None, Range::default()).metrics.profit_factor;
             pf.is_finite().then_some(pf)
@@ -444,7 +455,7 @@ pub fn run_hypothesis(
     seeds: usize,
 ) -> Result<Option<HypothesisReport>, String> {
     let base = registry.get(&hypothesis.base).map_err(|e| e.to_string())?;
-    let preset = Preset { inner: base, defaults: preset_params(base, &hypothesis.overrides)? };
+    let preset = Preset::new(base, &hypothesis.overrides)?;
     let filtered = Filtered { inner: &preset, filters: hypothesis.filters.clone() };
     let Some(result) = walk_forward(&filtered, bars, rules, None, folds, select_by, min_trades_per_cell) else {
         return Ok(None);
@@ -454,14 +465,14 @@ pub fn run_hypothesis(
     // window at the registered parameters (the walk-forward's own count is a
     // fifth of the bars per fold and would under-match).
     let whole = crate::engine::run_backtest(bars, &filtered, &preset.defaults, rules, None, crate::engine::Range::default());
-    let drift = base.exits() == fd_strategy::registry::Exits::Strategy && Preset { inner: base, defaults: preset.defaults.clone() }.grid().is_empty();
+    let drift = base.exits() == fd_strategy::registry::Exits::Strategy && preset.grid().is_empty();
     let rate = (!drift).then(|| matched_rate(bars, rules, &hypothesis.filters, whole.trades.len()));
 
     let mut null_pf: Vec<f64> = (0..seeds)
         .into_par_iter()
         .filter_map(|seed| {
             let (inner, defaults) = matched_control_for(base, &hypothesis.overrides, seed as f64 + 1.0, rate);
-            let control = Preset { inner, defaults };
+            let control = Preset::bare(inner, defaults);
             let matched = Filtered { inner: &control, filters: hypothesis.filters.clone() };
             walk_forward(&matched, bars, rules, None, folds, select_by, min_trades_per_cell)
                 .map(|r| r.oos.profit_factor)
@@ -551,11 +562,15 @@ why = "the first hour's range is the day's liquidity"
     fn a_preset_on_a_gridded_parameter_pins_it() {
         let registry = Registry::with_builtins();
         let base = registry.get("ema-cross").unwrap();
-        let untouched = Preset { inner: base, defaults: base.default_params() };
+        let untouched = Preset::bare(base, base.default_params());
         assert_eq!(untouched.grid().len(), base.grid().len());
-        let pinned = Preset { inner: base, defaults: preset_params(base, &[("fast".into(), 13.0)]).unwrap() };
+        let pinned = Preset::new(base, &[("fast".into(), 13.0)]).unwrap();
         assert!(!pinned.grid().contains_key("fast"), "a pinned axis leaves the grid");
         assert!(pinned.grid().contains_key("slow"));
+        // Naming the default is still a pin.
+        let at_default = base.default_params().get("fast");
+        let named = Preset::new(base, &[("fast".into(), at_default)]).unwrap();
+        assert!(!named.grid().contains_key("fast"), "a preset at the default value is still pinned");
     }
 
     #[test]
