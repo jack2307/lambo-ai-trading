@@ -1,0 +1,30 @@
+[run]
+in_sample = "xauduka:15m"
+in_sample_from = "2018-06-16"
+in_sample_to = "2025-04-10"
+out_of_sample = "xauusd:15m"
+out_of_sample_from = "2025-04-11"
+seeds = 200
+direction_samples = 1000
+fixed = true
+
+[[hypothesis]]
+label = "tp/fixed"
+base = "trend-pullback"
+filters = ["weekdays", "flat:1630-1815"]
+overrides = { fast = 20, riskReward = 1.5, pipSize = 0.1 }
+why = "the defaults pinned: EMA20 pullbacks in an EMA200 trend, 1.5R, wherever they print"
+
+[[hypothesis]]
+label = "tp/allday"
+base = "trend-pullback"
+filters = ["weekdays", "flat:1630-1815"]
+overrides = { pipSize = 0.1 }
+why = "the grid (fast EMA x reward) walked forward, all hours"
+
+[[hypothesis]]
+label = "tp/ny"
+base = "trend-pullback"
+filters = ["weekdays", "flat:1630-1815", "hours:0800-1600"]
+overrides = { pipSize = 0.1 }
+why = "New York hours only, where a pullback has participants to continue it"

@@ -1,0 +1,30 @@
+[run]
+in_sample = "xauusd:15m"
+in_sample_from = "2022-06-16"
+in_sample_to = "2025-04-10"
+out_of_sample = "xauusd:15m"
+out_of_sample_from = "2025-04-11"
+seeds = 200
+direction_samples = 1000
+fixed = true
+
+[[hypothesis]]
+label = "vt-gold/fixed"
+base = "volume-thrust"
+filters = ["weekdays", "flat:1630-1815"]
+overrides = { volMult = 2.5, riskReward = 1.5, pipSize = 0.1 }
+why = "the defaults pinned on the broker's tick volume, all hours"
+
+[[hypothesis]]
+label = "vt-gold/all"
+base = "volume-thrust"
+filters = ["weekdays", "flat:1630-1815"]
+overrides = { pipSize = 0.1 }
+why = "the grid walked forward, all hours"
+
+[[hypothesis]]
+label = "vt-gold/ny"
+base = "volume-thrust"
+filters = ["weekdays", "flat:1630-1815", "hours:0800-1600"]
+overrides = { pipSize = 0.1 }
+why = "New York hours, where tick volume means participation rather than a thin print"

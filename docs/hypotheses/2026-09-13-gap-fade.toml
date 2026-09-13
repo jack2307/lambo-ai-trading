@@ -1,0 +1,30 @@
+[run]
+in_sample = "xauduka:5m"
+in_sample_from = "2018-06-16"
+in_sample_to = "2025-04-10"
+out_of_sample = "xauusd:5m"
+out_of_sample_from = "2025-04-11"
+seeds = 200
+direction_samples = 1000
+fixed = true
+
+[[hypothesis]]
+label = "gap/1atr"
+base = "gap-fade"
+filters = ["hours:1700-1900"]
+overrides = { minGapAtr = 1.0, stopGapMult = 1.0 }
+why = "the registered preset: fade any gap of at least one ATR, stop one gap beyond the open"
+
+[[hypothesis]]
+label = "gap/2atr"
+base = "gap-fade"
+filters = ["hours:1700-1900"]
+overrides = { minGapAtr = 2.0, stopGapMult = 1.0 }
+why = "only the large gaps: fewer trades, the ones the story is about"
+
+[[hypothesis]]
+label = "gap/wf"
+base = "gap-fade"
+filters = ["hours:1700-1900"]
+overrides = {}
+why = "the grid (gap size x stop) selected by walk-forward: a check on whether the preset is a lucky cell"

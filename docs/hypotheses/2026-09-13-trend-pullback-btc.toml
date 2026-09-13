@@ -1,0 +1,29 @@
+[run]
+in_sample = "btc:15m"
+out_of_sample = "btcusd:15m"
+out_of_sample_from = "2023-10-05"
+out_of_sample_to = "2024-09-11"
+seeds = 200
+direction_samples = 1000
+fixed = true
+
+[[hypothesis]]
+label = "tp-btc/fixed"
+base = "trend-pullback"
+filters = []
+overrides = { fast = 20, riskReward = 1.5, pipSize = 1.0 }
+why = "the defaults pinned on BTC, 24/7"
+
+[[hypothesis]]
+label = "tp-btc/all"
+base = "trend-pullback"
+filters = []
+overrides = { pipSize = 1.0 }
+why = "the grid walked forward, 24/7"
+
+[[hypothesis]]
+label = "tp-btc/us"
+base = "trend-pullback"
+filters = ["weekdays", "hours:0930-1600"]
+overrides = { pipSize = 1.0 }
+why = "US equity hours, where BTC has its volume"

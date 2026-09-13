@@ -1,0 +1,30 @@
+[run]
+in_sample = "xauduka:15m"
+in_sample_from = "2018-06-16"
+in_sample_to = "2025-04-10"
+out_of_sample = "xauusd:15m"
+out_of_sample_from = "2025-04-11"
+seeds = 200
+direction_samples = 1000
+fixed = true
+
+[[hypothesis]]
+label = "tsmom2/60d"
+base = "tsmom"
+filters = ["weekdays", "hours:1800-1900"]
+overrides = { lookbackDays = 60, riskDailyRanges = 2, rangeDays = 20 }
+why = "the canonical lookback, sized on two daily ranges; the null holds random sides from the same bar, sized the same"
+
+[[hypothesis]]
+label = "tsmom2/20d"
+base = "tsmom"
+filters = ["weekdays", "hours:1800-1900"]
+overrides = { lookbackDays = 20, riskDailyRanges = 2, rangeDays = 20 }
+why = "one month: more flips, more cost, more trades"
+
+[[hypothesis]]
+label = "tsmom2/120d"
+base = "tsmom"
+filters = ["weekdays", "hours:1800-1900"]
+overrides = { lookbackDays = 120, riskDailyRanges = 2, rangeDays = 20 }
+why = "half a year: near buy-and-hold in a rising sample, which the sized drift null must expose"

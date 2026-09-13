@@ -1,0 +1,29 @@
+[run]
+in_sample = "btc:15m"
+in_sample_to = "2025-12-31"
+out_of_sample = "btc:15m"
+out_of_sample_from = "2026-01-01"
+seeds = 200
+direction_samples = 1000
+fixed = true
+
+[[hypothesis]]
+label = "vt-btc/fixed"
+base = "volume-thrust"
+filters = []
+overrides = { volMult = 2.5, riskReward = 1.5, pipSize = 1.0 }
+why = "the defaults pinned, 24/7"
+
+[[hypothesis]]
+label = "vt-btc/all"
+base = "volume-thrust"
+filters = []
+overrides = { pipSize = 1.0 }
+why = "the grid (volume multiple x reward) walked forward, 24/7"
+
+[[hypothesis]]
+label = "vt-btc/us"
+base = "volume-thrust"
+filters = ["weekdays", "hours:0930-1600"]
+overrides = { pipSize = 1.0 }
+why = "US equity hours: a thrust with the most participants behind it"
