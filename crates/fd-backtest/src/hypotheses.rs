@@ -230,13 +230,24 @@ impl HypothesisReport {
 /// length. Reading a drift against random entries with ATR stops is how
 /// the first drift test produced a null with a 95th percentile near 3.
 fn control_for(base: &dyn Strategy, overrides: &[(String, f64)], seed: f64) -> (&'static dyn Strategy, Params) {
-    let drift = base.exits() == fd_strategy::registry::Exits::Strategy && base.grid().is_empty();
+    // Judged on the preset, not the bare method: a pinned grid is empty.
+    let pinned = preset_params(base, overrides).ok();
+    let grid_empty = pinned.as_ref().is_some_and(|p| Preset { inner: base, defaults: p.clone() }.grid().is_empty());
+    let drift = base.exits() == fd_strategy::registry::Exits::Strategy && grid_empty;
     if drift {
         let get = |k: &str| overrides.iter().find(|(key, _)| key == k).map(|(_, v)| *v);
-        let (from, to) = (get("from").unwrap_or(930.0), get("to").unwrap_or(1600.0));
         let minutes = |v: f64| (v as i64 / 100) * 60 + v as i64 % 100;
-        let (a, b) = (minutes(from), minutes(to));
-        let hold = if b > a { b - a } else { 1440 - a + b };
+        // Hold length: a window's span when the preset names one; for a
+        // multi-day rebalanced hold, half the lookback (a sign change comes
+        // about that often); 390 minutes otherwise.
+        let hold = match (get("from"), get("to"), get("lookbackDays")) {
+            (Some(from), Some(to), _) => {
+                let (a, b) = (minutes(from), minutes(to));
+                if b > a { b - a } else { 1440 - a + b }
+            }
+            (_, _, Some(days)) => (days * 1440.0 / 2.0) as i64,
+            _ => 390,
+        };
         let mut p = RandomHold.default_params();
         p.set("holdMinutes", hold as f64);
         p.set("seed", seed);

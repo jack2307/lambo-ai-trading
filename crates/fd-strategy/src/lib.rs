@@ -16,6 +16,7 @@ pub mod orb;
 pub mod pdhl;
 pub mod registry;
 pub mod session_hold;
+pub mod tsmom;
 pub mod vwap_fade;
 
 pub use registry::{
