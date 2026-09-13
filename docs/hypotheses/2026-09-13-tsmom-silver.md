@@ -2,7 +2,7 @@
 
 **Registered:** (commit time is authoritative) — before any run of this batch;
 the silver bars were fetched and converted first and no backtest has read them
-**Status:** confirmation run — nothing survives both windows; under review
+**Status:** decided — closed; `docs/decisions/2026-09-13-tsmom-silver.md` (the warmup figures in this file are wrong: 105 / 274 / 528 days on 15m, see the record)
 **Batch file:** `docs/hypotheses/2026-09-13-tsmom-silver.toml`
 
 ## Where this comes from

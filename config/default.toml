@@ -271,9 +271,12 @@ underlying = "SI"
 
 [markets.xagduka.trading]
 # Vantage XAGUSD.sc, measured 2026-09-13 from 205k ticks over three days
-# (read-only): spread p50/p90 $0.021 an ounce; the account is swap-free
-# (the same deal-history measurement as gold). Contract unit one ounce, the
-# convention every Dukascopy-fed market here uses, so "lots" are ounces.
+# (read-only): spread p50/p90 $0.021 an ounce. Swap: the swap-free
+# measurement is gold's deal history (340 XAUUSD.sc positions); no silver
+# deal is known to be in it, so zero here is the account's stated terms, not
+# a measurement (adversary, 2026-09-13-tsmom-silver). symbol_info shows the
+# generic rate, -22.7 points long. Contract unit one ounce, the convention
+# every Dukascopy-fed market here uses, so "lots" are ounces.
 symbol = "XAGUSD.sc"
 contract_size = 1.0
 spread = 0.021

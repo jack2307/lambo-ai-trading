@@ -15,11 +15,21 @@ Closed ideas move to the bottom with a pointer to their decision record, so
   range on the same mechanism needs a new reason, not a new window.
 - [ ] **ICT variant: order block instead of FVG.** Reason: the manual's own
   alternative entry zone; the chain is already ported.
-- [ ] **TSMOM on a second asset with seven years** (Dukascopy silver or
-  EURUSD): the gold row beat random holds (98th) but not its own permuted
-  sides (86th) on 75 trades; needs a warmup in days, the Friday close and
-  Sunday reopen handled in the method, and its own registration.
-  `2026-09-13-tsmom-2.md`.
+- [ ] **TSMOM on EURUSD, the adversary's terms** (`2026-09-13-tsmom-silver`):
+  a third, uncorrelated asset (`eurduka` 2010–2026 is on disk), ONE
+  pre-registered lookback, the sized null drawn from realised holds (below),
+  the spread measured inside the 16:15–17:00 gate, ≥ 95th of both nulls on
+  both eight-year windows. Not before the null is fixed.
+- [ ] **The sized random-hold null holds half the lookback, not what the
+  method held** (adversary, `2026-09-13-tsmom-silver`): `control_for` sets
+  `holdMinutes = lookbackDays × 1440 / 2`; the 20-day row realised 13.8
+  days (27% longer), the 120-day row ~25 (2.4× shorter). Draw the control's
+  hold from the method's realised hold distribution. Inflates `tsmom` sized
+  percentiles by ~0.06 PF; the direction null is unaffected.
+- [ ] **Filters gate entries only; a self-managed method exits on the Sunday
+  reopen** (data-integrity, `2026-09-13-tsmom-silver`): `weekdays` does not
+  stop `tsmom` from acting on a sign flip at Sunday 18:00 as an exit. Decide
+  whether an exit gate is wanted and say so in the filter's doc either way.
 - [ ] **Trend pullback on BTC with a time exit**: the side beat its mirror
   (99th) while the swing-stop structure lost 0.38R a trade; a re-registration
   needs an exit with a reason, not a wider stop. `2026-09-13-trend-pullback.md`.
@@ -79,6 +89,11 @@ Closed ideas move to the bottom with a pointer to their decision record, so
 
 ## Closed
 
+- [x] TSMOM on silver, two eight-year windows → the 20-day row passes
+  2010–18 (one of three lookbacks, five trades of 2010–14) and is a coin
+  flip on 2018–26; 60d the gold shape on the same rally; 120d inverted then
+  nothing. With gold, daily-rebalanced TSMOM on intraday bars is closed on two
+  assets. `2026-09-13-tsmom-silver.md`.
 - [x] The Friday weekend hold on 2010–2018 Dukascopy → the window the
   adversary named before the run: 400 holds PF 0.983, 92nd on direction,
   2014–2018 negative every year; the 2018–2025 pass was the decade. Closed
