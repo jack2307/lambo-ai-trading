@@ -2,7 +2,7 @@
 
 **Registered:** (commit time is authoritative) — before any run of this batch;
 the EURUSD bars were fetched and converted first and no backtest has read them
-**Status:** in-sample run — passes the gate and the sized null, fails the direction null (85th); closed as registered, under review
+**Status:** decided — closed on the primary; `docs/decisions/2026-09-14-tsmom-eurusd.md`
 **Batch file:** `docs/hypotheses/2026-09-14-tsmom-eurusd.toml`
 
 ## Where this comes from

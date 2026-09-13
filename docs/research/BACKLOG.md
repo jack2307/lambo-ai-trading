@@ -15,17 +15,21 @@ Closed ideas move to the bottom with a pointer to their decision record, so
   range on the same mechanism needs a new reason, not a new window.
 - [ ] **ICT variant: order block instead of FVG.** Reason: the manual's own
   alternative entry zone; the chain is already ported.
-- [ ] **TSMOM on EURUSD, the adversary's terms** (`2026-09-13-tsmom-silver`):
-  a third, uncorrelated asset (`eurduka` 2010–2026 is on disk), ONE
-  pre-registered lookback, the sized null drawn from realised holds (below),
-  the spread measured inside the 16:15–17:00 gate, ≥ 95th of both nulls on
-  both eight-year windows. Not before the null is fixed.
-- [ ] **The sized random-hold null holds half the lookback, not what the
-  method held** (adversary, `2026-09-13-tsmom-silver`): `control_for` sets
-  `holdMinutes = lookbackDays × 1440 / 2`; the 20-day row realised 13.8
-  days (27% longer), the 120-day row ~25 (2.4× shorter). Draw the control's
-  hold from the method's realised hold distribution. Inflates `tsmom` sized
-  percentiles by ~0.06 PF; the direction null is unaffected.
+- [ ] **The sized random-hold null holds the method's mean hold, not its
+  distribution** (adversary, `2026-09-14-tsmom-eurusd`; the mean was fixed
+  at `f65a061`): a fixed 23-day random hold cannot produce a 356-day +23R
+  interval, so the null's PF is bounded where the method's is not and a
+  `tsmom` row sits at the 100th on its exit rule, not its sign. Draw each
+  control hold from the method's realised hold distribution (a list, not a
+  scalar). Also: the scan-back matches the lookback by day, so the
+  reference close is 23:45 New York, not the rebalance minute
+  (data-integrity, same record).
+- [ ] **A direction test that three trades cannot saturate** (adversary,
+  `2026-09-14-tsmom-eurusd`): when three trades are the net, permuting
+  sides has about one answer in eight and cannot reach 0.05. Candidates,
+  each its own instrument change and not a re-tune: a sign test on R; a
+  stale-signal null (same intervals, the side from one lookback earlier);
+  the literature's pooling across a diversified set.
 - [ ] **Filters gate entries only; a self-managed method exits on the Sunday
   reopen** (data-integrity, `2026-09-13-tsmom-silver`): `weekdays` does not
   stop `tsmom` from acting on a sign flip at Sunday 18:00 as an exit. Decide
@@ -89,6 +93,10 @@ Closed ideas move to the bottom with a pointer to their decision record, so
 
 ## Closed
 
+- [x] TSMOM on EURUSD, the adversary's terms → gate and sized null pass on
+  2010–18 (PF 1.81, 100th), the row's own sides permuted 85th; one 356-day
+  trade is 71% of net, PF 0.62 without the top five. Three assets, one
+  shape; the family on intraday bars is closed. `2026-09-14-tsmom-eurusd.md`.
 - [x] TSMOM on silver, two eight-year windows → the 20-day row passes
   2010–18 (one of three lookbacks, five trades of 2010–14) and is a coin
   flip on 2018–26; 60d the gold shape on the same rally; 120d inverted then
