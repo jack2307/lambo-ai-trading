@@ -1,0 +1,31 @@
+[run]
+in_sample = "xagduka:15m"
+in_sample_from = "2010-06-01"
+in_sample_to = "2018-06-15"
+out_of_sample = "xagduka:15m"
+out_of_sample_from = "2018-06-16"
+out_of_sample_to = "2026-05-31"
+seeds = 300
+direction_samples = 1000
+fixed = true
+
+[[hypothesis]]
+label = "tsmom/20d"
+base = "tsmom"
+filters = ["weekdays", "hours:1615-1700"]
+overrides = { lookbackDays = 20, rebalanceHHMM = 1615, riskDailyRanges = 2, rangeDays = 20 }
+why = "the 20-day sign, decided on the last bars before each weekday's close, Friday included"
+
+[[hypothesis]]
+label = "tsmom/60d"
+base = "tsmom"
+filters = ["weekdays", "hours:1615-1700"]
+overrides = { lookbackDays = 60, rebalanceHHMM = 1615, riskDailyRanges = 2, rangeDays = 20 }
+why = "the 60-day sign, the row that passed the gate on gold and failed its permuted null"
+
+[[hypothesis]]
+label = "tsmom/120d"
+base = "tsmom"
+filters = ["weekdays", "hours:1615-1700"]
+overrides = { lookbackDays = 120, rebalanceHHMM = 1615, riskDailyRanges = 2, rangeDays = 20 }
+why = "the 120-day sign; may not reach 30 trades on one window, which is a fact about the row"
