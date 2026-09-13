@@ -1,0 +1,28 @@
+[run]
+in_sample = "xauduka:15m"
+in_sample_to = "2025-04-10"
+out_of_sample = "xauusd:15m"
+out_of_sample_from = "2025-04-11"
+seeds = 200
+direction_samples = 1000
+
+[[hypothesis]]
+label = "doji/allday"
+base = "doji-reversal"
+filters = ["weekdays", "flat:1630-1815"]
+overrides = {}
+why = "the pattern wherever it prints"
+
+[[hypothesis]]
+label = "doji/ny"
+base = "doji-reversal"
+filters = ["weekdays", "flat:1630-1815", "hours:0800-1600"]
+overrides = {}
+why = "only in New York hours, where a full-ATR bar means participation"
+
+[[hypothesis]]
+label = "doji/strict"
+base = "doji-reversal"
+filters = ["weekdays", "flat:1630-1815"]
+overrides = { bodyMaxPct = 0.05, minRangeAtr = 1.5 }
+why = "a stricter doji: near-zero body on a large bar"

@@ -1,0 +1,19 @@
+[run]
+in_sample = "btc:15m"
+out_of_sample = "btcusd:15m"
+seeds = 200
+direction_samples = 1000
+
+[[hypothesis]]
+label = "doji/btc-allday"
+base = "doji-reversal"
+filters = []
+overrides = { pipSize = 1.0 }
+why = "the same pattern on BTC 15-minute bars"
+
+[[hypothesis]]
+label = "doji/btc-us"
+base = "doji-reversal"
+filters = ["hours:0800-1600"]
+overrides = { pipSize = 1.0 }
+why = "US hours only"
