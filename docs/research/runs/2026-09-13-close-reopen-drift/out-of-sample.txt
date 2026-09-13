@@ -1,0 +1,28 @@
+$ E:/rust/flowdesk/target-b/release/search.exe --market=xauusd --interval=15m --mode=hypotheses --batch-file=E:\rust\flowdesk\docs\hypotheses\2026-09-13-close-reopen-drift.toml --seeds=300 --from=2025-04-11
+
+bounds:   --from=2025-04-11 --to=… kept 33589 of 100249 bars
+bars:     33589 from 2025-04-11 00:00 to 2026-09-11 20:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+== hypotheses `E:\rust\flowdesk\docs\hypotheses\2026-09-13-close-reopen-drift.toml`: 6 declared, walk-forward (4 folds), each against 300 matched null runs ==
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+close/1630-1815 session-hold          228   1.400   0.014    0.908    1.328        0   97%  fail: expectancy 0.014R < 0.05R
+                                MoTuWeTh + NY 16:15-16:20  — the break itself: long from the last bars before the close to the first after the reopen, Monday to Thursday
+close/1630-2000 session-hold          228   1.800   0.047    0.936    1.326        0  100%  fail: expectancy 0.047R < 0.05R
+                                MoTuWeTh + NY 16:15-16:20  — the break plus the first hours of Asia
+close/1630-2200 session-hold          228   1.420   0.043    0.977    1.323        0   98%  fail: expectancy 0.043R < 0.05R
+                                MoTuWeTh + NY 16:15-16:20  — the whole evening from before the close
+close/1815-2200 session-hold          234   1.254   0.028    0.994    1.365        0   89%  fail: expectancy 0.028R < 0.05R
+                                MoTuWeTh + NY 18:15-18:20  — the evening without the break: the contrast that says whether the reopen is the move
+close/1400-1630 session-hold          234   0.962  -0.003    0.976    1.323        0   48%  fail: profit factor 0.962 < 1.2; expectancy -0.003R < 0.05R
+                                MoTuWeTh + NY 14:00-14:05  — the afternoon before the close: the contrast that says whether it is just the trend
+close/fri-1630-1815 session-hold           55   1.893   0.069    0.953    1.930        0   94%  gate pass, inside the noise
+                                Fr + NY 16:15-16:20  — the Friday leg alone: a hold across the weekend, which the screen's 16-18 row hid inside its count
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+

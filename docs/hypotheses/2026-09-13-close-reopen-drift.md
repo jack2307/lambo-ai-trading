@@ -1,7 +1,7 @@
 # 2026-09-13-close-reopen-drift: gold rises across the New York close and through the early evening
 
 **Registered:** (commit time is authoritative) — before any run of this batch
-**Status:** in-sample done — one row survives (the Friday leg); confirmation running
+**Status:** confirmation done — nothing survives both windows; under review
 **Batch file:** `docs/hypotheses/2026-09-13-close-reopen-drift.toml`
 
 ## Where this comes from
@@ -101,3 +101,27 @@ it; that is the registration's own unit, and the gate stands as written. The
 evening without the break (`1815-2200`) is flat; the afternoon before it is
 negative. The Friday leg — the weekend hold the screen's 16–18 row had hidden
 — is the one row that passes everything.
+
+## Confirmation (2025-04-11 → 2026-09-11, `xauusd` 15m, 33,589 bars)
+
+Fixed replay (`out-of-sample-fixed.txt`) and direction null (`direction-close-*-oos.txt`):
+
+```
+hypothesis            trades  OOS PF  expect  null p50 null p95   pct  direction   verdict
+close/1630-1815          282   1.299   0.012    0.892    1.262   96%   96th       fail: expectancy 0.012R < 0.05R
+close/1630-2000          282   1.637   0.039    0.934    1.250  100%  100th       fail: expectancy 0.039R < 0.05R
+close/1630-2200          282   1.355   0.038    0.955    1.270   97%   98th       fail: expectancy 0.038R < 0.05R
+close/1815-2200          289   1.195   0.022    0.986    1.307   88%   91st       fail: profit factor 1.195 < 1.2
+close/1400-1630          289   0.955  -0.003    0.968    1.260   47%   52nd       fail: profit factor 0.955 < 1.2
+close/fri-1630-1815       68   1.720   0.061    0.959    1.761   95%   91st       gate pass, inside the noise
+```
+
+Walk-forward (`out-of-sample.txt`): 1.400 (97%) / 1.800 (100%) / 1.420 (98%) /
+1.254 (89%) / 0.962 (48%) / the Friday row 1.893 on 55 sessions, 0.069R, 94%.
+"Nothing survived" in both files.
+
+The Friday leg passed the primary and does not clear either null on the
+confirmation's 68 Fridays (95th of random holds on the fixed replay, 94th on
+the walk-forward, 91st on direction); the falsifier said the confirmation must
+agree, and it does not. The break rows keep their sign and rank on the second
+window and fail the same gate. Closed under this registration.
