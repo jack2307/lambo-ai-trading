@@ -2,7 +2,7 @@
 
 **Registered:** (commit time is authoritative) — before any run of this batch;
 the data for the window was fetched first and no backtest has touched it
-**Status:** registered
+**Status:** in-sample run — the Friday row fails the primary; closed, under review
 **Batch file:** `docs/hypotheses/2026-09-13-friday-weekend-hold.toml`
 
 ## Where this comes from
@@ -100,3 +100,26 @@ weekday daily break did not exist on this feed before 2013 — Monday–Thursday
 carry bars at 17:00–17:45 through 2012 — so the prediction row's "across the
 close" is literal only from 2013; the Friday row's structure is the same in
 all eight years. Fridays by year: 2010 31, 2011–2017 48–51, 2018 23.
+
+## In-sample (2010-06-01 → 2018-06-15, `xauduka` 15m)
+
+Fixed replay (`in-sample-fixed.txt`, 300 sized random holds) and direction
+null (`direction-*.txt`, 1,000 permutations):
+
+```
+hypothesis          trades  OOS PF  expect  null p50 null p95   pct  direction   verdict
+fri/1630-1815          400   0.983  -0.001    0.799    1.022   91%   92nd       fail: profit factor 0.983 < 1.2
+close/1630-1815       1621   0.733  -0.010    0.596    0.669   99%  100th       fail: profit factor 0.733 < 1.2
+```
+
+Walk-forward (`in-sample.txt`): `fri/1630-1815` 321 holds PF 0.798 (51%),
+`close/1630-1815` 1,301 PF 0.708 (99%). "Nothing survived".
+
+The Friday row fails the primary: net −$73 on 401 weekend holds
+(`diag-fri-2010-2018.txt`), 2011 and 2013 positive, 2014–2018 negative in
+every year (PF 0.76, 0.78, 0.49, 0.66, 0.21). Closed for good, as
+registered; the confirmation stage is not run. The prediction row: the side
+is right (100th on direction) and the net is not "near zero" but −$1,459 on
+1,621 sessions — the spread took more than the move at $1,050–1,900 gold
+(and on 2010–2012 there was no daily break on this feed). The closed record's
+"every year" is wrong for 2010–2018 and is amended in the decision.

@@ -1,0 +1,20 @@
+$ E:\rust\flowdesk\target\release\search.exe --market=xauduka --interval=15m --mode=hypotheses --batch-file=E:\rust\flowdesk\docs\hypotheses\2026-09-13-friday-weekend-hold.toml --seeds=300 --from=2010-06-01 --to=2018-06-15
+
+bounds:   --from=2010-06-01 --to=2018-06-15 kept 191809 of 378749 bars
+bars:     191809 from 2010-06-01 00:00 to 2018-06-14 23:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+== hypotheses `E:\rust\flowdesk\docs\hypotheses\2026-09-13-friday-weekend-hold.toml`: 2 declared, walk-forward (4 folds), each against 300 matched null runs ==
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+fri/1630-1815 session-hold          321   0.798  -0.018    0.788    1.057        0   51%  fail: profit factor 0.798 < 1.2; expectancy -0.018R < 0.05R
+                                Fr + NY 16:15-16:20  — the test: long from Friday's last bars before the close to Sunday's first after the reopen, on eight years no run has read
+close/1630-1815 session-hold         1301   0.708  -0.010    0.561    0.644        0   99%  fail: profit factor 0.708 < 1.2; expectancy -0.010R < 0.05R
+                                MoTuWeTh + NY 16:15-16:20  — the prediction, not the test: the weekday break at $1,050-1,900 gold should have the side right (direction >= 95th) and net near zero, if the closed record's spread reading is right
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+
