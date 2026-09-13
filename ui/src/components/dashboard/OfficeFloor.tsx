@@ -312,6 +312,8 @@ export function OfficeFloor({ departments, animate, carModel, modelsBase = '/mod
       dwell: number
       /** How often this one leaves: desk workers rarely, roamers often. */
       restless: number
+      /** A patrol: walk straight to this point and back, instead of anywhere. */
+      beat?: THREE.Vector3
     }
     const agents: Agent[] = []
     const rand = (a: number, b: number) => a + Math.random() * (b - a)
@@ -1304,9 +1306,10 @@ export function OfficeFloor({ departments, animate, carModel, modelsBase = '/mod
         const sw = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.07, 0.4), rackUnit)
         sw.position.set(dept.x, 1.535, dept.z - front * 0.2)
         scene.add(sw)
-        // A guard at the door: stanchions with a rope across the front of the
-        // row, and someone standing beside them who never leaves the post.
-        const frontZ = dept.z + facing * (dept.d / 2 + 0.15)
+        // A guard on the front of the row, where the cabinets face: rope
+        // stanchions along the edge, and the guard walking a beat between
+        // the ends of the row behind the rope.
+        const frontZ = dept.z - facing * (dept.d / 2 + 0.05)
         const postTops: THREE.Vector3[] = []
         for (const dx of [-1.1, 1.1]) {
           const base = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 0.03, 20), frameMaterial)
@@ -1324,11 +1327,13 @@ export function OfficeFloor({ departments, animate, carModel, modelsBase = '/mod
         sag.y -= 0.18
         const rope = shadowed(new THREE.Mesh(new THREE.TubeGeometry(new THREE.QuadraticBezierCurve3(postTops[0], sag, postTops[1]), 16, 0.018, 8, false), new THREE.MeshPhysicalMaterial({ color: colors.caution.clone().lerp(colors.background, 0.3), roughness: 0.8 })))
         scene.add(rope)
-        const guard = person(dept.x + 1.6, frontZ + facing * 0.1, facing === 1 ? 0 : Math.PI, new THREE.MeshPhysicalMaterial({ color: steelBlack, roughness: 0.7 }), { kind: 'standing' })
+        const beatZ = frontZ + facing * 0.45
+        const guard = person(dept.x - 1.2, beatZ, facing === 1 ? Math.PI : 0, new THREE.MeshPhysicalMaterial({ color: steelBlack, roughness: 0.7 }), { kind: 'standing' })
         const post = agents.find((a) => a.group === guard)
         if (post) {
-          post.restless = 0
-          post.dwell = Number.POSITIVE_INFINITY
+          post.restless = 1
+          post.dwell = rand(2, 5)
+          post.beat = new THREE.Vector3(dept.x + 1.2, 0, beatZ)
         }
         for (let k = 0; k < 8; k++) {
           const on = k % 4 === 3 ? colors.caution.clone() : colors.mint.clone()
@@ -1729,8 +1734,9 @@ export function OfficeFloor({ departments, animate, carModel, modelsBase = '/mod
     }
     const startTrip = (agent: Agent, goal: 'home' | 'away') => {
       const from = agent.group.position.clone()
-      const to = goal === 'home' ? new THREE.Vector3(agent.home.x, 0, agent.home.z) : pois[Math.floor(Math.random() * pois.length)].at
-      agent.path = routeTo(from, to)
+      const to = goal === 'home' ? new THREE.Vector3(agent.home.x, 0, agent.home.z) : agent.beat ? agent.beat : pois[Math.floor(Math.random() * pois.length)].at
+      // A beat is a straight line; everyone else takes the lanes.
+      agent.path = agent.beat ? [to.clone().setY(0)] : routeTo(from, to)
       agent.leg = 0
       agent.goal = goal
       agent.state = 'walking'
@@ -1755,10 +1761,15 @@ export function OfficeFloor({ departments, animate, carModel, modelsBase = '/mod
             agent.group.position.set(agent.home.x, agent.home.y, agent.home.z)
             agent.group.rotation.y = agent.home.yaw
             fadeTo(agent, agent.home.seated ? 'sit' : 'idle')
-            agent.dwell = agent.home.seated ? rand(60, 180) : rand(10, 40)
+            agent.dwell = agent.beat ? rand(2, 5) : agent.home.seated ? rand(60, 180) : rand(10, 40)
           } else {
             fadeTo(agent, 'idle')
             agent.dwell = agent.home.seated ? rand(3, 8) : rand(6, 18)
+            if (agent.beat) {
+              // At the end of the beat: face out, a short stand, then back.
+              agent.group.rotation.y = agent.home.yaw
+              agent.dwell = rand(2, 5)
+            }
           }
           continue
         }
