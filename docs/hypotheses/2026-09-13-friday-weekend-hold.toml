@@ -1,0 +1,24 @@
+[run]
+in_sample = "xauduka:15m"
+in_sample_from = "2010-06-01"
+in_sample_to = "2018-06-15"
+out_of_sample = "xauduka:15m"
+out_of_sample_from = "2018-06-16"
+out_of_sample_to = "2022-06-15"
+seeds = 300
+direction_samples = 1000
+fixed = true
+
+[[hypothesis]]
+label = "fri/1630-1815"
+base = "session-hold"
+filters = ["weekdays:Fr", "hours:1615-1620"]
+overrides = { from = 1615, to = 1815, side = 1, riskDailyRanges = 1, rangeDays = 20 }
+why = "the test: long from Friday's last bars before the close to Sunday's first after the reopen, on eight years no run has read"
+
+[[hypothesis]]
+label = "close/1630-1815"
+base = "session-hold"
+filters = ["weekdays:MoTuWeTh", "hours:1615-1620"]
+overrides = { from = 1615, to = 1815, side = 1, riskDailyRanges = 1, rangeDays = 20 }
+why = "the prediction, not the test: the weekday break at $1,050-1,900 gold should have the side right (direction >= 95th) and net near zero, if the closed record's spread reading is right"

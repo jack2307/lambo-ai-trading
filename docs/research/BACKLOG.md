@@ -24,7 +24,8 @@ Closed ideas move to the bottom with a pointer to their decision record, so
   (99th) while the swing-stop structure lost 0.38R a trade; a re-registration
   needs an exit with a reason, not a wider stop. `2026-09-13-trend-pullback.md`.
 - [ ] **The Friday leg of the close-reopen hold on 2010–2018 Dukascopy**
-  (adversary, `2026-09-13-close-reopen-drift`): the weekend hold passed
+  (adversary, `2026-09-13-close-reopen-drift`; registered
+  `2026-09-13-friday-weekend-hold`): the weekend hold passed
   seven years (336 holds, 100th) and the pre-screen years alone (194, 100th)
   and could not be confirmed on 67 Vantage Fridays (a power problem). The
   way back in: fetch Dukascopy XAUUSD 2010-06 → 2018-06 (~400 Fridays),
