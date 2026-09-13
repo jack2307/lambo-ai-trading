@@ -1,0 +1,27 @@
+# Amendment to the recent-year screen: the gap rows carried `weekdays` and the
+# daily-break filter, which together exclude the Sunday reopen bar the method
+# needs, so both took zero trades. The same two rows with only the reopen-hour
+# gate, on both timeframes.
+[run]
+in_sample = "xauusd:5m"
+in_sample_from = "2025-09-13"
+in_sample_to = "2026-09-12"
+out_of_sample = "xauduka:5m"
+out_of_sample_from = "2022-06-16"
+out_of_sample_to = "2025-04-10"
+seeds = 200
+direction_samples = 1000
+
+[[hypothesis]]
+label = "gap-fade/reopen"
+base = "gap-fade"
+filters = ["hours:1700-1900"]
+overrides = {}
+why = "the reopen gap fills; gated to the reopen hour only"
+
+[[hypothesis]]
+label = "gap-fade/reopen-2atr"
+base = "gap-fade"
+filters = ["hours:1700-1900"]
+overrides = { minGapAtr = 2.0, stopGapMult = 1.0 }
+why = "only the large gaps"
