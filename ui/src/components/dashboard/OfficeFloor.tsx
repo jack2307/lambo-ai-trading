@@ -25,6 +25,19 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js'
+import { loadModels, type ModelSet } from './officeAssets'
+
+/** Kenney's Furniture Kit and Mini Characters (CC0), by file name. */
+const FURNITURE = [
+  'desk', 'chairDesk', 'computerScreen', 'computerKeyboard', 'computerMouse', 'loungeSofa', 'loungeChair', 'tableCoffee',
+  'plantSmall1', 'plantSmall2', 'plantSmall3', 'pottedPlant', 'bookcaseOpen', 'cabinetTelevision', 'televisionModern',
+  'lampRoundFloor', 'kitchenCoffeeMachine', 'kitchenFridgeSmall', 'kitchenCabinet', 'laptop', 'trashcan', 'coatRackStanding',
+  'sideTableDrawers',
+]
+const CHARACTERS = ['character-male-a', 'character-female-a', 'character-male-b', 'character-female-b', 'character-male-c', 'character-female-c']
+/** Kenney's models face +z. */
+const KENNEY_YAW = 0
+const CHAR_YAW = 0
 
 export type Tone = 'arbiter' | 'veto' | 'advisory' | 'ops' | 'public'
 
@@ -70,6 +83,8 @@ interface Props {
    * from its bounding box, whatever units it was made in.
    */
   carModel?: string
+  /** Where the Kenney models live (`<base>/<name>.glb`). Absent: primitives only. */
+  modelsBase?: string
   className?: string
 }
 
@@ -175,7 +190,7 @@ interface Led {
   lit: boolean
 }
 
-export function OfficeFloor({ departments, animate, carModel, className }: Props) {
+export function OfficeFloor({ departments, animate, carModel, modelsBase = '/models/kenney', className }: Props) {
   const container = useRef<HTMLDivElement>(null)
   const labels = useRef<HTMLDivElement>(null)
   const [zoomed, setZoomed] = useState(false)
@@ -221,6 +236,16 @@ export function OfficeFloor({ departments, animate, carModel, className }: Props
     renderer.shadowMap.type = THREE.PCFSoftShadowMap
     host.appendChild(renderer.domElement)
 
+    // The floor is built once the models are in (or the deadline passes);
+    // whatever did not arrive is drawn as a primitive instead.
+    let teardown = () => {}
+    let cancelled = false
+    loadModels(modelsBase, [...FURNITURE, ...CHARACTERS]).then((models) => {
+      if (!cancelled) build(models)
+    })
+
+    const build = (models: ModelSet) => {
+    const mixers: THREE.AnimationMixer[] = []
     const scene = new THREE.Scene()
     scene.fog = new THREE.Fog(colors.card, 34, 60)
 
@@ -387,6 +412,31 @@ export function OfficeFloor({ departments, animate, carModel, className }: Props
       shirt: THREE.Material,
       pose: { kind: 'seated'; seat: number; armsOnDesk: boolean } | { kind: 'standing' },
     ) => {
+      if (models.has(CHARACTERS[0])) {
+        // A Kenney character: sits or stands from its own clips.
+        const idx = personCount++
+        const inst = models.instance(CHARACTERS[idx % CHARACTERS.length], { height: 1.08 })
+        if (inst) {
+          const seated = pose.kind === 'seated'
+          const mixer = new THREE.AnimationMixer(inst.group)
+          const clip = THREE.AnimationClip.findByName(inst.animations, seated ? 'sit' : 'idle')
+          if (clip) {
+            const action = mixer.clipAction(clip)
+            action.play()
+            mixer.update(0.016)
+          }
+          mixers.push(mixer)
+          // Pose first, then stand the feet on the floor: the sit clip folds
+          // the legs, and the chair was scaled with the same system, so the
+          // hips land on the seat.
+          inst.group.updateMatrixWorld(true)
+          const posed = new THREE.Box3().setFromObject(inst.group)
+          inst.group.position.set(x, -posed.min.y, z)
+          inst.group.rotation.y = yaw + CHAR_YAW
+          scene.add(inst.group)
+          return inst.group
+        }
+      }
       const g = new THREE.Group()
       const n = personCount++
       const hair = hairMaterials[n % hairMaterials.length]
@@ -454,6 +504,13 @@ export function OfficeFloor({ departments, animate, carModel, className }: Props
 
     /** A chair at (x, z) whose back is on the −facing side. */
     const chair = (x: number, z: number, facing: 1 | -1) => {
+      const model = models.instance('chairDesk', { height: 0.9 })
+      if (model) {
+        model.group.position.set(x, 0, z)
+        model.group.rotation.y = (facing === 1 ? 0 : Math.PI) + KENNEY_YAW
+        scene.add(model.group)
+        return
+      }
       const seat = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.06, 24), chairMaterial))
       seat.position.set(x, 0.45, z)
       scene.add(seat)
@@ -467,6 +524,36 @@ export function OfficeFloor({ departments, animate, carModel, className }: Props
 
     /** A desk with a monitor and a chair; the person sits facing `facing` along z. */
     const desk = (x: number, z: number, facing: 1 | -1, material: THREE.Material) => {
+      const model = models.instance('desk', { width: 1.3 })
+      if (model) {
+        const yaw = (facing === 1 ? 0 : Math.PI) + KENNEY_YAW
+        model.group.position.set(x, 0, z)
+        model.group.rotation.y = yaw
+        scene.add(model.group)
+        const top = model.size.y
+        const put = (name: string, fit: Parameters<ModelSet['instance']>[1], px: number, pz: number) => {
+          const inst = models.instance(name, fit)
+          if (!inst) return
+          inst.group.position.set(px, top, pz)
+          inst.group.rotation.y = yaw
+          scene.add(inst.group)
+        }
+        put('computerScreen', { height: 0.42 }, x, z + facing * 0.14)
+        put('computerKeyboard', { width: 0.42 }, x - 0.04, z - facing * 0.1)
+        put('computerMouse', { width: 0.07 }, x + 0.3, z - facing * 0.1)
+        const mug = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.03, 0.08, 12), paper)
+        mug.position.set(x + 0.48, top + 0.04, z + facing * 0.1)
+        scene.add(mug)
+        const bin = models.instance('trashcan', { height: 0.32 })
+        if (bin) {
+          bin.group.position.set(x - 0.78, 0, z - facing * 0.2)
+          scene.add(bin.group)
+        }
+        const cz = z - facing * 0.66
+        chair(x, cz, facing)
+        person(x, cz, facing === 1 ? 0 : Math.PI, material, { kind: 'seated', seat: 0.47, armsOnDesk: true })
+        return
+      }
       const top = shadowed(new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.05, 0.55), deskTop))
       top.position.set(x, 0.72, z)
       scene.add(top)
@@ -549,7 +636,16 @@ export function OfficeFloor({ departments, animate, carModel, className }: Props
       return g
     }
 
+    let plantCount = 0
     const plant = (x: number, z: number, scale = 1) => {
+      const kinds = ['plantSmall1', 'plantSmall2', 'plantSmall3', 'pottedPlant']
+      const model = models.instance(kinds[plantCount++ % kinds.length], { height: 0.95 * scale })
+      if (model) {
+        model.group.position.set(x, 0, z)
+        model.group.rotation.y = (plantCount * 1.9) % (Math.PI * 2)
+        scene.add(model.group)
+        return
+      }
       const p = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(0.2 * scale, 0.16 * scale, 0.4 * scale, 16), pot))
       p.position.set(x, 0.2 * scale, z)
       scene.add(p)
@@ -612,6 +708,15 @@ export function OfficeFloor({ departments, animate, carModel, className }: Props
 
     /** A floor lamp: post, shade, and a warm glow. */
     const floorLamp = (x: number, z: number) => {
+      const model = models.instance('lampRoundFloor', { height: 1.7 })
+      if (model) {
+        model.group.position.set(x, 0, z)
+        scene.add(model.group)
+        const g = haloFor(colors.caution.clone().lerp(colors.foreground, 0.5), 0.9)
+        g.material.opacity = 0.35
+        g.position.set(x, 1.55, z)
+        return
+      }
       const base = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.03, 20), steel)
       base.position.set(x, 0.015, z)
       scene.add(base)
@@ -642,6 +747,13 @@ export function OfficeFloor({ departments, animate, carModel, className }: Props
 
     /** A filing cabinet. */
     const cabinet = (x: number, z: number, drawersFacing: 1 | -1) => {
+      const model = models.instance('sideTableDrawers', { height: 0.8 })
+      if (model) {
+        model.group.position.set(x, 0, z)
+        model.group.rotation.y = (drawersFacing === 1 ? 0 : Math.PI) + KENNEY_YAW
+        scene.add(model.group)
+        return
+      }
       const body = shadowed(new THREE.Mesh(new THREE.BoxGeometry(0.5, 1.1, 0.55), equipment))
       body.position.set(x, 0.55, z)
       scene.add(body)
@@ -654,6 +766,19 @@ export function OfficeFloor({ departments, animate, carModel, className }: Props
 
     /** A bookcase against a back wall, spines toward +facing z. */
     const bookcase = (x: number, z: number, width: number, facing: 1 | -1) => {
+      if (models.has('bookcaseOpen')) {
+        // As many units as the wall takes, side by side.
+        const unitW = 1.0
+        const n = Math.max(1, Math.floor(width / unitW))
+        for (let i = 0; i < n; i++) {
+          const inst = models.instance('bookcaseOpen', { width: unitW })
+          if (!inst) break
+          inst.group.position.set(x - ((n - 1) * unitW) / 2 + i * unitW, 0, z)
+          inst.group.rotation.y = (facing === 1 ? 0 : Math.PI) + KENNEY_YAW
+          scene.add(inst.group)
+        }
+        return
+      }
       const back = shadowed(new THREE.Mesh(new THREE.BoxGeometry(width, 1.7, 0.04), equipment))
       back.position.set(x, 0.85, z - facing * 0.15)
       scene.add(back)
@@ -682,6 +807,42 @@ export function OfficeFloor({ departments, animate, carModel, className }: Props
 
     /** A coffee station: a counter, an espresso machine with a lit light, cups, a kettle. */
     const coffeeStation = (x: number, z: number, facing: 1 | -1) => {
+      if (models.has('kitchenCabinet')) {
+        const yaw = (facing === 1 ? 0 : Math.PI) + KENNEY_YAW
+        let top = 0.9
+        for (const dx of [-0.5, 0.5]) {
+          const cab = models.instance('kitchenCabinet', { width: 1.0 })
+          if (!cab) break
+          cab.group.position.set(x + dx, 0, z)
+          cab.group.rotation.y = yaw
+          scene.add(cab.group)
+          top = cab.size.y
+        }
+        const machine = models.instance('kitchenCoffeeMachine', { height: 0.42 })
+        if (machine) {
+          machine.group.position.set(x - 0.45, top, z)
+          machine.group.rotation.y = yaw
+          scene.add(machine.group)
+        }
+        for (let i = 0; i < 4; i++) {
+          const cup = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.03, 0.08, 12), paper)
+          cup.position.set(x + 0.15 + i * 0.13, top + 0.04, z - facing * 0.12)
+          scene.add(cup)
+        }
+        const fridge = models.instance('kitchenFridgeSmall', { height: 1.25 })
+        if (fridge) {
+          fridge.group.position.set(x + 1.35, 0, z)
+          fridge.group.rotation.y = yaw
+          scene.add(fridge.group)
+        }
+        const light = new THREE.Mesh(ledGeometry, new THREE.MeshBasicMaterial({ color: colors.mint }))
+        light.position.set(x - 0.3, top + 0.3, z + facing * 0.2)
+        scene.add(light)
+        const lightHalo = haloFor(colors.mint, 0.12)
+        lightHalo.material.opacity = 0.7
+        lightHalo.position.copy(light.position).add(new THREE.Vector3(0, 0, facing * 0.03))
+        return
+      }
       const counter = shadowed(new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.9, 0.6), deskTop))
       counter.position.set(x, 0.45, z)
       scene.add(counter)
@@ -736,6 +897,20 @@ export function OfficeFloor({ departments, animate, carModel, className }: Props
 
     /** A television on a stand, the screen toward +facing z. */
     const television = (x: number, z: number, facing: 1 | -1) => {
+      const cab = models.instance('cabinetTelevision', { width: 1.5 })
+      if (cab) {
+        const yaw = (facing === 1 ? 0 : Math.PI) + KENNEY_YAW
+        cab.group.position.set(x, 0, z)
+        cab.group.rotation.y = yaw
+        scene.add(cab.group)
+        const tv = models.instance('televisionModern', { width: 1.25 })
+        if (tv) {
+          tv.group.position.set(x, cab.size.y, z)
+          tv.group.rotation.y = yaw
+          scene.add(tv.group)
+        }
+        return
+      }
       const stand = shadowed(new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.5, 0.4), equipment))
       stand.position.set(x, 0.25, z)
       scene.add(stand)
@@ -966,6 +1141,21 @@ export function OfficeFloor({ departments, animate, carModel, className }: Props
           }
         }
         const group = (gx: number) => {
+          if (models.has('loungeSofa')) {
+            for (const f of [1, -1] as const) {
+              const inst = models.instance('loungeSofa', { width: 1.9 })
+              if (!inst) break
+              inst.group.position.set(gx, 0, dept.z - f * 1.05)
+              inst.group.rotation.y = (f === 1 ? 0 : Math.PI) + KENNEY_YAW
+              scene.add(inst.group)
+            }
+            const table = models.instance('tableCoffee', { width: 1.0 })
+            if (table) {
+              table.group.position.set(gx, 0, dept.z)
+              scene.add(table.group)
+            }
+            return
+          }
           sofa(gx, dept.z - 1.0, 1)
           sofa(gx, dept.z + 1.0, -1)
           cushion(gx - 0.55, dept.z - 1.12)
@@ -1059,6 +1249,11 @@ export function OfficeFloor({ departments, animate, carModel, className }: Props
         waterCooler(dept.x + dept.w / 2 - 0.5, dept.z - 0.9)
         television(dept.x + dept.w / 2 - 1.7, dept.z + 1.1, -1)
         floorLamp(dept.x - dept.w / 2 + 0.6, dept.z + dept.d / 2 - 0.6)
+        const rack = models.instance('coatRackStanding', { height: 1.7 })
+        if (rack) {
+          rack.group.position.set(dept.x - dept.w / 2 + 3.4, 0, dept.z + 0.4)
+          scene.add(rack.group)
+        }
         floorLamp(dept.x + dept.w * 0.22 + 1.3, dept.z + dept.d / 2 - 0.6)
         palm(dept.x - dept.w / 2 + 0.6, dept.z - dept.d / 2 + 0.6, 1.1)
         palm(dept.x + dept.w / 2 - 0.6, dept.z + dept.d / 2 - 0.6, 1.0)
@@ -1098,6 +1293,12 @@ export function OfficeFloor({ departments, animate, carModel, className }: Props
         const jug = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.06, 0.22, 16), glass)
         jug.position.set(dept.x + 0.3, 0.86, dept.z)
         scene.add(jug)
+        const laptop = models.instance('laptop', { width: 0.36 })
+        if (laptop) {
+          laptop.group.position.set(dept.x - 0.5, 0.745, dept.z + 0.1)
+          laptop.group.rotation.y = Math.PI + KENNEY_YAW
+          scene.add(laptop.group)
+        }
         for (const dx of [-0.6, 0.6]) {
           const pad = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.01, 0.3), paper)
           pad.position.set(dept.x + dx, 0.75, dept.z - 0.2)
@@ -1159,7 +1360,6 @@ export function OfficeFloor({ departments, animate, carModel, className }: Props
         }
         case 'advisory': {
           whiteboard(dept.x - dept.w / 2 + 0.9, back, facing)
-          plant(dept.x, dept.z, 0.7)
           cabinet(dept.x + dept.w / 2 - 0.4, back, facing)
           break
         }
@@ -1231,7 +1431,8 @@ export function OfficeFloor({ departments, animate, carModel, className }: Props
         case 'adversary':
         case 'risk': {
           deskLamp(dept.x + 0.42, 0.74, dept.z + facing * 0.05)
-          cabinet(dept.x, back, facing)
+          // Beside the desk, not behind the chair: the camera looks from the south.
+          cabinet(dept.x - 0.62, dept.z + facing * 0.45, facing)
           break
         }
         default:
@@ -1531,6 +1732,7 @@ export function OfficeFloor({ departments, animate, carModel, className }: Props
         sheet.rotation.y = now * 0.8
         if (showCar) showCar.rotation.y += dt * 0.25
         for (const fan of fans) fan.rotation.y += dt * 9
+        for (const m of mixers) m.update(dt)
         // People: a look around now and then, and the typists' hands moving.
         for (const p of people) {
           p.head.rotation.y = Math.sin(now * 0.32 + p.phase) * 0.22
@@ -1635,7 +1837,7 @@ export function OfficeFloor({ departments, animate, carModel, className }: Props
     }
     frame = requestAnimationFrame(render)
 
-    return () => {
+    teardown = () => {
       disposed = true
       window.clearTimeout(pickTimer)
       host.removeEventListener('wheel', onWheel, { capture: true })
@@ -1657,10 +1859,16 @@ export function OfficeFloor({ departments, animate, carModel, className }: Props
       glow.dispose()
       for (const c of clusters) c.label.remove()
       for (const tag of rackTags) tag.label.remove()
+    }
+    } // build
+
+    return () => {
+      cancelled = true
+      teardown()
       renderer.dispose()
       renderer.domElement.remove()
     }
-  }, [departments, animate, carModel])
+  }, [departments, animate, carModel, modelsBase])
 
   return (
     <div

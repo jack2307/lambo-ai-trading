@@ -180,3 +180,9 @@ dashboard is the model; a second scene on the same page is decoration.
   dashboard, not a game.
 - **Labels are DOM, positioned by projection.** Crisper than canvas text, and in
   the product's own font.
+- **Models are fitted, never trusted for scale.** A glTF is placed by the size
+  it must be along one axis, measured from its bounding box, and stood on the
+  floor; a seated character is posed first and then grounded. Every model has
+  a primitive stand-in for when it does not arrive, and a licence file beside
+  it in `public/models/`. Furniture and people are Kenney (CC0); the show car
+  is CC BY-NC and credited under the scene.

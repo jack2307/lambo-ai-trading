@@ -433,7 +433,11 @@ export function Dashboard({ catalog, market, onError }: Props) {
               <a href={CAR_MODEL.licenseUrl} className="hover:text-foreground underline underline-offset-2" target="_blank" rel="noreferrer">
                 {CAR_MODEL.license}
               </a>
-              .
+              . Furniture and people:{' '}
+              <a href="https://kenney.nl" className="hover:text-foreground underline underline-offset-2" target="_blank" rel="noreferrer">
+                Kenney
+              </a>{' '}
+              (CC0).
             </p>
           </Panel>
         </div>
