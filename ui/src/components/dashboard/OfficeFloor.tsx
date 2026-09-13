@@ -394,9 +394,9 @@ export function OfficeFloor({ departments, animate, carModel, modelsBase = '/mod
 
     /* ---- shared materials ---- */
     const glass = new THREE.MeshPhysicalMaterial({
-      color: colors.foreground.clone().lerp(colors.caution, 0.12),
+      color: colors.foreground.clone().lerp(colors.caution, 0.08),
       transparent: true,
-      opacity: 0.14,
+      opacity: 0.09,
       roughness: 0.05,
       clearcoat: 1,
       side: THREE.DoubleSide,
@@ -1117,23 +1117,31 @@ export function OfficeFloor({ departments, animate, carModel, modelsBase = '/mod
           // Slim black mullions every 90 cm.
           const along = Math.max(w, d)
           for (let m = 0.9; m < along - 0.3; m += 0.9) {
-            const mullion = new THREE.Mesh(new THREE.BoxGeometry(w > d ? 0.035 : d + 0.02, GLASS_H, w > d ? d + 0.02 : 0.035), frameMaterial)
+            // A slim post: 3.5 cm along the panel, the panel's thickness across it.
+            const mullion = new THREE.Mesh(new THREE.BoxGeometry(w > d ? 0.035 : w + 0.02, GLASS_H, w > d ? d + 0.02 : 0.035), frameMaterial)
             if (w > d) mullion.position.set(px - w / 2 + m, GLASS_H / 2, pz)
             else mullion.position.set(px, GLASS_H / 2, pz - d / 2 + m)
             scene.add(mullion)
           }
         }
+        // A walnut panel to sill height on the back, glass above it: the
+        // room reads as wood-and-glass without turning into a dark box.
         const woodWall = (px: number, pz: number, w: number, d: number) => {
-          const m = shadowed(new THREE.Mesh(new THREE.BoxGeometry(w, GLASS_H + 0.05, d), wallPaint))
-          m.position.set(px, (GLASS_H + 0.05) / 2, pz)
+          const h = 1.1
+          const m = shadowed(new THREE.Mesh(new THREE.BoxGeometry(w, h, d), wallPaint))
+          m.position.set(px, h / 2, pz)
           scene.add(m)
+          const cap = new THREE.Mesh(new THREE.BoxGeometry(w + 0.02, 0.04, d + 0.04), frameMaterial)
+          cap.position.set(px, h + 0.02, pz)
+          scene.add(cap)
         }
         const w = x1 - x0
         const d = z1 - z0
         const doorZ = facing === 1 ? z1 : z0
         const backZ = facing === 1 ? z0 : z1
-        // Walnut on the back, glass on the other three sides.
-        woodWall((x0 + x1) / 2, backZ, w, 0.12)
+        // Glass all round; walnut to sill height along the back.
+        panel((x0 + x1) / 2, backZ, w, 0.04)
+        woodWall((x0 + x1) / 2, backZ + facing * 0.09, w - 0.1, 0.12)
         panel(x0, (z0 + z1) / 2, 0.04, d)
         panel(x1, (z0 + z1) / 2, 0.04, d)
         const doorW = 1.0
