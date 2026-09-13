@@ -74,8 +74,8 @@ interface Props {
 }
 
 const FLOOR_W = 24
-/** Deep enough for two wings and the lobby along the south edge. */
-const FLOOR_D = 17
+/** Deep enough for two wings, a gap, and the lobby along the south edge. */
+const FLOOR_D = 18.6
 const AISLE_X0 = -8.4
 const AISLE_X1 = 10.4
 const GLASS_H = 1.35
@@ -230,7 +230,7 @@ export function OfficeFloor({ departments, animate, carModel, className }: Props
     pmrem.dispose()
 
     const camera = new THREE.PerspectiveCamera(28, 1, 0.1, 120)
-    camera.position.set(17, 21, 31)
+    camera.position.set(17.5, 21.5, 33)
 
     const controls = new OrbitControls(camera, renderer.domElement)
     // The wheel zooms only once the scene has been clicked (or with Ctrl
@@ -246,7 +246,7 @@ export function OfficeFloor({ departments, animate, carModel, className }: Props
     controls.autoRotateSpeed = 0.12
     controls.minPolarAngle = Math.PI * 0.2
     controls.maxPolarAngle = Math.PI * 0.36
-    controls.target.set(0, 0.2, 1.4)
+    controls.target.set(0, 0.2, 2.0)
 
     /* ---- light: a warm key as if from a window wall, a cool fill ---- */
     scene.add(new THREE.HemisphereLight(colors.foreground, colors.background, 0.45))
@@ -353,6 +353,18 @@ export function OfficeFloor({ departments, animate, carModel, className }: Props
     const paper = new THREE.MeshPhysicalMaterial({ color: colors.foreground.clone().lerp(colors.elevated, 0.15), roughness: 0.6 })
     const steel = new THREE.MeshPhysicalMaterial({ color: colors.foreground.clone().lerp(colors.muted, 0.5), roughness: 0.25, metalness: 0.85 })
     const lampShade = new THREE.MeshPhysicalMaterial({ color: colors.foreground, roughness: 0.6, emissive: colors.caution.clone().lerp(colors.foreground, 0.5), emissiveIntensity: 0.55 })
+    // People: skin and hair are the amber token pulled toward white and
+    // toward black; the shirt is the department's tone.
+    const skin = new THREE.MeshPhysicalMaterial({ color: colors.caution.clone().lerp(colors.foreground, 0.58), roughness: 0.65 })
+    const hairMaterials = [
+      new THREE.MeshPhysicalMaterial({ color: colors.background.clone().lerp(colors.caution, 0.18), roughness: 0.8 }),
+      new THREE.MeshPhysicalMaterial({ color: colors.background.clone().lerp(colors.foreground, 0.3), roughness: 0.8 }),
+      new THREE.MeshPhysicalMaterial({ color: colors.caution.clone().lerp(colors.background, 0.5), roughness: 0.8 }),
+    ]
+    const trousers = new THREE.MeshPhysicalMaterial({ color: colors.background.clone().lerp(colors.foreground, 0.14), roughness: 0.85 })
+    const shoe = new THREE.MeshPhysicalMaterial({ color: colors.background.clone().lerp(colors.foreground, 0.06), roughness: 0.5 })
+    const people: { head: THREE.Object3D; hands: THREE.Object3D[]; phase: number; typing: boolean }[] = []
+    let personCount = 0
     const bookMaterials = [colors.caution, colors.mint, colors.foreground, colors.muted].map(
       (c) => new THREE.MeshPhysicalMaterial({ color: c.clone().lerp(colors.elevated, 0.5), roughness: 0.85 }),
     )
@@ -361,6 +373,83 @@ export function OfficeFloor({ departments, animate, carModel, className }: Props
       mesh.castShadow = true
       mesh.receiveShadow = true
       return mesh
+    }
+
+    /**
+     * A person. Built facing +z inside a group, then turned by `yaw`. Seated
+     * poses take the seat height so the same figure sits a chair or a sofa;
+     * `armsOnDesk` puts the forearms out at desk height, otherwise on the lap.
+     */
+    const person = (
+      x: number,
+      z: number,
+      yaw: number,
+      shirt: THREE.Material,
+      pose: { kind: 'seated'; seat: number; armsOnDesk: boolean } | { kind: 'standing' },
+    ) => {
+      const g = new THREE.Group()
+      const n = personCount++
+      const hair = hairMaterials[n % hairMaterials.length]
+      const tall = 0.94 + ((n * 7) % 5) * 0.03
+      const part = (geometry: THREE.BufferGeometry, material: THREE.Material, px: number, py: number, pz: number, rx = 0, ry = 0, rz = 0) => {
+        const m = shadowed(new THREE.Mesh(geometry, material))
+        m.position.set(px, py, pz)
+        m.rotation.set(rx, ry, rz)
+        g.add(m)
+        return m
+      }
+      const seat = pose.kind === 'seated' ? pose.seat : 0.86
+      // Legs.
+      if (pose.kind === 'seated') {
+        for (const sx of [-0.09, 0.09]) {
+          part(new THREE.CapsuleGeometry(0.07, 0.26, 4, 12), trousers, sx, seat - 0.05, 0.17, Math.PI / 2)
+          const shin = seat - 0.14
+          part(new THREE.CapsuleGeometry(0.06, Math.max(0.1, shin - 0.12), 4, 12), trousers, sx, shin / 2 + 0.06, 0.33)
+          part(new THREE.BoxGeometry(0.1, 0.06, 0.2), shoe, sx, 0.03, 0.38)
+        }
+      } else {
+        for (const sx of [-0.09, 0.09]) {
+          part(new THREE.CapsuleGeometry(0.07, 0.3, 4, 12), trousers, sx, 0.62, 0)
+          part(new THREE.CapsuleGeometry(0.06, 0.28, 4, 12), trousers, sx, 0.26, 0.01)
+          part(new THREE.BoxGeometry(0.1, 0.06, 0.22), shoe, sx, 0.03, 0.05)
+        }
+      }
+      // Torso, a little wider at the shoulders.
+      const torso = part(new THREE.CapsuleGeometry(0.15, 0.3, 6, 16), shirt, 0, seat + 0.3, 0)
+      torso.scale.set(1.25, 1, 0.85)
+      part(new THREE.CylinderGeometry(0.045, 0.05, 0.1, 10), skin, 0, seat + 0.56, 0)
+      // Head and hair.
+      const head = part(new THREE.SphereGeometry(0.125, 20, 20), skin, 0, seat + 0.7, 0)
+      const cap = new THREE.Mesh(new THREE.SphereGeometry(0.132, 20, 20, 0, Math.PI * 2, 0, Math.PI * 0.55), hair)
+      cap.position.set(0, 0.015, -0.02)
+      head.add(cap)
+      const nose = new THREE.Mesh(new THREE.ConeGeometry(0.018, 0.04, 8), skin)
+      nose.position.set(0, -0.01, 0.125)
+      nose.rotation.x = Math.PI / 2
+      head.add(nose)
+      // Arms.
+      const hands: THREE.Object3D[] = []
+      for (const sx of [-1, 1]) {
+        if (pose.kind === 'seated' && pose.armsOnDesk) {
+          part(new THREE.CapsuleGeometry(0.045, 0.2, 4, 10), shirt, sx * 0.2, seat + 0.38, 0.1, 0.95)
+          part(new THREE.CapsuleGeometry(0.04, 0.22, 4, 10), skin, sx * 0.17, seat + 0.29, 0.33, Math.PI / 2)
+          hands.push(part(new THREE.SphereGeometry(0.045, 10, 10), skin, sx * 0.16, seat + 0.29, 0.47))
+        } else if (pose.kind === 'seated') {
+          part(new THREE.CapsuleGeometry(0.045, 0.2, 4, 10), shirt, sx * 0.2, seat + 0.36, 0.03, 0.4)
+          part(new THREE.CapsuleGeometry(0.04, 0.2, 4, 10), skin, sx * 0.14, seat + 0.1, 0.2, Math.PI / 2)
+          hands.push(part(new THREE.SphereGeometry(0.045, 10, 10), skin, sx * 0.13, seat + 0.1, 0.32))
+        } else {
+          part(new THREE.CapsuleGeometry(0.045, 0.22, 4, 10), shirt, sx * 0.21, seat + 0.34, 0, 0, 0, sx * 0.12)
+          part(new THREE.CapsuleGeometry(0.04, 0.2, 4, 10), skin, sx * 0.24, seat + 0.06, 0.02, -0.25)
+          hands.push(part(new THREE.SphereGeometry(0.045, 10, 10), skin, sx * 0.25, seat - 0.08, 0.06))
+        }
+      }
+      g.position.set(x, 0, z)
+      g.rotation.y = yaw
+      g.scale.setScalar(tall)
+      scene.add(g)
+      people.push({ head, hands, phase: n * 1.7, typing: pose.kind === 'seated' && pose.armsOnDesk })
+      return g
     }
 
     /** A chair at (x, z) whose back is on the −facing side. */
@@ -392,16 +481,21 @@ export function OfficeFloor({ departments, animate, carModel, className }: Props
       const stand = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.14, 0.05), deskLeg)
       stand.position.set(x, 0.79, z + facing * 0.16)
       scene.add(stand)
-      // The chair, on the near side of the desk.
+      // Keyboard, mouse, a mug.
+      const keyboard = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.015, 0.12), deskLeg)
+      keyboard.position.set(x - 0.05, 0.755, z - facing * 0.08)
+      scene.add(keyboard)
+      const mouse = new THREE.Mesh(new THREE.CapsuleGeometry(0.025, 0.04, 4, 8), deskLeg)
+      mouse.position.set(x + 0.25, 0.765, z - facing * 0.08)
+      mouse.rotation.x = Math.PI / 2
+      scene.add(mouse)
+      const mug = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.03, 0.08, 12), paper)
+      mug.position.set(x + 0.42, 0.785, z + facing * 0.1)
+      scene.add(mug)
+      // The chair on the near side of the desk, and the person in it.
       const cz = z - facing * 0.62
       chair(x, cz, facing)
-      // The person.
-      const body = shadowed(new THREE.Mesh(new THREE.CapsuleGeometry(0.17, 0.3, 6, 18), material))
-      body.position.set(x, 0.76, cz + facing * 0.02)
-      scene.add(body)
-      const head = shadowed(new THREE.Mesh(new THREE.SphereGeometry(0.135, 20, 20), material))
-      head.position.set(x, 1.16, cz + facing * 0.02)
-      scene.add(head)
+      person(x, cz, facing === 1 ? 0 : Math.PI, material, { kind: 'seated', seat: 0.48, armsOnDesk: true })
     }
 
     /**
@@ -489,7 +583,7 @@ export function OfficeFloor({ departments, animate, carModel, className }: Props
       const box = shadowed(new THREE.Mesh(new THREE.BoxGeometry(length, 0.42, 0.4), pot))
       box.position.set(x, 0.21, z)
       scene.add(box)
-      const n = Math.max(2, Math.round(length / 0.6))
+      const n = Math.max(2, Math.round(length / 0.95))
       for (let i = 0; i < n; i++) {
         const bush = shadowed(new THREE.Mesh(new THREE.SphereGeometry(0.2 + (i % 2) * 0.04, 12, 12), i % 2 ? leaf : leafDark))
         bush.position.set(x - length / 2 + 0.3 + (i * (length - 0.6)) / (n - 1), 0.56, z + ((i % 2) - 0.5) * 0.08)
@@ -970,9 +1064,15 @@ export function OfficeFloor({ departments, animate, carModel, className }: Props
         palm(dept.x + dept.w / 2 - 0.6, dept.z + dept.d / 2 - 0.6, 1.0)
         plant(dept.x - 2.6, dept.z + dept.d / 2 - 0.5, 0.8)
         plant(dept.x + 2.6, dept.z + dept.d / 2 - 0.5, 0.8)
-        // A planter row between the lobby and the desks, with a gap at the aisle.
-        planter(dept.x - 6.0, dept.z - dept.d / 2 + 0.05, 8.0)
-        planter(dept.x + 6.2, dept.z - dept.d / 2 + 0.05, 7.6)
+        // A low hedge between the lobby and the desks, a gap at the aisle,
+        // set back from both so neither side crowds it.
+        planter(dept.x - 6.0, dept.z - dept.d / 2 - 0.55, 7.0)
+        planter(dept.x + 6.2, dept.z - dept.d / 2 - 0.55, 6.6)
+        // People: the receptionist behind the counter, a visitor at the car,
+        // one on a sofa with a coffee.
+        person(dept.x - dept.w / 2 + 1.6, dept.z - 0.35, 0, new THREE.MeshPhysicalMaterial({ color: colors.foreground.clone().lerp(colors.muted, 0.2), roughness: 0.6 }), { kind: 'standing' })
+        person(dept.x + 2.3, dept.z + 0.9, -Math.PI / 2 - 0.3, new THREE.MeshPhysicalMaterial({ color: colors.mint.clone().lerp(colors.background, 0.35), roughness: 0.6 }), { kind: 'standing' })
+        person(dept.x + dept.w * 0.22 - 0.4, dept.z - 1.0, 0, new THREE.MeshPhysicalMaterial({ color: colors.muted.clone().lerp(colors.foreground, 0.1), roughness: 0.6 }), { kind: 'seated', seat: 0.35, armsOnDesk: false })
       } else if (dept.furniture === 'meeting') {
         // A long table, three chairs a side, a screen on the back glass.
         const tableW = dept.w - 1.2
@@ -1431,6 +1531,15 @@ export function OfficeFloor({ departments, animate, carModel, className }: Props
         sheet.rotation.y = now * 0.8
         if (showCar) showCar.rotation.y += dt * 0.25
         for (const fan of fans) fan.rotation.y += dt * 9
+        // People: a look around now and then, and the typists' hands moving.
+        for (const p of people) {
+          p.head.rotation.y = Math.sin(now * 0.32 + p.phase) * 0.22
+          p.head.rotation.x = Math.sin(now * 0.21 + p.phase * 2) * 0.05
+          if (p.typing) {
+            p.hands[0].position.y = 0.77 + Math.max(0, Math.sin(now * 9 + p.phase)) * 0.012
+            p.hands[1].position.y = 0.77 + Math.max(0, Math.sin(now * 9 + p.phase + 1.9)) * 0.012
+          }
+        }
 
         for (let i = arcs.length - 1; i >= 0; i--) {
           const a = arcs[i]

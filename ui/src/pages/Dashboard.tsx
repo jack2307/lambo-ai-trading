@@ -83,7 +83,7 @@ const seat = (id: (typeof TEAM)[number]['id']) => {
 }
 const DEPARTMENTS: Department[] = [
   // The lobby runs the length of the south edge, where the doors are.
-  { id: 'reception', title: 'Lobby', line: 'Public reception, with the show car.', tone: 'public', x: -0.2, z: 6.6, w: 22.6, d: 3.4, occupants: [], furniture: 'lounge' },
+  { id: 'reception', title: 'Lobby', line: 'Public reception, with the show car.', tone: 'public', x: -0.2, z: 7.4, w: 22.6, d: 3.4, occupants: [], furniture: 'lounge' },
   // The west end of the north wing: the meeting room, glass like the office.
   { id: 'meeting', title: 'Meeting room', line: 'Where a decision is argued before it is written.', tone: 'public', x: -10.0, z: -3.0, w: 3.0, d: 3.4, enclosed: true, occupants: [], furniture: 'meeting' },
   // North of the aisle: the glass office, the advisory desks, the archive.
