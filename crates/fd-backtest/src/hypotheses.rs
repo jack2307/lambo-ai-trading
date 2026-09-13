@@ -229,6 +229,30 @@ impl HypothesisReport {
 /// no grid — a drift claim) is read against random *holds* of the same
 /// length. Reading a drift against random entries with ATR stops is how
 /// the first drift test produced a null with a 95th percentile near 3.
+/// The entry rate at which the random-entry control produces about as many
+/// trades as the method under test, over the same bars with the same
+/// filters.
+///
+/// A control with five times the method's trades has a much tighter
+/// profit-factor distribution, and a percentile read against it flatters a
+/// thin method — the adversary caught a 61-trade row measured against a
+/// 300-trade null. So the control is calibrated: one probe run at the
+/// default rate, then the rate scaled to the method's count. Pinned, so the
+/// control's grid loses its rate axis too.
+fn matched_rate(bars: &[Bar], rules: &TradingRules, filters: &[Filter], target_trades: usize) -> f64 {
+    use crate::engine::{Range, run_backtest};
+    const PROBE: f64 = 0.02;
+    let mut p = RandomEntry.default_params();
+    p.set("entryRate", PROBE);
+    p.set("seed", 1.0);
+    let probe = Filtered { inner: &RandomEntry, filters: filters.to_vec() };
+    let got = run_backtest(bars, &probe, &p, rules, None, Range::default()).trades.len();
+    if got == 0 || target_trades == 0 {
+        return PROBE;
+    }
+    (PROBE * target_trades as f64 / got as f64).clamp(0.0005, 1.0)
+}
+
 fn control_for(base: &dyn Strategy, overrides: &[(String, f64)], seed: f64) -> (&'static dyn Strategy, Params) {
     // Judged on the preset, not the bare method: a pinned grid is empty.
     let pinned = preset_params(base, overrides).ok();
@@ -257,6 +281,22 @@ fn control_for(base: &dyn Strategy, overrides: &[(String, f64)], seed: f64) -> (
         p.set("seed", seed);
         (&RandomEntry, p)
     }
+}
+
+/// `control_for`, with the random-entry rate matched to the method's count.
+fn matched_control_for(
+    base: &dyn Strategy,
+    overrides: &[(String, f64)],
+    seed: f64,
+    rate: Option<f64>,
+) -> (&'static dyn Strategy, Params) {
+    let (inner, mut p) = control_for(base, overrides, seed);
+    if let Some(rate) = rate
+        && p.contains("entryRate")
+    {
+        p.set("entryRate", rate);
+    }
+    (inner, p)
 }
 
 /// A method with some defaults replaced: a preset, as a strategy.
@@ -349,11 +389,13 @@ pub fn run_hypothesis_fixed(
     let preset = Preset { inner: base, defaults: preset_params(base, &hypothesis.overrides)? };
     let filtered = Filtered { inner: &preset, filters: hypothesis.filters.clone() };
     let result = run_backtest(bars, &filtered, &preset.defaults, rules, None, Range::default());
+    let drift = base.exits() == fd_strategy::registry::Exits::Strategy && Preset { inner: base, defaults: preset.defaults.clone() }.grid().is_empty();
+    let rate = (!drift).then(|| matched_rate(bars, rules, &hypothesis.filters, result.trades.len()));
 
     let mut null_pf: Vec<f64> = (0..seeds)
         .into_par_iter()
         .filter_map(|seed| {
-            let (inner, defaults) = control_for(base, &hypothesis.overrides, seed as f64 + 1.0);
+            let (inner, defaults) = matched_control_for(base, &hypothesis.overrides, seed as f64 + 1.0, rate);
             let control = Preset { inner, defaults: defaults.clone() };
             let matched = Filtered { inner: &control, filters: hypothesis.filters.clone() };
             let pf = run_backtest(bars, &matched, &defaults, rules, None, Range::default()).metrics.profit_factor;
@@ -401,10 +443,17 @@ pub fn run_hypothesis(
         return Ok(None);
     };
 
+    // The control's trade count follows the method's, measured over the whole
+    // window at the registered parameters (the walk-forward's own count is a
+    // fifth of the bars per fold and would under-match).
+    let whole = crate::engine::run_backtest(bars, &filtered, &preset.defaults, rules, None, crate::engine::Range::default());
+    let drift = base.exits() == fd_strategy::registry::Exits::Strategy && Preset { inner: base, defaults: preset.defaults.clone() }.grid().is_empty();
+    let rate = (!drift).then(|| matched_rate(bars, rules, &hypothesis.filters, whole.trades.len()));
+
     let mut null_pf: Vec<f64> = (0..seeds)
         .into_par_iter()
         .filter_map(|seed| {
-            let (inner, defaults) = control_for(base, &hypothesis.overrides, seed as f64 + 1.0);
+            let (inner, defaults) = matched_control_for(base, &hypothesis.overrides, seed as f64 + 1.0, rate);
             let control = Preset { inner, defaults };
             let matched = Filtered { inner: &control, filters: hypothesis.filters.clone() };
             walk_forward(&matched, bars, rules, None, folds, select_by, min_trades_per_cell)
