@@ -1328,12 +1328,12 @@ export function OfficeFloor({ departments, animate, carModel, modelsBase = '/mod
         const rope = shadowed(new THREE.Mesh(new THREE.TubeGeometry(new THREE.QuadraticBezierCurve3(postTops[0], sag, postTops[1]), 16, 0.018, 8, false), new THREE.MeshPhysicalMaterial({ color: colors.caution.clone().lerp(colors.background, 0.3), roughness: 0.8 })))
         scene.add(rope)
         const beatZ = frontZ + facing * 0.45
-        const guard = person(dept.x - 1.2, beatZ, facing === 1 ? Math.PI : 0, new THREE.MeshPhysicalMaterial({ color: steelBlack, roughness: 0.7 }), { kind: 'standing' })
+        const guard = person(dept.x - 1.0, beatZ, facing === 1 ? Math.PI : 0, new THREE.MeshPhysicalMaterial({ color: steelBlack, roughness: 0.7 }), { kind: 'standing' })
         const post = agents.find((a) => a.group === guard)
         if (post) {
           post.restless = 1
           post.dwell = rand(2, 5)
-          post.beat = new THREE.Vector3(dept.x + 1.2, 0, beatZ)
+          post.beat = new THREE.Vector3(dept.x + 1.0, 0, beatZ)
         }
         for (let k = 0; k < 8; k++) {
           const on = k % 4 === 3 ? colors.caution.clone() : colors.mint.clone()
@@ -1611,17 +1611,19 @@ export function OfficeFloor({ departments, animate, carModel, modelsBase = '/mod
           break
         }
         case 'data': {
-          // Air handler and an extinguisher, as any server row has.
+          // Air handler and an extinguisher on the aisle side, behind the
+          // cabinets, clear of the guard's beat along the front.
+          const rear = dept.z + facing * (dept.d / 2 - 0.35)
           const ac = shadowed(new THREE.Mesh(new THREE.BoxGeometry(0.7, 1.9, 0.5), paper))
-          ac.position.set(dept.x + dept.w / 2 - 0.5, 0.95, back)
+          ac.position.set(dept.x + dept.w / 2 - 0.5, 0.95, rear)
           scene.add(ac)
           for (let i = 0; i < 6; i++) {
             const slat = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.015, 0.02), frameMaterial)
-            slat.position.set(ac.position.x, 1.35 + i * 0.07, back + facing * 0.26)
+            slat.position.set(ac.position.x, 1.35 + i * 0.07, rear - facing * 0.26)
             scene.add(slat)
           }
           const ext = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.4, 12), new THREE.MeshPhysicalMaterial({ color: colors.caution, roughness: 0.4 }))
-          ext.position.set(dept.x - dept.w / 2 + 0.3, 0.2, back)
+          ext.position.set(dept.x - dept.w / 2 + 0.3, 0.2, rear)
           scene.add(ext)
           break
         }
