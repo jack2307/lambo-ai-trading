@@ -275,6 +275,13 @@ fn control_for(base: &dyn Strategy, overrides: &[(String, f64)], seed: f64) -> (
         let mut p = RandomHold.default_params();
         p.set("holdMinutes", hold as f64);
         p.set("seed", seed);
+        // Sized like the method when the method sizes on daily ranges.
+        if let Some(pinned) = &pinned
+            && pinned.contains("riskDailyRanges")
+        {
+            p.set("riskDailyRanges", pinned.get("riskDailyRanges"));
+            p.set("rangeDays", pinned.get("rangeDays"));
+        }
         (&RandomHold, p)
     } else {
         let mut p = RandomEntry.default_params();

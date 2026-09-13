@@ -12,6 +12,15 @@
 //! `lookbackDays` New York days ago, found by scanning back, so no daily
 //! series is needed and nothing after `i` is read.
 //!
+//! **Sizing.** The engine sizes a position on the distance to its stop. A
+//! multi-week hold sized on a five-minute ATR realises ten to fifty times
+//! that risk, and equity becomes a path (the first run of this method,
+//! `2026-09-13-tsmom.md`). So the entry carries a *sizing* stop —
+//! `riskDailyRanges` × the average New York-day range of the last
+//! `rangeDays` days — which the engine uses for lots and for R and does not
+//! enforce, because exits are the strategy's. That is volatility targeting
+//! by another name: one percent of equity per two daily ranges.
+//!
 //! Spec: `docs/hypotheses/2026-09-13-tsmom.md`.
 
 use std::collections::BTreeMap;
@@ -36,7 +45,13 @@ impl Strategy for TimeSeriesMomentum {
         "Hold the side of the trailing N-day return, rebalanced at the first bar of each New York day."
     }
     fn default_params(&self) -> Params {
-        Params::new(&[("lookbackDays", 60.0), ("rebalanceHHMM", 1800.0), ("atrPeriod", 14.0)])
+        Params::new(&[
+            ("lookbackDays", 60.0),
+            ("rebalanceHHMM", 1800.0),
+            ("atrPeriod", 14.0),
+            ("riskDailyRanges", 2.0),
+            ("rangeDays", 20.0),
+        ])
     }
     fn grid(&self) -> BTreeMap<String, Vec<f64>> {
         BTreeMap::from([("lookbackDays".to_string(), vec![20.0, 60.0, 120.0])])
@@ -84,14 +99,68 @@ impl Strategy for TimeSeriesMomentum {
         match ctx.position {
             Some(open) if open.side == want => Intent::None,
             Some(_) => Intent::Exit { reason: format!("{lookback}-day return flipped") },
-            None => Intent::Enter {
-                side: want,
-                stop: None,
-                target: None,
-                reason: format!("{lookback}-day return {:+.1}%", ret * 100.0),
-            },
+            None => {
+                // Sizing stop only: the engine does not enforce it for a
+                // strategy-managed position, but it sizes and measures R on it.
+                let Some(stop) = sizing_stop(bars, bar, want, p.get("riskDailyRanges"), p.period("rangeDays")) else {
+                    return Intent::None;
+                };
+                Intent::Enter {
+                    side: want,
+                    stop: Some(stop),
+                    target: None,
+                    reason: format!("{lookback}-day return {:+.1}%; sized on {:.1} daily ranges", ret * 100.0, p.get("riskDailyRanges")),
+                }
+            }
         }
     }
+}
+
+/// A stop used for sizing only: `ranges` average daily ranges from the
+/// close, on the far side. `None` until `days` days of history exist. Shared
+/// with the random-hold control so a drift null is sized like the method.
+pub fn sizing_stop(bars: &[fd_core::types::Bar], bar: &fd_core::types::Bar, side: Side, ranges: f64, days: usize) -> Option<f64> {
+    let (today, _) = ny_day_minute(bar.time);
+    let range = average_day_range(bars, today, days)?;
+    let distance = ranges * range;
+    Some(if side.is_long() { bar.close - distance } else { bar.close + distance })
+}
+
+/// Mean high-low range of the last `days` completed New York days before `today`.
+fn average_day_range(bars: &[fd_core::types::Bar], today: i64, days: usize) -> Option<f64> {
+    let mut ranges: Vec<f64> = Vec::with_capacity(days);
+    let (mut current, mut high, mut low) = (None, f64::NEG_INFINITY, f64::INFINITY);
+    for b in bars.iter().rev() {
+        let (d, _) = ny_day_minute(b.time);
+        if d >= today {
+            continue;
+        }
+        match current {
+            Some(c) if c != d => {
+                ranges.push(high - low);
+                if ranges.len() == days {
+                    break;
+                }
+                current = Some(d);
+                high = b.high;
+                low = b.low;
+            }
+            Some(_) => {
+                high = high.max(b.high);
+                low = low.min(b.low);
+            }
+            None => {
+                current = Some(d);
+                high = b.high;
+                low = b.low;
+            }
+        }
+    }
+    if ranges.len() < days.min(5) {
+        return None;
+    }
+    let mean = ranges.iter().sum::<f64>() / ranges.len() as f64;
+    (mean > 0.0).then_some(mean)
 }
 
 fn hhmm(v: f64) -> u32 {
@@ -116,7 +185,8 @@ mod tests {
         (0..days)
             .map(|d| {
                 let t = (days_from_civil(2026, 6, 1) + d) * DAY_MS + 22 * 3_600_000;
-                Bar::flat(t, 100.0 * 1.01f64.powi(d as i32))
+                let c = 100.0 * 1.01f64.powi(d as i32);
+                Bar { time: t, open: c, high: c + 1.0, low: c - 1.0, close: c, volume: None }
             })
             .collect()
     }
@@ -133,7 +203,11 @@ mod tests {
     fn holds_the_side_of_the_trailing_return_and_flips_when_it_flips() {
         let bars = rising(40);
         assert_eq!(intent(&bars, 10, None), Intent::None, "no 20-day history yet");
-        assert!(matches!(intent(&bars, 30, None), Intent::Enter { side: Side::Long, .. }));
+        let entry = intent(&bars, 30, None);
+        let Intent::Enter { side, stop, .. } = entry else { panic!("expected an entry, got {entry:?}") };
+        assert_eq!(side, Side::Long);
+        // Sized on two daily ranges of $2: the sizing stop sits $4 below.
+        assert!((stop.unwrap() - (bars[30].close - 4.0)).abs() < 1e-9, "stop {stop:?}");
         let long = OpenPosition { side: Side::Long, entry_price: 100.0, entry_time: 0, stop: None, target: None };
         assert_eq!(intent(&bars, 31, Some(long)), Intent::None, "same side: stay");
         let short = OpenPosition { side: Side::Short, ..long };

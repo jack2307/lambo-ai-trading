@@ -7,6 +7,11 @@
 //! filters allow (the same window open the method uses), closed after
 //! `holdMinutes`. Same costs, same sizing, same fills. What the method has to
 //! beat is the distribution of these across seeds.
+//!
+//! Sizing follows the method: when `riskDailyRanges` is set (copied from a
+//! method that sizes on daily ranges, see `fd_strategy::tsmom`), the hold
+//! carries the same sizing stop; otherwise the engine's ATR fallback, as for
+//! a session hold.
 
 use std::collections::BTreeMap;
 
@@ -40,7 +45,14 @@ impl Strategy for RandomHold {
          The noise floor for a drift claim."
     }
     fn default_params(&self) -> Params {
-        Params::new(&[("holdMinutes", 390.0), ("entryRate", 1.0), ("atrPeriod", 14.0), ("seed", 1.0)])
+        Params::new(&[
+            ("holdMinutes", 390.0),
+            ("entryRate", 1.0),
+            ("atrPeriod", 14.0),
+            ("seed", 1.0),
+            ("riskDailyRanges", 0.0),
+            ("rangeDays", 20.0),
+        ])
     }
     fn grid(&self) -> BTreeMap<String, Vec<f64>> {
         BTreeMap::new()
@@ -70,12 +82,17 @@ impl Strategy for RandomHold {
         if draw(seed, bar, 0) >= p.get("entryRate") {
             return Intent::None;
         }
-        Intent::Enter {
-            side: if draw(seed, bar, 1) < 0.5 { Side::Long } else { Side::Short },
-            stop: None,
-            target: None,
-            reason: "coin flip, fixed hold".into(),
-        }
+        let side = if draw(seed, bar, 1) < 0.5 { Side::Long } else { Side::Short };
+        let ranges = p.get("riskDailyRanges");
+        let stop = if ranges > 0.0 {
+            let Some(stop) = fd_strategy::tsmom::sizing_stop(&ctx.bars[..=ctx.i], ctx.bar, side, ranges, p.period("rangeDays")) else {
+                return Intent::None;
+            };
+            Some(stop)
+        } else {
+            None
+        };
+        Intent::Enter { side, stop, target: None, reason: "coin flip, fixed hold".into() }
     }
 }
 

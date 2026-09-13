@@ -60,6 +60,9 @@ pub fn register_all(registry: &mut Registry) {
     registry.register(Box::new(crate::vwap_fade::VwapFade));
     registry.register(Box::new(crate::tsmom::TimeSeriesMomentum));
     registry.register(Box::new(crate::doji::DojiReversal));
+    registry.register(Box::new(crate::gap_fade::GapFade));
+    registry.register(Box::new(crate::trend_pullback::TrendPullback));
+    registry.register(Box::new(crate::volume_thrust::VolumeThrust));
 }
 
 /* ---------------- classic technical baselines ---------------- */

@@ -11,13 +11,16 @@
 
 pub mod builtin;
 pub mod doji;
+pub mod gap_fade;
 pub mod filter;
 pub mod ict;
 pub mod orb;
 pub mod pdhl;
 pub mod registry;
 pub mod session_hold;
+pub mod trend_pullback;
 pub mod tsmom;
+pub mod volume_thrust;
 pub mod vwap_fade;
 
 pub use registry::{
