@@ -1,0 +1,31 @@
+[run]
+in_sample = "xauduka:15m"
+in_sample_from = "2010-06-01"
+in_sample_to = "2018-06-15"
+out_of_sample = "xauduka:15m"
+out_of_sample_from = "2018-06-16"
+out_of_sample_to = "2026-05-31"
+seeds = 300
+direction_samples = 1000
+fixed = true
+
+[[hypothesis]]
+label = "im/first"
+base = "intraday-momentum"
+filters = ["weekdays", "hours:1515-1520"]
+overrides = { firstFrom = 830, firstTo = 900, from = 1515, to = 1630, minMove = 0, riskDailyRanges = 1, rangeDays = 20 }
+why = "the test: the first half hour of New York (08:30-09:00) sets the side of the last hour before the close (15:30-16:45)"
+
+[[hypothesis]]
+label = "im/day"
+base = "intraday-momentum"
+filters = ["weekdays", "hours:1515-1520"]
+overrides = { firstFrom = 830, firstTo = 1500, from = 1515, to = 1630, minMove = 0, riskDailyRanges = 1, rangeDays = 20 }
+why = "the paper's second predictor: the day so far (08:30-15:00) sets the side of the same hold"
+
+[[hypothesis]]
+label = "im/mid"
+base = "intraday-momentum"
+filters = ["weekdays", "hours:1515-1520"]
+overrides = { firstFrom = 1200, firstTo = 1230, from = 1515, to = 1630, minMove = 0, riskDailyRanges = 1, rangeDays = 20 }
+why = "the contrast: a half hour in the middle of the day, which the paper says predicts nothing; if it passes, the effect is a drift, not intraday momentum"
