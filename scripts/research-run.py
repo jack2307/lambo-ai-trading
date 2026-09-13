@@ -35,7 +35,9 @@ import sys
 import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SEARCH = os.path.join(ROOT, "target", "release", "search.exe" if os.name == "nt" else "search")
+# `FD_SEARCH` points the runner at another build of the binary — a second
+# target directory, when the release one is busy in a long run.
+SEARCH = os.environ.get("FD_SEARCH") or os.path.join(ROOT, "target", "release", "search.exe" if os.name == "nt" else "search")
 
 
 def load_toml(path: str) -> dict:
