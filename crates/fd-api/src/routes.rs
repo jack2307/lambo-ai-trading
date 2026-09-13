@@ -14,6 +14,7 @@ use fd_backtest::engine::{Range, run_backtest_guarded};
 use fd_backtest::Guards;
 use fd_backtest::sweep::{compare_strategies, verdict};
 use fd_core::types::Bar;
+use fd_strategy::filter::{Filter, Filtered};
 use fd_indicators::{INDICATORS, IndicatorSpec, Pane, compute_indicators};
 use serde::Deserialize;
 
@@ -296,6 +297,18 @@ pub async fn backtest(
         }
         params.set(name, *value);
     }
+
+    // Filters wrap the method exactly as `Filtered` does for the loop; a
+    // misspelt filter is refused, not ignored.
+    let filters = request
+        .filters
+        .iter()
+        .filter(|f| !f.trim().is_empty())
+        .map(|f| Filter::parse(f))
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(ApiError::BadRequest)?;
+    let gated = Filtered { inner: strategy, filters };
+    let strategy: &dyn fd_strategy::registry::Strategy = if gated.filters.is_empty() { strategy } else { &gated };
 
     let timeline = state.timeline(&market);
     if strategy.needs_options() && timeline.is_none() {

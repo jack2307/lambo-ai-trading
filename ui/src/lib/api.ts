@@ -247,8 +247,8 @@ export const api = {
       specs,
     }),
 
-  backtest: (market: string, tf: string, strategy: string, params: Record<string, number>) =>
-    post<BacktestResult>('/api/chart/backtest', { market, tf, strategy, params }),
+  backtest: (market: string, tf: string, strategy: string, params: Record<string, number>, filters: string[] = [], guards = false) =>
+    post<BacktestResult>('/api/chart/backtest', { market, tf, strategy, params, filters, guards }),
 
   research: () => request<Research>('/api/research'),
 }

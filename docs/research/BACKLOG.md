@@ -82,3 +82,5 @@ Closed ideas move to the bottom with a pointer to their decision record, so
   `2026-09-13-london-fix.md`.
 - [x] VWAP fade (BTC, real volume) → PF 0.95 on 5,828 trades, direction null
   13th: a stretch continues rather than reverts. `2026-09-13-vwap-fade.md`.
+- [x] The closed mechanisms on 15-minute bars (gold ×4, BTC ×2) → every row
+  fails; the timeframe is not the variable. `2026-09-13-m15-check.md`.

@@ -64,6 +64,9 @@ export function Workbench({ catalog, market, onError }: Props) {
   const [showMarkers, setShowMarkers] = useState(true)
   const [showZones, setShowZones] = useState(true)
   const [dock, setDock] = useState<'leaderboard' | 'trades' | 'model'>('leaderboard')
+  // Gates in the research loop's spelling, one per line or comma-separated.
+  const [filtersText, setFiltersText] = useState('')
+  const [guards, setGuards] = useState(false)
 
   const strategy = useMemo(
     () => catalog.strategies.find((s) => s.id === strategyId),
@@ -139,7 +142,12 @@ export function Workbench({ catalog, market, onError }: Props) {
     if (!market || !strategyId || running) return
     setRunning(true)
     try {
-      const outcome = await api.backtest(market, timeframe, strategyId, params)
+      const filters = filtersText
+        .split(/[,;]/)
+        .flatMap((chunk) => chunk.split(String.fromCharCode(10)))
+        .map((f) => f.trim())
+        .filter(Boolean)
+      const outcome = await api.backtest(market, timeframe, strategyId, params, filters, guards)
       setResult(outcome)
       // The rail's result block and the dock switching to the fills are the
       // announcement; a toast on top of them covered the newest trades.
@@ -149,7 +157,7 @@ export function Workbench({ catalog, market, onError }: Props) {
     } finally {
       setRunning(false)
     }
-  }, [market, timeframe, strategyId, params, running, onError])
+  }, [market, timeframe, strategyId, params, filtersText, guards, running, onError])
 
   // ⌘/Ctrl+Enter runs from anywhere on the page — the rail's inputs included.
   useEffect(() => {
@@ -224,6 +232,22 @@ export function Workbench({ catalog, market, onError }: Props) {
               })}
             </div>
           )}
+          <label className="mt-3 block">
+            <span className="text-muted-foreground block text-[11px]">
+              filters <span className="text-muted-foreground/60">· weekdays, hours:0800-1200, flat:1630-1815, vol:14/100:1.2-99, volabs:14:0.075-9</span>
+            </span>
+            <textarea
+              value={filtersText}
+              onChange={(e) => setFiltersText(e.target.value)}
+              rows={2}
+              placeholder="weekdays, flat:1630-1815, hours:0920-1200"
+              className="border-input bg-background num focus-visible:ring-ring/50 mt-1 w-full resize-none rounded-md border px-2 py-1 text-[11px] focus-visible:ring-[3px] focus-visible:outline-none"
+            />
+          </label>
+          <label className="text-muted-foreground mt-2 flex items-center gap-2 text-[11px]">
+            <input type="checkbox" checked={guards} onChange={(e) => setGuards(e.target.checked)} className="accent-[var(--primary)]" />
+            enforce [trading.guards] (daily cap, loss limit, cooldown)
+          </label>
           <Button size="sm" className="mt-3 h-8 w-full text-xs" disabled={running} onClick={runBacktest}>
             {running ? 'Running…' : 'Run backtest'}
             <kbd className="text-primary-foreground/60 ml-auto font-mono text-[10px]">⌘⏎</kbd>

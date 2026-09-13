@@ -1,0 +1,21 @@
+$ E:\rust\flowdesk\target\release\search.exe --market=btc --interval=15m --mode=null-dir --strategy=orb --samples=1000 --params=rangeStart=930,rangeMinutes=60,entryUntil=1300,maxRangeAtr=100,pipSize=1.0,minRangePips=20 --filters=weekdays;hours:1030-1300
+
+bars:     70080 from 2024-09-12 10:15 to 2026-09-12 10:00
+timeline: 556 frames from 2026-09-11 05:36 to 2026-09-13 03:38
+          the tape covers 114 of 70080 bars (0.2%)
+
+tape:     15579 prints, 556 frames  <- a result is only comparable to another run over the same tape
+
+  filters: MoTuWeThFr + NY 10:30-13:00
+== direction control: orb, 403 trades, 1000 coin-flip assignments ==
+  preset: rangeStart=930,rangeMinutes=60,entryUntil=1300,maxRangeAtr=100,pipSize=1.0,minRangePips=20
+  entries, stops and targets held fixed; only the side is randomised
+
+  profit factor of the same trades with random direction:
+    p05 0.747   p25 0.882   p50 0.989   p75 1.100   p95 1.277   max 1.462
+
+  actual: 1.085  ->  72th percentile  (p = 0.283)
+
+  Inside its own null. On this sample the direction rule has not been
+  distinguished from a coin flip, however good the profit factor looks.
+

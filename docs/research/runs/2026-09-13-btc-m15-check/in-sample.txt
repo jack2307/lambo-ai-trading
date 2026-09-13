@@ -1,0 +1,20 @@
+$ E:\rust\flowdesk\target\release\search.exe --market=btc --interval=15m --mode=hypotheses --batch-file=E:\rust\flowdesk\docs\hypotheses\2026-09-13-btc-m15-check.toml --seeds=200
+
+bars:     70080 from 2024-09-12 10:15 to 2026-09-12 10:00
+timeline: 556 frames from 2026-09-11 05:36 to 2026-09-13 03:38
+          the tape covers 114 of 70080 bars (0.2%)
+
+tape:     15579 prints, 556 frames  <- a result is only comparable to another run over the same tape
+
+== hypotheses `E:\rust\flowdesk\docs\hypotheses\2026-09-13-btc-m15-check.toml`: 2 declared, walk-forward (4 folds), each against 200 matched null runs ==
+swap: long 0.00 / short 0.00 USD per lot per night; spread 5.00
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+m15/eq-open-60m orb                   316   1.192   0.053    0.984    1.509        0   78%  fail: profit factor 1.192 < 1.2
+                                MoTuWeThFr + NY 10:30-13:00  — the equity-open range on 15-minute closes
+m15/vwap-allday vwap-fade            3392   0.917  -0.037    0.958    1.073        0   25%  fail: profit factor 0.917 < 1.2; expectancy -0.037R < 0.05R
+                                  — VWAP reversion on 15-minute closes
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+

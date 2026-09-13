@@ -350,4 +350,11 @@ pub struct BacktestRequest {
     /// browser sees the same numbers the oracle produced.
     #[serde(default)]
     pub guards: bool,
+    /// Gates in front of the strategy's entries, in the batch-file spelling
+    /// (`weekdays`, `hours:0800-1200`, `sessions:0100-0500|0600-1000`,
+    /// `flat:1630-1815`, `vol:14/100:1.2-99`, `volabs:14:0.075-9`). The same
+    /// wrapper the research loop uses, so a Workbench run and a hypothesis
+    /// row are the same computation.
+    #[serde(default)]
+    pub filters: Vec<String>,
 }
