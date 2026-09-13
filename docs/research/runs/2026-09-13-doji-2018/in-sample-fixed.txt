@@ -1,0 +1,18 @@
+$ E:\rust\flowdesk\target\release\search.exe --market=xauduka --interval=15m --mode=hypotheses --fixed --batch-file=E:\rust\flowdesk\docs\hypotheses\2026-09-13-doji-2018.toml --seeds=200 --from=2018-06-16 --to=2022-06-16
+
+bounds:   --from=2018-06-16 --to=2022-06-16 kept 94125 of 186856 bars
+bars:     94125 from 2018-06-17 22:00 to 2022-06-14 23:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+== hypotheses `E:\rust\flowdesk\docs\hypotheses\2026-09-13-doji-2018.toml`: 1 declared, FIXED parameters over the whole window (no selection), each against 200 matched null runs ==
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+doji/strict-2018 doji-reversal         121   0.618  -0.262    0.797    1.079        0    9%  fail: profit factor 0.618 < 1.2; expectancy -0.262R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15  — the registered strict preset, parameters pinned, on four years nobody has looked at
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+

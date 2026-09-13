@@ -118,6 +118,9 @@ ever placed by anything in this repository.
   a preset that cannot fire), fix the spec, commit `Amend <id>: <why>`, then
   run. Never in the same commit as a result.
 
+- **The null is matched to the row's trade count as well as its window**
+  (`matched_rate` in `hypotheses.rs`, automatic). A 61-trade row read
+  against a 300-trade control reported a 100th percentile that was a 90th.
 - **The null must be matched to the window.** A method that only signals
   between 09:20 and 12:00 must be read against a control gated to
   `hours:0920-1200` (in the batch file), or the percentile measures the

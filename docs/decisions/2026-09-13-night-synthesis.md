@@ -84,3 +84,18 @@ closed, and the skill now says so.
 - It does not say the loop is finished tuning itself: eight process changes
   in one night means the ninth is likely, and the next reviewer should look
   for it.
+
+## Addendum (late morning) — the null's trade count
+
+The doji pass found that the matched null was gated to the row's hours but
+not to its trade count: rows with few trades were read against a denser,
+tighter control, which inflates their percentile. Fixed in the runner
+(`matched_rate`). Every matched-null percentile in the records above was
+computed before the fix; every one of those rows also failed the gate, so no
+outcome changes, but the percentile columns in those tables should be read
+as upper bounds. The doji record shows the size of the effect: 100th → 90th
+on a 61-trade row.
+
+Two more mechanisms since this note was written, both closed: VWAP fade
+(BTC), time-series momentum (parked on sizing), the closed families on
+15-minute bars, and the doji fade on three gold windows and BTC.

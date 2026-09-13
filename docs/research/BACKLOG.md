@@ -84,3 +84,6 @@ Closed ideas move to the bottom with a pointer to their decision record, so
   13th: a stretch continues rather than reverts. `2026-09-13-vwap-fade.md`.
 - [x] The closed mechanisms on 15-minute bars (gold ×4, BTC ×2) → every row
   fails; the timeframe is not the variable. `2026-09-13-m15-check.md`.
+- [x] Doji reversal (gold 15m, BTC 15m; three gold windows) → inside the
+  count-matched null on 2022–25, loses on 2018–22 and 2025–26; BTC fails.
+  `2026-09-13-doji.md`.
