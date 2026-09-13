@@ -14,6 +14,7 @@ pub mod doji;
 pub mod gap_fade;
 pub mod filter;
 pub mod ict;
+pub mod intraday_momentum;
 pub mod orb;
 pub mod pdhl;
 pub mod registry;

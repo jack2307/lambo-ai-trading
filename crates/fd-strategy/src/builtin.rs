@@ -57,6 +57,7 @@ pub fn register_all(registry: &mut Registry) {
     registry.register(Box::new(crate::orb::OpeningRangeBreakout));
     registry.register(Box::new(crate::pdhl::PreviousDayLevels));
     registry.register(Box::new(crate::session_hold::SessionHold));
+    registry.register(Box::new(crate::intraday_momentum::IntradayMomentum));
     registry.register(Box::new(crate::vwap_fade::VwapFade));
     registry.register(Box::new(crate::tsmom::TimeSeriesMomentum));
     registry.register(Box::new(crate::doji::DojiReversal));
