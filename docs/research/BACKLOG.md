@@ -40,6 +40,15 @@ Closed ideas move to the bottom with a pointer to their decision record, so
   when the tape covers months this is the control the founding thesis needs
   (adversary, 2026-09-12).
 
+- [ ] **Volatility-targeted sizing for strategy-managed exits** (lots from
+  realised volatility over the intended horizon) and a multi-week drift null;
+  without them multi-day claims (time-series momentum) cannot be tested
+  (tsmom pass, 2026-09-13).
+- [ ] **Time-series momentum on gold** — parked, not closed: PF 2.1 on 26
+  trades at 60 days is under the floor and the sizing is wrong; re-run once
+  the item above exists and a longer Dukascopy history is fetched.
+  `2026-09-13-tsmom.md`.
+
 ## Closed
 
 - [x] Technical baselines (ema-cross, rsi-reversion, donchian, bb-fade) on GC,

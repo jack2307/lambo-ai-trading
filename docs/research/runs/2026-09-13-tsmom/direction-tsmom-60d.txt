@@ -1,0 +1,21 @@
+$ E:\rust\flowdesk\target\release\search.exe --market=xauduka --interval=5m --mode=null-dir --strategy=tsmom --samples=1000 --params=lookbackDays=60 --filters=weekdays;hours:1800-1900 --to=2025-04-10
+
+bounds:   --from=… --to=2025-04-10 kept 198716 of 278169 bars
+bars:     198716 from 2022-06-16 00:00 to 2025-04-09 23:55
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+  filters: MoTuWeThFr + NY 18:00-19:00
+== direction control: tsmom, 30 trades, 1000 coin-flip assignments ==
+  preset: lookbackDays=60
+  entries, stops and targets held fixed; only the side is randomised
+
+  profit factor of the same trades with random direction:
+    p05 0.038   p25 0.076   p50 0.153   p75 0.239   p95 0.532   max 2.270
+
+  actual: 0.046  ->  8th percentile  (p = 0.918)
+
+  Inside its own null. On this sample the direction rule has not been
+  distinguished from a coin flip, however good the profit factor looks.
+
