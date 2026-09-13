@@ -85,6 +85,22 @@ impl Filter {
         match spec.split_once(':') {
             None if spec == "weekdays" => Ok(Self::weekdays()),
             None => bad("unknown filter"),
+            // `weekdays:MoTuWeTh` — a chosen set of New York weekdays, so a
+            // Friday leg that runs into the weekend can be left out of a row.
+            Some(("weekdays", names)) => {
+                const NAMES: [&str; 7] = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+                let text = names.trim();
+                if text.is_empty() || text.len() % 2 != 0 {
+                    return bad("expected weekday names such as MoTuWeTh");
+                }
+                let mut mask = 0u8;
+                for i in (0..text.len()).step_by(2) {
+                    let name = &text[i..i + 2];
+                    let day = NAMES.iter().position(|n| n.eq_ignore_ascii_case(name)).ok_or_else(|| format!("filter `{spec}`: `{name}` is not a weekday"))?;
+                    mask |= 1 << day;
+                }
+                Ok(Self::Weekdays { mask })
+            }
             Some(("hours", w)) => window(w).map(|(a, b)| Self::hours(a, b)),
             Some(("flat", w)) => window(w).map(|(a, b)| Self::flat(a, b)),
             Some(("sessions", list)) => {
@@ -359,6 +375,13 @@ mod tests {
         assert!(matches!(intent_at(&f, monday_utc(20, 45), None), Intent::None));
         // 22:15 UTC = 18:15 New York: the window has passed, trading resumes.
         assert!(matches!(intent_at(&f, monday_utc(22, 15), None), Intent::Enter { .. }));
+    }
+
+    #[test]
+    fn named_weekdays_parse_to_a_mask() {
+        assert_eq!(Filter::parse("weekdays:MoTuWeTh").unwrap(), Filter::Weekdays { mask: 0b001_1110 });
+        assert_eq!(Filter::parse("weekdays:fr").unwrap(), Filter::Weekdays { mask: 0b010_0000 });
+        assert!(Filter::parse("weekdays:Mon").is_err());
     }
 
     #[test]

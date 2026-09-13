@@ -8,7 +8,13 @@
 //! and buy-and-hold are the comparisons, and a random-entry null gated to the
 //! same hours is the noise floor.
 //!
-//! Spec: `docs/hypotheses/2026-09-13-btc-us-hours.md`.
+//! **Sizing.** With `riskDailyRanges` > 0 the entry carries a sizing stop of
+//! that many mean New York-day ranges (over `rangeDays` days), which the
+//! engine uses for lots and R and does not enforce — the clock is the exit.
+//! Without it the engine's bar-ATR fallback sizes the hold, which the risk
+//! role called "a scaling constant, not a loss limit" for an eight-bar hold.
+//!
+//! Spec: `docs/hypotheses/2026-09-13-btc-us-hours.md`, `2026-09-13-close-reopen-drift.md`.
 
 use std::collections::BTreeMap;
 
@@ -30,7 +36,7 @@ impl Strategy for SessionHold {
         "Long (or short) from the first bar of a New York window to its last, every day. A drift test, not a signal."
     }
     fn default_params(&self) -> Params {
-        Params::new(&[("from", 930.0), ("to", 1600.0), ("side", 1.0), ("atrPeriod", 14.0)])
+        Params::new(&[("from", 930.0), ("to", 1600.0), ("side", 1.0), ("atrPeriod", 14.0), ("riskDailyRanges", 0.0), ("rangeDays", 20.0)])
     }
     fn grid(&self) -> BTreeMap<String, Vec<f64>> {
         // A drift has nothing to tune; the walk-forward sees one cell and
@@ -66,9 +72,19 @@ impl Strategy for SessionHold {
                 if previous_inside {
                     return Intent::None;
                 }
+                let side = if p.get("side") >= 0.0 { Side::Long } else { Side::Short };
+                let ranges = p.get("riskDailyRanges");
+                let stop = if ranges > 0.0 {
+                    let Some(stop) = crate::tsmom::sizing_stop(&ctx.bars[..=ctx.i], ctx.bar, side, ranges, p.period("rangeDays")) else {
+                        return Intent::None;
+                    };
+                    Some(stop)
+                } else {
+                    None
+                };
                 Intent::Enter {
-                    side: if p.get("side") >= 0.0 { Side::Long } else { Side::Short },
-                    stop: None,
+                    side,
+                    stop,
                     target: None,
                     reason: format!("window {:04}-{:04} New York", p.get("from") as u32, p.get("to") as u32),
                 }
@@ -93,6 +109,26 @@ mod tests {
     fn at(hour: i64, minute: i64) -> i64 {
         // 2026-09-14, EDT: New York = UTC - 4.
         days_from_civil(2026, 9, 14) * 86_400_000 + (hour + 4) * 3_600_000 + minute * 60_000
+    }
+
+    #[test]
+    fn a_daily_range_sizing_stop_rides_with_the_entry_and_nothing_else_changes() {
+        // Twenty-one days of one bar each at 09:00 New York with a $2 range,
+        // then the 09:25 and 09:30 bars of the last day.
+        let day = |d: i64| days_from_civil(2026, 8, 24) * 86_400_000 + d * 86_400_000 + 13 * 3_600_000;
+        let mut bars: Vec<Bar> = (0..21).map(|d| Bar { time: day(d), open: 100.0, high: 101.0, low: 99.0, close: 100.0, volume: None }).collect();
+        bars.push(Bar::flat(day(21) + 25 * 60_000, 100.0));
+        bars.push(Bar::flat(day(21) + 30 * 60_000, 100.0));
+        let i = bars.len() - 1;
+        let ind = fd_indicators::IndicatorSet::new();
+        let mut params = SessionHold.default_params();
+        params.set("riskDailyRanges", 1.0);
+        let ctx = BarContext { bar: &bars[i], i, bars: &bars, ind: &ind, series: &[], options: None, position: None, params: &params };
+        let it = SessionHold.on_bar(&ctx);
+        let Intent::Enter { side: Side::Long, stop, target: None, .. } = it else { panic!("{it:?}") };
+        assert!((stop.unwrap() - 98.0).abs() < 1e-9, "one mean daily range of $2 below the close: {stop:?}");
+        // Off by default: the bare hold carries no stop, as every earlier record ran it.
+        assert!(matches!(intent(at(9, 30), Some(at(9, 25)), None), Intent::Enter { stop: None, .. }));
     }
 
     fn intent(time: i64, prev: Option<i64>, position: Option<OpenPosition>) -> Intent {
