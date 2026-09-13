@@ -253,7 +253,7 @@ fn matched_rate(bars: &[Bar], rules: &TradingRules, filters: &[Filter], target_t
     (PROBE * target_trades as f64 / got as f64).clamp(0.0005, 1.0)
 }
 
-fn control_for(base: &dyn Strategy, overrides: &[(String, f64)], seed: f64) -> (&'static dyn Strategy, Params) {
+fn control_for(base: &dyn Strategy, overrides: &[(String, f64)], seed: f64, realised_hold: Option<f64>) -> (&'static dyn Strategy, Params) {
     // Judged on the preset, not the bare method: a pinned grid is empty.
     let preset = Preset::new(base, overrides).ok();
     let pinned = preset.as_ref().map(|p| p.defaults.clone());
@@ -262,15 +262,19 @@ fn control_for(base: &dyn Strategy, overrides: &[(String, f64)], seed: f64) -> (
     if drift {
         let get = |k: &str| overrides.iter().find(|(key, _)| key == k).map(|(_, v)| *v);
         let minutes = |v: f64| (v as i64 / 100) * 60 + v as i64 % 100;
-        // Hold length: a window's span when the preset names one; for a
-        // multi-day rebalanced hold, half the lookback (a sign change comes
-        // about that often); 390 minutes otherwise.
-        let hold = match (get("from"), get("to"), get("lookbackDays")) {
-            (Some(from), Some(to), _) => {
+        // Hold length: a window's span when the preset names one; otherwise
+        // what the method actually held on this window, when the caller has
+        // run it (the mean realised hold); failing that, half the lookback
+        // for a rebalanced hold, 390 minutes otherwise. The guess was the
+        // null for tsmom until 2026-09-13: it held 27% less than the 20-day
+        // row and 2.4x more than the 120-day row (`2026-09-13-tsmom-silver.md`).
+        let hold = match (get("from"), get("to"), realised_hold, get("lookbackDays")) {
+            (Some(from), Some(to), _, _) => {
                 let (a, b) = (minutes(from), minutes(to));
                 if b > a { b - a } else { 1440 - a + b }
             }
-            (_, _, Some(days)) => (days * 1440.0 / 2.0) as i64,
+            (_, _, Some(minutes), _) if minutes.is_finite() && minutes > 0.0 => minutes.round() as i64,
+            (_, _, _, Some(days)) => (days * 1440.0 / 2.0) as i64,
             _ => 390,
         };
         let mut p = RandomHold.default_params();
@@ -291,14 +295,24 @@ fn control_for(base: &dyn Strategy, overrides: &[(String, f64)], seed: f64) -> (
     }
 }
 
+/// The mean hold of a trade list in minutes; `None` when there are no trades.
+fn mean_hold_minutes(trades: &[crate::engine::Trade]) -> Option<f64> {
+    if trades.is_empty() {
+        return None;
+    }
+    let total: i64 = trades.iter().map(|t| t.exit_time - t.entry_time).sum();
+    Some(total as f64 / trades.len() as f64 / 60_000.0)
+}
+
 /// `control_for`, with the random-entry rate matched to the method's count.
 fn matched_control_for(
     base: &dyn Strategy,
     overrides: &[(String, f64)],
     seed: f64,
     rate: Option<f64>,
+    realised_hold: Option<f64>,
 ) -> (&'static dyn Strategy, Params) {
-    let (inner, mut p) = control_for(base, overrides, seed);
+    let (inner, mut p) = control_for(base, overrides, seed, realised_hold);
     if let Some(rate) = rate
         && p.contains("entryRate")
     {
@@ -409,11 +423,12 @@ pub fn run_hypothesis_fixed(
     let result = run_backtest(bars, &filtered, &preset.defaults, rules, None, Range::default());
     let drift = base.exits() == fd_strategy::registry::Exits::Strategy && preset.grid().is_empty();
     let rate = (!drift).then(|| matched_rate(bars, rules, &hypothesis.filters, result.trades.len()));
+    let hold = drift.then(|| mean_hold_minutes(&result.trades)).flatten();
 
     let mut null_pf: Vec<f64> = (0..seeds)
         .into_par_iter()
         .filter_map(|seed| {
-            let (inner, defaults) = matched_control_for(base, &hypothesis.overrides, seed as f64 + 1.0, rate);
+            let (inner, defaults) = matched_control_for(base, &hypothesis.overrides, seed as f64 + 1.0, rate, hold);
             let control = Preset::bare(inner, defaults.clone());
             let matched = Filtered { inner: &control, filters: hypothesis.filters.clone() };
             let pf = run_backtest(bars, &matched, &defaults, rules, None, Range::default()).metrics.profit_factor;
@@ -467,11 +482,12 @@ pub fn run_hypothesis(
     let whole = crate::engine::run_backtest(bars, &filtered, &preset.defaults, rules, None, crate::engine::Range::default());
     let drift = base.exits() == fd_strategy::registry::Exits::Strategy && preset.grid().is_empty();
     let rate = (!drift).then(|| matched_rate(bars, rules, &hypothesis.filters, whole.trades.len()));
+    let hold = drift.then(|| mean_hold_minutes(&whole.trades)).flatten();
 
     let mut null_pf: Vec<f64> = (0..seeds)
         .into_par_iter()
         .filter_map(|seed| {
-            let (inner, defaults) = matched_control_for(base, &hypothesis.overrides, seed as f64 + 1.0, rate);
+            let (inner, defaults) = matched_control_for(base, &hypothesis.overrides, seed as f64 + 1.0, rate, hold);
             let control = Preset::bare(inner, defaults);
             let matched = Filtered { inner: &control, filters: hypothesis.filters.clone() };
             walk_forward(&matched, bars, rules, None, folds, select_by, min_trades_per_cell)
@@ -503,6 +519,18 @@ pub fn run_hypothesis(
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn the_hold_null_takes_the_realised_hold_over_the_lookback_guess() {
+        let registry = Registry::with_builtins();
+        let base = registry.get("tsmom").unwrap();
+        let overrides = vec![("lookbackDays".to_string(), 20.0), ("riskDailyRanges".to_string(), 2.0), ("rangeDays".to_string(), 20.0)];
+        let (_, guessed) = super::control_for(base, &overrides, 1.0, None);
+        assert_eq!(guessed.get("holdMinutes"), 20.0 * 1440.0 / 2.0, "no realised hold: half the lookback");
+        let (_, realised) = super::control_for(base, &overrides, 1.0, Some(19_829.4));
+        assert_eq!(realised.get("holdMinutes"), 19_829.0, "the method's own mean hold, rounded");
+        assert_eq!(realised.get("riskDailyRanges"), 2.0, "sized like the method");
+    }
+
     use super::*;
 
     #[test]

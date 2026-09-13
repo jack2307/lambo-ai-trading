@@ -127,9 +127,19 @@ pub fn sizing_stop(bars: &[fd_core::types::Bar], bar: &fd_core::types::Bar, side
 }
 
 /// Mean high-low range of the last `days` completed New York days before `today`.
+///
+/// A calendar day whose bars span less than half of the longest day in the
+/// window is not a day: Sunday's six-hour evening session on a 24-hour
+/// feed was entering the mean as a full day and shrinking it by 6–9%
+/// (data-integrity, `2026-09-13-close-reopen-drift.md`). Holiday half-days
+/// (thirteen hours) still count; a feed of one bar a day (every span zero)
+/// counts every day.
 fn average_day_range(bars: &[fd_core::types::Bar], today: i64, days: usize) -> Option<f64> {
-    let mut ranges: Vec<f64> = Vec::with_capacity(days);
-    let (mut current, mut high, mut low) = (None, f64::NEG_INFINITY, f64::INFINITY);
+    // (range, span in ms) per completed day, newest first; a few extra so
+    // the short days can be dropped and `days` real ones remain.
+    let want = days + days / 5 + 2;
+    let mut found: Vec<(f64, i64)> = Vec::with_capacity(want);
+    let (mut current, mut high, mut low, mut first, mut last) = (None, f64::NEG_INFINITY, f64::INFINITY, 0i64, 0i64);
     for b in bars.iter().rev() {
         let (d, _) = ny_day_minute(b.time);
         if d >= today {
@@ -137,25 +147,35 @@ fn average_day_range(bars: &[fd_core::types::Bar], today: i64, days: usize) -> O
         }
         match current {
             Some(c) if c != d => {
-                ranges.push(high - low);
-                if ranges.len() == days {
+                found.push((high - low, last - first));
+                if found.len() == want {
                     break;
                 }
                 current = Some(d);
                 high = b.high;
                 low = b.low;
+                first = b.time;
+                last = b.time;
             }
             Some(_) => {
                 high = high.max(b.high);
                 low = low.min(b.low);
+                first = b.time; // scanning backwards: this bar is earlier
             }
             None => {
                 current = Some(d);
                 high = b.high;
                 low = b.low;
+                first = b.time;
+                last = b.time;
             }
         }
     }
+    if let (Some(_), true) = (current, found.len() < want) {
+        found.push((high - low, last - first));
+    }
+    let longest = found.iter().map(|(_, span)| *span).max().unwrap_or(0);
+    let ranges: Vec<f64> = found.iter().filter(|(_, span)| *span * 2 >= longest).map(|(r, _)| *r).take(days).collect();
     if ranges.len() < days.min(5) {
         return None;
     }
@@ -212,6 +232,27 @@ mod tests {
         assert_eq!(intent(&bars, 31, Some(long)), Intent::None, "same side: stay");
         let short = OpenPosition { side: Side::Short, ..long };
         assert!(matches!(intent(&bars, 31, Some(short)), Intent::Exit { .. }), "wrong side: flip");
+    }
+
+    #[test]
+    fn a_sunday_evening_is_not_a_day_in_the_range() {
+        // Fourteen calendar days: weekdays with bars at 00:00 and 23:00 New
+        // York ($2 range); Sundays with bars at 18:00 and 23:00 ($0.50 range).
+        // 2026-06-01 is a Monday.
+        let mut bars = Vec::new();
+        for d in 0..14i64 {
+            let day = days_from_civil(2026, 6, 1) + d;
+            let sunday = (d + 1) % 7 == 6; // 2026-06-07, 06-14
+            let ny_offset = 4 * 3_600_000; // EDT
+            let (h0, h1, range) = if sunday { (18, 23, 0.5) } else { (0, 23, 2.0) };
+            for h in [h0, h1] {
+                let t = day * DAY_MS + ny_offset + h * 3_600_000;
+                bars.push(Bar { time: t, open: 100.0, high: 100.0 + range / 2.0, low: 100.0 - range / 2.0, close: 100.0, volume: None });
+            }
+        }
+        let (today, _) = ny_day_minute(bars.last().unwrap().time + DAY_MS);
+        let mean = average_day_range(&bars, today, 10).unwrap();
+        assert!((mean - 2.0).abs() < 1e-9, "Sundays excluded: mean {mean}, not the diluted {}", (8.0 * 2.0 + 2.0 * 0.5) / 10.0);
     }
 
     #[test]
