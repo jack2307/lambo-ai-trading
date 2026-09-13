@@ -319,6 +319,7 @@ export function OfficeFloor({ departments, animate, carModel, className }: Props
     const leds: Led[] = []
     const rackTags: { label: HTMLDivElement; at: THREE.Vector3 }[] = []
     let showCar: THREE.Group | null = null
+    const fans: THREE.Mesh[] = []
     let disposed = false
     /** Geometry, materials and every texture a material holds. */
     const disposeObject = (root: THREE.Object3D) => {
@@ -335,7 +336,16 @@ export function OfficeFloor({ departments, animate, carModel, className }: Props
       })
     }
     const leaf = new THREE.MeshPhysicalMaterial({ color: colors.mint.clone().lerp(colors.background, 0.55), roughness: 0.7 })
+    const leafDark = new THREE.MeshPhysicalMaterial({ color: colors.mint.clone().lerp(colors.background, 0.7), roughness: 0.75 })
     const pot = new THREE.MeshPhysicalMaterial({ color: colors.elevated.clone().lerp(colors.caution, 0.12), roughness: 0.6 })
+    const sofaMaterial = new THREE.MeshPhysicalMaterial({ color: colors.elevated.clone().lerp(colors.muted, 0.35), roughness: 0.85 })
+    const cushionMaterial = new THREE.MeshPhysicalMaterial({ color: colors.caution.clone().lerp(colors.elevated, 0.45), roughness: 0.9 })
+    const paper = new THREE.MeshPhysicalMaterial({ color: colors.foreground.clone().lerp(colors.elevated, 0.15), roughness: 0.6 })
+    const steel = new THREE.MeshPhysicalMaterial({ color: colors.foreground.clone().lerp(colors.muted, 0.5), roughness: 0.25, metalness: 0.85 })
+    const lampShade = new THREE.MeshPhysicalMaterial({ color: colors.foreground, roughness: 0.6, emissive: colors.caution.clone().lerp(colors.foreground, 0.5), emissiveIntensity: 0.55 })
+    const bookMaterials = [colors.caution, colors.mint, colors.foreground, colors.muted].map(
+      (c) => new THREE.MeshPhysicalMaterial({ color: c.clone().lerp(colors.elevated, 0.5), roughness: 0.85 }),
+    )
 
     const shadowed = (mesh: THREE.Mesh) => {
       mesh.castShadow = true
@@ -445,6 +455,205 @@ export function OfficeFloor({ departments, animate, carModel, className }: Props
         ball.position.set(x + Math.cos(a) * 0.1 * scale, (0.62 + i * 0.12) * scale, z + Math.sin(a) * 0.1 * scale)
         scene.add(ball)
       }
+    }
+
+    /** A palm: a slim trunk and a crown of leaning cones. */
+    const palm = (x: number, z: number, scale = 1) => {
+      const p = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(0.26 * scale, 0.22 * scale, 0.5 * scale, 16), pot))
+      p.position.set(x, 0.25 * scale, z)
+      scene.add(p)
+      const trunk = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(0.05 * scale, 0.08 * scale, 1.5 * scale, 10), new THREE.MeshPhysicalMaterial({ color: colors.elevated.clone().lerp(colors.caution, 0.2), roughness: 0.9 })))
+      trunk.position.set(x, 1.2 * scale, z)
+      scene.add(trunk)
+      for (let i = 0; i < 6; i++) {
+        const a = (i / 6) * Math.PI * 2
+        const frond = shadowed(new THREE.Mesh(new THREE.ConeGeometry(0.1 * scale, 0.9 * scale, 6), i % 2 ? leaf : leafDark))
+        frond.position.set(x + Math.cos(a) * 0.32 * scale, 1.95 * scale, z + Math.sin(a) * 0.32 * scale)
+        frond.rotation.set(Math.sin(a) * 1.15, 0, -Math.cos(a) * 1.15)
+        scene.add(frond)
+      }
+    }
+
+    /** A long planter with a row of bushes, along x. */
+    const planter = (x: number, z: number, length: number) => {
+      const box = shadowed(new THREE.Mesh(new THREE.BoxGeometry(length, 0.42, 0.4), pot))
+      box.position.set(x, 0.21, z)
+      scene.add(box)
+      const n = Math.max(2, Math.round(length / 0.6))
+      for (let i = 0; i < n; i++) {
+        const bush = shadowed(new THREE.Mesh(new THREE.SphereGeometry(0.2 + (i % 2) * 0.04, 12, 12), i % 2 ? leaf : leafDark))
+        bush.position.set(x - length / 2 + 0.3 + (i * (length - 0.6)) / (n - 1), 0.56, z + ((i % 2) - 0.5) * 0.08)
+        scene.add(bush)
+      }
+    }
+
+    /** A whiteboard on a stand, its face toward +facing z, with a few lines on it. */
+    const whiteboard = (x: number, z: number, facing: 1 | -1) => {
+      const board = shadowed(new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.9, 0.04), paper))
+      board.position.set(x, 1.15, z)
+      scene.add(board)
+      for (const dx of [-0.6, 0.6]) {
+        const leg = new THREE.Mesh(new THREE.BoxGeometry(0.04, 1.6, 0.04), frameMaterial)
+        leg.position.set(x + dx, 0.8, z)
+        scene.add(leg)
+      }
+      for (let i = 0; i < 4; i++) {
+        const w = 0.5 + ((i * 7) % 5) * 0.14
+        const line = new THREE.Mesh(new THREE.PlaneGeometry(w, 0.03), new THREE.MeshBasicMaterial({ color: i === 1 ? colors.caution : colors.mint }))
+        line.position.set(x - 0.6 + w / 2, 1.45 - i * 0.18, z + facing * 0.025)
+        if (facing === -1) line.rotation.y = Math.PI
+        scene.add(line)
+      }
+    }
+
+    /** A floor lamp: post, shade, and a warm glow. */
+    const floorLamp = (x: number, z: number) => {
+      const base = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.03, 20), steel)
+      base.position.set(x, 0.015, z)
+      scene.add(base)
+      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 1.6, 8), steel)
+      post.position.set(x, 0.8, z)
+      scene.add(post)
+      const shade = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.22, 0.28, 20, 1, true), lampShade))
+      shade.position.set(x, 1.7, z)
+      scene.add(shade)
+      const g = haloFor(colors.caution.clone().lerp(colors.foreground, 0.5), 0.9)
+      g.material.opacity = 0.35
+      g.position.set(x, 1.62, z)
+    }
+
+    /** A desk lamp with an amber shade. */
+    const deskLamp = (x: number, y: number, z: number) => {
+      const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.36, 8), steel)
+      arm.position.set(x, y + 0.18, z)
+      arm.rotation.z = 0.35
+      scene.add(arm)
+      const shade = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.1, 16, 1, true), lampShade)
+      shade.position.set(x - 0.07, y + 0.36, z)
+      scene.add(shade)
+      const g = haloFor(colors.caution.clone().lerp(colors.foreground, 0.5), 0.4)
+      g.material.opacity = 0.45
+      g.position.set(x - 0.07, y + 0.3, z)
+    }
+
+    /** A filing cabinet. */
+    const cabinet = (x: number, z: number, drawersFacing: 1 | -1) => {
+      const body = shadowed(new THREE.Mesh(new THREE.BoxGeometry(0.5, 1.1, 0.55), equipment))
+      body.position.set(x, 0.55, z)
+      scene.add(body)
+      for (let i = 0; i < 3; i++) {
+        const handle = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.02, 0.02), steel)
+        handle.position.set(x, 0.25 + i * 0.33, z + drawersFacing * 0.285)
+        scene.add(handle)
+      }
+    }
+
+    /** A bookcase against a back wall, spines toward +facing z. */
+    const bookcase = (x: number, z: number, width: number, facing: 1 | -1) => {
+      const back = shadowed(new THREE.Mesh(new THREE.BoxGeometry(width, 1.7, 0.04), equipment))
+      back.position.set(x, 0.85, z - facing * 0.15)
+      scene.add(back)
+      for (const sx of [-1, 1]) {
+        const side = new THREE.Mesh(new THREE.BoxGeometry(0.04, 1.7, 0.32), equipment)
+        side.position.set(x + (sx * width) / 2, 0.85, z)
+        scene.add(side)
+      }
+      for (let k = 0; k < 4; k++) {
+        const board = new THREE.Mesh(new THREE.BoxGeometry(width, 0.025, 0.3), frameMaterial)
+        board.position.set(x, 0.2 + k * 0.42, z)
+        scene.add(board)
+        let bx = x - width / 2 + 0.08
+        let i = 0
+        while (bx < x + width / 2 - 0.1) {
+          const w = 0.05 + ((i * 3) % 4) * 0.015
+          const h = 0.24 + ((i * 5) % 3) * 0.04
+          const book = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.2), bookMaterials[(i + k) % bookMaterials.length])
+          book.position.set(bx + w / 2, 0.2 + k * 0.42 + h / 2 + 0.013, z)
+          scene.add(book)
+          bx += w + 0.012
+          i += 1
+        }
+      }
+    }
+
+    /** A coffee station: a counter, an espresso machine with a lit light, cups, a kettle. */
+    const coffeeStation = (x: number, z: number, facing: 1 | -1) => {
+      const counter = shadowed(new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.9, 0.6), deskTop))
+      counter.position.set(x, 0.45, z)
+      scene.add(counter)
+      const top = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.04, 0.7), frameMaterial)
+      top.position.set(x, 0.92, z)
+      scene.add(top)
+      // The machine.
+      const body = shadowed(new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.4, 0.4), steel))
+      body.position.set(x - 0.5, 1.14, z)
+      scene.add(body)
+      const group = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.08, 12), steel)
+      group.position.set(x - 0.5, 0.98, z + facing * 0.16)
+      scene.add(group)
+      const tray = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.02, 0.14), frameMaterial)
+      tray.position.set(x - 0.5, 0.95, z + facing * 0.16)
+      scene.add(tray)
+      const light = new THREE.Mesh(ledGeometry, new THREE.MeshBasicMaterial({ color: colors.mint }))
+      light.position.set(x - 0.38, 1.26, z + facing * 0.205)
+      scene.add(light)
+      const lightHalo = haloFor(colors.mint, 0.12)
+      lightHalo.material.opacity = 0.7
+      lightHalo.position.copy(light.position).add(new THREE.Vector3(0, 0, facing * 0.03))
+      // Cups in a row and a kettle.
+      for (let i = 0; i < 4; i++) {
+        const cup = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.03, 0.08, 12), paper)
+        cup.position.set(x + 0.05 + i * 0.12, 0.98, z - facing * 0.12)
+        scene.add(cup)
+      }
+      const kettle = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 0.2, 16), steel))
+      kettle.position.set(x + 0.65, 1.04, z)
+      scene.add(kettle)
+      const jar = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.16, 16), glass)
+      jar.position.set(x + 0.35, 1.02, z + facing * 0.15)
+      scene.add(jar)
+    }
+
+    /** A water cooler. */
+    const waterCooler = (x: number, z: number) => {
+      const body = shadowed(new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.95, 0.34), paper))
+      body.position.set(x, 0.475, z)
+      scene.add(body)
+      const bottle = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 0.42, 20), glass)
+      bottle.position.set(x, 1.18, z)
+      scene.add(bottle)
+      const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.06, 12), glass)
+      neck.position.set(x, 0.98, z)
+      scene.add(neck)
+      const tap = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.04, 0.08), steel)
+      tap.position.set(x, 0.72, z + 0.19)
+      scene.add(tap)
+    }
+
+    /** A television on a stand, the screen toward +facing z. */
+    const television = (x: number, z: number, facing: 1 | -1) => {
+      const stand = shadowed(new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.5, 0.4), equipment))
+      stand.position.set(x, 0.25, z)
+      scene.add(stand)
+      const screen = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.75, 0.05), screenMaterial)
+      screen.position.set(x, 0.92, z)
+      scene.add(screen)
+      // A price line on the screen, in the token that means "up".
+      const points: THREE.Vector3[] = []
+      for (let i = 0; i <= 12; i++) {
+        points.push(new THREE.Vector3(x - 0.55 + i * 0.09, 0.75 + 0.18 * (0.5 + 0.5 * Math.sin(i * 1.3)) + i * 0.012, z + facing * 0.03))
+      }
+      const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), new THREE.LineBasicMaterial({ color: colors.primary }))
+      scene.add(line)
+    }
+
+    /** A pinboard-sized cushion on a sofa seat. */
+    const cushion = (x: number, z: number, rot = 0) => {
+      const c = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.26, 0.1), cushionMaterial)
+      c.position.set(x, 0.5, z)
+      c.rotation.y = rot
+      c.rotation.x = -0.25
+      scene.add(c)
     }
 
     /* ---- clusters ---- */
@@ -637,7 +846,6 @@ export function OfficeFloor({ departments, animate, carModel, className }: Props
         // The lobby: the show car in the middle on a turning plinth under its
         // own light, a sofa group either side round a low table, the counter
         // at the west end facing the doors, plants where a lobby keeps them.
-        const sofaMaterial = new THREE.MeshPhysicalMaterial({ color: colors.elevated.clone().lerp(colors.muted, 0.35), roughness: 0.85 })
         const sofa = (sx: number, sz: number, f: 1 | -1) => {
           const seat = shadowed(new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.3, 0.6), sofaMaterial))
           seat.position.set(sx, 0.2, sz)
@@ -654,6 +862,8 @@ export function OfficeFloor({ departments, animate, carModel, className }: Props
         const group = (gx: number) => {
           sofa(gx, dept.z - 1.0, 1)
           sofa(gx, dept.z + 1.0, -1)
+          cushion(gx - 0.55, dept.z - 1.12)
+          cushion(gx + 0.55, dept.z + 1.12, Math.PI)
           const table = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.45, 0.05, 32), deskTop))
           table.position.set(gx, 0.4, dept.z)
           scene.add(table)
@@ -738,11 +948,19 @@ export function OfficeFloor({ departments, animate, carModel, className }: Props
         const mat = new THREE.Mesh(rug(4.0, 0.7, 0.2), new THREE.MeshPhysicalMaterial({ color: colors.background.clone().lerp(colors.foreground, 0.12), roughness: 0.95 }))
         mat.position.set(dept.x, 0.009, dept.z + dept.d / 2 - 0.45)
         scene.add(mat)
-        plant(dept.x - dept.w / 2 + 0.5, dept.z - dept.d / 2 + 0.5, 1.1)
-        plant(dept.x + dept.w / 2 - 0.5, dept.z - dept.d / 2 + 0.5, 1.1)
-        plant(dept.x + dept.w / 2 - 0.5, dept.z + dept.d / 2 - 0.5, 0.9)
+        // Coffee at the east end, water beside it, a screen with the tape.
+        coffeeStation(dept.x + dept.w / 2 - 1.7, dept.z - 0.9, 1)
+        waterCooler(dept.x + dept.w / 2 - 0.5, dept.z - 0.9)
+        television(dept.x + dept.w / 2 - 1.7, dept.z + 1.1, -1)
+        floorLamp(dept.x - dept.w / 2 + 0.6, dept.z + dept.d / 2 - 0.6)
+        floorLamp(dept.x + dept.w * 0.22 + 1.3, dept.z + dept.d / 2 - 0.6)
+        palm(dept.x - dept.w / 2 + 0.6, dept.z - dept.d / 2 + 0.6, 1.1)
+        palm(dept.x + dept.w / 2 - 0.6, dept.z + dept.d / 2 - 0.6, 1.0)
         plant(dept.x - 2.6, dept.z + dept.d / 2 - 0.5, 0.8)
         plant(dept.x + 2.6, dept.z + dept.d / 2 - 0.5, 0.8)
+        // A planter row between the lobby and the desks, with a gap at the aisle.
+        planter(dept.x - 6.0, dept.z - dept.d / 2 + 0.05, 8.0)
+        planter(dept.x + 6.2, dept.z - dept.d / 2 + 0.05, 7.6)
       } else if (dept.furniture === 'meeting') {
         // A long table, three chairs a side, a screen on the back glass.
         const tableW = dept.w - 1.2
@@ -762,7 +980,19 @@ export function OfficeFloor({ departments, animate, carModel, className }: Props
         const screen = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.68, 0.04), screenMaterial)
         screen.position.set(dept.x, 1.1, dept.z - facing * (dept.d / 2 + 0.16))
         scene.add(screen)
-        plant(dept.x + dept.w / 2 - 0.4, dept.z - facing * (dept.d / 2 - 0.4), 0.9)
+        const credenza = shadowed(new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.55, 0.4), equipment))
+        credenza.position.set(dept.x - dept.w / 2 + 0.9, 0.275, dept.z - facing * (dept.d / 2 - 0.25))
+        scene.add(credenza)
+        const jug = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.06, 0.22, 16), glass)
+        jug.position.set(dept.x + 0.3, 0.86, dept.z)
+        scene.add(jug)
+        for (const dx of [-0.6, 0.6]) {
+          const pad = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.01, 0.3), paper)
+          pad.position.set(dept.x + dx, 0.75, dept.z - 0.2)
+          scene.add(pad)
+        }
+        whiteboard(dept.x + dept.w / 2 - 0.35, dept.z, 1)
+        plant(dept.x - dept.w / 2 + 0.4, dept.z + facing * (dept.d / 2 - 0.4), 0.9)
       } else if (dept.furniture === 'shelves') {
         for (let i = 0; i < 2; i++) {
           const zz = dept.z - facing * (0.75 - i * 1.3)
@@ -803,14 +1033,109 @@ export function OfficeFloor({ departments, animate, carModel, className }: Props
         `<div class="text-[10px] text-muted-foreground">${who}</div>` +
         (model ? `<div class="text-[9px] font-mono text-muted-foreground/80">${model}</div>` : '')
       labelHost.appendChild(label)
+
+      // What each department keeps beside its desks.
+      const back = dept.z - facing * (dept.d / 2 - 0.35)
+      switch (dept.id) {
+        case 'arbiter': {
+          bookcase(dept.x, back, dept.w - 0.9, facing)
+          floorLamp(dept.x + dept.w / 2 - 0.4, dept.z + facing * (dept.d / 2 - 0.4))
+          // Two guest chairs across the desk.
+          chair(dept.x - 0.45, dept.z + facing * 0.85, (-facing as 1 | -1))
+          chair(dept.x + 0.45, dept.z + facing * 0.85, (-facing as 1 | -1))
+          break
+        }
+        case 'advisory': {
+          whiteboard(dept.x - dept.w / 2 + 0.9, back, facing)
+          plant(dept.x, dept.z, 0.7)
+          cabinet(dept.x + dept.w / 2 - 0.4, back, facing)
+          break
+        }
+        case 'archive': {
+          // A reading table with a lamp, at the aisle side.
+          const table = shadowed(new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.05, 0.6), deskTop))
+          table.position.set(dept.x - dept.w / 2 + 1.0, 0.72, dept.z + facing * (dept.d / 2 - 0.6))
+          scene.add(table)
+          for (const dx of [-0.5, 0.5]) {
+            const leg = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.7, 0.5), deskLeg)
+            leg.position.set(table.position.x + dx, 0.35, table.position.z)
+            scene.add(leg)
+          }
+          deskLamp(table.position.x + 0.4, 0.74, table.position.z - facing * 0.15)
+          chair(table.position.x, table.position.z + facing * 0.6, (-facing as 1 | -1))
+          break
+        }
+        case 'data': {
+          // Air handler and an extinguisher, as any server row has.
+          const ac = shadowed(new THREE.Mesh(new THREE.BoxGeometry(0.7, 1.9, 0.5), paper))
+          ac.position.set(dept.x + dept.w / 2 - 0.5, 0.95, back)
+          scene.add(ac)
+          for (let i = 0; i < 6; i++) {
+            const slat = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.015, 0.02), frameMaterial)
+            slat.position.set(ac.position.x, 1.35 + i * 0.07, back + facing * 0.26)
+            scene.add(slat)
+          }
+          const ext = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.4, 12), new THREE.MeshPhysicalMaterial({ color: colors.caution, roughness: 0.4 }))
+          ext.position.set(dept.x - dept.w / 2 + 0.3, 0.2, back)
+          scene.add(ext)
+          break
+        }
+        case 'lab': {
+          whiteboard(dept.x + dept.w / 2 - 0.7, back, facing)
+          plant(dept.x - dept.w / 2 + 0.4, back, 0.8)
+          break
+        }
+        case 'engine': {
+          // Two cabinets flank the core, a fan on each, cables to the tray.
+          for (const sx of [-1, 1]) {
+            const cab = shadowed(new THREE.Mesh(new THREE.BoxGeometry(0.5, 1.5, 0.6), equipment))
+            cab.position.set(dept.x + sx * 1.35, 0.75, back + facing * 0.1)
+            scene.add(cab)
+            const fan = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.17, 0.03, 24), steel)
+            fan.position.set(cab.position.x, 1.15, cab.position.z + facing * 0.31)
+            fan.rotation.x = Math.PI / 2
+            scene.add(fan)
+            fans.push(fan)
+            for (let k = 0; k < 4; k++) {
+              const on = k === 3 ? colors.caution.clone() : colors.primary.clone()
+              const material = new THREE.MeshBasicMaterial({ color: colors.background })
+              const dot = new THREE.Mesh(ledGeometry, material)
+              dot.position.set(cab.position.x - 0.12 + k * 0.08, 0.7, cab.position.z + facing * 0.305)
+              scene.add(dot)
+              const halo = haloFor(on, 0.1)
+              halo.position.copy(dot.position).add(new THREE.Vector3(0, 0, facing * 0.03))
+              const lit = Math.random() < 0.5
+              material.color.copy(lit ? on : colors.background.clone().lerp(on, 0.1))
+              halo.material.opacity = lit ? 0.7 : 0
+              leds.push({ material, halo, on, off: colors.background.clone().lerp(on, 0.1), rate: k === 3 ? 0.5 : 3 + Math.random() * 6, lit })
+            }
+          }
+          const coreGlow = haloFor(colors.primary, 1.4)
+          coreGlow.material.opacity = 0.16
+          coreGlow.position.set(dept.x, 0.6, dept.z + facing * 0.3)
+          break
+        }
+        case 'data-integrity':
+        case 'adversary':
+        case 'risk': {
+          deskLamp(dept.x + 0.42, 0.74, dept.z + facing * 0.05)
+          cabinet(dept.x, back, facing)
+          break
+        }
+        default:
+          break
+      }
       clusters.push(cluster)
     }
 
     // Plants along the edge, where an open plan keeps them.
-    plant(FLOOR_W / 2 - 0.6, -FLOOR_D / 2 + 0.6, 0.9)
+    palm(FLOOR_W / 2 - 0.7, -FLOOR_D / 2 + 0.7, 1.0)
     plant(FLOOR_W / 2 - 0.6, 0.0, 0.9)
-    plant(FLOOR_W / 2 - 1.6, 3.2, 1.0)
+    palm(FLOOR_W / 2 - 1.4, 3.4, 0.9)
     plant(2.6, -FLOOR_D / 2 + 0.5, 0.9)
+    plant(-FLOOR_W / 2 + 0.6, 0.2, 0.9)
+    palm(-FLOOR_W / 2 + 0.8, 3.4, 0.9)
+    planter(-1.6, -FLOOR_D / 2 + 0.35, 5.0)
 
     const byId = (id: string) => clusters.find((c) => c.dept.id === id)
     const arbiter = clusters.find((c) => c.dept.tone === 'arbiter')
@@ -1011,6 +1336,7 @@ export function OfficeFloor({ departments, animate, carModel, className }: Props
         fileGroup.position.y = Y + Math.sin(now * 3) * 0.04
         sheet.rotation.y = now * 0.8
         if (showCar) showCar.rotation.y += dt * 0.25
+        for (const fan of fans) fan.rotation.y += dt * 9
 
         for (let i = arcs.length - 1; i >= 0; i--) {
           const a = arcs[i]
