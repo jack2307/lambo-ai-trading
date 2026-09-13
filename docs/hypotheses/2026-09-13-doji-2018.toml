@@ -1,0 +1,15 @@
+[run]
+in_sample = "xauduka:15m"
+in_sample_from = "2018-06-16"
+in_sample_to = "2022-06-16"
+out_of_sample = "xauusd:15m"
+seeds = 200
+direction_samples = 1000
+fixed = true
+
+[[hypothesis]]
+label = "doji/strict-2018"
+base = "doji-reversal"
+filters = ["weekdays", "flat:1630-1815"]
+overrides = { bodyMaxPct = 0.05, minRangeAtr = 1.5, riskReward = 1.5 }
+why = "the registered strict preset, parameters pinned, on four years nobody has looked at"

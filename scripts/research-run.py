@@ -120,6 +120,13 @@ def main() -> int:
             [SEARCH, f"--market={market}", f"--interval={tf}", "--mode=hypotheses", f"--batch-file={path}", f"--seeds={seeds}", *b],
             os.path.join(out_dir, "in-sample.txt"),
         )
+        if run_cfg.get("fixed"):
+            # A registered-parameters replay on the primary too, when the
+            # hypothesis pins its parameters (no selection to walk forward).
+            run(
+                [SEARCH, f"--market={market}", f"--interval={tf}", "--mode=hypotheses", "--fixed", f"--batch-file={path}", f"--seeds={seeds}", *b],
+                os.path.join(out_dir, "in-sample-fixed.txt"),
+            )
         for base, slug, preset in direction_runs():
             print(f"direction null: {slug} ({base}) on {market} {tf}, {direction} samples")
             run(
