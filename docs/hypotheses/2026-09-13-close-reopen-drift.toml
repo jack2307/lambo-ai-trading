@@ -1,0 +1,51 @@
+[run]
+in_sample = "xauduka:15m"
+in_sample_from = "2018-06-16"
+in_sample_to = "2025-04-10"
+out_of_sample = "xauusd:15m"
+out_of_sample_from = "2025-04-11"
+seeds = 300
+direction_samples = 1000
+fixed = true
+
+[[hypothesis]]
+label = "close/1630-1815"
+base = "session-hold"
+filters = ["weekdays:MoTuWeTh", "hours:1625-1630"]
+overrides = { from = 1625, to = 1815, side = 1, riskDailyRanges = 1, rangeDays = 20 }
+why = "the break itself: long from the last bars before the close to the first after the reopen, Monday to Thursday"
+
+[[hypothesis]]
+label = "close/1630-2000"
+base = "session-hold"
+filters = ["weekdays:MoTuWeTh", "hours:1625-1630"]
+overrides = { from = 1625, to = 2000, side = 1, riskDailyRanges = 1, rangeDays = 20 }
+why = "the break plus the first hours of Asia"
+
+[[hypothesis]]
+label = "close/1630-2200"
+base = "session-hold"
+filters = ["weekdays:MoTuWeTh", "hours:1625-1630"]
+overrides = { from = 1625, to = 2200, side = 1, riskDailyRanges = 1, rangeDays = 20 }
+why = "the whole evening from before the close"
+
+[[hypothesis]]
+label = "close/1815-2200"
+base = "session-hold"
+filters = ["weekdays:MoTuWeTh", "hours:1815-1820"]
+overrides = { from = 1815, to = 2200, side = 1, riskDailyRanges = 1, rangeDays = 20 }
+why = "the evening without the break: the contrast that says whether the reopen is the move"
+
+[[hypothesis]]
+label = "close/1400-1630"
+base = "session-hold"
+filters = ["weekdays:MoTuWeTh", "hours:1400-1405"]
+overrides = { from = 1400, to = 1630, side = 1, riskDailyRanges = 1, rangeDays = 20 }
+why = "the afternoon before the close: the contrast that says whether it is just the trend"
+
+[[hypothesis]]
+label = "close/fri-1630-1815"
+base = "session-hold"
+filters = ["weekdays:Fr", "hours:1625-1630"]
+overrides = { from = 1625, to = 1815, side = 1, riskDailyRanges = 1, rangeDays = 20 }
+why = "the Friday leg alone: a hold across the weekend, which the screen's 16-18 row hid inside its count"
