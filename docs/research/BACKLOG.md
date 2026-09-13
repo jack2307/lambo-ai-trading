@@ -23,10 +23,26 @@ Closed ideas move to the bottom with a pointer to their decision record, so
 - [ ] **Trend pullback on BTC with a time exit**: the side beat its mirror
   (99th) while the swing-stop structure lost 0.38R a trade; a re-registration
   needs an exit with a reason, not a wider stop. `2026-09-13-trend-pullback.md`.
-- [ ] **Close-to-reopen drift on gold** (registered `2026-09-13-close-reopen-drift`):
-  long across the 17:00 New York close and the early evening, 100th
-  percentile of both nulls on 2022–25 in the recent-year screen's context;
-  the proper test with the Friday leg separated and daily-range sizing.
+- [ ] **The Friday leg of the close-reopen hold on 2010–2018 Dukascopy**
+  (adversary, `2026-09-13-close-reopen-drift`): the weekend hold passed
+  seven years (336 holds, 100th) and the pre-screen years alone (194, 100th)
+  and could not be confirmed on 67 Vantage Fridays (a power problem). The
+  way back in: fetch Dukascopy XAUUSD 2010-06 → 2018-06 (~400 Fridays),
+  register before any run, replay the registered parameters, ≥ 95th on the
+  direction null. Needs the ingest for that range first; then the risk list
+  (weekend guard, unrealised-loss cap, maximum hold, notional cap) before a
+  paper proposal. `2026-09-13-close-reopen-drift.md`.
+- [ ] **Guards for open positions, and guards in the research runner**
+  (risk, `2026-09-13-close-reopen-drift`): the daily-loss limit sums closed
+  trades and nothing can close a self-managed position; no maximum hold, no
+  weekend flag, no notional cap; `search` does not pass the configured guards,
+  so every receipt is unguarded. Instrument work: enforce with tests, then
+  say in the receipts whether guards were on.
+- [ ] **The sizing range counts Sundays as days** (data-integrity,
+  `2026-09-13-close-reopen-drift`): `average_day_range` uses the New York
+  calendar day, so a Sunday evening's six hours enter the 20-day mean as a
+  full day — R 6–9% too small, uniformly. Instrument: use the 17:00 session
+  day, or skip days with fewer than N bars. Ranks unaffected; sizes are.
 - [ ] **Direction null on the walk-forward's selected cell** (adversary,
   recent-year screen): `null-dir` runs the defaults over the whole window,
   so for a gridded row it scores different trades than the table. An
@@ -72,6 +88,12 @@ Closed ideas move to the bottom with a pointer to their decision record, so
 
 ## Closed
 
+- [x] Close-to-reopen drift on gold → the sign is at the 96th–100th of the
+  null on both windows and in every year, worth $0.10–0.20 an ounce a
+  session: net zero before 2023 (the spread), 1–4% a year at 1% risk since;
+  fails the registered gate as a unit and is not a trade. The Friday leg
+  passes seven years and cannot be confirmed on 67 Fridays. No paper run
+  (risk BLOCK). `2026-09-13-close-reopen-drift.md`.
 - [x] Technical baselines (ema-cross, rsi-reversion, donchian, bb-fade) on GC,
   Binance, Vantage → inside the noise. `docs/decisions/2026-09-12-technical-baselines.md`,
   `2026-09-12-vantage-bars-baselines.md`.

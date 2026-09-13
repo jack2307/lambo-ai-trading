@@ -1,7 +1,7 @@
 # 2026-09-13-close-reopen-drift: gold rises across the New York close and through the early evening
 
 **Registered:** (commit time is authoritative) — before any run of this batch
-**Status:** confirmation done — nothing survives both windows; under review
+**Status:** decided — closed; `docs/decisions/2026-09-13-close-reopen-drift.md`
 **Batch file:** `docs/hypotheses/2026-09-13-close-reopen-drift.toml`
 
 ## Where this comes from
