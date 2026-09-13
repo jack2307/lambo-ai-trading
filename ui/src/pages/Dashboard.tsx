@@ -71,26 +71,28 @@ const TEAM = [
 ] as const
 
 /**
- * The floor: one room per department, laid out as the research loop walks
- * it. North wing: the arbiter's corner office, the advisory desks, the
- * archive. South wing: the data room, the strategy lab, the engine room and
- * the three veto rooms in a row. A file leaves the archive and comes back to
- * it, as a record or as closed.
+ * The floor: open plan, one desk cluster per department on its own rug, and
+ * a single glass office for the arbiter. North of the aisle: the office, the
+ * advisory desks, the archive. South: the data racks, the strategy desk, the
+ * engine bay and the three veto desks in a row. A file leaves the archive
+ * and comes back to it, as a record or as closed.
  */
 const seat = (id: (typeof TEAM)[number]['id']) => {
   const agent = TEAM.find((a) => a.id === id)!
   return { id: agent.id, title: agent.title, model: agent.model.name }
 }
 const DEPARTMENTS: Department[] = [
-  { id: 'arbiter', title: "Arbiter's office", line: 'Reads the receipts and the vetoes; decides last.', tone: 'arbiter', wing: 'north', width: 2.4, occupants: [{ id: 'arbiter', title: 'Arbiter', model: SESSION_MODEL.name }] },
-  { id: 'advisory', title: 'Advisory', line: 'Notes to the arbiter; none of them can stop anything alone.', tone: 'advisory', wing: 'north', width: 5.2, occupants: [seat('researcher'), seat('execution-realist'), seat('portfolio'), seat('historian')] },
-  { id: 'archive', title: 'Archive', line: 'Hypotheses, run receipts, decisions, backlog.', tone: 'ops', wing: 'north', width: 2.4, occupants: [], furniture: 'shelves' },
-  { id: 'data', title: 'Data room', line: 'MT5 export, Dukascopy, Binance; the tape collectors.', tone: 'ops', wing: 'south', width: 2.0, occupants: [], furniture: 'racks' },
-  { id: 'lab', title: 'Strategy lab', line: 'Pre-registers, implements, tests for look-ahead.', tone: 'ops', wing: 'south', width: 2.0, occupants: [{ id: 'strategy-implementer', title: 'Implementer', model: MODELS.sonnet.name }] },
-  { id: 'engine', title: 'Engine room', line: 'Backtest, walk-forward, nulls; the search binary.', tone: 'ops', wing: 'south', width: 2.0, occupants: [], furniture: 'engine' },
-  { id: 'data-integrity', title: 'Data Integrity', line: 'Veto', tone: 'veto', wing: 'south', width: 1.35, occupants: [seat('data-integrity')] },
-  { id: 'adversary', title: 'Adversary', line: 'Veto', tone: 'veto', wing: 'south', width: 1.35, occupants: [seat('adversary')] },
-  { id: 'risk', title: 'Risk', line: 'Veto', tone: 'veto', wing: 'south', width: 1.35, occupants: [seat('risk')] },
+  // North of the aisle: the glass office, the advisory desks, the archive.
+  { id: 'arbiter', title: "Arbiter's office", line: 'Reads the receipts and the vetoes; decides last.', tone: 'arbiter', x: -6.6, z: -3.0, w: 3.4, d: 3.2, enclosed: true, occupants: [{ id: 'arbiter', title: 'Arbiter', model: SESSION_MODEL.name }] },
+  { id: 'advisory', title: 'Advisory', line: 'Notes to the arbiter; none of them can stop anything alone.', tone: 'advisory', x: -0.6, z: -3.0, w: 5.2, d: 3.6, arrange: 'grid', occupants: [seat('researcher'), seat('execution-realist'), seat('portfolio'), seat('historian')] },
+  { id: 'archive', title: 'Archive', line: 'Hypotheses, run receipts, decisions, backlog.', tone: 'ops', x: 5.6, z: -3.0, w: 4.4, d: 3.4, occupants: [], furniture: 'shelves' },
+  // South of the aisle: data, the lab, the engine bay, then the veto desks in a row.
+  { id: 'data', title: 'Data room', line: 'MT5 export, Dukascopy, Binance; the tape collectors.', tone: 'ops', x: -6.8, z: 3.0, w: 3.2, d: 3.0, occupants: [], furniture: 'racks' },
+  { id: 'lab', title: 'Strategy lab', line: 'Pre-registers, implements, tests for look-ahead.', tone: 'ops', x: -3.4, z: 3.0, w: 2.6, d: 3.0, occupants: [{ id: 'strategy-implementer', title: 'Implementer', model: MODELS.sonnet.name }] },
+  { id: 'engine', title: 'Engine room', line: 'Backtest, walk-forward, nulls; the search binary.', tone: 'ops', x: -0.2, z: 3.0, w: 3.0, d: 3.0, occupants: [], furniture: 'engine' },
+  { id: 'data-integrity', title: 'Data Integrity', line: 'Veto', tone: 'veto', x: 3.0, z: 3.0, w: 1.6, d: 3.0, occupants: [seat('data-integrity')] },
+  { id: 'adversary', title: 'Adversary', line: 'Veto', tone: 'veto', x: 5.0, z: 3.0, w: 1.6, d: 3.0, occupants: [seat('adversary')] },
+  { id: 'risk', title: 'Risk', line: 'Veto', tone: 'veto', x: 7.0, z: 3.0, w: 1.6, d: 3.0, occupants: [seat('risk')] },
 ]
 
 /**
@@ -273,7 +275,7 @@ export function Dashboard({ catalog, market, onError }: Props) {
       <section>
         <SectionHeader
           title="The floor"
-          subtitle="The company as a floor plan. A file leaves the archive, is written up in the lab, run in the engine room, and walks past three rooms that can each send it back before it reaches the arbiter's office."
+          subtitle="The company as an open-plan floor; only the arbiter sits behind glass. A file leaves the archive, is written up in the lab, run in the engine bay, and passes three desks that can each send it back before it reaches the office."
         />
         <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
           <Panel className="relative min-h-[460px] overflow-hidden">
@@ -340,8 +342,8 @@ export function Dashboard({ catalog, market, onError }: Props) {
               ))}
             </ul>
             <p className="text-muted-foreground border-border mt-4 border-t pt-3 text-[11px] leading-relaxed">
-              Three rooms in a row that each can send a file back; nothing reaches the corner office without
-              passing all of them, and the gates are not up for a vote in any of the rooms.
+              No walls but one: the veto desks sit in a row between the engine and the glass office, and a file
+              passes all three or goes back to the archive. The gates are not up for a vote at any desk.
             </p>
           </Panel>
         </div>

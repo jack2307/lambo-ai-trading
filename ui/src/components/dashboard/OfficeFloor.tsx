@@ -1,19 +1,18 @@
 /**
- * The company as a floor plan.
+ * The company as an open-plan floor.
  *
- * One floor, glass-walled rooms, a corridor down the middle. Each department
- * is a room; each agent is a figure at a desk in one. The thing that moves is
- * a *hypothesis*: a lit document that leaves the archive, is written up in
- * the strategy lab, run in the engine room, and then walks the veto wing —
- * three rooms in a row, any one of which can stamp it and send it back to
- * the archive as closed. What passes all three reaches the arbiter's corner
- * office, and from there goes to the archive as a record. Advisory desks
- * send their notes to the arbiter's office while a file is on the desk.
+ * One floor, no walls: each department is a cluster of desks on its own rug,
+ * and the only glass on the floor is around the arbiter's corner office. The
+ * thing that moves is a *hypothesis*: a lit file that leaves the archive, is
+ * written up at the strategy desk, run in the engine bay, and then passes
+ * the three veto desks in a row — any one of which can stamp it and send it
+ * back to the archive as closed. What passes all three goes through the
+ * glass to the arbiter, and from there to the archive as a record. The
+ * advisory desks send their notes to the office while a file is on the desk.
  *
- * The rooms are the research loop's steps (`.claude/skills/research/SKILL.md`)
- * and the figures are the agents (`.claude/agents/`); nothing here is
- * decoration for its own sake. A department with no agent — data, engine,
- * archive — is drawn with its equipment instead of a chair.
+ * The clusters are the research loop's steps (`.claude/skills/research/SKILL.md`)
+ * and the figures are the agents (`.claude/agents/`). A department with no
+ * agent — data, engine, archive — is drawn with its equipment.
  *
  * Plain three.js in a ref; every resource disposed once. Labels are DOM,
  * projected. Colours are the CSS tokens, read at mount; the only colours made
@@ -25,7 +24,6 @@ import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 
-export type Wing = 'north' | 'south'
 export type Tone = 'arbiter' | 'veto' | 'advisory' | 'ops'
 
 export interface Occupant {
@@ -36,16 +34,20 @@ export interface Occupant {
 
 export interface Department {
   id: string
-  /** Room name on the door. */
   title: string
-  /** One line: what this room does. */
+  /** One line: what this cluster does. */
   line: string
   tone: Tone
-  wing: Wing
-  /** Relative width; rooms in a wing share the floor by these. */
-  width: number
+  /** Centre of the cluster on the floor and the rug's size. */
+  x: number
+  z: number
+  w: number
+  d: number
+  /** Glass partition around the cluster. Only the arbiter's office has one. */
+  enclosed?: boolean
   occupants: Occupant[]
-  /** Equipment drawn when nobody sits here. */
+  /** Desks in one row facing the aisle, or two rows facing each other. */
+  arrange?: 'row' | 'grid'
   furniture?: 'racks' | 'engine' | 'shelves'
 }
 
@@ -54,13 +56,9 @@ interface Props {
   className?: string
 }
 
-/* ---- geometry of the floor ---- */
-const FLOOR_W = 17
-const WING_DEPTH = 3.4
-const CORRIDOR = 1.4
-const GAP = 0.32
-const WALL_H = 1.15
-const WALL_T = 0.05
+const FLOOR_W = 19
+const FLOOR_D = 11.5
+const GLASS_H = 1.35
 
 function token(name: string, fallback: string): string {
   if (typeof window === 'undefined') return fallback
@@ -84,30 +82,39 @@ function glowTexture(): THREE.Texture {
   return texture
 }
 
-interface Room {
+/** A rounded rectangle lying in the x/z plane. */
+function rug(w: number, d: number, r = 0.35): THREE.ShapeGeometry {
+  const shape = new THREE.Shape()
+  const x = -w / 2
+  const y = -d / 2
+  shape.moveTo(x + r, y)
+  shape.lineTo(x + w - r, y)
+  shape.quadraticCurveTo(x + w, y, x + w, y + r)
+  shape.lineTo(x + w, y + d - r)
+  shape.quadraticCurveTo(x + w, y + d, x + w - r, y + d)
+  shape.lineTo(x + r, y + d)
+  shape.quadraticCurveTo(x, y + d, x, y + d - r)
+  shape.lineTo(x, y + r)
+  shape.quadraticCurveTo(x, y, x + r, y)
+  const geometry = new THREE.ShapeGeometry(shape, 8)
+  geometry.rotateX(-Math.PI / 2)
+  return geometry
+}
+
+interface Cluster {
   dept: Department
-  /** Floor rectangle, x/z extents. */
-  x0: number
-  x1: number
-  z0: number
-  z1: number
   centre: THREE.Vector3
-  /** Where the corridor meets the door. */
-  door: THREE.Vector3
-  tile: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshPhysicalMaterial>
-  tileColor: THREE.Color
+  /** Where the aisle meets the cluster. */
+  aisle: THREE.Vector3
+  rugMaterial: THREE.MeshPhysicalMaterial
   label: HTMLDivElement
   figures: Figure[]
-  /** Room glow, 0..1, decays each frame. */
   glow: number
   glowColor: THREE.Color
 }
 
 interface Figure {
-  occupant: Occupant
-  group: THREE.Group
   material: THREE.MeshPhysicalMaterial
-  position: THREE.Vector3
   glow: number
   glowColor: THREE.Color
 }
@@ -125,61 +132,13 @@ interface Arc {
   duration: number
   head: THREE.Sprite
   tail: THREE.Line<THREE.BufferGeometry, THREE.LineBasicMaterial>
-  to: Room
-  color: THREE.Color
+  to: Cluster
 }
 
-/** One stop on the hypothesis's route. */
 interface Stop {
-  room: Room
-  /** Seconds the file rests on the desk. */
+  cluster: Cluster
   dwell: number
-  /** Chance this room sends it back. Only the veto wing has one. */
   vetoChance: number
-}
-
-/** Lay the rooms of a wing out left to right by relative width. */
-function layout(departments: Department[]): Omit<Room, 'tile' | 'tileColor' | 'label' | 'figures' | 'glow' | 'glowColor'>[] {
-  const out: Omit<Room, 'tile' | 'tileColor' | 'label' | 'figures' | 'glow' | 'glowColor'>[] = []
-  for (const wing of ['north', 'south'] as Wing[]) {
-    const rooms = departments.filter((d) => d.wing === wing)
-    const total = rooms.reduce((s, d) => s + d.width, 0)
-    const usable = FLOOR_W - GAP * (rooms.length + 1)
-    let x = -FLOOR_W / 2 + GAP
-    const z0 = wing === 'north' ? -CORRIDOR / 2 - WING_DEPTH : CORRIDOR / 2
-    const z1 = z0 + WING_DEPTH
-    for (const dept of rooms) {
-      const w = (dept.width / total) * usable
-      const x0 = x
-      const x1 = x + w
-      const cx = (x0 + x1) / 2
-      const cz = (z0 + z1) / 2
-      out.push({
-        dept,
-        x0,
-        x1,
-        z0,
-        z1,
-        centre: new THREE.Vector3(cx, 0, cz),
-        door: new THREE.Vector3(cx, 0, wing === 'north' ? -CORRIDOR / 2 + 0.2 : CORRIDOR / 2 - 0.2),
-      })
-      x = x1 + GAP
-    }
-  }
-  return out
-}
-
-/** A person: a capsule and a head, sat at a desk, facing the corridor. */
-function buildFigure(material: THREE.Material): THREE.Group {
-  const group = new THREE.Group()
-  const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.16, 0.34, 6, 18), material)
-  body.position.y = 0.42
-  body.castShadow = true
-  const head = new THREE.Mesh(new THREE.SphereGeometry(0.13, 20, 20), material)
-  head.position.y = 0.84
-  head.castShadow = true
-  group.add(body, head)
-  return group
 }
 
 export function OfficeFloor({ departments, className }: Props) {
@@ -205,7 +164,7 @@ export function OfficeFloor({ departments, className }: Props) {
       elevated: new THREE.Color(token('--elevated', '#1a1c1a')),
     }
     const toneColor = (tone: Tone) =>
-      tone === 'arbiter' ? colors.primary : tone === 'veto' ? colors.caution : tone === 'ops' ? colors.mint : colors.foreground.clone().lerp(colors.muted, 0.35)
+      tone === 'arbiter' ? colors.primary : tone === 'veto' ? colors.caution : tone === 'ops' ? colors.mint : colors.foreground.clone().lerp(colors.muted, 0.3)
 
     /* ---- renderer ---- */
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'low-power' })
@@ -213,21 +172,21 @@ export function OfficeFloor({ departments, className }: Props) {
     renderer.setClearColor(0x000000, 0)
     renderer.outputColorSpace = THREE.SRGBColorSpace
     renderer.toneMapping = THREE.ACESFilmicToneMapping
-    renderer.toneMappingExposure = 1.05
+    renderer.toneMappingExposure = 1.1
     renderer.shadowMap.enabled = true
     renderer.shadowMap.type = THREE.PCFSoftShadowMap
     host.appendChild(renderer.domElement)
 
     const scene = new THREE.Scene()
-    scene.fog = new THREE.Fog(colors.card, 24, 44)
+    scene.fog = new THREE.Fog(colors.card, 26, 46)
 
     const pmrem = new THREE.PMREMGenerator(renderer)
     scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture
-    scene.environmentIntensity = 0.5
+    scene.environmentIntensity = 0.6
     pmrem.dispose()
 
-    const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 120)
-    camera.position.set(9, 13, 17)
+    const camera = new THREE.PerspectiveCamera(28, 1, 0.1, 120)
+    camera.position.set(12.5, 14.5, 20.5)
 
     const controls = new OrbitControls(camera, renderer.domElement)
     controls.enableZoom = false
@@ -235,229 +194,315 @@ export function OfficeFloor({ departments, className }: Props) {
     controls.enableDamping = true
     controls.dampingFactor = 0.06
     controls.autoRotate = !reduceMotion
-    controls.autoRotateSpeed = 0.14
-    controls.minPolarAngle = Math.PI * 0.18
+    controls.autoRotateSpeed = 0.12
+    controls.minPolarAngle = Math.PI * 0.2
     controls.maxPolarAngle = Math.PI * 0.36
-    controls.target.set(0, 0.3, 0)
+    controls.target.set(0.4, 0.2, 0.4)
 
-    /* ---- light ---- */
-    scene.add(new THREE.HemisphereLight(colors.foreground, colors.background, 0.4))
-    const key = new THREE.DirectionalLight(colors.foreground, 1.7)
-    key.position.set(-8, 16, 10)
+    /* ---- light: a warm key as if from a window wall, a cool fill ---- */
+    scene.add(new THREE.HemisphereLight(colors.foreground, colors.background, 0.45))
+    const key = new THREE.DirectionalLight(colors.foreground.clone().lerp(colors.caution, 0.18), 1.8)
+    key.position.set(-10, 15, 8)
     key.castShadow = true
     key.shadow.mapSize.set(2048, 2048)
-    key.shadow.camera.left = -12
-    key.shadow.camera.right = 12
-    key.shadow.camera.top = 12
-    key.shadow.camera.bottom = -12
+    key.shadow.camera.left = -13
+    key.shadow.camera.right = 13
+    key.shadow.camera.top = 13
+    key.shadow.camera.bottom = -13
     key.shadow.camera.near = 1
     key.shadow.camera.far = 50
-    key.shadow.bias = -0.0005
-    key.shadow.radius = 4
+    key.shadow.bias = -0.0004
+    key.shadow.radius = 5
     scene.add(key)
-    const rim = new THREE.DirectionalLight(colors.mint, 0.3)
-    rim.position.set(10, 6, -14)
-    scene.add(rim)
+    const fill = new THREE.DirectionalLight(colors.mint, 0.25)
+    fill.position.set(12, 6, -14)
+    scene.add(fill)
 
-    /* ---- slab and corridor ---- */
-    const depth = WING_DEPTH * 2 + CORRIDOR
+    /* ---- floor: a warm timber field on a dark slab, with one aisle ---- */
+    const timber = colors.elevated.clone().lerp(colors.caution, 0.22).lerp(colors.foreground, 0.05)
     const slab = new THREE.Mesh(
-      new THREE.BoxGeometry(FLOOR_W + 0.9, 0.18, depth + 0.9),
-      new THREE.MeshPhysicalMaterial({ color: colors.background, roughness: 0.45, clearcoat: 0.5, clearcoatRoughness: 0.3 }),
+      new THREE.BoxGeometry(FLOOR_W + 1.2, 0.22, FLOOR_D + 1.2),
+      new THREE.MeshPhysicalMaterial({ color: colors.background, roughness: 0.5, clearcoat: 0.4, clearcoatRoughness: 0.4 }),
     )
-    slab.position.y = -0.1
+    slab.position.y = -0.12
     slab.receiveShadow = true
     scene.add(slab)
-    const corridorFloor = new THREE.Mesh(
-      new THREE.PlaneGeometry(FLOOR_W, CORRIDOR),
-      new THREE.MeshPhysicalMaterial({ color: colors.elevated.clone().lerp(colors.foreground, 0.08), roughness: 0.3, clearcoat: 0.8, clearcoatRoughness: 0.2 }),
+    const floor = new THREE.Mesh(
+      new THREE.PlaneGeometry(FLOOR_W, FLOOR_D),
+      new THREE.MeshPhysicalMaterial({ color: timber, roughness: 0.42, clearcoat: 0.9, clearcoatRoughness: 0.28 }),
     )
-    corridorFloor.rotation.x = -Math.PI / 2
-    corridorFloor.position.y = 0.002
-    corridorFloor.receiveShadow = true
-    scene.add(corridorFloor)
-    // A centre line down the corridor: the route the file walks.
-    const stripe = new THREE.Mesh(
-      new THREE.PlaneGeometry(FLOOR_W - 0.6, 0.05),
-      new THREE.MeshBasicMaterial({ color: colors.border.clone().lerp(colors.foreground, 0.25) }),
+    floor.rotation.x = -Math.PI / 2
+    floor.receiveShadow = true
+    scene.add(floor)
+    // Plank seams, so the field reads as timber and not paint.
+    const seam = new THREE.MeshBasicMaterial({ color: timber.clone().lerp(colors.background, 0.35) })
+    for (let z = -FLOOR_D / 2 + 0.6; z < FLOOR_D / 2; z += 0.6) {
+      const line = new THREE.Mesh(new THREE.PlaneGeometry(FLOOR_W, 0.012), seam)
+      line.rotation.x = -Math.PI / 2
+      line.position.set(0, 0.002, z)
+      scene.add(line)
+    }
+    const aisle = new THREE.Mesh(
+      new THREE.PlaneGeometry(FLOOR_W - 1.5, 1.2),
+      new THREE.MeshPhysicalMaterial({ color: colors.elevated.clone().lerp(colors.foreground, 0.1), roughness: 0.35, clearcoat: 0.8, clearcoatRoughness: 0.2 }),
     )
-    stripe.rotation.x = -Math.PI / 2
-    stripe.position.y = 0.004
-    scene.add(stripe)
+    aisle.rotation.x = -Math.PI / 2
+    aisle.position.y = 0.004
+    aisle.receiveShadow = true
+    scene.add(aisle)
 
-    /* ---- rooms ---- */
+    /* ---- shared materials ---- */
     const glass = new THREE.MeshPhysicalMaterial({
-      color: colors.foreground.clone().lerp(colors.mint, 0.25),
+      color: colors.foreground.clone().lerp(colors.mint, 0.2),
       transparent: true,
-      opacity: 0.13,
-      roughness: 0.08,
-      metalness: 0,
+      opacity: 0.12,
+      roughness: 0.05,
       clearcoat: 1,
       side: THREE.DoubleSide,
       depthWrite: false,
     })
-    const frameMaterial = new THREE.MeshPhysicalMaterial({ color: colors.border.clone().lerp(colors.foreground, 0.35), roughness: 0.35, metalness: 0.4 })
-    const deskMaterial = new THREE.MeshPhysicalMaterial({ color: colors.elevated.clone().lerp(colors.foreground, 0.28), roughness: 0.4, clearcoat: 0.6 })
-    const screenMaterial = new THREE.MeshPhysicalMaterial({ color: colors.background, roughness: 0.2, emissive: colors.mint.clone(), emissiveIntensity: 0.35 })
-    const equipmentMaterial = new THREE.MeshPhysicalMaterial({ color: colors.elevated.clone().lerp(colors.foreground, 0.12), roughness: 0.5, metalness: 0.3 })
-    const ledMaterial = new THREE.MeshBasicMaterial({ color: colors.mint })
+    const frameMaterial = new THREE.MeshPhysicalMaterial({ color: colors.border.clone().lerp(colors.foreground, 0.45), roughness: 0.3, metalness: 0.5 })
+    const deskTop = new THREE.MeshPhysicalMaterial({ color: colors.foreground.clone().lerp(colors.elevated, 0.55), roughness: 0.35, clearcoat: 0.7, clearcoatRoughness: 0.2 })
+    const deskLeg = new THREE.MeshPhysicalMaterial({ color: colors.background.clone().lerp(colors.foreground, 0.2), roughness: 0.4, metalness: 0.5 })
+    const chairMaterial = new THREE.MeshPhysicalMaterial({ color: colors.background.clone().lerp(colors.foreground, 0.16), roughness: 0.6 })
+    const screenMaterial = new THREE.MeshPhysicalMaterial({ color: colors.background, roughness: 0.15, emissive: colors.mint.clone(), emissiveIntensity: 0.4 })
+    const equipment = new THREE.MeshPhysicalMaterial({ color: colors.elevated.clone().lerp(colors.foreground, 0.14), roughness: 0.45, metalness: 0.35 })
+    const led = new THREE.MeshBasicMaterial({ color: colors.mint })
+    const leaf = new THREE.MeshPhysicalMaterial({ color: colors.mint.clone().lerp(colors.background, 0.55), roughness: 0.7 })
+    const pot = new THREE.MeshPhysicalMaterial({ color: colors.elevated.clone().lerp(colors.caution, 0.12), roughness: 0.6 })
 
-    const wall = (x: number, z: number, w: number, d: number, h = WALL_H) => {
-      const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), glass)
-      mesh.position.set(x, h / 2, z)
-      scene.add(mesh)
-      const top = new THREE.Mesh(new THREE.BoxGeometry(w + 0.02, 0.03, d + 0.02), frameMaterial)
-      top.position.set(x, h + 0.015, z)
-      scene.add(top)
-      const base = new THREE.Mesh(new THREE.BoxGeometry(w + 0.02, 0.06, d + 0.02), frameMaterial)
-      base.position.set(x, 0.03, z)
-      base.castShadow = true
-      scene.add(base)
+    const shadowed = (mesh: THREE.Mesh) => {
+      mesh.castShadow = true
+      mesh.receiveShadow = true
+      return mesh
     }
 
-    const rooms: Room[] = []
-    for (const r of layout(departments)) {
-      const w = r.x1 - r.x0
-      const d = r.z1 - r.z0
-      const tone = toneColor(r.dept.tone)
-      const tileColor = colors.card.clone().lerp(tone, r.dept.tone === 'advisory' ? 0.06 : 0.1)
-      const tile = new THREE.Mesh(
-        new THREE.PlaneGeometry(w, d),
-        new THREE.MeshPhysicalMaterial({ color: tileColor, roughness: 0.35, clearcoat: 0.7, clearcoatRoughness: 0.25, emissive: tone.clone(), emissiveIntensity: 0 }),
-      )
-      tile.rotation.x = -Math.PI / 2
-      tile.position.set(r.centre.x, 0.003, r.centre.z)
-      tile.receiveShadow = true
-      scene.add(tile)
+    /** A desk with a monitor and a chair; the person sits facing `facing` along z. */
+    const desk = (x: number, z: number, facing: 1 | -1, material: THREE.Material) => {
+      const top = shadowed(new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.05, 0.55), deskTop))
+      top.position.set(x, 0.72, z)
+      scene.add(top)
+      for (const dx of [-0.48, 0.48]) {
+        const legMesh = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.7, 0.5), deskLeg)
+        legMesh.position.set(x + dx, 0.35, z)
+        scene.add(legMesh)
+      }
+      const screen = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.26, 0.025), screenMaterial)
+      screen.position.set(x, 0.92, z + facing * 0.16)
+      scene.add(screen)
+      const stand = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.14, 0.05), deskLeg)
+      stand.position.set(x, 0.79, z + facing * 0.16)
+      scene.add(stand)
+      // The chair, on the near side of the desk.
+      const cz = z - facing * 0.62
+      const seat = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.06, 24), chairMaterial))
+      seat.position.set(x, 0.45, cz)
+      scene.add(seat)
+      const back = shadowed(new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.42, 0.05), chairMaterial))
+      back.position.set(x, 0.72, cz - facing * 0.2)
+      scene.add(back)
+      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.42, 12), deskLeg)
+      post.position.set(x, 0.22, cz)
+      scene.add(post)
+      // The person.
+      const body = shadowed(new THREE.Mesh(new THREE.CapsuleGeometry(0.17, 0.3, 6, 18), material))
+      body.position.set(x, 0.76, cz + facing * 0.02)
+      scene.add(body)
+      const head = shadowed(new THREE.Mesh(new THREE.SphereGeometry(0.135, 20, 20), material))
+      head.position.set(x, 1.16, cz + facing * 0.02)
+      scene.add(head)
+    }
 
-      // Three glass walls and a door-side wall with an opening onto the corridor.
-      const doorSide = r.dept.wing === 'north' ? r.z1 : r.z0
-      const backSide = r.dept.wing === 'north' ? r.z0 : r.z1
-      wall(r.centre.x, backSide, w, WALL_T)
-      wall(r.x0, r.centre.z, WALL_T, d)
-      wall(r.x1, r.centre.z, WALL_T, d)
-      const doorW = Math.min(0.9, w * 0.35)
-      const sideW = (w - doorW) / 2
-      wall(r.x0 + sideW / 2, doorSide, sideW, WALL_T)
-      wall(r.x1 - sideW / 2, doorSide, sideW, WALL_T)
+    const plant = (x: number, z: number, scale = 1) => {
+      const p = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(0.2 * scale, 0.16 * scale, 0.4 * scale, 16), pot))
+      p.position.set(x, 0.2 * scale, z)
+      scene.add(p)
+      for (let i = 0; i < 3; i++) {
+        const ball = shadowed(new THREE.Mesh(new THREE.SphereGeometry((0.22 + i * 0.04) * scale, 16, 16), leaf))
+        const a = (i / 3) * Math.PI * 2
+        ball.position.set(x + Math.cos(a) * 0.1 * scale, (0.62 + i * 0.12) * scale, z + Math.sin(a) * 0.1 * scale)
+        scene.add(ball)
+      }
+    }
 
-      // A skirting strip in the room's tone along the back wall: the door plate.
-      const plate = new THREE.Mesh(new THREE.BoxGeometry(Math.min(w * 0.6, 1.6), 0.02, 0.08), new THREE.MeshBasicMaterial({ color: tone }))
-      plate.position.set(r.centre.x, 0.012, doorSide + (r.dept.wing === 'north' ? 0.12 : -0.12))
-      scene.add(plate)
+    /* ---- clusters ---- */
+    const clusters: Cluster[] = []
+    for (const dept of departments) {
+      const tone = toneColor(dept.tone)
+      const rugMaterial = new THREE.MeshPhysicalMaterial({
+        color: colors.elevated.clone().lerp(tone, dept.tone === 'advisory' ? 0.1 : 0.18),
+        roughness: 0.85,
+        emissive: tone.clone(),
+        emissiveIntensity: 0,
+      })
+      const mat = new THREE.Mesh(rug(dept.w, dept.d), rugMaterial)
+      mat.position.set(dept.x, 0.006, dept.z)
+      mat.receiveShadow = true
+      scene.add(mat)
 
-      const label = document.createElement('div')
-      label.className =
-        'pointer-events-none absolute -translate-x-1/2 whitespace-nowrap text-center transition-opacity duration-200 [text-shadow:0_1px_3px_rgba(0,0,0,0.9)]'
-      // A room named after its one occupant does not repeat the name.
-      const solo = r.dept.occupants.length === 1 && r.dept.occupants[0].title === r.dept.title
-      const who = r.dept.occupants.length && !solo ? r.dept.occupants.map((o) => o.title).join(' · ') : r.dept.line
-      const model = r.dept.occupants[0]?.model ?? ''
-      label.innerHTML =
-        `<div class="text-[11px] font-semibold tracking-tight" style="color:${tone.getStyle()}">${r.dept.title}</div>` +
-        `<div class="text-[10px] text-muted-foreground">${who}</div>` +
-        (model ? `<div class="text-[9px] font-mono text-muted-foreground/80">${model}</div>` : '')
-      labelHost.appendChild(label)
+      const facing: 1 | -1 = dept.z < 0 ? 1 : -1 // toward the aisle
+      const centre = new THREE.Vector3(dept.x, 0, dept.z)
+      const cluster: Cluster = {
+        dept,
+        centre,
+        aisle: new THREE.Vector3(dept.x, 0, 0),
+        rugMaterial,
+        label: document.createElement('div'),
+        figures: [],
+        glow: 0,
+        glowColor: tone.clone(),
+      }
 
-      const room: Room = { ...r, tile, tileColor, label, figures: [], glow: 0, glowColor: tone.clone() }
+      if (dept.enclosed) {
+        // Glass on all four sides with a door gap toward the aisle.
+        const x0 = dept.x - dept.w / 2 - 0.25
+        const x1 = dept.x + dept.w / 2 + 0.25
+        const z0 = dept.z - dept.d / 2 - 0.25
+        const z1 = dept.z + dept.d / 2 + 0.25
+        const panel = (px: number, pz: number, w: number, d: number) => {
+          const g = new THREE.Mesh(new THREE.BoxGeometry(w, GLASS_H, d), glass)
+          g.position.set(px, GLASS_H / 2, pz)
+          scene.add(g)
+          const rail = new THREE.Mesh(new THREE.BoxGeometry(w + 0.02, 0.035, d + 0.02), frameMaterial)
+          rail.position.set(px, GLASS_H + 0.017, pz)
+          scene.add(rail)
+          const sill = new THREE.Mesh(new THREE.BoxGeometry(w + 0.02, 0.05, d + 0.02), frameMaterial)
+          sill.position.set(px, 0.025, pz)
+          scene.add(sill)
+        }
+        const w = x1 - x0
+        const d = z1 - z0
+        const doorZ = facing === 1 ? z1 : z0
+        const backZ = facing === 1 ? z0 : z1
+        panel((x0 + x1) / 2, backZ, w, 0.04)
+        panel(x0, (z0 + z1) / 2, 0.04, d)
+        panel(x1, (z0 + z1) / 2, 0.04, d)
+        const doorW = 1.0
+        const side = (w - doorW) / 2
+        panel(x0 + side / 2, doorZ, side, 0.04)
+        panel(x1 - side / 2, doorZ, side, 0.04)
+        for (const [px, pz] of [[x0, z0], [x1, z0], [x0, z1], [x1, z1]] as [number, number][]) {
+          const postMesh = new THREE.Mesh(new THREE.BoxGeometry(0.07, GLASS_H + 0.05, 0.07), frameMaterial)
+          postMesh.position.set(px, (GLASS_H + 0.05) / 2, pz)
+          scene.add(postMesh)
+        }
+        plant(x0 + 0.45, backZ + facing * 0.45, 1.1)
+      }
 
-      /* ---- furniture and people ---- */
-      const facing = r.dept.wing === 'north' ? 1 : -1 // +z looks toward the corridor from the north wing
-      const n = r.dept.occupants.length
+      const n = dept.occupants.length
       if (n > 0) {
-        const span = Math.min(w - 0.9, n * 1.15)
-        r.dept.occupants.forEach((occupant, i) => {
-          const x = n === 1 ? r.centre.x : r.centre.x - span / 2 + (span * i) / (n - 1)
-          const z = r.centre.z - facing * 0.25
-          const desk = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.05, 0.42), deskMaterial)
-          desk.position.set(x, 0.44, z + facing * 0.5)
-          desk.castShadow = true
-          desk.receiveShadow = true
-          scene.add(desk)
-          for (const dx of [-0.36, 0.36]) {
-            const leg = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.42, 0.36), frameMaterial)
-            leg.position.set(x + dx, 0.21, z + facing * 0.5)
-            scene.add(leg)
+        const material = () =>
+          new THREE.MeshPhysicalMaterial({ color: tone, metalness: 0.08, roughness: 0.32, clearcoat: 1, clearcoatRoughness: 0.12, emissive: tone.clone(), emissiveIntensity: 0 })
+        const seats: [number, number, 1 | -1][] = []
+        if (dept.arrange === 'grid' && n > 2) {
+          // Two rows facing each other across the rug.
+          const cols = Math.ceil(n / 2)
+          const spanX = (cols - 1) * 1.5
+          for (let i = 0; i < n; i++) {
+            const col = i % cols
+            const row = Math.floor(i / cols)
+            seats.push([dept.x - spanX / 2 + col * 1.5, dept.z + (row === 0 ? -0.55 : 0.55), row === 0 ? 1 : -1])
           }
-          const screen = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.22, 0.02), screenMaterial)
-          screen.position.set(x, 0.6, z + facing * 0.62)
-          scene.add(screen)
-          const material = new THREE.MeshPhysicalMaterial({
-            color: tone,
-            metalness: 0.08,
-            roughness: 0.3,
-            clearcoat: 1,
-            clearcoatRoughness: 0.12,
-            emissive: tone.clone(),
-            emissiveIntensity: 0,
-          })
-          const group = buildFigure(material)
-          group.position.set(x, 0, z)
-          scene.add(group)
-          room.figures.push({ occupant, group, material, position: group.position.clone(), glow: 0, glowColor: tone.clone() })
-        })
-      } else {
-        // Equipment for the rooms nobody sits in.
-        const cz = r.centre.z - facing * 0.3
-        if (r.dept.furniture === 'racks') {
-          for (let i = 0; i < 3; i++) {
-            const rack = new THREE.Mesh(new THREE.BoxGeometry(0.5, 1.0, 0.5), equipmentMaterial)
-            rack.position.set(r.centre.x - 0.75 + i * 0.75, 0.5, cz)
-            rack.castShadow = true
-            scene.add(rack)
-            for (let k = 0; k < 4; k++) {
-              const led = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.03, 0.02), ledMaterial)
-              led.position.set(rack.position.x - 0.15 + k * 0.1, 0.9, cz + facing * 0.26)
-              scene.add(led)
-            }
-          }
-        } else if (r.dept.furniture === 'engine') {
-          const core = new THREE.Mesh(new THREE.BoxGeometry(Math.min(1.9, w - 0.8), 0.7, 0.9), equipmentMaterial)
-          core.position.set(r.centre.x, 0.35, cz)
-          core.castShadow = true
-          scene.add(core)
-          const strip = new THREE.Mesh(new THREE.BoxGeometry(Math.min(1.7, w - 1.0), 0.05, 0.03), new THREE.MeshBasicMaterial({ color: colors.primary }))
-          strip.position.set(r.centre.x, 0.5, cz + facing * 0.46)
-          scene.add(strip)
         } else {
-          for (let i = 0; i < 2; i++) {
-            const shelf = new THREE.Mesh(new THREE.BoxGeometry(Math.min(2.2, w - 0.7), 1.05, 0.3), equipmentMaterial)
-            shelf.position.set(r.centre.x, 0.525, r.centre.z - facing * (0.9 - i * 1.1))
-            shelf.castShadow = true
-            scene.add(shelf)
-            for (let k = 0; k < 3; k++) {
-              const board = new THREE.Mesh(new THREE.BoxGeometry(Math.min(2.0, w - 0.9), 0.02, 0.26), frameMaterial)
-              board.position.set(r.centre.x, 0.25 + k * 0.3, shelf.position.z)
-              scene.add(board)
+          const span = (n - 1) * 1.5
+          for (let i = 0; i < n; i++) seats.push([dept.x - span / 2 + i * 1.5, dept.z, facing])
+        }
+        for (const [x, z, f] of seats) {
+          const m = material()
+          desk(x, z, f, m)
+          cluster.figures.push({ material: m, glow: 0, glowColor: tone.clone() })
+        }
+      } else if (dept.furniture === 'racks') {
+        for (let i = 0; i < 3; i++) {
+          const rack = shadowed(new THREE.Mesh(new THREE.BoxGeometry(0.55, 1.25, 0.55), equipment))
+          rack.position.set(dept.x - 0.8 + i * 0.8, 0.625, dept.z - facing * 0.2)
+          scene.add(rack)
+          for (let k = 0; k < 5; k++) {
+            const dot = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.03, 0.02), led)
+            dot.position.set(rack.position.x - 0.18 + k * 0.09, 1.05 - (k % 2) * 0.12, rack.position.z + facing * 0.285)
+            scene.add(dot)
+          }
+        }
+      } else if (dept.furniture === 'engine') {
+        const core = shadowed(new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.85, 1.0), equipment))
+        core.position.set(dept.x, 0.425, dept.z - facing * 0.15)
+        scene.add(core)
+        const strip = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.05, 0.03), new THREE.MeshBasicMaterial({ color: colors.primary }))
+        strip.position.set(dept.x, 0.62, core.position.z + facing * 0.515)
+        scene.add(strip)
+        const vent = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.02, 0.6), frameMaterial)
+        vent.position.set(dept.x, 0.86, core.position.z)
+        scene.add(vent)
+      } else if (dept.furniture === 'shelves') {
+        for (let i = 0; i < 2; i++) {
+          const zz = dept.z - facing * (0.75 - i * 1.3)
+          // An open shelf unit: two uprights and a back, the boards between.
+          for (const sx of [-1, 1]) {
+            const upright = shadowed(new THREE.Mesh(new THREE.BoxGeometry(0.05, 1.3, 0.34), equipment))
+            upright.position.set(dept.x + (sx * (dept.w - 0.8)) / 2, 0.65, zz)
+            scene.add(upright)
+          }
+          const back = new THREE.Mesh(new THREE.BoxGeometry(dept.w - 0.8, 1.3, 0.03), equipment)
+          back.position.set(dept.x, 0.65, zz - facing * 0.16)
+          scene.add(back)
+          for (let k = 0; k < 3; k++) {
+            const board = new THREE.Mesh(new THREE.BoxGeometry(dept.w - 0.9, 0.025, 0.3), frameMaterial)
+            board.position.set(dept.x, 0.3 + k * 0.38, zz)
+            scene.add(board)
+            // Files on the shelf, in the tones of the desks that made them.
+            for (let b = 0; b < 6; b++) {
+              const file = new THREE.Mesh(
+                new THREE.BoxGeometry(0.08, 0.26, 0.2),
+                new THREE.MeshPhysicalMaterial({ color: (b % 3 === 0 ? colors.caution : b % 3 === 1 ? colors.mint : colors.foreground).clone().lerp(colors.elevated, 0.55), roughness: 0.8 }),
+              )
+              file.position.set(dept.x - (dept.w - 1.3) / 2 + b * ((dept.w - 1.3) / 5), 0.45 + k * 0.38, zz)
+              scene.add(file)
             }
           }
         }
       }
-      rooms.push(room)
+
+      const label = cluster.label
+      label.className =
+        'pointer-events-none absolute -translate-x-1/2 whitespace-nowrap text-center transition-opacity duration-200 [text-shadow:0_1px_3px_rgba(0,0,0,0.9)]'
+      const solo = n === 1 && dept.occupants[0].title === dept.title
+      const who = n && !solo ? dept.occupants.map((o) => o.title).join(' · ') : dept.line
+      const model = dept.occupants[0]?.model ?? ''
+      label.innerHTML =
+        `<div class="text-[11px] font-semibold tracking-tight" style="color:${tone.getStyle()}">${dept.title}</div>` +
+        `<div class="text-[10px] text-muted-foreground">${who}</div>` +
+        (model ? `<div class="text-[9px] font-mono text-muted-foreground/80">${model}</div>` : '')
+      labelHost.appendChild(label)
+      clusters.push(cluster)
     }
 
-    const byId = (id: string) => rooms.find((r) => r.dept.id === id)
-    const arbiterRoom = rooms.find((r) => r.dept.tone === 'arbiter')
-    const vetoRooms = rooms.filter((r) => r.dept.tone === 'veto')
-    const advisoryRooms = rooms.filter((r) => r.dept.tone === 'advisory')
+    // Plants along the edge, where an open plan keeps them.
+    plant(-FLOOR_W / 2 + 0.6, FLOOR_D / 2 - 0.6)
+    plant(FLOOR_W / 2 - 0.6, -FLOOR_D / 2 + 0.6)
+    plant(FLOOR_W / 2 - 0.6, FLOOR_D / 2 - 0.6, 0.85)
+    plant(2.6, -FLOOR_D / 2 + 0.5, 0.9)
+
+    const byId = (id: string) => clusters.find((c) => c.dept.id === id)
+    const arbiter = clusters.find((c) => c.dept.tone === 'arbiter')
+    const vetoes = clusters.filter((c) => c.dept.tone === 'veto')
+    const advisors = clusters.filter((c) => c.dept.tone === 'advisory')
     const archive = byId('archive')
     const lab = byId('lab')
     const engine = byId('engine')
 
-    /* ---- the file that walks the floor ---- */
+    /* ---- the file ---- */
     const glow = glowTexture()
     const fileGroup = new THREE.Group()
-    const fileMaterial = new THREE.MeshPhysicalMaterial({ color: colors.foreground, roughness: 0.4, emissive: colors.mint.clone(), emissiveIntensity: 0.25 })
-    const sheet = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.02, 0.4), fileMaterial)
-    sheet.castShadow = true
+    const fileMaterial = new THREE.MeshPhysicalMaterial({ color: colors.foreground, roughness: 0.4, emissive: colors.mint.clone(), emissiveIntensity: 0.3 })
+    const sheet = shadowed(new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.02, 0.4), fileMaterial))
     fileGroup.add(sheet)
     const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: glow, color: colors.mint, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false }))
-    halo.scale.setScalar(0.9)
+    halo.scale.setScalar(1.0)
     fileGroup.add(halo)
     fileGroup.visible = false
     scene.add(fileGroup)
 
-    /* ---- rings, arcs ---- */
+    /* ---- rings and arcs ---- */
     const rings: Ring[] = []
     const ringGeometry = new THREE.RingGeometry(0.3, 0.42, 48)
     const ring = (at: THREE.Vector3, color: THREE.Color, veto: boolean) => {
@@ -466,18 +511,18 @@ export function OfficeFloor({ departments, className }: Props) {
         new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }),
       )
       mesh.rotation.x = -Math.PI / 2
-      mesh.position.copy(at).setY(0.014)
+      mesh.position.copy(at).setY(0.02)
       scene.add(mesh)
-      rings.push({ mesh, age: 0, life: veto ? 2.8 : 1.1, reach: veto ? 1.3 : 2.4 })
+      rings.push({ mesh, age: 0, life: veto ? 2.8 : 1.1, reach: veto ? 1.4 : 2.6 })
     }
 
     const arcs: Arc[] = []
     const TAIL_POINTS = 22
-    const sendArc = (from: Room, to: Room, color: THREE.Color) => {
-      const start = from.centre.clone().setY(1.25)
-      const end = to.centre.clone().setY(1.25)
+    const sendArc = (from: Cluster, to: Cluster, color: THREE.Color) => {
+      const start = from.centre.clone().setY(1.4)
+      const end = to.centre.clone().setY(1.4)
       const mid = start.clone().lerp(end, 0.5)
-      mid.y += 1.0 + start.distanceTo(end) * 0.18
+      mid.y += 1.0 + start.distanceTo(end) * 0.16
       const curve = new THREE.QuadraticBezierCurve3(start, mid, end)
       const head = new THREE.Sprite(new THREE.SpriteMaterial({ map: glow, color, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }))
       head.scale.setScalar(0.45)
@@ -486,7 +531,7 @@ export function OfficeFloor({ departments, className }: Props) {
       tailGeometry.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(TAIL_POINTS * 3), 3))
       const tail = new THREE.Line(tailGeometry, new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.7, blending: THREE.AdditiveBlending, depthWrite: false }))
       scene.add(tail)
-      arcs.push({ curve, t: 0, duration: 0.9 + start.distanceTo(end) * 0.08, head, tail, to, color })
+      arcs.push({ curve, t: 0, duration: 0.9 + start.distanceTo(end) * 0.08, head, tail, to })
       from.glow = 1
       from.glowColor.copy(color)
       for (const f of from.figures) {
@@ -495,15 +540,14 @@ export function OfficeFloor({ departments, className }: Props) {
       }
     }
 
-    /* ---- the route ---- */
-    // Piecewise-linear path: room centre → its door → along the corridor →
-    // the next door → the next centre. The file walks it at constant speed.
-    const pathBetween = (a: Room, b: Room): THREE.Vector3[] => {
-      const y = 0.55
-      const corridorA = new THREE.Vector3(a.door.x, y, 0)
-      const corridorB = new THREE.Vector3(b.door.x, y, 0)
-      return [a.centre.clone().setY(y), a.door.clone().setY(y), corridorA, corridorB, b.door.clone().setY(y), b.centre.clone().setY(y)]
-    }
+    /* ---- the route: cluster → aisle → aisle → cluster ---- */
+    const Y = 0.95
+    const pathBetween = (a: Cluster, b: Cluster): THREE.Vector3[] => [
+      a.centre.clone().setY(Y),
+      a.aisle.clone().setY(Y),
+      b.aisle.clone().setY(Y),
+      b.centre.clone().setY(Y),
+    ]
 
     let route: Stop[] = []
     let stopIndex = 0
@@ -512,22 +556,21 @@ export function OfficeFloor({ departments, className }: Props) {
     let segmentLength = 0
     let dwell = 0
     let closed = false
-    const SPEED = 2.2
+    const SPEED = 2.4
 
-    const planRoute = () => {
-      if (!archive || !lab || !engine || !arbiterRoom) return []
-      const stops: Stop[] = [
-        { room: archive, dwell: 1.0, vetoChance: 0 },
-        { room: lab, dwell: 1.6, vetoChance: 0 },
-        { room: engine, dwell: 1.8, vetoChance: 0 },
-        ...vetoRooms.map((room) => ({ room, dwell: 1.5, vetoChance: 0.22 })),
-        { room: arbiterRoom, dwell: 2.2, vetoChance: 0 },
-        { room: archive, dwell: 1.2, vetoChance: 0 },
+    const planRoute = (): Stop[] => {
+      if (!archive || !lab || !engine || !arbiter) return []
+      return [
+        { cluster: archive, dwell: 1.0, vetoChance: 0 },
+        { cluster: lab, dwell: 1.6, vetoChance: 0 },
+        { cluster: engine, dwell: 1.8, vetoChance: 0 },
+        ...vetoes.map((cluster) => ({ cluster, dwell: 1.5, vetoChance: 0.22 })),
+        { cluster: arbiter, dwell: 2.4, vetoChance: 0 },
+        { cluster: archive, dwell: 1.2, vetoChance: 0 },
       ]
-      return stops
     }
 
-    const startSegment = (from: Room, to: Room) => {
+    const startSegment = (from: Cluster, to: Cluster) => {
       segment = pathBetween(from, to)
       segmentT = 0
       segmentLength = 0
@@ -540,46 +583,42 @@ export function OfficeFloor({ departments, className }: Props) {
       stopIndex = 0
       closed = false
       fileGroup.visible = true
-      fileGroup.position.copy(route[0].room.centre).setY(0.55)
+      fileGroup.position.copy(route[0].cluster.centre).setY(Y)
       halo.material.color.copy(colors.mint)
       fileMaterial.emissive.copy(colors.mint)
       dwell = route[0].dwell
       segment = []
     }
 
+    const timers: number[] = []
     const arrive = (stop: Stop) => {
-      const room = stop.room
-      const color = closed ? colors.caution : room.dept.tone === 'arbiter' ? colors.primary : colors.mint
-      room.glow = 1
-      room.glowColor.copy(color)
-      for (const f of room.figures) {
+      const c = stop.cluster
+      const color = closed ? colors.caution : c.dept.tone === 'arbiter' ? colors.primary : colors.mint
+      c.glow = 1
+      c.glowColor.copy(color)
+      for (const f of c.figures) {
         f.glow = 1
         f.glowColor.copy(color)
       }
-      ring(room.centre, color, false)
+      ring(c.centre, color, false)
       if (!closed && stop.vetoChance > 0 && Math.random() < stop.vetoChance) {
-        // Stamped. The file turns amber and goes back to the archive as closed.
+        // Stamped: the file turns amber and goes back to the archive, closed.
         closed = true
-        ring(room.centre, colors.caution, true)
-        room.glowColor.copy(colors.caution)
-        for (const f of room.figures) f.glowColor.copy(colors.caution)
+        ring(c.centre, colors.caution, true)
+        c.glowColor.copy(colors.caution)
+        for (const f of c.figures) f.glowColor.copy(colors.caution)
         halo.material.color.copy(colors.caution)
         fileMaterial.emissive.copy(colors.caution)
-        if (archive) route = [...route.slice(0, stopIndex + 1), { room: archive, dwell: 1.4, vetoChance: 0 }]
+        if (archive) route = [...route.slice(0, stopIndex + 1), { cluster: archive, dwell: 1.4, vetoChance: 0 }]
       }
-      if (room.dept.tone === 'arbiter') {
-        // Advisors send their notes while the file is on the desk.
-        advisoryRooms.forEach((adv, i) => {
-          timers.push(window.setTimeout(() => sendArc(adv, room, colors.mint), 250 + i * 320))
+      if (c.dept.tone === 'arbiter') {
+        advisors.forEach((adv, i) => {
+          timers.push(window.setTimeout(() => sendArc(adv, c, colors.mint), 250 + i * 320))
         })
-      }
-      if (room.dept.tone === 'arbiter' && !closed) {
-        ring(room.centre, colors.primary, false)
       }
     }
 
     const point = (t: number, out: THREE.Vector3) => {
-      // Position along the piecewise path at distance t·length.
       let remaining = t * segmentLength
       for (let i = 1; i < segment.length; i++) {
         const len = segment[i].distanceTo(segment[i - 1])
@@ -609,7 +648,6 @@ export function OfficeFloor({ departments, className }: Props) {
     let idle = 0.8
     const projected = new THREE.Vector3()
     const scratch = new THREE.Vector3()
-    const timers: number[] = []
 
     const render = () => {
       const dt = Math.min(clock.getDelta(), 0.05)
@@ -620,12 +658,10 @@ export function OfficeFloor({ departments, className }: Props) {
           idle -= dt
           if (idle <= 0) beginCycle()
         } else if (segment.length === 0) {
-          // Resting on a desk.
           dwell -= dt
           if (dwell <= 0) {
-            if (stopIndex + 1 < route.length) {
-              startSegment(route[stopIndex].room, route[stopIndex + 1].room)
-            } else {
+            if (stopIndex + 1 < route.length) startSegment(route[stopIndex].cluster, route[stopIndex + 1].cluster)
+            else {
               fileGroup.visible = false
               idle = 1.6
             }
@@ -635,7 +671,7 @@ export function OfficeFloor({ departments, className }: Props) {
           if (segmentT >= 1) {
             stopIndex += 1
             segment = []
-            fileGroup.position.copy(route[stopIndex].room.centre).setY(0.55)
+            fileGroup.position.copy(route[stopIndex].cluster.centre).setY(Y)
             dwell = route[stopIndex].dwell
             arrive(route[stopIndex])
           } else {
@@ -643,7 +679,7 @@ export function OfficeFloor({ departments, className }: Props) {
             fileGroup.position.copy(scratch)
           }
         }
-        fileGroup.position.y = 0.55 + Math.sin(now * 3) * 0.04
+        fileGroup.position.y = Y + Math.sin(now * 3) * 0.04
         sheet.rotation.y = now * 0.8
 
         for (let i = arcs.length - 1; i >= 0; i--) {
@@ -686,11 +722,11 @@ export function OfficeFloor({ departments, className }: Props) {
         }
       }
 
-      for (const room of rooms) {
-        room.glow = Math.max(0, room.glow - dt * 0.9)
-        room.tile.material.emissive.copy(room.glowColor)
-        room.tile.material.emissiveIntensity = room.glow * 0.22
-        for (const f of room.figures) {
+      for (const c of clusters) {
+        c.glow = Math.max(0, c.glow - dt * 0.9)
+        c.rugMaterial.emissive.copy(c.glowColor)
+        c.rugMaterial.emissiveIntensity = c.glow * 0.25
+        for (const f of c.figures) {
           f.glow = Math.max(0, f.glow - dt * 1.2)
           f.material.emissive.copy(f.glowColor)
           f.material.emissiveIntensity = f.glow * 0.8
@@ -701,13 +737,13 @@ export function OfficeFloor({ departments, className }: Props) {
       renderer.render(scene, camera)
 
       const { width, height } = renderer.domElement.getBoundingClientRect()
-      for (const room of rooms) {
-        projected.copy(room.centre)
-        projected.y = WALL_H + 0.55
+      for (const c of clusters) {
+        projected.copy(c.centre)
+        projected.y = c.dept.enclosed ? GLASS_H + 0.5 : 1.75
         projected.project(camera)
-        room.label.style.opacity = projected.z > 1 ? '0' : '1'
-        room.label.style.left = `${((projected.x + 1) / 2) * width}px`
-        room.label.style.top = `${((1 - projected.y) / 2) * height}px`
+        c.label.style.opacity = projected.z > 1 ? '0' : '1'
+        c.label.style.left = `${((projected.x + 1) / 2) * width}px`
+        c.label.style.top = `${((1 - projected.y) / 2) * height}px`
       }
       frame = requestAnimationFrame(render)
     }
@@ -729,7 +765,7 @@ export function OfficeFloor({ departments, className }: Props) {
       })
       ringGeometry.dispose()
       glow.dispose()
-      for (const room of rooms) room.label.remove()
+      for (const c of clusters) c.label.remove()
       renderer.dispose()
       renderer.domElement.remove()
     }
@@ -739,7 +775,7 @@ export function OfficeFloor({ departments, className }: Props) {
     <div
       className={className}
       role="img"
-      aria-label="The company as a floor plan: glass-walled rooms on both sides of a corridor. On the north side the arbiter's corner office, the advisory desks and the archive; on the south side the data room, the strategy lab, the engine room and the three veto rooms. A lit file walks the corridor from the archive through the lab and the engine, past each veto room — any of which can stamp it amber and send it back — to the arbiter's office and into the archive."
+      aria-label="The company as an open-plan floor: desks in clusters on either side of one aisle, and a single glass office in the corner for the arbiter. Data racks, the strategy desk, the engine bay and the three veto desks sit south of the aisle; the advisory desks and the archive shelves north of it. A lit file walks the aisle from the archive through the lab and the engine, past each veto desk — any of which can stamp it amber and send it back — into the glass office, and back to the archive."
     >
       <div ref={container} className="absolute inset-0 [&>canvas]:block [&>canvas]:h-full [&>canvas]:w-full" />
       <div ref={labels} className="pointer-events-none absolute inset-0" aria-hidden />
