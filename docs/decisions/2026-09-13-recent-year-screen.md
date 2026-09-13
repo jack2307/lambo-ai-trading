@@ -143,5 +143,72 @@ sign-inverted on the long window.
   registry with a stop and a target is distinguishable from noise on it.
 - It does not say the evening drift is a bot; risk's arithmetic on lots and
   spread stands until a sized, stopped version is tested.
-- The sessions and 5m context on the long window had not finished when this
-  was written; they are context, and the record will carry them when they land.
+- The long-window context for the sessions, 5m and gap batches is in the
+  addendum below; it is context, not a re-run of the criterion.
+
+## Addendum (later the same evening): the long-window context for the rest
+
+The same batches on `xauduka` 2022-06-16 → 2025-04-10, 200 seeds, the
+direction null on each method's defaults over the window
+(`recent-year-{sessions,sessions-5m,screen-5m,gap}/out-of-sample.txt` and
+`direction-*-oos.txt`). Every file ends "Nothing survived".
+
+Sessions, 15m (66,243 bars) — the best rows:
+
+```
+hypothesis                 trades  OOS PF  expect  null p50 null p95   pct
+orb/london                    330   1.001   0.003    0.876    1.061   86%
+bb-fade/london                766   0.981  -0.010    0.876    1.061   80%
+squeeze-break/london          161   0.961  -0.024    0.876    1.061   76%
+bb-fade/asia                  703   0.906  -0.053    0.863    1.088   68%
+```
+
+The Asian rows the year had nominated: `macd-cross/asia` direction 92nd
+(PF 0.908), `keltner-break/asia` 68th (0.883), `ema-cross/asia` 30th. The
+two Asian rows at the 95th or better on direction — `bb-fade/asia` 100th and
+`donchian-breakout/asia` 97th — have PF 0.85–0.86: the side is right and the
+exits lose it, which is the closed level-fade and breakout families saying
+what they said before.
+
+Mechanisms, 5m (198,716 bars) — the best rows:
+
+```
+hypothesis                 trades  OOS PF  expect  null p50 null p95   pct
+ict-sweep-mss-fvg/all         288   1.141   0.067    0.812    0.878  100%
+orb/ny                        117   1.050   0.021    0.828    0.946  100%
+orb/all                       117   1.050   0.021    0.812    0.878  100%
+ict-sweep-mss-fvg/ny          110   1.017   0.002    0.828    0.946   99%
+```
+
+`ict-sweep-mss-fvg/all` is 100th of its matched null and 95th on direction
+(p = 0.050) at PF 1.141 — under the gate, and a member of a family closed at
+`2026-09-13-ict-sweep-mss-fvg` with the same shape. `bb-fade` is 100th on direction
+in both sessions at PF 0.80–0.86. Nothing new.
+
+Gap, 5m (`recent-year-gap`): `gap-fade/reopen` 69 trades PF 0.350 (0th),
+`gap-fade/reopen-2atr` 33 trades PF 0.559 (10th); direction 48th and 26th.
+Closed on the long window as it was on the year.
+
+Sessions, 5m (`recent-year-sessions-5m`) — the best rows:
+
+```
+hypothesis                 trades  OOS PF  expect  null p50 null p95   pct  direction
+ict-sweep-mss-fvg/asia         81   1.251   0.139    0.790    0.892  100%   86th
+ict-sweep-mss-fvg/london      120   1.107   0.054    0.861    0.959  100%   89th
+orb/london                    119   1.010   0.004    0.861    0.959  100%   78th
+donchian-breakout/london     2985   0.874  -0.045    0.861    0.959   60%   84th
+```
+
+The runner's file prints `ict-sweep-mss-fvg/asia` as a survivor of the
+matched null — 81 trades, gate pass, 100th — and its direction null is the
+86th (p = 0.145): the side is not distinguishable from a coin flip, and the
+family is closed at `2026-09-13-ict-sweep-mss-fvg` on the same window. Context
+only; not a registration, not reopened. `rsi-reversion` is 98th–99th on
+direction in both sessions at PF 0.62–0.81, the same "right side, losing
+exits" shape as `bb-fade` above.
+
+Across the four context batches on 2022–25: no mechanism with a stop and a
+target passes the gate and both nulls in any session on either timeframe;
+the only rows at the 100th of the matched null are ICT sweeps at PF 1.14–1.25
+on 81–288 trades with direction at the 86th–95th, in a closed family. The
+long window agrees with the year.

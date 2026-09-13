@@ -1,0 +1,18 @@
+$ E:\rust\flowdesk\target\release\search.exe --market=xauduka --interval=5m --mode=null-dir --strategy=rsi-reversion --samples=1000 --filters=weekdays;flat:1630-1815;hours:1800-0200 --from=2022-06-16 --to=2025-04-10
+
+bounds:   --from=2022-06-16 --to=2025-04-10 kept 198716 of 560497 bars
+bars:     198716 from 2022-06-16 00:00 to 2025-04-09 23:55
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+  filters: MoTuWeThFr + flat 16:30-18:15 + NY 18:00-02:00
+== direction control: rsi-reversion, 1346 trades, 1000 coin-flip assignments ==
+  entries, stops and targets held fixed; only the side is randomised
+  profit factor of the same trades with random direction:
+    p05 0.478   p25 0.515   p50 0.541   p75 0.567   p95 0.605   max 0.660
+
+  actual: 0.624  ->  98th percentile  (p = 0.019)
+
+  Outside its own null. That is a finding worth taking further.
+

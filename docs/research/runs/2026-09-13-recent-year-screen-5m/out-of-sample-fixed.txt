@@ -1,0 +1,84 @@
+$ E:\rust\flowdesk\target\release\search.exe --market=xauduka --interval=5m --mode=hypotheses --fixed --batch-file=E:\rust\flowdesk\docs\hypotheses\2026-09-13-recent-year-screen-5m.toml --seeds=200 --from=2022-06-16 --to=2025-04-10
+
+bounds:   --from=2022-06-16 --to=2025-04-10 kept 198716 of 560497 bars
+bars:     198716 from 2022-06-16 00:00 to 2025-04-09 23:55
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+== hypotheses `E:\rust\flowdesk\docs\hypotheses\2026-09-13-recent-year-screen-5m.toml`: 34 declared, FIXED parameters over the whole window (no selection), each against 200 matched null runs ==
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+ema-cross/all ema-cross            3236   0.860  -0.121    0.758    0.844        0   99%  fail: profit factor 0.860 < 1.2; expectancy -0.121R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15  — the moving-average cross baseline, all day
+ema-cross/ny ema-cross            1171   0.880  -0.061    0.800    0.908        0   88%  fail: profit factor 0.880 < 1.2; expectancy -0.061R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 08:00-16:00  — the moving-average cross baseline, New York hours
+rsi-reversion/all rsi-reversion        4317   0.758  -0.140    0.760    0.829        0   48%  fail: profit factor 0.758 < 1.2; expectancy -0.140R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15  — the RSI reversion baseline, all day
+rsi-reversion/ny rsi-reversion        1571   0.823  -0.088    0.794    0.896        0   64%  fail: profit factor 0.823 < 1.2; expectancy -0.088R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 08:00-16:00  — the RSI reversion baseline, New York hours
+donchian-breakout/all donchian-breakout    8719   0.662  -0.125    0.767    0.834        0    4%  fail: profit factor 0.662 < 1.2; expectancy -0.125R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15  — the channel breakout baseline, all day
+donchian-breakout/ny donchian-breakout    3311   0.735  -0.101    0.803    0.881        0    7%  fail: profit factor 0.735 < 1.2; expectancy -0.101R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 08:00-16:00  — the channel breakout baseline, New York hours
+bb-fade/all  bb-fade             12331   0.797  -0.135    0.770    0.827        0   72%  fail: profit factor 0.797 < 1.2; expectancy -0.135R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15  — the Bollinger fade baseline, all day
+bb-fade/ny   bb-fade              4430   0.858  -0.083    0.808    0.881        0   88%  fail: profit factor 0.858 < 1.2; expectancy -0.083R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 08:00-16:00  — the Bollinger fade baseline, New York hours
+orb/all      orb                   154   1.054   0.028    0.760    0.959        0   99%  fail: profit factor 1.054 < 1.2; expectancy 0.028R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15  — the opening-range breakout, all day
+orb/ny       orb                   154   1.054   0.028    0.801    1.027        0   96%  fail: profit factor 1.054 < 1.2; expectancy 0.028R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 08:00-16:00  — the opening-range breakout, New York hours
+pdhl/all     pdhl                  698   0.664  -0.203    0.761    0.860        0    8%  fail: profit factor 0.664 < 1.2; expectancy -0.203R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15  — previous-day high and low, fade and break, all day
+pdhl/ny      pdhl                  237   0.690  -0.197    0.795    1.002        0   14%  fail: profit factor 0.690 < 1.2; expectancy -0.197R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 08:00-16:00  — previous-day high and low, fade and break, New York hours
+vwap-fade/all vwap-fade            6541   0.700  -0.222    0.759    0.835        0   12%  fail: profit factor 0.700 < 1.2; expectancy -0.222R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15  — a stretch from session VWAP fades, all day
+vwap-fade/ny vwap-fade            1954   0.760  -0.152    0.800    0.892        0   19%  fail: profit factor 0.760 < 1.2; expectancy -0.152R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 08:00-16:00  — a stretch from session VWAP fades, New York hours
+doji-reversal/all doji-reversal        1950   0.624  -0.256    0.756    0.830        0    0%  fail: profit factor 0.624 < 1.2; expectancy -0.256R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15  — a doji at the end of a move fades, all day
+doji-reversal/ny doji-reversal         658   0.623  -0.235    0.795    0.905        0    0%  fail: profit factor 0.623 < 1.2; expectancy -0.235R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 08:00-16:00  — a doji at the end of a move fades, New York hours
+trend-pullback/all trend-pullback       7360   0.440  -0.410    0.760    0.832        0    0%  fail: profit factor 0.440 < 1.2; expectancy -0.410R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15  — the first pullback in a slow trend continues it, all day
+trend-pullback/ny trend-pullback       2765   0.425  -0.412    0.804    0.878        0    0%  fail: profit factor 0.425 < 1.2; expectancy -0.412R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 08:00-16:00  — the first pullback in a slow trend continues it, New York hours
+gap-fade/all gap-fade                3   0.062  -0.649    0.780    1.044        0    0%  fail: only 3 trades (need 30); profit factor 0.062 < 1.2; expectancy -0.649R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15  — the reopen gap fills, all day
+gap-fade/ny  gap-fade                0     NaN     NaN    0.797    0.913       -0  NaN%  fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 08:00-16:00  — the reopen gap fills, New York hours
+volume-thrust/all volume-thrust           0     NaN     NaN    0.756    0.839       -0  NaN%  fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15  — a bar on unusual volume that closes at its extreme continues, all day
+volume-thrust/ny volume-thrust           0     NaN     NaN    0.797    0.913       -0  NaN%  fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 08:00-16:00  — a bar on unusual volume that closes at its extreme continues, New York hours
+ict-sweep-mss-fvg/all ict-sweep-mss-fvg     363   1.051   0.032    0.764    0.906        0  100%  fail: profit factor 1.051 < 1.2; expectancy 0.032R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15  — sweep, shift, gap: the ICT chain, all day
+ict-sweep-mss-fvg/ny ict-sweep-mss-fvg     148   1.028   0.016    0.796    1.020        0   96%  fail: profit factor 1.028 < 1.2; expectancy 0.016R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 08:00-16:00  — sweep, shift, gap: the ICT chain, New York hours
+keltner-break/all keltner-break        7451   0.694  -0.149    0.761    0.833        0   10%  fail: profit factor 0.694 < 1.2; expectancy -0.149R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15  — a close outside the Keltner channel continues, all day
+keltner-break/ny keltner-break        2690   0.709  -0.131    0.801    0.878        0    2%  fail: profit factor 0.709 < 1.2; expectancy -0.131R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 08:00-16:00  — a close outside the Keltner channel continues, New York hours
+macd-cross/all macd-cross           9723   0.760  -0.151    0.768    0.835        0   46%  fail: profit factor 0.760 < 1.2; expectancy -0.151R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15  — the MACD line crossing its signal, all day
+macd-cross/ny macd-cross           3455   0.837  -0.100    0.806    0.878        0   72%  fail: profit factor 0.837 < 1.2; expectancy -0.100R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 08:00-16:00  — the MACD line crossing its signal, New York hours
+rsi2-pullback/all rsi2-pullback        6783   0.764  -0.117    0.759    0.837        0   53%  fail: profit factor 0.764 < 1.2; expectancy -0.117R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15  — RSI(2) extremes with the SMA200 trend, all day
+rsi2-pullback/ny rsi2-pullback        2349   0.824  -0.077    0.802    0.887        0   70%  fail: profit factor 0.824 < 1.2; expectancy -0.077R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 08:00-16:00  — RSI(2) extremes with the SMA200 trend, New York hours
+squeeze-break/all squeeze-break        1587   0.688  -0.164    0.758    0.824        0    7%  fail: profit factor 0.688 < 1.2; expectancy -0.164R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15  — a Bollinger squeeze, then a close outside the bands, all day
+squeeze-break/ny squeeze-break         580   0.722  -0.157    0.792    0.911        0   10%  fail: profit factor 0.722 < 1.2; expectancy -0.157R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 08:00-16:00  — a Bollinger squeeze, then a close outside the bands, New York hours
+stoch-reversal/all stoch-reversal      12018   0.758  -0.146    0.770    0.831        0   38%  fail: profit factor 0.758 < 1.2; expectancy -0.146R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15  — stochastic crossing from an extreme, all day
+stoch-reversal/ny stoch-reversal       4174   0.827  -0.091    0.810    0.881        0   65%  fail: profit factor 0.827 < 1.2; expectancy -0.091R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 08:00-16:00  — stochastic crossing from an extreme, New York hours
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+

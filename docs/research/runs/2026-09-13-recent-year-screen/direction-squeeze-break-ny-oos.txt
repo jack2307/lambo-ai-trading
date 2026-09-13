@@ -1,4 +1,4 @@
-$ E:\rust\flowdesk\target\release\search.exe --market=xauduka --interval=15m --mode=null-dir --strategy=ict-sweep-mss-fvg --samples=1000 --filters=weekdays;flat:1630-1815;hours:0800-1600 --from=2022-06-16 --to=2025-04-10
+$ E:\rust\flowdesk\target\release\search.exe --market=xauduka --interval=15m --mode=null-dir --strategy=squeeze-break --samples=1000 --filters=weekdays;flat:1630-1815;hours:0800-1600 --from=2022-06-16 --to=2025-04-10
 
 bounds:   --from=2022-06-16 --to=2025-04-10 kept 66243 of 186856 bars
 bars:     66243 from 2022-06-16 00:00 to 2025-04-09 23:45
@@ -7,12 +7,12 @@ timeline: none — options strategies will be skipped
 tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
 
   filters: MoTuWeThFr + flat 16:30-18:15 + NY 08:00-16:00
-== direction control: ict-sweep-mss-fvg, 62 trades, 1000 coin-flip assignments ==
+== direction control: squeeze-break, 66 trades, 1000 coin-flip assignments ==
   entries, stops and targets held fixed; only the side is randomised
   profit factor of the same trades with random direction:
-    p05 0.514   p25 0.717   p50 0.929   p75 1.169   p95 1.577   max 2.488
+    p05 0.503   p25 0.653   p50 0.766   p75 0.881   p95 1.105   max 1.399
 
-  actual: 0.826  ->  37th percentile  (p = 0.629)
+  actual: 0.272  ->  0th percentile  (p = 1.000)
 
   Inside its own null. On this sample the direction rule has not been
   distinguished from a coin flip, however good the profit factor looks.

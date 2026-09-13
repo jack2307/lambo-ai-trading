@@ -1,0 +1,9 @@
+$ E:\rust\flowdesk\target\release\search.exe --market=xauduka --interval=15m --mode=null-dir --strategy=orb --samples=1000 --filters=weekdays;flat:1630-1815;hours:1800-0200 --from=2022-06-16 --to=2025-04-10
+
+bounds:   --from=2022-06-16 --to=2025-04-10 kept 66243 of 186856 bars
+bars:     66243 from 2022-06-16 00:00 to 2025-04-09 23:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+orb took no trades; there is nothing to compare
