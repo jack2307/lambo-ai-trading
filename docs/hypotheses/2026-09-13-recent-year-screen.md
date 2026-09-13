@@ -2,7 +2,7 @@
 
 **Registered:** (commit time is authoritative) — before any run
 **Status:** registered
-**Batch files:** `docs/hypotheses/2026-09-13-recent-year-screen.toml` (15m), `2026-09-13-recent-year-screen-5m.toml` (5m), `2026-09-13-recent-year-hours.toml` (hour-of-day holds)
+**Batch files:** `docs/hypotheses/2026-09-13-recent-year-screen.toml` (15m), `2026-09-13-recent-year-screen-5m.toml` (5m), `2026-09-13-recent-year-hours.toml` (hour-of-day holds), `2026-09-13-recent-year-sessions.toml` / `-5m` (each mechanism per session: Asia 18:00–02:00, London 03:00–11:00 New York; added at the owner's request after the first receipts), `2026-09-13-recent-year-gap.toml` (the gap rows, amended)
 
 ## The criterion changed, and by whom
 
@@ -41,8 +41,8 @@ A row that fails is closed for this program.
 
 ## Multiplicity
 
-This is a screen: about 36 rows on 15m, 36 on 5m, 24 hour-holds — nearly a
-hundred looks at one year. At the 95th percentile, five would pass by
+This is a screen: about 36 rows on 15m, 36 on 5m, 24 hour-holds, and 32
+session rows per timeframe — some 170 looks at one year. At the 95th percentile, five would pass by
 luck. The record will say how many passed and how many were expected by
 chance, and a candidate list shorter than that expectation is noise.
 

@@ -1,0 +1,235 @@
+# Session variants of the recent-year screen, added at the owner's request:
+# the same mechanisms, each gated to one session in New York time.
+[run]
+in_sample = "xauusd:15m"
+in_sample_from = "2025-09-13"
+in_sample_to = "2026-09-12"
+out_of_sample = "xauduka:15m"
+out_of_sample_from = "2022-06-16"
+out_of_sample_to = "2025-04-10"
+seeds = 200
+direction_samples = 1000
+
+[[hypothesis]]
+label = "ema-cross/asia"
+base = "ema-cross"
+filters = ["weekdays", "flat:1630-1815", "hours:1800-0200"]
+overrides = {}
+why = "the moving-average cross baseline, the Asian session, 18:00-02:00 New York"
+
+[[hypothesis]]
+label = "ema-cross/london"
+base = "ema-cross"
+filters = ["weekdays", "flat:1630-1815", "hours:0300-1100"]
+overrides = {}
+why = "the moving-average cross baseline, the London session, 03:00-11:00 New York"
+
+[[hypothesis]]
+label = "rsi-reversion/asia"
+base = "rsi-reversion"
+filters = ["weekdays", "flat:1630-1815", "hours:1800-0200"]
+overrides = {}
+why = "the RSI reversion baseline, the Asian session, 18:00-02:00 New York"
+
+[[hypothesis]]
+label = "rsi-reversion/london"
+base = "rsi-reversion"
+filters = ["weekdays", "flat:1630-1815", "hours:0300-1100"]
+overrides = {}
+why = "the RSI reversion baseline, the London session, 03:00-11:00 New York"
+
+[[hypothesis]]
+label = "donchian-breakout/asia"
+base = "donchian-breakout"
+filters = ["weekdays", "flat:1630-1815", "hours:1800-0200"]
+overrides = {}
+why = "the channel breakout baseline, the Asian session, 18:00-02:00 New York"
+
+[[hypothesis]]
+label = "donchian-breakout/london"
+base = "donchian-breakout"
+filters = ["weekdays", "flat:1630-1815", "hours:0300-1100"]
+overrides = {}
+why = "the channel breakout baseline, the London session, 03:00-11:00 New York"
+
+[[hypothesis]]
+label = "bb-fade/asia"
+base = "bb-fade"
+filters = ["weekdays", "flat:1630-1815", "hours:1800-0200"]
+overrides = {}
+why = "the Bollinger fade baseline, the Asian session, 18:00-02:00 New York"
+
+[[hypothesis]]
+label = "bb-fade/london"
+base = "bb-fade"
+filters = ["weekdays", "flat:1630-1815", "hours:0300-1100"]
+overrides = {}
+why = "the Bollinger fade baseline, the London session, 03:00-11:00 New York"
+
+[[hypothesis]]
+label = "orb/asia"
+base = "orb"
+filters = ["weekdays", "flat:1630-1815", "hours:1800-0200"]
+overrides = {}
+why = "the opening-range breakout, the Asian session, 18:00-02:00 New York"
+
+[[hypothesis]]
+label = "orb/london"
+base = "orb"
+filters = ["weekdays", "flat:1630-1815", "hours:0300-1100"]
+overrides = {}
+why = "the opening-range breakout, the London session, 03:00-11:00 New York"
+
+[[hypothesis]]
+label = "pdhl/asia"
+base = "pdhl"
+filters = ["weekdays", "flat:1630-1815", "hours:1800-0200"]
+overrides = {}
+why = "previous-day high and low, fade and break, the Asian session, 18:00-02:00 New York"
+
+[[hypothesis]]
+label = "pdhl/london"
+base = "pdhl"
+filters = ["weekdays", "flat:1630-1815", "hours:0300-1100"]
+overrides = {}
+why = "previous-day high and low, fade and break, the London session, 03:00-11:00 New York"
+
+[[hypothesis]]
+label = "vwap-fade/asia"
+base = "vwap-fade"
+filters = ["weekdays", "flat:1630-1815", "hours:1800-0200"]
+overrides = {}
+why = "a stretch from session VWAP fades, the Asian session, 18:00-02:00 New York"
+
+[[hypothesis]]
+label = "vwap-fade/london"
+base = "vwap-fade"
+filters = ["weekdays", "flat:1630-1815", "hours:0300-1100"]
+overrides = {}
+why = "a stretch from session VWAP fades, the London session, 03:00-11:00 New York"
+
+[[hypothesis]]
+label = "doji-reversal/asia"
+base = "doji-reversal"
+filters = ["weekdays", "flat:1630-1815", "hours:1800-0200"]
+overrides = {}
+why = "a doji at the end of a move fades, the Asian session, 18:00-02:00 New York"
+
+[[hypothesis]]
+label = "doji-reversal/london"
+base = "doji-reversal"
+filters = ["weekdays", "flat:1630-1815", "hours:0300-1100"]
+overrides = {}
+why = "a doji at the end of a move fades, the London session, 03:00-11:00 New York"
+
+[[hypothesis]]
+label = "trend-pullback/asia"
+base = "trend-pullback"
+filters = ["weekdays", "flat:1630-1815", "hours:1800-0200"]
+overrides = {}
+why = "the first pullback in a slow trend continues it, the Asian session, 18:00-02:00 New York"
+
+[[hypothesis]]
+label = "trend-pullback/london"
+base = "trend-pullback"
+filters = ["weekdays", "flat:1630-1815", "hours:0300-1100"]
+overrides = {}
+why = "the first pullback in a slow trend continues it, the London session, 03:00-11:00 New York"
+
+[[hypothesis]]
+label = "volume-thrust/asia"
+base = "volume-thrust"
+filters = ["weekdays", "flat:1630-1815", "hours:1800-0200"]
+overrides = {}
+why = "a bar on unusual volume that closes at its extreme continues, the Asian session, 18:00-02:00 New York"
+
+[[hypothesis]]
+label = "volume-thrust/london"
+base = "volume-thrust"
+filters = ["weekdays", "flat:1630-1815", "hours:0300-1100"]
+overrides = {}
+why = "a bar on unusual volume that closes at its extreme continues, the London session, 03:00-11:00 New York"
+
+[[hypothesis]]
+label = "ict-sweep-mss-fvg/asia"
+base = "ict-sweep-mss-fvg"
+filters = ["weekdays", "flat:1630-1815", "hours:1800-0200"]
+overrides = {}
+why = "sweep, shift, gap: the ICT chain, the Asian session, 18:00-02:00 New York"
+
+[[hypothesis]]
+label = "ict-sweep-mss-fvg/london"
+base = "ict-sweep-mss-fvg"
+filters = ["weekdays", "flat:1630-1815", "hours:0300-1100"]
+overrides = {}
+why = "sweep, shift, gap: the ICT chain, the London session, 03:00-11:00 New York"
+
+[[hypothesis]]
+label = "keltner-break/asia"
+base = "keltner-break"
+filters = ["weekdays", "flat:1630-1815", "hours:1800-0200"]
+overrides = {}
+why = "a close outside the Keltner channel continues, the Asian session, 18:00-02:00 New York"
+
+[[hypothesis]]
+label = "keltner-break/london"
+base = "keltner-break"
+filters = ["weekdays", "flat:1630-1815", "hours:0300-1100"]
+overrides = {}
+why = "a close outside the Keltner channel continues, the London session, 03:00-11:00 New York"
+
+[[hypothesis]]
+label = "macd-cross/asia"
+base = "macd-cross"
+filters = ["weekdays", "flat:1630-1815", "hours:1800-0200"]
+overrides = {}
+why = "the MACD line crossing its signal, the Asian session, 18:00-02:00 New York"
+
+[[hypothesis]]
+label = "macd-cross/london"
+base = "macd-cross"
+filters = ["weekdays", "flat:1630-1815", "hours:0300-1100"]
+overrides = {}
+why = "the MACD line crossing its signal, the London session, 03:00-11:00 New York"
+
+[[hypothesis]]
+label = "rsi2-pullback/asia"
+base = "rsi2-pullback"
+filters = ["weekdays", "flat:1630-1815", "hours:1800-0200"]
+overrides = {}
+why = "RSI(2) extremes with the SMA200 trend, the Asian session, 18:00-02:00 New York"
+
+[[hypothesis]]
+label = "rsi2-pullback/london"
+base = "rsi2-pullback"
+filters = ["weekdays", "flat:1630-1815", "hours:0300-1100"]
+overrides = {}
+why = "RSI(2) extremes with the SMA200 trend, the London session, 03:00-11:00 New York"
+
+[[hypothesis]]
+label = "squeeze-break/asia"
+base = "squeeze-break"
+filters = ["weekdays", "flat:1630-1815", "hours:1800-0200"]
+overrides = {}
+why = "a Bollinger squeeze, then a close outside the bands, the Asian session, 18:00-02:00 New York"
+
+[[hypothesis]]
+label = "squeeze-break/london"
+base = "squeeze-break"
+filters = ["weekdays", "flat:1630-1815", "hours:0300-1100"]
+overrides = {}
+why = "a Bollinger squeeze, then a close outside the bands, the London session, 03:00-11:00 New York"
+
+[[hypothesis]]
+label = "stoch-reversal/asia"
+base = "stoch-reversal"
+filters = ["weekdays", "flat:1630-1815", "hours:1800-0200"]
+overrides = {}
+why = "stochastic crossing from an extreme, the Asian session, 18:00-02:00 New York"
+
+[[hypothesis]]
+label = "stoch-reversal/london"
+base = "stoch-reversal"
+filters = ["weekdays", "flat:1630-1815", "hours:0300-1100"]
+overrides = {}
+why = "stochastic crossing from an extreme, the London session, 03:00-11:00 New York"
