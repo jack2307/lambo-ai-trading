@@ -2,7 +2,7 @@
 
 **Registered:** (commit time is authoritative) — before any run of this batch;
 the silver bars were fetched and converted first and no backtest has read them
-**Status:** in-sample run — the 20-day row survives the primary; confirmation running
+**Status:** confirmation run — nothing survives both windows; under review
 **Batch file:** `docs/hypotheses/2026-09-13-tsmom-silver.toml`
 
 ## Where this comes from
@@ -128,3 +128,25 @@ registration said it would have to be read: one of three draws. The 120-day
 row is not noise either — 0th percentile on both nulls, the sign of silver's
 trailing four months predicted the *opposite* of its next weeks on 2010–2018.
 The confirmation (2018-06-16 → 2026-05-31) is opened now, for all three rows.
+
+## Confirmation (2018-06-16 → 2026-05-31, `xagduka` 15m)
+
+Fixed replay (`out-of-sample-fixed.txt`) with the direction percentile from
+`direction-tsmom-*-oos.txt`:
+
+```
+hypothesis     trades  OOS PF  expect  null p50 null p95   pct  direction   verdict
+tsmom/20d         186   1.026   0.022    0.949    1.233   63%   62nd       fail: profit factor 1.026 < 1.2
+tsmom/60d          95   1.532   0.315    0.933    1.589   94%   72nd       gate pass, inside the noise
+tsmom/120d        104   0.933  -0.004    0.992    2.076   45%   49th       fail: profit factor 0.933 < 1.2
+```
+
+Walk-forward (`out-of-sample.txt`): 20d PF 1.02x, 60d 1.314 (82%), 120d
+1.248 (71%). "Nothing survived".
+
+The 20-day row that passed the primary is a coin flip on the confirmation
+(63rd, 62nd); the 60-day row that failed the primary passes the gate here
+and clears neither null; the 120-day row that was inverted on the primary is
+nothing here. No lookback passes both windows. Closed. With gold's
+`2026-09-13-tsmom-2`, the daily-rebalanced TSMOM on intraday bars is closed
+on two assets.
