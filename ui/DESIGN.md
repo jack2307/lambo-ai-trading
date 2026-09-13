@@ -149,7 +149,7 @@ in `src/components` fetches.
 
 ## 3D scenes
 
-One is allowed per screen, and only in overview mode. The board on the
+One is allowed per screen, and only in overview mode. The floor plan on the
 dashboard is the model; a second scene on the same page is decoration.
 
 - **It reads the tokens.** Every colour comes from `getComputedStyle` at mount
@@ -157,10 +157,11 @@ dashboard is the model; a second scene on the same page is decoration.
   `--border`). A scene with its own palette is a different product embedded in
   ours.
 - **It encodes something.** Position, height, colour and motion each carry a
-  meaning that is written down in the component's doc comment. On the board,
-  the rooks are the veto roles because a rook cannot be jumped, and the king
-  is the arbiter. A scene where the layout is
-  arbitrary is a screensaver.
+  meaning that is written down in the component's doc comment. On the floor,
+  the rooms are the loop's steps in the order a file walks them, the three
+  veto rooms stand between the engine and the arbiter's office because that
+  is where a veto sits, and an amber stamp sends the file back. A scene where
+  the layout is arbitrary is a screensaver.
 - **Everything in it is also in text.** A legend panel beside the scene states
   what the scene shows. Nothing may be *only* visual; a reader with the canvas
   disabled loses nothing they need.

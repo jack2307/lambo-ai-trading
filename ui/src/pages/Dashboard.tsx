@@ -25,7 +25,7 @@ import {
   RailRow,
   SectionHeader,
 } from '@/components/dashboard/primitives'
-import type { Piece } from '@/components/dashboard/ChessBoard'
+import type { Department } from '@/components/dashboard/OfficeFloor'
 import { ResearchPanel } from '@/components/dashboard/ResearchPanel'
 import { Skeleton } from '@/components/ui/skeleton'
 import { api, type BarsResponse, type Catalog, type LeaderboardRow, type OptionsFrame, type Research } from '@/lib/api'
@@ -70,22 +70,34 @@ const TEAM = [
   { id: 'historian', title: 'Historian', role: 'Advisory', model: MODELS.sonnet, line: 'Has this been tried, and what did it cost last time?' },
 ] as const
 
-/** The board: the arbiter plus the team, each a piece its rules fit. */
-const PIECES: Piece[] = [
-  { id: 'arbiter', title: 'Arbiter', role: 'arbiter', model: SESSION_MODEL.name },
-  ...TEAM.map((agent) => ({
-    id: agent.id,
-    title: agent.title,
-    role: agent.role === 'Veto' ? ('veto' as const) : ('advisory' as const),
-    model: agent.model.name,
-  })),
+/**
+ * The floor: one room per department, laid out as the research loop walks
+ * it. North wing: the arbiter's corner office, the advisory desks, the
+ * archive. South wing: the data room, the strategy lab, the engine room and
+ * the three veto rooms in a row. A file leaves the archive and comes back to
+ * it, as a record or as closed.
+ */
+const seat = (id: (typeof TEAM)[number]['id']) => {
+  const agent = TEAM.find((a) => a.id === id)!
+  return { id: agent.id, title: agent.title, model: agent.model.name }
+}
+const DEPARTMENTS: Department[] = [
+  { id: 'arbiter', title: "Arbiter's office", line: 'Reads the receipts and the vetoes; decides last.', tone: 'arbiter', wing: 'north', width: 2.4, occupants: [{ id: 'arbiter', title: 'Arbiter', model: SESSION_MODEL.name }] },
+  { id: 'advisory', title: 'Advisory', line: 'Notes to the arbiter; none of them can stop anything alone.', tone: 'advisory', wing: 'north', width: 5.2, occupants: [seat('researcher'), seat('execution-realist'), seat('portfolio'), seat('historian')] },
+  { id: 'archive', title: 'Archive', line: 'Hypotheses, run receipts, decisions, backlog.', tone: 'ops', wing: 'north', width: 2.4, occupants: [], furniture: 'shelves' },
+  { id: 'data', title: 'Data room', line: 'MT5 export, Dukascopy, Binance; the tape collectors.', tone: 'ops', wing: 'south', width: 2.0, occupants: [], furniture: 'racks' },
+  { id: 'lab', title: 'Strategy lab', line: 'Pre-registers, implements, tests for look-ahead.', tone: 'ops', wing: 'south', width: 2.0, occupants: [{ id: 'strategy-implementer', title: 'Implementer', model: MODELS.sonnet.name }] },
+  { id: 'engine', title: 'Engine room', line: 'Backtest, walk-forward, nulls; the search binary.', tone: 'ops', wing: 'south', width: 2.0, occupants: [], furniture: 'engine' },
+  { id: 'data-integrity', title: 'Data Integrity', line: 'Veto', tone: 'veto', wing: 'south', width: 1.35, occupants: [seat('data-integrity')] },
+  { id: 'adversary', title: 'Adversary', line: 'Veto', tone: 'veto', wing: 'south', width: 1.35, occupants: [seat('adversary')] },
+  { id: 'risk', title: 'Risk', line: 'Veto', tone: 'veto', wing: 'south', width: 1.35, occupants: [seat('risk')] },
 ]
 
 /**
  * Loaded on demand. three.js is half a megabyte, and the tape reader and the
  * workbench never draw a triangle — they should not pay for one.
  */
-const ChessBoard = lazy(() => import('@/components/dashboard/ChessBoard').then((m) => ({ default: m.ChessBoard })))
+const OfficeFloor = lazy(() => import('@/components/dashboard/OfficeFloor').then((m) => ({ default: m.OfficeFloor })))
 
 type Filter = 'all' | 'promising' | 'thin'
 
@@ -257,19 +269,19 @@ export function Dashboard({ catalog, market, onError }: Props) {
         />
       </section>
 
-      {/* ---- row two: the board ---- */}
+      {/* ---- row two: the floor ---- */}
       <section>
         <SectionHeader
-          title="The board"
-          subtitle="The review team's authority, as pieces whose rules already say it. Nothing reaches the king without passing a rook."
+          title="The floor"
+          subtitle="The company as a floor plan. A file leaves the archive, is written up in the lab, run in the engine room, and walks past three rooms that can each send it back before it reaches the arbiter's office."
         />
         <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
           <Panel className="relative min-h-[460px] overflow-hidden">
             <Suspense fallback={<Skeleton className="absolute inset-0 rounded-[inherit]" />}>
-              <ChessBoard pieces={PIECES} className="absolute inset-0" />
+              <OfficeFloor departments={DEPARTMENTS} className="absolute inset-0" />
             </Suspense>
-            {/* Which model each rank of the board runs on. The arbiter's is the
-                session's and is set by hand; the rest are read from the agent
+            {/* Which model each wing runs on. The arbiter's is the session's
+                and is set by hand; the rest are read from the agent
                 definitions. */}
             <div className="pointer-events-none absolute top-3 left-4 flex flex-wrap items-center gap-2 text-[11px]">
               <span className="bg-background/70 border-border rounded-full border px-2 py-0.5 backdrop-blur">
@@ -277,49 +289,59 @@ export function Dashboard({ catalog, market, onError }: Props) {
                 <span className="text-muted-foreground"> · {SESSION_MODEL.name}</span>
               </span>
               <span className="bg-background/70 border-border rounded-full border px-2 py-0.5 backdrop-blur">
-                <span className="text-caution font-medium">Veto ×3</span>
+                <span className="text-caution font-medium">Veto wing ×3</span>
                 <span className="text-muted-foreground"> · {MODELS.fable.name}</span>
               </span>
               <span className="bg-background/70 border-border rounded-full border px-2 py-0.5 backdrop-blur">
                 <span className="font-medium">Advisory ×4</span>
                 <span className="text-muted-foreground"> · {MODELS.sonnet.name}</span>
               </span>
+              <span className="bg-background/70 border-border rounded-full border px-2 py-0.5 backdrop-blur">
+                <span className="text-brand-mint font-medium">Operations</span>
+                <span className="text-muted-foreground"> · data, lab, engine, archive</span>
+              </span>
             </div>
             {/* The things the scene cannot say on its own. */}
             <div className="pointer-events-none absolute bottom-3 left-4 flex flex-wrap items-center gap-3 text-[11px]">
               <span className="flex items-center gap-1.5">
-                <span className="bg-primary size-2 rounded-full" aria-hidden /> king / arbiter
+                <span className="bg-brand-mint size-2 rounded-full" aria-hidden /> the file, in review
               </span>
               <span className="flex items-center gap-1.5">
-                <span className="bg-caution size-2 rounded-full" aria-hidden /> rooks / veto
+                <span className="bg-caution size-2 rounded-full" aria-hidden /> stamped: sent back, closed
               </span>
               <span className="flex items-center gap-1.5">
-                <span className="bg-foreground/70 size-2 rounded-full" aria-hidden /> bishops, knights / advisory
+                <span className="bg-primary size-2 rounded-full" aria-hidden /> on the arbiter's desk
               </span>
               <span className="text-muted-foreground">drag to orbit</span>
             </div>
           </Panel>
 
           <Panel className="p-4">
-            <Label className="mb-3">Who may say no</Label>
+            <Label className="mb-3">Departments</Label>
             <ul className="space-y-2.5">
-              {TEAM.map((agent) => (
-                <li key={agent.id} className="flex items-start gap-2.5">
-                  <Monogram seed={agent.id} label={agent.title} size={28} />
+              {DEPARTMENTS.map((dept) => (
+                <li key={dept.id} className="flex items-start gap-2.5">
+                  <Monogram seed={dept.id} label={dept.title} size={28} />
                   <span className="min-w-0 flex-1">
                     <span className="flex items-baseline gap-2">
-                      <span className="truncate text-[13px] font-medium">{agent.title}</span>
-                      <span className="text-muted-foreground shrink-0 font-mono text-[10px]">{agent.model.name}</span>
+                      <span className="truncate text-[13px] font-medium">{dept.title}</span>
+                      {dept.occupants[0] && (
+                        <span className="text-muted-foreground shrink-0 font-mono text-[10px]">{dept.occupants[0].model}</span>
+                      )}
                     </span>
-                    <span className="text-muted-foreground mt-0.5 block text-[11px] leading-snug">{agent.line}</span>
+                    <span className="text-muted-foreground mt-0.5 block text-[11px] leading-snug">
+                      {dept.occupants.length > 1 ? dept.occupants.map((o) => o.title).join(' · ') : dept.line}
+                    </span>
                   </span>
-                  <Pill tone={agent.role === 'Veto' ? 'caution' : 'neutral'}>{agent.role}</Pill>
+                  <Pill tone={dept.tone === 'veto' ? 'caution' : 'neutral'}>
+                    {dept.tone === 'veto' ? 'Veto' : dept.tone === 'arbiter' ? 'Decides' : dept.tone === 'advisory' ? 'Advisory' : 'Ops'}
+                  </Pill>
                 </li>
               ))}
             </ul>
             <p className="text-muted-foreground border-border mt-4 border-t pt-3 text-[11px] leading-relaxed">
-              A rook blocks a line alone. Above the pieces: the board. The rules of chess are not up for a
-              vote, and neither are the gates.
+              Three rooms in a row that each can send a file back; nothing reaches the corner office without
+              passing all of them, and the gates are not up for a vote in any of the rooms.
             </p>
           </Panel>
         </div>
