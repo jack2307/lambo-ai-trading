@@ -1,0 +1,17 @@
+[run]
+in_sample = "eurduka:15m"
+in_sample_from = "2010-06-01"
+in_sample_to = "2018-06-15"
+out_of_sample = "eurduka:15m"
+out_of_sample_from = "2018-06-16"
+out_of_sample_to = "2026-05-31"
+seeds = 300
+direction_samples = 1000
+fixed = true
+
+[[hypothesis]]
+label = "tsmom/60d"
+base = "tsmom"
+filters = ["weekdays", "hours:1615-1700"]
+overrides = { lookbackDays = 60, rebalanceHHMM = 1615, riskDailyRanges = 2, rangeDays = 20 }
+why = "one lookback, chosen before the run: the 60-day sign on a third asset that is not a metal, decided on the last bars before each weekday's close"
