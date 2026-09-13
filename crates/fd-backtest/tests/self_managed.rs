@@ -91,3 +91,17 @@ fn the_sizing_stop_still_sets_the_lots_and_the_r() {
     // The hold lost $40 on a $10 unit: −4R.
     assert!((trade.r + 4.0).abs() < 1e-6, "R {}", trade.r);
 }
+
+#[test]
+fn a_window_that_ends_mid_hold_flattens_the_book_at_the_boundary() {
+    // The range ends at bar 40 (`to` is inclusive); the strategy would only
+    // exit at bar 60. The hold must close at the open of the first bar past
+    // the range, bar 41, not at the end of data.
+    let range = Range { from: None, to: Some(40 * 15 * MINUTE) };
+    let result = run_backtest(&bars(), &SizedHold, &SizedHold.default_params(), &rules(), None, range);
+    assert_eq!(result.trades.len(), 1);
+    let trade = &result.trades[0];
+    assert_eq!(trade.exit_kind, ExitKind::EndOfData);
+    assert_eq!(trade.exit_time, 41 * 15 * MINUTE);
+    assert_eq!(trade.exit_price, 3960.0, "bar 41's open, no spread");
+}

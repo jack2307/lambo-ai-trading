@@ -331,6 +331,24 @@ pub fn run_backtest_guarded(
     for (i, bar) in bars.iter().enumerate() {
         let tradable = range.contains(bar.time);
 
+        // 0. The window has ended: the book is flat at this bar's open. The
+        // strategy is not consulted past the range, so without this a
+        // self-managed hold open at a fold's end ran to the end of the data
+        // (a 2021 short held to 2025, −27R, in the tsmom-2 pass).
+        if !tradable
+            && range.to.is_some_and(|to| bar.time >= to)
+            && let Some(open) = position.take()
+        {
+            pending = None;
+            let exit = apply_costs(bar.open, open.side, false, rules);
+            let entry_reason = open.reason.clone();
+            let trade = close_position(open, exit, bar.time, ExitKind::EndOfData, ExitKind::EndOfData.label(), rules, &entry_reason);
+            equity += trade.pnl_usd;
+            equity_curve.push((bar.time, round2(equity)));
+            guard_state.closed(trade.exit_time, trade.pnl_usd);
+            trades.push(trade);
+        }
+
         // 1. Fill whatever the previous bar decided, at this bar's open.
         if tradable && let Some(intent) = pending.take() {
             match intent {
