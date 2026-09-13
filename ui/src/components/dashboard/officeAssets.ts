@@ -53,7 +53,7 @@ export class ModelSet {
    * standing on y = 0, centred in x and z, casting and receiving shadows.
    * `null` when the model is not in the set.
    */
-  instance(name: string, fit: Fit): Instance | null {
+  instance(name: string, fit: Fit, tint?: THREE.Color): Instance | null {
     const source = this.loaded.get(name)
     if (!source) return null
     const model = source.skinned ? (cloneSkeleton(source.scene) as THREE.Group) : source.scene.clone(true)
@@ -62,6 +62,18 @@ export class ModelSet {
         o.castShadow = true
         o.receiveShadow = true
         o.frustumCulled = !source.skinned
+        if (tint) {
+          // A recoloured copy: flat colours take the tint, textures are multiplied by it.
+          const materials = Array.isArray(o.material) ? o.material : [o.material]
+          const recoloured = materials.map((m) => {
+            if (!(m instanceof THREE.MeshStandardMaterial)) return m
+            const c = m.clone()
+            if (c.map) c.color.copy(tint)
+            else c.color.copy(tint)
+            return c
+          })
+          o.material = Array.isArray(o.material) ? recoloured : recoloured[0]
+        }
       }
     })
     const box = new THREE.Box3().setFromObject(model)

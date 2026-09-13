@@ -132,7 +132,7 @@ const FLOOR_ZC = (FLOOR_Z0 + FLOOR_Z1) / 2
 const AISLE_Z = 4.3
 const AISLE_X0 = -11.4
 const AISLE_X1 = 11.4
-const GLASS_H = 1.35
+const GLASS_H = 2.6
 
 function token(name: string, fallback: string): string {
   if (typeof window === 'undefined') return fallback
@@ -273,7 +273,7 @@ export function OfficeFloor({ departments, animate, carModel, modelsBase = '/mod
     renderer.setClearColor(0x000000, 0)
     renderer.outputColorSpace = THREE.SRGBColorSpace
     renderer.toneMapping = THREE.ACESFilmicToneMapping
-    renderer.toneMappingExposure = 1.1
+    renderer.toneMappingExposure = 1.0
     renderer.shadowMap.enabled = !lite
     renderer.shadowMap.type = THREE.PCFSoftShadowMap
     host.appendChild(renderer.domElement)
@@ -311,7 +311,7 @@ export function OfficeFloor({ departments, animate, carModel, modelsBase = '/mod
 
     const pmrem = new THREE.PMREMGenerator(renderer)
     scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture
-    scene.environmentIntensity = 0.6
+    scene.environmentIntensity = 0.5
     pmrem.dispose()
 
     const camera = new THREE.PerspectiveCamera(28, 1, 0.1, 120)
@@ -335,7 +335,7 @@ export function OfficeFloor({ departments, animate, carModel, modelsBase = '/mod
 
     /* ---- light: a warm key as if from a window wall, a cool fill ---- */
     scene.add(new THREE.HemisphereLight(colors.foreground, colors.background, 0.45))
-    const key = new THREE.DirectionalLight(colors.foreground.clone().lerp(colors.caution, 0.18), 1.8)
+    const key = new THREE.DirectionalLight(colors.foreground.clone().lerp(colors.caution, 0.22), 1.7)
     key.position.set(-10, 15, 8)
     key.castShadow = true
     key.shadow.mapSize.set(2048, 2048)
@@ -353,7 +353,13 @@ export function OfficeFloor({ departments, animate, carModel, modelsBase = '/mod
     scene.add(fill)
 
     /* ---- floor: a warm timber field on a dark slab, with one aisle ---- */
-    const timber = colors.elevated.clone().lerp(colors.caution, 0.22).lerp(colors.foreground, 0.05)
+    // The interior: light oak underfoot, walnut on the walls, black steel
+    // frames, white lacquer on the desks, grey carpet under the clusters.
+    const timber = colors.caution.clone().lerp(colors.foreground, 0.5).lerp(colors.background, 0.14)
+    const walnut = colors.caution.clone().lerp(colors.background, 0.7)
+    const lacquer = colors.foreground.clone().lerp(colors.elevated, 0.06)
+    const carpet = colors.elevated.clone().lerp(colors.muted, 0.32)
+    const steelBlack = colors.background.clone().lerp(colors.foreground, 0.1)
     const slab = new THREE.Mesh(
       new THREE.BoxGeometry(FLOOR_W + 1.2, 0.22, FLOOR_D + 1.2),
       new THREE.MeshPhysicalMaterial({ color: colors.background, roughness: 0.5, clearcoat: 0.4, clearcoatRoughness: 0.4 }),
@@ -370,7 +376,7 @@ export function OfficeFloor({ departments, animate, carModel, modelsBase = '/mod
     floor.receiveShadow = true
     scene.add(floor)
     // Plank seams, so the field reads as timber and not paint.
-    const seam = new THREE.MeshBasicMaterial({ color: timber.clone().lerp(colors.background, 0.35) })
+    const seam = new THREE.MeshBasicMaterial({ color: timber.clone().lerp(colors.background, 0.28) })
     for (let z = FLOOR_Z0 + 0.6; z < FLOOR_Z1; z += 0.6) {
       const line = new THREE.Mesh(new THREE.PlaneGeometry(FLOOR_W, 0.012), seam)
       line.rotation.x = -Math.PI / 2
@@ -388,18 +394,18 @@ export function OfficeFloor({ departments, animate, carModel, modelsBase = '/mod
 
     /* ---- shared materials ---- */
     const glass = new THREE.MeshPhysicalMaterial({
-      color: colors.foreground.clone().lerp(colors.mint, 0.2),
+      color: colors.foreground.clone().lerp(colors.caution, 0.12),
       transparent: true,
-      opacity: 0.12,
+      opacity: 0.14,
       roughness: 0.05,
       clearcoat: 1,
       side: THREE.DoubleSide,
       depthWrite: false,
     })
-    const frameMaterial = new THREE.MeshPhysicalMaterial({ color: colors.border.clone().lerp(colors.foreground, 0.45), roughness: 0.3, metalness: 0.5 })
-    const deskTop = new THREE.MeshPhysicalMaterial({ color: colors.foreground.clone().lerp(colors.elevated, 0.55), roughness: 0.35, clearcoat: 0.7, clearcoatRoughness: 0.2 })
-    const deskLeg = new THREE.MeshPhysicalMaterial({ color: colors.background.clone().lerp(colors.foreground, 0.2), roughness: 0.4, metalness: 0.5 })
-    const chairMaterial = new THREE.MeshPhysicalMaterial({ color: colors.background.clone().lerp(colors.foreground, 0.16), roughness: 0.6 })
+    const frameMaterial = new THREE.MeshPhysicalMaterial({ color: steelBlack, roughness: 0.35, metalness: 0.6 })
+    const deskTop = new THREE.MeshPhysicalMaterial({ color: lacquer, roughness: 0.22, clearcoat: 1, clearcoatRoughness: 0.08 })
+    const deskLeg = new THREE.MeshPhysicalMaterial({ color: steelBlack, roughness: 0.4, metalness: 0.6 })
+    const chairMaterial = new THREE.MeshPhysicalMaterial({ color: colors.background.clone().lerp(colors.foreground, 0.1), roughness: 0.6 })
     const screenMaterial = new THREE.MeshPhysicalMaterial({ color: colors.background, roughness: 0.15, emissive: colors.mint.clone(), emissiveIntensity: 0.4 })
     const equipment = new THREE.MeshPhysicalMaterial({ color: colors.elevated.clone().lerp(colors.foreground, 0.14), roughness: 0.45, metalness: 0.35 })
     const glow = glowTexture()
@@ -563,8 +569,7 @@ export function OfficeFloor({ departments, animate, carModel, modelsBase = '/mod
 
     /** A chair at (x, z) whose back is on the −facing side. */
     const chair = (x: number, z: number, facing: 1 | -1) => {
-      if (place(photo('chairDesk', { height: 0.9 }), x, 0, z, facing === 1 ? 0 : Math.PI)) return
-      const model = models.instance('chairDesk', { height: 0.9 })
+      const model = models.instance('chairDesk', { height: 0.9 }, steelBlack.clone().lerp(colors.foreground, 0.06))
       if (model) {
         model.group.position.set(x, 0, z)
         model.group.rotation.y = (facing === 1 ? 0 : Math.PI) + KENNEY_YAW
@@ -584,86 +589,53 @@ export function OfficeFloor({ departments, animate, carModel, modelsBase = '/mod
 
     /** A desk with a monitor and a chair; the person sits facing `facing` along z. */
     const desk = (x: number, z: number, facing: 1 | -1, material: THREE.Material) => {
-      const realDesk = photo('desk', { width: 1.4 })
-      if (realDesk) {
+      {
+        // White lacquer top on slim black legs, a white pedestal on one side,
+        // a black monitor; the laptop, notepads and the bin are real when here.
         const yaw = facing === 1 ? 0 : Math.PI
-        place(realDesk, x, 0, z, yaw)
-        const top = realDesk.size.y
-        // A monitor stays a primitive (Poly Haven has none); the laptop, the
-        // notepads and the lamp are real.
-        const screen = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.28, 0.025), screenMaterial)
-        screen.position.set(x - 0.1, top + 0.24, z + facing * 0.16)
+        const top = 0.74
+        const tabletop = shadowed(new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.04, 0.72), deskTop))
+        tabletop.position.set(x, top - 0.02, z)
+        scene.add(tabletop)
+        const pedestal = shadowed(new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.62, 0.62), deskTop))
+        pedestal.position.set(x + 0.5, 0.31, z)
+        scene.add(pedestal)
+        for (let k = 0; k < 3; k++) {
+          const line = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.006, 0.01), deskLeg)
+          line.position.set(x + 0.5, 0.15 + k * 0.2, z - facing * 0.31)
+          scene.add(line)
+        }
+        for (const dz of [-0.3, 0.3]) {
+          const leg = new THREE.Mesh(new THREE.BoxGeometry(0.03, top - 0.04, 0.03), deskLeg)
+          leg.position.set(x - 0.7, (top - 0.04) / 2, z + dz)
+          scene.add(leg)
+        }
+        const beam = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.03, 0.62), deskLeg)
+        beam.position.set(x - 0.7, top - 0.06, z)
+        scene.add(beam)
+        const screen = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.3, 0.02), screenMaterial)
+        screen.position.set(x - 0.1, top + 0.27, z + facing * 0.18)
         scene.add(screen)
-        const stand = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.12, 0.05), deskLeg)
-        stand.position.set(x - 0.1, top + 0.06, z + facing * 0.16)
+        const bezel = new THREE.Mesh(new THREE.BoxGeometry(0.54, 0.34, 0.015), deskLeg)
+        bezel.position.set(x - 0.1, top + 0.27, z + facing * 0.19)
+        scene.add(bezel)
+        const stand = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.14, 0.04), deskLeg)
+        stand.position.set(x - 0.1, top + 0.07, z + facing * 0.18)
         scene.add(stand)
-        place(photo('laptop', { width: 0.34 }), x + 0.35, top, z + facing * 0.02, yaw)
-        place(photo('notepads', { width: 0.22 }), x - 0.45, top, z - facing * 0.05, yaw + 0.3)
-        place(photo('trashcan', { height: 0.34 }), x - 0.85, 0, z - facing * 0.15)
-        const cz = z - facing * 0.7
-        chair(x, cz, facing)
-        person(x, cz, facing === 1 ? 0 : Math.PI, material, { kind: 'seated', seat: 0.46, armsOnDesk: true })
+        const foot = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.012, 0.16), deskLeg)
+        foot.position.set(x - 0.1, top + 0.006, z + facing * 0.18)
+        scene.add(foot)
+        place(photo('laptop', { width: 0.32 }), x + 0.42, top, z + facing * 0.05, yaw)
+        place(photo('notepads', { width: 0.2 }), x - 0.5, top, z - facing * 0.1, yaw + 0.3)
+        const keyboard = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.014, 0.12), deskLeg)
+        keyboard.position.set(x - 0.1, top + 0.007, z - facing * 0.1)
+        scene.add(keyboard)
+        place(photo('trashcan', { height: 0.32 }), x - 0.95, 0, z - facing * 0.2)
+        const cz = z - facing * 0.72
+        chair(x - 0.1, cz, facing)
+        person(x - 0.1, cz, facing === 1 ? 0 : Math.PI, material, { kind: 'seated', seat: 0.46, armsOnDesk: true })
         return
       }
-      const model = models.instance('desk', { width: 1.3 })
-      if (model) {
-        const yaw = (facing === 1 ? 0 : Math.PI) + KENNEY_YAW
-        model.group.position.set(x, 0, z)
-        model.group.rotation.y = yaw
-        scene.add(model.group)
-        const top = model.size.y
-        const put = (name: string, fit: Parameters<ModelSet['instance']>[1], px: number, pz: number) => {
-          const inst = models.instance(name, fit)
-          if (!inst) return
-          inst.group.position.set(px, top, pz)
-          inst.group.rotation.y = yaw
-          scene.add(inst.group)
-        }
-        put('computerScreen', { height: 0.42 }, x, z + facing * 0.14)
-        put('computerKeyboard', { width: 0.42 }, x - 0.04, z - facing * 0.1)
-        put('computerMouse', { width: 0.07 }, x + 0.3, z - facing * 0.1)
-        const mug = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.03, 0.08, 12), paper)
-        mug.position.set(x + 0.48, top + 0.04, z + facing * 0.1)
-        scene.add(mug)
-        const bin = models.instance('trashcan', { height: 0.32 })
-        if (bin) {
-          bin.group.position.set(x - 0.78, 0, z - facing * 0.2)
-          scene.add(bin.group)
-        }
-        const cz = z - facing * 0.66
-        chair(x, cz, facing)
-        person(x, cz, facing === 1 ? 0 : Math.PI, material, { kind: 'seated', seat: 0.47, armsOnDesk: true })
-        return
-      }
-      const top = shadowed(new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.05, 0.55), deskTop))
-      top.position.set(x, 0.72, z)
-      scene.add(top)
-      for (const dx of [-0.48, 0.48]) {
-        const legMesh = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.7, 0.5), deskLeg)
-        legMesh.position.set(x + dx, 0.35, z)
-        scene.add(legMesh)
-      }
-      const screen = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.26, 0.025), screenMaterial)
-      screen.position.set(x, 0.92, z + facing * 0.16)
-      scene.add(screen)
-      const stand = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.14, 0.05), deskLeg)
-      stand.position.set(x, 0.79, z + facing * 0.16)
-      scene.add(stand)
-      // Keyboard, mouse, a mug.
-      const keyboard = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.015, 0.12), deskLeg)
-      keyboard.position.set(x - 0.05, 0.755, z - facing * 0.08)
-      scene.add(keyboard)
-      const mouse = new THREE.Mesh(new THREE.CapsuleGeometry(0.025, 0.04, 4, 8), deskLeg)
-      mouse.position.set(x + 0.25, 0.765, z - facing * 0.08)
-      mouse.rotation.x = Math.PI / 2
-      scene.add(mouse)
-      const mug = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.03, 0.08, 12), paper)
-      mug.position.set(x + 0.42, 0.785, z + facing * 0.1)
-      scene.add(mug)
-      // The chair on the near side of the desk, and the person in it.
-      const cz = z - facing * 0.62
-      chair(x, cz, facing)
-      person(x, cz, facing === 1 ? 0 : Math.PI, material, { kind: 'seated', seat: 0.48, armsOnDesk: true })
     }
 
     /**
@@ -1044,7 +1016,8 @@ export function OfficeFloor({ departments, animate, carModel, modelsBase = '/mod
        yet: they are the surfaces the floor will decorate. Behind everything
        from where the camera looks, and casting no shadow so the west light
        still reaches the desks. */
-    const wallPaint = new THREE.MeshPhysicalMaterial({ color: colors.elevated.clone().lerp(colors.foreground, 0.14), roughness: 0.92 })
+    const wallPaint = new THREE.MeshPhysicalMaterial({ color: walnut, roughness: 0.6, clearcoat: 0.3, clearcoatRoughness: 0.4 })
+    const wallJoint = new THREE.MeshBasicMaterial({ color: walnut.clone().lerp(colors.background, 0.45) })
     const skirtingMaterial = new THREE.MeshPhysicalMaterial({ color: colors.background.clone().lerp(colors.foreground, 0.1), roughness: 0.7 })
     const flatWall = (axis: 'x' | 'z', at: number, from: number, to: number) => {
       const H = 3.0
@@ -1063,17 +1036,41 @@ export function OfficeFloor({ departments, animate, carModel, modelsBase = '/mod
       put(new THREE.BoxGeometry(len, H, 0.22), wallPaint, H / 2)
       put(new THREE.BoxGeometry(len, 0.14, 0.26), skirtingMaterial, 0.07)
       put(new THREE.BoxGeometry(len, 0.1, 0.26), skirtingMaterial, H - 0.05)
+      // Panel joints every 60 cm, so the wall reads as veneer panels.
+      for (let p = from + 0.6; p < to; p += 0.6) {
+        const j = new THREE.Mesh(new THREE.BoxGeometry(0.012, H - 0.24, 0.24), wallJoint)
+        if (axis === 'x') j.position.set(p, H / 2, at)
+        else {
+          j.position.set(at, H / 2, p)
+        }
+        scene.add(j)
+      }
     }
     flatWall('x', FLOOR_Z0 - 0.12, -FLOOR_W / 2 - 0.12, FLOOR_W / 2 + 0.12)
     flatWall('z', -FLOOR_W / 2 - 0.12, FLOOR_Z0 - 0.12, FLOOR_Z1 + 0.12)
+
+    /* ---- linear lights: suspended LED bars in rows, as the ceiling would carry ---- */
+    // Seen from above they are thin lines of light, nothing more: no housing
+    // to cut across the view.
+    const ledBar = new THREE.MeshBasicMaterial({ color: colors.foreground.clone().lerp(colors.caution, 0.2) })
+    for (const rowZ of [FLOOR_Z0 + 2.4, AISLE_Z - 2.0, AISLE_Z + 2.2]) {
+      for (let bx = -FLOOR_W / 2 + 2.2; bx < FLOOR_W / 2 - 1.5; bx += 3.6) {
+        const bar = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.015, 0.04), ledBar)
+        bar.position.set(bx, 3.05, rowZ)
+        scene.add(bar)
+        const soft = haloFor(colors.foreground.clone().lerp(colors.caution, 0.3), 0.7)
+        soft.material.opacity = 0.12
+        soft.position.set(bx, 3.0, rowZ)
+      }
+    }
 
     /* ---- clusters ---- */
     const clusters: Cluster[] = []
     for (const dept of departments) {
       const tone = toneColor(dept.tone)
       const rugMaterial = new THREE.MeshPhysicalMaterial({
-        color: colors.elevated.clone().lerp(tone, dept.tone === 'advisory' ? 0.1 : 0.18),
-        roughness: 0.85,
+        color: carpet.clone().lerp(tone, 0.04),
+        roughness: 0.95,
         emissive: tone.clone(),
         emissiveIntensity: 0,
       })
@@ -1081,6 +1078,10 @@ export function OfficeFloor({ departments, animate, carModel, modelsBase = '/mod
       mat.position.set(dept.x, 0.006, dept.z)
       mat.receiveShadow = true
       scene.add(mat)
+      // The department's colour, as a thin line along the aisle edge of its carpet.
+      const accent = new THREE.Mesh(new THREE.BoxGeometry(dept.w - 0.5, 0.012, 0.06), new THREE.MeshBasicMaterial({ color: tone }))
+      accent.position.set(dept.x, 0.014, dept.z + (dept.z < AISLE_Z ? 1 : -1) * (dept.d / 2 - 0.1))
+      scene.add(accent)
       rugMeshes.push(mat)
 
       const facing: 1 | -1 = dept.z < AISLE_Z ? 1 : -1 // toward the aisle
@@ -1107,18 +1108,32 @@ export function OfficeFloor({ departments, animate, carModel, modelsBase = '/mod
           const g = new THREE.Mesh(new THREE.BoxGeometry(w, GLASS_H, d), glass)
           g.position.set(px, GLASS_H / 2, pz)
           scene.add(g)
-          const rail = new THREE.Mesh(new THREE.BoxGeometry(w + 0.02, 0.035, d + 0.02), frameMaterial)
-          rail.position.set(px, GLASS_H + 0.017, pz)
+          const rail = new THREE.Mesh(new THREE.BoxGeometry(w + 0.02, 0.05, d + 0.03), frameMaterial)
+          rail.position.set(px, GLASS_H + 0.025, pz)
           scene.add(rail)
-          const sill = new THREE.Mesh(new THREE.BoxGeometry(w + 0.02, 0.05, d + 0.02), frameMaterial)
-          sill.position.set(px, 0.025, pz)
+          const sill = new THREE.Mesh(new THREE.BoxGeometry(w + 0.02, 0.06, d + 0.03), frameMaterial)
+          sill.position.set(px, 0.03, pz)
           scene.add(sill)
+          // Slim black mullions every 90 cm.
+          const along = Math.max(w, d)
+          for (let m = 0.9; m < along - 0.3; m += 0.9) {
+            const mullion = new THREE.Mesh(new THREE.BoxGeometry(w > d ? 0.035 : d + 0.02, GLASS_H, w > d ? d + 0.02 : 0.035), frameMaterial)
+            if (w > d) mullion.position.set(px - w / 2 + m, GLASS_H / 2, pz)
+            else mullion.position.set(px, GLASS_H / 2, pz - d / 2 + m)
+            scene.add(mullion)
+          }
+        }
+        const woodWall = (px: number, pz: number, w: number, d: number) => {
+          const m = shadowed(new THREE.Mesh(new THREE.BoxGeometry(w, GLASS_H + 0.05, d), wallPaint))
+          m.position.set(px, (GLASS_H + 0.05) / 2, pz)
+          scene.add(m)
         }
         const w = x1 - x0
         const d = z1 - z0
         const doorZ = facing === 1 ? z1 : z0
         const backZ = facing === 1 ? z0 : z1
-        panel((x0 + x1) / 2, backZ, w, 0.04)
+        // Walnut on the back, glass on the other three sides.
+        woodWall((x0 + x1) / 2, backZ, w, 0.12)
         panel(x0, (z0 + z1) / 2, 0.04, d)
         panel(x1, (z0 + z1) / 2, 0.04, d)
         const doorW = 1.0
@@ -1126,7 +1141,7 @@ export function OfficeFloor({ departments, animate, carModel, modelsBase = '/mod
         panel(x0 + side / 2, doorZ, side, 0.04)
         panel(x1 - side / 2, doorZ, side, 0.04)
         for (const [px, pz] of [[x0, z0], [x1, z0], [x0, z1], [x1, z1]] as [number, number][]) {
-          const postMesh = new THREE.Mesh(new THREE.BoxGeometry(0.07, GLASS_H + 0.05, 0.07), frameMaterial)
+          const postMesh = new THREE.Mesh(new THREE.BoxGeometry(0.06, GLASS_H + 0.05, 0.06), frameMaterial)
           postMesh.position.set(px, (GLASS_H + 0.05) / 2, pz)
           scene.add(postMesh)
         }
