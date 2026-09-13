@@ -1,0 +1,17 @@
+$ E:\rust\flowdesk\target\release\search.exe --market=eurduka --interval=15m --mode=hypotheses --fixed --batch-file=E:\rust\flowdesk\docs\hypotheses\2026-09-14-tsmom-eurusd.toml --seeds=300 --from=2010-06-01 --to=2018-06-15
+
+bounds:   --from=2010-06-01 --to=2018-06-15 kept 200576 of 398220 bars
+bars:     200576 from 2010-06-01 00:00 to 2018-06-14 23:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+== hypotheses `E:\rust\flowdesk\docs\hypotheses\2026-09-14-tsmom-eurusd.toml`: 1 declared, FIXED parameters over the whole window (no selection), each against 300 matched null runs ==
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.00
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+tsmom/60d    tsmom                 108   1.809   0.284    0.998    1.445        0  100%  SURVIVES
+                                MoTuWeThFr + NY 16:15-17:00  — one lookback, chosen before the run: the 60-day sign on a third asset that is not a metal, decided on the last bars before each weekday's close
+
+Survivors: tsmom/60d/tsmom — worth a decision record and a direction null before anything else.
+

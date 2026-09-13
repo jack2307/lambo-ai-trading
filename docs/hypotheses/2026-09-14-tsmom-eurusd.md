@@ -2,7 +2,7 @@
 
 **Registered:** (commit time is authoritative) — before any run of this batch;
 the EURUSD bars were fetched and converted first and no backtest has read them
-**Status:** registered
+**Status:** in-sample run — passes the gate and the sized null, fails the direction null (85th); closed as registered, under review
 **Batch file:** `docs/hypotheses/2026-09-14-tsmom-eurusd.toml`
 
 ## Where this comes from
@@ -96,3 +96,22 @@ EURUSD.sc spread inside 16:15-17:00 NY (server 23:15-00:00), 2180 ticks over 3 d
 primary: 200576 bars, 2516 days; weekdays with a 16:15 NY bar 2088 of 2098; bars in the 17:xx NY hour 8365
 confirmation: 197548 bars, 2485 days; weekdays with a 16:15 NY bar 2056 of 2071; bars in the 17:xx NY hour 8187
 ```
+
+## In-sample (2010-06-01 → 2018-06-14, `eurduka` 15m)
+
+Fixed replay (`in-sample-fixed.txt`, 300 sized random holds with the
+method's own mean hold) and the direction null (`direction-tsmom-60d.txt`):
+
+```
+hypothesis     trades  OOS PF  expect  null p50 null p95   pct  direction   verdict
+tsmom/60d         108   1.809   0.284    0.998    1.445  100%   85th       fails the falsifier: direction 85th < 95th
+```
+
+Walk-forward (`in-sample.txt`): 88 trades PF 1.903, 0.349R, 99th of the
+sized null.
+
+The runner prints SURVIVES because it reads the gate and the sized null;
+the registration's falsifier has a third condition, the row's own sides
+permuted at the 95th, and the row sits at the 85th (p = 0.152). That is the
+condition gold's 60-day row failed (86th) and the one this registration was
+written to test. Closed on the primary; the confirmation is not opened.
