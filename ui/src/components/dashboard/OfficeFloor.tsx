@@ -1298,6 +1298,32 @@ export function OfficeFloor({ departments, animate, carModel, modelsBase = '/mod
         const sw = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.07, 0.4), rackUnit)
         sw.position.set(dept.x, 1.535, dept.z - front * 0.2)
         scene.add(sw)
+        // A guard at the door: stanchions with a rope across the front of the
+        // row, and someone standing beside them who never leaves the post.
+        const frontZ = dept.z + facing * (dept.d / 2 + 0.15)
+        const postTops: THREE.Vector3[] = []
+        for (const dx of [-1.1, 1.1]) {
+          const base = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 0.03, 20), frameMaterial)
+          base.position.set(dept.x + dx, 0.015, frontZ)
+          scene.add(base)
+          const post = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.95, 12), frameMaterial))
+          post.position.set(dept.x + dx, 0.5, frontZ)
+          scene.add(post)
+          const knob = new THREE.Mesh(new THREE.SphereGeometry(0.045, 12, 12), frameMaterial)
+          knob.position.set(dept.x + dx, 0.99, frontZ)
+          scene.add(knob)
+          postTops.push(new THREE.Vector3(dept.x + dx, 0.93, frontZ))
+        }
+        const sag = postTops[0].clone().lerp(postTops[1], 0.5)
+        sag.y -= 0.18
+        const rope = shadowed(new THREE.Mesh(new THREE.TubeGeometry(new THREE.QuadraticBezierCurve3(postTops[0], sag, postTops[1]), 16, 0.018, 8, false), new THREE.MeshPhysicalMaterial({ color: colors.caution.clone().lerp(colors.background, 0.3), roughness: 0.8 })))
+        scene.add(rope)
+        const guard = person(dept.x + 1.6, frontZ + facing * 0.1, facing === 1 ? 0 : Math.PI, new THREE.MeshPhysicalMaterial({ color: steelBlack, roughness: 0.7 }), { kind: 'standing' })
+        const post = agents.find((a) => a.group === guard)
+        if (post) {
+          post.restless = 0
+          post.dwell = Number.POSITIVE_INFINITY
+        }
         for (let k = 0; k < 8; k++) {
           const on = k % 4 === 3 ? colors.caution.clone() : colors.mint.clone()
           const material = new THREE.MeshBasicMaterial({ color: colors.background })
