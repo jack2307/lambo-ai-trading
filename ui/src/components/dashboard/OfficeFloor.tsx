@@ -64,11 +64,11 @@ interface Props {
   className?: string
 }
 
-const FLOOR_W = 25
-const FLOOR_D = 11.5
-/** The aisle runs from the reception at the west end to the east wall. */
-const AISLE_X0 = -8.6
-const AISLE_X1 = 12.0
+const FLOOR_W = 24
+/** Deep enough for two wings and the lobby along the south edge. */
+const FLOOR_D = 17
+const AISLE_X0 = -8.4
+const AISLE_X1 = 10.4
 const GLASS_H = 1.35
 
 function token(name: string, fallback: string): string {
@@ -217,7 +217,7 @@ export function OfficeFloor({ departments, animate, className }: Props) {
     pmrem.dispose()
 
     const camera = new THREE.PerspectiveCamera(28, 1, 0.1, 120)
-    camera.position.set(17.5, 20.5, 28.5)
+    camera.position.set(17, 21, 31)
 
     const controls = new OrbitControls(camera, renderer.domElement)
     controls.enableZoom = false
@@ -228,7 +228,7 @@ export function OfficeFloor({ departments, animate, className }: Props) {
     controls.autoRotateSpeed = 0.12
     controls.minPolarAngle = Math.PI * 0.2
     controls.maxPolarAngle = Math.PI * 0.36
-    controls.target.set(0.2, 0.2, 0.6)
+    controls.target.set(0, 0.2, 1.4)
 
     /* ---- light: a warm key as if from a window wall, a cool fill ---- */
     scene.add(new THREE.HemisphereLight(colors.foreground, colors.background, 0.45))
@@ -236,10 +236,10 @@ export function OfficeFloor({ departments, animate, className }: Props) {
     key.position.set(-10, 15, 8)
     key.castShadow = true
     key.shadow.mapSize.set(2048, 2048)
-    key.shadow.camera.left = -16
-    key.shadow.camera.right = 16
-    key.shadow.camera.top = 16
-    key.shadow.camera.bottom = -16
+    key.shadow.camera.left = -17
+    key.shadow.camera.right = 17
+    key.shadow.camera.top = 17
+    key.shadow.camera.bottom = -17
     key.shadow.camera.near = 1
     key.shadow.camera.far = 50
     key.shadow.bias = -0.0004
@@ -610,60 +610,76 @@ export function OfficeFloor({ departments, animate, className }: Props) {
         vent.position.set(dept.x, 0.86, core.position.z)
         scene.add(vent)
       } else if (dept.furniture === 'lounge') {
-        // Reception: a desk by the aisle, two sofas around a low table, and
-        // the show car on a slowly turning plinth under its own light.
+        // The lobby: the show car in the middle on a turning plinth under its
+        // own light, a sofa group either side round a low table, the counter
+        // at the west end facing the doors, plants where a lobby keeps them.
         const sofaMaterial = new THREE.MeshPhysicalMaterial({ color: colors.elevated.clone().lerp(colors.muted, 0.35), roughness: 0.85 })
         const sofa = (sx: number, sz: number, f: 1 | -1) => {
-          const seat = shadowed(new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.3, 0.6), sofaMaterial))
+          const seat = shadowed(new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.3, 0.6), sofaMaterial))
           seat.position.set(sx, 0.2, sz)
           scene.add(seat)
-          const back = shadowed(new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.35, 0.16), sofaMaterial))
+          const back = shadowed(new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.35, 0.16), sofaMaterial))
           back.position.set(sx, 0.5, sz - f * 0.24)
           scene.add(back)
           for (const ax of [-1, 1]) {
             const arm = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.2, 0.6), sofaMaterial)
-            arm.position.set(sx + ax * 0.7, 0.45, sz)
+            arm.position.set(sx + ax * 0.8, 0.45, sz)
             scene.add(arm)
           }
         }
-        const lx = dept.x
-        sofa(lx, dept.z - 1.6, 1)
-        sofa(lx, dept.z + 0.1, -1)
-        const table = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.05, 32), deskTop))
-        table.position.set(lx, 0.4, dept.z - 0.75)
-        scene.add(table)
-        const tableLeg = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.12, 0.38, 16), deskLeg)
-        tableLeg.position.set(lx, 0.19, dept.z - 0.75)
-        scene.add(tableLeg)
-        // Reception desk facing the aisle end.
-        const counter = shadowed(new THREE.Mesh(new THREE.BoxGeometry(0.5, 1.0, 2.0), deskTop))
-        counter.position.set(dept.x + dept.w / 2 - 0.45, 0.5, dept.z - 1.0)
+        const group = (gx: number) => {
+          sofa(gx, dept.z - 1.0, 1)
+          sofa(gx, dept.z + 1.0, -1)
+          const table = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.45, 0.05, 32), deskTop))
+          table.position.set(gx, 0.4, dept.z)
+          scene.add(table)
+          const tableLeg = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.12, 0.38, 16), deskLeg)
+          tableLeg.position.set(gx, 0.19, dept.z)
+          scene.add(tableLeg)
+        }
+        group(dept.x - dept.w * 0.22)
+        group(dept.x + dept.w * 0.22)
+        // The counter, facing the doors on the south side.
+        const counter = shadowed(new THREE.Mesh(new THREE.BoxGeometry(2.2, 1.0, 0.55), deskTop))
+        counter.position.set(dept.x - dept.w / 2 + 1.6, 0.5, dept.z + 0.3)
         scene.add(counter)
-        const counterTop = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.04, 2.1), frameMaterial)
+        const counterTop = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.04, 0.65), frameMaterial)
         counterTop.position.set(counter.position.x, 1.02, counter.position.z)
         scene.add(counterTop)
-        // The car.
-        const plinth = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(1.45, 1.5, 0.12, 48), frameMaterial))
-        plinth.position.set(lx, 0.06, dept.z + 2.0)
+        const counterScreen = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.22, 0.02), screenMaterial)
+        counterScreen.position.set(counter.position.x + 0.5, 1.16, counter.position.z - 0.1)
+        scene.add(counterScreen)
+        chair(counter.position.x, counter.position.z - 0.7, 1)
+        // The car, centre stage.
+        const plinth = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(1.55, 1.6, 0.12, 48), frameMaterial))
+        plinth.position.set(dept.x, 0.06, dept.z)
         scene.add(plinth)
-        const plinthTop = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.4, 0.02, 48), equipment)
-        plinthTop.position.set(lx, 0.13, dept.z + 2.0)
+        const plinthTop = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.5, 0.02, 48), equipment)
+        plinthTop.position.set(dept.x, 0.13, dept.z)
         scene.add(plinthTop)
         const car = raceCar()
-        car.position.set(lx, 0.14, dept.z + 2.0)
+        car.position.set(dept.x, 0.14, dept.z)
         car.rotation.y = 0.5
         scene.add(car)
         showCar = car
         const carLight = new THREE.SpotLight(colors.foreground, 4.5, 8, 0.5, 0.7, 1.2)
-        carLight.position.set(lx, 4.2, dept.z + 2.0)
+        carLight.position.set(dept.x, 4.2, dept.z)
         carLight.target = car
         carLight.castShadow = true
         carLight.shadow.mapSize.set(1024, 1024)
         scene.add(carLight)
         const carHalo = haloFor(colors.caution, 1.6)
         carHalo.material.opacity = 0.18
-        carHalo.position.set(lx, 0.5, dept.z + 2.0)
-        plant(dept.x - dept.w / 2 + 0.5, dept.z + dept.d / 2 - 0.5, 1.1)
+        carHalo.position.set(dept.x, 0.5, dept.z)
+        // A mat at the doors and plants at both ends.
+        const mat = new THREE.Mesh(rug(4.0, 0.7, 0.2), new THREE.MeshPhysicalMaterial({ color: colors.background.clone().lerp(colors.foreground, 0.12), roughness: 0.95 }))
+        mat.position.set(dept.x, 0.009, dept.z + dept.d / 2 - 0.45)
+        scene.add(mat)
+        plant(dept.x - dept.w / 2 + 0.5, dept.z - dept.d / 2 + 0.5, 1.1)
+        plant(dept.x + dept.w / 2 - 0.5, dept.z - dept.d / 2 + 0.5, 1.1)
+        plant(dept.x + dept.w / 2 - 0.5, dept.z + dept.d / 2 - 0.5, 0.9)
+        plant(dept.x - 2.6, dept.z + dept.d / 2 - 0.5, 0.8)
+        plant(dept.x + 2.6, dept.z + dept.d / 2 - 0.5, 0.8)
       } else if (dept.furniture === 'meeting') {
         // A long table, three chairs a side, a screen on the back glass.
         const tableW = dept.w - 1.2
@@ -728,9 +744,9 @@ export function OfficeFloor({ departments, animate, className }: Props) {
     }
 
     // Plants along the edge, where an open plan keeps them.
-    plant(FLOOR_W / 2 - 0.6, FLOOR_D / 2 - 0.6, 0.85)
-    plant(FLOOR_W / 2 - 2.2, FLOOR_D / 2 - 1.2, 1.1)
-    plant(FLOOR_W / 2 - 0.6, 1.2, 0.9)
+    plant(FLOOR_W / 2 - 0.6, -FLOOR_D / 2 + 0.6, 0.9)
+    plant(FLOOR_W / 2 - 0.6, 0.0, 0.9)
+    plant(FLOOR_W / 2 - 1.6, 3.2, 1.0)
     plant(2.6, -FLOOR_D / 2 + 0.5, 0.9)
 
     const byId = (id: string) => clusters.find((c) => c.dept.id === id)

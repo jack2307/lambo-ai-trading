@@ -82,21 +82,21 @@ const seat = (id: (typeof TEAM)[number]['id']) => {
   return { id: agent.id, title: agent.title, model: agent.model.name }
 }
 const DEPARTMENTS: Department[] = [
-  // The west end: reception, open to the aisle, the show car on its plinth.
-  { id: 'reception', title: 'Reception', line: 'Public lounge, with the show car.', tone: 'public', x: -10.4, z: 0.2, w: 3.6, d: 8.6, occupants: [], furniture: 'lounge' },
-  // The east end: the meeting room, glass like the office.
-  { id: 'meeting', title: 'Meeting room', line: 'Where a decision is argued before it is written.', tone: 'public', x: 10.4, z: -3.0, w: 3.4, d: 3.4, enclosed: true, occupants: [], furniture: 'meeting' },
+  // The lobby runs the length of the south edge, where the doors are.
+  { id: 'reception', title: 'Lobby', line: 'Public reception, with the show car.', tone: 'public', x: -0.2, z: 6.6, w: 22.6, d: 3.4, occupants: [], furniture: 'lounge' },
+  // The west end of the north wing: the meeting room, glass like the office.
+  { id: 'meeting', title: 'Meeting room', line: 'Where a decision is argued before it is written.', tone: 'public', x: -10.0, z: -3.0, w: 3.0, d: 3.4, enclosed: true, occupants: [], furniture: 'meeting' },
   // North of the aisle: the glass office, the advisory desks, the archive.
   { id: 'arbiter', title: "Arbiter's office", line: 'Reads the receipts and the vetoes; decides last.', tone: 'arbiter', x: -6.6, z: -3.0, w: 3.4, d: 3.2, enclosed: true, occupants: [{ id: 'arbiter', title: 'Arbiter', model: SESSION_MODEL.name }] },
   { id: 'advisory', title: 'Advisory', line: 'Notes to the arbiter; none of them can stop anything alone.', tone: 'advisory', x: -0.6, z: -3.0, w: 5.2, d: 3.6, arrange: 'grid', occupants: [seat('researcher'), seat('execution-realist'), seat('portfolio'), seat('historian')] },
-  { id: 'archive', title: 'Archive', line: 'Hypotheses, run receipts, decisions, backlog.', tone: 'ops', x: 5.6, z: -3.0, w: 4.4, d: 3.4, occupants: [], furniture: 'shelves' },
+  { id: 'archive', title: 'Archive', line: 'Hypotheses, run receipts, decisions, backlog.', tone: 'ops', x: 6.4, z: -3.0, w: 5.2, d: 3.4, occupants: [], furniture: 'shelves' },
   // South of the aisle: data, the lab, the engine bay, then the veto desks in a row.
   { id: 'data', title: 'Data room', line: 'Broker bars, two free feeds, the tape collectors.', tone: 'ops', x: -6.8, z: 3.0, w: 3.4, d: 3.0, occupants: [], furniture: 'racks', racks: ['MT5 · Vantage', 'Dukascopy', 'Binance', 'OTL tape'] },
   { id: 'lab', title: 'Strategy lab', line: 'Pre-registers, implements, tests for look-ahead.', tone: 'ops', x: -3.4, z: 3.0, w: 2.6, d: 3.0, occupants: [{ id: 'strategy-implementer', title: 'Implementer', model: MODELS.sonnet.name }] },
   { id: 'engine', title: 'Engine room', line: 'Backtest, walk-forward, nulls; the search binary.', tone: 'ops', x: -0.2, z: 3.0, w: 3.0, d: 3.0, occupants: [], furniture: 'engine' },
-  { id: 'data-integrity', title: 'Data Integrity', line: 'Veto', tone: 'veto', x: 3.0, z: 3.0, w: 1.6, d: 3.0, occupants: [seat('data-integrity')] },
-  { id: 'adversary', title: 'Adversary', line: 'Veto', tone: 'veto', x: 5.0, z: 3.0, w: 1.6, d: 3.0, occupants: [seat('adversary')] },
-  { id: 'risk', title: 'Risk', line: 'Veto', tone: 'veto', x: 7.0, z: 3.0, w: 1.6, d: 3.0, occupants: [seat('risk')] },
+  { id: 'data-integrity', title: 'Data Integrity', line: 'Veto', tone: 'veto', x: 3.4, z: 3.0, w: 1.6, d: 3.0, occupants: [seat('data-integrity')] },
+  { id: 'adversary', title: 'Adversary', line: 'Veto', tone: 'veto', x: 5.6, z: 3.0, w: 1.6, d: 3.0, occupants: [seat('adversary')] },
+  { id: 'risk', title: 'Risk', line: 'Veto', tone: 'veto', x: 7.8, z: 3.0, w: 1.6, d: 3.0, occupants: [seat('risk')] },
 ]
 
 /**
@@ -339,7 +339,7 @@ export function Dashboard({ catalog, market, onError }: Props) {
               </span>
               <span className="bg-background/70 border-border rounded-full border px-2 py-0.5 backdrop-blur">
                 <span className="font-medium">Public</span>
-                <span className="text-muted-foreground"> · reception, meeting room</span>
+                <span className="text-muted-foreground"> · lobby, meeting room</span>
               </span>
             </div>
             {/* The things the scene cannot say on its own. */}
