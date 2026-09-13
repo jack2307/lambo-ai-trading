@@ -49,6 +49,8 @@ export interface Department {
   /** Desks in one row facing the aisle, or two rows facing each other. */
   arrange?: 'row' | 'grid'
   furniture?: 'racks' | 'engine' | 'shelves'
+  /** One rack per feed, named on the floor in front of it. */
+  racks?: string[]
 }
 
 interface Props {
@@ -139,6 +141,16 @@ interface Stop {
   cluster: Cluster
   dwell: number
   vetoChance: number
+}
+
+/** One activity light on a rack: flips on and off at its own rate. */
+interface Led {
+  material: THREE.MeshBasicMaterial
+  on: THREE.Color
+  off: THREE.Color
+  /** Expected flips per second. */
+  rate: number
+  lit: boolean
 }
 
 export function OfficeFloor({ departments, className }: Props) {
@@ -267,7 +279,10 @@ export function OfficeFloor({ departments, className }: Props) {
     const chairMaterial = new THREE.MeshPhysicalMaterial({ color: colors.background.clone().lerp(colors.foreground, 0.16), roughness: 0.6 })
     const screenMaterial = new THREE.MeshPhysicalMaterial({ color: colors.background, roughness: 0.15, emissive: colors.mint.clone(), emissiveIntensity: 0.4 })
     const equipment = new THREE.MeshPhysicalMaterial({ color: colors.elevated.clone().lerp(colors.foreground, 0.14), roughness: 0.45, metalness: 0.35 })
-    const led = new THREE.MeshBasicMaterial({ color: colors.mint })
+    const rackUnit = new THREE.MeshPhysicalMaterial({ color: colors.elevated.clone().lerp(colors.foreground, 0.3), roughness: 0.5, metalness: 0.4 })
+    const ledGeometry = new THREE.BoxGeometry(0.055, 0.032, 0.012)
+    const leds: Led[] = []
+    const rackTags: { label: HTMLDivElement; at: THREE.Vector3 }[] = []
     const leaf = new THREE.MeshPhysicalMaterial({ color: colors.mint.clone().lerp(colors.background, 0.55), roughness: 0.7 })
     const pot = new THREE.MeshPhysicalMaterial({ color: colors.elevated.clone().lerp(colors.caution, 0.12), roughness: 0.6 })
 
@@ -413,15 +428,79 @@ export function OfficeFloor({ departments, className }: Props) {
           cluster.figures.push({ material: m, glow: 0, glowColor: tone.clone() })
         }
       } else if (dept.furniture === 'racks') {
-        for (let i = 0; i < 3; i++) {
-          const rack = shadowed(new THREE.Mesh(new THREE.BoxGeometry(0.55, 1.25, 0.55), equipment))
-          rack.position.set(dept.x - 0.8 + i * 0.8, 0.625, dept.z - facing * 0.2)
-          scene.add(rack)
-          for (let k = 0; k < 5; k++) {
-            const dot = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.03, 0.02), led)
-            dot.position.set(rack.position.x - 0.18 + k * 0.09, 1.05 - (k % 2) * 0.12, rack.position.z + facing * 0.285)
-            scene.add(dot)
+        // A server row: each feed its own cabinet, seven units high, every
+        // unit with a drive bay and three activity lights. The lights flip at
+        // their own rates so the row reads as running, not painted on.
+        const names = dept.racks ?? ['MT5', 'Dukascopy', 'Binance']
+        const pitch = 0.78
+        // The cabinets face the outer edge, where the camera starts: the
+        // aisle side is their back, which is how a server row is stood anyway.
+        const front: 1 | -1 = -facing as 1 | -1
+        names.forEach((name, i) => {
+          const rx = dept.x - ((names.length - 1) * pitch) / 2 + i * pitch
+          const rz = dept.z - front * 0.2
+          const cabinet = shadowed(new THREE.Mesh(new THREE.BoxGeometry(0.62, 1.5, 0.62), equipment))
+          cabinet.position.set(rx, 0.75, rz)
+          scene.add(cabinet)
+          // Door frame and a vented top.
+          const frameBox = new THREE.Mesh(new THREE.BoxGeometry(0.66, 1.54, 0.03), frameMaterial)
+          frameBox.position.set(rx, 0.77, rz + front * 0.31)
+          scene.add(frameBox)
+          for (let u = 0; u < 7; u++) {
+            const uy = 0.2 + u * 0.19
+            const unit = new THREE.Mesh(new THREE.BoxGeometry(0.54, 0.15, 0.04), rackUnit)
+            unit.position.set(rx, uy, rz + front * 0.335)
+            scene.add(unit)
+            const bay = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.09, 0.01), deskLeg)
+            bay.position.set(rx + 0.12, uy, rz + front * 0.36)
+            scene.add(bay)
+            for (let k = 0; k < 3; k++) {
+              const warn = k === 2
+              const material = new THREE.MeshBasicMaterial({ color: colors.background })
+              const dot = new THREE.Mesh(ledGeometry, material)
+              dot.position.set(rx - 0.19 + k * 0.08, uy + 0.03, rz + front * 0.365)
+              scene.add(dot)
+              leds.push({
+                material,
+                on: warn ? colors.caution.clone() : colors.mint.clone(),
+                off: colors.background.clone().lerp(warn ? colors.caution : colors.mint, 0.12),
+                rate: warn ? 0.08 : 1.5 + Math.random() * 4,
+                lit: Math.random() < 0.5,
+              })
+            }
           }
+          // Cable drop from the tray to each cabinet.
+          const cable = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.5, 8), deskLeg)
+          cable.position.set(rx + 0.2, 1.75, rz - front * 0.2)
+          scene.add(cable)
+          // The feed's name on the floor in front of its cabinet.
+          const tag = document.createElement('div')
+          tag.className =
+            'pointer-events-none absolute -translate-x-1/2 whitespace-nowrap text-center text-[9px] font-mono text-muted-foreground [text-shadow:0_1px_3px_rgba(0,0,0,0.9)]'
+          tag.textContent = name
+          labelHost.appendChild(tag)
+          rackTags.push({ label: tag, at: new THREE.Vector3(rx, 0.02, rz + front * 0.7) })
+        })
+        // A cable tray across the top of the row, and a switch on the middle
+        // cabinet with a row of port lights that flicker faster than the rest.
+        const trayW = (names.length - 1) * pitch + 0.7
+        const tray = new THREE.Mesh(new THREE.BoxGeometry(trayW, 0.05, 0.16), frameMaterial)
+        tray.position.set(dept.x, 2.0, dept.z - front * 0.4)
+        scene.add(tray)
+        for (const sx of [-1, 1]) {
+          const leg = new THREE.Mesh(new THREE.BoxGeometry(0.04, 2.0, 0.04), frameMaterial)
+          leg.position.set(dept.x + (sx * trayW) / 2, 1.0, dept.z - front * 0.4)
+          scene.add(leg)
+        }
+        const sw = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.07, 0.4), rackUnit)
+        sw.position.set(dept.x, 1.535, dept.z - front * 0.2)
+        scene.add(sw)
+        for (let k = 0; k < 8; k++) {
+          const material = new THREE.MeshBasicMaterial({ color: colors.background })
+          const dot = new THREE.Mesh(ledGeometry, material)
+          dot.position.set(dept.x - 0.21 + k * 0.06, 1.55, dept.z - front * 0.2 + front * 0.205)
+          scene.add(dot)
+          leds.push({ material, on: colors.mint.clone(), off: colors.background.clone().lerp(colors.mint, 0.12), rate: 4 + Math.random() * 8, lit: Math.random() < 0.5 })
         }
       } else if (dept.furniture === 'engine') {
         const core = shadowed(new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.85, 1.0), equipment))
@@ -722,6 +801,17 @@ export function OfficeFloor({ departments, className }: Props) {
         }
       }
 
+      // Activity lights: each flips with probability rate·dt per frame, so the
+      // row blinks at data speed and never in step. Reduced motion holds them.
+      if (!reduceMotion) {
+        for (const l of leds) {
+          if (Math.random() < l.rate * dt) {
+            l.lit = !l.lit
+            l.material.color.copy(l.lit ? l.on : l.off)
+          }
+        }
+      }
+
       for (const c of clusters) {
         c.glow = Math.max(0, c.glow - dt * 0.9)
         c.rugMaterial.emissive.copy(c.glowColor)
@@ -737,9 +827,15 @@ export function OfficeFloor({ departments, className }: Props) {
       renderer.render(scene, camera)
 
       const { width, height } = renderer.domElement.getBoundingClientRect()
+      for (const tag of rackTags) {
+        projected.copy(tag.at).project(camera)
+        tag.label.style.opacity = projected.z > 1 ? '0' : '1'
+        tag.label.style.left = `${((projected.x + 1) / 2) * width}px`
+        tag.label.style.top = `${((1 - projected.y) / 2) * height}px`
+      }
       for (const c of clusters) {
         projected.copy(c.centre)
-        projected.y = c.dept.enclosed ? GLASS_H + 0.5 : 1.75
+        projected.y = c.dept.enclosed ? GLASS_H + 0.5 : c.dept.furniture === 'racks' ? 2.55 : 1.75
         projected.project(camera)
         c.label.style.opacity = projected.z > 1 ? '0' : '1'
         c.label.style.left = `${((projected.x + 1) / 2) * width}px`
@@ -764,8 +860,10 @@ export function OfficeFloor({ departments, className }: Props) {
         }
       })
       ringGeometry.dispose()
+      ledGeometry.dispose()
       glow.dispose()
       for (const c of clusters) c.label.remove()
+      for (const tag of rackTags) tag.label.remove()
       renderer.dispose()
       renderer.domElement.remove()
     }

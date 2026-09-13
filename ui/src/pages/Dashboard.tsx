@@ -87,7 +87,7 @@ const DEPARTMENTS: Department[] = [
   { id: 'advisory', title: 'Advisory', line: 'Notes to the arbiter; none of them can stop anything alone.', tone: 'advisory', x: -0.6, z: -3.0, w: 5.2, d: 3.6, arrange: 'grid', occupants: [seat('researcher'), seat('execution-realist'), seat('portfolio'), seat('historian')] },
   { id: 'archive', title: 'Archive', line: 'Hypotheses, run receipts, decisions, backlog.', tone: 'ops', x: 5.6, z: -3.0, w: 4.4, d: 3.4, occupants: [], furniture: 'shelves' },
   // South of the aisle: data, the lab, the engine bay, then the veto desks in a row.
-  { id: 'data', title: 'Data room', line: 'MT5 export, Dukascopy, Binance; the tape collectors.', tone: 'ops', x: -6.8, z: 3.0, w: 3.2, d: 3.0, occupants: [], furniture: 'racks' },
+  { id: 'data', title: 'Data room', line: 'Broker bars, two free feeds, the tape collectors.', tone: 'ops', x: -6.8, z: 3.0, w: 3.4, d: 3.0, occupants: [], furniture: 'racks', racks: ['MT5 · Vantage', 'Dukascopy', 'Binance', 'OTL tape'] },
   { id: 'lab', title: 'Strategy lab', line: 'Pre-registers, implements, tests for look-ahead.', tone: 'ops', x: -3.4, z: 3.0, w: 2.6, d: 3.0, occupants: [{ id: 'strategy-implementer', title: 'Implementer', model: MODELS.sonnet.name }] },
   { id: 'engine', title: 'Engine room', line: 'Backtest, walk-forward, nulls; the search binary.', tone: 'ops', x: -0.2, z: 3.0, w: 3.0, d: 3.0, occupants: [], furniture: 'engine' },
   { id: 'data-integrity', title: 'Data Integrity', line: 'Veto', tone: 'veto', x: 3.0, z: 3.0, w: 1.6, d: 3.0, occupants: [seat('data-integrity')] },
