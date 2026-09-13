@@ -1,0 +1,26 @@
+[run]
+in_sample = "btc:5m"
+out_of_sample = "btcusd:5m"
+seeds = 200
+direction_samples = 1000
+
+[[hypothesis]]
+label = "vwap/allday"
+base = "vwap-fade"
+filters = []
+overrides = { stretchAtr = 1.5 }
+why = "reversion to the UTC-day VWAP, any hour"
+
+[[hypothesis]]
+label = "vwap/us-hours"
+base = "vwap-fade"
+filters = ["hours:0930-1600"]
+overrides = { stretchAtr = 1.5 }
+why = "only where the benchmarked flow is; the null trades the same hours"
+
+[[hypothesis]]
+label = "vwap/wide"
+base = "vwap-fade"
+filters = []
+overrides = { stretchAtr = 2.5 }
+why = "a wider stretch: fewer, larger dislocations"
