@@ -291,6 +291,30 @@ export function OfficeFloor({ departments, animate, carModel, modelsBase = '/mod
 
     const build = (models: ModelSet, real: ModelSet) => {
     const mixers: THREE.AnimationMixer[] = []
+    /**
+     * People who move. Each has a home (a chair or a spot to stand), the
+     * three clips, and a small state machine: rest at home, now and then walk
+     * to somewhere on the floor, stand there a while, walk back, sit down.
+     * Paths run along two lanes — the aisle and the walkway behind the north
+     * wing — joined at the gaps between clusters, so nobody walks through a
+     * desk.
+     */
+    interface Agent {
+      group: THREE.Group
+      mixer: THREE.AnimationMixer
+      actions: Partial<Record<'sit' | 'idle' | 'walk', THREE.AnimationAction>>
+      current: 'sit' | 'idle' | 'walk'
+      home: { x: number; z: number; yaw: number; seated: boolean; y: number }
+      state: 'home' | 'walking' | 'away'
+      goal: 'home' | 'away'
+      path: THREE.Vector3[]
+      leg: number
+      dwell: number
+      /** How often this one leaves: desk workers rarely, roamers often. */
+      restless: number
+    }
+    const agents: Agent[] = []
+    const rand = (a: number, b: number) => a + Math.random() * (b - a)
     /** A photoreal piece by role, fitted and turned to face +z; null when the set lacks it. */
     const photo = (role: keyof typeof PHOTOREAL, fit: Parameters<ModelSet['instance']>[1]) => {
       const spec = PHOTOREAL[role]
@@ -484,21 +508,40 @@ export function OfficeFloor({ departments, animate, carModel, modelsBase = '/mod
         if (inst) {
           const seated = pose.kind === 'seated'
           const mixer = new THREE.AnimationMixer(inst.group)
-          const clip = THREE.AnimationClip.findByName(inst.animations, seated ? 'sit' : 'idle')
-          if (clip) {
+          const actions: Agent['actions'] = {}
+          for (const name of ['sit', 'idle', 'walk'] as const) {
+            const clip = THREE.AnimationClip.findByName(inst.animations, name)
+            if (!clip) continue
             const action = mixer.clipAction(clip)
+            action.enabled = true
+            action.setEffectiveWeight(name === (seated ? 'sit' : 'idle') ? 1 : 0)
             action.play()
-            mixer.update(0.016)
+            actions[name] = action
           }
+          mixer.update(0.016)
           mixers.push(mixer)
           // Pose first, then stand the feet on the floor: the sit clip folds
           // the legs, and the chair was scaled with the same system, so the
           // hips land on the seat.
           inst.group.updateMatrixWorld(true)
           const posed = new THREE.Box3().setFromObject(inst.group)
-          inst.group.position.set(x, -posed.min.y, z)
+          const y = seated ? -posed.min.y : 0
+          inst.group.position.set(x, y, z)
           inst.group.rotation.y = yaw + CHAR_YAW
           scene.add(inst.group)
+          agents.push({
+            group: inst.group,
+            mixer,
+            actions,
+            current: seated ? 'sit' : 'idle',
+            home: { x, z, yaw: yaw + CHAR_YAW, seated, y },
+            state: 'home',
+            goal: 'home',
+            path: [],
+            leg: 0,
+            dwell: rand(4, 30),
+            restless: seated ? 0.35 : 0.6,
+          })
           return inst.group
         }
       }
@@ -1602,6 +1645,121 @@ export function OfficeFloor({ departments, animate, carModel, modelsBase = '/mod
     plant(-FLOOR_W / 2 + 0.6, AISLE_Z - 0.2, 0.9)
     plant(-FLOOR_W / 2 + 0.6, FLOOR_Z1 - 0.6, 0.9)
 
+    /* ---- where people go, and how they get there ---- */
+    const WALKWAY_Z = 0.05
+    const lanes = { aisle: AISLE_Z, walkway: WALKWAY_Z }
+    const laneOf = (z: number) => (z < (WALKWAY_Z + AISLE_Z) / 2 ? lanes.walkway : lanes.aisle)
+    // The gaps between north-wing clusters, where one lane meets the other.
+    const northWing = clusters.filter((c) => Math.abs(c.dept.z - 2.3) < 0.5).sort((a, b) => a.dept.x - b.dept.x)
+    const connectors: number[] = [-FLOOR_W / 2 + 0.7]
+    for (let i = 0; i + 1 < northWing.length; i++) connectors.push((northWing[i].dept.x + northWing[i].dept.w / 2 + northWing[i + 1].dept.x - northWing[i + 1].dept.w / 2) / 2)
+    connectors.push(FLOOR_W / 2 - 0.7)
+    const routeTo = (from: THREE.Vector3, to: THREE.Vector3): THREE.Vector3[] => {
+      const a = laneOf(from.z)
+      const b = laneOf(to.z)
+      const path = [new THREE.Vector3(from.x, 0, a)]
+      if (a !== b) {
+        const mid = (from.x + to.x) / 2
+        const cx = connectors.reduce((best, c) => (Math.abs(c - mid) < Math.abs(best - mid) ? c : best), connectors[0])
+        path.push(new THREE.Vector3(cx, 0, a), new THREE.Vector3(cx, 0, b))
+      }
+      path.push(new THREE.Vector3(to.x, 0, b), to.clone().setY(0))
+      return path
+    }
+    // Somewhere to go: the front of each cluster, the coffee, the water, the car.
+    const pois: { at: THREE.Vector3; yaw: number }[] = []
+    for (const c of clusters) {
+      if (c.dept.furniture === 'showcase' || c.dept.enclosed) continue
+      const f = c.dept.z < AISLE_Z ? 1 : -1
+      pois.push({ at: new THREE.Vector3(c.dept.x + rand(-0.6, 0.6), 0, c.dept.z + f * (c.dept.d / 2 + 0.45)), yaw: f === 1 ? Math.PI : 0 })
+    }
+    const showcase = clusters.find((c) => c.dept.furniture === 'showcase')
+    if (showcase) {
+      const d = showcase.dept
+      pois.push({ at: new THREE.Vector3(d.x + d.w / 2 - 1.6, 0, d.z - 0.7), yaw: Math.PI })
+      pois.push({ at: new THREE.Vector3(d.x + d.w / 2 - 0.5, 0, d.z - 0.6), yaw: Math.PI })
+      pois.push({ at: new THREE.Vector3(d.x - 2.9, 0, d.z - 0.4), yaw: Math.PI / 2 })
+      pois.push({ at: new THREE.Vector3(d.x + 2.9, 0, d.z - 0.4), yaw: -Math.PI / 2 })
+      pois.push({ at: new THREE.Vector3(d.x - d.w / 2 + 1.7, 0, d.z + 2.9), yaw: Math.PI })
+    }
+    // Three people with no desk, on the move between the others.
+    for (let i = 0; i < 3 && pois.length > 0; i++) {
+      const p = pois[(i * 3) % pois.length]
+      const g = person(p.at.x, p.at.z, p.yaw, new THREE.MeshPhysicalMaterial({ color: colors.muted.clone().lerp(colors.foreground, 0.2), roughness: 0.6 }), { kind: 'standing' })
+      const agent = agents.find((a) => a.group === g)
+      if (agent) {
+        agent.restless = 0.9
+        agent.dwell = rand(1, 8)
+      }
+    }
+    const WALK_SPEED = 1.25
+    const fadeTo = (agent: Agent, next: 'sit' | 'idle' | 'walk') => {
+      if (agent.current === next) return
+      const from = agent.actions[agent.current]
+      const to = agent.actions[next]
+      if (!to) return
+      to.enabled = true
+      to.reset()
+      to.setEffectiveWeight(1)
+      to.play()
+      if (from) from.crossFadeTo(to, 0.3, false)
+      agent.current = next
+    }
+    const startTrip = (agent: Agent, goal: 'home' | 'away') => {
+      const from = agent.group.position.clone()
+      const to = goal === 'home' ? new THREE.Vector3(agent.home.x, 0, agent.home.z) : pois[Math.floor(Math.random() * pois.length)].at
+      agent.path = routeTo(from, to)
+      agent.leg = 0
+      agent.goal = goal
+      agent.state = 'walking'
+      agent.group.position.y = 0
+      fadeTo(agent, 'walk')
+    }
+    const updateAgents = (dt: number) => {
+      for (const agent of agents) {
+        if (agent.state !== 'walking') {
+          agent.dwell -= dt
+          if (agent.dwell > 0) continue
+          if (agent.state === 'home') {
+            if (Math.random() < agent.restless && pois.length > 0) startTrip(agent, 'away')
+            else agent.dwell = rand(6, 30)
+          } else startTrip(agent, 'home')
+          continue
+        }
+        const target = agent.path[agent.leg]
+        if (!target) {
+          agent.state = agent.goal
+          if (agent.goal === 'home') {
+            agent.group.position.set(agent.home.x, agent.home.y, agent.home.z)
+            agent.group.rotation.y = agent.home.yaw
+            fadeTo(agent, agent.home.seated ? 'sit' : 'idle')
+            agent.dwell = rand(15, 70)
+          } else {
+            fadeTo(agent, 'idle')
+            agent.dwell = rand(5, 16)
+          }
+          continue
+        }
+        const pos = agent.group.position
+        const dx = target.x - pos.x
+        const dz = target.z - pos.z
+        const dist = Math.hypot(dx, dz)
+        const step = WALK_SPEED * dt
+        if (dist <= step) {
+          pos.set(target.x, 0, target.z)
+          agent.leg += 1
+          continue
+        }
+        pos.x += (dx / dist) * step
+        pos.z += (dz / dist) * step
+        // Face the way of travel; +z is the character's front.
+        const want = Math.atan2(dx, dz)
+        let delta = want - agent.group.rotation.y
+        delta = Math.atan2(Math.sin(delta), Math.cos(delta))
+        agent.group.rotation.y += delta * Math.min(1, dt * 10)
+      }
+    }
+
     const byId = (id: string) => clusters.find((c) => c.dept.id === id)
     const arbiter = clusters.find((c) => c.dept.tone === 'arbiter')
     const vetoes = clusters.filter((c) => c.dept.tone === 'veto')
@@ -1884,6 +2042,7 @@ export function OfficeFloor({ departments, animate, carModel, modelsBase = '/mod
         sheet.rotation.y = now * 0.8
         if (showCar) showCar.rotation.y += dt * 0.25
         for (const fan of fans) fan.rotation.y += dt * 9
+        updateAgents(dt)
         for (const m of mixers) m.update(dt)
         // People: a look around now and then, and the typists' hands moving.
         for (const p of people) {
