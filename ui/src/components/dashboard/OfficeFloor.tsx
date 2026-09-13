@@ -295,7 +295,7 @@ export function OfficeFloor({ departments, animate, className }: Props) {
       return sprite
     }
     const rackUnit = new THREE.MeshPhysicalMaterial({ color: colors.elevated.clone().lerp(colors.foreground, 0.3), roughness: 0.5, metalness: 0.4 })
-    const ledGeometry = new THREE.BoxGeometry(0.07, 0.04, 0.012)
+    const ledGeometry = new THREE.BoxGeometry(0.06, 0.035, 0.012)
     const leds: Led[] = []
     const rackTags: { label: HTMLDivElement; at: THREE.Vector3 }[] = []
     const leaf = new THREE.MeshPhysicalMaterial({ color: colors.mint.clone().lerp(colors.background, 0.55), roughness: 0.7 })
@@ -476,11 +476,11 @@ export function OfficeFloor({ departments, animate, className }: Props) {
               const dot = new THREE.Mesh(ledGeometry, material)
               dot.position.set(rx - 0.19 + k * 0.09, uy + 0.03, rz + front * 0.365)
               scene.add(dot)
-              const halo = haloFor(on, 0.22)
+              const halo = haloFor(on, 0.11)
               halo.position.copy(dot.position).add(new THREE.Vector3(0, 0, front * 0.03))
               const lit = Math.random() < 0.5
               material.color.copy(lit ? on : colors.background.clone().lerp(on, 0.1))
-              halo.material.opacity = lit ? 0.85 : 0
+              halo.material.opacity = lit ? 0.7 : 0
               leds.push({
                 material,
                 halo,
@@ -524,11 +524,11 @@ export function OfficeFloor({ departments, animate, className }: Props) {
           const dot = new THREE.Mesh(ledGeometry, material)
           dot.position.set(dept.x - 0.21 + k * 0.06, 1.55, dept.z - front * 0.2 + front * 0.205)
           scene.add(dot)
-          const halo = haloFor(on, 0.18)
+          const halo = haloFor(on, 0.1)
           halo.position.copy(dot.position).add(new THREE.Vector3(0, 0, front * 0.03))
           const lit = Math.random() < 0.5
           material.color.copy(lit ? on : colors.background.clone().lerp(on, 0.1))
-          halo.material.opacity = lit ? 0.85 : 0
+          halo.material.opacity = lit ? 0.7 : 0
           leds.push({ material, halo, on, off: colors.background.clone().lerp(on, 0.1), rate: 4 + Math.random() * 8, lit })
         }
       } else if (dept.furniture === 'engine') {
@@ -830,14 +830,14 @@ export function OfficeFloor({ departments, animate, className }: Props) {
       }
 
       // Activity lights: each flips with probability rate·dt per frame, so the
-      // row blinks at data speed and never in step. Reduced motion holds them.
-      if (!reduceMotion) {
-        for (const l of leds) {
-          if (Math.random() < l.rate * dt) {
-            l.lit = !l.lit
-            l.material.color.copy(l.lit ? l.on : l.off)
-            l.halo.material.opacity = l.lit ? 0.85 : 0
-          }
+      // row blinks at data speed and never in step. They blink whatever the
+      // motion setting: a few pixels changing colour on a rack is a status
+      // light, not motion, and a dark row reads as a dead one.
+      for (const l of leds) {
+        if (Math.random() < l.rate * dt) {
+          l.lit = !l.lit
+          l.material.color.copy(l.lit ? l.on : l.off)
+          l.halo.material.opacity = l.lit ? 0.7 : 0
         }
       }
 
