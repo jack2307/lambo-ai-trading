@@ -1,0 +1,27 @@
+$ E:/rust/flowdesk/target-b/release/search.exe --market=xauduka --interval=15m --mode=hypotheses --batch-file=E:\rust\flowdesk\docs\hypotheses\2026-09-13-close-reopen-drift.toml --seeds=300 --from=2018-06-16 --to=2025-04-10
+
+bounds:   --from=2018-06-16 --to=2025-04-10 kept 160368 of 186856 bars
+bars:     160368 from 2018-06-17 22:00 to 2025-04-09 23:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+== hypotheses `E:\rust\flowdesk\docs\hypotheses\2026-09-13-close-reopen-drift.toml`: 6 declared, walk-forward (4 folds), each against 300 matched null runs ==
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+close/1630-1815 session-hold         1086   1.288   0.007    0.652    0.772        0  100%  fail: expectancy 0.007R < 0.05R
+                                MoTuWeTh + NY 16:15-16:20  — the break itself: long from the last bars before the close to the first after the reopen, Monday to Thursday
+close/1630-2000 session-hold         1086   1.234   0.011    0.788    0.918        0  100%  fail: expectancy 0.011R < 0.05R
+                                MoTuWeTh + NY 16:15-16:20  — the break plus the first hours of Asia
+close/1630-2200 session-hold         1086   1.292   0.021    0.856    0.982        0  100%  fail: expectancy 0.021R < 0.05R
+                                MoTuWeTh + NY 16:15-16:20  — the whole evening from before the close
+close/1815-2200 session-hold         1120   1.061   0.005    0.863    0.990        0  100%  fail: profit factor 1.061 < 1.2; expectancy 0.005R < 0.05R
+                                MoTuWeTh + NY 18:15-18:20  — the evening without the break: the contrast that says whether the reopen is the move
+close/1400-1630 session-hold         1106   0.826  -0.011    0.817    0.973        0   53%  fail: profit factor 0.826 < 1.2; expectancy -0.011R < 0.05R
+                                MoTuWeTh + NY 14:00-14:05  — the afternoon before the close: the contrast that says whether it is just the trend
+close/fri-1630-1815 session-hold          270   2.300   0.061    0.816    1.287        0  100%  SURVIVES
+                                Fr + NY 16:15-16:20  — the Friday leg alone: a hold across the weekend, which the screen's 16-18 row hid inside its count
+
+Survivors: close/fri-1630-1815/session-hold — worth a decision record and a direction null before anything else.
+

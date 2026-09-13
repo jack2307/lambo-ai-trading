@@ -1,7 +1,7 @@
 # 2026-09-13-close-reopen-drift: gold rises across the New York close and through the early evening
 
 **Registered:** (commit time is authoritative) — before any run of this batch
-**Status:** registered
+**Status:** in-sample done — one row survives (the Friday leg); confirmation running
 **Batch file:** `docs/hypotheses/2026-09-13-close-reopen-drift.toml`
 
 ## Where this comes from
@@ -74,3 +74,30 @@ not in question. The question is the null.
   open, not the settlement; record it as such.
 - Nothing passes the primary → the long-window context of the screen was
   the 2022–25 rally seen through 560 sessions; closed.
+
+## In-sample (2018-06-16 → 2025-04-10, `xauduka` 15m, 160,368 bars)
+
+Fixed replay (`in-sample-fixed.txt`, the test for a strategy-managed hold;
+300 sized random holds per row) and the direction null (`direction-close-*.txt`,
+1,000 permutations of the same trades' sides):
+
+```
+hypothesis            trades  OOS PF  expect  null p50 null p95   pct  direction   verdict
+close/1630-1815         1355   1.254   0.006    0.599    0.706  100%  100th       fail: expectancy 0.006R < 0.05R
+close/1630-2000         1355   1.237   0.011    0.760    0.859  100%  100th       fail: expectancy 0.011R < 0.05R
+close/1630-2200         1355   1.258   0.019    0.837    0.936  100%  100th       fail: expectancy 0.019R < 0.05R
+close/1815-2200         1397   0.985  -0.001    0.830    0.936   99%   99th       fail: profit factor 0.985 < 1.2
+close/1400-1630         1375   0.739  -0.017    0.784    0.913   21%   25th       fail: profit factor 0.739 < 1.2
+close/fri-1630-1815      336   2.064   0.054    0.785    1.177  100%  100th       SURVIVES
+```
+
+Walk-forward (`in-sample.txt`, the check): the same order — 1.288 / 1.234 /
+1.292 / 1.061 / 0.826 / 2.300, the Friday row at 0.061R on 270 sessions.
+
+Reading before the confirmation: the break rows sit at the 100th percentile
+of both nulls on 1,355 sessions and fail the registered expectancy gate,
+because R here is one full daily range and a two-hour hold moves a tenth of
+it; that is the registration's own unit, and the gate stands as written. The
+evening without the break (`1815-2200`) is flat; the afternoon before it is
+negative. The Friday leg — the weekend hold the screen's 16–18 row had hidden
+— is the one row that passes everything.
