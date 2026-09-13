@@ -676,9 +676,11 @@ export function OfficeFloor({ departments, animate, carModel, modelsBase = '/mod
         keyboard.position.set(x - 0.1, top + 0.007, z - facing * 0.1)
         scene.add(keyboard)
         place(photo('trashcan', { height: 0.32 }), x - 0.95, 0, z - facing * 0.2)
-        const cz = z - facing * 0.72
-        chair(x - 0.1, cz, facing)
-        person(x - 0.1, cz, facing === 1 ? 0 : Math.PI, material, { kind: 'seated', seat: 0.46, armsOnDesk: true })
+        // The chair's centre includes its back; the sitter's hips go on the
+        // seat, forward of that, so the body does not sink into the backrest.
+        const cz = z - facing * 0.74
+        chair(x - 0.1, cz - facing * 0.04, facing)
+        person(x - 0.1, cz + facing * 0.16, facing === 1 ? 0 : Math.PI, material, { kind: 'seated', seat: 0.46, armsOnDesk: true })
         return
       }
     }
