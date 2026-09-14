@@ -81,14 +81,74 @@ def load_events(lo: pd.Timestamp, hi: pd.Timestamp) -> pd.DataFrame:
     return events[events["impact"] == 3].sort_values("time_utc").reset_index(drop=True)
 
 
-def open_at(times: np.ndarray, opens: np.ndarray, when: pd.Timestamp) -> float:
-    """The open of the first bar at or after `when`; NaN past the end.
+def open_at(times: np.ndarray, opens: np.ndarray, when_ns: int) -> float:
+    """The open of the first bar at or after `when_ns`; NaN past the end.
+
+    Times are integer nanoseconds on both sides: numpy's `searchsorted` has no
+    notion of a timezone and pandas refuses to compare an aware stamp with a
+    naive one, so the comparison is done in the one unit neither can mistake.
 
     The engine fills at an open, so a window measured open-to-open is the one
     a trade could have had.
     """
-    i = np.searchsorted(times, np.datetime64(when), side="left")
+    i = int(np.searchsorted(times, when_ns, side="left"))
     return float(opens[i]) if i < len(opens) else float("nan")
+
+
+def permutation(
+    times: np.ndarray,
+    opens: np.ndarray,
+    when: pd.Series,
+    a: int,
+    b: int,
+    draws: int,
+    seed: int,
+) -> tuple[float, float]:
+    """Where the events' mean move sits among `draws` fake event sets.
+
+    A fake set is the same number of days, drawn from the weekdays of the same
+    window at the same clock minute and the same weekday as the real releases —
+    so the null holds the hour and the day of the week fixed and varies only
+    *which* dates were announcements. That is the question: is it the release,
+    or is it Friday at half past eight.
+
+    Returns (percentile of the actual mean, the null's own mean).
+    """
+    stamps = pd.DatetimeIndex(when)
+    minute = stamps[0].hour * 60 + stamps[0].minute
+    weekday = stamps[0].weekday()
+    # Every candidate day in the bars' span with that weekday, stamped at the
+    # release minute; the real release days are left in, because removing them
+    # would make the null a sample of "days that were not announcements" and
+    # bias it by exactly the effect being measured.
+    first = pd.Timestamp(times[0], tz="UTC").normalize()
+    last = pd.Timestamp(times[-1], tz="UTC").normalize()
+    days = pd.date_range(first, last, freq="D", tz="UTC")
+    days = days[days.weekday == weekday]
+    candidates = days + pd.Timedelta(minutes=minute)
+
+    def mean_move(points: pd.DatetimeIndex) -> float:
+        moves = []
+        for t in points:
+            lo = open_at(times, opens, (t + pd.Timedelta(minutes=a)).value)
+            hi = open_at(times, opens, (t + pd.Timedelta(minutes=b)).value)
+            moves.append(hi - lo)
+        arr = np.array(moves)
+        arr = arr[np.isfinite(arr)]
+        return float(arr.mean()) if len(arr) else float("nan")
+
+    actual = mean_move(stamps)
+    rng = np.random.default_rng(seed)
+    nulls = []
+    for _ in range(draws):
+        pick = rng.choice(len(candidates), size=min(len(stamps), len(candidates)), replace=False)
+        value = mean_move(candidates[np.sort(pick)])
+        if np.isfinite(value):
+            nulls.append(value)
+    if not nulls:
+        return float("nan"), float("nan")
+    nulls = np.array(nulls)
+    return 100.0 * float((nulls < actual).mean()), float(nulls.mean())
 
 
 def describe(moves: np.ndarray, ranges: np.ndarray, unit: str) -> str:
@@ -110,6 +170,9 @@ def main() -> int:
     ap.add_argument("start", nargs="?", default="2010-06-01")
     ap.add_argument("end", nargs="?", default="2018-06-15")
     ap.add_argument("--unit", default="$", help="what one price point is called")
+    ap.add_argument("--permute", default="", help="'NAME:a:b' — run the date-permutation null on that class and window")
+    ap.add_argument("--draws", type=int, default=1000)
+    ap.add_argument("--seed", type=int, default=7)
     args = ap.parse_args()
 
     lo, hi = pd.Timestamp(args.start, tz="UTC"), pd.Timestamp(args.end, tz="UTC")
@@ -117,12 +180,31 @@ def main() -> int:
     events = load_events(lo, hi)
     if bars.empty or events.empty:
         sys.exit("no bars or no events in that window")
-    times = bars["time"].to_numpy()
+    times = bars["time"].dt.tz_convert("UTC").astype("datetime64[ns, UTC]").astype("int64").to_numpy()
     opens = bars["open"].to_numpy()
     ranges = bars.set_index("time")["range20"]
 
     print(f"{args.market} 15m {args.start} -> {args.end}: {len(bars)} bars, {len(events)} high-impact events")
     print("a move is open-to-open; R is the trailing 20-day range\n")
+
+    if args.permute:
+        name, a, b = args.permute.rsplit(":", 2)
+        when = events.loc[events["name"] == name, "time_utc"]
+        if when.empty:
+            sys.exit(f"no events named {name!r}; have {sorted(events['name'].unique())}")
+        pct, null_mean = permutation(times, opens, when, int(a), int(b), args.draws, args.seed)
+        moves = np.array([
+            open_at(times, opens, (t + pd.Timedelta(minutes=int(b))).value)
+            - open_at(times, opens, (t + pd.Timedelta(minutes=int(a))).value)
+            for t in when
+        ])
+        moves = moves[np.isfinite(moves)]
+        t_stat = moves.mean() / moves.std(ddof=1) * np.sqrt(len(moves))
+        print(f"{name}  {a}..{b} min  {len(moves)} events")
+        print(f"  actual mean {moves.mean():+.3f} {args.unit}  t {t_stat:+.2f}  up {100 * (moves > 0).mean():.1f}%")
+        print(f"  {args.draws} date permutations (same weekday, same minute): mean {null_mean:+.3f} {args.unit}")
+        print(f"  actual sits at the {pct:.1f}th percentile of them")
+        return 0
 
     classes = sorted(events["name"].unique())
     for name in classes:
@@ -133,7 +215,8 @@ def main() -> int:
             for t in when:
                 start = t + pd.Timedelta(minutes=a)
                 end = t + pd.Timedelta(minutes=b)
-                first, last = open_at(times, opens, start), open_at(times, opens, end)
+                first = open_at(times, opens, start.value)
+                last = open_at(times, opens, end.value)
                 moves.append(last - first)
                 r = ranges.asof(start)
                 rs.append(r if pd.notna(r) else np.nan)
@@ -142,7 +225,7 @@ def main() -> int:
                 p_start, p_end = start - pd.Timedelta(days=7), end - pd.Timedelta(days=7)
                 if (p_start - pd.Timedelta(minutes=1)) in when.values:
                     continue
-                pf, pl = open_at(times, opens, p_start), open_at(times, opens, p_end)
+                pf, pl = open_at(times, opens, p_start.value), open_at(times, opens, p_end.value)
                 placebo.append(pl - pf)
                 pr = ranges.asof(p_start)
                 placebo_rs.append(pr if pd.notna(pr) else np.nan)

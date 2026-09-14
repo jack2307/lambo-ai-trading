@@ -1,0 +1,51 @@
+xauduka 15m 2010-06-01 -> 2018-06-15: 191809 bars, 342 high-impact events
+a move is open-to-open; R is the trailing 20-day range
+
+ECB rate decision  (83 events)
+  day before        83     -0.164 $  t -0.12  up 48.2%  -0.030 R
+    (7 days earlier)    83     -1.077 $  t -0.67  up 47.0%  -0.049 R
+  hour before       83     +0.580 $  t +2.06  up 56.6%  +0.030 R
+    (7 days earlier)    83     -0.166 $  t -0.58  up 44.6%  -0.017 R
+  the print         83     +0.061 $  t +0.19  up 50.6%  -0.001 R
+    (7 days earlier)    83     -0.213 $  t -1.59  up 39.8%  -0.012 R
+  hour after        83     -0.192 $  t -0.33  up 45.8%  -0.018 R
+    (7 days earlier)    83     -0.645 $  t -1.56  up 39.8%  -0.050 R
+  session after     83     -1.144 $  t -0.91  up 39.8%  -0.086 R
+    (7 days earlier)    83     -1.128 $  t -0.91  up 43.4%  -0.111 R
+
+FOMC  (65 events)
+  day before        65     +1.283 $  t +0.87  up 49.2%  +0.118 R
+    (7 days earlier)    65     -0.172 $  t -0.12  up 43.1%  -0.000 R
+  hour before       65     +0.849 $  t +1.78  up 52.3%  +0.042 R
+    (7 days earlier)    65     +0.126 $  t +0.47  up 49.2%  +0.003 R
+  the print         65     +0.671 $  t +0.83  up 50.8%  +0.035 R
+    (7 days earlier)    65     +0.086 $  t +0.68  up 52.3%  +0.006 R
+  hour after        65     +1.482 $  t +1.15  up 53.8%  +0.106 R
+    (7 days earlier)    65     -0.122 $  t -0.54  up 46.2%  -0.004 R
+  session after     65     +0.874 $  t +0.53  up 56.9%  +0.095 R
+    (7 days earlier)    65     +0.308 $  t +0.49  up 49.2%  +0.016 R
+
+US CPI  (97 events)
+  day before        97     +0.527 $  t +0.38  up 56.7%  +0.025 R
+    (7 days earlier)    97     -2.004 $  t -1.62  up 43.3%  -0.156 R
+  hour before       97     -0.662 $  t -1.91  up 43.3%  -0.041 R
+    (7 days earlier)    97     -0.238 $  t -0.72  up 46.4%  -0.011 R
+  the print         97     -0.075 $  t -0.19  up 52.6%  +0.005 R
+    (7 days earlier)    97     +0.482 $  t +1.07  up 44.3%  +0.032 R
+  hour after        97     -0.098 $  t -0.23  up 45.4%  +0.010 R
+    (7 days earlier)    97     +0.988 $  t +1.59  up 48.5%  +0.055 R
+  session after     97     -0.131 $  t -0.13  up 48.5%  +0.019 R
+    (7 days earlier)    97     +0.447 $  t +0.42  up 51.5%  +0.033 R
+
+US Employment Situation (NFP)  (97 events)
+  day before        97     -2.604 $  t -2.17  up 40.2%  -0.183 R
+    (7 days earlier)    97     -0.459 $  t -0.36  up 45.4%  -0.064 R
+  hour before       97     -0.886 $  t -2.23  up 32.0%  -0.057 R
+    (7 days earlier)    97     -0.480 $  t -1.25  up 39.2%  -0.020 R
+  the print         97     +1.239 $  t +1.31  up 53.6%  +0.090 R
+    (7 days earlier)    97     +0.219 $  t +0.79  up 47.4%  +0.016 R
+  hour after        97     +2.187 $  t +1.87  up 59.8%  +0.138 R
+    (7 days earlier)    97     +1.025 $  t +2.39  up 56.7%  +0.066 R
+  session after     97     +4.287 $  t +2.71  up 63.9%  +0.270 R
+    (7 days earlier)    97     +3.593 $  t +3.24  up 57.7%  +0.207 R
+
