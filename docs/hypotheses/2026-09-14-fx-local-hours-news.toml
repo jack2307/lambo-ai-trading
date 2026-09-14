@@ -1,0 +1,36 @@
+# Context batch for 2026-09-14-fx-local-hours (closed): the European-hours
+# short with the news blackout the bot would run under. Decides nothing —
+# the record is closed on its gate; this says whether the drift sat on the
+# release minutes (ECB Thursdays, US 08:30 prints) or between them. The first
+# use of the news: filter; the receipt header prints the events loaded.
+[run]
+in_sample = "eurduka:15m"
+in_sample_from = "2010-06-01"
+in_sample_to = "2018-06-15"
+out_of_sample = "eurduka:15m"
+out_of_sample_from = "2018-06-16"
+out_of_sample_to = "2026-05-31"
+seeds = 300
+direction_samples = 1000
+fixed = true
+
+[[hypothesis]]
+label = "fx/eu-short"
+base = "session-hold"
+filters = ["weekdays", "hours:0245-0250"]
+overrides = { from = 245, to = 1045, side = -1, riskDailyRanges = 1, rangeDays = 20 }
+why = "the closed row, unchanged, as the baseline in the same run"
+
+[[hypothesis]]
+label = "fx/eu-short-news"
+base = "session-hold"
+filters = ["weekdays", "hours:0245-0250", "news:60-30"]
+overrides = { from = 245, to = 1045, side = -1, riskDailyRanges = 1, rangeDays = 20 }
+why = "the same row with no entry from 60 min before to 30 min after a high-impact release: the 02:45 signal is blocked when an event falls 01:45-03:15 New York; a release inside the hold is not avoided by an entry gate"
+
+[[hypothesis]]
+label = "fx/eu-short-newsday"
+base = "session-hold"
+filters = ["weekdays", "hours:0245-0250", "news:600-600"]
+overrides = { from = 245, to = 1045, side = -1, riskDailyRanges = 1, rangeDays = 20 }
+why = "the same row skipping the whole day of a high-impact release (10 h either side of the 02:45 signal covers ECB 07:45/08:15 and US 08:30/14:00 New York): the drift between release days"
