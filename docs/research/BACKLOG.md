@@ -34,6 +34,15 @@ Closed ideas move to the bottom with a pointer to their decision record, so
   reopen** (data-integrity, `2026-09-13-tsmom-silver`): `weekdays` does not
   stop `tsmom` from acting on a sign flip at Sunday 18:00 as an exit. Decide
   whether an exit gate is wanted and say so in the filter's doc either way.
+- [ ] **The receipts' profit factor is a compounded-dollar number**
+  (adversary, `2026-09-14-volman-box`): with lots at 1% of compounding
+  equity, a −0.14R/trade row's PF is weighted 47% on its first seven
+  months, and its direction percentile reads 1st where the R-weighted one
+  is 38th. Print PF and the direction null on R (or on fixed lots) next to
+  the dollar figures in `search`'s tables and in `permuted_sides_pf`; then
+  re-read every thousands-of-trades negative in the loop against the R
+  column (the verdicts will not move — a loser is a loser in both units —
+  but the percentiles quoted for them will).
 - [ ] **Intraday reversal on gold, as a sign claim only** (adversary,
   `2026-09-14-intraday-momentum`): the day-so-far sign (08:30 → 15:00)
   predicted the opposite of the last hour (15:30 → 16:45) on 2010–18 at the
@@ -103,6 +112,11 @@ Closed ideas move to the bottom with a pointer to their decision record, so
 
 ## Closed
 
+- [x] Volman's three boxes on 5m gold (the owner's request) → the tight-box
+  break is a coin flip before costs (38th on direction in R, flat gross on
+  3,317 trades) and loses a seventh of its risk a trade after $0.28;
+  0.92–0.97 on the last Vantage year. The breakout family's verdict, with
+  box-height exits. `2026-09-14-volman-box.md`.
 - [x] The euro's European-hours drift on 2018–2026, sign only → 67th on
   direction, excess −0.10 pips a hold (t = −0.16) against −2.84 on 2010–18;
   the clock stopped; the flip year is 2025. `2026-09-14-fx-local-hours-sign.md`.

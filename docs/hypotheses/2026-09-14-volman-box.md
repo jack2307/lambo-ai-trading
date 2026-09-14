@@ -2,7 +2,7 @@
 
 **Registered:** (commit time is authoritative) — after the method is
 implemented and tested, before any run of this batch
-**Status:** in-sample run — both rows fail the primary, the breakout side below a coin flip; closed, under review
+**Status:** decided — closed; `docs/decisions/2026-09-14-volman-box.md` (the "1st percentile / faded at the 99th" in the in-sample note below is the compounded-dollar artefact the record explains; in R the side is a coin flip)
 **Batch files:** `docs/hypotheses/2026-09-14-volman-box.toml` (the test, two
 eight-year windows) and `docs/hypotheses/2026-09-14-volman-box-vantage.toml`
 (context: the owner's recent-year criterion on the broker's own bars)

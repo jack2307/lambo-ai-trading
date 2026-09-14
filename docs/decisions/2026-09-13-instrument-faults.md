@@ -105,3 +105,15 @@ The pattern of the first record holds: none of these was visible in a
 table. Two came from an adversary comparing the two null columns to each
 other, one from a data-integrity replay of the method's own rule, one from
 reading a trade list's exit stamps.
+
+5. **The receipts' profit factor is a compounded-dollar number** (adversary
+   on `2026-09-14-volman-box`, afternoon): lots are 1% of compounding
+   equity, so on a row losing 0.14R a trade the equity curve falls from
+   $10,000 to $84 and the profit factor — gross wins over gross losses in
+   dollars — is 47% the first seven months. The direction percentile of
+   that row reads 1st in dollars and 38th in R. Not yet fixed: the
+   receipts and the permuted-sides null should print an R-weighted (or
+   fixed-lot) profit factor beside the dollar one, and the loop's
+   thousands-of-trades negatives should be re-read against it. No verdict
+   moves — a loser is a loser in both units — but the percentiles quoted
+   for deep losers are not what they look like. Backlog.
