@@ -177,18 +177,33 @@ impl Range {
 }
 
 /// Position while it is open.
-struct Live {
-    side: Side,
-    entry_time: i64,
-    entry_price: f64,
-    stop: Option<f64>,
-    target: Option<f64>,
-    lots: f64,
-    risk: f64,
-    reason: String,
-    mae: f64,
-    mfe: f64,
-    self_managed: bool,
+///
+/// Public, with its fields, because the paper loop (`paper.rs`) holds one
+/// between bars and persists it; the engine is the only thing that creates
+/// or closes one.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Live {
+    pub side: Side,
+    pub entry_time: i64,
+    pub entry_price: f64,
+    pub stop: Option<f64>,
+    pub target: Option<f64>,
+    pub lots: f64,
+    /// The sizing unit: one R in price.
+    pub risk: f64,
+    pub reason: String,
+    /// Worst and best excursion so far, in price.
+    pub mae: f64,
+    pub mfe: f64,
+    pub self_managed: bool,
+}
+
+impl Live {
+    /// The position as a strategy sees it.
+    #[must_use]
+    pub fn view(&self) -> OpenPosition {
+        OpenPosition { side: self.side, entry_price: self.entry_price, entry_time: self.entry_time, stop: self.stop, target: self.target }
+    }
 }
 
 /// Trading rules for one market.
@@ -464,13 +479,7 @@ pub fn run_backtest_guarded(
                 ind,
                 series: &resolved,
                 options: view.as_ref(),
-                position: position.as_ref().map(|p| OpenPosition {
-                    side: p.side,
-                    entry_price: p.entry_price,
-                    entry_time: p.entry_time,
-                    stop: p.stop,
-                    target: p.target,
-                }),
+                position: position.as_ref().map(Live::view),
                 params,
             };
             match strategy.on_bar(&ctx) {
@@ -518,7 +527,8 @@ pub fn run_backtest_guarded(
 }
 
 /// Why `open_position` did not open one.
-enum Refused {
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Refused {
     /// No structural stop and no ATR to derive a risk unit from.
     NoRisk,
     /// A guard refused it at sizing time (the notional cap).
@@ -527,7 +537,7 @@ enum Refused {
 
 /// The position, and whether a guard reduced its lots.
 #[allow(clippy::too_many_arguments)]
-fn open_position(
+pub fn open_position(
     side: Side,
     stop: Option<f64>,
     target: Option<f64>,
@@ -606,7 +616,8 @@ fn open_position(
 
 /// Stop first, then target — the pessimistic reading when a bar's range covers
 /// both and OHLC cannot say which came first.
-fn check_exit(position: &Live, bar: &Bar, rules: &TradingRules) -> Option<(f64, ExitKind)> {
+#[must_use]
+pub fn check_exit(position: &Live, bar: &Bar, rules: &TradingRules) -> Option<(f64, ExitKind)> {
     // A self-managed position has no engine stop, target or clock: the strategy
     // must issue its own exit, and the final bar closes whatever is left.
     // A stop on a self-managed entry is a risk unit for sizing and R, not
@@ -640,7 +651,7 @@ fn check_exit(position: &Live, bar: &Bar, rules: &TradingRules) -> Option<(f64, 
     None
 }
 
-fn track_excursion(position: &mut Live, bar: &Bar) {
+pub fn track_excursion(position: &mut Live, bar: &Bar) {
     let long = position.side.is_long();
     let best = if long { bar.high - position.entry_price } else { position.entry_price - bar.low };
     let worst = if long { bar.low - position.entry_price } else { position.entry_price - bar.high };
@@ -661,7 +672,8 @@ pub(crate) fn apply_costs(price: f64, side: Side, entering: bool, rules: &Tradin
     }
 }
 
-fn close_position(
+#[must_use]
+pub fn close_position(
     position: Live,
     exit_price: f64,
     exit_time: i64,
@@ -806,7 +818,7 @@ pub fn metrics_of(trades: &[Trade], starting_equity: f64) -> Metrics {
 // rounds a half towards positive infinity. `f64::round` rounds away from zero
 // and so disagrees on every negative half — and PnL, R and excursions are
 // negative about as often as not.
-fn round2(v: f64) -> f64 {
+pub(crate) fn round2(v: f64) -> f64 {
     fd_core::js_round_to(v, 2)
 }
 

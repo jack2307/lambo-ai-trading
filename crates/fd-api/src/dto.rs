@@ -233,6 +233,17 @@ pub struct BacktestResponse {
     /// asked for — the default reproduces the oracle, which had none.
     #[serde(skip_serializing_if = "BTreeMap::is_empty")]
     pub skipped_by_guard: BTreeMap<String, usize>,
+    /// Positions a position guard closed, by its label. Empty unless
+    /// `guards` was asked for.
+    #[serde(skip_serializing_if = "BTreeMap::is_empty")]
+    pub closed_by_guard: BTreeMap<String, usize>,
+    /// Entries whose lots the notional cap reduced. Zero unless `guards`.
+    #[serde(skip_serializing_if = "is_zero")]
+    pub sized_down_by_guard: usize,
+}
+
+fn is_zero(n: &usize) -> bool {
+    *n == 0
 }
 
 #[derive(Debug, Serialize)]

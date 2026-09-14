@@ -14,6 +14,7 @@ pub mod control_hold;
 pub mod engine;
 pub mod guards;
 pub mod hypotheses;
+pub mod paper;
 pub mod sweep;
 pub mod timeline;
 
@@ -26,6 +27,7 @@ pub use engine::{
     run_backtest_guarded, trading_rules_for,
 };
 pub use guards::{Exposure, GuardKind, GuardState, Guards, Refusal, guard_exit};
+pub use paper::{PaperBook, StepReport};
 pub use sweep::{
     Fold, LeaderboardRow, PromisingGate, SelectBy, SweepCell, SweepResult, SweepSummary, Verdict,
     WalkForwardResult, compare_strategies, compare_strategies_guarded, run_by_id, score_of, sweep_grid,

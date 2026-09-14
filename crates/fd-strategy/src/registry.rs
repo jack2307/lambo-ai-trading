@@ -87,7 +87,8 @@ impl Side {
 }
 
 /// What a strategy wants to do on this bar.
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum Intent {
     #[default]
     None,

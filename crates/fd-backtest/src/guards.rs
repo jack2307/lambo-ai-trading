@@ -342,7 +342,7 @@ impl Refusal {
 /// Bars arrive in time order, so closed trades older than the window are
 /// dropped from the front as it slides; the deque never holds more than a
 /// day's trades.
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct GuardState {
     /// `(exit_time, pnl_usd)` of closed trades, oldest first.
     closed: VecDeque<(i64, f64)>,

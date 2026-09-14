@@ -33,6 +33,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
     println!("{}", fd_strategy::news::summary("data/news/events.parquet"));
+    {
+        let runs = state.paper.lock().expect("paper runs");
+        if runs.is_empty() {
+            println!("paper: no runs on disk under {}", data.join("paper").display());
+        } else {
+            let ids: Vec<&str> = runs.keys().map(String::as_str).collect();
+            println!("paper: reloaded {} run(s): {}", runs.len(), ids.join(", "));
+        }
+    }
 
     let serving_ui = ui.is_dir();
     let app = router(Arc::clone(&state), Some(ui.clone()));

@@ -372,5 +372,7 @@ pub async fn backtest(
             })
             .collect(),
         skipped_by_guard: result.skipped_by_guard,
+        closed_by_guard: result.closed_by_guard,
+        sized_down_by_guard: result.sized_down_by_guard,
     }))
 }

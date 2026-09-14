@@ -1,8 +1,8 @@
 //! What every request needs, loaded once.
 
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::path::PathBuf;
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 
 use fd_backtest::engine::TradingRules;
 use fd_backtest::{OptionsTimeline, PromisingGate};
@@ -33,6 +33,10 @@ pub struct AppState {
     timelines: RwLock<HashMap<String, Option<Arc<OptionsTimeline>>>>,
     /// One upstream connection per market, shared by every viewer.
     pub live: crate::live::LiveHub,
+    /// The paper runs, one per `market:tf`, keyed by run id. A bar POST
+    /// holds the lock for its step and the write to disk; reloaded from
+    /// `<data>/paper/*/state.json` when the state is built.
+    pub paper: Mutex<BTreeMap<String, crate::paper::PaperRun>>,
 }
 
 pub struct BarSeries {
@@ -44,6 +48,7 @@ pub struct BarSeries {
 
 impl AppState {
     pub fn new(config: Config, data: PathBuf) -> Self {
+        let paper = crate::paper::reload(&data);
         Self {
             config,
             docs: PathBuf::from("docs"),
@@ -52,6 +57,7 @@ impl AppState {
             bars: RwLock::new(HashMap::new()),
             timelines: RwLock::new(HashMap::new()),
             live: crate::live::LiveHub::default(),
+            paper: Mutex::new(paper),
         }
     }
 
