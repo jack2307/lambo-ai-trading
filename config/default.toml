@@ -359,6 +359,38 @@ min_premium_usd = 100_000
 floor = 0.0005
 atr_fraction = 0.15
 
+[markets.eurusd]
+label = "Vantage EURUSD.sc CFD (MT5 bars, no options)"
+bar_symbol = "EURUSD"
+bar_source = "mt5"
+# The broker's own bars, for the paper desk: an EURUSD.sc poller
+# (`py/live/mt5_bars.py --symbol=EURUSD.sc --market=eurusd`) feeds the runs
+# started on this market. The store has no EURUSD-*.parquet until an export
+# is run; a paper start on it warms up from zero bars, from the poller.
+# Costs and conventions are `eurduka`'s, measured on the same account.
+options_source = "none"
+premium_in_underlying = false
+multiplier = 100
+underlying = "6E"
+
+[markets.eurusd.trading]
+symbol = "EURUSD.sc"
+contract_size = 1.0
+spread = 0.00014
+lot_step = 0.01
+min_lot = 0.01
+# Both legs of the pair (empty = every currency).
+news_currencies = ["USD", "EUR"]
+swap_long_per_lot = 0.0
+swap_short_per_lot = 0.0
+
+[markets.eurusd.big_trades]
+min_premium_usd = 100_000
+
+[markets.eurusd.levels.cluster]
+floor = 0.0005
+atr_fraction = 0.15
+
 [markets.btcusd]
 label = "Vantage BTCUSD.sc CFD (MT5 bars + Deribit options)"
 bar_symbol = "BTCUSD"

@@ -33,8 +33,9 @@ pub struct AppState {
     timelines: RwLock<HashMap<String, Option<Arc<OptionsTimeline>>>>,
     /// One upstream connection per market, shared by every viewer.
     pub live: crate::live::LiveHub,
-    /// The paper runs, one per `market:tf`, keyed by run id. A bar POST
-    /// holds the lock for its step and the write to disk; reloaded from
+    /// The paper runs, keyed by run id; any number may share a
+    /// `market:tf`, and a bar POST feeds them all under one lock, each
+    /// step and its write to disk in turn. Reloaded from
     /// `<data>/paper/*/state.json` when the state is built.
     pub paper: Mutex<BTreeMap<String, crate::paper::PaperRun>>,
 }

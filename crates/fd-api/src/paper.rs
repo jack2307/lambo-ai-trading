@@ -1,10 +1,17 @@
-//! The paper loop's run: one strategy on closed bars, the book on disk.
+//! The paper loop's runs: strategies on closed bars, the books on disk.
 //!
 //! `docs/paper/DESIGN.md`. A run is one `market:tf`, one registered
 //! strategy with its filters, the configured guards, and a
 //! [`PaperBook`] — the engine's own fill model one bar at a time. Nothing
 //! here can send an order; the only thing that executes is the JSON file
-//! under `<data>/paper/<market>-<tf>/`.
+//! under `<data>/paper/<id>/`.
+//!
+//! Runs are keyed by an id, not by `market:tf`: the owner runs several
+//! demo accounts on the same bar stream, each with its own strategy, and
+//! one posted bar feeds every run whose `market:tf` matches, in id order.
+//! The id defaults to `<market>-<tf>-<strategy>`; the first layout (one
+//! run per `market:tf`, directory `<market>-<tf>`, no `id` in the state
+//! file) reloads under that directory's name — see [`PaperConfig::id`].
 //!
 //! Per accepted bar: the window (the last `window` bars) gains the bar,
 //! the strategy's indicators are recomputed on the window exactly as the
@@ -46,10 +53,22 @@ use crate::state::{AppState, TIMEFRAMES};
 /// Bars kept when a start does not say.
 pub const DEFAULT_WINDOW: usize = 600;
 
+/// The longest run id accepted.
+pub const MAX_ID_LEN: usize = 40;
+
 /// What a run was started with. `params` are the full parameters after the
 /// overrides, so a reload needs no registry lookup to know what ran.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PaperConfig {
+    /// The run's id, the key everything else hangs off. Empty in a state
+    /// file written before ids existed; [`PaperConfig::id`] derives the
+    /// old key then, so that file reloads where it was.
+    #[serde(default)]
+    pub id: String,
+    /// Free text for the owner's eyes ("demo 12345 — macd asia"); nothing
+    /// reads it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub label: Option<String>,
     pub market: String,
     pub tf: String,
     pub strategy: String,
@@ -60,15 +79,50 @@ pub struct PaperConfig {
 }
 
 impl PaperConfig {
+    /// The run's id: the stored one, or for a state file from the
+    /// one-run-per-`market:tf` layout (no `id` key) the key that layout
+    /// used, `<market>-<tf>` — which is also the directory it sits in.
     #[must_use]
     pub fn id(&self) -> String {
-        run_id(&self.market, &self.tf)
+        if self.id.is_empty() { legacy_run_id(&self.market, &self.tf) } else { self.id.clone() }
+    }
+
+    /// The run's bar stream.
+    #[must_use]
+    pub fn stream(&self) -> String {
+        stream_key(&self.market, &self.tf)
     }
 }
 
+/// The run id of the first layout, and the default's prefix.
 #[must_use]
-pub fn run_id(market: &str, tf: &str) -> String {
+pub fn legacy_run_id(market: &str, tf: &str) -> String {
     format!("{market}-{tf}")
+}
+
+/// The id a start gets when it does not name one.
+#[must_use]
+pub fn default_run_id(market: &str, tf: &str, strategy: &str) -> String {
+    format!("{market}-{tf}-{strategy}")
+}
+
+/// `market:tf`, the key a posted bar is matched on.
+#[must_use]
+pub fn stream_key(market: &str, tf: &str) -> String {
+    format!("{market}:{tf}")
+}
+
+/// `[a-z0-9_-]{1,40}`: a directory name that needs no escaping anywhere,
+/// and short enough to read in a status line.
+fn check_id(id: &str) -> Result<(), ApiError> {
+    let ok = !id.is_empty()
+        && id.len() <= MAX_ID_LEN
+        && id.bytes().all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'_' || b == b'-');
+    if ok {
+        Ok(())
+    } else {
+        Err(ApiError::BadRequest(format!("run id `{id}` must match [a-z0-9_-]{{1,{MAX_ID_LEN}}}")))
+    }
 }
 
 /// One paper run: the config, the rolling window, the book.
@@ -97,6 +151,15 @@ pub enum Accepted {
     Stepped { report: StepReport, gap: Option<usize> },
 }
 
+/// A bar's prices must be finite and ordered; checked once per POST, not
+/// per run, since it is the bar that is wrong and not any run.
+fn check_bar(bar: &Bar) -> Result<(), ApiError> {
+    if ![bar.open, bar.high, bar.low, bar.close].iter().all(|v| v.is_finite()) || bar.high < bar.low {
+        return Err(ApiError::BadRequest(format!("malformed bar at {}: prices must be finite and high >= low", bar.time)));
+    }
+    Ok(())
+}
+
 impl PaperRun {
     /// One closed bar. `Err` for a bar older than the last or malformed;
     /// `Ok(Seen)` for the last bar again.
@@ -109,9 +172,7 @@ impl PaperRun {
         guards: Option<&Guards>,
         bar_ms: i64,
     ) -> Result<Accepted, ApiError> {
-        if ![bar.open, bar.high, bar.low, bar.close].iter().all(|v| v.is_finite()) || bar.high < bar.low {
-            return Err(ApiError::BadRequest(format!("malformed bar at {}: prices must be finite and high >= low", bar.time)));
-        }
+        check_bar(&bar)?;
         let mut gap = None;
         if let Some(last) = self.bars.last() {
             if bar.time == last.time {
@@ -219,6 +280,10 @@ fn record(data: &Path, id: &str, event: &serde_json::Value) -> Result<(), ApiErr
 /// Every `state.json` under `<data>/paper/`, keyed by run id. A file that
 /// does not parse is reported on stderr and skipped rather than taking the
 /// process down: the other runs are still worth keeping.
+///
+/// Both layouts load: a file with an `id` keys by it; one without (written
+/// when there was one run per `market:tf`, in `<market>-<tf>/`) keys by
+/// `<market>-<tf>`, and the id is filled in so the next write says it.
 #[must_use]
 pub fn reload(data: &Path) -> BTreeMap<String, PaperRun> {
     let mut runs = BTreeMap::new();
@@ -229,8 +294,12 @@ pub fn reload(data: &Path) -> BTreeMap<String, PaperRun> {
             continue;
         }
         match std::fs::read_to_string(&path).map_err(|e| e.to_string()).and_then(|t| serde_json::from_str::<PaperRun>(&t).map_err(|e| e.to_string())) {
-            Ok(run) => {
-                runs.insert(run.config.id(), run);
+            Ok(mut run) => {
+                let id = run.config.id();
+                run.config.id.clone_from(&id);
+                if let Some(previous) = runs.insert(id.clone(), run) {
+                    eprintln!("paper: two state files claim run `{id}`; keeping {}, the earlier one was for {}", path.display(), previous.config.stream());
+                }
             }
             Err(e) => eprintln!("paper: could not reload {}: {e}", path.display()),
         }
@@ -256,6 +325,11 @@ fn trade_event(kind: &str, trade: &Trade) -> serde_json::Value {
 
 #[derive(Debug, Deserialize)]
 pub struct StartRequest {
+    /// `[a-z0-9_-]{1,40}`; default `<market>-<tf>-<strategy>`.
+    #[serde(default)]
+    pub id: Option<String>,
+    #[serde(default)]
+    pub label: Option<String>,
     pub market: String,
     pub tf: String,
     pub strategy: String,
@@ -297,18 +371,28 @@ pub struct BarRequest {
     pub bar: BarIn,
 }
 
+/// Which run to stop: by `id`, or by `market` + `tf` when exactly one run
+/// is on that stream (the first client's spelling).
 #[derive(Debug, Deserialize)]
-pub struct RunKey {
-    pub market: String,
-    pub tf: String,
+pub struct StopRequest {
+    #[serde(default)]
+    pub id: Option<String>,
+    #[serde(default)]
+    pub market: Option<String>,
+    #[serde(default)]
+    pub tf: Option<String>,
 }
 
+/// What one run did with a posted bar.
 #[derive(Debug, Serialize)]
-pub struct BarResponse {
+pub struct RunBarResponse {
+    pub id: String,
+    /// False when the run had this bar already (`reason: "seen"`) or
+    /// refused it (`reason` says why); the other runs are unaffected.
     pub accepted: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub reason: Option<&'static str>,
-    /// Bars in the window after this one.
+    pub reason: Option<String>,
+    /// Bars in the run's window after this one.
     pub bars: usize,
     /// Trades closed on this bar.
     pub closed: Vec<TradeDto>,
@@ -320,6 +404,20 @@ pub struct BarResponse {
     /// Bars missing before this one, when the feed skipped some.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub gap: Option<usize>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct BarResponse {
+    /// True when at least one run stepped on the bar. The poller's log
+    /// line reads this and `bars`; the rest is per run.
+    pub accepted: bool,
+    /// Why no run stepped, when none did: the first run's reason.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reason: Option<String>,
+    /// The widest window among the runs fed, after this bar.
+    pub bars: usize,
+    /// One entry per run on this `market:tf`, in id order.
+    pub runs: Vec<RunBarResponse>,
 }
 
 #[derive(Debug, Serialize)]
@@ -368,6 +466,7 @@ pub struct NewsDto {
 #[derive(Debug, Serialize)]
 pub struct RunStatus {
     pub id: String,
+    pub label: Option<String>,
     pub market: String,
     pub tf: String,
     pub strategy: String,
@@ -430,6 +529,7 @@ fn status_of(run: &PaperRun, rules: &TradingRules, guards: Option<&Guards>) -> R
     let skip = book.trades.len().saturating_sub(10);
     RunStatus {
         id: run.config.id(),
+        label: run.config.label.clone(),
         market: run.config.market.clone(),
         tf: run.config.tf.clone(),
         strategy: run.config.strategy.clone(),
@@ -477,8 +577,13 @@ pub async fn start(State(state): State<Arc<AppState>>, Json(request): Json<Start
         return Err(ApiError::BadRequest(format!("unknown timeframe: {}", request.tf)));
     }
     state.config.market(&request.market).map_err(|e| ApiError::BadRequest(e.to_string()))?;
+    let id = request.id.unwrap_or_else(|| default_run_id(&request.market, &request.tf, &request.strategy));
+    check_id(&id)?;
+    let label = request.label.map(|l| l.trim().to_string()).filter(|l| !l.is_empty());
     let window = request.window.max(1);
     let config = PaperConfig {
+        id,
+        label,
         market: request.market,
         tf: request.tf,
         strategy: request.strategy,
@@ -509,7 +614,8 @@ pub async fn start(State(state): State<Arc<AppState>>, Json(request): Json<Start
     let config = PaperConfig { params: params.0.clone(), ..config };
 
     // Warm-up from the store: the last `window` bars, or none when the
-    // store has nothing for this market yet — the poller will supply them.
+    // store has nothing for this market yet (no file at any timeframe,
+    // `ApiError::NoData`) — the poller sends the warm-up bars itself.
     let history = match state.bars(&config.market, &config.tf) {
         Ok(series) => {
             let skip = series.bars.len().saturating_sub(window);
@@ -522,7 +628,7 @@ pub async fn start(State(state): State<Arc<AppState>>, Json(request): Json<Start
     let id = config.id();
     let mut runs = state.paper.lock().expect("paper runs");
     if runs.contains_key(&id) {
-        return Err(ApiError::Conflict(format!("a paper run for {id} exists; stop it first")));
+        return Err(ApiError::Conflict(format!("paper run `{id}` exists; stop it first or start under another id")));
     }
     let run = PaperRun {
         book: PaperBook::new(&rules, strategy.exits() == Exits::Strategy),
@@ -550,34 +656,27 @@ pub async fn start(State(state): State<Arc<AppState>>, Json(request): Json<Start
     Ok(Json(status))
 }
 
-/// `POST /api/paper/bar`
-pub async fn bar(State(state): State<Arc<AppState>>, Json(request): Json<BarRequest>) -> Result<Json<BarResponse>, ApiError> {
-    let id = run_id(&request.market, &request.tf);
-    let bar = Bar {
-        time: request.bar.time,
-        open: request.bar.open,
-        high: request.bar.high,
-        low: request.bar.low,
-        close: request.bar.close,
-        volume: request.bar.volume,
-    };
-    let mut runs = state.paper.lock().expect("paper runs");
-    let run = runs.get_mut(&id).ok_or_else(|| ApiError::NotFound(format!("no paper run for {id}")))?;
-    let (rules, guards) = rules_and_guards(&state, &run.config)?;
+/// One run's step on a posted bar: accept, persist, record. An `Err` is
+/// the run's own refusal (the bar is older than its last), reported in
+/// its entry and not to the caller.
+fn feed_run(state: &AppState, run: &mut PaperRun, bar: Bar) -> Result<RunBarResponse, ApiError> {
+    let id = run.config.id();
+    let (rules, guards) = rules_and_guards(state, &run.config)?;
     let (strategy, params) = resolve(&state.registry, &run.config, &rules.news_currencies)?;
     let bar_ms = timeframe_ms(&run.config.tf).unwrap_or(0);
 
     let (report, gap) = match run.accept(bar, &strategy, &params, &rules, guards.as_ref(), bar_ms)? {
         Accepted::Seen => {
-            return Ok(Json(BarResponse {
+            return Ok(RunBarResponse {
+                id,
                 accepted: false,
-                reason: Some("seen"),
+                reason: Some("seen".to_string()),
                 bars: run.bars.len(),
                 closed: Vec::new(),
                 opened: false,
                 refused: None,
                 gap: None,
-            }));
+            });
         }
         Accepted::Stepped { report, gap } => (report, gap),
     };
@@ -599,7 +698,8 @@ pub async fn bar(State(state): State<Arc<AppState>>, Json(request): Json<BarRequ
         }
     }
 
-    Ok(Json(BarResponse {
+    Ok(RunBarResponse {
+        id,
         accepted: true,
         reason: None,
         bars: run.bars.len(),
@@ -607,14 +707,89 @@ pub async fn bar(State(state): State<Arc<AppState>>, Json(request): Json<BarRequ
         opened: report.opened,
         refused: report.refused,
         gap,
-    }))
+    })
+}
+
+/// `POST /api/paper/bar`
+///
+/// Feeds every run on the bar's `market:tf`, in id order. One run
+/// refusing the bar (older than its last) does not stop the others; each
+/// entry says what its run did. The response is 404 when no run is on
+/// the stream, 400 when the bar is malformed or when every run refused
+/// it — a bar no one could use is the old single-run answer — and 200
+/// otherwise, `accepted` saying whether anyone stepped.
+pub async fn bar(State(state): State<Arc<AppState>>, Json(request): Json<BarRequest>) -> Result<Json<BarResponse>, ApiError> {
+    let stream = stream_key(&request.market, &request.tf);
+    let bar = Bar {
+        time: request.bar.time,
+        open: request.bar.open,
+        high: request.bar.high,
+        low: request.bar.low,
+        close: request.bar.close,
+        volume: request.bar.volume,
+    };
+    check_bar(&bar)?;
+    let mut runs = state.paper.lock().expect("paper runs");
+    let mut out = Vec::new();
+    let mut refusals = 0;
+    for run in runs.values_mut().filter(|r| r.config.stream() == stream) {
+        match feed_run(&state, run, bar) {
+            Ok(entry) => out.push(entry),
+            // The run's own verdict on the bar; a failure to write its
+            // state is the caller's problem and stops the post.
+            Err(ApiError::BadRequest(why)) => {
+                refusals += 1;
+                out.push(RunBarResponse {
+                    id: run.config.id(),
+                    accepted: false,
+                    reason: Some(why),
+                    bars: run.bars.len(),
+                    closed: Vec::new(),
+                    opened: false,
+                    refused: None,
+                    gap: None,
+                });
+            }
+            Err(e) => return Err(e),
+        }
+    }
+    if out.is_empty() {
+        return Err(ApiError::NotFound(format!("no paper run for {stream}")));
+    }
+    if refusals == out.len() {
+        let why = out.iter().find_map(|r| r.reason.clone()).unwrap_or_default();
+        return Err(ApiError::BadRequest(format!("every run on {stream} refused the bar: {why}")));
+    }
+    let accepted = out.iter().any(|r| r.accepted);
+    let reason = if accepted { None } else { out.iter().find_map(|r| r.reason.clone()) };
+    let bars = out.iter().map(|r| r.bars).max().unwrap_or(0);
+    Ok(Json(BarResponse { accepted, reason, bars, runs: out }))
 }
 
 /// `POST /api/paper/stop`
-pub async fn stop(State(state): State<Arc<AppState>>, Json(request): Json<RunKey>) -> Result<Json<StopResponse>, ApiError> {
-    let id = run_id(&request.market, &request.tf);
+pub async fn stop(State(state): State<Arc<AppState>>, Json(request): Json<StopRequest>) -> Result<Json<StopResponse>, ApiError> {
     let mut runs = state.paper.lock().expect("paper runs");
-    let mut run = runs.remove(&id).ok_or_else(|| ApiError::NotFound(format!("no paper run for {id}")))?;
+    let id = match (request.id, request.market, request.tf) {
+        (Some(id), _, _) => id,
+        (None, Some(market), Some(tf)) => {
+            let stream = stream_key(&market, &tf);
+            let mut on_stream = runs.keys().filter(|id| runs[*id].config.stream() == stream);
+            match (on_stream.next(), on_stream.next()) {
+                (Some(only), None) => only.clone(),
+                (None, _) => return Err(ApiError::NotFound(format!("no paper run for {stream}"))),
+                (Some(_), Some(_)) => {
+                    let ids: Vec<&String> = runs.keys().filter(|id| runs[*id].config.stream() == stream).collect();
+                    return Err(ApiError::Conflict(format!(
+                        "{} paper runs on {stream}; say which by id: {}",
+                        ids.len(),
+                        ids.iter().map(|s| s.as_str()).collect::<Vec<_>>().join(", ")
+                    )));
+                }
+            }
+        }
+        _ => return Err(ApiError::BadRequest("stop needs an id, or a market and tf".to_string())),
+    };
+    let mut run = runs.remove(&id).ok_or_else(|| ApiError::NotFound(format!("no paper run `{id}`")))?;
     let (rules, _) = match rules_and_guards(&state, &run.config) {
         Ok(found) => found,
         Err(e) => {
