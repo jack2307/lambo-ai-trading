@@ -1,6 +1,6 @@
 # The review team
 
-Seven agents, none of which trades. They exist to make it harder to fool
+Eight agents, none of which trades. They exist to make it harder to fool
 ourselves during research, which is the only failure mode this project has
 actually suffered so far — every real bug found here has been a number that
 looked right.
@@ -34,7 +34,11 @@ So authority here is **asymmetric**, and the numbers outrank everybody.
    and only with evidence — a veto that cannot point at a file, a number or a
    command output is not a veto, it is a mood.
 3. **The advisory roles.** `researcher`, `execution-realist`, `portfolio`,
-   `historian`. They inform the written decision. They do not make it.
+   `historian`, `news-desk`. They inform the written decision. They do not
+   make it. `news-desk` has one standing power outside research: the
+   blackout it publishes around scheduled releases is enforced in code on
+   any paper run (`news:` filter), and it is the role asked afterwards
+   whether the blackout was honoured.
 4. **The manager** (the main session). Enforces the process: did each role cite
    evidence, did any veto fire, and what does the decision record say. The
    manager's job is not to break ties by preference.

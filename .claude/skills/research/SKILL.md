@@ -90,8 +90,12 @@ artefact, and require a citation from each:
 - `risk` → the trade lists / drawdowns in the in-sample output and the
   strategy's exits.
 
-Advisory roles (`execution-realist`, `portfolio`, `historian`) get the same
-files and one question each. Any veto with evidence stands; you do not break
+Advisory roles (`execution-realist`, `portfolio`, `historian`, `news-desk`)
+get the same files and one question each. `news-desk` is mandatory for any
+claim that trades a clock, a session or a fixed window: it marks the trades
+whose entry or exit sits inside ±60 minutes of a scheduled high-impact
+release (`data/news/events.parquet`) and says what share of the net they
+carry; the `news:60-30` filter may be run as *context*, never as a re-tune. Any veto with evidence stands; you do not break
 ties by preference.
 
 ## 6. Record and close
