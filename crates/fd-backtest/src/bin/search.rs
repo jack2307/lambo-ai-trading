@@ -668,7 +668,7 @@ fn run_volume(registry: &Registry, bars: &[Bar], rules: &TradingRules, timeline:
     let round_trip = rules.spread * rules.contract_size + 2.0 * rules.commission_per_lot;
     println!("== volume economics: what one lot costs the client, and the rebate that would cover it ==");
     println!(
-        "contract {} | spread {:.2} + commission {:.2}/side = {:.2} USD per lot round trip | swap {:.2}/{:.2} per lot-night | {span_years:.2} years",
+        "contract {} | spread {} + commission {:.2}/side = {:.2} USD per lot round trip | swap {:.2}/{:.2} per lot-night | {span_years:.2} years",
         rules.contract_size, rules.spread, rules.commission_per_lot, round_trip, rules.swap_long_per_lot, rules.swap_short_per_lot
     );
     println!("all figures per lot of this contract; on a 100 oz standard lot multiply gold by 100");
@@ -766,7 +766,7 @@ fn run_hypotheses(
     } else {
         println!("== hypotheses `{shown}`: {} declared, walk-forward ({folds} folds), each against {seeds} matched null runs ==", batch.len());
     }
-    println!("swap: long {:.2} / short {:.2} USD per lot per night; spread {:.2}", rules.swap_long_per_lot, rules.swap_short_per_lot, rules.spread);
+    println!("swap: long {:.2} / short {:.2} USD per lot per night; spread {}", rules.swap_long_per_lot, rules.swap_short_per_lot, rules.spread);
     println!();
     println!(
         "{:<12} {:<18} {:>6} {:>7} {:>7} {:>8} {:>8} {:>8} {:>5}  verdict",
@@ -847,7 +847,7 @@ fn run_cost_sensitivity(
     const FRACTIONS: [f64; 5] = [0.0, 0.25, 0.5, 1.0, 2.0];
 
     println!("== cost sensitivity: walk-forward profit factor at N x the configured cost ==");
-    println!("configured spread {:.2}, commission {:.2}/lot
+    println!("configured spread {}, commission {:.2}/lot
 ", rules.spread, rules.commission_per_lot);
     print!("{:<20}", "strategy");
     for fraction in FRACTIONS {

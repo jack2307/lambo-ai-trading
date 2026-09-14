@@ -1,7 +1,7 @@
 # 2026-09-14-fx-local-hours: the euro falls during European hours and rises during American ones
 
 **Registered:** (commit time is authoritative) — before any run of this batch
-**Status:** in-sample run — every row has the sign right at the 96th–100th of both nulls and fails the profit-factor gate; closed as registered, under review
+**Status:** decided — closed on the gate; `docs/decisions/2026-09-14-fx-local-hours.md` (note: the `us-long` row's Friday holds ran to Sunday 17:00 on this feed; `weekdays:MoTuWeTh` should have been used)
 **Batch file:** `docs/hypotheses/2026-09-14-fx-local-hours.toml`
 
 ## Where this comes from
