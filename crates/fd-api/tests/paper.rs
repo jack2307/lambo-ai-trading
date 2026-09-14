@@ -11,7 +11,8 @@ use std::sync::Arc;
 use axum::Json;
 use axum::extract::State;
 use axum::response::IntoResponse;
-use fd_api::paper::{bar, start, status, stop};
+use axum::extract::{Path as PathParam, Query};
+use fd_api::paper::{DEFAULT_DETAIL_BARS, DetailQuery, bar, detail, start, status, stop};
 use fd_api::{ApiError, AppState};
 use fd_core::config::Config;
 use fd_core::types::Bar;
@@ -52,6 +53,12 @@ async fn post_bar(state: &Arc<AppState>, market: &str, tf: &str, b: Bar) -> Resu
     let body = json!({ "market": market, "tf": tf, "bar": { "time": b.time, "open": b.open, "high": b.high, "low": b.low, "close": b.close, "volume": b.volume } });
     let request = serde_json::from_value(body).expect("a bar body");
     bar(State(Arc::clone(state)), Json(request)).await.map(|Json(v)| serde_json::to_value(v).expect("json"))
+}
+
+async fn read_detail(state: &Arc<AppState>, id: &str, bars: Option<usize>) -> Result<Value, ApiError> {
+    detail(State(Arc::clone(state)), PathParam(id.to_string()), Query(DetailQuery { bars }))
+        .await
+        .map(|Json(v)| serde_json::to_value(v).expect("json"))
 }
 
 async fn read_status(state: &Arc<AppState>) -> Value {
@@ -467,4 +474,48 @@ async fn a_start_is_checked_like_a_backtest_request() {
     assert_eq!(started["bars"], 0);
     assert_eq!(started["warmup_bars"], 0);
     assert!(read_status(&state).await["runs"].as_array().is_some_and(Vec::is_empty));
+}
+
+#[tokio::test]
+async fn the_detail_carries_the_curve_the_fills_the_events_and_the_window() {
+    let dir = tempfile::tempdir().expect("temp dir");
+    let state = state_over(dir.path(), 300);
+    start_run(&state, json!({ "id": "detail", "market": "btc", "tf": "15m", "strategy": "ema-cross" }))
+        .await
+        .expect("start");
+    for i in 300..350 {
+        post_bar(&state, "btc", "15m", wave(i)).await.expect("bar");
+    }
+
+    let d = read_detail(&state, "detail", None).await.expect("detail");
+    let run = &d["run"];
+    assert_eq!(run["id"], "detail");
+
+    // The curve opens at the starting equity, at the moment the run started,
+    // so a run with no trade still draws a point.
+    let curve = d["equity_curve"].as_array().expect("curve");
+    assert_eq!(curve[0][0], run["started_at"]);
+    assert_eq!(curve[0][1], 10_000.0);
+    assert_eq!(curve.len(), run["trades"].as_u64().expect("trades") as usize + 1);
+
+    // Every closed trade is here, not just the ten the status carries.
+    let fills = d["fills"].as_array().expect("fills");
+    assert_eq!(fills.len(), run["trades"].as_u64().expect("trades") as usize);
+    assert!(!fills.is_empty(), "the wave must produce a closed trade");
+    assert!(fills[0]["exitTime"].as_i64() <= fills[fills.len() - 1]["exitTime"].as_i64(), "oldest first");
+
+    // The event lines are the ones that are not trades.
+    let events = d["events"].as_array().expect("events");
+    assert!(events.iter().any(|e| e["kind"] == "started"), "{events:?}");
+    assert!(events.iter().all(|e| e["kind"] != "trade"), "trades belong in `fills`");
+
+    // The window, newest `bars` of it, oldest first.
+    assert_eq!(d["bars"].as_array().map(Vec::len), Some(DEFAULT_DETAIL_BARS));
+    let ten = read_detail(&state, "detail", Some(10)).await.expect("detail");
+    let bars = ten["bars"].as_array().expect("bars");
+    assert_eq!(bars.len(), 10);
+    assert_eq!(bars[9][0], wave(349).time, "the newest window bar is last");
+    assert!(bars[0][0].as_i64() < bars[9][0].as_i64());
+
+    assert_eq!(read_detail(&state, "nobody", None).await.map(|_| ()).map_err(http_status), Err(404));
 }

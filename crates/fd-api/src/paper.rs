@@ -30,12 +30,12 @@
 //! (`fd-backtest/tests/paper_parity.rs`).
 
 use std::collections::BTreeMap;
-use std::io::Write;
+use std::io::{BufRead, Write};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use axum::Json;
-use axum::extract::State;
+use axum::extract::{Path as PathParam, Query, State};
 use fd_backtest::engine::{ensure_fallback_atr, sizing_atr_key};
 use fd_backtest::{Guards, PaperBook, StepReport, Trade, TradingRules};
 use fd_core::types::Bar;
@@ -277,6 +277,22 @@ fn record(data: &Path, id: &str, event: &serde_json::Value) -> Result<(), ApiErr
     writeln!(file, "{event}").map_err(|e| ApiError::Internal(format!("paper: {}: {e}", path.display())))
 }
 
+/// The run's `fills.jsonl` less its `trade` lines, oldest first: the
+/// `started`, `gap`, `refused`, `guard_close` and `stopped` events. Read
+/// line by line; a line that is not a JSON object (a write cut short by a
+/// crash) is skipped, not fatal — the book in `state.json` is the record,
+/// this file is its narration. No file (a run that never wrote one) is no
+/// events.
+fn events_of(data: &Path, id: &str) -> Vec<serde_json::Value> {
+    let Ok(file) = std::fs::File::open(run_dir(data, id).join("fills.jsonl")) else { return Vec::new() };
+    std::io::BufReader::new(file)
+        .lines()
+        .map_while(Result::ok)
+        .filter_map(|line| serde_json::from_str::<serde_json::Value>(&line).ok())
+        .filter(|event| event.is_object() && event["kind"] != "trade")
+        .collect()
+}
+
 /// Every `state.json` under `<data>/paper/`, keyed by run id. A file that
 /// does not parse is reported on stderr and skipped rather than taking the
 /// process down: the other runs are still worth keeping.
@@ -493,6 +509,13 @@ pub struct RunStatus {
     pub news: NewsDto,
     /// The last ten closed trades, oldest first.
     pub last_fills: Vec<TradeDto>,
+    /// Points on the book's equity curve (one per closed trade). The curve
+    /// itself is on `GET /api/paper/run/{id}`; the status stays light.
+    pub equity_curve: usize,
+    /// Event lines in the run's `fills.jsonl` other than trades (started,
+    /// gaps, refusals, guard closes, stopped). The lines themselves are on
+    /// `GET /api/paper/run/{id}`.
+    pub events: usize,
 }
 
 #[derive(Debug, Serialize)]
@@ -500,7 +523,44 @@ pub struct StatusResponse {
     pub runs: Vec<RunStatus>,
 }
 
-fn status_of(run: &PaperRun, rules: &TradingRules, guards: Option<&Guards>) -> RunStatus {
+/// `GET /api/paper/run/{id}`: the status entry and what it leaves out.
+#[derive(Debug, Serialize)]
+pub struct RunDetail {
+    /// The same entry `/api/paper/status` carries for this run.
+    pub run: RunStatus,
+    /// `[time_ms, equity]` after every closed trade, oldest first, led by
+    /// `[started_at, starting equity]` so a run with no trade still draws
+    /// a point.
+    pub equity_curve: Vec<(i64, f64)>,
+    /// Every closed trade, oldest first — the last [`MAX_DETAIL_FILLS`].
+    pub fills: Vec<TradeDto>,
+    /// The `fills.jsonl` lines that are not trades, oldest first — the
+    /// last [`MAX_DETAIL_EVENTS`]. Each is the line as written: `kind`,
+    /// `time`, and the kind's own fields.
+    pub events: Vec<serde_json::Value>,
+    /// `[time, open, high, low, close]` for the last `bars` of the run's
+    /// window, oldest first.
+    pub bars: Vec<(i64, f64, f64, f64, f64)>,
+}
+
+/// Closed trades a detail carries at most.
+pub const MAX_DETAIL_FILLS: usize = 500;
+
+/// Event lines a detail carries at most.
+pub const MAX_DETAIL_EVENTS: usize = 200;
+
+/// Window bars a detail carries when the query does not say.
+pub const DEFAULT_DETAIL_BARS: usize = 120;
+
+#[derive(Debug, Default, Deserialize)]
+pub struct DetailQuery {
+    /// Window bars to return, from the newest back; default
+    /// [`DEFAULT_DETAIL_BARS`], at most the run's window.
+    #[serde(default)]
+    pub bars: Option<usize>,
+}
+
+fn status_of(data: &Path, run: &PaperRun, rules: &TradingRules, guards: Option<&Guards>) -> RunStatus {
     let book = &run.book;
     let metrics = book.metrics(rules);
     let open = book.position.as_ref().map(|p| OpenDto {
@@ -553,6 +613,8 @@ fn status_of(run: &PaperRun, rules: &TradingRules, guards: Option<&Guards>) -> R
         gaps: run.gaps,
         news: NewsDto { events_loaded: events.len(), next_blackout },
         last_fills: book.trades[skip..].iter().map(TradeDto::from).collect(),
+        equity_curve: book.equity_curve.len(),
+        events: events_of(data, &run.config.id()).len(),
     }
 }
 
@@ -651,7 +713,7 @@ pub async fn start(State(state): State<Arc<AppState>>, Json(request): Json<Start
             "news": fd_strategy::news::summary("data/news/events.parquet"),
         }),
     )?;
-    let status = status_of(&run, &rules, guards.as_ref());
+    let status = status_of(&state.data, &run, &rules, guards.as_ref());
     runs.insert(id, run);
     Ok(Json(status))
 }
@@ -833,7 +895,42 @@ pub async fn status(State(state): State<Arc<AppState>>) -> Result<Json<StatusRes
     let mut out = Vec::with_capacity(runs.len());
     for run in runs.values() {
         let (rules, guards) = rules_and_guards(&state, &run.config)?;
-        out.push(status_of(run, &rules, guards.as_ref()));
+        out.push(status_of(&state.data, run, &rules, guards.as_ref()));
     }
     Ok(Json(StatusResponse { runs: out }))
+}
+
+/// `GET /api/paper/run/{id}?bars=N`
+///
+/// One run in full for the Desk's drill-down: the status entry, the equity
+/// curve, every closed trade (the last 500), the event lines (the last
+/// 200) and the tail of the bar window (`bars`, default 120, at most the
+/// window). 404 for an id no run has.
+pub async fn detail(
+    State(state): State<Arc<AppState>>,
+    PathParam(id): PathParam<String>,
+    Query(query): Query<DetailQuery>,
+) -> Result<Json<RunDetail>, ApiError> {
+    let runs = state.paper.lock().expect("paper runs");
+    let run = runs.get(&id).ok_or_else(|| ApiError::NotFound(format!("no paper run `{id}`")))?;
+    let (rules, guards) = rules_and_guards(&state, &run.config)?;
+    let status = status_of(&state.data, run, &rules, guards.as_ref());
+
+    let book = &run.book;
+    let mut equity_curve = Vec::with_capacity(book.equity_curve.len() + 1);
+    equity_curve.push((run.started_at, rules.starting_equity_usd));
+    equity_curve.extend_from_slice(&book.equity_curve);
+
+    let skip = book.trades.len().saturating_sub(MAX_DETAIL_FILLS);
+    let fills = book.trades[skip..].iter().map(TradeDto::from).collect();
+
+    let mut events = events_of(&state.data, &id);
+    let skip = events.len().saturating_sub(MAX_DETAIL_EVENTS);
+    events.drain(..skip);
+
+    let wanted = query.bars.unwrap_or(DEFAULT_DETAIL_BARS).min(run.config.window.max(1));
+    let skip = run.bars.len().saturating_sub(wanted);
+    let bars = run.bars[skip..].iter().map(|b| (b.time, b.open, b.high, b.low, b.close)).collect();
+
+    Ok(Json(RunDetail { run: status, equity_curve, fills, events, bars }))
 }

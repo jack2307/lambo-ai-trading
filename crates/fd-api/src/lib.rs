@@ -43,6 +43,7 @@ pub fn router(state: Arc<AppState>, ui: Option<PathBuf>) -> Router {
         .route("/api/paper/bar", post(paper::bar))
         .route("/api/paper/stop", post(paper::stop))
         .route("/api/paper/status", get(paper::status))
+        .route("/api/paper/run/{id}", get(paper::detail))
         .with_state(state);
 
     match ui.filter(|dir| dir.is_dir()) {
