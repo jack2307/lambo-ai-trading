@@ -15,12 +15,12 @@ fixed = true
 label = "box/b2"
 base = "volman-box"
 filters = ["weekdays"]
-overrides = { maxBoxAtr = 1.5, boxes = 1, emaPeriod = 18, atrPeriod = 14, maxBreakAtr = 1.0 }
+overrides = { maxBoxAtr = 3.0, boxes = 1, emaPeriod = 18, atrPeriod = 14, maxBreakAtr = 1.0 }
 why = "context: box 2 target on the last seventeen months of Vantage 5m bars"
 
 [[hypothesis]]
 label = "box/b3"
 base = "volman-box"
 filters = ["weekdays"]
-overrides = { maxBoxAtr = 1.5, boxes = 2, emaPeriod = 18, atrPeriod = 14, maxBreakAtr = 1.0 }
+overrides = { maxBoxAtr = 3.0, boxes = 2, emaPeriod = 18, atrPeriod = 14, maxBreakAtr = 1.0 }
 why = "context: box 3 target on the same"

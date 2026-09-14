@@ -13,12 +13,12 @@ fixed = true
 label = "box/b2"
 base = "volman-box"
 filters = ["weekdays"]
-overrides = { maxBoxAtr = 1.5, boxes = 1, emaPeriod = 18, atrPeriod = 14, maxBreakAtr = 1.0 }
+overrides = { maxBoxAtr = 3.0, boxes = 1, emaPeriod = 18, atrPeriod = 14, maxBreakAtr = 1.0 }
 why = "the breakout from a tight box travels one more box: stop at box 1's far side, target at box 2's far edge (Volman's TP1); boxBars selected from {12, 20, 30}"
 
 [[hypothesis]]
 label = "box/b3"
 base = "volman-box"
 filters = ["weekdays"]
-overrides = { maxBoxAtr = 1.5, boxes = 2, emaPeriod = 18, atrPeriod = 14, maxBreakAtr = 1.0 }
+overrides = { maxBoxAtr = 3.0, boxes = 2, emaPeriod = 18, atrPeriod = 14, maxBreakAtr = 1.0 }
 why = "the same breakout travels two more boxes: target at box 3's far edge (Volman's TP final)"

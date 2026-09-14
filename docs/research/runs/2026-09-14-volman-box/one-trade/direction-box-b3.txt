@@ -1,0 +1,19 @@
+$ E:\rust\flowdesk\target\release\search.exe --market=xauduka --interval=5m --mode=null-dir --strategy=volman-box --samples=1000 --params=maxBoxAtr=1.5,boxes=2,emaPeriod=18,atrPeriod=14,maxBreakAtr=1.0 --filters=weekdays --from=2010-06-01 --to=2018-06-15
+
+bounds:   --from=2010-06-01 --to=2018-06-15 kept 574640 of 1135389 bars
+bars:     574640 from 2010-06-01 00:00 to 2018-06-14 23:55
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+  filters: MoTuWeThFr
+== direction control: volman-box, 1 trades, 1000 coin-flip assignments ==
+  preset: maxBoxAtr=1.5,boxes=2,emaPeriod=18,atrPeriod=14,maxBreakAtr=1.0
+  entries, stops and targets held fixed; only the side is randomised
+  profit factor of the same trades with random direction:
+    p05 0.000   p25 0.000   p50 0.000   p75 0.000   p95 0.000   max 0.000
+
+  actual: inf  ->  100th percentile  (p = 0.000)
+
+  Outside its own null. That is a finding worth taking further.
+

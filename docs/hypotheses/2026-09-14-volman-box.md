@@ -2,7 +2,7 @@
 
 **Registered:** (commit time is authoritative) — after the method is
 implemented and tested, before any run of this batch
-**Status:** registered
+**Status:** registered; amended once (the compression threshold), before any informative run
 **Batch files:** `docs/hypotheses/2026-09-14-volman-box.toml` (the test, two
 eight-year windows) and `docs/hypotheses/2026-09-14-volman-box-vantage.toml`
 (context: the owner's recent-year criterion on the broker's own bars)
@@ -88,3 +88,15 @@ per window; the gate's 30 is not in question, the nulls are.
 - Fails the primary → closed; the family's verdict extends to this exit
   geometry, and the owner's context batch says what the last year looked
   like.
+
+## Amendment (before any informative run): the compression threshold
+
+The first run fired once in eight years at the registered parameters
+(`in-sample-fixed.txt` under `one-trade/`: 1 trade; the walk-forward's
+229 trades came from the 12-bar cell). `maxBoxAtr = 1.5` was written as if
+the ATR were a 20-bar range; the ATR is one bar's, and the range of twenty
+random-walk bars is three to four of them, so a box under 1.5 ATR almost
+never exists. Amended to `maxBoxAtr = 3.0` — a twenty-bar box no taller
+than three single-bar ATRs, which is a tight consolidation in Volman's
+sense and a preset that can fire. Nothing else changes; the run that
+produced this is kept under `one-trade/` and quoted nowhere as a result.
