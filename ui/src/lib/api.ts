@@ -195,6 +195,8 @@ export interface ResearchHypothesis {
 /** One paper run, as `/api/paper/status` reports it (snake_case on the wire). */
 export interface PaperRun {
   id: string
+  /** The sentence the run was registered under — why it is on the desk at all. */
+  label?: string
   market: string
   tf: string
   strategy: string
@@ -228,7 +230,47 @@ export interface PaperRun {
   skipped_no_atr: number
   gaps: number
   news: { events_loaded: number; next_blackout: null | { time: number; currency: string; impact: number; name?: string } }
+  /** The last ten closed trades. The whole book is on `/api/paper/run/{id}`. */
   last_fills: BacktestTrade[]
+  /** On `/status` these two are *counts*, kept light; the detail route carries the rows. */
+  equity_curve?: number
+  events?: number
+}
+
+/**
+ * One line of a run's `fills.jsonl`, less its `trade` lines: what happened to
+ * the run that was not a fill.
+ *
+ * `kind` is `started`, `gap`, `refused`, `guard_close` or `stopped`, and each
+ * carries only the fields its kind writes — hence every extra field optional.
+ */
+export interface PaperEvent {
+  kind: string
+  time: number
+  /** `refused` and `guard_close`: the guard's own label, e.g. `NEWS_FLAT`. */
+  reason?: string
+  /** `gap`: bars the feed skipped before this one. */
+  missing_bars?: number
+  /** `started`: the guard sentence and the news file, as the server describes them. */
+  guards?: string | null
+  news?: string | null
+  /** `stopped`: the book as it was closed. */
+  trades?: number
+  equity?: number
+  net_usd?: number
+  trade?: BacktestTrade
+}
+
+/** `GET /api/paper/run/{id}` — one run's book, narration and recent bars. */
+export interface PaperRunDetail {
+  run: PaperRun
+  /** `[epoch ms, equity]`, one point per closed trade plus the opening balance.
+   *  Not sorted: warm-up trades close before the run's own start stamp. */
+  equity_curve: [number, number][]
+  fills: BacktestTrade[]
+  events: PaperEvent[]
+  /** `[time, open, high, low, close]`, oldest first. */
+  bars: [number, number, number, number, number][]
 }
 
 export interface Research {
@@ -298,4 +340,8 @@ export const api = {
 
   research: () => request<Research>('/api/research'),
   paperStatus: () => request<{ runs: PaperRun[] }>('/api/paper/status'),
+
+  /** One run in full. `bars` is how many recent bars to send back with it. */
+  paperRun: (id: string, bars = 120) =>
+    request<PaperRunDetail>(`/api/paper/run/${encodeURIComponent(id)}?bars=${bars}`),
 }

@@ -20,13 +20,13 @@ thing the client runs. One rename must not drag the other.
 
 ## The two modes
 
-**Overview mode** — the Dashboard. Dark, elevated cards on a near-black ground,
+**Overview mode** — Research and Floor. Dark, elevated cards on a near-black ground,
 generous radius, generous space, a single bright accent. Its job is to let
 someone arriving cold see the state of the system in one screen: what is
 running, what passed, what is blocked. Cards carry meaning through grouping and
 rank rather than through density.
 
-**Terminal mode** — Workbench and Tape. Dense, flat, small radius, tight
+**Terminal mode** — Desk, Workbench and Tape. Dense, flat, small radius, tight
 leading, a table that fills the viewport. Its job is to let someone already
 working read a lot of numbers without scrolling. Cards and padding are the enemy
 here.

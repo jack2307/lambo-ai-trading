@@ -2,19 +2,22 @@ import { useCallback, useEffect, useState } from 'react'
 
 import { AppBar } from '@/components/AppBar'
 import { ErrorBanner } from '@/components/ErrorBanner'
-import { Dashboard } from '@/pages/Dashboard'
+import { Desk } from '@/pages/Desk'
+import { Floor } from '@/pages/Floor'
+import { Research } from '@/pages/Research'
 import { Tape } from '@/pages/Tape'
 import { Workbench } from '@/pages/Workbench'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Toaster } from '@/components/ui/sonner'
 import { api, type Catalog } from '@/lib/api'
 
-export type View = 'dashboard' | 'tape' | 'workbench'
+export type View = 'desk' | 'workbench' | 'tape' | 'research' | 'floor'
+
+const VIEWS: View[] = ['desk', 'workbench', 'tape', 'research', 'floor']
 
 function viewFromHash(): View {
-  const hash = window.location.hash.replace('#', '')
-  if (hash === 'tape' || hash === 'workbench') return hash
-  return 'dashboard'
+  const hash = window.location.hash.replace('#', '') as View
+  return VIEWS.includes(hash) ? hash : 'desk'
 }
 
 export default function App() {
@@ -61,13 +64,19 @@ export default function App() {
 
       {error && <ErrorBanner message={error} onDismiss={() => setError(null)} />}
 
-      {!catalog ? (
+      {/* The Desk and the Floor read no catalog, so neither waits on one: the
+          default screen must not be held behind a request it does not use. */}
+      {view === 'desk' ? (
+        <Desk />
+      ) : view === 'floor' ? (
+        <Floor />
+      ) : !catalog ? (
         <div className="space-y-3 p-4">
           <Skeleton className="h-9 w-full" />
           <Skeleton className="h-[60vh] w-full" />
         </div>
-      ) : view === 'dashboard' ? (
-        <Dashboard catalog={catalog} market={market} onError={setError} />
+      ) : view === 'research' ? (
+        <Research catalog={catalog} market={market} onError={setError} />
       ) : view === 'workbench' ? (
         <Workbench catalog={catalog} market={market} onError={setError} />
       ) : (
