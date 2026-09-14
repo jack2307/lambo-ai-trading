@@ -3,6 +3,21 @@
 Two surfaces, one palette. Read the first section before adding a screen,
 because most mistakes here are a screen built in the wrong mode.
 
+## The name
+
+The product is **Backcom Desk** (owner's choice, 2026-09-14). It lives in one
+constant, `src/lib/brand.ts`, and in `index.html`'s `<title>`; nowhere else.
+A rename is those two places.
+
+`flowdesk` stays the repository and the engine — the Rust workspace, the
+crates, the binaries. It is not a public name: **Flowdesk** is a French
+crypto market maker with real funding and the same industry, so the word
+cannot go on anything a client or a stranger sees.
+
+The bot that will be handed to IB clients gets its **own** name, decided
+when it ships. The desk is the room the owner works in; the bot is the
+thing the client runs. One rename must not drag the other.
+
 ## The two modes
 
 **Overview mode** — the Dashboard. Dark, elevated cards on a near-black ground,
