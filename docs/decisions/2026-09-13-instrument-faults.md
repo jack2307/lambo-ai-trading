@@ -149,3 +149,44 @@ number worse, which is the direction a reader forgives.
    one-bar tolerance: a bar further from the minute than one interval is no
    observation. The rule: a lookup that cannot fail silently tells you it
    failed.
+
+## Addendum, 2026-09-15 (small hours): two design faults, not coding ones
+
+Both from `2026-09-14-nfp-vs-first-friday`, and both different in kind from
+the seven above. Faults 1–7 were things the code did that its author did not
+intend. These two are things the code did exactly as written, where the
+writing was wrong — which is why no test would have caught either and why
+both needed a role reading the design rather than the output.
+
+8. **A null that holds one clock fixed and lets another float** (news-desk,
+   and the same class as fault 6). The four-cell run drew its control from
+   quiet later Fridays across all twelve months, while the cells it was
+   controlling can only exist in seven or eight: the US employment report
+   lands on a second Friday only when the reference month is February or a
+   30-day month whose 12th is a Sunday, so the release cell is 56% January
+   and March and contains no April, June, August or September day ever.
+   Re-drawn holding the month of the year fixed, the cell's mean moves from
+   the 6.1st percentile to the **16.2nd**. The rule both this and fault 6
+   encode: **name every clock the treatment is locked to, and hold all of
+   them in the null.** Weekday and minute were held; month of year was not,
+   and nobody noticed because the cell was defined by a rule about weeks.
+
+9. **A screen applied to the control cells and not to the treatment cells**
+   (data-integrity and news-desk). The same run excluded any day carrying a
+   second scheduled high-impact release — but only from the two cells with no
+   release in them. The two release cells were never screened, so
+   `2014-07-03` sat in one of them carrying an **ECB rate decision at 07:45
+   New York, inside the measured hour**. Harmless in fact on the main cells
+   (0 of 153 and 0 of 25 carry one) and not harmless in principle: a filter
+   that runs on one arm of a comparison and not the other is a difference
+   between the arms that nobody declared. The rule: **a screen is a property
+   of the comparison, not of a cell.**
+
+And one fault that is not the instrument's but belongs beside them, because
+it did the same damage: **the registration's own cell table was
+arithmetically impossible** — 158 + 34 + 33 + 643 = 868 against 835 Fridays
+in the span, because the baseline was written as *all* later Fridays,
+silently including the release days it was the control for and the busy days
+the same paragraph promised to exclude. A declared count that does not add up
+to the calendar is a fault findable before any data is read, and it was
+committed unread.

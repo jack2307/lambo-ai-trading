@@ -10,6 +10,30 @@ Closed ideas move to the bottom with a pointer to their decision record, so
 
 ## Open
 
+- [ ] **Does the hour before 08:30 New York fall before ANY macro release,
+  rather than before this one?** (the successor to
+  `2026-09-14-nfp-vs-first-friday`, named independently by the adversary and
+  by news-desk). Reason: it is the only hypothesis that fits all three
+  findings at once. Gold's 07:30 → 08:30 hour falls on US employment Fridays;
+  it falls on "quiet" first Fridays, eleven of which carry Canada's Labour
+  Force Survey or US Personal Income/PCE at 08:30; and it does **not** fall on
+  quiet Monday-to-Thursday turn-of-month days (median −0.005 over 274 days) —
+  a calendar cannot tell a Friday from a Tuesday, an 08:30 release can. This
+  is a mechanism rather than a window, it has five to ten times the sample,
+  and it is the first idea in this loop that was proposed by a review rather
+  than by a search. **Prerequisite, and it is a data task not a research one:**
+  extend `data/news/events.csv` with Canada's Labour Force Survey and US
+  Personal Income/PCE release dates (`docs/news/README.md` records that the
+  calendar holds five event names and two currencies). **Declare before
+  reading:** the median as the statistic, not the mean (the mean was the
+  statistic that misled the parent); a day-of-month-matched control; and the
+  baseline restricted to mid-month days.
+- [ ] **A screen is a property of a comparison, not of a cell** (fault 9,
+  `2026-09-13-instrument-faults.md`): `scripts/friday_cells.py` excludes days
+  carrying a second high-impact release from its control cells and not from
+  its treatment cells. Fix it there, and check every other instrument in
+  `scripts/` for a filter applied to one arm only.
+
 - [ ] ~~**Asian-range breakout at London open.**~~ Withdrawn 2026-09-13: the
   breakout family is closed (`2026-09-13-volcond-breakout.md`); a fourth
   range on the same mechanism needs a new reason, not a new window.
@@ -125,6 +149,16 @@ Closed ideas move to the bottom with a pointer to their decision record, so
 
 ## Closed
 
+- [x] Is the pre-NFP hour the release or the first Friday of the month? → the
+  question cannot be asked of this calendar. Both declared conditions passed
+  and neither measured what it was declared for: the falsifier compared one
+  treatment cell to another instead of to the control, and **one** of the 32
+  "quiet first Fridays" is an ordinary print-free trading day — eleven carry
+  Canada's jobs report or US PCE at the same 08:30 minute, four are US market
+  holidays, six exist only because a shutdown removed the release. What
+  survived: 25 releases on a **later** Friday, away from the turn of the month,
+  at the **0.2nd percentile** of a day-of-month-matched control with 20% of
+  hours up against 53%. `2026-09-14-nfp-vs-first-friday.md`.
 - [x] News trading, the one family in the sarwa.co survey this loop had never
   tested (the owner's request) → gold's hour before the US employment report
   falls at the **3.2nd percentile** of a New-York-clocked Friday null on the

@@ -2,7 +2,16 @@
 
 **Registered:** (commit time is authoritative) — the script is committed with
 this file and has not been run
-**Status:** registered
+**Status:** decided — `docs/decisions/2026-09-14-nfp-vs-first-friday.md`. Both
+declared conditions passed and neither measured what it was declared for: the
+falsifier compares cell B to cell C while the claim compares B to D, and a
+day-by-day pass found that **one** of cell B's 32 days is an ordinary
+print-free trading day. **The claim is not supported and the cell table below
+is wrong** — it sums to 868 against 835 Fridays in the span, because D was
+written as all later Fridays including C's releases and the busy days. Neither
+`D = 643` nor `C = 33 releases` may be quoted. What survived is the one clean
+cell: 25 releases on a later Friday, at the 0.2nd percentile of a
+day-of-month-matched control.
 **Instrument:** `scripts/friday_cells.py`
 **Parent:** `docs/decisions/2026-09-14-pre-nfp-drift.md`
 

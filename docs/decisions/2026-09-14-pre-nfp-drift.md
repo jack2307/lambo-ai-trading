@@ -217,3 +217,51 @@ guards forbid the hour anyway.
   suggestive and were not registered.
 - It changes nothing about the ten paper books, and it is not a reason to
   lift the news guard that makes the hour untradeable.
+
+## Amendment, 2026-09-15 (small hours): the null let the day of the month float
+
+`2026-09-14-nfp-vs-first-friday` was registered to answer the question this
+record left open, and it closed on its own instrument rather than on its
+numbers — but two of its findings are about **this** record and are filed here
+as well.
+
+**1. The null holds the weekday and the minute fixed and lets the day of the
+month float.** Nearly every release in this record's cells is the first Friday
+of a month; the Fridays the null draws against are spread across all of it.
+Gold's 07:30 → 08:30 hour is not flat at the turn of the month. Quiet Fridays
+on days 1–3 read a median of −1.241 $/oz with 34.6% of hours up over 26 days,
+against +0.321 and roughly 57% on quiet Fridays in the middle of a month. So
+part of the gap this record measured is the position in the month and not the
+announcement, and the 3.2nd percentile overstates what the release itself
+contributes. Matched on the day of the month — release days against quiet days
+on days 1–3 — the release adds **−0.742 $/oz at a Welch t of −0.45**, which is
+not distinguishable from nothing. The adversary's review of this record put a
+quarter to a third of the fall on a month-start tilt; measured properly with a
+matched control, it cannot separate the two at all.
+
+**2. The Fridays in the null are not all quiet.** news-desk checked 32
+first Fridays that carried no US employment report and found **one** that was
+an ordinary print-free trading day. Eleven carried another 08:30 New York
+macro release the five-name calendar cannot see — Canada's Labour Force Survey
+on five of them, US Personal Income and PCE on four, Canada's monthly GDP on
+two. This cuts the opposite way to the first point: a null pool containing
+falling days is a null whose mean is too low, which makes this record's
+percentile conservative rather than generous. Both faults are real and they
+push in opposite directions, and nothing here says which wins.
+
+**What changes in the claim.** The sentence *"gold falls in the hour before
+the US employment report by more than the same hour on other Fridays"* stands
+— it is what was measured and it is what the test window agreed to. The
+sentence this record does **not** support, and did not state carefully enough,
+is the attribution: that the fall belongs to **the employment report
+specifically**. The comparison Fridays are not matched on the day of the
+month, and the ones that are matched carry other releases at the same minute.
+The claim is now: *the hour before 08:30 on a US employment Friday falls, for
+a reason this feed and this calendar cannot pin to the employment report.*
+
+Nothing else in this record moves. The size is unchanged and still about $46 a
+year, the out-of-sample window still agreed with three numbers declared before
+it was read, the retraction of the 0.0th percentile still stands, and the news
+guard still forbids the hour. The successor question — whether the hour falls
+before **any** 08:30 release rather than this one — is on the backlog with the
+calendar work it needs.
