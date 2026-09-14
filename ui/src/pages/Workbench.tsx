@@ -66,6 +66,28 @@ export function Workbench({ catalog, market, onError }: Props) {
   const [dock, setDock] = useState<'leaderboard' | 'trades' | 'model'>('leaderboard')
   // Gates in the research loop's spelling, one per line or comma-separated.
   const [filtersText, setFiltersText] = useState('')
+  // Sessions as the research batches spell them: New York wall-clock hours,
+  // the same `hours:` token `Filter::parse` reads, so a Workbench run over a
+  // session is the batch's computation over that session.
+  const SESSIONS: [string, string, string][] = [
+    ['All', '', 'no hours filter'],
+    ['Asia', '1800-0200', '18:00-02:00 New York'],
+    ['London', '0300-1100', '03:00-11:00 New York'],
+    ['NY', '0800-1600', '08:00-16:00 New York'],
+  ]
+  const hoursToken = (text: string) => text.match(/hours:(\d{4}-\d{4})/)?.[1] ?? ''
+  const session = (() => {
+    const h = hoursToken(filtersText)
+    if (!h) return 'All'
+    return SESSIONS.find(([, token]) => token === h)?.[0] ?? 'Custom'
+  })()
+  const pickSession = (token: string) => {
+    const rest = filtersText
+      .split(/[,;\n]/)
+      .map((f) => f.trim())
+      .filter((f) => f && !f.startsWith('hours:'))
+    setFiltersText([...rest, ...(token ? [`hours:${token}`] : [])].join(', '))
+  }
   const [guards, setGuards] = useState(false)
   const [rangeFrom, setRangeFrom] = useState('')
   const [rangeTo, setRangeTo] = useState('')
@@ -234,7 +256,32 @@ export function Workbench({ catalog, market, onError }: Props) {
               })}
             </div>
           )}
-          <label className="mt-3 block">
+          <div className="mt-3">
+            <span className="text-muted-foreground block text-[11px]">session (New York hours)</span>
+            <div className="mt-1 flex flex-wrap gap-1" role="group" aria-label="session">
+              {SESSIONS.map(([label, token, title]) => (
+                <button
+                  key={label}
+                  type="button"
+                  title={title}
+                  aria-pressed={session === label}
+                  onClick={() => pickSession(token)}
+                  className={
+                    'rounded border px-2 py-0.5 font-mono text-[10px] transition-colors ' +
+                    (session === label
+                      ? 'border-primary bg-primary/15 text-foreground'
+                      : 'border-border bg-background hover:bg-accent/60')
+                  }
+                >
+                  {label}
+                </button>
+              ))}
+              {session === 'Custom' && (
+                <span className="text-muted-foreground/70 self-center font-mono text-[10px]">custom hours:{hoursToken(filtersText)}</span>
+              )}
+            </div>
+          </div>
+          <label className="mt-2 block">
             <span className="text-muted-foreground block text-[11px]">
               filters <span className="text-muted-foreground/60">· weekdays, hours:0800-1200, flat:1630-1815, vol:14/100:1.2-99, volabs:14:0.075-9</span>
             </span>
