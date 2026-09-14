@@ -1,0 +1,31 @@
+[run]
+in_sample = "eurduka:15m"
+in_sample_from = "2010-06-01"
+in_sample_to = "2018-06-15"
+out_of_sample = "eurduka:15m"
+out_of_sample_from = "2018-06-16"
+out_of_sample_to = "2026-05-31"
+seeds = 300
+direction_samples = 1000
+fixed = true
+
+[[hypothesis]]
+label = "fx/eu-short"
+base = "session-hold"
+filters = ["weekdays", "hours:0245-0250"]
+overrides = { from = 245, to = 1045, side = -1, riskDailyRanges = 1, rangeDays = 20 }
+why = "the test: short the euro through European hours, 03:00 to 11:00 New York (08:00 to 16:00 London)"
+
+[[hypothesis]]
+label = "fx/us-long"
+base = "session-hold"
+filters = ["weekdays", "hours:1045-1050"]
+overrides = { from = 1045, to = 1645, side = 1, riskDailyRanges = 1, rangeDays = 20 }
+why = "the test's other half: long the euro through American hours, 11:00 to 17:00 New York"
+
+[[hypothesis]]
+label = "fx/asia-long"
+base = "session-hold"
+filters = ["weekdays", "hours:1845-1850"]
+overrides = { from = 1845, to = 245, side = 1, riskDailyRanges = 1, rangeDays = 20 }
+why = "the contrast: outside both currencies' local hours, 19:00 to 03:00 New York, the paper predicts little"
