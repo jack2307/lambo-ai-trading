@@ -1,0 +1,21 @@
+[run]
+in_sample = "eurduka:15m"
+in_sample_from = "2018-06-16"
+in_sample_to = "2026-05-31"
+out_of_sample = "eurduka:15m"
+out_of_sample_from = "2010-06-01"
+out_of_sample_to = "2018-06-15"
+seeds = 300
+direction_samples = 1000
+fixed = true
+
+# `out_of_sample` names the already-read primary of 2026-09-14-fx-local-hours
+# only because the runner wants a market; the stage is never run — the
+# primary's receipts are on record under runs/2026-09-14-fx-local-hours/.
+
+[[hypothesis]]
+label = "fx/eu-short"
+base = "session-hold"
+filters = ["weekdays", "hours:0245-0250"]
+overrides = { from = 245, to = 1045, side = -1, riskDailyRanges = 1, rangeDays = 20 }
+why = "the sign claim: short the euro through European hours, 03:00 to 11:00 New York, byte-identical to the closed registration's row, on the eight years no run has read"
