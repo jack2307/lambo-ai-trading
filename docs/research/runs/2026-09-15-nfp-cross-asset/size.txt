@@ -1,0 +1,9 @@
+market        n    range      size        R    gross   spread      net    per yr    win
+xauduka     185  23.0708      5.7oz  +0.0523    +5.23     1.61    +3.62    +43.45  62.7%
+xagduka     183   0.6775    234.5oz  +0.0630    +6.30     4.92    +1.37    +16.46  57.4%
+
+the sentence this table exists to produce:
+  silver's hour is 2.3x gold's in proportional terms and worth LESS to trade,
+  because silver's spread is 78% of its own gross effect where gold's is 31%.
+  Neither is a strategy. The loop's news guard blacks out 07:30-09:00 New York,
+  which forbids both, and no paper book changes because of this record.

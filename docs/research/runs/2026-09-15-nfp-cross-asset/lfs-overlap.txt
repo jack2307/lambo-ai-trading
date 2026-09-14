@@ -1,0 +1,42 @@
+
+xauduka
+   NFP + Canada LFS at 08:30      n  106  mean   -1.3247 $/oz  median   -0.7850  up  33.0%  sign p 0.00061
+   NFP alone (no LFS)             n   80  mean   -1.0463 $/oz  median   -1.3575  up  35.0%  sign p 0.00968
+   Canada LFS at 08:30, no NFP    n   64  mean   +0.5127 $/oz  median   +0.1505  up  54.7%  sign p 0.53231
+   neither, quiet Friday          n  541  mean   +0.0011 $/oz  median   +0.0830  up  51.8%  sign p 0.43903
+
+xagduka
+   NFP + Canada LFS at 08:30      n  104  mean   -0.0289 $/oz  median   -0.0280  up  33.7%  sign p 0.00111
+   NFP alone (no LFS)             n   80  mean   -0.0511 $/oz  median   -0.0400  up  25.0%  sign p 0.00001
+   Canada LFS at 08:30, no NFP    n   64  mean   +0.0288 $/oz  median   -0.0005  up  48.4%  sign p 0.90065
+   neither, quiet Friday          n  536  mean   -0.0076 $/oz  median   +0.0010  up  50.2%  sign p 0.96555
+
+eurduka
+   NFP + Canada LFS at 08:30      n  105  mean   +1.2533 pips  median   +0.9000  up  53.3%  sign p 0.55839
+   NFP alone (no LFS)             n   84  mean   -4.2631 pips  median   -3.6000  up  36.9%  sign p 0.02138
+   Canada LFS at 08:30, no NFP    n   64  mean   -2.2297 pips  median   +0.1000  up  50.0%  sign p 1.00000
+   neither, quiet Friday          n  551  mean   -1.3261 pips  median   -1.3000  up  43.6%  sign p 0.00283
+
+==========================================================================
+Is the NFP-alone / NFP-with-LFS split a TIME split in disguise?
+Canada moved the LFS to 08:30 on 2012-04-05, so every release before that
+date is 'NFP alone' by construction. That alone could make the two groups
+different eras rather than different mornings.
+==========================================================================
+
+NFP releases before the LFS moved to 08:30: 22 — all classified 'NFP alone'
+
+xauduka  — restricted to releases FROM 2012-04-05, where both groups can exist
+   NFP + LFS    n  106  mean   -1.3247 $/oz  median   -0.7850  up  33.0%  sign p 0.00061
+   NFP alone    n   58  mean   -1.1227 $/oz  median   -1.4265  up  34.5%  sign p 0.02475
+   (pre-2012-04) n   22  mean   -0.8449 $/oz  median   -0.7165  up  36.4%  sign p 0.28628
+
+xagduka  — restricted to releases FROM 2012-04-05, where both groups can exist
+   NFP + LFS    n  104  mean   -0.0289 $/oz  median   -0.0280  up  33.7%  sign p 0.00111
+   NFP alone    n   58  mean   -0.0583 $/oz  median   -0.0440  up  20.7%  sign p 0.00001
+   (pre-2012-04) n   22  mean   -0.0322 $/oz  median   -0.0185  up  36.4%  sign p 0.28628
+
+eurduka  — restricted to releases FROM 2012-04-05, where both groups can exist
+   NFP + LFS    n  105  mean   +1.2533 pips  median   +0.9000  up  53.3%  sign p 0.55839
+   NFP alone    n   62  mean   -4.2823 pips  median   -3.4500  up  33.9%  sign p 0.01513
+   (pre-2012-04) n   22  mean   -4.2091 pips  median   -4.4000  up  45.5%  sign p 0.83181
