@@ -1,6 +1,6 @@
 # The paper loop
 
-**Status:** design, 2026-09-14. The owner chose "A": build the disciplined
+**Status:** running since 2026-09-14 afternoon — steps 1–4 built (`675b5ef` guards, `677e82e` PaperBook + endpoints, `5ad33a5` panel, `b7db765` poller), step 5 in progress: `ema-cross` on `xauusd:15m`, guards on, `weekdays` + `news:60-30` (USD), fed by the read-only MT5 poller every 10 s. Design as written 2026-09-14 morning: The owner chose "A": build the disciplined
 paper bot rather than keep searching for an edge that 26 registrations
 have not found. This is what it is and what it is not.
 
