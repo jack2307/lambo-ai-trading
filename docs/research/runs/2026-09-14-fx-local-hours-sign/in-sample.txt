@@ -1,0 +1,18 @@
+$ E:\rust\flowdesk\target\release\search.exe --market=eurduka --interval=15m --mode=hypotheses --batch-file=E:\rust\flowdesk\docs\hypotheses\2026-09-14-fx-local-hours-sign.toml --seeds=300 --from=2018-06-16 --to=2026-05-31
+
+bounds:   --from=2018-06-16 --to=2026-05-31 kept 197548 of 398220 bars
+bars:     197548 from 2018-06-17 21:00 to 2026-05-29 20:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+== hypotheses `E:\rust\flowdesk\docs\hypotheses\2026-09-14-fx-local-hours-sign.toml`: 1 declared, walk-forward (4 folds), each against 300 matched null runs ==
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.00014
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+fx/eu-short  session-hold         1649   0.906  -0.019    0.905    1.000        0   51%  fail: profit factor 0.906 < 1.2; expectancy -0.019R < 0.05R
+                                MoTuWeThFr + NY 02:45-02:50  — the sign claim: short the euro through European hours, 03:00 to 11:00 New York, byte-identical to the closed registration's row, on the eight years no run has read
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+

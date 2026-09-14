@@ -1,0 +1,14 @@
+eurduka 0300-1100 New York, 2018-06-16 -> 2026-05-31: 2056 weekday holds, window 8.0 h
+drift per hold -0.36 pips (median -0.45, negative on 50.4% of days, t = -0.43)
+trend share per hold -0.27 pips; EXCESS (drift minus share) -0.10 pips per hold, t = -0.16
+sum: window -741 pips, share -545, excess -196
+per year: holds, drift/hold, share/hold, excess/hold (pips)
+  2018  140   +0.83   -0.44   +1.27
+  2019  259   -2.19   -0.63   -1.56
+  2020  259   +0.02   +0.82   -0.80
+  2021  259   -1.97   -1.07   -0.90
+  2022  260   +0.36   -0.71   +1.07
+  2023  259   -2.26   +0.24   -2.50
+  2024  255   -2.19   -1.20   -0.99
+  2025  259   +4.38   +1.00   +3.38
+  2026  106   +1.22   -0.83   +2.05

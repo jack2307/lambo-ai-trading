@@ -1,7 +1,7 @@
 # 2026-09-14-fx-local-hours-sign: the euro's European-hours drift persists on 2018–2026 — a sign claim, not a trade
 
 **Registered:** (commit time is authoritative) — before any run of this batch
-**Status:** registered
+**Status:** run — both conditions fail on 2018–2026; the sign did not persist; closed, under review
 **Batch file:** `docs/hypotheses/2026-09-14-fx-local-hours-sign.toml`
 
 ## Where this comes from
@@ -84,3 +84,24 @@ and −3.18 on the excess at 2,088.
   has decayed since the paper; closed, with the year it stopped.
 - Under no outcome is a paper run proposed; the risk role has said that
   promise is prose, so the record repeats it and names no strategy.
+
+## The window (2018-06-16 → 2026-05-31, `eurduka` 15m)
+
+Fixed replay (`in-sample-fixed.txt`) and the direction null
+(`direction-fx-eu-short.txt`):
+
+```
+hypothesis      trades  OOS PF  expect  null p50 null p95   pct  direction   verdict
+fx/eu-short       2057   0.926  -0.015    0.895    0.984   72%   67th       both conditions fail
+```
+
+`scripts/fx_window_drift.py eurduka 0300 1100 2018-06-16 2026-05-31`
+(`fx-window-drift.txt`): drift −0.36 pips a hold (t = −0.43), trend share
+−0.27, **excess −0.10 pips a hold (t = −0.16)**; by year 2018 +1.27, 2019
+−1.56, 2020 −0.80, 2021 −0.90, 2022 +1.07, 2023 −2.50, 2024 −0.99, 2025
++3.38, 2026 +2.05. Against the primary's −2.84 (t = −3.18), eight of nine
+years negative.
+
+The clock stopped. On the eight years after the paper's sample the euro's
+European-hours drift is a tenth of a pip a hold net of trend, and the
+row's own sides permuted put it at the 67th percentile. Closed.
