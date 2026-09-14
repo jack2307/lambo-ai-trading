@@ -1,0 +1,17 @@
+xauduka 15m 2010-06-01 -> 2026-05-31: 378741 bars, 191 NFP releases
+the 07:30 -> 08:30 New York hour, open to open
+
+  A  first Friday, release               153   -1.212 $  t -3.70  up 35.3%  median  -0.873
+  B  first Friday, no release             32   +0.922 $  t +0.56  up 40.6%  median  -0.979
+  C  later Friday, release                25   -1.734 $  t -1.75  up 20.0%  median  -1.395
+  D  later Friday, no release            565   +0.010 $  t +0.04  up 52.6%  median  +0.130
+  C' release, not a Friday at all          8   +0.590 $  t +0.18  up 50.0%  median  -0.383
+
+  release reading  wants C < 0 and C close to A: A -1.212  C -1.734
+  calendar reading wants B < 0 and B close to A: A -1.212  B +0.922
+  the quiet baseline                            D +0.010
+
+  C against 1000 draws of 25 quiet later Fridays: null mean +0.064
+  C sits at the 4.7th percentile of them
+  B against 1000 draws of 32 quiet later Fridays: null mean +0.003
+  B sits at the 81.8th percentile of them
