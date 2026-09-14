@@ -649,11 +649,12 @@ fn status_of(data: &Path, run: &PaperRun, rules: &TradingRules, guards: Option<&
 /// next bar, and the status reflects it.
 /// The strategy's indicator series over `bars`, for the Desk's chart.
 ///
-/// Computed here rather than kept from the step: the detail returns a slice
-/// of the window, and an indicator read on that slice is what should be drawn
-/// over it. Whether a series sits on the price or in its own pane comes from
-/// the indicator's own definition (`Pane`), never from a guess about its
-/// magnitude.
+/// Computed on the **whole** window and returned from `from` onwards: the
+/// strategy read its series over the window, so an indicator recomputed on a
+/// shorter slice would be a different series — and a 55-period average would
+/// be empty on a 30-bar one. Whether a series sits on the price or in its own
+/// pane comes from the indicator's own definition (`Pane`), never from a guess
+/// about its magnitude.
 ///
 /// A strategy whose series cannot be built yields no overlays rather than an
 /// error: a chart without lines beats no detail at all, and a bad parameter
@@ -663,6 +664,7 @@ fn overlays(
     config: &PaperConfig,
     rules: &TradingRules,
     bars: &[Bar],
+    from: usize,
 ) -> (Vec<IndicatorDto>, BTreeMap<String, Vec<Point>>) {
     let mut drawn = Vec::new();
     let mut series: BTreeMap<String, Vec<Point>> = BTreeMap::new();
@@ -701,6 +703,7 @@ fn overlays(
             let drawn_points: Vec<Point> = bars
                 .iter()
                 .zip(points.iter())
+                .skip(from)
                 .filter(|(_, value)| value.is_finite())
                 .map(|(bar, value)| Point { time: bar.time / 1000, value: *value })
                 .collect();
@@ -1037,9 +1040,11 @@ pub async fn detail(
 
     let wanted = query.bars.unwrap_or(DEFAULT_DETAIL_BARS).min(run.config.window.max(1));
     let skip = run.bars.len().saturating_sub(wanted);
-    let window = &run.bars[skip..];
-    let bars = window.iter().map(|b| (b.time, b.open, b.high, b.low, b.close)).collect();
-    let (indicators, series) = overlays(&state.registry, &run.config, &rules, window);
+    let bars = run.bars[skip..].iter().map(|b| (b.time, b.open, b.high, b.low, b.close)).collect();
+    // The indicators are computed on the whole window and only then cut to the
+    // returned bars: an indicator read on a short slice is a different series
+    // from the one the strategy read, and a long period would be empty on it.
+    let (indicators, series) = overlays(&state.registry, &run.config, &rules, &run.bars, skip);
 
     Ok(Json(RunDetail { run: status, equity_curve, fills, events, bars, indicators, series }))
 }
