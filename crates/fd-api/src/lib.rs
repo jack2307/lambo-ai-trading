@@ -50,12 +50,22 @@ pub fn router(state: Arc<AppState>, ui: Option<PathBuf>) -> Router {
             // hashed bundles, and a stale copy after a rebuild points at files
             // that no longer exist (a blank page, 2026-09-14). The bundles
             // themselves are content-addressed and may cache forever.
-            let index = tower_http::set_header::SetResponseHeader::overriding(
-                ServeFile::new(index),
+            // ServeDir answers `/` with index.html itself, so the header goes on
+            // the whole static service, applied only to HTML responses.
+            let html_no_cache = |res: &axum::http::Response<_>| {
+                let html = res
+                    .headers()
+                    .get(axum::http::header::CONTENT_TYPE)
+                    .and_then(|v| v.to_str().ok())
+                    .is_some_and(|v| v.starts_with("text/html"));
+                html.then(|| axum::http::HeaderValue::from_static("no-cache"))
+            };
+            let statics = tower_http::set_header::SetResponseHeader::overriding(
+                ServeDir::new(dir).fallback(ServeFile::new(index)),
                 axum::http::header::CACHE_CONTROL,
-                axum::http::HeaderValue::from_static("no-cache"),
+                html_no_cache,
             );
-            api.fallback_service(ServeDir::new(dir).fallback(index))
+            api.fallback_service(statics)
         }
         // Permissive CORS only in the no-SPA case, which is the dev setup where
         // the client is served from another port.
