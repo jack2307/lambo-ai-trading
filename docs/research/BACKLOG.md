@@ -34,17 +34,6 @@ Closed ideas move to the bottom with a pointer to their decision record, so
   reopen** (data-integrity, `2026-09-13-tsmom-silver`): `weekdays` does not
   stop `tsmom` from acting on a sign flip at Sunday 18:00 as an exit. Decide
   whether an exit gate is wanted and say so in the filter's doc either way.
-- [ ] **The euro's European-hours drift on 2018–2026, as a sign claim only**
-  (adversary, `2026-09-14-fx-local-hours`): the short 03:00 → 11:00 New
-  York row byte-identical, fixed replay on `eurduka` 2018-06-16 →
-  2026-05-31 (never read by this mechanism), ≥ 95th of the direction null
-  AND a detrended effect size ≤ −1.5 pips a hold (window drift minus 8/24
-  of the same days' change, `scripts/fx_window_drift.py`, committed before
-  the run); the PF gate declared unreachable (−0.70 pips) in advance; no
-  paper run named as an outcome; the Asian row excluded (bid-feed artefact).
-  A question about the world, not a bot.
-- [ ] **`search` prints the spread with two decimals** — `spread 0.00` on
-  EURUSD receipts (0.00014). Display only; the diagnostics show it charged.
 - [ ] **Intraday reversal on gold, as a sign claim only** (adversary,
   `2026-09-14-intraday-momentum`): the day-so-far sign (08:30 → 15:00)
   predicted the opposite of the last hour (15:30 → 16:45) on 2010–18 at the
@@ -114,6 +103,11 @@ Closed ideas move to the bottom with a pointer to their decision record, so
 
 ## Closed
 
+- [x] The euro's European-hours drift on 2018–2026, sign only → 67th on
+  direction, excess −0.10 pips a hold (t = −0.16) against −2.84 on 2010–18;
+  the clock stopped; the flip year is 2025. `2026-09-14-fx-local-hours-sign.md`.
+- [x] The spread print (`search` header showed 0.00 on EURUSD) → fixed at
+  `49b5139`.
 - [x] The euro falls through European hours (Breedon–Ranaldo) → the sign
   at the 96th–100th of both nulls on ~2,000 holds a row, 6,150 pips in
   eight years, eight of nine years relative to trend; PF 1.07 / 0.98 /

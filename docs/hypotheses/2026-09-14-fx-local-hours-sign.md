@@ -1,7 +1,7 @@
 # 2026-09-14-fx-local-hours-sign: the euro's European-hours drift persists on 2018–2026 — a sign claim, not a trade
 
 **Registered:** (commit time is authoritative) — before any run of this batch
-**Status:** run — both conditions fail on 2018–2026; the sign did not persist; closed, under review
+**Status:** decided — closed; `docs/decisions/2026-09-14-fx-local-hours-sign.md`
 **Batch file:** `docs/hypotheses/2026-09-14-fx-local-hours-sign.toml`
 
 ## Where this comes from

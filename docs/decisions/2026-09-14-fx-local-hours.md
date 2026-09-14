@@ -191,3 +191,16 @@ as a question about the world and not about a bot.
 - It does not price the 03:00 spread; the measurement was inside the
   16:15–17:00 gate. London's open is a narrow hour, and the adversary's
   sensitivity table covers 0 to 3 pips.
+
+## Amendment (2026-09-14, later): the trend share, and the dollar reading
+
+The "8/24 of the fall, −383 pips" above was the adversary's first
+arithmetic (the period change apportioned by hours); the script the
+sign-only registration committed (`scripts/fx_window_drift.py`) detrends
+each hold by 8/24 of its own day's change and gives a share of −232 pips
+and an excess of −2.84 pips a hold (t = −3.18), which is the figure that
+reproduces. And the reading "the row's $3,072 is entirely the dollar-rally
+years" is withdrawn by the adversary on the sign record
+(`2026-09-14-fx-local-hours-sign.md`): the excess was concentrated in
+2011–2016 and is positive in 2022, the largest dollar year on the feed.
+Nothing in the verdict moves.
