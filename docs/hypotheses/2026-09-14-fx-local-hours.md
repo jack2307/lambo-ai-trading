@@ -1,7 +1,7 @@
 # 2026-09-14-fx-local-hours: the euro falls during European hours and rises during American ones
 
 **Registered:** (commit time is authoritative) — before any run of this batch
-**Status:** registered
+**Status:** in-sample run — every row has the sign right at the 96th–100th of both nulls and fails the profit-factor gate; closed as registered, under review
 **Batch file:** `docs/hypotheses/2026-09-14-fx-local-hours.toml`
 
 ## Where this comes from
@@ -86,3 +86,29 @@ The null for this batch is the first to draw its holds from the method's realise
 primary: 2098 weekdays with bars; 02:45 NY bar on 2092, 10:45 on 2087, 18:45 on 1673
 confirmation: 2071 weekdays with bars; 02:45 NY bar on 2062, 10:45 on 2056, 18:45 on 1651
 ```
+
+## In-sample (2010-06-01 → 2018-06-14, `eurduka` 15m)
+
+Fixed replay (`in-sample-fixed.txt`, 300 sized random holds of the same
+window, the corrected control) with the direction percentile
+(`direction-fx-*.txt`):
+
+```
+hypothesis      trades  OOS PF  expect  null p50 null p95   pct  direction   verdict
+fx/eu-short       2087   1.069   0.014    0.922    1.027  100%   99th       fail: profit factor 1.069 < 1.2
+fx/us-long        2082   0.983  -0.002    0.879    0.971   96%   97th       fail: profit factor 0.983 < 1.2
+fx/asia-long      1669   0.979  -0.002    0.847    0.949   98%   98th       fail: profit factor 0.979 < 1.2
+```
+
+Walk-forward (`in-sample.txt`): 1.104 (100%) / 0.975 (93%) / 0.913 (87%).
+
+Every row fails the gate and every row has the side right: the euro falls
+through European hours and rises through American and Asian ones, on
+1,669–2,087 holds each, at the 96th–100th of random holds of the same
+window and the 97th–99th of the rows' own sides permuted. The Asian
+contrast was registered as "the paper predicts little"; it came in with
+the sign of "outside the euro's hours the euro rises", which is the paper's
+statement, and a profit factor under one. The drift is worth about the
+spread: 0.014R a hold on the short — 1.4% of a daily range for eight hours
+— after 1.4 pips. Closed on the gate as registered; the confirmation is
+not opened by this registration.

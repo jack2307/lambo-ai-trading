@@ -4,7 +4,7 @@
 //! excursions, the per-year split. Not a receipt: the record quotes
 //! `search`'s files under `docs/research/runs/`.
 //!
-//!     cargo run --release -p fd-backtest --example diag_close -- 1615 1815 MoTuWeTh [xauduka 2018-06-16 2025-04-10]
+//!     cargo run --release -p fd-backtest --example diag_close -- 1615 1815 MoTuWeTh [xauduka 2018-06-16 2025-04-10 [side: 1|-1]]
 
 use fd_backtest::engine::{Range, run_backtest, trading_rules_for};
 use fd_backtest::hypotheses::Preset;
@@ -25,6 +25,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
     let from = args.get(4).map(|s| parse_day(s)).unwrap_or_else(|| parse_day("2018-06-16"));
     let to = args.get(5).map(|s| parse_day(s)).unwrap_or_else(|| parse_day("2025-04-10"));
+    let side: f64 = args.get(6).and_then(|a| a.parse().ok()).unwrap_or(1.0);
 
     let config = Config::load("config")?;
     let spec = config.market(&market)?;
@@ -39,7 +40,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         &[
             ("from".into(), from_hhmm),
             ("to".into(), to_hhmm),
-            ("side".into(), 1.0),
+            ("side".into(), side),
             ("riskDailyRanges".into(), 1.0),
             ("rangeDays".into(), 20.0),
         ],
@@ -59,7 +60,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let r = run_backtest(&bars, &filtered, &preset.defaults, &rules, None, Range::default());
     let m = &r.metrics;
     println!(
-        "{market} {}-{} {days}: {} trades  PF {:.3}  exp {:.4}R  win {:.1}%  net ${:.0}  return {:.2}%  maxDD ${:.0} ({:.2}%)  avgMAE {:.3}R  avgMFE {:.3}R  hold {:.0} min",
+        "{market} {}-{} {days} side {side}: {} trades  PF {:.3}  exp {:.4}R  win {:.1}%  net ${:.0}  return {:.2}%  maxDD ${:.0} ({:.2}%)  avgMAE {:.3}R  avgMFE {:.3}R  hold {:.0} min",
         gate_from, to_hhmm as u32, m.trades, m.profit_factor, m.expectancy, m.win_rate * 100.0, m.net_pnl_usd, m.return_pct, m.max_drawdown_usd, m.max_drawdown_pct, m.avg_mae, m.avg_mfe, m.avg_hold_min
     );
     let mut pnl: Vec<f64> = r.trades.iter().map(|t| t.pnl_usd).collect();

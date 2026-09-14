@@ -1,0 +1,19 @@
+$ E:\rust\flowdesk\target\release\search.exe --market=eurduka --interval=15m --mode=null-dir --strategy=session-hold --samples=1000 --params=from=1045,to=1645,side=1,riskDailyRanges=1,rangeDays=20 --filters=weekdays;hours:1045-1050 --from=2010-06-01 --to=2018-06-15
+
+bounds:   --from=2010-06-01 --to=2018-06-15 kept 200576 of 398220 bars
+bars:     200576 from 2010-06-01 00:00 to 2018-06-14 23:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+  filters: MoTuWeThFr + NY 10:45-10:50
+== direction control: session-hold, 2082 trades, 1000 coin-flip assignments ==
+  preset: from=1045,to=1645,side=1,riskDailyRanges=1,rangeDays=20
+  the method's own trades — entry, exit, lots, costs — with each side a coin flip
+  profit factor of the same trades with random direction:
+    p05 0.798   p25 0.849   p50 0.880   p75 0.912   p95 0.969   max 1.079
+
+  actual: 0.983  ->  97th percentile  (p = 0.034)
+
+  Outside its own null. That is a finding worth taking further.
+

@@ -1,0 +1,22 @@
+$ E:\rust\flowdesk\target\release\search.exe --market=eurduka --interval=15m --mode=hypotheses --fixed --batch-file=E:\rust\flowdesk\docs\hypotheses\2026-09-14-fx-local-hours.toml --seeds=300 --from=2010-06-01 --to=2018-06-15
+
+bounds:   --from=2010-06-01 --to=2018-06-15 kept 200576 of 398220 bars
+bars:     200576 from 2010-06-01 00:00 to 2018-06-14 23:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+== hypotheses `E:\rust\flowdesk\docs\hypotheses\2026-09-14-fx-local-hours.toml`: 3 declared, FIXED parameters over the whole window (no selection), each against 300 matched null runs ==
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.00
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+fx/eu-short  session-hold         2087   1.069   0.014    0.922    1.027        0  100%  fail: profit factor 1.069 < 1.2; expectancy 0.014R < 0.05R
+                                MoTuWeThFr + NY 02:45-02:50  — the test: short the euro through European hours, 03:00 to 11:00 New York (08:00 to 16:00 London)
+fx/us-long   session-hold         2082   0.983  -0.002    0.879    0.971        0   96%  fail: profit factor 0.983 < 1.2; expectancy -0.002R < 0.05R
+                                MoTuWeThFr + NY 10:45-10:50  — the test's other half: long the euro through American hours, 11:00 to 17:00 New York
+fx/asia-long session-hold         1669   0.979  -0.002    0.847    0.949        0   98%  fail: profit factor 0.979 < 1.2; expectancy -0.002R < 0.05R
+                                MoTuWeThFr + NY 18:45-18:50  — the contrast: outside both currencies' local hours, 19:00 to 03:00 New York, the paper predicts little
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+
