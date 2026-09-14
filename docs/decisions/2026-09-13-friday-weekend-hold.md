@@ -170,3 +170,12 @@ asset would be a different registration with its own reason.
   Sunday reopen; the exit fills at the feed's 18:30 open minus half the
   spread, and the data-integrity role's checks on the seam and the reopen
   prints are quoted above.
+
+## Amendment (2026-09-14): the sized-null column was computed with a late-exiting control
+
+The random-hold control signalled its exit one bar after the method's
+(`2026-09-13-instrument-faults.md`, addendum item 3); on a weekend hold that
+is the Sunday 18:15 fill against the method's 18:30 — fifteen minutes. The
+91st percentile of the sized null and the 92nd of the direction null agree
+with each other; the direction null is unaffected and decided the row.
+Fixed at `4eaef94`.

@@ -263,3 +263,14 @@ stands; the sentence in Reading beginning "The side is right in every year
 since 2018 … only from 2023, at $2,000–5,000, does the same proportional
 move clear it" is withdrawn as an explanation. Nothing in the verdict
 changes: closed, no paper run.
+
+## Amendment (2026-09-14): the sized-null column was computed with a late-exiting control
+
+The random-hold control in every receipt above signalled its exit one bar
+after the method's (`2026-09-13-instrument-faults.md`, addendum item 3):
+on the 16:30 → 18:30 rows the null held to 18:45, fifteen minutes longer;
+on the Friday row it held to the Sunday 18:15 fill, fifteen minutes less.
+The direction null — the method's own trades with sides permuted — is
+unaffected and put every row where the sized column did (100th / 100th /
+100th / 99th / 25th / 100th on the primary). Nothing in the verdict moves.
+Fixed at `4eaef94`.
