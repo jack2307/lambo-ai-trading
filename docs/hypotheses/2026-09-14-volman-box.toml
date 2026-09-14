@@ -1,0 +1,24 @@
+[run]
+in_sample = "xauduka:5m"
+in_sample_from = "2010-06-01"
+in_sample_to = "2018-06-15"
+out_of_sample = "xauduka:5m"
+out_of_sample_from = "2018-06-16"
+out_of_sample_to = "2026-05-31"
+seeds = 200
+direction_samples = 1000
+fixed = true
+
+[[hypothesis]]
+label = "box/b2"
+base = "volman-box"
+filters = ["weekdays"]
+overrides = { maxBoxAtr = 1.5, boxes = 1, emaPeriod = 18, atrPeriod = 14, maxBreakAtr = 1.0 }
+why = "the breakout from a tight box travels one more box: stop at box 1's far side, target at box 2's far edge (Volman's TP1); boxBars selected from {12, 20, 30}"
+
+[[hypothesis]]
+label = "box/b3"
+base = "volman-box"
+filters = ["weekdays"]
+overrides = { maxBoxAtr = 1.5, boxes = 2, emaPeriod = 18, atrPeriod = 14, maxBreakAtr = 1.0 }
+why = "the same breakout travels two more boxes: target at box 3's far edge (Volman's TP final)"
