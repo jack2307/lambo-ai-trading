@@ -192,6 +192,45 @@ export interface ResearchHypothesis {
   modifiedAt: number
 }
 
+/** One paper run, as `/api/paper/status` reports it (snake_case on the wire). */
+export interface PaperRun {
+  id: string
+  market: string
+  tf: string
+  strategy: string
+  params: Record<string, number>
+  filters: string[]
+  guards: boolean
+  started_at: number
+  bars: number
+  bars_seen: number
+  warmup_bars: number
+  last_bar_time: number | null
+  equity: number
+  open: null | {
+    side: 'LONG' | 'SHORT'
+    entry_time: number
+    entry_price: number
+    lots: number
+    stop: number | null
+    target: number | null
+    mae: number
+    mfe: number
+    risk: number
+    unrealised_usd_at_last_close: number
+  }
+  trades: number
+  net_usd: number
+  profit_factor: number | null
+  skipped_by_guard: Record<string, number>
+  closed_by_guard: Record<string, number>
+  sized_down: number
+  skipped_no_atr: number
+  gaps: number
+  news: { events_loaded: number; next_blackout: null | { time: number; currency: string; impact: number; name?: string } }
+  last_fills: BacktestTrade[]
+}
+
 export interface Research {
   updatedAt: number
   hypotheses: ResearchHypothesis[]
@@ -258,4 +297,5 @@ export const api = {
   ) => post<BacktestResult>('/api/chart/backtest', { market, tf, strategy, params, filters, guards, from: range.from || undefined, to: range.to || undefined }),
 
   research: () => request<Research>('/api/research'),
+  paperStatus: () => request<{ runs: PaperRun[] }>('/api/paper/status'),
 }

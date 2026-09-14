@@ -26,9 +26,10 @@ import {
   SectionHeader,
 } from '@/components/dashboard/primitives'
 import type { Department } from '@/components/dashboard/OfficeFloor'
+import { PaperPanel } from '@/components/dashboard/PaperPanel'
 import { ResearchPanel } from '@/components/dashboard/ResearchPanel'
 import { Skeleton } from '@/components/ui/skeleton'
-import { api, type BarsResponse, type Catalog, type LeaderboardRow, type OptionsFrame, type Research } from '@/lib/api'
+import { api, type BarsResponse, type Catalog, type LeaderboardRow, type OptionsFrame, type PaperRun, type Research } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
 interface Props {
@@ -163,6 +164,28 @@ export function Dashboard({ catalog, market, onError }: Props) {
     }
   }
   const [research, setResearch] = useState<Research | null>(null)
+  const [paper, setPaper] = useState<PaperRun[] | null>(null)
+  const [paperError, setPaperError] = useState<string | null>(null)
+  // The paper book changes when a bar arrives (every fifteen minutes on the
+  // gold run); a poll every 20 s is plenty and costs nothing.
+  useEffect(() => {
+    let alive = true
+    const read = () =>
+      api
+        .paperStatus()
+        .then((r) => {
+          if (!alive) return
+          setPaper(r.runs)
+          setPaperError(null)
+        })
+        .catch((e: Error) => alive && setPaperError(e.message))
+    read()
+    const id = setInterval(read, 20_000)
+    return () => {
+      alive = false
+      clearInterval(id)
+    }
+  }, [])
   const [now, setNow] = useState(() => Date.now())
 
   // The research files change when the loop writes them; re-read every
@@ -309,6 +332,15 @@ export function Dashboard({ catalog, market, onError }: Props) {
           </ul>
         </Panel>
       </div>
+
+      {/* ---- the paper desk: the only thing that executes, into a file ---- */}
+      <section>
+        <SectionHeader
+          title="Paper desk"
+          subtitle="One registered strategy on closed bars, the backtest's own fill model and guards, a book on disk. No broker is connected; the fills are a receipt the same reviewers read."
+        />
+        <PaperPanel runs={paper} now={now} error={paperError} />
+      </section>
 
       {/* ---- research: what the loop is doing ---- */}
       <section>
