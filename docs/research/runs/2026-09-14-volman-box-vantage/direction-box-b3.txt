@@ -1,4 +1,4 @@
-$ E:\rust\flowdesk\target\release\search.exe --market=xauusd --interval=5m --mode=null-dir --strategy=volman-box --samples=1000 --params=maxBoxAtr=1.5,boxes=2,emaPeriod=18,atrPeriod=14,maxBreakAtr=1.0 --filters=weekdays --from=2025-04-11 --to=2026-09-12
+$ E:\rust\flowdesk\target\release\search.exe --market=xauusd --interval=5m --mode=null-dir --strategy=volman-box --samples=1000 --params=maxBoxAtr=3.0,boxes=2,emaPeriod=18,atrPeriod=14,maxBreakAtr=1.0 --filters=weekdays --from=2025-04-11 --to=2026-09-12
 
 bounds:   --from=2025-04-11 --to=2026-09-12 kept 100749 of 100749 bars
 bars:     100749 from 2025-04-11 01:05 to 2026-09-11 20:55
@@ -6,4 +6,15 @@ timeline: none — options strategies will be skipped
 
 tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
 
-volman-box took no trades; there is nothing to compare
+  filters: MoTuWeThFr
+== direction control: volman-box, 672 trades, 1000 coin-flip assignments ==
+  preset: maxBoxAtr=3.0,boxes=2,emaPeriod=18,atrPeriod=14,maxBreakAtr=1.0
+  entries, stops and targets held fixed; only the side is randomised
+  profit factor of the same trades with random direction:
+    p05 0.805   p25 0.856   p50 0.908   p75 0.958   p95 1.016   max 1.081
+
+  actual: 0.966  ->  78th percentile  (p = 0.224)
+
+  Inside its own null. On this sample the direction rule has not been
+  distinguished from a coin flip, however good the profit factor looks.
+

@@ -2,7 +2,7 @@
 
 **Registered:** (commit time is authoritative) — after the method is
 implemented and tested, before any run of this batch
-**Status:** registered; amended once (the compression threshold), before any informative run
+**Status:** in-sample run — both rows fail the primary, the breakout side below a coin flip; closed, under review
 **Batch files:** `docs/hypotheses/2026-09-14-volman-box.toml` (the test, two
 eight-year windows) and `docs/hypotheses/2026-09-14-volman-box-vantage.toml`
 (context: the owner's recent-year criterion on the broker's own bars)
@@ -100,3 +100,31 @@ never exists. Amended to `maxBoxAtr = 3.0` — a twenty-bar box no taller
 than three single-bar ATRs, which is a tight consolidation in Volman's
 sense and a preset that can fire. Nothing else changes; the run that
 produced this is kept under `one-trade/` and quoted nowhere as a result.
+
+## In-sample (2010-06-01 → 2018-06-14, `xauduka` 5m) and the owner's context
+
+Primary, fixed replay at `boxBars = 20` (`in-sample-fixed.txt`, 200
+count-matched random entries with the same stop and target geometry) with
+the direction percentile (`direction-box-*.txt`):
+
+```
+hypothesis   trades  OOS PF  expect  null p50 null p95   pct  direction   verdict
+box/b2         3460   0.639  -0.137    0.715    0.806    8%    1st       fail: profit factor 0.639 < 1.2
+box/b3         3309   0.706  -0.139    0.716    0.805   43%   12th       fail: profit factor 0.706 < 1.2
+```
+
+Walk-forward (`in-sample.txt`, `boxBars` selected per fold): b2 6,070
+trades PF 0.700 (4%); b3 255 trades PF 0.859 (100% of a null whose median
+is 0.751 — the geometry itself loses, and the row loses less).
+
+Vantage 5m, 2025-04-11 → 2026-09-12, the owner's criterion
+(`runs/2026-09-14-volman-box-vantage/`): fixed b2 697 trades PF 0.920
+(47%, direction 68th); b3 672 trades 0.966 (73%, 78th); walk-forward 0.926
+/ 1.027 on 441 / 181 trades. Nothing passes the gate on the last year
+either.
+
+Closed on the primary. The breakout side on the box-2 row is at the 1st
+percentile of its own sides permuted — the same entries faded would have
+been at the 99th, which is the closed family's finding on gold restated
+with a box-height stop: a tight box's break on 5-minute gold does not
+travel a box; it comes back. The confirmation is not opened.

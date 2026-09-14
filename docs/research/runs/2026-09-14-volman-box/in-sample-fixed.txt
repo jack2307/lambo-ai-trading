@@ -1,0 +1,20 @@
+$ E:\rust\flowdesk\target\release\search.exe --market=xauduka --interval=5m --mode=hypotheses --fixed --batch-file=E:\rust\flowdesk\docs\hypotheses\2026-09-14-volman-box.toml --seeds=200 --from=2010-06-01 --to=2018-06-15
+
+bounds:   --from=2010-06-01 --to=2018-06-15 kept 574640 of 1135389 bars
+bars:     574640 from 2010-06-01 00:00 to 2018-06-14 23:55
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+== hypotheses `E:\rust\flowdesk\docs\hypotheses\2026-09-14-volman-box.toml`: 2 declared, FIXED parameters over the whole window (no selection), each against 200 matched null runs ==
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+box/b2       volman-box           3460   0.639  -0.137    0.715    0.806        0    8%  fail: profit factor 0.639 < 1.2; expectancy -0.137R < 0.05R
+                                MoTuWeThFr  — the breakout from a tight box travels one more box: stop at box 1's far side, target at box 2's far edge (Volman's TP1); boxBars selected from {12, 20, 30}
+box/b3       volman-box           3309   0.706  -0.139    0.716    0.805        0   43%  fail: profit factor 0.706 < 1.2; expectancy -0.139R < 0.05R
+                                MoTuWeThFr  — the same breakout travels two more boxes: target at box 3's far edge (Volman's TP final)
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+

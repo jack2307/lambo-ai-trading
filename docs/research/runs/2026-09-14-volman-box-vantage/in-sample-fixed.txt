@@ -1,0 +1,20 @@
+$ E:\rust\flowdesk\target\release\search.exe --market=xauusd --interval=5m --mode=hypotheses --fixed --batch-file=E:\rust\flowdesk\docs\hypotheses\2026-09-14-volman-box-vantage.toml --seeds=200 --from=2025-04-11 --to=2026-09-12
+
+bounds:   --from=2025-04-11 --to=2026-09-12 kept 100749 of 100749 bars
+bars:     100749 from 2025-04-11 01:05 to 2026-09-11 20:55
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+== hypotheses `E:\rust\flowdesk\docs\hypotheses\2026-09-14-volman-box-vantage.toml`: 2 declared, FIXED parameters over the whole window (no selection), each against 200 matched null runs ==
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+box/b2       volman-box            697   0.920  -0.030    0.925    1.050        0   47%  fail: profit factor 0.920 < 1.2; expectancy -0.030R < 0.05R
+                                MoTuWeThFr  — context: box 2 target on the last seventeen months of Vantage 5m bars
+box/b3       volman-box            672   0.966  -0.013    0.928    1.051        0   73%  fail: profit factor 0.966 < 1.2; expectancy -0.013R < 0.05R
+                                MoTuWeThFr  — context: box 3 target on the same
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+
