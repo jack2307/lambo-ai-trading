@@ -27,7 +27,7 @@ use fd_strategy::registry::{BarContext, Exits, Intent, OpenPosition, OptionsView
 use serde::{Deserialize, Serialize};
 
 use crate::context::OptionsTimeline;
-use crate::guards::{GuardState, Guards};
+use crate::guards::{Exposure, GuardKind, GuardState, Guards, Refusal, bar_interval_ms, guard_exit};
 
 /// Costs and sizing, shared by every strategy in a run.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
@@ -117,6 +117,9 @@ pub enum ExitKind {
     /// The strategy asked to close; the wording lives in `Trade::exit_reason`.
     Signal,
     EndOfData,
+    /// A position guard closed it — the open-loss cap, the Friday cut-off or
+    /// a news window (`guards.rs`). Only a guarded run produces these.
+    Guard(GuardKind),
 }
 
 impl ExitKind {
@@ -129,6 +132,7 @@ impl ExitKind {
             Self::Timeout => "TIMEOUT",
             Self::Signal => "SIGNAL",
             Self::EndOfData => "END_OF_DATA",
+            Self::Guard(kind) => kind.label(),
         }
     }
 }
@@ -149,6 +153,13 @@ pub struct BacktestResult {
     /// guards — which is the oracle-faithful default.
     #[serde(default)]
     pub skipped_by_guard: BTreeMap<String, usize>,
+    /// Positions closed by a position guard, by its label (`OPEN_LOSS_CAP`,
+    /// `WEEKEND_FLAT`, `NEWS_FLAT`). Empty when the run had no guards.
+    #[serde(default)]
+    pub closed_by_guard: BTreeMap<String, usize>,
+    /// Entries whose lots the notional cap reduced (not refused).
+    #[serde(default)]
+    pub sized_down_by_guard: usize,
 }
 
 /// Restrict trading to a window. Indicators still warm up on earlier bars.
@@ -268,12 +279,18 @@ pub fn run_backtest_with(
     run_backtest_guarded(bars, strategy, params, rules, None, timeline, range, shared)
 }
 
-/// The same run with position-level risk guards enforced at each entry.
+/// The same run with position-level risk guards enforced at each entry and
+/// on every open position.
 ///
 /// `None` reproduces the oracle, whose backtest never applied guards; the
 /// parity gate depends on that. `Some` bounds the run the way the live loop is
-/// bounded — daily loss, daily trade cap, cooldown — and records every refusal
-/// in `skipped_by_guard`, so a guarded run can show how often the rules bit.
+/// bounded — daily loss, daily trade cap, cooldown, notional cap at entry;
+/// open-loss cap, Friday cut-off and news window on the open position,
+/// self-managed or not — and records every refusal in `skipped_by_guard`,
+/// every forced close in `closed_by_guard` and every reduced entry in
+/// `sized_down_by_guard`, so a guarded run can show how often the rules bit.
+/// A guard at zero is off; with every guard off `Some` is `None`
+/// (`tests/guards_positions.rs`).
 #[allow(clippy::too_many_arguments)]
 pub fn run_backtest_guarded(
     bars: &[Bar],
@@ -319,6 +336,11 @@ pub fn run_backtest_guarded(
     let mut pending: Option<Intent> = None;
     let mut skipped_no_atr = 0usize;
     let mut skipped_by_guard: BTreeMap<String, usize> = BTreeMap::new();
+    let mut closed_by_guard: BTreeMap<String, usize> = BTreeMap::new();
+    let mut sized_down_by_guard = 0usize;
+    // The feed's bar interval, for the guard that reads a bar's close
+    // instant. Only the weekend guard needs it; measured once, and only then.
+    let bar_ms = guards.filter(|g| g.flat_before_weekend_hhmm > 0).map_or(0, |_| bar_interval_ms(bars));
     // Kept whether or not guards are on: it is cheap, and it means a guarded
     // and an unguarded run differ only in whether the check is consulted.
     let mut guard_state = GuardState::default();
@@ -367,17 +389,28 @@ pub fn run_backtest_guarded(
                         None => atr_series.get(i).copied(),
                     }
                     .filter(|v| v.is_finite());
-                    // The guard is asked before any sizing happens, so a refused
-                    // entry costs nothing and leaves no trace but its count.
-                    if let Some(why) = guards.and_then(|g| guard_state.refusal(g, bar.time, 0)) {
+                    // The guards are asked before any sizing happens, so a
+                    // refused entry costs nothing and leaves no trace but its
+                    // count. The signal bar is always the one before the fill
+                    // bar: `pending` is set in step 3 and consumed here.
+                    let refused = guards.and_then(|g| {
+                        guard_state
+                            .refusal(g, bar.time, 0)
+                            .or_else(|| i.checked_sub(1).and_then(|s| g.calendar_refusal(&bars[s], bar, bar_ms)))
+                    });
+                    if let Some(why) = refused {
                         *skipped_by_guard.entry(why.label().to_string()).or_default() += 1;
                     } else {
-                        match open_position(side, stop, target, reason, bar, atr, equity, rules, self_managed) {
-                            Some(opened) => {
+                        match open_position(side, stop, target, reason, bar, atr, equity, rules, self_managed, guards) {
+                            Ok((opened, sized_down)) => {
+                                sized_down_by_guard += usize::from(sized_down);
                                 guard_state.opened(opened.entry_time);
                                 position = Some(opened);
                             }
-                            None => skipped_no_atr += 1,
+                            Err(Refused::NoRisk) => skipped_no_atr += 1,
+                            Err(Refused::Guard(why)) => {
+                                *skipped_by_guard.entry(why.label().to_string()).or_default() += 1;
+                            }
                         }
                     }
                 }
@@ -396,12 +429,21 @@ pub fn run_backtest_guarded(
             }
         }
 
-        // 2. Manage an open position against this bar's range.
+        // 2. Manage an open position against this bar's range: the engine's
+        // own stop, target and clock first, then the position guards — which
+        // is what can close a self-managed hold, and the only thing that can.
         if let Some(open) = position.as_mut() {
-            if let Some((price, kind)) = check_exit(open, bar, rules) {
+            let exit = check_exit(open, bar, rules).or_else(|| {
+                let exposure = Exposure { side: open.side, entry_price: open.entry_price, risk: open.risk };
+                guards.and_then(|g| guard_exit(&exposure, bar, bar_ms, rules, g))
+            });
+            if let Some((price, kind)) = exit {
                 let open = position.take().expect("checked");
                 let entry_reason = open.reason.clone();
                 let trade = close_position(open, price, bar.time, kind, kind.label(), rules, &entry_reason);
+                if let ExitKind::Guard(_) = kind {
+                    *closed_by_guard.entry(kind.label().to_string()).or_default() += 1;
+                }
                 equity += trade.pnl_usd;
                 equity_curve.push((bar.time, round2(equity)));
                 guard_state.closed(trade.exit_time, trade.pnl_usd);
@@ -470,9 +512,20 @@ pub fn run_backtest_guarded(
         warmup,
         skipped_no_atr,
         skipped_by_guard,
+        closed_by_guard,
+        sized_down_by_guard,
     }
 }
 
+/// Why `open_position` did not open one.
+enum Refused {
+    /// No structural stop and no ATR to derive a risk unit from.
+    NoRisk,
+    /// A guard refused it at sizing time (the notional cap).
+    Guard(Refusal),
+}
+
+/// The position, and whether a guard reduced its lots.
 #[allow(clippy::too_many_arguments)]
 fn open_position(
     side: Side,
@@ -484,13 +537,14 @@ fn open_position(
     equity: f64,
     rules: &TradingRules,
     self_managed: bool,
-) -> Option<Live> {
+    guards: Option<&Guards>,
+) -> Result<(Live, bool), Refused> {
     let entry = apply_costs(bar.open, side, true, rules);
 
     let stop = match stop.filter(|s| s.is_finite()) {
         Some(explicit) => Some(explicit),
         None => {
-            let atr = atr?; // no structural stop and no ATR: refuse the trade
+            let atr = atr.ok_or(Refused::NoRisk)?; // no structural stop and no ATR: refuse the trade
             if self_managed {
                 None
             } else if side.is_long() {
@@ -504,18 +558,24 @@ fn open_position(
     // A self-managed position still needs a risk unit for sizing and for R.
     let risk = match stop {
         Some(s) => (entry - s).abs(),
-        None => atr? * rules.stop_atr,
+        None => atr.ok_or(Refused::NoRisk)? * rules.stop_atr,
     };
     // Negated on purpose, and clippy is wrong to want `risk <= 0.0` here: a
     // NaN risk must refuse the trade, and every comparison with NaN is false.
     #[allow(clippy::neg_cmp_op_on_partial_ord)]
     if !(risk > 0.0) {
-        return None;
+        return Err(Refused::NoRisk);
     }
 
     let risk_usd = equity * rules.risk_per_trade_pct;
     let raw_lots = risk_usd / (risk * rules.contract_size);
     let lots = ((raw_lots / rules.lot_step).floor() * rules.lot_step).max(rules.min_lot);
+    // The notional cap sizes down after the risk sizing and before anything
+    // reads `lots`; with no guards (or the cap at zero) `lots` is untouched.
+    let (lots, sized_down) = match guards {
+        Some(g) => g.cap_lots(lots, entry, equity, rules).map_err(Refused::Guard)?,
+        None => (lots, false),
+    };
 
     let target = match target.filter(|t| t.is_finite()) {
         Some(explicit) => Some(explicit),
@@ -526,19 +586,22 @@ fn open_position(
         }
     };
 
-    Some(Live {
-        side,
-        entry_time: bar.time,
-        entry_price: entry,
-        stop,
-        target,
-        lots,
-        risk,
-        reason,
-        mae: 0.0,
-        mfe: 0.0,
-        self_managed,
-    })
+    Ok((
+        Live {
+            side,
+            entry_time: bar.time,
+            entry_price: entry,
+            stop,
+            target,
+            lots,
+            risk,
+            reason,
+            mae: 0.0,
+            mfe: 0.0,
+            self_managed,
+        },
+        sized_down,
+    ))
 }
 
 /// Stop first, then target — the pessimistic reading when a bar's range covers
@@ -586,7 +649,7 @@ fn track_excursion(position: &mut Live, bar: &Bar) {
 }
 
 /// Half the spread against the trader on every side.
-fn apply_costs(price: f64, side: Side, entering: bool, rules: &TradingRules) -> f64 {
+pub(crate) fn apply_costs(price: f64, side: Side, entering: bool, rules: &TradingRules) -> f64 {
     let half = rules.spread / 2.0;
     let long = side.is_long();
     if entering {

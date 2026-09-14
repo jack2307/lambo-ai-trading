@@ -101,6 +101,32 @@ max_concurrent_positions = 1
 max_trades_per_day = 4
 daily_loss_limit_usd = 300.0
 cooldown_ms = 1_800_000
+# The four below are the risk role's standing list (2026-09-13/14). Each is
+# enforced in the engine for every position, self-managed ones included, and
+# only when a run asks for guards (`search --guards`, the API's `guards: true`);
+# 0 turns one off. Every receipt before 2026-09-14 was produced without them.
+# Unrealised loss on the open position, in R of its sizing unit, checked every
+# bar including the reopen bar; the fill is the level, or the open when a bar
+# gaps through it. tsmom-silver: "the right guard is an unrealised-loss cap in
+# R on the open position, evaluated every bar including the reopen bar,
+# closing at market."
+max_open_loss_r = 2.0
+# Lots are cut so that lots × contract × price ≤ this share of equity; below
+# min_lot the entry is refused. fx-local-hours: "the '1% risk' row is 1.3×
+# leveraged with no stop."
+max_notional_pct_equity = 300.0
+# Friday New York wall clock (HHMM) from which the book is flat: the position
+# is closed at the close of the last bar ending at or after it and no entry is
+# taken. close-reopen-drift: "a 50-hour weekend hold is not representable
+# under these guards."
+flat_before_weekend_hhmm = 1655
+# Flat from `before` minutes ahead of a scheduled event of impact ≥ min to
+# `after` minutes past it, over the calendar `search`/the API install; inert
+# with no calendar. fx-local-hours: "worst hold −3.12R / −$410 (2015-12-03,
+# ECB)."
+news_flat_before_min = 60
+news_flat_after_min = 30
+news_min_impact = 3
 
 [ai]
 # ATR bar width must match the trade horizon. Computing ATR on one-minute closes

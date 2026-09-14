@@ -18,16 +18,21 @@
 //! ```text
 //! cargo run --release -p fd-backtest --bin search -- --market=btc --mode=wf
 //! ```
+//!
+//! `--guards` applies `[trading.guards]` to every run of every mode —
+//! hypotheses, nulls, sweeps, cost curves, the leaderboard — and says so in
+//! the header. Without it every number is unguarded, as every receipt before
+//! 2026-09-14 was.
 
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-use fd_backtest::engine::{Range, TradingRules, run_backtest};
+use fd_backtest::engine::{Range, TradingRules, run_backtest_guarded};
 use fd_strategy::registry::Strategy as _;
-use fd_backtest::sweep::{SelectBy, compare_strategies, sweep_strategy, verdict, walk_forward};
-use fd_backtest::hypotheses::{batch as hypothesis_batch, batch_from_file, run_hypothesis, run_hypothesis_fixed};
+use fd_backtest::sweep::{SelectBy, compare_strategies_guarded, sweep_strategy_guarded, verdict, walk_forward_guarded};
+use fd_backtest::hypotheses::{batch as hypothesis_batch, batch_from_file, run_hypothesis_fixed_guarded, run_hypothesis_guarded};
 use fd_backtest::timeline::{TimelineOptions, build_timeline};
-use fd_backtest::{OptionsTimeline, PromisingGate};
+use fd_backtest::{Guards, OptionsTimeline, PromisingGate};
 use fd_core::config::Config;
 use fd_core::types::Bar;
 use fd_store::{TapeStore, read_bars};
@@ -98,14 +103,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // hypotheses receipt so a record can quote which calendar it ran on.
     let news_line = load_news(&data);
     println!("{news_line}");
+    // `--guards`: the configured risk guards on every run of every mode.
+    // Printed right under the calendar so a receipt's header says whether
+    // its numbers were bounded, and by what.
+    let guards = std::env::args().any(|a| a == "--guards").then(|| Guards::from_config(&config));
+    let guards = guards.as_ref();
+    println!("{}", guards_line(guards));
     println!();
 
     let registry = Registry::with_builtins();
     if mode == "all" || mode == "compare" {
-        run_compare(&registry, &bars, &rules, timeline.as_ref(), &gate);
+        run_compare(&registry, &bars, &rules, timeline.as_ref(), &gate, guards);
     }
     if mode == "all" || mode == "sweep" {
-        run_sweeps(&registry, &bars, &rules, timeline.as_ref(), config.backtest.min_trades_per_cell);
+        run_sweeps(&registry, &bars, &rules, timeline.as_ref(), config.backtest.min_trades_per_cell, guards);
     }
     if mode == "null-dir" {
         run_direction_null(
@@ -115,10 +126,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             timeline.as_ref(),
             arg("strategy", "maxpain-magnet"),
             arg("samples", "2000").parse().unwrap_or(2000),
+            guards,
         );
     }
     if mode == "volume" {
-        run_volume(&registry, &bars, &rules, timeline.as_ref());
+        run_volume(&registry, &bars, &rules, timeline.as_ref(), guards);
     }
     if mode == "hypotheses" {
         run_hypotheses(
@@ -133,6 +145,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             &arg("batch", "gold-intraday"),
             arg("batch-file", "").as_str(),
             std::env::args().any(|a| a == "--fixed"),
+            guards,
         );
     }
     if mode == "null" {
@@ -146,6 +159,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             config.backtest.min_trades_per_cell,
             &gate,
             arg("seeds", "200").parse().unwrap_or(200),
+            guards,
         );
     }
     if mode == "costs" {
@@ -157,6 +171,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             config.backtest.walk_forward_folds,
             select_by,
             config.backtest.min_trades_per_cell,
+            guards,
         );
     }
     if mode == "all" || mode == "wf" {
@@ -169,9 +184,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             select_by,
             config.backtest.min_trades_per_cell,
             &gate,
+            guards,
         );
     }
     Ok(())
+}
+
+/// The header line that says whether the run was bounded, and by what.
+fn guards_line(guards: Option<&Guards>) -> String {
+    match guards {
+        Some(g) => format!("guards: on — {}", g.describe()),
+        None => "guards: off (every number unguarded)".to_string(),
+    }
 }
 
 /// Build the options timeline from whatever tape the store holds.
@@ -267,10 +291,11 @@ fn run_compare(
     rules: &TradingRules,
     timeline: Option<&OptionsTimeline>,
     gate: &PromisingGate,
+    guards: Option<&Guards>,
 ) {
     println!("== every method at its default parameters ==");
     println!("{:<20} {:>7} {:>8} {:>9} {:>8} {:>11}", "strategy", "trades", "win%", "profit", "expect", "maxDD$");
-    for row in compare_strategies(registry, bars, rules, timeline, gate) {
+    for row in compare_strategies_guarded(registry, bars, rules, timeline, gate, guards) {
         match (row.skipped, row.metrics) {
             (Some(reason), _) => println!("{:<20} {reason}", row.id),
             (None, Some(m)) => println!(
@@ -289,6 +314,7 @@ fn run_sweeps(
     rules: &TradingRules,
     timeline: Option<&OptionsTimeline>,
     min_trades_per_cell: usize,
+    guards: Option<&Guards>,
 ) {
     println!("== parameter sweeps (in-sample; read the median, not the best) ==");
     println!("{:<20} {:>6} {:>7} {:>12} {:>12} {:>11}", "strategy", "cells", "usable", "medianPF", "medianExp", "profitable");
@@ -296,7 +322,7 @@ fn run_sweeps(
         if strategy.needs_options() && timeline.is_none() {
             continue;
         }
-        let result = sweep_strategy(strategy.as_ref(), bars, rules, timeline, min_trades_per_cell);
+        let result = sweep_strategy_guarded(strategy.as_ref(), bars, rules, timeline, min_trades_per_cell, guards);
         let s = &result.summary;
         println!(
             "{:<20} {:>6} {:>7} {:>12.3} {:>12.3} {:>10.0}%",
@@ -321,6 +347,7 @@ fn run_walk_forward(
     select_by: SelectBy,
     min_trades_per_cell: usize,
     gate: &PromisingGate,
+    guards: Option<&Guards>,
 ) {
     println!("== walk-forward, out of sample ({folds} folds) ==");
     println!("{:<20} {:>7} {:>8} {:>9} {:>8} {:>9}  verdict", "strategy", "trades", "win%", "profit", "expect", "maxDD");
@@ -330,7 +357,7 @@ fn run_walk_forward(
             continue;
         }
         let Some(result) =
-            walk_forward(strategy.as_ref(), bars, rules, timeline, folds, select_by, min_trades_per_cell)
+            walk_forward_guarded(strategy.as_ref(), bars, rules, timeline, folds, select_by, min_trades_per_cell, guards)
         else {
             println!("{:<20} not enough bars", strategy.id());
             continue;
@@ -366,6 +393,7 @@ fn run_walk_forward(
 /// only the direction is a coin flip, mirrored around the entry price so the
 /// geometry is preserved. The resulting distribution has exactly the same trade
 /// count as the result, which is what makes the percentile mean something.
+#[allow(clippy::too_many_arguments)]
 fn run_direction_null(
     registry: &Registry,
     bars: &[Bar],
@@ -373,6 +401,7 @@ fn run_direction_null(
     timeline: Option<&OptionsTimeline>,
     id: String,
     samples: usize,
+    guards: Option<&Guards>,
 ) {
     use rayon::prelude::*;
 
@@ -412,7 +441,7 @@ fn run_direction_null(
         }
     };
     let gated = fd_strategy::filter::Filtered { inner: strategy, filters: filters.clone() };
-    let actual = run_backtest(bars, &gated, &params, rules, timeline, Range::default());
+    let actual = run_backtest_guarded(bars, &gated, &params, rules, guards, timeline, Range::default(), None);
     if actual.trades.is_empty() {
         println!("{id} took no trades; there is nothing to compare");
         return;
@@ -436,7 +465,7 @@ fn run_direction_null(
             }
             let flipped = DirectionFlipped { inner: strategy, seed: seed as u64 + 1 };
             let gated = fd_strategy::filter::Filtered { inner: &flipped, filters: filters.clone() };
-            run_backtest(bars, &gated, &params, rules, timeline, Range::default())
+            run_backtest_guarded(bars, &gated, &params, rules, guards, timeline, Range::default(), None)
                 .metrics
                 .profit_factor
         })
@@ -576,6 +605,7 @@ fn run_null_control(
     min_trades_per_cell: usize,
     gate: &fd_backtest::PromisingGate,
     seeds: usize,
+    guards: Option<&Guards>,
 ) {
     use rayon::prelude::*;
 
@@ -597,6 +627,7 @@ fn run_null_control(
                 folds,
                 select_by,
                 min_trades_per_cell,
+                guards,
             )?;
             Some((result.oos.profit_factor, result.oos.expectancy, result.oos.trades))
         })
@@ -654,7 +685,7 @@ fn run_null_control(
             continue;
         }
         let Some(result) =
-            walk_forward(strategy.as_ref(), bars, rules, timeline, folds, select_by, min_trades_per_cell)
+            walk_forward_guarded(strategy.as_ref(), bars, rules, timeline, folds, select_by, min_trades_per_cell, guards)
         else {
             continue;
         };
@@ -685,8 +716,11 @@ fn run_null_control(
 /// a fixed lot (what a client running fixed size feels). The last column is
 /// the rebate per lot at which that client breaks even. Compare it with the
 /// actual rebate; nothing else here is a judgement.
-fn run_volume(registry: &Registry, bars: &[Bar], rules: &TradingRules, timeline: Option<&OptionsTimeline>) {
+fn run_volume(registry: &Registry, bars: &[Bar], rules: &TradingRules, timeline: Option<&OptionsTimeline>, guards: Option<&Guards>) {
     use fd_strategy::filter::{Filter, Filtered};
+    let run = |s: &dyn fd_strategy::registry::Strategy, p: &fd_strategy::registry::Params| {
+        run_backtest_guarded(bars, s, p, rules, guards, timeline, Range::default(), None)
+    };
 
     let span_years = (bars[bars.len() - 1].time - bars[0].time) as f64 / (365.25 * 86_400_000.0);
     let round_trip = rules.spread * rules.contract_size + 2.0 * rules.commission_per_lot;
@@ -709,17 +743,17 @@ fn run_volume(registry: &Registry, bars: &[Bar], rules: &TradingRules, timeline:
             continue;
         }
         let p = s.default_params();
-        rows.push((s.id().to_string(), run_backtest(bars, s.as_ref(), &p, rules, timeline, Range::default())));
+        rows.push((s.id().to_string(), run(s.as_ref(), &p)));
         let flat = Filtered { inner: s.as_ref(), filters: intraday() };
-        rows.push((format!("{}/intraday", s.id()), run_backtest(bars, &flat, &p, rules, timeline, Range::default())));
+        rows.push((format!("{}/intraday", s.id()), run(&flat, &p)));
     }
     let control = fd_backtest::RandomEntry;
     let mut p = control.default_params();
     p.set("entryRate", 0.1);
     p.set("seed", 7.0);
-    rows.push(("null-random".to_string(), run_backtest(bars, &control, &p, rules, timeline, Range::default())));
+    rows.push(("null-random".to_string(), run(&control, &p)));
     let flat = Filtered { inner: &control, filters: intraday() };
-    rows.push(("null-random/intraday".to_string(), run_backtest(bars, &flat, &p, rules, timeline, Range::default())));
+    rows.push(("null-random/intraday".to_string(), run(&flat, &p)));
 
     for (id, result) in rows {
         let trades = result.trades.len();
@@ -767,6 +801,7 @@ fn run_hypotheses(
     batch_name: &str,
     batch_file: &str,
     fixed: bool,
+    guards: Option<&Guards>,
 ) {
     let (batch, shown) = if batch_file.is_empty() {
         match hypothesis_batch(batch_name) {
@@ -792,6 +827,7 @@ fn run_hypotheses(
     }
     println!("swap: long {:.2} / short {:.2} USD per lot per night; spread {}", rules.swap_long_per_lot, rules.swap_short_per_lot, rules.spread);
     println!("{}", fd_strategy::news::summary(NEWS_FILE));
+    println!("{}", guards_line(guards));
     println!();
     println!(
         "{:<12} {:<18} {:>6} {:>7} {:>7} {:>8} {:>8} {:>8} {:>5}  verdict",
@@ -800,9 +836,9 @@ fn run_hypotheses(
     let mut survivors = Vec::new();
     for hypothesis in &batch {
         let outcome = if fixed {
-            run_hypothesis_fixed(registry, hypothesis, bars, rules, gate, seeds).map(Some)
+            run_hypothesis_fixed_guarded(registry, hypothesis, bars, rules, gate, seeds, guards).map(Some)
         } else {
-            run_hypothesis(registry, hypothesis, bars, rules, folds, select_by, min_trades_per_cell, gate, seeds)
+            run_hypothesis_guarded(registry, hypothesis, bars, rules, folds, select_by, min_trades_per_cell, gate, seeds, guards)
         };
         let report = match outcome {
             Ok(Some(report)) => report,
@@ -836,6 +872,11 @@ fn run_hypotheses(
             report.percentile
         );
         println!("{:<12} {:<18} {}  — {}", "", "", report.filters, report.why);
+        // How often a guard acted on this row's own out-of-sample runs, so a
+        // receipt shows whether a bounded number was bounded in practice.
+        if guards.is_some() {
+            println!("{:<12} {:<18} {}", "", "", report.guard_activity());
+        }
         if report.survives() {
             survivors.push(format!("{}/{}", report.label, report.base));
         }
@@ -868,6 +909,7 @@ fn run_cost_sensitivity(
     folds: usize,
     select_by: SelectBy,
     min_trades_per_cell: usize,
+    guards: Option<&Guards>,
 ) {
     const FRACTIONS: [f64; 5] = [0.0, 0.25, 0.5, 1.0, 2.0];
 
@@ -892,7 +934,7 @@ fn run_cost_sensitivity(
                 commission_per_lot: rules.commission_per_lot * fraction,
                 ..*rules
             };
-            match walk_forward(strategy.as_ref(), bars, &scaled, timeline, folds, select_by, min_trades_per_cell)
+            match walk_forward_guarded(strategy.as_ref(), bars, &scaled, timeline, folds, select_by, min_trades_per_cell, guards)
             {
                 Some(result) => {
                     if (fraction - 1.0).abs() < f64::EPSILON {
@@ -915,6 +957,7 @@ fn run_cost_sensitivity(
 ///
 /// `walk_forward` builds its combinations from the strategy's own defaults, so
 /// varying the seed means varying the defaults it starts from.
+#[allow(clippy::too_many_arguments)]
 fn walk_forward_seeded(
     strategy: &dyn fd_strategy::registry::Strategy,
     defaults: &fd_strategy::registry::Params,
@@ -923,6 +966,7 @@ fn walk_forward_seeded(
     folds: usize,
     select_by: SelectBy,
     min_trades_per_cell: usize,
+    guards: Option<&Guards>,
 ) -> Option<fd_backtest::WalkForwardResult> {
     struct Seeded<'a> {
         inner: &'a dyn fd_strategy::registry::Strategy,
@@ -961,7 +1005,7 @@ fn walk_forward_seeded(
         }
     }
     let seeded = Seeded { inner: strategy, defaults: defaults.clone() };
-    walk_forward(&seeded, bars, rules, None, folds, select_by, min_trades_per_cell)
+    walk_forward_guarded(&seeded, bars, rules, None, folds, select_by, min_trades_per_cell, guards)
 }
 
 fn iso(ms: i64) -> String {

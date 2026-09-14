@@ -87,7 +87,7 @@ fn without_guards_the_impatient_strategy_trades_constantly() {
 #[test]
 fn the_daily_trade_cap_bounds_the_run() {
     let bars = falling(400); // 400 bars of 15m = ~4.2 days
-    let guards = Guards { max_concurrent_positions: 1, max_trades_per_day: 4, daily_loss_limit_usd: 1e9, cooldown_ms: 0 };
+    let guards = Guards { max_concurrent_positions: 1, max_trades_per_day: 4, daily_loss_limit_usd: 1e9, cooldown_ms: 0, ..Guards::unbounded() };
     let result = run_backtest_guarded(
         &bars, &EveryBar, &EveryBar.default_params(), &rules(), Some(&guards), None, Range::default(), None,
     );
@@ -106,7 +106,13 @@ fn the_daily_loss_limit_stops_a_losing_day() {
     assert!(worst_day_loss > 0.0, "the fixture must lose money for the limit to have anything to do");
 
     // A limit smaller than what one unguarded day loses must stop the bleeding.
-    let guards = Guards { max_concurrent_positions: 1, max_trades_per_day: 10_000, daily_loss_limit_usd: worst_day_loss * 0.25, cooldown_ms: 0 };
+    let guards = Guards {
+        max_concurrent_positions: 1,
+        max_trades_per_day: 10_000,
+        daily_loss_limit_usd: worst_day_loss * 0.25,
+        cooldown_ms: 0,
+        ..Guards::unbounded()
+    };
     let result = run_backtest_guarded(
         &bars, &EveryBar, &EveryBar.default_params(), &rules(), Some(&guards), None, Range::default(), None,
     );
@@ -118,7 +124,7 @@ fn the_daily_loss_limit_stops_a_losing_day() {
 fn the_cooldown_spaces_entries_apart() {
     let bars = falling(400);
     let cooldown = 4 * BAR;
-    let guards = Guards { max_concurrent_positions: 1, max_trades_per_day: 10_000, daily_loss_limit_usd: 1e9, cooldown_ms: cooldown };
+    let guards = Guards { max_concurrent_positions: 1, max_trades_per_day: 10_000, daily_loss_limit_usd: 1e9, cooldown_ms: cooldown, ..Guards::unbounded() };
     let result = run_backtest_guarded(
         &bars, &EveryBar, &EveryBar.default_params(), &rules(), Some(&guards), None, Range::default(), None,
     );

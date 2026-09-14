@@ -107,6 +107,34 @@ pub struct GuardsConfig {
     pub max_trades_per_day: usize,
     pub daily_loss_limit_usd: f64,
     pub cooldown_ms: i64,
+    // The four below were added 2026-09-14 (risk role's standing list on the
+    // close-reopen, tsmom-silver and fx-local-hours records). Each defaults
+    // to off so a config written before them still loads and still means
+    // what it meant.
+    /// Unrealised-loss cap on the open position, in R. 0 = off.
+    #[serde(default)]
+    pub max_open_loss_r: f64,
+    /// Cap on `lots × contract × price` as a percentage of equity. 0 = off.
+    #[serde(default)]
+    pub max_notional_pct_equity: f64,
+    /// New York wall-clock HHMM on Friday after which the book is flat and
+    /// no entry is taken. 0 = off.
+    #[serde(default)]
+    pub flat_before_weekend_hhmm: u32,
+    /// Minutes before a scheduled news event during which the book is flat.
+    /// Both 0 = off.
+    #[serde(default)]
+    pub news_flat_before_min: u32,
+    /// Minutes after a scheduled news event during which the book is flat.
+    #[serde(default)]
+    pub news_flat_after_min: u32,
+    /// Lowest impact (1 low, 2 medium, 3 high) the news guard reacts to.
+    #[serde(default = "default_news_min_impact")]
+    pub news_min_impact: u8,
+}
+
+const fn default_news_min_impact() -> u8 {
+    3
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

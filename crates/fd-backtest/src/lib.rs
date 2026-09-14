@@ -25,8 +25,9 @@ pub use engine::{
     BacktestResult, ExitKind, Metrics, Range, Trade, TradingRules, metrics_of, run_backtest,
     run_backtest_guarded, trading_rules_for,
 };
-pub use guards::{GuardState, Guards, Refusal};
+pub use guards::{Exposure, GuardKind, GuardState, Guards, Refusal, guard_exit};
 pub use sweep::{
     Fold, LeaderboardRow, PromisingGate, SelectBy, SweepCell, SweepResult, SweepSummary, Verdict,
-    WalkForwardResult, compare_strategies, run_by_id, score_of, sweep_grid, sweep_strategy, verdict, walk_forward,
+    WalkForwardResult, compare_strategies, compare_strategies_guarded, run_by_id, score_of, sweep_grid,
+    sweep_grid_guarded, sweep_strategy, sweep_strategy_guarded, verdict, walk_forward, walk_forward_guarded,
 };

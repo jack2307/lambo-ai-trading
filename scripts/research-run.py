@@ -9,6 +9,7 @@ Reads the `[run]` table of the hypothesis file:
     out_of_sample = "xauduka:1m"
     out_of_sample_to = "2025-04-10"   # optional UTC date bounds (to is exclusive):
     in_sample_from = "2025-04-11"     #   *_from / *_to for either stage
+    guards = true                     # pass --guards to every search call
     seeds = 200             # matched-null runs per hypothesis
     direction_samples = 1000
 
@@ -93,6 +94,7 @@ def main() -> int:
     run_cfg = spec.get("run", {})
     seeds = args.seeds or int(run_cfg.get("seeds", 200))
     direction = args.direction_samples or int(run_cfg.get("direction_samples", 1000))
+    guard = ["--guards"] if run_cfg.get("guards") else []
     hyp_id = os.path.splitext(os.path.basename(path))[0]
     out_dir = os.path.join(ROOT, "docs", "research", "runs", hyp_id)
     os.makedirs(out_dir, exist_ok=True)
@@ -120,14 +122,14 @@ def main() -> int:
         print(f"in-sample: {market} {tf}, {len(spec['hypothesis'])} hypotheses, {seeds} null seeds")
         b = bounds(run_cfg, "in_sample")
         run(
-            [SEARCH, f"--market={market}", f"--interval={tf}", "--mode=hypotheses", f"--batch-file={path}", f"--seeds={seeds}", *b],
+            [SEARCH, f"--market={market}", f"--interval={tf}", "--mode=hypotheses", f"--batch-file={path}", f"--seeds={seeds}", *b, *guard],
             os.path.join(out_dir, "in-sample.txt"),
         )
         if run_cfg.get("fixed"):
             # A registered-parameters replay on the primary too, when the
             # hypothesis pins its parameters (no selection to walk forward).
             run(
-                [SEARCH, f"--market={market}", f"--interval={tf}", "--mode=hypotheses", "--fixed", f"--batch-file={path}", f"--seeds={seeds}", *b],
+                [SEARCH, f"--market={market}", f"--interval={tf}", "--mode=hypotheses", "--fixed", f"--batch-file={path}", f"--seeds={seeds}", *b, *guard],
                 os.path.join(out_dir, "in-sample-fixed.txt"),
             )
     if args.stage in ("in", "dir", "all"):
@@ -136,7 +138,7 @@ def main() -> int:
         for base, slug, preset in direction_runs():
             print(f"direction null: {slug} ({base}) on {market} {tf}, {direction} samples")
             run(
-                [SEARCH, f"--market={market}", f"--interval={tf}", "--mode=null-dir", f"--strategy={base}", f"--samples={direction}", *preset, *b],
+                [SEARCH, f"--market={market}", f"--interval={tf}", "--mode=null-dir", f"--strategy={base}", f"--samples={direction}", *preset, *b, *guard],
                 os.path.join(out_dir, f"direction-{slug}.txt"),
             )
 
@@ -147,17 +149,17 @@ def main() -> int:
         b = bounds(run_cfg, "out_of_sample")
         print(f"out-of-sample: {market} {tf} {' '.join(b)}")
         run(
-            [SEARCH, f"--market={market}", f"--interval={tf}", "--mode=hypotheses", f"--batch-file={path}", f"--seeds={seeds}", *b],
+            [SEARCH, f"--market={market}", f"--interval={tf}", "--mode=hypotheses", f"--batch-file={path}", f"--seeds={seeds}", *b, *guard],
             os.path.join(out_dir, "out-of-sample.txt"),
         )
         for base, slug, preset in direction_runs():
             run(
-                [SEARCH, f"--market={market}", f"--interval={tf}", "--mode=null-dir", f"--strategy={base}", f"--samples={direction}", *preset, *b],
+                [SEARCH, f"--market={market}", f"--interval={tf}", "--mode=null-dir", f"--strategy={base}", f"--samples={direction}", *preset, *b, *guard],
                 os.path.join(out_dir, f"direction-{slug}-oos.txt"),
             )
         # The replay: registered parameters, no re-selection on the new window.
         run(
-            [SEARCH, f"--market={market}", f"--interval={tf}", "--mode=hypotheses", "--fixed", f"--batch-file={path}", f"--seeds={seeds}", *b],
+            [SEARCH, f"--market={market}", f"--interval={tf}", "--mode=hypotheses", "--fixed", f"--batch-file={path}", f"--seeds={seeds}", *b, *guard],
             os.path.join(out_dir, "out-of-sample-fixed.txt"),
         )
 

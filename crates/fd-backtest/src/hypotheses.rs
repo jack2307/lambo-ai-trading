@@ -24,10 +24,13 @@ use fd_strategy::registry::{BarContext, Intent, Params, Registry, Strategy};
 use rayon::prelude::*;
 use serde::Deserialize;
 
+use std::collections::BTreeMap;
+
 use crate::control::RandomEntry;
 use crate::control_hold::RandomHold;
 use crate::engine::{Metrics, TradingRules};
-use crate::sweep::{PromisingGate, SelectBy, Verdict, verdict, walk_forward};
+use crate::guards::Guards;
+use crate::sweep::{PromisingGate, SelectBy, Verdict, verdict, walk_forward_guarded};
 
 #[derive(Debug, Clone)]
 pub struct Hypothesis {
@@ -204,6 +207,12 @@ pub struct HypothesisReport {
     /// Share of null runs the hypothesis beat, 0–100.
     pub percentile: f64,
     pub verdict: Verdict,
+    /// How often a guard acted on the hypothesis's own out-of-sample runs
+    /// (not the null's): entries refused by label, positions closed by
+    /// label, entries sized down. All empty/zero on an unguarded run.
+    pub skipped_by_guard: BTreeMap<String, usize>,
+    pub closed_by_guard: BTreeMap<String, usize>,
+    pub sized_down_by_guard: usize,
 }
 
 impl HypothesisReport {
@@ -219,6 +228,20 @@ impl HypothesisReport {
     #[must_use]
     pub fn survives(&self) -> bool {
         self.verdict.promising && self.percentile >= 95.0
+    }
+
+    /// The guard activity in one line for a receipt: `guards: refused
+    /// WEEKEND_FLAT 3, DAILY_TRADE_CAP 12; closed OPEN_LOSS_CAP 2; sized down
+    /// 0`. `guards: nothing acted` when every count is zero.
+    #[must_use]
+    pub fn guard_activity(&self) -> String {
+        let list = |m: &BTreeMap<String, usize>| m.iter().map(|(k, n)| format!("{k} {n}")).collect::<Vec<_>>().join(", ");
+        if self.skipped_by_guard.is_empty() && self.closed_by_guard.is_empty() && self.sized_down_by_guard == 0 {
+            return "guards: nothing acted".to_string();
+        }
+        let refused = if self.skipped_by_guard.is_empty() { "none".to_string() } else { list(&self.skipped_by_guard) };
+        let closed = if self.closed_by_guard.is_empty() { "none".to_string() } else { list(&self.closed_by_guard) };
+        format!("guards: refused {refused}; closed {closed}; sized down {}", self.sized_down_by_guard)
     }
 }
 
@@ -239,14 +262,14 @@ impl HypothesisReport {
 /// 300-trade null. So the control is calibrated: one probe run at the
 /// default rate, then the rate scaled to the method's count. Pinned, so the
 /// control's grid loses its rate axis too.
-fn matched_rate(bars: &[Bar], rules: &TradingRules, filters: &[Filter], target_trades: usize) -> f64 {
-    use crate::engine::{Range, run_backtest};
+fn matched_rate(bars: &[Bar], rules: &TradingRules, filters: &[Filter], target_trades: usize, guards: Option<&Guards>) -> f64 {
+    use crate::engine::{Range, run_backtest_guarded};
     const PROBE: f64 = 0.02;
     let mut p = RandomEntry.default_params();
     p.set("entryRate", PROBE);
     p.set("seed", 1.0);
     let probe = Filtered { inner: &RandomEntry, filters: filters.to_vec() };
-    let got = run_backtest(bars, &probe, &p, rules, None, Range::default()).trades.len();
+    let got = run_backtest_guarded(bars, &probe, &p, rules, guards, None, Range::default(), None).trades.len();
     if got == 0 || target_trades == 0 {
         return PROBE;
     }
@@ -440,7 +463,6 @@ pub fn preset_params(base: &dyn Strategy, overrides: &[(String, f64)]) -> Result
 /// what was registered. This is the replay. `percentile` is against
 /// `seeds` random-entry runs wrapped in the same filters, each at the
 /// control's defaults with a different seed.
-#[allow(clippy::too_many_arguments)]
 pub fn run_hypothesis_fixed(
     registry: &Registry,
     hypothesis: &Hypothesis,
@@ -449,13 +471,28 @@ pub fn run_hypothesis_fixed(
     gate: &PromisingGate,
     seeds: usize,
 ) -> Result<HypothesisReport, String> {
-    use crate::engine::{Range, run_backtest};
+    run_hypothesis_fixed_guarded(registry, hypothesis, bars, rules, gate, seeds, None)
+}
+
+/// [`run_hypothesis_fixed`] with the risk guards applied to the hypothesis
+/// and to every null run: the null goes through the same bounded pipeline.
+#[allow(clippy::too_many_arguments)]
+pub fn run_hypothesis_fixed_guarded(
+    registry: &Registry,
+    hypothesis: &Hypothesis,
+    bars: &[Bar],
+    rules: &TradingRules,
+    gate: &PromisingGate,
+    seeds: usize,
+    guards: Option<&Guards>,
+) -> Result<HypothesisReport, String> {
+    use crate::engine::{Range, run_backtest_guarded};
     let base = registry.get(&hypothesis.base).map_err(|e| e.to_string())?;
     let preset = Preset::new(base, &hypothesis.overrides)?;
     let filtered = Filtered { inner: &preset, filters: hypothesis.filters.clone() };
-    let result = run_backtest(bars, &filtered, &preset.defaults, rules, None, Range::default());
+    let result = run_backtest_guarded(bars, &filtered, &preset.defaults, rules, guards, None, Range::default(), None);
     let drift = base.exits() == fd_strategy::registry::Exits::Strategy && preset.grid().is_empty();
-    let rate = (!drift).then(|| matched_rate(bars, rules, &hypothesis.filters, result.trades.len()));
+    let rate = (!drift).then(|| matched_rate(bars, rules, &hypothesis.filters, result.trades.len(), guards));
     let hold = drift.then(|| hold_distribution(&result.trades)).flatten();
 
     let mut null_pf: Vec<f64> = (0..seeds)
@@ -464,7 +501,9 @@ pub fn run_hypothesis_fixed(
             let (inner, defaults) = matched_control_for(base, &hypothesis.overrides, seed as f64 + 1.0, rate, hold);
             let control = Preset::bare(inner, defaults.clone());
             let matched = Filtered { inner: &control, filters: hypothesis.filters.clone() };
-            let pf = run_backtest(bars, &matched, &defaults, rules, None, Range::default()).metrics.profit_factor;
+            let pf = run_backtest_guarded(bars, &matched, &defaults, rules, guards, None, Range::default(), None)
+                .metrics
+                .profit_factor;
             pf.is_finite().then_some(pf)
         })
         .collect();
@@ -486,6 +525,9 @@ pub fn run_hypothesis_fixed(
         oos: result.metrics,
         null_pf,
         percentile,
+        skipped_by_guard: result.skipped_by_guard,
+        closed_by_guard: result.closed_by_guard,
+        sized_down_by_guard: result.sized_down_by_guard,
     })
 }
 
@@ -502,19 +544,47 @@ pub fn run_hypothesis(
     gate: &PromisingGate,
     seeds: usize,
 ) -> Result<Option<HypothesisReport>, String> {
+    run_hypothesis_guarded(registry, hypothesis, bars, rules, folds, select_by, min_trades_per_cell, gate, seeds, None)
+}
+
+/// [`run_hypothesis`] with the risk guards applied to the hypothesis and to
+/// every null run.
+#[allow(clippy::too_many_arguments)]
+pub fn run_hypothesis_guarded(
+    registry: &Registry,
+    hypothesis: &Hypothesis,
+    bars: &[Bar],
+    rules: &TradingRules,
+    folds: usize,
+    select_by: SelectBy,
+    min_trades_per_cell: usize,
+    gate: &PromisingGate,
+    seeds: usize,
+    guards: Option<&Guards>,
+) -> Result<Option<HypothesisReport>, String> {
     let base = registry.get(&hypothesis.base).map_err(|e| e.to_string())?;
     let preset = Preset::new(base, &hypothesis.overrides)?;
     let filtered = Filtered { inner: &preset, filters: hypothesis.filters.clone() };
-    let Some(result) = walk_forward(&filtered, bars, rules, None, folds, select_by, min_trades_per_cell) else {
+    let Some(result) = walk_forward_guarded(&filtered, bars, rules, None, folds, select_by, min_trades_per_cell, guards)
+    else {
         return Ok(None);
     };
 
     // The control's trade count follows the method's, measured over the whole
     // window at the registered parameters (the walk-forward's own count is a
     // fifth of the bars per fold and would under-match).
-    let whole = crate::engine::run_backtest(bars, &filtered, &preset.defaults, rules, None, crate::engine::Range::default());
+    let whole = crate::engine::run_backtest_guarded(
+        bars,
+        &filtered,
+        &preset.defaults,
+        rules,
+        guards,
+        None,
+        crate::engine::Range::default(),
+        None,
+    );
     let drift = base.exits() == fd_strategy::registry::Exits::Strategy && preset.grid().is_empty();
-    let rate = (!drift).then(|| matched_rate(bars, rules, &hypothesis.filters, whole.trades.len()));
+    let rate = (!drift).then(|| matched_rate(bars, rules, &hypothesis.filters, whole.trades.len(), guards));
     let hold = drift.then(|| hold_distribution(&whole.trades)).flatten();
 
     let mut null_pf: Vec<f64> = (0..seeds)
@@ -523,7 +593,7 @@ pub fn run_hypothesis(
             let (inner, defaults) = matched_control_for(base, &hypothesis.overrides, seed as f64 + 1.0, rate, hold);
             let control = Preset::bare(inner, defaults);
             let matched = Filtered { inner: &control, filters: hypothesis.filters.clone() };
-            walk_forward(&matched, bars, rules, None, folds, select_by, min_trades_per_cell)
+            walk_forward_guarded(&matched, bars, rules, None, folds, select_by, min_trades_per_cell, guards)
                 .map(|r| r.oos.profit_factor)
                 .filter(|pf| pf.is_finite())
         })
@@ -547,6 +617,9 @@ pub fn run_hypothesis(
         oos: result.oos,
         null_pf,
         percentile,
+        skipped_by_guard: result.skipped_by_guard,
+        closed_by_guard: result.closed_by_guard,
+        sized_down_by_guard: result.sized_down_by_guard,
     }))
 }
 
@@ -688,10 +761,19 @@ why = "the first hour's range is the day's liquidity"
             oos,
             null_pf: vec![0.8, 0.9, 1.0, 1.1, 1.2],
             percentile: 100.0,
+            skipped_by_guard: BTreeMap::new(),
+            closed_by_guard: BTreeMap::new(),
+            sized_down_by_guard: 0,
         };
         assert_eq!(report.null_quantile(0.5), 1.0);
         assert!(report.survives());
         let inside = HypothesisReport { percentile: 60.0, ..report.clone() };
         assert!(!inside.survives(), "a gate pass inside the noise is not a finding");
+        assert_eq!(report.guard_activity(), "guards: nothing acted");
+        let mut acted = report.clone();
+        acted.skipped_by_guard.insert("WEEKEND_FLAT".into(), 3);
+        acted.closed_by_guard.insert("OPEN_LOSS_CAP".into(), 2);
+        acted.closed_by_guard.insert("WEEKEND_FLAT".into(), 40);
+        assert_eq!(acted.guard_activity(), "guards: refused WEEKEND_FLAT 3; closed OPEN_LOSS_CAP 2, WEEKEND_FLAT 40; sized down 0");
     }
 }

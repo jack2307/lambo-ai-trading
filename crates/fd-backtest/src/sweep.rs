@@ -21,7 +21,8 @@ use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use crate::context::OptionsTimeline;
-use crate::engine::{BacktestResult, Metrics, Range, TradingRules, Trade, metrics_of, run_backtest};
+use crate::engine::{BacktestResult, Metrics, Range, TradingRules, Trade, metrics_of, run_backtest, run_backtest_guarded};
+use crate::guards::Guards;
 
 /// Thresholds a result must clear to be worth a walk-forward.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
@@ -99,6 +100,19 @@ pub fn compare_strategies(
     timeline: Option<&OptionsTimeline>,
     gate: &PromisingGate,
 ) -> Vec<LeaderboardRow> {
+    compare_strategies_guarded(registry, bars, rules, timeline, gate, None)
+}
+
+/// [`compare_strategies`] with the risk guards applied to every run; `None`
+/// is the unguarded leaderboard.
+pub fn compare_strategies_guarded(
+    registry: &Registry,
+    bars: &[Bar],
+    rules: &TradingRules,
+    timeline: Option<&OptionsTimeline>,
+    gate: &PromisingGate,
+    guards: Option<&Guards>,
+) -> Vec<LeaderboardRow> {
     let _ = gate;
     let mut rows: Vec<LeaderboardRow> = registry
         .all()
@@ -116,7 +130,7 @@ pub fn compare_strategies(
                 };
             }
             let params = strategy.default_params();
-            let result = run_backtest(bars, strategy, &params, rules, timeline, Range::default());
+            let result = run_backtest_guarded(bars, strategy, &params, rules, guards, timeline, Range::default(), None);
             let score = score_of(Some(&result.metrics));
             LeaderboardRow {
                 id: strategy.id().to_string(),
@@ -167,6 +181,18 @@ pub fn sweep_strategy(
     sweep_grid(strategy, bars, rules, timeline, &strategy.grid(), min_trades_per_cell)
 }
 
+/// [`sweep_strategy`] with the risk guards applied to every cell.
+pub fn sweep_strategy_guarded(
+    strategy: &dyn Strategy,
+    bars: &[Bar],
+    rules: &TradingRules,
+    timeline: Option<&OptionsTimeline>,
+    min_trades_per_cell: usize,
+    guards: Option<&Guards>,
+) -> SweepResult {
+    sweep_grid_guarded(strategy, bars, rules, timeline, &strategy.grid(), min_trades_per_cell, guards)
+}
+
 /// The same sweep over a caller-supplied grid, mirroring the prototype's
 /// optional `grid` argument. Useful for refining a promising region without
 /// editing the strategy, and for benchmarking a grid larger than the default.
@@ -178,11 +204,24 @@ pub fn sweep_grid(
     grid: &BTreeMap<String, Vec<f64>>,
     min_trades_per_cell: usize,
 ) -> SweepResult {
+    sweep_grid_guarded(strategy, bars, rules, timeline, grid, min_trades_per_cell, None)
+}
+
+/// [`sweep_grid`] with the risk guards applied to every cell.
+pub fn sweep_grid_guarded(
+    strategy: &dyn Strategy,
+    bars: &[Bar],
+    rules: &TradingRules,
+    timeline: Option<&OptionsTimeline>,
+    grid: &BTreeMap<String, Vec<f64>>,
+    min_trades_per_cell: usize,
+    guards: Option<&Guards>,
+) -> SweepResult {
     let combos = parameter_combinations(&strategy.default_params(), grid);
     let mut cells: Vec<SweepCell> = combos
         .par_iter()
         .map(|params| {
-            let result = run_backtest(bars, strategy, params, rules, timeline, Range::default());
+            let result = run_backtest_guarded(bars, strategy, params, rules, guards, timeline, Range::default(), None);
             SweepCell { params: params.clone(), metrics: result.metrics }
         })
         .collect();
@@ -235,6 +274,15 @@ pub struct WalkForwardResult {
     pub oos_trades: Vec<Trade>,
     /// Whether the chosen parameters held still between folds.
     pub parameter_stability: BTreeMap<String, Vec<f64>>,
+    /// Guard activity summed over the out-of-sample folds; empty and zero
+    /// for an unguarded run. Training-window runs are not counted: they
+    /// select, they do not measure.
+    #[serde(default)]
+    pub skipped_by_guard: BTreeMap<String, usize>,
+    #[serde(default)]
+    pub closed_by_guard: BTreeMap<String, usize>,
+    #[serde(default)]
+    pub sized_down_by_guard: usize,
 }
 
 /// What a fold selects on.
@@ -268,6 +316,22 @@ pub fn walk_forward(
     select_by: SelectBy,
     min_trades_per_cell: usize,
 ) -> Option<WalkForwardResult> {
+    walk_forward_guarded(strategy, bars, rules, timeline, folds, select_by, min_trades_per_cell, None)
+}
+
+/// [`walk_forward`] with the risk guards applied to every run, selection and
+/// measurement alike: a guarded walk-forward selects on guarded numbers.
+#[allow(clippy::too_many_arguments)]
+pub fn walk_forward_guarded(
+    strategy: &dyn Strategy,
+    bars: &[Bar],
+    rules: &TradingRules,
+    timeline: Option<&OptionsTimeline>,
+    folds: usize,
+    select_by: SelectBy,
+    min_trades_per_cell: usize,
+    guards: Option<&Guards>,
+) -> Option<WalkForwardResult> {
     if bars.len() < folds + 2 || folds == 0 {
         return None;
     }
@@ -279,6 +343,9 @@ pub fn walk_forward(
 
     let mut fold_results = Vec::with_capacity(folds);
     let mut oos_trades: Vec<Trade> = Vec::new();
+    let mut skipped_by_guard: BTreeMap<String, usize> = BTreeMap::new();
+    let mut closed_by_guard: BTreeMap<String, usize> = BTreeMap::new();
+    let mut sized_down_by_guard = 0usize;
 
     for f in 1..=folds {
         let train_end = bars[block * f - 1].time;
@@ -289,13 +356,15 @@ pub fn walk_forward(
         let best = combos
             .par_iter()
             .filter_map(|params| {
-                let result = run_backtest(
+                let result = run_backtest_guarded(
                     bars,
                     strategy,
                     params,
                     rules,
+                    guards,
                     timeline,
                     Range { from: None, to: Some(train_end) },
+                    None,
                 );
                 (result.metrics.trades >= min_trades_per_cell)
                     .then(|| (select_by.score(&result.metrics), result.metrics.trades, params.clone()))
@@ -316,15 +385,24 @@ pub fn walk_forward(
         };
 
         // Measurement sees only the window that follows it.
-        let test = run_backtest(
+        let test = run_backtest_guarded(
             bars,
             strategy,
             &params,
             rules,
+            guards,
             timeline,
             Range { from: Some(test_start), to: Some(test_end) },
+            None,
         );
         oos_trades.extend(test.trades.iter().cloned());
+        for (label, n) in &test.skipped_by_guard {
+            *skipped_by_guard.entry(label.clone()).or_default() += n;
+        }
+        for (label, n) in &test.closed_by_guard {
+            *closed_by_guard.entry(label.clone()).or_default() += n;
+        }
+        sized_down_by_guard += test.sized_down_by_guard;
         fold_results.push(Fold {
             fold: f,
             selected: Some(params),
@@ -352,6 +430,9 @@ pub fn walk_forward(
         oos: metrics_of(&oos_trades, rules.starting_equity_usd),
         oos_trades,
         parameter_stability: stability,
+        skipped_by_guard,
+        closed_by_guard,
+        sized_down_by_guard,
     })
 }
 
