@@ -43,6 +43,19 @@ Closed ideas move to the bottom with a pointer to their decision record, so
   re-read every thousands-of-trades negative in the loop against the R
   column (the verdicts will not move — a loser is a loser in both units —
   but the percentiles quoted for them will).
+- [ ] **`session-hold` fires at the reopen on a feed-gap day** (news-desk,
+  `2026-09-14-fx-local-hours` addendum): on Christmas-week days with no
+  bars until 17:00 New York the "first bar of the window" was the 17:00
+  bar, giving fifteen-minute holds and one Sunday hold under `weekdays`.
+  Require the window's first bar to be at most one bar-interval after
+  `from`, or skip days whose first bar is after `to`. Immaterial to every
+  record so far (five holds, −$26); a correctness item.
+- [ ] **Blackout that flattens** (owner's intent for the paper phase): the
+  `news:` filter blocks entries; a hold that spans a release is avoided by
+  `before = hold length`. A live bot also needs a guard that closes an open
+  position before a release (and does not re-enter until `after`), which
+  is the unrealised-loss / weekend guard family — the live loop does not
+  exist yet. news-desk publishes the schedule; the runner must enforce it.
 - [ ] **Intraday reversal on gold, as a sign claim only** (adversary,
   `2026-09-14-intraday-momentum`): the day-so-far sign (08:30 → 15:00)
   predicted the opposite of the last hour (15:30 → 16:45) on 2010–18 at the

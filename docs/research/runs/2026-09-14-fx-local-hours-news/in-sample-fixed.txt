@@ -1,0 +1,25 @@
+$ E:\rust\flowdesk\target\release\search.exe --market=eurduka --interval=15m --mode=hypotheses --fixed --batch-file=E:\rust\flowdesk\docs\hypotheses\2026-09-14-fx-local-hours-news.toml --seeds=300 --from=2010-06-01 --to=2018-06-15
+
+bounds:   --from=2010-06-01 --to=2018-06-15 kept 200576 of 398220 bars
+bars:     200576 from 2010-06-01 00:00 to 2018-06-14 23:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from data/news/events.parquet
+
+== hypotheses `E:\rust\flowdesk\docs\hypotheses\2026-09-14-fx-local-hours-news.toml`: 3 declared, FIXED parameters over the whole window (no selection), each against 300 matched null runs ==
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.00014
+news: 747 events (2010-01-08 → 2027-12-08) from data/news/events.parquet
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+fx/eu-short  session-hold         2087   1.069   0.014    0.922    1.027        0  100%  fail: profit factor 1.069 < 1.2; expectancy 0.014R < 0.05R
+                                MoTuWeThFr + NY 02:45-02:50  — the closed row, unchanged, as the baseline in the same run
+fx/eu-short-news session-hold         2087   1.069   0.014    0.922    1.027        0  100%  fail: profit factor 1.069 < 1.2; expectancy 0.014R < 0.05R
+                                MoTuWeThFr + NY 02:45-02:50 + no entries 60 min before to 30 min after high-impact news  — the same row with no entry from 60 min before to 30 min after a high-impact release: the 02:45 signal is blocked when an event falls 01:45-03:15 New York; a release inside the hold is not avoided by an entry gate
+fx/eu-short-newsday session-hold         1812   1.034   0.007    0.918    1.025        0   96%  fail: profit factor 1.034 < 1.2; expectancy 0.007R < 0.05R
+                                MoTuWeThFr + NY 02:45-02:50 + no entries 600 min before to 600 min after high-impact news  — the same row skipping the whole day of a high-impact release (10 h either side of the 02:45 signal covers ECB 07:45/08:15 and US 08:30/14:00 New York): the drift between release days
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+

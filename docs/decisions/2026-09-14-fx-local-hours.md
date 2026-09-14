@@ -204,3 +204,67 @@ years" is withdrawn by the adversary on the sign record
 (`2026-09-14-fx-local-hours-sign.md`): the excess was concentrated in
 2011–2016 and is positive in 2022, the largest dollar year on the feed.
 Nothing in the verdict moves.
+
+## Addendum (2026-09-14, afternoon): the news-desk's first check, and the row under a news blackout
+
+The owner asked for a role that owns the scheduled-news calendar and, when
+a paper bot runs, switches it off around releases. `news-desk`
+(`.claude/agents/news-desk.md`) was given this row as its first
+assignment, with the calendar `data/news/events.parquet` (747 releases
+2010–2027: FOMC, US CPI, US NFP, ECB; `docs/news/README.md`) and the trade
+list `diag-eu-short-trades.txt`. Its verdict: **CONTAMINATED for the P&L;
+the sign survives, weakened.**
+
+- Events inside the 03:00–11:00 window on 2010–2018: 83 ECB decisions
+  (07:45 New York; two at 08:45 on DST-mismatch weeks), 97 CPI and 96 NFP
+  (08:30); the 65 FOMC statements (14:00) fall outside every hold.
+- 275 of 2,087 holds (13.2%) contain a release. They carry **$1,900 of the
+  $3,072 net (61.8%)**, 32.0% of the gross pips (1,894 of 5,914 in the trade
+  file) and 50.4% of the net pips; 6.9 gross pips a hold against 2.2 on the
+  other 1,812. ECB Thursdays alone: 83 holds, 14.0 pips a hold, 43.9% of the
+  net dollars, 19.7% of the gross pips; three of the top five holds and the
+  worst one (2015-12-03) are ECB days. Win rate is the same on both kinds of
+  day — the release days move more, they do not move more often.
+- The adversary's claim — *"ECB Thursdays plus the 04:00–05:00 hour carry
+  more than half"* — is **false for the sign** (68% of the gross pips sit on
+  holds with no release, positive in seven of nine years, t = 1.78) and
+  **true for the after-spread dollars** (13% of holds, 62% of net); the
+  04:00–05:00 half is untestable from a trade list and a calendar without
+  eurozone data releases.
+- The bot's view: a `news:60-30` entry blackout blocks **none** of the 2,087
+  entries — no release falls within 60 minutes of the 02:45 signal; the
+  releases sit inside the hold. A hold that spans a release is avoided by
+  setting the blackout's `before` to the hold's length (`news:600-600` here),
+  which drops the 275 event holds and leaves 1,812 at net $1,173, PF 1.03,
+  0.82 net pips a hold. A paper bot honouring a release blackout would have
+  kept about a third of this row's P&L.
+- Odd stamps: five holds are not 03:00 → 11:00 at all — Christmas-week feed
+  gaps made `session-hold` fire at the 17:00 reopen and exit fifteen minutes
+  later, one of them on a Sunday (2015-12-27) under a `weekdays` filter; net
+  −$26, immaterial to the row, logged as an instrument note. The trade file's
+  gross (5,914 pips, from `pnl / units`) and the record's bar replay (6,150)
+  differ by 3.8%, partly those holds.
+
+The same row re-run with the blackout in the engine, as context
+(`docs/hypotheses/2026-09-14-fx-local-hours-news.toml`,
+`runs/2026-09-14-fx-local-hours-news/`; the receipt header prints the
+events loaded):
+
+```
+hypothesis            trades  OOS PF  expect  null p50 null p95   pct  direction   note
+fx/eu-short             2087   1.069   0.014    0.922    1.027  100%   99th       the closed row, unchanged
+fx/eu-short-news        2087   1.069   0.014    0.922    1.027  100%   99th       news:60-30 blocks no entry: the releases sit inside the hold
+fx/eu-short-newsday     1812   1.034   0.007    0.918    1.025   96%   93rd       news:600-600 drops the 275 release holds
+```
+
+(`in-sample-fixed.txt`, `direction-fx-*.txt`; walk-forward 1.104 / 1.104 /
+1.061 at 100% / 100% / 98%.) Without the release days the drift keeps its
+sign at the 96th of random holds and the 93rd of its own sides — a
+between-releases drift of two pips a hold, real but a third weaker than
+the row that carried the releases.
+
+What this changes in the record: nothing in the verdict — the row was
+closed on its gate — and one sentence in the reading: the European-hours
+drift is a between-releases drift of about two pips a hold plus a release-day
+drift of seven; the paper's mechanism is the first, and the dollars were
+mostly the second.

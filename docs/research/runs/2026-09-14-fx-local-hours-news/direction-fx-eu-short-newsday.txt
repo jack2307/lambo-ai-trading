@@ -1,0 +1,22 @@
+$ E:\rust\flowdesk\target\release\search.exe --market=eurduka --interval=15m --mode=null-dir --strategy=session-hold --samples=1000 --params=from=245,to=1045,side=-1,riskDailyRanges=1,rangeDays=20 --filters=weekdays;hours:0245-0250;news:600-600 --from=2010-06-01 --to=2018-06-15
+
+bounds:   --from=2010-06-01 --to=2018-06-15 kept 200576 of 398220 bars
+bars:     200576 from 2010-06-01 00:00 to 2018-06-14 23:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from data/news/events.parquet
+
+  filters: MoTuWeThFr + NY 02:45-02:50 + no entries 600 min before to 600 min after high-impact news
+== direction control: session-hold, 1812 trades, 1000 coin-flip assignments ==
+  preset: from=245,to=1045,side=-1,riskDailyRanges=1,rangeDays=20
+  the method's own trades — entry, exit, lots, costs — with each side a coin flip
+  profit factor of the same trades with random direction:
+    p05 0.816   p25 0.889   p50 0.926   p75 0.961   p95 1.046   max 1.141
+
+  actual: 1.034  ->  93th percentile  (p = 0.068)
+
+  Inside its own null. On this sample the direction rule has not been
+  distinguished from a coin flip, however good the profit factor looks.
+
