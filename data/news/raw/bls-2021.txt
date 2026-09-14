@@ -1,0 +1,26 @@
+# source: https://www.bls.gov/schedule/2021/home.htm (WebFetch 2026-09-14)
+# columns: release name | reference month | release date (as printed) | release time (ET, as printed)
+Consumer Price Index | December 2020 | Wednesday, January 13, 2021 | 08:30 AM
+Consumer Price Index | January 2021 | Wednesday, February 10, 2021 | 08:30 AM
+Consumer Price Index | February 2021 | Wednesday, March 10, 2021 | 08:30 AM
+Consumer Price Index | March 2021 | Tuesday, April 13, 2021 | 08:30 AM
+Consumer Price Index | April 2021 | Wednesday, May 12, 2021 | 08:30 AM
+Consumer Price Index | May 2021 | Thursday, June 10, 2021 | 08:30 AM
+Consumer Price Index | June 2021 | Tuesday, July 13, 2021 | 08:30 AM
+Consumer Price Index | July 2021 | Wednesday, August 11, 2021 | 08:30 AM
+Consumer Price Index | August 2021 | Tuesday, September 14, 2021 | 08:30 AM
+Consumer Price Index | September 2021 | Wednesday, October 13, 2021 | 08:30 AM
+Consumer Price Index | October 2021 | Wednesday, November 10, 2021 | 08:30 AM
+Consumer Price Index | November 2021 | Friday, December 10, 2021 | 08:30 AM
+Employment Situation | December 2020 | Friday, January 8, 2021 | 08:30 AM
+Employment Situation | January 2021 | Friday, February 5, 2021 | 08:30 AM
+Employment Situation | February 2021 | Friday, March 5, 2021 | 08:30 AM
+Employment Situation | March 2021 | Friday, April 2, 2021 | 08:30 AM
+Employment Situation | April 2021 | Friday, May 7, 2021 | 08:30 AM
+Employment Situation | May 2021 | Friday, June 4, 2021 | 08:30 AM
+Employment Situation | June 2021 | Friday, July 2, 2021 | 08:30 AM
+Employment Situation | July 2021 | Friday, August 6, 2021 | 08:30 AM
+Employment Situation | August 2021 | Friday, September 3, 2021 | 08:30 AM
+Employment Situation | September 2021 | Friday, October 8, 2021 | 08:30 AM
+Employment Situation | October 2021 | Friday, November 5, 2021 | 08:30 AM
+Employment Situation | November 2021 | Friday, December 3, 2021 | 08:30 AM

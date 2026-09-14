@@ -1,0 +1,26 @@
+# source: https://www.bls.gov/schedule/2016/home.htm (WebFetch 2026-09-14)
+# columns: release name | reference month | release date (as printed) | release time (ET, as printed)
+Consumer Price Index | December 2015 | Wednesday, January 20, 2016 | 08:30 AM
+Consumer Price Index | January 2016 | Friday, February 19, 2016 | 08:30 AM
+Consumer Price Index | February 2016 | Wednesday, March 16, 2016 | 08:30 AM
+Consumer Price Index | March 2016 | Thursday, April 14, 2016 | 08:30 AM
+Consumer Price Index | April 2016 | Tuesday, May 17, 2016 | 08:30 AM
+Consumer Price Index | May 2016 | Thursday, June 16, 2016 | 08:30 AM
+Consumer Price Index | June 2016 | Friday, July 15, 2016 | 08:30 AM
+Consumer Price Index | July 2016 | Tuesday, August 16, 2016 | 08:30 AM
+Consumer Price Index | August 2016 | Friday, September 16, 2016 | 08:30 AM
+Consumer Price Index | September 2016 | Tuesday, October 18, 2016 | 08:30 AM
+Consumer Price Index | October 2016 | Thursday, November 17, 2016 | 08:30 AM
+Consumer Price Index | November 2016 | Thursday, December 15, 2016 | 08:30 AM
+Employment Situation | December 2015 | Friday, January 8, 2016 | 08:30 AM
+Employment Situation | January 2016 | Friday, February 5, 2016 | 08:30 AM
+Employment Situation | February 2016 | Friday, March 4, 2016 | 08:30 AM
+Employment Situation | March 2016 | Friday, April 1, 2016 | 08:30 AM
+Employment Situation | April 2016 | Friday, May 6, 2016 | 08:30 AM
+Employment Situation | May 2016 | Friday, June 3, 2016 | 08:30 AM
+Employment Situation | June 2016 | Friday, July 8, 2016 | 08:30 AM
+Employment Situation | July 2016 | Friday, August 5, 2016 | 08:30 AM
+Employment Situation | August 2016 | Friday, September 2, 2016 | 08:30 AM
+Employment Situation | September 2016 | Friday, October 7, 2016 | 08:30 AM
+Employment Situation | October 2016 | Friday, November 4, 2016 | 08:30 AM
+Employment Situation | November 2016 | Friday, December 2, 2016 | 08:30 AM

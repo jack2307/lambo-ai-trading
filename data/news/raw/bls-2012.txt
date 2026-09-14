@@ -1,0 +1,26 @@
+# source: https://www.bls.gov/schedule/2012/home.htm (WebFetch 2026-09-14)
+# columns: release name | reference month | release date (as printed) | release time (ET, as printed)
+Consumer Price Index | December 2011 | Thursday, January 19, 2012 | 08:30 AM
+Consumer Price Index | January 2012 | Friday, February 17, 2012 | 08:30 AM
+Consumer Price Index | February 2012 | Friday, March 16, 2012 | 08:30 AM
+Consumer Price Index | March 2012 | Friday, April 13, 2012 | 08:30 AM
+Consumer Price Index | April 2012 | Tuesday, May 15, 2012 | 08:30 AM
+Consumer Price Index | May 2012 | Thursday, June 14, 2012 | 08:30 AM
+Consumer Price Index | June 2012 | Tuesday, July 17, 2012 | 08:30 AM
+Consumer Price Index | July 2012 | Wednesday, August 15, 2012 | 08:30 AM
+Consumer Price Index | August 2012 | Friday, September 14, 2012 | 08:30 AM
+Consumer Price Index | September 2012 | Tuesday, October 16, 2012 | 08:30 AM
+Consumer Price Index | October 2012 | Thursday, November 15, 2012 | 08:30 AM
+Consumer Price Index | November 2012 | Friday, December 14, 2012 | 08:30 AM
+Employment Situation | December 2011 | Friday, January 6, 2012 | 08:30 AM
+Employment Situation | January 2012 | Friday, February 3, 2012 | 08:30 AM
+Employment Situation | February 2012 | Friday, March 9, 2012 | 08:30 AM
+Employment Situation | March 2012 | Friday, April 6, 2012 | 08:30 AM
+Employment Situation | April 2012 | Friday, May 4, 2012 | 08:30 AM
+Employment Situation | May 2012 | Friday, June 1, 2012 | 08:30 AM
+Employment Situation | June 2012 | Friday, July 6, 2012 | 08:30 AM
+Employment Situation | July 2012 | Friday, August 3, 2012 | 08:30 AM
+Employment Situation | August 2012 | Friday, September 7, 2012 | 08:30 AM
+Employment Situation | September 2012 | Friday, October 5, 2012 | 08:30 AM
+Employment Situation | October 2012 | Friday, November 2, 2012 | 08:30 AM
+Employment Situation | November 2012 | Friday, December 7, 2012 | 08:30 AM

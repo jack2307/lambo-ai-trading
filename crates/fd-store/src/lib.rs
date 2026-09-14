@@ -16,6 +16,7 @@
 
 pub mod bars;
 pub mod error;
+pub mod news;
 pub mod resample;
 pub mod schema;
 pub mod store;
@@ -23,6 +24,7 @@ pub mod tape;
 
 pub use bars::{read_bars, write_bars};
 pub use error::StoreError;
+pub use news::read_news;
 pub use resample::{resample, timeframe_ms};
 pub use schema::{bars_schema, tape_schema};
 pub use store::TapeStore;

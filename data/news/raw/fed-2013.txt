@@ -1,0 +1,11 @@
+# source: https://www.federalreserve.gov/monetarypolicy/fomchistorical2013.htm (WebFetch 2026-09-14; release headers from the linked press releases, WebFetch same day)
+# columns: month | day(s) | type | statement | release-header (verbatim from the linked press release; 'unknown' = not fetched, default 14:00 ET applies)
+January | 29-30 | Meeting | /newsevents/pressreleases/monetary20130130a.htm | unknown
+March | 19-20 | Meeting | /newsevents/pressreleases/monetary20130320a.htm | unknown
+April | 30-1 | Meeting | /newsevents/pressreleases/monetary20130501a.htm | unknown
+June | 18-19 | Meeting | /newsevents/pressreleases/monetary20130619a.htm | unknown
+July | 30-31 | Meeting | /newsevents/pressreleases/monetary20130731a.htm | unknown
+September | 17-18 | Meeting | /newsevents/pressreleases/monetary20130918a.htm | unknown
+October | 16 | Unscheduled Conference Call | no statement | -
+October | 29-30 | Meeting | /newsevents/pressreleases/monetary20131030a.htm | unknown
+December | 17-18 | Meeting | /newsevents/pressreleases/monetary20131218a.htm | unknown

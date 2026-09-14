@@ -1,0 +1,14 @@
+# source: https://www.ecb.europa.eu/press/pr/date/2014/html/index_include.en.html (press releases titled 'Monetary policy decisions') (WebFetch 2026-09-14)
+# columns: decision date | title as listed
+2014-01-09 | Monetary policy decisions
+2014-02-06 | Monetary policy decisions
+2014-03-06 | Monetary policy decisions
+2014-04-03 | Monetary policy decisions
+2014-05-08 | Monetary policy decisions
+2014-06-05 | Monetary policy decisions
+2014-07-03 | Monetary policy decisions
+2014-08-07 | Monetary policy decisions
+2014-09-04 | Monetary policy decisions
+2014-10-02 | Monetary policy decisions
+2014-11-06 | Monetary policy decisions
+2014-12-04 | Monetary policy decisions

@@ -17,6 +17,7 @@ use std::collections::BTreeMap;
 use fd_core::clock::new_york_local;
 use fd_indicators::IndicatorSpec;
 
+use crate::news;
 use crate::registry::{BarContext, Exits, Intent, Params, Strategy};
 
 /// One gate. Minutes are New York minutes of day; a window whose `from` is
@@ -42,6 +43,20 @@ pub enum Filter {
     /// which is relative to the recent past: a year twice as volatile as
     /// another reads as "high" here and as "normal" there.
     VolAbs { period: usize, min_pct: f64, max_pct: f64 },
+    /// No entries from `before_min` minutes before to `after_min` minutes
+    /// after any scheduled event of `impact >= min_impact` (3 = high) in the
+    /// calendar the binary installed through [`news::install`].
+    ///
+    /// The check reads the **signal bar's open time**: a bar whose time is
+    /// inside `[event − before, event + after)` produces no entry. The fill
+    /// is the engine's, one bar later, so a bar that opens just before the
+    /// window and would fill inside it is **not** blocked — pad `before_min`
+    /// by one bar when the hypothesis needs the fill outside the window too.
+    /// Exits are never gated: a position opened before the release is closed
+    /// by its stop, target or the strategy exactly as without the filter.
+    /// With no calendar installed the filter is a no-op (the receipt says
+    /// `news: none loaded`).
+    News { before_min: u32, after_min: u32, min_impact: u8 },
 }
 
 impl Filter {
@@ -69,7 +84,10 @@ impl Filter {
 
     /// A filter from its one-line spelling, as a batch file writes it:
     /// `weekdays`, `hours:0800-1200`, `sessions:0100-0500|0600-1000`,
-    /// `flat:1630-1815`, `vol:14/100:1.2-99`. Times are New York `hhmm`.
+    /// `flat:1630-1815`, `vol:14/100:1.2-99`, `volabs:14:0.075-9`,
+    /// `news:60-30` (60 min before to 30 min after high-impact news) or
+    /// `news:60-30:2` (impact ≥ 2). Times are New York `hhmm`; news widths
+    /// are minutes.
     pub fn parse(spec: &str) -> Result<Self, String> {
         let spec = spec.trim();
         let bad = |why: &str| Err(format!("filter `{spec}`: {why}"));
@@ -117,6 +135,26 @@ impl Filter {
                 let period = period.trim().parse::<usize>().map_err(|_| format!("filter `{spec}`: `{period}` is not a period"))?;
                 Ok(Self::VolAbs { period, min_pct: num(lo)?, max_pct: num(hi)? })
             }
+            // `news:B-A[:I]` — B minutes before to A minutes after events of
+            // impact ≥ I (default 3, high). Both widths are required so that
+            // `news:60` cannot be read as "and nothing after".
+            Some(("news", rest)) => {
+                let (widths, impact) = match rest.split_once(':') {
+                    Some((w, i)) => (w, Some(i)),
+                    None => (rest, None),
+                };
+                let (b, a) = widths.split_once('-').ok_or_else(|| format!("filter `{spec}`: expected news:before-after[:impact] in minutes"))?;
+                let minutes = |t: &str| t.trim().parse::<u32>().map_err(|_| format!("filter `{spec}`: `{t}` is not a number of minutes"));
+                let (before_min, after_min) = (minutes(b)?, minutes(a)?);
+                let min_impact = match impact {
+                    None => 3,
+                    Some(i) => match i.trim().parse::<u8>() {
+                        Ok(v @ 1..=3) => v,
+                        _ => return bad("impact must be 1, 2 or 3 (3 = high)"),
+                    },
+                };
+                Ok(Self::News { before_min, after_min, min_impact })
+            }
             Some(("vol", rest)) => {
                 let (periods, range) = rest.split_once(':').ok_or_else(|| format!("filter `{spec}`: expected vol:F/S:min-max"))?;
                 let (fast, slow) = periods.split_once('/').ok_or_else(|| format!("filter `{spec}`: expected F/S"))?;
@@ -149,6 +187,13 @@ impl Filter {
                 format!("ATR{fast}/ATR{slow} in [{min_ratio}, {max_ratio}]")
             }
             Self::VolAbs { period, min_pct, max_pct } => format!("ATR{period}/close in [{min_pct}%, {max_pct}%]"),
+            Self::News { before_min, after_min, min_impact } => {
+                let which = match min_impact {
+                    3 => "high-impact".to_string(),
+                    i => format!("impact≥{i}"),
+                };
+                format!("no entries {before_min} min before to {after_min} min after {which} news")
+            }
         }
     }
 }
@@ -285,6 +330,14 @@ impl Strategy for Filtered<'_> {
                     let pct = 100.0 * atr / ctx.bar.close;
                     pct.is_finite() && pct >= *min_pct && pct <= *max_pct
                 }
+                // Signal-bar time; the fill lands one bar later (see the
+                // variant's doc). No calendar installed → never blocked.
+                Filter::News { before_min, after_min, min_impact } => !news::in_blackout(
+                    ctx.bar.time,
+                    i64::from(*before_min) * 60_000,
+                    i64::from(*after_min) * 60_000,
+                    *min_impact,
+                ),
             };
             if !allowed {
                 return Intent::None;
@@ -405,6 +458,83 @@ mod tests {
         assert_eq!(Filter::parse("volabs:14:0.075-9").unwrap(), Filter::VolAbs { period: 14, min_pct: 0.075, max_pct: 9.0 });
         assert!(Filter::parse("hours:0860-1200").unwrap_err().contains("clock"));
         assert!(Filter::parse("moon:full").unwrap_err().contains("unknown"));
+    }
+
+    #[test]
+    fn the_news_filter_parses_widths_in_minutes_and_an_optional_impact() {
+        assert_eq!(Filter::parse("news:60-30").unwrap(), Filter::News { before_min: 60, after_min: 30, min_impact: 3 });
+        assert_eq!(Filter::parse("news:60-30:2").unwrap(), Filter::News { before_min: 60, after_min: 30, min_impact: 2 });
+        assert_eq!(Filter::parse("news:0-15:1").unwrap(), Filter::News { before_min: 0, after_min: 15, min_impact: 1 });
+        assert!(Filter::parse("news:").unwrap_err().contains("before-after"));
+        assert!(Filter::parse("news:60").unwrap_err().contains("before-after"));
+        assert!(Filter::parse("news:60-x").unwrap_err().contains("minutes"));
+        assert!(Filter::parse("news:60-30:0").unwrap_err().contains("impact"));
+        assert!(Filter::parse("news:60-30:4").unwrap_err().contains("impact"));
+        assert_eq!(Filter::parse("news:60-30").unwrap().describe(), "no entries 60 min before to 30 min after high-impact news");
+        assert_eq!(Filter::parse("news:60-30:2").unwrap().describe(), "no entries 60 min before to 30 min after impact≥2 news");
+    }
+
+    /// Wants out on every bar it holds; never enters.
+    struct ExitNow;
+    impl Strategy for ExitNow {
+        fn id(&self) -> &'static str {
+            "exit-now"
+        }
+        fn name(&self) -> &'static str {
+            "exit-now"
+        }
+        fn description(&self) -> &'static str {
+            ""
+        }
+        fn default_params(&self) -> Params {
+            Params::default()
+        }
+        fn indicators(&self, _: &Params) -> Vec<IndicatorSpec> {
+            Vec::new()
+        }
+        fn warmup(&self, _: &Params) -> usize {
+            0
+        }
+        fn on_bar(&self, ctx: &BarContext) -> Intent {
+            if ctx.position.is_some() { Intent::Exit { reason: "done".into() } } else { Intent::None }
+        }
+    }
+
+    #[test]
+    fn the_news_filter_gates_entries_on_the_signal_bar_and_never_exits() {
+        // The shared calendar (see `news::test_events`): a high-impact
+        // release at 12:30 UTC on the Monday. Window: [11:30, 13:00).
+        news::install(news::test_events()).expect("shared install");
+        let f = Filtered { inner: &Always, filters: vec![Filter::parse("news:60-30").unwrap()] };
+        let release = monday_utc(12, 30);
+
+        // Inside the window: the signal is blocked.
+        assert!(matches!(intent_at(&f, release - 60 * 60_000, None), Intent::None), "front edge is inclusive");
+        assert!(matches!(intent_at(&f, release, None), Intent::None), "the release bar");
+        assert!(matches!(intent_at(&f, release + 29 * 60_000, None), Intent::None), "last minute after");
+
+        // One (one-minute) bar outside on either side: not blocked. The bar
+        // at 11:29 opens before the window and would FILL at 11:30, inside
+        // it — that is by design: the filter reads the signal bar's time,
+        // and a hypothesis that needs the fill outside pads `before`.
+        assert!(matches!(intent_at(&f, release - 61 * 60_000, None), Intent::Enter { .. }));
+        assert!(matches!(intent_at(&f, release + 30 * 60_000, None), Intent::Enter { .. }), "back edge is exclusive");
+
+        // The medium EUR event at 09:00 does not count at the default
+        // threshold, and does at `:2`.
+        let medium = monday_utc(9, 0);
+        assert!(matches!(intent_at(&f, medium, None), Intent::Enter { .. }));
+        let f2 = Filtered { inner: &Always, filters: vec![Filter::parse("news:60-30:2").unwrap()] };
+        assert!(matches!(intent_at(&f2, medium, None), Intent::None));
+
+        // An exit inside the window is not gated: a strategy that wants out
+        // gets out.
+        let g = Filtered { inner: &ExitNow, filters: vec![Filter::parse("news:60-30").unwrap()] };
+        let open = OpenPosition { side: Side::Long, entry_price: 100.0, entry_time: 0, stop: None, target: None };
+        assert!(matches!(intent_at(&g, release, Some(open)), Intent::Exit { .. }));
+        // And the filter adds no series or warm-up of its own.
+        assert!(f.series(&Params::default()).is_empty());
+        assert_eq!(f.warmup(&Params::default()), 0);
     }
 
     #[test]

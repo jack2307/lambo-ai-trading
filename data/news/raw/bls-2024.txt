@@ -1,0 +1,26 @@
+# source: https://www.bls.gov/schedule/2024/home.htm (WebFetch 2026-09-14)
+# columns: release name | reference month | release date (as printed) | release time (ET, as printed)
+Consumer Price Index | December 2023 | Thursday, January 11, 2024 | 08:30 AM
+Consumer Price Index | January 2024 | Tuesday, February 13, 2024 | 08:30 AM
+Consumer Price Index | February 2024 | Tuesday, March 12, 2024 | 08:30 AM
+Consumer Price Index | March 2024 | Wednesday, April 10, 2024 | 08:30 AM
+Consumer Price Index | April 2024 | Wednesday, May 15, 2024 | 08:30 AM
+Consumer Price Index | May 2024 | Wednesday, June 12, 2024 | 08:30 AM
+Consumer Price Index | June 2024 | Thursday, July 11, 2024 | 08:30 AM
+Consumer Price Index | July 2024 | Wednesday, August 14, 2024 | 08:30 AM
+Consumer Price Index | August 2024 | Wednesday, September 11, 2024 | 08:30 AM
+Consumer Price Index | September 2024 | Thursday, October 10, 2024 | 08:30 AM
+Consumer Price Index | October 2024 | Wednesday, November 13, 2024 | 08:30 AM
+Consumer Price Index | November 2024 | Wednesday, December 11, 2024 | 08:30 AM
+Employment Situation | December 2023 | Friday, January 5, 2024 | 08:30 AM
+Employment Situation | January 2024 | Friday, February 2, 2024 | 08:30 AM
+Employment Situation | February 2024 | Friday, March 8, 2024 | 08:30 AM
+Employment Situation | March 2024 | Friday, April 5, 2024 | 08:30 AM
+Employment Situation | April 2024 | Friday, May 3, 2024 | 08:30 AM
+Employment Situation | May 2024 | Friday, June 7, 2024 | 08:30 AM
+Employment Situation | June 2024 | Friday, July 5, 2024 | 08:30 AM
+Employment Situation | July 2024 | Friday, August 2, 2024 | 08:30 AM
+Employment Situation | August 2024 | Friday, September 6, 2024 | 08:30 AM
+Employment Situation | September 2024 | Friday, October 4, 2024 | 08:30 AM
+Employment Situation | October 2024 | Friday, November 1, 2024 | 08:30 AM
+Employment Situation | November 2024 | Friday, December 6, 2024 | 08:30 AM

@@ -1,0 +1,11 @@
+# source: https://www.federalreserve.gov/monetarypolicy/fomchistorical2019.htm (WebFetch 2026-09-14; release headers from the linked press releases, WebFetch same day)
+# columns: month | day(s) | type | statement | release-header (verbatim from the linked press release; 'unknown' = not fetched, default 14:00 ET applies)
+January | 29-30 | Meeting | /newsevents/pressreleases/monetary20190130a.htm | unknown
+March | 19-20 | Meeting | /newsevents/pressreleases/monetary20190320a.htm | unknown
+April | 30-1 | Meeting | /newsevents/pressreleases/monetary20190501a.htm | unknown
+June | 18-19 | Meeting | /newsevents/pressreleases/monetary20190619a.htm | unknown
+July | 30-31 | Meeting | /newsevents/pressreleases/monetary20190731a.htm | unknown
+September | 17-18 | Meeting | /newsevents/pressreleases/monetary20190918a.htm | unknown
+October | 4 | Unscheduled Conference Call | /newsevents/pressreleases/monetary20191011a.htm | For release at 11:00 a.m. EDT October 11, 2019
+October | 29-30 | Meeting | /newsevents/pressreleases/monetary20191030a.htm | unknown
+December | 10-11 | Meeting | /newsevents/pressreleases/monetary20191211a.htm | unknown

@@ -1,0 +1,14 @@
+# source: https://www.ecb.europa.eu/press/pr/date/2011/html/index_include.en.html (press releases titled 'Monetary policy decisions') (WebFetch 2026-09-14)
+# columns: decision date | title as listed
+2011-01-13 | Monetary policy decisions
+2011-02-03 | Monetary policy decisions
+2011-03-03 | Monetary policy decisions
+2011-04-07 | Monetary policy decisions
+2011-05-05 | Monetary policy decisions
+2011-06-09 | Monetary policy decisions
+2011-07-07 | Monetary policy decisions
+2011-08-04 | Monetary policy decisions
+2011-09-08 | Monetary policy decisions
+2011-10-06 | Monetary policy decisions
+2011-11-03 | Monetary policy decisions
+2011-12-08 | Monetary policy decisions

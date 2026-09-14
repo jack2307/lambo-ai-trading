@@ -1,0 +1,26 @@
+# source: https://www.bls.gov/schedule/2017/home.htm (WebFetch 2026-09-14)
+# columns: release name | reference month | release date (as printed) | release time (ET, as printed)
+Consumer Price Index | December 2016 | Wednesday, January 18, 2017 | 08:30 AM
+Consumer Price Index | January 2017 | Wednesday, February 15, 2017 | 08:30 AM
+Consumer Price Index | February 2017 | Wednesday, March 15, 2017 | 08:30 AM
+Consumer Price Index | March 2017 | Friday, April 14, 2017 | 08:30 AM
+Consumer Price Index | April 2017 | Friday, May 12, 2017 | 08:30 AM
+Consumer Price Index | May 2017 | Wednesday, June 14, 2017 | 08:30 AM
+Consumer Price Index | June 2017 | Friday, July 14, 2017 | 08:30 AM
+Consumer Price Index | July 2017 | Friday, August 11, 2017 | 08:30 AM
+Consumer Price Index | August 2017 | Thursday, September 14, 2017 | 08:30 AM
+Consumer Price Index | September 2017 | Friday, October 13, 2017 | 08:30 AM
+Consumer Price Index | October 2017 | Wednesday, November 15, 2017 | 08:30 AM
+Consumer Price Index | November 2017 | Wednesday, December 13, 2017 | 08:30 AM
+Employment Situation | December 2016 | Friday, January 6, 2017 | 08:30 AM
+Employment Situation | January 2017 | Friday, February 3, 2017 | 08:30 AM
+Employment Situation | February 2017 | Friday, March 10, 2017 | 08:30 AM
+Employment Situation | March 2017 | Friday, April 7, 2017 | 08:30 AM
+Employment Situation | April 2017 | Friday, May 5, 2017 | 08:30 AM
+Employment Situation | May 2017 | Friday, June 2, 2017 | 08:30 AM
+Employment Situation | June 2017 | Friday, July 7, 2017 | 08:30 AM
+Employment Situation | July 2017 | Friday, August 4, 2017 | 08:30 AM
+Employment Situation | August 2017 | Friday, September 1, 2017 | 08:30 AM
+Employment Situation | September 2017 | Friday, October 6, 2017 | 08:30 AM
+Employment Situation | October 2017 | Friday, November 3, 2017 | 08:30 AM
+Employment Situation | November 2017 | Friday, December 8, 2017 | 08:30 AM

@@ -93,6 +93,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .and_then(|tape| fd_store::TapeStore::open(&data, tape).and_then(|s| s.all()).ok())
         .map_or(0, |t| t.len());
     describe_tape(timeline.as_ref(), prints);
+    // The calendar behind every `news:` filter, installed once for the
+    // process. Printed here and again beside the swap/spread line of a
+    // hypotheses receipt so a record can quote which calendar it ran on.
+    let news_line = load_news(&data);
+    println!("{news_line}");
+    println!();
 
     let registry = Registry::with_builtins();
     if mode == "all" || mode == "compare" {
@@ -197,6 +203,24 @@ fn load_timeline(
     );
     let _ = bars;
     (!timeline.is_empty()).then_some(timeline)
+}
+
+/// Where the scheduled-news calendar lives under the data directory.
+const NEWS_FILE: &str = "data/news/events.parquet";
+
+/// Install `<data>/news/events.parquet` for the `news:` filters, if it is
+/// there, and say what happened in one line. A missing file is not an error
+/// — the filters are then no-ops, and the line says so; an unreadable one is
+/// reported, not fatal, for the same reason.
+fn load_news(data: &std::path::Path) -> String {
+    let path = data.join("news").join("events.parquet");
+    if path.is_file() {
+        match fd_store::read_news(&path).map_err(|e| e.to_string()).and_then(fd_strategy::news::install) {
+            Ok(_) => {}
+            Err(e) => println!("news: could not load {}: {e}", path.display()),
+        }
+    }
+    fd_strategy::news::summary(NEWS_FILE)
 }
 
 fn describe(bars: &[Bar], timeline: Option<&OptionsTimeline>) {
@@ -767,6 +791,7 @@ fn run_hypotheses(
         println!("== hypotheses `{shown}`: {} declared, walk-forward ({folds} folds), each against {seeds} matched null runs ==", batch.len());
     }
     println!("swap: long {:.2} / short {:.2} USD per lot per night; spread {}", rules.swap_long_per_lot, rules.swap_short_per_lot, rules.spread);
+    println!("{}", fd_strategy::news::summary(NEWS_FILE));
     println!();
     println!(
         "{:<12} {:<18} {:>6} {:>7} {:>7} {:>8} {:>8} {:>8} {:>5}  verdict",

@@ -1,0 +1,11 @@
+# source: https://www.ecb.europa.eu/press/press_conference/monetary-policy-statement/2026/html/index_include.en.html (monetary policy statements; the pr/date list for 2026 returned no decision rows) (WebFetch 2026-09-14)
+# note: 2026-02-05 .. 2026-09-10 from the statement list; 2026-10-29 and 2026-12-17 from https://www.ecb.europa.eu/press/calendars/mgcgc/html/index.en.html (Governing Council monetary policy meetings, day 2)
+# columns: decision date | title as listed
+2026-02-05 | Monetary policy statement (with Q&A)
+2026-03-19 | Monetary policy statement (with Q&A)
+2026-04-30 | Monetary policy statement (with Q&A)
+2026-06-11 | Monetary policy statement (with Q&A)
+2026-07-23 | Monetary policy statement (with Q&A)
+2026-09-10 | Monetary policy statement (with Q&A)
+2026-10-29 | Governing Council monetary policy meeting (calendar)
+2026-12-17 | Governing Council monetary policy meeting (calendar)

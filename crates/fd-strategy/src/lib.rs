@@ -15,6 +15,7 @@ pub mod gap_fade;
 pub mod filter;
 pub mod ict;
 pub mod intraday_momentum;
+pub mod news;
 pub mod orb;
 pub mod pdhl;
 pub mod registry;

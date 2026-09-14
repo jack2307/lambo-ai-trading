@@ -1,0 +1,10 @@
+# source: https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm (2021 block) (WebFetch 2026-09-14; release headers from the linked press releases, WebFetch same day)
+# columns: month | day(s) | type | statement | release-header (verbatim from the linked press release; 'unknown' = not fetched, default 14:00 ET applies)
+January | 26-27 | Meeting | statement | unknown
+March | 16-17 | Meeting | statement | unknown
+April | 27-28 | Meeting | statement | unknown
+June | 15-16 | Meeting | statement | unknown
+July | 27-28 | Meeting | statement | unknown
+September | 21-22 | Meeting | statement | unknown
+November | 2-3 | Meeting | statement | unknown
+December | 14-15 | Meeting | statement | unknown

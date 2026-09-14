@@ -352,7 +352,10 @@ pub struct BacktestRequest {
     pub guards: bool,
     /// Gates in front of the strategy's entries, in the batch-file spelling
     /// (`weekdays`, `hours:0800-1200`, `sessions:0100-0500|0600-1000`,
-    /// `flat:1630-1815`, `vol:14/100:1.2-99`, `volabs:14:0.075-9`). The same
+    /// `flat:1630-1815`, `vol:14/100:1.2-99`, `volabs:14:0.075-9`,
+    /// `news:60-30` or `news:60-30:2` — minutes before/after scheduled news
+    /// of impact ≥ 3, or the given level; a no-op when the server loaded no
+    /// calendar). The same
     /// wrapper the research loop uses, so a Workbench run and a hypothesis
     /// row are the same computation.
     #[serde(default)]

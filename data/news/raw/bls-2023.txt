@@ -1,0 +1,26 @@
+# source: https://www.bls.gov/schedule/2023/home.htm (WebFetch 2026-09-14)
+# columns: release name | reference month | release date (as printed) | release time (ET, as printed)
+Consumer Price Index | December 2022 | Thursday, January 12, 2023 | 08:30 AM
+Consumer Price Index | January 2023 | Tuesday, February 14, 2023 | 08:30 AM
+Consumer Price Index | February 2023 | Tuesday, March 14, 2023 | 08:30 AM
+Consumer Price Index | March 2023 | Wednesday, April 12, 2023 | 08:30 AM
+Consumer Price Index | April 2023 | Wednesday, May 10, 2023 | 08:30 AM
+Consumer Price Index | May 2023 | Tuesday, June 13, 2023 | 08:30 AM
+Consumer Price Index | June 2023 | Wednesday, July 12, 2023 | 08:30 AM
+Consumer Price Index | July 2023 | Thursday, August 10, 2023 | 08:30 AM
+Consumer Price Index | August 2023 | Wednesday, September 13, 2023 | 08:30 AM
+Consumer Price Index | September 2023 | Thursday, October 12, 2023 | 08:30 AM
+Consumer Price Index | October 2023 | Tuesday, November 14, 2023 | 08:30 AM
+Consumer Price Index | November 2023 | Tuesday, December 12, 2023 | 08:30 AM
+Employment Situation | December 2022 | Friday, January 6, 2023 | 08:30 AM
+Employment Situation | January 2023 | Friday, February 3, 2023 | 08:30 AM
+Employment Situation | February 2023 | Friday, March 10, 2023 | 08:30 AM
+Employment Situation | March 2023 | Friday, April 7, 2023 | 08:30 AM
+Employment Situation | April 2023 | Friday, May 5, 2023 | 08:30 AM
+Employment Situation | May 2023 | Friday, June 2, 2023 | 08:30 AM
+Employment Situation | June 2023 | Friday, July 7, 2023 | 08:30 AM
+Employment Situation | July 2023 | Friday, August 4, 2023 | 08:30 AM
+Employment Situation | August 2023 | Friday, September 1, 2023 | 08:30 AM
+Employment Situation | September 2023 | Friday, October 6, 2023 | 08:30 AM
+Employment Situation | October 2023 | Friday, November 3, 2023 | 08:30 AM
+Employment Situation | November 2023 | Friday, December 8, 2023 | 08:30 AM

@@ -1,0 +1,26 @@
+# source: https://www.bls.gov/schedule/2022/home.htm (WebFetch 2026-09-14)
+# columns: release name | reference month | release date (as printed) | release time (ET, as printed)
+Consumer Price Index | December 2021 | Wednesday, January 12, 2022 | 08:30 AM
+Consumer Price Index | January 2022 | Thursday, February 10, 2022 | 08:30 AM
+Consumer Price Index | February 2022 | Thursday, March 10, 2022 | 08:30 AM
+Consumer Price Index | March 2022 | Tuesday, April 12, 2022 | 08:30 AM
+Consumer Price Index | April 2022 | Wednesday, May 11, 2022 | 08:30 AM
+Consumer Price Index | May 2022 | Friday, June 10, 2022 | 08:30 AM
+Consumer Price Index | June 2022 | Wednesday, July 13, 2022 | 08:30 AM
+Consumer Price Index | July 2022 | Wednesday, August 10, 2022 | 08:30 AM
+Consumer Price Index | August 2022 | Tuesday, September 13, 2022 | 08:30 AM
+Consumer Price Index | September 2022 | Thursday, October 13, 2022 | 08:30 AM
+Consumer Price Index | October 2022 | Thursday, November 10, 2022 | 08:30 AM
+Consumer Price Index | November 2022 | Tuesday, December 13, 2022 | 08:30 AM
+Employment Situation | December 2021 | Friday, January 7, 2022 | 08:30 AM
+Employment Situation | January 2022 | Friday, February 4, 2022 | 08:30 AM
+Employment Situation | February 2022 | Friday, March 4, 2022 | 08:30 AM
+Employment Situation | March 2022 | Friday, April 1, 2022 | 08:30 AM
+Employment Situation | April 2022 | Friday, May 6, 2022 | 08:30 AM
+Employment Situation | May 2022 | Friday, June 3, 2022 | 08:30 AM
+Employment Situation | June 2022 | Friday, July 8, 2022 | 08:30 AM
+Employment Situation | July 2022 | Friday, August 5, 2022 | 08:30 AM
+Employment Situation | August 2022 | Friday, September 2, 2022 | 08:30 AM
+Employment Situation | September 2022 | Friday, October 7, 2022 | 08:30 AM
+Employment Situation | October 2022 | Friday, November 4, 2022 | 08:30 AM
+Employment Situation | November 2022 | Friday, December 2, 2022 | 08:30 AM

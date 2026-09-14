@@ -229,6 +229,23 @@ impl Bar {
     }
 }
 
+/// One scheduled economic release, as the calendar store holds it.
+///
+/// Lives in the domain core rather than in the strategy crate so that the
+/// Parquet store can read it without depending on the strategies: the store
+/// reads files, the strategy crate installs the list once and every `news:`
+/// filter reads it. `currency` is carried for a future per-currency gate; the
+/// blackout filter keys on `impact` only (3 = high).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct NewsEvent {
+    /// Epoch milliseconds, UTC.
+    pub time: i64,
+    /// 1 low, 2 medium, 3 high.
+    pub impact: u8,
+    /// `"USD"`, `"EUR"`, … or `"All"`.
+    pub currency: String,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

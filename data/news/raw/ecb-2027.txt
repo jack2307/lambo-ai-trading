@@ -1,0 +1,10 @@
+# source: https://www.ecb.europa.eu/press/press_conference/monetary-policy-statement/2027/html/index_include.en.html (monetary policy statements; the pr/date list for 2027 returned no decision rows) (WebFetch 2026-09-14)
+# note: all 2027 dates from https://www.ecb.europa.eu/press/calendars/mgcgc/html/index.en.html (Governing Council monetary policy meetings, day 2) (December 2027 meeting not yet on the calendar)
+# columns: decision date | title as listed
+2027-02-04 | Governing Council monetary policy meeting (calendar)
+2027-03-18 | Governing Council monetary policy meeting (calendar)
+2027-04-29 | Governing Council monetary policy meeting (calendar)
+2027-06-10 | Governing Council monetary policy meeting (calendar)
+2027-07-22 | Governing Council monetary policy meeting (calendar)
+2027-09-09 | Governing Council monetary policy meeting (calendar)
+2027-10-28 | Governing Council monetary policy meeting (calendar)

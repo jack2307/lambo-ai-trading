@@ -1,0 +1,26 @@
+# source: https://www.bls.gov/schedule/2014/home.htm (WebFetch 2026-09-14)
+# columns: release name | reference month | release date (as printed) | release time (ET, as printed)
+Consumer Price Index | December 2013 | Thursday, January 16, 2014 | 08:30 AM
+Consumer Price Index | January 2014 | Thursday, February 20, 2014 | 08:30 AM
+Consumer Price Index | February 2014 | Tuesday, March 18, 2014 | 08:30 AM
+Consumer Price Index | March 2014 | Tuesday, April 15, 2014 | 08:30 AM
+Consumer Price Index | April 2014 | Thursday, May 15, 2014 | 08:30 AM
+Consumer Price Index | May 2014 | Tuesday, June 17, 2014 | 08:30 AM
+Consumer Price Index | June 2014 | Tuesday, July 22, 2014 | 08:30 AM
+Consumer Price Index | July 2014 | Tuesday, August 19, 2014 | 08:30 AM
+Consumer Price Index | August 2014 | Wednesday, September 17, 2014 | 08:30 AM
+Consumer Price Index | September 2014 | Wednesday, October 22, 2014 | 08:30 AM
+Consumer Price Index | October 2014 | Thursday, November 20, 2014 | 08:30 AM
+Consumer Price Index | November 2014 | Wednesday, December 17, 2014 | 08:30 AM
+Employment Situation | December 2013 | Friday, January 10, 2014 | 08:30 AM
+Employment Situation | January 2014 | Friday, February 7, 2014 | 08:30 AM
+Employment Situation | February 2014 | Friday, March 7, 2014 | 08:30 AM
+Employment Situation | March 2014 | Friday, April 4, 2014 | 08:30 AM
+Employment Situation | April 2014 | Friday, May 2, 2014 | 08:30 AM
+Employment Situation | May 2014 | Friday, June 6, 2014 | 08:30 AM
+Employment Situation | June 2014 | Thursday, July 3, 2014 | 08:30 AM
+Employment Situation | July 2014 | Friday, August 1, 2014 | 08:30 AM
+Employment Situation | August 2014 | Friday, September 5, 2014 | 08:30 AM
+Employment Situation | September 2014 | Friday, October 3, 2014 | 08:30 AM
+Employment Situation | October 2014 | Friday, November 7, 2014 | 08:30 AM
+Employment Situation | November 2014 | Friday, December 5, 2014 | 08:30 AM

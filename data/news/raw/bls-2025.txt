@@ -1,0 +1,25 @@
+# source: https://www.bls.gov/schedule/2025/home.htm (WebFetch 2026-09-14)
+# columns: release name | reference month | release date (as printed) | release time (ET, as printed)
+# note: the 2025 page carries no October-2025 CPI row and no October-2025 Employment Situation row (Oct-Nov 2025 lapse in appropriations); Sep-2025 CPI moved to Oct 24, Sep-2025 Employment Situation to Nov 20. 11 CPI + 11 Employment Situation rows.
+Consumer Price Index | December 2024 | Wednesday, January 15, 2025 | 08:30 AM
+Consumer Price Index | January 2025 | Wednesday, February 12, 2025 | 08:30 AM
+Consumer Price Index | February 2025 | Wednesday, March 12, 2025 | 08:30 AM
+Consumer Price Index | March 2025 | Thursday, April 10, 2025 | 08:30 AM
+Consumer Price Index | April 2025 | Tuesday, May 13, 2025 | 08:30 AM
+Consumer Price Index | May 2025 | Wednesday, June 11, 2025 | 08:30 AM
+Consumer Price Index | June 2025 | Tuesday, July 15, 2025 | 08:30 AM
+Consumer Price Index | July 2025 | Tuesday, August 12, 2025 | 08:30 AM
+Consumer Price Index | August 2025 | Thursday, September 11, 2025 | 08:30 AM
+Consumer Price Index | September 2025 | Friday, October 24, 2025 | 08:30 AM
+Consumer Price Index | November 2025 | Thursday, December 18, 2025 | 08:30 AM
+Employment Situation | December 2024 | Friday, January 10, 2025 | 08:30 AM
+Employment Situation | January 2025 | Friday, February 7, 2025 | 08:30 AM
+Employment Situation | February 2025 | Friday, March 7, 2025 | 08:30 AM
+Employment Situation | March 2025 | Friday, April 4, 2025 | 08:30 AM
+Employment Situation | April 2025 | Friday, May 2, 2025 | 08:30 AM
+Employment Situation | May 2025 | Friday, June 6, 2025 | 08:30 AM
+Employment Situation | June 2025 | Thursday, July 3, 2025 | 08:30 AM
+Employment Situation | July 2025 | Friday, August 1, 2025 | 08:30 AM
+Employment Situation | August 2025 | Friday, September 5, 2025 | 08:30 AM
+Employment Situation | September 2025 | Thursday, November 20, 2025 | 08:30 AM
+Employment Situation | November 2025 | Tuesday, December 16, 2025 | 08:30 AM

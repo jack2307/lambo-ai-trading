@@ -1,0 +1,14 @@
+# source: https://www.ecb.europa.eu/press/pr/date/2010/html/index_include.en.html (press releases titled 'Monetary policy decisions') (WebFetch 2026-09-14)
+# columns: decision date | title as listed
+2010-01-14 | Monetary policy decisions
+2010-02-04 | Monetary policy decisions
+2010-03-04 | Monetary policy decisions
+2010-04-08 | Monetary policy decisions
+2010-05-06 | Monetary policy decisions
+2010-06-10 | Monetary policy decisions
+2010-07-08 | Monetary policy decisions
+2010-08-05 | Monetary policy decisions
+2010-09-02 | Monetary policy decisions
+2010-10-07 | Monetary policy decisions
+2010-11-04 | Monetary policy decisions
+2010-12-02 | Monetary policy decisions

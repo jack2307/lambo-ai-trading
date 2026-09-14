@@ -3,8 +3,12 @@
 
 # Data is fetched, not committed — except the golden files, which are the
 # parity oracle for the port and must be version controlled.
-/data
+/data/*
 !/tests/golden
+# The scheduled-news calendar is small, hand-verified text: versioned
+# (a parent directory that is ignored cannot be re-entered, hence /data/*).
+!/data/news/
+/data/news/events.parquet
 
 # Python
 __pycache__/

@@ -1,0 +1,26 @@
+# source: https://www.bls.gov/schedule/2010/home.htm (WebFetch 2026-09-14)
+# columns: release name | reference month | release date (as printed) | release time (ET, as printed)
+Consumer Price Index | December 2009 | Friday, January 15, 2010 | 08:30 AM
+Consumer Price Index | January 2010 | Friday, February 19, 2010 | 08:30 AM
+Consumer Price Index | February 2010 | Thursday, March 18, 2010 | 08:30 AM
+Consumer Price Index | March 2010 | Wednesday, April 14, 2010 | 08:30 AM
+Consumer Price Index | April 2010 | Wednesday, May 19, 2010 | 08:30 AM
+Consumer Price Index | May 2010 | Thursday, June 17, 2010 | 08:30 AM
+Consumer Price Index | June 2010 | Friday, July 16, 2010 | 08:30 AM
+Consumer Price Index | July 2010 | Friday, August 13, 2010 | 08:30 AM
+Consumer Price Index | August 2010 | Friday, September 17, 2010 | 08:30 AM
+Consumer Price Index | September 2010 | Friday, October 15, 2010 | 08:30 AM
+Consumer Price Index | October 2010 | Wednesday, November 17, 2010 | 08:30 AM
+Consumer Price Index | November 2010 | Wednesday, December 15, 2010 | 08:30 AM
+Employment Situation | December 2009 | Friday, January 08, 2010 | 08:30 AM
+Employment Situation | January 2010 | Friday, February 05, 2010 | 08:30 AM
+Employment Situation | February 2010 | Friday, March 05, 2010 | 08:30 AM
+Employment Situation | March 2010 | Friday, April 02, 2010 | 08:30 AM
+Employment Situation | April 2010 | Friday, May 07, 2010 | 08:30 AM
+Employment Situation | May 2010 | Friday, June 04, 2010 | 08:30 AM
+Employment Situation | June 2010 | Friday, July 02, 2010 | 08:30 AM
+Employment Situation | July 2010 | Friday, August 06, 2010 | 08:30 AM
+Employment Situation | August 2010 | Friday, September 03, 2010 | 08:30 AM
+Employment Situation | September 2010 | Friday, October 08, 2010 | 08:30 AM
+Employment Situation | October 2010 | Friday, November 05, 2010 | 08:30 AM
+Employment Situation | November 2010 | Friday, December 03, 2010 | 08:30 AM

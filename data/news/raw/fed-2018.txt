@@ -1,0 +1,10 @@
+# source: https://www.federalreserve.gov/monetarypolicy/fomchistorical2018.htm (WebFetch 2026-09-14; release headers from the linked press releases, WebFetch same day)
+# columns: month | day(s) | type | statement | release-header (verbatim from the linked press release; 'unknown' = not fetched, default 14:00 ET applies)
+January | 30-31 | Meeting | statement | unknown
+March | 20-21 | Meeting | statement | unknown
+May | 1-2 | Meeting | statement | unknown
+June | 12-13 | Meeting | statement | unknown
+July | 31-1 | Meeting | statement | unknown
+September | 25-26 | Meeting | statement | unknown
+November | 7-8 | Meeting | statement | unknown
+December | 18-19 | Meeting | statement | unknown

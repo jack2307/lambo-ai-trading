@@ -1,0 +1,16 @@
+# source: https://www.federalreserve.gov/monetarypolicy/fomchistorical2020.htm (WebFetch 2026-09-14; release headers from the linked press releases, WebFetch same day)
+# columns: month | day(s) | type | statement | release-header (verbatim from the linked press release; 'unknown' = not fetched, default 14:00 ET applies)
+January | 28-29 | Meeting | /newsevents/pressreleases/monetary20200129a.htm | unknown
+March | 2 | Unscheduled Meeting | /newsevents/pressreleases/monetary20200303a.htm | For release at 10:00 a.m. EST March 03, 2020
+March | 15 | Unscheduled Meeting | /newsevents/pressreleases/monetary20200315a.htm | For immediate release at 5:00 p.m. EDT March 15, 2020
+March | 17-18 | Cancelled Meeting | no statement | -
+March | 19 | Notation Vote | /newsevents/pressreleases/monetary20200319b.htm | For release at 9:00 a.m. EDT March 19, 2020
+March | 23 | Notation Vote | /newsevents/pressreleases/monetary20200323a.htm | For release at 8:00 a.m. EDT March 23, 2020
+March | 31 | Notation Vote | /newsevents/pressreleases/monetary20200331a.htm | For release at 8:30 a.m. EDT March 31, 2020
+April | 28-29 | Meeting | /newsevents/pressreleases/monetary20200429a.htm | unknown
+June | 9-10 | Meeting | /newsevents/pressreleases/monetary20200610a.htm | unknown
+July | 28-29 | Meeting | /newsevents/pressreleases/monetary20200729a.htm | unknown
+August | 27 | Notation Vote | /newsevents/pressreleases/monetary20200827a.htm | For release at 9:10 a.m. EDT August 27, 2020
+September | 15-16 | Meeting | /newsevents/pressreleases/monetary20200916a.htm | unknown
+November | 4-5 | Meeting | /newsevents/pressreleases/monetary20201105a.htm | unknown
+December | 15-16 | Meeting | /newsevents/pressreleases/monetary20201216a.htm | unknown

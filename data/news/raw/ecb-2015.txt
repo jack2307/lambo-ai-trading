@@ -1,0 +1,10 @@
+# source: https://www.ecb.europa.eu/press/pr/date/2015/html/index_include.en.html (press releases titled 'Monetary policy decisions') (WebFetch 2026-09-14)
+# columns: decision date | title as listed
+2015-01-22 | Monetary policy decisions
+2015-03-05 | Monetary policy decisions
+2015-04-15 | Monetary policy decisions
+2015-06-03 | Monetary policy decisions
+2015-07-16 | Monetary policy decisions
+2015-09-03 | Monetary policy decisions
+2015-10-22 | Monetary policy decisions
+2015-12-03 | Monetary policy decisions

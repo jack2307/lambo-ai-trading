@@ -22,6 +22,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config = Config::load(arg("config", "config"))?;
     let state = Arc::new(AppState::new(config, data.clone()).with_docs(docs));
 
+    // The scheduled-news calendar every `news:` filter reads, installed once
+    // for the process. Missing or unreadable is not fatal: the filters are
+    // then no-ops, and the line below says which case holds.
+    let news_path = data.join("news").join("events.parquet");
+    if news_path.is_file() {
+        match fd_store::read_news(&news_path).map_err(|e| e.to_string()).and_then(fd_strategy::news::install) {
+            Ok(_) => {}
+            Err(e) => println!("news: could not load {}: {e}", news_path.display()),
+        }
+    }
+    println!("{}", fd_strategy::news::summary("data/news/events.parquet"));
+
     let serving_ui = ui.is_dir();
     let app = router(Arc::clone(&state), Some(ui.clone()));
 

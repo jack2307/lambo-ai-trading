@@ -1,0 +1,10 @@
+# source: https://www.ecb.europa.eu/press/press_conference/monetary-policy-statement/2024/html/index_include.en.html (monetary policy statements; the pr/date list for 2024 returned no decision rows) (WebFetch 2026-09-14)
+# columns: decision date | title as listed
+2024-01-25 | Monetary policy statement (with Q&A)
+2024-03-07 | Monetary policy statement (with Q&A)
+2024-04-11 | Monetary policy statement (with Q&A)
+2024-06-06 | Monetary policy statement (with Q&A)
+2024-07-18 | Monetary policy statement (with Q&A)
+2024-09-12 | Monetary policy statement (with Q&A)
+2024-10-17 | Monetary policy statement (with Q&A)
+2024-12-12 | Monetary policy statement (with Q&A)

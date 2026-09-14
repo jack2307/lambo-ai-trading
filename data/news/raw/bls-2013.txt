@@ -1,0 +1,26 @@
+# source: https://www.bls.gov/schedule/2013/home.htm (WebFetch 2026-09-14)
+# columns: release name | reference month | release date (as printed) | release time (ET, as printed)
+Consumer Price Index | December 2012 | Wednesday, January 16, 2013 | 08:30 AM
+Consumer Price Index | January 2013 | Thursday, February 21, 2013 | 08:30 AM
+Consumer Price Index | February 2013 | Friday, March 15, 2013 | 08:30 AM
+Consumer Price Index | March 2013 | Tuesday, April 16, 2013 | 08:30 AM
+Consumer Price Index | April 2013 | Thursday, May 16, 2013 | 08:30 AM
+Consumer Price Index | May 2013 | Tuesday, June 18, 2013 | 08:30 AM
+Consumer Price Index | June 2013 | Tuesday, July 16, 2013 | 08:30 AM
+Consumer Price Index | July 2013 | Thursday, August 15, 2013 | 08:30 AM
+Consumer Price Index | August 2013 | Tuesday, September 17, 2013 | 08:30 AM
+Consumer Price Index | September 2013 | Wednesday, October 30, 2013 | 08:30 AM
+Consumer Price Index | October 2013 | Wednesday, November 20, 2013 | 08:30 AM
+Consumer Price Index | November 2013 | Tuesday, December 17, 2013 | 08:30 AM
+Employment Situation | December 2012 | Friday, January 4, 2013 | 08:30 AM
+Employment Situation | January 2013 | Friday, February 1, 2013 | 08:30 AM
+Employment Situation | February 2013 | Friday, March 8, 2013 | 08:30 AM
+Employment Situation | March 2013 | Friday, April 5, 2013 | 08:30 AM
+Employment Situation | April 2013 | Friday, May 3, 2013 | 08:30 AM
+Employment Situation | May 2013 | Friday, June 7, 2013 | 08:30 AM
+Employment Situation | June 2013 | Friday, July 5, 2013 | 08:30 AM
+Employment Situation | July 2013 | Friday, August 2, 2013 | 08:30 AM
+Employment Situation | August 2013 | Friday, September 6, 2013 | 08:30 AM
+Employment Situation | September 2013 | Tuesday, October 22, 2013 | 08:30 AM
+Employment Situation | October 2013 | Friday, November 8, 2013 | 08:30 AM
+Employment Situation | November 2013 | Friday, December 6, 2013 | 08:30 AM

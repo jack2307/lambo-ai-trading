@@ -1,0 +1,11 @@
+# source: https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm (2025 block) (WebFetch 2026-09-14; release headers from the linked press releases, WebFetch same day)
+# columns: month | day(s) | type | statement | release-header (verbatim from the linked press release; 'unknown' = not fetched, default 14:00 ET applies)
+January | 28-29 | Meeting | statement | unknown
+March | 18-19 | Meeting | statement | unknown
+May | 6-7 | Meeting | statement | unknown
+June | 17-18 | Meeting | statement | unknown
+July | 29-30 | Meeting | statement | unknown
+August | 22 | Notation Vote | /newsevents/pressreleases/monetary20250822a.htm | For release at 10:00 a.m. EDT August 22, 2025
+September | 16-17 | Meeting | statement | unknown
+October | 28-29 | Meeting | statement | unknown
+December | 9-10 | Meeting | statement | unknown

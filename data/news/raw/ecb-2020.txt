@@ -1,0 +1,10 @@
+# source: https://www.ecb.europa.eu/press/pr/date/2020/html/index_include.en.html (press releases titled 'Monetary policy decisions') (WebFetch 2026-09-14)
+# columns: decision date | title as listed
+2020-01-23 | Monetary policy decisions
+2020-03-12 | Monetary policy decisions
+2020-04-30 | Monetary policy decisions
+2020-06-04 | Monetary policy decisions
+2020-07-16 | Monetary policy decisions
+2020-09-10 | Monetary policy decisions
+2020-10-29 | Monetary policy decisions
+2020-12-10 | Monetary policy decisions

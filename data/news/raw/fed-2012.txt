@@ -1,0 +1,10 @@
+# source: https://www.federalreserve.gov/monetarypolicy/fomchistorical2012.htm (WebFetch 2026-09-14; release headers from the linked press releases, WebFetch same day)
+# columns: month | day(s) | type | statement | release-header (verbatim from the linked press release; 'unknown' = not fetched, default 14:00 ET applies)
+January | 24-25 | Meeting | statement | unknown
+March | 13 | Meeting | statement | unknown
+April | 24-25 | Meeting | statement | unknown
+June | 19-20 | Meeting | statement | unknown
+July | 31-1 | Meeting | statement | unknown
+September | 12-13 | Meeting | statement | unknown
+October | 23-24 | Meeting | statement | unknown
+December | 11-12 | Meeting | statement | unknown

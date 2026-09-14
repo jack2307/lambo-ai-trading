@@ -1,0 +1,26 @@
+# source: https://www.bls.gov/schedule/2015/home.htm (WebFetch 2026-09-14)
+# columns: release name | reference month | release date (as printed) | release time (ET, as printed)
+Consumer Price Index | December 2014 | Friday, January 16, 2015 | 08:30 AM
+Consumer Price Index | January 2015 | Thursday, February 26, 2015 | 08:30 AM
+Consumer Price Index | February 2015 | Tuesday, March 24, 2015 | 08:30 AM
+Consumer Price Index | March 2015 | Friday, April 17, 2015 | 08:30 AM
+Consumer Price Index | April 2015 | Friday, May 22, 2015 | 08:30 AM
+Consumer Price Index | May 2015 | Thursday, June 18, 2015 | 08:30 AM
+Consumer Price Index | June 2015 | Friday, July 17, 2015 | 08:30 AM
+Consumer Price Index | July 2015 | Wednesday, August 19, 2015 | 08:30 AM
+Consumer Price Index | August 2015 | Wednesday, September 16, 2015 | 08:30 AM
+Consumer Price Index | September 2015 | Thursday, October 15, 2015 | 08:30 AM
+Consumer Price Index | October 2015 | Tuesday, November 17, 2015 | 08:30 AM
+Consumer Price Index | November 2015 | Tuesday, December 15, 2015 | 08:30 AM
+Employment Situation | December 2014 | Friday, January 09, 2015 | 08:30 AM
+Employment Situation | January 2015 | Friday, February 06, 2015 | 08:30 AM
+Employment Situation | February 2015 | Friday, March 06, 2015 | 08:30 AM
+Employment Situation | March 2015 | Friday, April 03, 2015 | 08:30 AM
+Employment Situation | April 2015 | Friday, May 08, 2015 | 08:30 AM
+Employment Situation | May 2015 | Friday, June 05, 2015 | 08:30 AM
+Employment Situation | June 2015 | Thursday, July 02, 2015 | 08:30 AM
+Employment Situation | July 2015 | Friday, August 07, 2015 | 08:30 AM
+Employment Situation | August 2015 | Friday, September 04, 2015 | 08:30 AM
+Employment Situation | September 2015 | Friday, October 02, 2015 | 08:30 AM
+Employment Situation | October 2015 | Friday, November 06, 2015 | 08:30 AM
+Employment Situation | November 2015 | Friday, December 04, 2015 | 08:30 AM

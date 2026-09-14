@@ -1,0 +1,26 @@
+# source: https://www.bls.gov/schedule/2018/home.htm (WebFetch 2026-09-14)
+# columns: release name | reference month | release date (as printed) | release time (ET, as printed)
+Consumer Price Index | December 2017 | Friday, January 12, 2018 | 08:30 AM
+Consumer Price Index | January 2018 | Wednesday, February 14, 2018 | 08:30 AM
+Consumer Price Index | February 2018 | Tuesday, March 13, 2018 | 08:30 AM
+Consumer Price Index | March 2018 | Wednesday, April 11, 2018 | 08:30 AM
+Consumer Price Index | April 2018 | Thursday, May 10, 2018 | 08:30 AM
+Consumer Price Index | May 2018 | Tuesday, June 12, 2018 | 08:30 AM
+Consumer Price Index | June 2018 | Thursday, July 12, 2018 | 08:30 AM
+Consumer Price Index | July 2018 | Friday, August 10, 2018 | 08:30 AM
+Consumer Price Index | August 2018 | Thursday, September 13, 2018 | 08:30 AM
+Consumer Price Index | September 2018 | Thursday, October 11, 2018 | 08:30 AM
+Consumer Price Index | October 2018 | Wednesday, November 14, 2018 | 08:30 AM
+Consumer Price Index | November 2018 | Wednesday, December 12, 2018 | 08:30 AM
+Employment Situation | December 2017 | Friday, January 05, 2018 | 08:30 AM
+Employment Situation | January 2018 | Friday, February 02, 2018 | 08:30 AM
+Employment Situation | February 2018 | Friday, March 09, 2018 | 08:30 AM
+Employment Situation | March 2018 | Friday, April 06, 2018 | 08:30 AM
+Employment Situation | April 2018 | Friday, May 04, 2018 | 08:30 AM
+Employment Situation | May 2018 | Friday, June 01, 2018 | 08:30 AM
+Employment Situation | June 2018 | Friday, July 06, 2018 | 08:30 AM
+Employment Situation | July 2018 | Friday, August 03, 2018 | 08:30 AM
+Employment Situation | August 2018 | Friday, September 07, 2018 | 08:30 AM
+Employment Situation | September 2018 | Friday, October 05, 2018 | 08:30 AM
+Employment Situation | October 2018 | Friday, November 02, 2018 | 08:30 AM
+Employment Situation | November 2018 | Friday, December 07, 2018 | 08:30 AM

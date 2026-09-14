@@ -1,0 +1,10 @@
+# source: https://www.ecb.europa.eu/press/pr/date/2021/html/index_include.en.html (press releases titled 'Monetary policy decisions') (WebFetch 2026-09-14)
+# columns: decision date | title as listed
+2021-01-21 | Monetary policy decisions
+2021-03-11 | Monetary policy decisions
+2021-04-22 | Monetary policy decisions
+2021-06-10 | Monetary policy decisions
+2021-07-22 | Monetary policy decisions
+2021-09-09 | Monetary policy decisions
+2021-10-28 | Monetary policy decisions
+2021-12-16 | Monetary policy decisions

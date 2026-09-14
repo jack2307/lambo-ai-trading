@@ -1,0 +1,10 @@
+# source: https://www.ecb.europa.eu/press/press_conference/monetary-policy-statement/2025/html/index_include.en.html (monetary policy statements; the pr/date list for 2025 returned no decision rows) (WebFetch 2026-09-14)
+# columns: decision date | title as listed
+2025-01-30 | Monetary policy statement (with Q&A)
+2025-03-06 | Monetary policy statement (with Q&A)
+2025-04-17 | Monetary policy statement (with Q&A)
+2025-06-05 | Monetary policy statement (with Q&A)
+2025-07-24 | Monetary policy statement (with Q&A)
+2025-09-11 | Monetary policy statement (with Q&A)
+2025-10-30 | Monetary policy statement (with Q&A)
+2025-12-18 | Monetary policy statement (with Q&A)

@@ -1,0 +1,26 @@
+# source: https://www.bls.gov/schedule/2011/home.htm (WebFetch 2026-09-14)
+# columns: release name | reference month | release date (as printed) | release time (ET, as printed)
+Consumer Price Index | December 2010 | Friday, January 14, 2011 | 08:30 AM
+Consumer Price Index | January 2011 | Thursday, February 17, 2011 | 08:30 AM
+Consumer Price Index | February 2011 | Thursday, March 17, 2011 | 08:30 AM
+Consumer Price Index | March 2011 | Friday, April 15, 2011 | 08:30 AM
+Consumer Price Index | April 2011 | Friday, May 13, 2011 | 08:30 AM
+Consumer Price Index | May 2011 | Wednesday, June 15, 2011 | 08:30 AM
+Consumer Price Index | June 2011 | Friday, July 15, 2011 | 08:30 AM
+Consumer Price Index | July 2011 | Thursday, August 18, 2011 | 08:30 AM
+Consumer Price Index | August 2011 | Thursday, September 15, 2011 | 08:30 AM
+Consumer Price Index | September 2011 | Wednesday, October 19, 2011 | 08:30 AM
+Consumer Price Index | October 2011 | Wednesday, November 16, 2011 | 08:30 AM
+Consumer Price Index | November 2011 | Friday, December 16, 2011 | 08:30 AM
+Employment Situation | December 2010 | Friday, January 07, 2011 | 08:30 AM
+Employment Situation | January 2011 | Friday, February 04, 2011 | 08:30 AM
+Employment Situation | February 2011 | Friday, March 04, 2011 | 08:30 AM
+Employment Situation | March 2011 | Friday, April 01, 2011 | 08:30 AM
+Employment Situation | April 2011 | Friday, May 06, 2011 | 08:30 AM
+Employment Situation | May 2011 | Friday, June 03, 2011 | 08:30 AM
+Employment Situation | June 2011 | Friday, July 08, 2011 | 08:30 AM
+Employment Situation | July 2011 | Friday, August 05, 2011 | 08:30 AM
+Employment Situation | August 2011 | Friday, September 02, 2011 | 08:30 AM
+Employment Situation | September 2011 | Friday, October 07, 2011 | 08:30 AM
+Employment Situation | October 2011 | Friday, November 04, 2011 | 08:30 AM
+Employment Situation | November 2011 | Friday, December 02, 2011 | 08:30 AM

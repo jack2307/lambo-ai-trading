@@ -1,0 +1,748 @@
+time_utc,currency,name,impact,source
+2010-01-08T13:30:00Z,USD,US Employment Situation (NFP),3,bls
+2010-01-14T12:45:00Z,EUR,ECB rate decision,3,ecb
+2010-01-15T13:30:00Z,USD,US CPI,3,bls
+2010-01-27T19:00:00Z,USD,FOMC,3,federalreserve
+2010-02-04T12:45:00Z,EUR,ECB rate decision,3,ecb
+2010-02-05T13:30:00Z,USD,US Employment Situation (NFP),3,bls
+2010-02-19T13:30:00Z,USD,US CPI,3,bls
+2010-03-04T12:45:00Z,EUR,ECB rate decision,3,ecb
+2010-03-05T13:30:00Z,USD,US Employment Situation (NFP),3,bls
+2010-03-16T18:00:00Z,USD,FOMC,3,federalreserve
+2010-03-18T12:30:00Z,USD,US CPI,3,bls
+2010-04-02T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2010-04-08T11:45:00Z,EUR,ECB rate decision,3,ecb
+2010-04-14T12:30:00Z,USD,US CPI,3,bls
+2010-04-28T18:00:00Z,USD,FOMC,3,federalreserve
+2010-05-06T11:45:00Z,EUR,ECB rate decision,3,ecb
+2010-05-07T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2010-05-10T01:15:00Z,USD,FOMC (unscheduled),3,federalreserve
+2010-05-19T12:30:00Z,USD,US CPI,3,bls
+2010-06-04T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2010-06-10T11:45:00Z,EUR,ECB rate decision,3,ecb
+2010-06-17T12:30:00Z,USD,US CPI,3,bls
+2010-06-23T18:00:00Z,USD,FOMC,3,federalreserve
+2010-07-02T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2010-07-08T11:45:00Z,EUR,ECB rate decision,3,ecb
+2010-07-16T12:30:00Z,USD,US CPI,3,bls
+2010-08-05T11:45:00Z,EUR,ECB rate decision,3,ecb
+2010-08-06T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2010-08-10T18:00:00Z,USD,FOMC,3,federalreserve
+2010-08-13T12:30:00Z,USD,US CPI,3,bls
+2010-09-02T11:45:00Z,EUR,ECB rate decision,3,ecb
+2010-09-03T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2010-09-17T12:30:00Z,USD,US CPI,3,bls
+2010-09-21T18:00:00Z,USD,FOMC,3,federalreserve
+2010-10-07T11:45:00Z,EUR,ECB rate decision,3,ecb
+2010-10-08T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2010-10-15T12:30:00Z,USD,US CPI,3,bls
+2010-11-03T18:00:00Z,USD,FOMC,3,federalreserve
+2010-11-04T12:45:00Z,EUR,ECB rate decision,3,ecb
+2010-11-05T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2010-11-17T13:30:00Z,USD,US CPI,3,bls
+2010-12-02T12:45:00Z,EUR,ECB rate decision,3,ecb
+2010-12-03T13:30:00Z,USD,US Employment Situation (NFP),3,bls
+2010-12-14T19:00:00Z,USD,FOMC,3,federalreserve
+2010-12-15T13:30:00Z,USD,US CPI,3,bls
+2011-01-07T13:30:00Z,USD,US Employment Situation (NFP),3,bls
+2011-01-13T12:45:00Z,EUR,ECB rate decision,3,ecb
+2011-01-14T13:30:00Z,USD,US CPI,3,bls
+2011-01-26T19:00:00Z,USD,FOMC,3,federalreserve
+2011-02-03T12:45:00Z,EUR,ECB rate decision,3,ecb
+2011-02-04T13:30:00Z,USD,US Employment Situation (NFP),3,bls
+2011-02-17T13:30:00Z,USD,US CPI,3,bls
+2011-03-03T12:45:00Z,EUR,ECB rate decision,3,ecb
+2011-03-04T13:30:00Z,USD,US Employment Situation (NFP),3,bls
+2011-03-15T18:00:00Z,USD,FOMC,3,federalreserve
+2011-03-17T12:30:00Z,USD,US CPI,3,bls
+2011-04-01T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2011-04-07T11:45:00Z,EUR,ECB rate decision,3,ecb
+2011-04-15T12:30:00Z,USD,US CPI,3,bls
+2011-04-27T18:00:00Z,USD,FOMC,3,federalreserve
+2011-05-05T11:45:00Z,EUR,ECB rate decision,3,ecb
+2011-05-06T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2011-05-13T12:30:00Z,USD,US CPI,3,bls
+2011-06-03T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2011-06-09T11:45:00Z,EUR,ECB rate decision,3,ecb
+2011-06-15T12:30:00Z,USD,US CPI,3,bls
+2011-06-22T18:00:00Z,USD,FOMC,3,federalreserve
+2011-07-07T11:45:00Z,EUR,ECB rate decision,3,ecb
+2011-07-08T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2011-07-15T12:30:00Z,USD,US CPI,3,bls
+2011-08-04T11:45:00Z,EUR,ECB rate decision,3,ecb
+2011-08-05T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2011-08-09T18:00:00Z,USD,FOMC,3,federalreserve
+2011-08-18T12:30:00Z,USD,US CPI,3,bls
+2011-09-02T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2011-09-08T11:45:00Z,EUR,ECB rate decision,3,ecb
+2011-09-15T12:30:00Z,USD,US CPI,3,bls
+2011-09-21T18:00:00Z,USD,FOMC,3,federalreserve
+2011-10-06T11:45:00Z,EUR,ECB rate decision,3,ecb
+2011-10-07T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2011-10-19T12:30:00Z,USD,US CPI,3,bls
+2011-11-02T18:00:00Z,USD,FOMC,3,federalreserve
+2011-11-03T12:45:00Z,EUR,ECB rate decision,3,ecb
+2011-11-04T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2011-11-16T13:30:00Z,USD,US CPI,3,bls
+2011-12-02T13:30:00Z,USD,US Employment Situation (NFP),3,bls
+2011-12-08T12:45:00Z,EUR,ECB rate decision,3,ecb
+2011-12-13T19:00:00Z,USD,FOMC,3,federalreserve
+2011-12-16T13:30:00Z,USD,US CPI,3,bls
+2012-01-06T13:30:00Z,USD,US Employment Situation (NFP),3,bls
+2012-01-12T12:45:00Z,EUR,ECB rate decision,3,ecb
+2012-01-19T13:30:00Z,USD,US CPI,3,bls
+2012-01-25T19:00:00Z,USD,FOMC,3,federalreserve
+2012-02-03T13:30:00Z,USD,US Employment Situation (NFP),3,bls
+2012-02-09T12:45:00Z,EUR,ECB rate decision,3,ecb
+2012-02-17T13:30:00Z,USD,US CPI,3,bls
+2012-03-08T12:45:00Z,EUR,ECB rate decision,3,ecb
+2012-03-09T13:30:00Z,USD,US Employment Situation (NFP),3,bls
+2012-03-13T18:00:00Z,USD,FOMC,3,federalreserve
+2012-03-16T12:30:00Z,USD,US CPI,3,bls
+2012-04-04T11:45:00Z,EUR,ECB rate decision,3,ecb
+2012-04-06T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2012-04-13T12:30:00Z,USD,US CPI,3,bls
+2012-04-25T18:00:00Z,USD,FOMC,3,federalreserve
+2012-05-03T11:45:00Z,EUR,ECB rate decision,3,ecb
+2012-05-04T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2012-05-15T12:30:00Z,USD,US CPI,3,bls
+2012-06-01T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2012-06-06T11:45:00Z,EUR,ECB rate decision,3,ecb
+2012-06-14T12:30:00Z,USD,US CPI,3,bls
+2012-06-20T18:00:00Z,USD,FOMC,3,federalreserve
+2012-07-05T11:45:00Z,EUR,ECB rate decision,3,ecb
+2012-07-06T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2012-07-17T12:30:00Z,USD,US CPI,3,bls
+2012-08-01T18:00:00Z,USD,FOMC,3,federalreserve
+2012-08-02T11:45:00Z,EUR,ECB rate decision,3,ecb
+2012-08-03T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2012-08-15T12:30:00Z,USD,US CPI,3,bls
+2012-09-06T11:45:00Z,EUR,ECB rate decision,3,ecb
+2012-09-07T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2012-09-13T18:00:00Z,USD,FOMC,3,federalreserve
+2012-09-14T12:30:00Z,USD,US CPI,3,bls
+2012-10-04T11:45:00Z,EUR,ECB rate decision,3,ecb
+2012-10-05T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2012-10-16T12:30:00Z,USD,US CPI,3,bls
+2012-10-24T18:00:00Z,USD,FOMC,3,federalreserve
+2012-11-02T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2012-11-08T12:45:00Z,EUR,ECB rate decision,3,ecb
+2012-11-15T13:30:00Z,USD,US CPI,3,bls
+2012-12-06T12:45:00Z,EUR,ECB rate decision,3,ecb
+2012-12-07T13:30:00Z,USD,US Employment Situation (NFP),3,bls
+2012-12-12T19:00:00Z,USD,FOMC,3,federalreserve
+2012-12-14T13:30:00Z,USD,US CPI,3,bls
+2013-01-04T13:30:00Z,USD,US Employment Situation (NFP),3,bls
+2013-01-10T12:45:00Z,EUR,ECB rate decision,3,ecb
+2013-01-16T13:30:00Z,USD,US CPI,3,bls
+2013-01-30T19:00:00Z,USD,FOMC,3,federalreserve
+2013-02-01T13:30:00Z,USD,US Employment Situation (NFP),3,bls
+2013-02-07T12:45:00Z,EUR,ECB rate decision,3,ecb
+2013-02-21T13:30:00Z,USD,US CPI,3,bls
+2013-03-07T12:45:00Z,EUR,ECB rate decision,3,ecb
+2013-03-08T13:30:00Z,USD,US Employment Situation (NFP),3,bls
+2013-03-15T12:30:00Z,USD,US CPI,3,bls
+2013-03-20T18:00:00Z,USD,FOMC,3,federalreserve
+2013-04-04T11:45:00Z,EUR,ECB rate decision,3,ecb
+2013-04-05T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2013-04-16T12:30:00Z,USD,US CPI,3,bls
+2013-05-01T18:00:00Z,USD,FOMC,3,federalreserve
+2013-05-02T11:45:00Z,EUR,ECB rate decision,3,ecb
+2013-05-03T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2013-05-16T12:30:00Z,USD,US CPI,3,bls
+2013-06-06T11:45:00Z,EUR,ECB rate decision,3,ecb
+2013-06-07T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2013-06-18T12:30:00Z,USD,US CPI,3,bls
+2013-06-19T18:00:00Z,USD,FOMC,3,federalreserve
+2013-07-04T11:45:00Z,EUR,ECB rate decision,3,ecb
+2013-07-05T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2013-07-16T12:30:00Z,USD,US CPI,3,bls
+2013-07-31T18:00:00Z,USD,FOMC,3,federalreserve
+2013-08-01T11:45:00Z,EUR,ECB rate decision,3,ecb
+2013-08-02T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2013-08-15T12:30:00Z,USD,US CPI,3,bls
+2013-09-05T11:45:00Z,EUR,ECB rate decision,3,ecb
+2013-09-06T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2013-09-17T12:30:00Z,USD,US CPI,3,bls
+2013-09-18T18:00:00Z,USD,FOMC,3,federalreserve
+2013-10-02T11:45:00Z,EUR,ECB rate decision,3,ecb
+2013-10-22T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2013-10-30T12:30:00Z,USD,US CPI,3,bls
+2013-10-30T18:00:00Z,USD,FOMC,3,federalreserve
+2013-11-07T12:45:00Z,EUR,ECB rate decision,3,ecb
+2013-11-08T13:30:00Z,USD,US Employment Situation (NFP),3,bls
+2013-11-20T13:30:00Z,USD,US CPI,3,bls
+2013-12-05T12:45:00Z,EUR,ECB rate decision,3,ecb
+2013-12-06T13:30:00Z,USD,US Employment Situation (NFP),3,bls
+2013-12-17T13:30:00Z,USD,US CPI,3,bls
+2013-12-18T19:00:00Z,USD,FOMC,3,federalreserve
+2014-01-09T12:45:00Z,EUR,ECB rate decision,3,ecb
+2014-01-10T13:30:00Z,USD,US Employment Situation (NFP),3,bls
+2014-01-16T13:30:00Z,USD,US CPI,3,bls
+2014-01-29T19:00:00Z,USD,FOMC,3,federalreserve
+2014-02-06T12:45:00Z,EUR,ECB rate decision,3,ecb
+2014-02-07T13:30:00Z,USD,US Employment Situation (NFP),3,bls
+2014-02-20T13:30:00Z,USD,US CPI,3,bls
+2014-03-06T12:45:00Z,EUR,ECB rate decision,3,ecb
+2014-03-07T13:30:00Z,USD,US Employment Situation (NFP),3,bls
+2014-03-18T12:30:00Z,USD,US CPI,3,bls
+2014-03-19T18:00:00Z,USD,FOMC,3,federalreserve
+2014-04-03T11:45:00Z,EUR,ECB rate decision,3,ecb
+2014-04-04T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2014-04-15T12:30:00Z,USD,US CPI,3,bls
+2014-04-30T18:00:00Z,USD,FOMC,3,federalreserve
+2014-05-02T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2014-05-08T11:45:00Z,EUR,ECB rate decision,3,ecb
+2014-05-15T12:30:00Z,USD,US CPI,3,bls
+2014-06-05T11:45:00Z,EUR,ECB rate decision,3,ecb
+2014-06-06T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2014-06-17T12:30:00Z,USD,US CPI,3,bls
+2014-06-18T18:00:00Z,USD,FOMC,3,federalreserve
+2014-07-03T11:45:00Z,EUR,ECB rate decision,3,ecb
+2014-07-03T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2014-07-22T12:30:00Z,USD,US CPI,3,bls
+2014-07-30T18:00:00Z,USD,FOMC,3,federalreserve
+2014-08-01T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2014-08-07T11:45:00Z,EUR,ECB rate decision,3,ecb
+2014-08-19T12:30:00Z,USD,US CPI,3,bls
+2014-09-04T11:45:00Z,EUR,ECB rate decision,3,ecb
+2014-09-05T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2014-09-17T12:30:00Z,USD,US CPI,3,bls
+2014-09-17T18:00:00Z,USD,FOMC,3,federalreserve
+2014-10-02T11:45:00Z,EUR,ECB rate decision,3,ecb
+2014-10-03T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2014-10-22T12:30:00Z,USD,US CPI,3,bls
+2014-10-29T18:00:00Z,USD,FOMC,3,federalreserve
+2014-11-06T12:45:00Z,EUR,ECB rate decision,3,ecb
+2014-11-07T13:30:00Z,USD,US Employment Situation (NFP),3,bls
+2014-11-20T13:30:00Z,USD,US CPI,3,bls
+2014-12-04T12:45:00Z,EUR,ECB rate decision,3,ecb
+2014-12-05T13:30:00Z,USD,US Employment Situation (NFP),3,bls
+2014-12-17T13:30:00Z,USD,US CPI,3,bls
+2014-12-17T19:00:00Z,USD,FOMC,3,federalreserve
+2015-01-09T13:30:00Z,USD,US Employment Situation (NFP),3,bls
+2015-01-16T13:30:00Z,USD,US CPI,3,bls
+2015-01-22T12:45:00Z,EUR,ECB rate decision,3,ecb
+2015-01-28T19:00:00Z,USD,FOMC,3,federalreserve
+2015-02-06T13:30:00Z,USD,US Employment Situation (NFP),3,bls
+2015-02-26T13:30:00Z,USD,US CPI,3,bls
+2015-03-05T12:45:00Z,EUR,ECB rate decision,3,ecb
+2015-03-06T13:30:00Z,USD,US Employment Situation (NFP),3,bls
+2015-03-18T18:00:00Z,USD,FOMC,3,federalreserve
+2015-03-24T12:30:00Z,USD,US CPI,3,bls
+2015-04-03T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2015-04-15T11:45:00Z,EUR,ECB rate decision,3,ecb
+2015-04-17T12:30:00Z,USD,US CPI,3,bls
+2015-04-29T18:00:00Z,USD,FOMC,3,federalreserve
+2015-05-08T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2015-05-22T12:30:00Z,USD,US CPI,3,bls
+2015-06-03T11:45:00Z,EUR,ECB rate decision,3,ecb
+2015-06-05T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2015-06-17T18:00:00Z,USD,FOMC,3,federalreserve
+2015-06-18T12:30:00Z,USD,US CPI,3,bls
+2015-07-02T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2015-07-16T11:45:00Z,EUR,ECB rate decision,3,ecb
+2015-07-17T12:30:00Z,USD,US CPI,3,bls
+2015-07-29T18:00:00Z,USD,FOMC,3,federalreserve
+2015-08-07T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2015-08-19T12:30:00Z,USD,US CPI,3,bls
+2015-09-03T11:45:00Z,EUR,ECB rate decision,3,ecb
+2015-09-04T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2015-09-16T12:30:00Z,USD,US CPI,3,bls
+2015-09-17T18:00:00Z,USD,FOMC,3,federalreserve
+2015-10-02T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2015-10-15T12:30:00Z,USD,US CPI,3,bls
+2015-10-22T11:45:00Z,EUR,ECB rate decision,3,ecb
+2015-10-28T18:00:00Z,USD,FOMC,3,federalreserve
+2015-11-06T13:30:00Z,USD,US Employment Situation (NFP),3,bls
+2015-11-17T13:30:00Z,USD,US CPI,3,bls
+2015-12-03T12:45:00Z,EUR,ECB rate decision,3,ecb
+2015-12-04T13:30:00Z,USD,US Employment Situation (NFP),3,bls
+2015-12-15T13:30:00Z,USD,US CPI,3,bls
+2015-12-16T19:00:00Z,USD,FOMC,3,federalreserve
+2016-01-08T13:30:00Z,USD,US Employment Situation (NFP),3,bls
+2016-01-20T13:30:00Z,USD,US CPI,3,bls
+2016-01-21T12:45:00Z,EUR,ECB rate decision,3,ecb
+2016-01-27T19:00:00Z,USD,FOMC,3,federalreserve
+2016-02-05T13:30:00Z,USD,US Employment Situation (NFP),3,bls
+2016-02-19T13:30:00Z,USD,US CPI,3,bls
+2016-03-04T13:30:00Z,USD,US Employment Situation (NFP),3,bls
+2016-03-10T12:45:00Z,EUR,ECB rate decision,3,ecb
+2016-03-16T12:30:00Z,USD,US CPI,3,bls
+2016-03-16T18:00:00Z,USD,FOMC,3,federalreserve
+2016-04-01T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2016-04-14T12:30:00Z,USD,US CPI,3,bls
+2016-04-21T11:45:00Z,EUR,ECB rate decision,3,ecb
+2016-04-27T18:00:00Z,USD,FOMC,3,federalreserve
+2016-05-06T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2016-05-17T12:30:00Z,USD,US CPI,3,bls
+2016-06-02T11:45:00Z,EUR,ECB rate decision,3,ecb
+2016-06-03T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2016-06-15T18:00:00Z,USD,FOMC,3,federalreserve
+2016-06-16T12:30:00Z,USD,US CPI,3,bls
+2016-07-08T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2016-07-15T12:30:00Z,USD,US CPI,3,bls
+2016-07-21T11:45:00Z,EUR,ECB rate decision,3,ecb
+2016-07-27T18:00:00Z,USD,FOMC,3,federalreserve
+2016-08-05T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2016-08-16T12:30:00Z,USD,US CPI,3,bls
+2016-09-02T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2016-09-08T11:45:00Z,EUR,ECB rate decision,3,ecb
+2016-09-16T12:30:00Z,USD,US CPI,3,bls
+2016-09-21T18:00:00Z,USD,FOMC,3,federalreserve
+2016-10-07T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2016-10-18T12:30:00Z,USD,US CPI,3,bls
+2016-10-20T11:45:00Z,EUR,ECB rate decision,3,ecb
+2016-11-02T18:00:00Z,USD,FOMC,3,federalreserve
+2016-11-04T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2016-11-17T13:30:00Z,USD,US CPI,3,bls
+2016-12-02T13:30:00Z,USD,US Employment Situation (NFP),3,bls
+2016-12-08T12:45:00Z,EUR,ECB rate decision,3,ecb
+2016-12-14T19:00:00Z,USD,FOMC,3,federalreserve
+2016-12-15T13:30:00Z,USD,US CPI,3,bls
+2017-01-06T13:30:00Z,USD,US Employment Situation (NFP),3,bls
+2017-01-18T13:30:00Z,USD,US CPI,3,bls
+2017-01-19T12:45:00Z,EUR,ECB rate decision,3,ecb
+2017-02-01T19:00:00Z,USD,FOMC,3,federalreserve
+2017-02-03T13:30:00Z,USD,US Employment Situation (NFP),3,bls
+2017-02-15T13:30:00Z,USD,US CPI,3,bls
+2017-03-09T12:45:00Z,EUR,ECB rate decision,3,ecb
+2017-03-10T13:30:00Z,USD,US Employment Situation (NFP),3,bls
+2017-03-15T12:30:00Z,USD,US CPI,3,bls
+2017-03-15T18:00:00Z,USD,FOMC,3,federalreserve
+2017-04-07T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2017-04-14T12:30:00Z,USD,US CPI,3,bls
+2017-04-27T11:45:00Z,EUR,ECB rate decision,3,ecb
+2017-05-03T18:00:00Z,USD,FOMC,3,federalreserve
+2017-05-05T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2017-05-12T12:30:00Z,USD,US CPI,3,bls
+2017-06-02T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2017-06-08T11:45:00Z,EUR,ECB rate decision,3,ecb
+2017-06-14T12:30:00Z,USD,US CPI,3,bls
+2017-06-14T18:00:00Z,USD,FOMC,3,federalreserve
+2017-07-07T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2017-07-14T12:30:00Z,USD,US CPI,3,bls
+2017-07-20T11:45:00Z,EUR,ECB rate decision,3,ecb
+2017-07-26T18:00:00Z,USD,FOMC,3,federalreserve
+2017-08-04T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2017-08-11T12:30:00Z,USD,US CPI,3,bls
+2017-09-01T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2017-09-07T11:45:00Z,EUR,ECB rate decision,3,ecb
+2017-09-14T12:30:00Z,USD,US CPI,3,bls
+2017-09-20T18:00:00Z,USD,FOMC,3,federalreserve
+2017-10-06T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2017-10-13T12:30:00Z,USD,US CPI,3,bls
+2017-10-26T11:45:00Z,EUR,ECB rate decision,3,ecb
+2017-11-01T18:00:00Z,USD,FOMC,3,federalreserve
+2017-11-03T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2017-11-15T13:30:00Z,USD,US CPI,3,bls
+2017-12-08T13:30:00Z,USD,US Employment Situation (NFP),3,bls
+2017-12-13T13:30:00Z,USD,US CPI,3,bls
+2017-12-13T19:00:00Z,USD,FOMC,3,federalreserve
+2017-12-14T12:45:00Z,EUR,ECB rate decision,3,ecb
+2018-01-05T13:30:00Z,USD,US Employment Situation (NFP),3,bls
+2018-01-12T13:30:00Z,USD,US CPI,3,bls
+2018-01-25T12:45:00Z,EUR,ECB rate decision,3,ecb
+2018-01-31T19:00:00Z,USD,FOMC,3,federalreserve
+2018-02-02T13:30:00Z,USD,US Employment Situation (NFP),3,bls
+2018-02-14T13:30:00Z,USD,US CPI,3,bls
+2018-03-08T12:45:00Z,EUR,ECB rate decision,3,ecb
+2018-03-09T13:30:00Z,USD,US Employment Situation (NFP),3,bls
+2018-03-13T12:30:00Z,USD,US CPI,3,bls
+2018-03-21T18:00:00Z,USD,FOMC,3,federalreserve
+2018-04-06T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2018-04-11T12:30:00Z,USD,US CPI,3,bls
+2018-04-26T11:45:00Z,EUR,ECB rate decision,3,ecb
+2018-05-02T18:00:00Z,USD,FOMC,3,federalreserve
+2018-05-04T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2018-05-10T12:30:00Z,USD,US CPI,3,bls
+2018-06-01T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2018-06-12T12:30:00Z,USD,US CPI,3,bls
+2018-06-13T18:00:00Z,USD,FOMC,3,federalreserve
+2018-06-14T11:45:00Z,EUR,ECB rate decision,3,ecb
+2018-07-06T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2018-07-12T12:30:00Z,USD,US CPI,3,bls
+2018-07-26T11:45:00Z,EUR,ECB rate decision,3,ecb
+2018-08-01T18:00:00Z,USD,FOMC,3,federalreserve
+2018-08-03T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2018-08-10T12:30:00Z,USD,US CPI,3,bls
+2018-09-07T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2018-09-13T11:45:00Z,EUR,ECB rate decision,3,ecb
+2018-09-13T12:30:00Z,USD,US CPI,3,bls
+2018-09-26T18:00:00Z,USD,FOMC,3,federalreserve
+2018-10-05T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2018-10-11T12:30:00Z,USD,US CPI,3,bls
+2018-10-25T11:45:00Z,EUR,ECB rate decision,3,ecb
+2018-11-02T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2018-11-08T19:00:00Z,USD,FOMC,3,federalreserve
+2018-11-14T13:30:00Z,USD,US CPI,3,bls
+2018-12-07T13:30:00Z,USD,US Employment Situation (NFP),3,bls
+2018-12-12T13:30:00Z,USD,US CPI,3,bls
+2018-12-13T12:45:00Z,EUR,ECB rate decision,3,ecb
+2018-12-19T19:00:00Z,USD,FOMC,3,federalreserve
+2019-01-04T13:30:00Z,USD,US Employment Situation (NFP),3,bls
+2019-01-11T13:30:00Z,USD,US CPI,3,bls
+2019-01-24T12:45:00Z,EUR,ECB rate decision,3,ecb
+2019-01-30T19:00:00Z,USD,FOMC,3,federalreserve
+2019-02-01T13:30:00Z,USD,US Employment Situation (NFP),3,bls
+2019-02-13T13:30:00Z,USD,US CPI,3,bls
+2019-03-07T12:45:00Z,EUR,ECB rate decision,3,ecb
+2019-03-08T13:30:00Z,USD,US Employment Situation (NFP),3,bls
+2019-03-12T12:30:00Z,USD,US CPI,3,bls
+2019-03-20T18:00:00Z,USD,FOMC,3,federalreserve
+2019-04-05T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2019-04-10T11:45:00Z,EUR,ECB rate decision,3,ecb
+2019-04-10T12:30:00Z,USD,US CPI,3,bls
+2019-05-01T18:00:00Z,USD,FOMC,3,federalreserve
+2019-05-03T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2019-05-10T12:30:00Z,USD,US CPI,3,bls
+2019-06-06T11:45:00Z,EUR,ECB rate decision,3,ecb
+2019-06-07T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2019-06-12T12:30:00Z,USD,US CPI,3,bls
+2019-06-19T18:00:00Z,USD,FOMC,3,federalreserve
+2019-07-05T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2019-07-11T12:30:00Z,USD,US CPI,3,bls
+2019-07-25T11:45:00Z,EUR,ECB rate decision,3,ecb
+2019-07-31T18:00:00Z,USD,FOMC,3,federalreserve
+2019-08-02T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2019-08-13T12:30:00Z,USD,US CPI,3,bls
+2019-09-06T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2019-09-12T11:45:00Z,EUR,ECB rate decision,3,ecb
+2019-09-12T12:30:00Z,USD,US CPI,3,bls
+2019-09-18T18:00:00Z,USD,FOMC,3,federalreserve
+2019-10-04T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2019-10-10T12:30:00Z,USD,US CPI,3,bls
+2019-10-11T15:00:00Z,USD,FOMC (unscheduled),3,federalreserve
+2019-10-24T11:45:00Z,EUR,ECB rate decision,3,ecb
+2019-10-30T18:00:00Z,USD,FOMC,3,federalreserve
+2019-11-01T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2019-11-13T13:30:00Z,USD,US CPI,3,bls
+2019-12-06T13:30:00Z,USD,US Employment Situation (NFP),3,bls
+2019-12-11T13:30:00Z,USD,US CPI,3,bls
+2019-12-11T19:00:00Z,USD,FOMC,3,federalreserve
+2019-12-12T12:45:00Z,EUR,ECB rate decision,3,ecb
+2020-01-10T13:30:00Z,USD,US Employment Situation (NFP),3,bls
+2020-01-14T13:30:00Z,USD,US CPI,3,bls
+2020-01-23T12:45:00Z,EUR,ECB rate decision,3,ecb
+2020-01-29T19:00:00Z,USD,FOMC,3,federalreserve
+2020-02-07T13:30:00Z,USD,US Employment Situation (NFP),3,bls
+2020-02-13T13:30:00Z,USD,US CPI,3,bls
+2020-03-03T15:00:00Z,USD,FOMC (unscheduled),3,federalreserve
+2020-03-06T13:30:00Z,USD,US Employment Situation (NFP),3,bls
+2020-03-11T12:30:00Z,USD,US CPI,3,bls
+2020-03-12T12:45:00Z,EUR,ECB rate decision,3,ecb
+2020-03-15T21:00:00Z,USD,FOMC (unscheduled),3,federalreserve
+2020-03-19T13:00:00Z,USD,FOMC (unscheduled),3,federalreserve
+2020-03-23T12:00:00Z,USD,FOMC (unscheduled),3,federalreserve
+2020-03-31T12:30:00Z,USD,FOMC (unscheduled),3,federalreserve
+2020-04-03T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2020-04-10T12:30:00Z,USD,US CPI,3,bls
+2020-04-29T18:00:00Z,USD,FOMC,3,federalreserve
+2020-04-30T11:45:00Z,EUR,ECB rate decision,3,ecb
+2020-05-08T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2020-05-12T12:30:00Z,USD,US CPI,3,bls
+2020-06-04T11:45:00Z,EUR,ECB rate decision,3,ecb
+2020-06-05T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2020-06-10T12:30:00Z,USD,US CPI,3,bls
+2020-06-10T18:00:00Z,USD,FOMC,3,federalreserve
+2020-07-02T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2020-07-14T12:30:00Z,USD,US CPI,3,bls
+2020-07-16T11:45:00Z,EUR,ECB rate decision,3,ecb
+2020-07-29T18:00:00Z,USD,FOMC,3,federalreserve
+2020-08-07T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2020-08-12T12:30:00Z,USD,US CPI,3,bls
+2020-08-27T13:10:00Z,USD,FOMC (unscheduled),3,federalreserve
+2020-09-04T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2020-09-10T11:45:00Z,EUR,ECB rate decision,3,ecb
+2020-09-11T12:30:00Z,USD,US CPI,3,bls
+2020-09-16T18:00:00Z,USD,FOMC,3,federalreserve
+2020-10-02T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2020-10-13T12:30:00Z,USD,US CPI,3,bls
+2020-10-29T12:45:00Z,EUR,ECB rate decision,3,ecb
+2020-11-05T19:00:00Z,USD,FOMC,3,federalreserve
+2020-11-06T13:30:00Z,USD,US Employment Situation (NFP),3,bls
+2020-11-12T13:30:00Z,USD,US CPI,3,bls
+2020-12-04T13:30:00Z,USD,US Employment Situation (NFP),3,bls
+2020-12-10T12:45:00Z,EUR,ECB rate decision,3,ecb
+2020-12-10T13:30:00Z,USD,US CPI,3,bls
+2020-12-16T19:00:00Z,USD,FOMC,3,federalreserve
+2021-01-08T13:30:00Z,USD,US Employment Situation (NFP),3,bls
+2021-01-13T13:30:00Z,USD,US CPI,3,bls
+2021-01-21T12:45:00Z,EUR,ECB rate decision,3,ecb
+2021-01-27T19:00:00Z,USD,FOMC,3,federalreserve
+2021-02-05T13:30:00Z,USD,US Employment Situation (NFP),3,bls
+2021-02-10T13:30:00Z,USD,US CPI,3,bls
+2021-03-05T13:30:00Z,USD,US Employment Situation (NFP),3,bls
+2021-03-10T13:30:00Z,USD,US CPI,3,bls
+2021-03-11T12:45:00Z,EUR,ECB rate decision,3,ecb
+2021-03-17T18:00:00Z,USD,FOMC,3,federalreserve
+2021-04-02T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2021-04-13T12:30:00Z,USD,US CPI,3,bls
+2021-04-22T11:45:00Z,EUR,ECB rate decision,3,ecb
+2021-04-28T18:00:00Z,USD,FOMC,3,federalreserve
+2021-05-07T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2021-05-12T12:30:00Z,USD,US CPI,3,bls
+2021-06-04T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2021-06-10T11:45:00Z,EUR,ECB rate decision,3,ecb
+2021-06-10T12:30:00Z,USD,US CPI,3,bls
+2021-06-16T18:00:00Z,USD,FOMC,3,federalreserve
+2021-07-02T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2021-07-13T12:30:00Z,USD,US CPI,3,bls
+2021-07-22T11:45:00Z,EUR,ECB rate decision,3,ecb
+2021-07-28T18:00:00Z,USD,FOMC,3,federalreserve
+2021-08-06T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2021-08-11T12:30:00Z,USD,US CPI,3,bls
+2021-09-03T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2021-09-09T11:45:00Z,EUR,ECB rate decision,3,ecb
+2021-09-14T12:30:00Z,USD,US CPI,3,bls
+2021-09-22T18:00:00Z,USD,FOMC,3,federalreserve
+2021-10-08T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2021-10-13T12:30:00Z,USD,US CPI,3,bls
+2021-10-28T11:45:00Z,EUR,ECB rate decision,3,ecb
+2021-11-03T18:00:00Z,USD,FOMC,3,federalreserve
+2021-11-05T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2021-11-10T13:30:00Z,USD,US CPI,3,bls
+2021-12-03T13:30:00Z,USD,US Employment Situation (NFP),3,bls
+2021-12-10T13:30:00Z,USD,US CPI,3,bls
+2021-12-15T19:00:00Z,USD,FOMC,3,federalreserve
+2021-12-16T12:45:00Z,EUR,ECB rate decision,3,ecb
+2022-01-07T13:30:00Z,USD,US Employment Situation (NFP),3,bls
+2022-01-12T13:30:00Z,USD,US CPI,3,bls
+2022-01-26T19:00:00Z,USD,FOMC,3,federalreserve
+2022-02-03T12:45:00Z,EUR,ECB rate decision,3,ecb
+2022-02-04T13:30:00Z,USD,US Employment Situation (NFP),3,bls
+2022-02-10T13:30:00Z,USD,US CPI,3,bls
+2022-03-04T13:30:00Z,USD,US Employment Situation (NFP),3,bls
+2022-03-10T12:45:00Z,EUR,ECB rate decision,3,ecb
+2022-03-10T13:30:00Z,USD,US CPI,3,bls
+2022-03-16T18:00:00Z,USD,FOMC,3,federalreserve
+2022-04-01T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2022-04-12T12:30:00Z,USD,US CPI,3,bls
+2022-04-14T11:45:00Z,EUR,ECB rate decision,3,ecb
+2022-05-04T18:00:00Z,USD,FOMC,3,federalreserve
+2022-05-06T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2022-05-11T12:30:00Z,USD,US CPI,3,bls
+2022-06-03T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2022-06-09T11:45:00Z,EUR,ECB rate decision,3,ecb
+2022-06-10T12:30:00Z,USD,US CPI,3,bls
+2022-06-15T18:00:00Z,USD,FOMC,3,federalreserve
+2022-07-08T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2022-07-13T12:30:00Z,USD,US CPI,3,bls
+2022-07-21T12:15:00Z,EUR,ECB rate decision,3,ecb
+2022-07-27T18:00:00Z,USD,FOMC,3,federalreserve
+2022-08-05T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2022-08-10T12:30:00Z,USD,US CPI,3,bls
+2022-09-02T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2022-09-08T12:15:00Z,EUR,ECB rate decision,3,ecb
+2022-09-13T12:30:00Z,USD,US CPI,3,bls
+2022-09-21T18:00:00Z,USD,FOMC,3,federalreserve
+2022-10-07T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2022-10-13T12:30:00Z,USD,US CPI,3,bls
+2022-10-27T12:15:00Z,EUR,ECB rate decision,3,ecb
+2022-11-02T18:00:00Z,USD,FOMC,3,federalreserve
+2022-11-04T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2022-11-10T13:30:00Z,USD,US CPI,3,bls
+2022-12-02T13:30:00Z,USD,US Employment Situation (NFP),3,bls
+2022-12-13T13:30:00Z,USD,US CPI,3,bls
+2022-12-14T19:00:00Z,USD,FOMC,3,federalreserve
+2022-12-15T13:15:00Z,EUR,ECB rate decision,3,ecb
+2023-01-06T13:30:00Z,USD,US Employment Situation (NFP),3,bls
+2023-01-12T13:30:00Z,USD,US CPI,3,bls
+2023-02-01T19:00:00Z,USD,FOMC,3,federalreserve
+2023-02-02T13:15:00Z,EUR,ECB rate decision,3,ecb
+2023-02-03T13:30:00Z,USD,US Employment Situation (NFP),3,bls
+2023-02-14T13:30:00Z,USD,US CPI,3,bls
+2023-03-10T13:30:00Z,USD,US Employment Situation (NFP),3,bls
+2023-03-14T12:30:00Z,USD,US CPI,3,bls
+2023-03-16T13:15:00Z,EUR,ECB rate decision,3,ecb
+2023-03-22T18:00:00Z,USD,FOMC,3,federalreserve
+2023-04-07T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2023-04-12T12:30:00Z,USD,US CPI,3,bls
+2023-05-03T18:00:00Z,USD,FOMC,3,federalreserve
+2023-05-04T12:15:00Z,EUR,ECB rate decision,3,ecb
+2023-05-05T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2023-05-10T12:30:00Z,USD,US CPI,3,bls
+2023-06-02T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2023-06-13T12:30:00Z,USD,US CPI,3,bls
+2023-06-14T18:00:00Z,USD,FOMC,3,federalreserve
+2023-06-15T12:15:00Z,EUR,ECB rate decision,3,ecb
+2023-07-07T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2023-07-12T12:30:00Z,USD,US CPI,3,bls
+2023-07-26T18:00:00Z,USD,FOMC,3,federalreserve
+2023-07-27T12:15:00Z,EUR,ECB rate decision,3,ecb
+2023-08-04T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2023-08-10T12:30:00Z,USD,US CPI,3,bls
+2023-09-01T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2023-09-13T12:30:00Z,USD,US CPI,3,bls
+2023-09-14T12:15:00Z,EUR,ECB rate decision,3,ecb
+2023-09-20T18:00:00Z,USD,FOMC,3,federalreserve
+2023-10-06T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2023-10-12T12:30:00Z,USD,US CPI,3,bls
+2023-10-26T12:15:00Z,EUR,ECB rate decision,3,ecb
+2023-11-01T18:00:00Z,USD,FOMC,3,federalreserve
+2023-11-03T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2023-11-14T13:30:00Z,USD,US CPI,3,bls
+2023-12-08T13:30:00Z,USD,US Employment Situation (NFP),3,bls
+2023-12-12T13:30:00Z,USD,US CPI,3,bls
+2023-12-13T19:00:00Z,USD,FOMC,3,federalreserve
+2023-12-14T13:15:00Z,EUR,ECB rate decision,3,ecb
+2024-01-05T13:30:00Z,USD,US Employment Situation (NFP),3,bls
+2024-01-11T13:30:00Z,USD,US CPI,3,bls
+2024-01-25T13:15:00Z,EUR,ECB rate decision,3,ecb
+2024-01-31T19:00:00Z,USD,FOMC,3,federalreserve
+2024-02-02T13:30:00Z,USD,US Employment Situation (NFP),3,bls
+2024-02-13T13:30:00Z,USD,US CPI,3,bls
+2024-03-07T13:15:00Z,EUR,ECB rate decision,3,ecb
+2024-03-08T13:30:00Z,USD,US Employment Situation (NFP),3,bls
+2024-03-12T12:30:00Z,USD,US CPI,3,bls
+2024-03-20T18:00:00Z,USD,FOMC,3,federalreserve
+2024-04-05T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2024-04-10T12:30:00Z,USD,US CPI,3,bls
+2024-04-11T12:15:00Z,EUR,ECB rate decision,3,ecb
+2024-05-01T18:00:00Z,USD,FOMC,3,federalreserve
+2024-05-03T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2024-05-15T12:30:00Z,USD,US CPI,3,bls
+2024-06-06T12:15:00Z,EUR,ECB rate decision,3,ecb
+2024-06-07T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2024-06-12T12:30:00Z,USD,US CPI,3,bls
+2024-06-12T18:00:00Z,USD,FOMC,3,federalreserve
+2024-07-05T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2024-07-11T12:30:00Z,USD,US CPI,3,bls
+2024-07-18T12:15:00Z,EUR,ECB rate decision,3,ecb
+2024-07-31T18:00:00Z,USD,FOMC,3,federalreserve
+2024-08-02T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2024-08-14T12:30:00Z,USD,US CPI,3,bls
+2024-09-06T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2024-09-11T12:30:00Z,USD,US CPI,3,bls
+2024-09-12T12:15:00Z,EUR,ECB rate decision,3,ecb
+2024-09-18T18:00:00Z,USD,FOMC,3,federalreserve
+2024-10-04T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2024-10-10T12:30:00Z,USD,US CPI,3,bls
+2024-10-17T12:15:00Z,EUR,ECB rate decision,3,ecb
+2024-11-01T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2024-11-07T19:00:00Z,USD,FOMC,3,federalreserve
+2024-11-13T13:30:00Z,USD,US CPI,3,bls
+2024-12-06T13:30:00Z,USD,US Employment Situation (NFP),3,bls
+2024-12-11T13:30:00Z,USD,US CPI,3,bls
+2024-12-12T13:15:00Z,EUR,ECB rate decision,3,ecb
+2024-12-18T19:00:00Z,USD,FOMC,3,federalreserve
+2025-01-10T13:30:00Z,USD,US Employment Situation (NFP),3,bls
+2025-01-15T13:30:00Z,USD,US CPI,3,bls
+2025-01-29T19:00:00Z,USD,FOMC,3,federalreserve
+2025-01-30T13:15:00Z,EUR,ECB rate decision,3,ecb
+2025-02-07T13:30:00Z,USD,US Employment Situation (NFP),3,bls
+2025-02-12T13:30:00Z,USD,US CPI,3,bls
+2025-03-06T13:15:00Z,EUR,ECB rate decision,3,ecb
+2025-03-07T13:30:00Z,USD,US Employment Situation (NFP),3,bls
+2025-03-12T12:30:00Z,USD,US CPI,3,bls
+2025-03-19T18:00:00Z,USD,FOMC,3,federalreserve
+2025-04-04T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2025-04-10T12:30:00Z,USD,US CPI,3,bls
+2025-04-17T12:15:00Z,EUR,ECB rate decision,3,ecb
+2025-05-02T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2025-05-07T18:00:00Z,USD,FOMC,3,federalreserve
+2025-05-13T12:30:00Z,USD,US CPI,3,bls
+2025-06-05T12:15:00Z,EUR,ECB rate decision,3,ecb
+2025-06-06T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2025-06-11T12:30:00Z,USD,US CPI,3,bls
+2025-06-18T18:00:00Z,USD,FOMC,3,federalreserve
+2025-07-03T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2025-07-15T12:30:00Z,USD,US CPI,3,bls
+2025-07-24T12:15:00Z,EUR,ECB rate decision,3,ecb
+2025-07-30T18:00:00Z,USD,FOMC,3,federalreserve
+2025-08-01T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2025-08-12T12:30:00Z,USD,US CPI,3,bls
+2025-08-22T14:00:00Z,USD,FOMC (unscheduled),3,federalreserve
+2025-09-05T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2025-09-11T12:15:00Z,EUR,ECB rate decision,3,ecb
+2025-09-11T12:30:00Z,USD,US CPI,3,bls
+2025-09-17T18:00:00Z,USD,FOMC,3,federalreserve
+2025-10-24T12:30:00Z,USD,US CPI,3,bls
+2025-10-29T18:00:00Z,USD,FOMC,3,federalreserve
+2025-10-30T13:15:00Z,EUR,ECB rate decision,3,ecb
+2025-11-20T13:30:00Z,USD,US Employment Situation (NFP),3,bls
+2025-12-10T19:00:00Z,USD,FOMC,3,federalreserve
+2025-12-16T13:30:00Z,USD,US Employment Situation (NFP),3,bls
+2025-12-18T13:15:00Z,EUR,ECB rate decision,3,ecb
+2025-12-18T13:30:00Z,USD,US CPI,3,bls
+2026-01-09T13:30:00Z,USD,US Employment Situation (NFP),3,bls
+2026-01-13T13:30:00Z,USD,US CPI,3,bls
+2026-01-28T19:00:00Z,USD,FOMC,3,federalreserve
+2026-02-05T13:15:00Z,EUR,ECB rate decision,3,ecb
+2026-02-11T13:30:00Z,USD,US Employment Situation (NFP),3,bls
+2026-02-13T13:30:00Z,USD,US CPI,3,bls
+2026-03-06T13:30:00Z,USD,US Employment Situation (NFP),3,bls
+2026-03-11T12:30:00Z,USD,US CPI,3,bls
+2026-03-18T18:00:00Z,USD,FOMC,3,federalreserve
+2026-03-19T13:15:00Z,EUR,ECB rate decision,3,ecb
+2026-04-03T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2026-04-10T12:30:00Z,USD,US CPI,3,bls
+2026-04-29T18:00:00Z,USD,FOMC,3,federalreserve
+2026-04-30T12:15:00Z,EUR,ECB rate decision,3,ecb
+2026-05-08T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2026-05-12T12:30:00Z,USD,US CPI,3,bls
+2026-06-05T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2026-06-10T12:30:00Z,USD,US CPI,3,bls
+2026-06-11T12:15:00Z,EUR,ECB rate decision,3,ecb
+2026-06-17T18:00:00Z,USD,FOMC,3,federalreserve
+2026-07-02T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2026-07-14T12:30:00Z,USD,US CPI,3,bls
+2026-07-23T12:15:00Z,EUR,ECB rate decision,3,ecb
+2026-07-29T18:00:00Z,USD,FOMC,3,federalreserve
+2026-08-07T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2026-08-12T12:30:00Z,USD,US CPI,3,bls
+2026-09-04T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2026-09-10T12:15:00Z,EUR,ECB rate decision,3,ecb
+2026-09-11T12:30:00Z,USD,US CPI,3,bls
+2026-09-14T12:30:00Z,CAD,CPI m/m,3,forexfactory
+2026-09-14T12:30:00Z,CAD,Common CPI y/y,2,forexfactory
+2026-09-14T12:30:00Z,CAD,Median CPI y/y,3,forexfactory
+2026-09-14T12:30:00Z,CAD,Trimmed CPI y/y,3,forexfactory
+2026-09-14T15:15:00Z,EUR,ECB President Lagarde Speaks,2,forexfactory
+2026-09-15T06:00:00Z,GBP,Average Earnings Index 3m/y,2,forexfactory
+2026-09-15T06:00:00Z,GBP,Claimant Count Change,3,forexfactory
+2026-09-16T06:00:00Z,GBP,CPI y/y,3,forexfactory
+2026-09-16T12:30:00Z,USD,Core Retail Sales m/m,2,forexfactory
+2026-09-16T12:30:00Z,USD,Retail Sales m/m,2,forexfactory
+2026-09-16T18:00:00Z,USD,FOMC,3,federalreserve
+2026-09-16T18:00:00Z,USD,FOMC Economic Projections,3,forexfactory
+2026-09-16T18:00:00Z,USD,FOMC Statement,3,forexfactory
+2026-09-16T18:00:00Z,USD,Federal Funds Rate,3,forexfactory
+2026-09-16T18:30:00Z,USD,FOMC Press Conference,3,forexfactory
+2026-09-16T22:45:00Z,NZD,GDP q/q,3,forexfactory
+2026-09-17T11:00:00Z,GBP,MPC Official Bank Rate Votes,3,forexfactory
+2026-09-17T11:00:00Z,GBP,Monetary Policy Summary,3,forexfactory
+2026-09-17T11:00:00Z,GBP,Official Bank Rate,3,forexfactory
+2026-09-17T12:30:00Z,USD,Philly Fed Manufacturing Index,2,forexfactory
+2026-09-17T12:30:00Z,USD,Unemployment Claims,2,forexfactory
+2026-09-17T23:30:00Z,AUD,RBA Gov Bullock Speaks,2,forexfactory
+2026-09-18T02:30:00Z,JPY,BOJ Policy Rate,3,forexfactory
+2026-09-18T02:30:00Z,JPY,Monetary Policy Statement,3,forexfactory
+2026-09-18T05:30:00Z,JPY,BOJ Press Conference,3,forexfactory
+2026-09-18T06:00:00Z,GBP,Retail Sales m/m,2,forexfactory
+2026-09-18T10:30:00Z,EUR,ECB President Lagarde Speaks,2,forexfactory
+2026-10-02T12:30:00Z,USD,US Employment Situation (NFP),3,bls
+2026-10-14T12:30:00Z,USD,US CPI,3,bls
+2026-10-28T18:00:00Z,USD,FOMC,3,federalreserve
+2026-10-29T13:15:00Z,EUR,ECB rate decision,3,ecb
+2026-11-06T13:30:00Z,USD,US Employment Situation (NFP),3,bls
+2026-11-10T13:30:00Z,USD,US CPI,3,bls
+2026-12-04T13:30:00Z,USD,US Employment Situation (NFP),3,bls
+2026-12-09T19:00:00Z,USD,FOMC,3,federalreserve
+2026-12-10T13:30:00Z,USD,US CPI,3,bls
+2026-12-17T13:15:00Z,EUR,ECB rate decision,3,ecb
+2027-01-27T19:00:00Z,USD,FOMC,3,federalreserve
+2027-02-04T13:15:00Z,EUR,ECB rate decision,3,ecb
+2027-03-17T18:00:00Z,USD,FOMC,3,federalreserve
+2027-03-18T13:15:00Z,EUR,ECB rate decision,3,ecb
+2027-04-28T18:00:00Z,USD,FOMC,3,federalreserve
+2027-04-29T12:15:00Z,EUR,ECB rate decision,3,ecb
+2027-06-09T18:00:00Z,USD,FOMC,3,federalreserve
+2027-06-10T12:15:00Z,EUR,ECB rate decision,3,ecb
+2027-07-22T12:15:00Z,EUR,ECB rate decision,3,ecb
+2027-07-28T18:00:00Z,USD,FOMC,3,federalreserve
+2027-09-09T12:15:00Z,EUR,ECB rate decision,3,ecb
+2027-09-15T18:00:00Z,USD,FOMC,3,federalreserve
+2027-10-27T18:00:00Z,USD,FOMC,3,federalreserve
+2027-10-28T12:15:00Z,EUR,ECB rate decision,3,ecb
+2027-12-08T19:00:00Z,USD,FOMC,3,federalreserve

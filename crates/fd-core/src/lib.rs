@@ -31,7 +31,7 @@ pub use config::{Config, ConfigError};
 pub use market::{Market, MarketId};
 pub use premium::{dte_from, expiry_weight, notional_usd, premium_usd};
 pub use types::{
-    AggressorSide, Bar, ExpirationType, OptionTrade, OptionType, TradeFlags, assign_content_ids,
+    AggressorSide, Bar, ExpirationType, NewsEvent, OptionTrade, OptionType, TradeFlags, assign_content_ids,
 };
 
 /// Milliseconds in a day, used wherever a DTE is derived.

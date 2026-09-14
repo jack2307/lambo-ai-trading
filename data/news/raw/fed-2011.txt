@@ -1,0 +1,12 @@
+# source: https://www.federalreserve.gov/monetarypolicy/fomchistorical2011.htm (WebFetch 2026-09-14; release headers from the linked press releases, WebFetch same day)
+# columns: month | day(s) | type | statement | release-header (verbatim from the linked press release; 'unknown' = not fetched, default 14:00 ET applies)
+January | 25-26 | Meeting | /newsevents/pressreleases/monetary20110126a.htm | unknown
+March | 15 | Meeting | /newsevents/pressreleases/monetary20110315a.htm | unknown
+April | 26-27 | Meeting | /newsevents/pressreleases/monetary20110427a.htm | unknown
+June | 21-22 | Meeting | /newsevents/pressreleases/monetary20110622a.htm | unknown
+August | 1 | Conference call | no statement | -
+August | 9 | Meeting | /newsevents/pressreleases/monetary20110809a.htm | unknown
+September | 20-21 | Meeting | /newsevents/pressreleases/monetary20110921a.htm | unknown
+November | 1-2 | Meeting | /newsevents/pressreleases/monetary20111102a.htm | unknown
+November | 28 | Conference call | no statement | -
+December | 13 | Meeting | /newsevents/pressreleases/monetary20111213a.htm | unknown
