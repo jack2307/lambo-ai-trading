@@ -117,3 +117,35 @@ reading a trade list's exit stamps.
    thousands-of-trades negatives should be re-read against it. No verdict
    moves — a loser is a loser in both units — but the percentiles quoted
    for deep losers are not what they look like. Backlog.
+
+## Addendum, 2026-09-14 (night): two more, and the first on a winner
+
+Both in `scripts/news_drift.py`, both found by the reviews of
+`2026-09-14-pre-nfp-drift`, both fixed at `436582c` with the uncorrected
+receipts kept beside the corrected ones. They are the first faults this loop
+has logged on a result that *flattered* a claim: every earlier one made a
+number worse, which is the direction a reader forgives.
+
+6. **A permutation null clocked in UTC against a New York event**
+   (data-integrity and the adversary). The null took its minute from the
+   first event's UTC stamp, so every fake Friday sat at one fixed UTC minute
+   — 08:30 New York in summer and 07:30 in winter. A third of the null
+   measured an hour earlier and quieter than the hour it was controlling,
+   which raised the null's mean and narrowed its spread, and pushed the
+   actual into a tail it does not occupy. The test window reads 0.0th
+   percentile before and 3.2nd after; the exploratory window reads 0.4th
+   before and **7.8th** after, which is a failing number under the gate that
+   window was used to justify. The rule the fix encodes: a control for an
+   event announced on a wall clock is built on that wall clock, and a
+   daylight-saving boundary inside the window is a fault, not a rounding.
+
+7. **A shut market scored as a move of exactly zero** (data-integrity).
+   `open_at` returned the first bar at or after the minute asked for,
+   however far away that was. On a Good Friday both ends of an hour-long
+   window resolved to the same bar days later and the move was recorded as
+   0.0 — which `np.isfinite` keeps, so a missing observation entered the
+   mean as a real one and dragged it toward zero. Four of 94 test releases
+   and fourteen of 415 null candidates were zeros of this kind. Fixed with a
+   one-bar tolerance: a bar further from the minute than one interval is no
+   observation. The rule: a lookup that cannot fail silently tells you it
+   failed.

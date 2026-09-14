@@ -2,7 +2,12 @@
 
 **Registered:** (commit time is authoritative) — before the confirmation window
 is read; the script and the primary's figures are committed with this file
-**Status:** registered
+**Status:** decided — `docs/decisions/2026-09-14-pre-nfp-drift.md`. All three
+conditions hold on the test window (3.2nd percentile, −1.536 $/oz, 35.6% up,
+n=90) on the instrument corrected at `436582c`. The exploratory figures quoted
+below are **withdrawn**: measured with a New-York-clocked null the primary sits
+at the 7.8th percentile, not the 0.4th, and would have failed this file's own
+falsifier. Nothing is promoted; the news guard makes the hour untradeable.
 **Instrument:** `scripts/news_drift.py` (no batch file — this is a sign claim,
 not a strategy; see the falsifier)
 

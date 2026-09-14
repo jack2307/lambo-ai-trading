@@ -125,6 +125,15 @@ Closed ideas move to the bottom with a pointer to their decision record, so
 
 ## Closed
 
+- [x] News trading, the one family in the sarwa.co survey this loop had never
+  tested (the owner's request) → gold's hour before the US employment report
+  falls at the **3.2nd percentile** of a New-York-clocked Friday null on the
+  eight years the question had not been asked of, passing all three numbers
+  declared before the window was opened. **The first registration in this loop
+  to survive its falsifier** — and the exploratory cell that nominated it does
+  not survive its own control (7.8th, not 0.4th; the number is retracted). Not
+  a strategy: about $46 a year at 1% risk, and the loop's own news guard
+  forbids the hour. `2026-09-14-pre-nfp-drift.md`.
 - [x] Volman's three boxes on 5m gold (the owner's request) → the tight-box
   break is a coin flip before costs (38th on direction in R, flat gross on
   3,317 trades) and loses a seventh of its risk a trade after $0.28;
