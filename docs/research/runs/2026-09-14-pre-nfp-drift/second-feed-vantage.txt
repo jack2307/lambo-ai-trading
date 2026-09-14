@@ -1,0 +1,7 @@
+xauusd 15m 2022-06-16 -> 2026-09-12: 100249 bars, 168 high-impact events
+a move is open-to-open; R is the trailing 20-day range
+
+US Employment Situation (NFP)  -60..0 min  48 of 50 events with bars at both ends
+  actual mean -1.660 $  t -1.76  up 33.3%
+  1000 date permutations (same weekday, same minute): mean -0.148 $
+  actual sits at the 16.3th percentile of them

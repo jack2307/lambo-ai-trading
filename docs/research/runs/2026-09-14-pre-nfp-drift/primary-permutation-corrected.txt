@@ -1,0 +1,7 @@
+xauduka 15m 2010-06-01 -> 2018-06-15: 191809 bars, 342 high-impact events
+a move is open-to-open; R is the trailing 20-day range
+
+US Employment Situation (NFP)  -60..0 min  96 of 97 events with bars at both ends
+  actual mean -0.895 $  t -2.23  up 32.3%
+  1000 date permutations (same weekday, same minute): mean -0.433 $
+  actual sits at the 7.8th percentile of them
