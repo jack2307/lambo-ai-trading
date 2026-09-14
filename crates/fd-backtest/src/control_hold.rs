@@ -110,9 +110,18 @@ impl Strategy for RandomHold {
         let p = ctx.params;
         let seed = p.get("seed") as u64;
         if let Some(open) = ctx.position {
+            // The engine fills an exit at the NEXT bar's open, so the signal
+            // has to come one bar early for the fill to land at the hold's
+            // end — exactly where a session hold's exit lands (its signal is
+            // the first bar at or after `to`, filled at the next open).
+            // Until 2026-09-14 this fired on the bar where the minutes had
+            // elapsed, so every window null held one bar longer than the
+            // method, and across the daily halt or the weekend when that
+            // bar was the day's last (adversary, `2026-09-14-intraday-momentum.md`).
             let held = ctx.bar.time - open.entry_time;
+            let interval = ctx.prev().map_or(0, |b| (ctx.bar.time - b.time).max(0));
             let minutes = hold_for(seed, open.entry_time as u64, p.get("holdMinutes"), p.get("holdLogSd"));
-            return if held >= (minutes * 60_000.0) as i64 {
+            return if held + interval >= (minutes * 60_000.0) as i64 {
                 Intent::Exit { reason: "hold elapsed".into() }
             } else {
                 Intent::None
@@ -144,13 +153,31 @@ mod tests {
 
     #[test]
     fn a_hold_ends_when_its_minutes_have_passed_and_not_before() {
-        let bars: Vec<Bar> = (0..3).map(|i| Bar::flat(i * 60_000 * 195, 100.0)).collect();
+        // Bars every 130 minutes; a 390-minute hold entered at bar 0 must be
+        // signalled on the bar at 260 so the engine's next-open fill lands
+        // at 390 — the bar a session hold with `to` at 390 would fill on.
+        let bars: Vec<Bar> = (0..4).map(|i| Bar::flat(i * 60_000 * 130, 100.0)).collect();
         let ind = fd_indicators::IndicatorSet::new();
         let params = RandomHold.default_params(); // 390 minutes
         let open = OpenPosition { side: Side::Long, entry_price: 100.0, entry_time: 0, stop: None, target: None };
         let at = |i: usize| BarContext { bar: &bars[i], i, bars: &bars, ind: &ind, series: &[], options: None, position: Some(open), params: &params };
-        assert_eq!(RandomHold.on_bar(&at(1)), Intent::None, "195 minutes in: still held");
-        assert!(matches!(RandomHold.on_bar(&at(2)), Intent::Exit { .. }), "390 minutes: closed");
+        assert_eq!(RandomHold.on_bar(&at(1)), Intent::None, "130 minutes in, next bar at 260: still held");
+        assert!(matches!(RandomHold.on_bar(&at(2)), Intent::Exit { .. }), "260 minutes in, next bar at 390: signal now");
+    }
+
+    #[test]
+    fn the_window_null_fills_its_exit_on_the_same_bar_as_a_session_hold() {
+        // Fifteen-minute bars from 15:30 (the fill of a 15:15 signal); a
+        // 75-minute hold must signal on the 16:30 bar, not the 16:45 one.
+        let t0 = 1_000_000_000_000i64;
+        let bars: Vec<Bar> = (0..8).map(|i| Bar::flat(t0 + i * 15 * 60_000, 100.0)).collect();
+        let ind = fd_indicators::IndicatorSet::new();
+        let mut params = RandomHold.default_params();
+        params.set("holdMinutes", 75.0);
+        let open = OpenPosition { side: Side::Long, entry_price: 100.0, entry_time: t0, stop: None, target: None };
+        let at = |i: usize| BarContext { bar: &bars[i], i, bars: &bars, ind: &ind, series: &[], options: None, position: Some(open), params: &params };
+        assert_eq!(RandomHold.on_bar(&at(3)), Intent::None, "16:15: 45 minutes in, next bar at 60");
+        assert!(matches!(RandomHold.on_bar(&at(4)), Intent::Exit { .. }), "16:30: 60 in, next bar at 75 — signal");
     }
 
     #[test]
@@ -220,9 +247,11 @@ mod tests {
         let ind = fd_indicators::IndicatorSet::new();
         let open = OpenPosition { side: Side::Short, entry_price: 100.0, entry_time: entry, stop: None, target: None };
         let at = |i: usize| BarContext { bar: &bars[i], i, bars: &bars, ind: &ind, series: &[], options: None, position: Some(open), params: &params };
-        for i in 0..closes_at {
+        // The signal comes one bar before the close so the next-open fill
+        // lands on the closing minute.
+        for i in 0..closes_at - 1 {
             assert_eq!(RandomHold.on_bar(&at(i)), Intent::None, "minute {i} of a {minutes:.2}-minute hold: still held");
         }
-        assert!(matches!(RandomHold.on_bar(&at(closes_at)), Intent::Exit { .. }), "minute {closes_at}: closed");
+        assert!(matches!(RandomHold.on_bar(&at(closes_at - 1)), Intent::Exit { .. }), "minute {}: signal, fill at {closes_at}", closes_at - 1);
     }
 }
