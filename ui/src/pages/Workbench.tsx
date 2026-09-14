@@ -66,27 +66,35 @@ export function Workbench({ catalog, market, onError }: Props) {
   const [dock, setDock] = useState<'leaderboard' | 'trades' | 'model'>('leaderboard')
   // Gates in the research loop's spelling, one per line or comma-separated.
   const [filtersText, setFiltersText] = useState('')
-  // Sessions as the research batches spell them: New York wall-clock hours,
-  // the same `hours:` token `Filter::parse` reads, so a Workbench run over a
-  // session is the batch's computation over that session.
+  // Sessions as the research batches spell them: New York wall-clock hours.
+  // One session writes the `hours:` token `Filter::parse` reads; two or
+  // three write `sessions:a|b|c`, the same grammar's multi-window form, so a
+  // Workbench run over a set of sessions is the batch's computation over it.
   const SESSIONS: [string, string, string][] = [
-    ['All', '', 'no hours filter'],
     ['Asia', '1800-0200', '18:00-02:00 New York'],
     ['London', '0300-1100', '03:00-11:00 New York'],
     ['NY', '0800-1600', '08:00-16:00 New York'],
   ]
-  const hoursToken = (text: string) => text.match(/hours:(\d{4}-\d{4})/)?.[1] ?? ''
-  const session = (() => {
-    const h = hoursToken(filtersText)
-    if (!h) return 'All'
-    return SESSIONS.find(([, token]) => token === h)?.[0] ?? 'Custom'
-  })()
-  const pickSession = (token: string) => {
+  const sessionTokens = (text: string): string[] => {
+    const hours = text.match(/hours:(\d{4}-\d{4})/)?.[1]
+    if (hours) return [hours]
+    const multi = text.match(/sessions:([\d|-]+)/)?.[1]
+    return multi ? multi.split('|') : []
+  }
+  const selected = sessionTokens(filtersText)
+  const custom = selected.some((t) => !SESSIONS.some(([, token]) => token === t))
+  const writeSessions = (tokens: string[]) => {
     const rest = filtersText
       .split(/[,;\n]/)
       .map((f) => f.trim())
-      .filter((f) => f && !f.startsWith('hours:'))
-    setFiltersText([...rest, ...(token ? [`hours:${token}`] : [])].join(', '))
+      .filter((f) => f && !f.startsWith('hours:') && !f.startsWith('sessions:'))
+    const ordered = SESSIONS.map(([, token]) => token).filter((t) => tokens.includes(t))
+    const token = ordered.length === 0 ? [] : ordered.length === 1 ? [`hours:${ordered[0]}`] : [`sessions:${ordered.join('|')}`]
+    setFiltersText([...rest, ...token].join(', '))
+  }
+  const toggleSession = (token: string) => {
+    const base = custom ? [] : selected
+    writeSessions(base.includes(token) ? base.filter((t) => t !== token) : [...base, token])
   }
   const [guards, setGuards] = useState(false)
   const [rangeFrom, setRangeFrom] = useState('')
@@ -257,27 +265,42 @@ export function Workbench({ catalog, market, onError }: Props) {
             </div>
           )}
           <div className="mt-3">
-            <span className="text-muted-foreground block text-[11px]">session (New York hours)</span>
-            <div className="mt-1 flex flex-wrap gap-1" role="group" aria-label="session">
-              {SESSIONS.map(([label, token, title]) => (
-                <button
-                  key={label}
-                  type="button"
-                  title={title}
-                  aria-pressed={session === label}
-                  onClick={() => pickSession(token)}
-                  className={
-                    'rounded border px-2 py-0.5 font-mono text-[10px] transition-colors ' +
-                    (session === label
-                      ? 'border-primary bg-primary/15 text-foreground'
-                      : 'border-border bg-background hover:bg-accent/60')
-                  }
-                >
-                  {label}
-                </button>
-              ))}
-              {session === 'Custom' && (
-                <span className="text-muted-foreground/70 self-center font-mono text-[10px]">custom hours:{hoursToken(filtersText)}</span>
+            <span className="text-muted-foreground block text-[11px]">
+              sessions (New York hours) <span className="text-muted-foreground/60">· pick one or more; none = all hours</span>
+            </span>
+            <div className="mt-1 flex flex-wrap gap-1" role="group" aria-label="sessions">
+              <button
+                type="button"
+                title="no hours filter"
+                aria-pressed={selected.length === 0}
+                onClick={() => writeSessions([])}
+                className={
+                  'rounded border px-2 py-0.5 font-mono text-[10px] transition-colors ' +
+                  (selected.length === 0 ? 'border-primary bg-primary/15 text-foreground' : 'border-border bg-background hover:bg-accent/60')
+                }
+              >
+                All
+              </button>
+              {SESSIONS.map(([label, token, title]) => {
+                const on = !custom && selected.includes(token)
+                return (
+                  <button
+                    key={label}
+                    type="button"
+                    title={title}
+                    aria-pressed={on}
+                    onClick={() => toggleSession(token)}
+                    className={
+                      'rounded border px-2 py-0.5 font-mono text-[10px] transition-colors ' +
+                      (on ? 'border-primary bg-primary/15 text-foreground' : 'border-border bg-background hover:bg-accent/60')
+                    }
+                  >
+                    {label}
+                  </button>
+                )
+              })}
+              {custom && (
+                <span className="text-muted-foreground/70 self-center font-mono text-[10px]">custom {selected.join('|')}</span>
               )}
             </div>
           </div>
