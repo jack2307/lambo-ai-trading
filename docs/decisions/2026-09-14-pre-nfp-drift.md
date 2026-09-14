@@ -265,3 +265,45 @@ it was read, the retraction of the 0.0th percentile still stands, and the news
 guard still forbids the hour. The successor question — whether the hour falls
 before **any** 08:30 release rather than this one — is on the backlog with the
 calendar work it needs.
+
+## Amendment, 2026-09-15 (morning): the claim did not replicate
+
+`2026-09-15-nfp-cross-asset` spent the last out-of-sample data this loop owned
+for this claim — silver and the euro, 2010–2026, never read for any news
+question — on the three conditions declared in this record, and **neither
+instrument confirms**.
+
+The euro refuses outright: its hour is −1.198 pips on release Fridays against
+−1.382 on quiet ones, so the release **adds +0.312 pips at a Welch t of +0.28**,
+and the drift turns out to be the European-hours effect already closed in
+`2026-09-14-fx-local-hours.md` rather than anything to do with employment.
+
+Silver is the harder case and the one this amendment exists for. Its hour does
+fall — 29.9% of 184 release hours up, an exact sign test at p = 4.9 × 10⁻⁸,
+robust to units, trimming and leave-one-year-out — but it **fails condition 1**,
+the percentile gate this record was judged on. Measured over 400,000 draws
+rather than 1,000, silver sits at **6.02 ± 0.04** against a gate of 5.0; the
+4.8 that the declared command printed is a one-in-four seed draw, and three
+quarters of seeds print a failure. By the rule written before the window was
+opened, that is silver refusing.
+
+And the adversary established the thing that governs how much any of this was
+ever worth: in a simulated world where silver is **only** gold times its
+ordinary quiet-Friday beta plus its own noise, all three of this record's
+conditions pass **79.4%** of the time. Silver was never an independent witness
+— its excess over gold's beta is +0.0176 $ at t +1.67 in raw units and −2.06
+basis points at t −0.61, a sign that flips with the unit. A confirmation would
+have carried about a third of a bit.
+
+**What changes here.** This record's claim stands as a measurement and loses
+its last support as a general fact. The sentence it may now carry is: *gold's
+07:30 → 08:30 hour falls before the US employment report on 2010–2026
+Dukascopy bars, at the 1.37th percentile of a null that does not control the
+day of the month, and it did not reproduce on the only out-of-sample
+instrument capable of reproducing it independently.*
+
+Two things do not change. The size is still about $43 a year at 1% risk —
+recomputed here with the short's sign and the engine's own sizing, and silver's
+version is worth $16 because its spread eats 78% of its own gross effect. And
+the news guard still blacks out 07:30–09:00 New York, so none of it was ever
+tradeable by this repository's own rules.

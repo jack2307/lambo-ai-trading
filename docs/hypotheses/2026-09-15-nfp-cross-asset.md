@@ -2,7 +2,15 @@
 
 **Registered:** (commit time is authoritative) — before any bar of `xagduka`
 or `eurduka` is read for this or any other news question
-**Status:** registered
+**Status:** decided — `docs/decisions/2026-09-15-nfp-cross-asset.md`.
+**Neither instrument confirms.** The euro fails conditions 1 and 2. Silver
+passes 2 and 3 overwhelmingly and **fails condition 1**: measured over 400,000
+draws its percentile is 6.02 ± 0.04 against the gate of 5.0, and the 4.8 the
+declared command printed is a one-in-four seed draw. By this file's own rule —
+"any one failing is that instrument refusing" — silver refused, which is the
+pre-declared "neither confirms" branch. The adversary added what this file
+failed to declare: given gold, all three conditions pass 79.4% of the time in a
+world where silver is only beta times gold plus noise.
 **Instrument:** `scripts/news_drift.py`, unchanged since `436582c`, plus
 `scripts/friday_cells.py` for the small cell. **No new code.**
 **Parent:** `docs/decisions/2026-09-14-pre-nfp-drift.md`

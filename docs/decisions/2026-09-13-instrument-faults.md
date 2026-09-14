@@ -190,3 +190,39 @@ silently including the release days it was the control for and the busy days
 the same paragraph promised to exclude. A declared count that does not add up
 to the calendar is a fault findable before any data is read, and it was
 committed unread.
+
+## Addendum, 2026-09-15 (morning): two faults about reporting, not measuring
+
+Faults 1–5 were things the code did that its author did not intend. Faults 6–7
+were the same on a result that flattered a claim. Faults 8–9 were design: a
+null that held one clock and let another float, and a screen applied to one arm
+of a comparison. These last two are about what happens to a number **after** it
+is computed, which is the part no test can reach.
+
+10. **A receipt was corrected by a commit message** (adversary,
+    `2026-09-15-nfp-cross-asset`). A wrapper passed
+    `friday_cells.load_calendar`'s midnight-normalised dates into
+    `news_drift.permutation`, so fifteen percentiles in
+    `cells-and-robustness.txt` measured the hour before midnight instead of the
+    hour before the release. I found the fault myself, said so in the commit,
+    and re-ran the numbers correctly — and left the wrong ones sitting unmarked
+    in the receipt, where they read as if silver's gate passed at the 0.5th
+    percentile against a truth of 6.02. The adversary reproduced all fifteen
+    wrong values by feeding midnight stamps, confirming the diagnosis rather
+    than accepting it, and then said the sentence that made this a numbered
+    fault: *anyone quoting that receipt in six months quotes a bug.* The rule:
+    **a wrong number is corrected inside the file that carries it.** A commit
+    message is a note to whoever is reading the history, not to whoever is
+    reading the evidence.
+
+11. **A gate was placed at a precision the estimator could not deliver**
+    (adversary, same record). The permutation prints one draw of a Monte-Carlo
+    estimate whose standard error at the instrument's default 1,000 draws is
+    **0.74 percentage points**, and the gate was written at "the 5th
+    percentile". Silver's true value is 6.02 ± 0.04 and the declared command
+    printed 4.8, so the run turned on which seed the default happened to be.
+    Gold at 1.37 and the euro at 55.2 were never in doubt; only a value sitting
+    within a standard error of its own gate was. The rule: **set the draws from
+    the precision the gate needs, not from the instrument's default.** At
+    100,000 draws the standard error is 0.07, and every percentile gate in this
+    repository should say what precision it requires before it is run.

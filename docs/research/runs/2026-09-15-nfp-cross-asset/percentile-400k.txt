@@ -1,0 +1,12 @@
+
+xagduka: actual mean -0.038592 on 184 releases; 806 of 835 candidates usable
+   1000 draws, seeds 1/7/13/42/2026: 5.6  4.7  6.5  5.1  5.5
+   400,000 draws: percentile 6.023  (se 0.038)   gate is <= 5.000  ->  FAIL
+
+xauduka: actual mean -1.204973 on 186 releases; 812 of 835 candidates usable
+   1000 draws, seeds 1/7/13/42/2026: 1.9  1.2  1.1  1.0  1.6
+   400,000 draws: percentile 1.370  (se 0.018)   gate is <= 5.000  ->  PASS
+
+eurduka: actual mean -0.000120 on 189 releases; 828 of 835 candidates usable
+   1000 draws, seeds 1/7/13/42/2026: 54.4  56.6  56.5  55.3  55.8
+   400,000 draws: percentile 55.172  (se 0.079)   gate is <= 5.000  ->  FAIL

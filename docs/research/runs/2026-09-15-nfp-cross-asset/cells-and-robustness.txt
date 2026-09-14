@@ -1,3 +1,31 @@
+!!! THE PERCENTILE COLUMN IN SECTION 1 BELOW IS WRONG AND IS KEPT ONLY AS EVIDENCE !!!
+
+It measures the hour before MIDNIGHT New York, not the hour before 08:30. The
+wrapper that produced it passed `friday_cells.load_calendar`'s output into
+`news_drift.permutation`, and that function returns dates normalised to
+midnight, so the window silently became 23:00 -> 00:00. Everything else in this
+file - means, t-statistics, up-rates, sections 2, 3 and 4 - was computed
+through `move()` and is correct; the adversary reproduced all of it
+independently, and also reproduced these fifteen wrong percentiles by feeding
+midnight stamps, which is how the fault was confirmed rather than assumed.
+
+The correct percentiles, from the committed instrument and then from 400,000
+draws, are in `seeds.txt` and `percentile-400k.txt`:
+
+    xagduka    4.8 - 6.3 over five seeds;   6.02 +- 0.04 over 400,000 draws
+    xauduka    0.9 - 1.5 over five seeds;   1.37 +- 0.02
+    eurduka   52.0 - 57.8 over five seeds; 55.17 +- 0.08
+
+Silver's declared gate was "at or below the 5th percentile". The population
+value is above it. CONDITION 1 FAILED, and by the registration's own words
+that is silver refusing.
+
+This banner was added after the adversary pointed out that the correction
+lived only in a commit message, where nobody reading the receipt in six months
+would ever find it. That is fault 10.
+
+==========================================================================
+
 1. the declared conditions, with the seed stability condition 1 needs
 
    market        n       mean       t      up   sign p  percentile over 5 seeds
@@ -5,7 +33,7 @@
    xagduka     184   -0.03859   -4.41   29.9%   0.0000    1.0    0.8    0.5    0.7    1.1
    eurduka     189   -0.00012   -1.28   46.0%   0.3085   10.9    9.0   10.1   10.7   10.0
 
-2. the confound-free cell — releases on a second Friday (days 8-14),
+2. the confound-free cell ï¿½ releases on a second Friday (days 8-14),
    against quiet Fridays on the same days. DECLARED AS DIRECTION ONLY.
 
    xauduka    release n  25  mean  -1.73444  median  -1.39500  up  20.0%  sign p 0.0041

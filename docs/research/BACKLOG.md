@@ -10,6 +10,31 @@ Closed ideas move to the bottom with a pointer to their decision record, so
 
 ## Open
 
+- [ ] **The residual gate on an unread instrument** (adversary,
+  `2026-09-15-nfp-cross-asset`), and it is the only experiment left that could
+  settle the pre-NFP thread. Silver's fall could not be distinguished from
+  "gold times its beta", because the registration gated the instrument rather
+  than its excess over gold. Fix that: on platinum, copper or a dollar-side
+  pair — none of which is on disk, so this starts as a data task — fit beta on
+  **quiet Fridays only**, where no release information exists, then gate the
+  sign and the up-rate of the **residual** of (instrument_bp − β·gold_bp).
+  Declare the median, and run the permutation at **100,000 draws**, where the
+  standard error is 0.07 percentage points rather than 0.74. A residual that
+  falls is a second factor; a residual at 50% is what silver gave and closes
+  the thread.
+- [ ] **Every percentile gate in this repository states the precision it
+  requires** (fault 11, `2026-09-13-instrument-faults.md`). `news_drift.py`
+  defaults to 1,000 draws, whose standard error is 0.74 percentage points, and
+  a gate written at "the 5th percentile" cannot be judged by it — silver's run
+  turned on which seed the default happened to be. Make `--draws` a declared
+  quantity in every registration, and consider raising the default.
+- [ ] **Bitcoin has never been read for a news question either** (noted while
+  checking what feeds exist). `BTCUSD` and `BTCUSDT` are on disk. A
+  24/7 dollar-denominated asset with no metals exposure separates "the dollar
+  is bought before the print" from "the metals complex is sold" better than
+  silver could. **Register it before reading it**, with the residual design
+  above rather than the instrument-level design that failed here.
+
 - [ ] **Does the hour before 08:30 New York fall before ANY macro release,
   rather than before this one?** (the successor to
   `2026-09-14-nfp-vs-first-friday`, named independently by the adversary and
@@ -149,6 +174,15 @@ Closed ideas move to the bottom with a pointer to their decision record, so
 
 ## Closed
 
+- [x] Does the pre-NFP hour exist on instruments never read for a news
+  question? → **no**. The euro refuses outright (the release adds +0.312 pips
+  at t +0.28; the drift is the already-closed European-hours effect). Silver's
+  hour falls hard — 29.9% up on 184 releases, sign p 4.9e-08, robust to units,
+  trimming and leave-one-year-out — and **fails the percentile gate** at
+  6.02 ± 0.04 against 5.0 over 400,000 draws. And it was never independent: in
+  a world where silver is only beta times gold plus noise, all three conditions
+  pass 79.4% of the time. The loop's one survivor did not replicate.
+  `2026-09-15-nfp-cross-asset.md`.
 - [x] Is the pre-NFP hour the release or the first Friday of the month? → the
   question cannot be asked of this calendar. Both declared conditions passed
   and neither measured what it was declared for: the falsifier compared one
