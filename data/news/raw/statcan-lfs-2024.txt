@@ -1,0 +1,36 @@
+# source: https://www150.statcan.gc.ca/n1/daily-quotidien/ (The Daily, one page per release; searched 2026-09-15)
+# columns: release name | reference month | release date (ISO yyyy-mm-dd) | release time (Eastern, HH:MM 24h)
+# time: 07:00 Eastern through the 2012-03-09 release, 08:30 Eastern from
+#      2012-04-05 on.  Note to users, Labour Force Survey Daily of 2011-12-02
+#      (daily-quotidien/111202/dq111202a-eng.htm): "Statistics Canada is moving
+#      to one release time, 8:30 a.m., for all data releases in The Daily.  This
+#      will mean a change in the release time for the Labour Force Survey, which
+#      is currently 7:00 a.m.  This change will be implemented with the release
+#      of LFS data on April 5, 2012."  Before that the LFS carried its own
+#      07:00 embargo ("Not for release before 7 A.M." on the Labour Force
+#      Information covers, 71-001-X) while the rest of The Daily went at 08:30.
+# page: each row's date is the Daily page named after it
+# page: 2024-01-05 -> daily-quotidien/240105/dq240105a-eng.htm
+# page: 2024-02-09 -> daily-quotidien/240209/dq240209a-eng.htm
+# page: 2024-03-08 -> daily-quotidien/240308/dq240308a-eng.htm
+# page: 2024-04-05 -> daily-quotidien/240405/dq240405a-eng.htm
+# page: 2024-05-10 -> daily-quotidien/240510/dq240510a-eng.htm
+# page: 2024-06-07 -> daily-quotidien/240607/dq240607a-cansim-eng.htm
+# page: 2024-07-05 -> daily-quotidien/240705/dq240705a-eng.htm
+# page: 2024-08-09 -> daily-quotidien/240809/dq240809a-eng.htm
+# page: 2024-09-06 -> daily-quotidien/240906/dq240906a-eng.htm
+# page: 2024-10-11 -> daily-quotidien/241011/dq241011a-eng.htm
+# page: 2024-11-08 -> daily-quotidien/241108/dq241108a-eng.htm
+# page: 2024-12-06 -> daily-quotidien/241206/dq241206a-eng.htm
+Labour Force Survey | December 2023 | 2024-01-05 | 08:30
+Labour Force Survey | January 2024 | 2024-02-09 | 08:30
+Labour Force Survey | February 2024 | 2024-03-08 | 08:30
+Labour Force Survey | March 2024 | 2024-04-05 | 08:30
+Labour Force Survey | April 2024 | 2024-05-10 | 08:30
+Labour Force Survey | May 2024 | 2024-06-07 | 08:30
+Labour Force Survey | June 2024 | 2024-07-05 | 08:30
+Labour Force Survey | July 2024 | 2024-08-09 | 08:30
+Labour Force Survey | August 2024 | 2024-09-06 | 08:30
+Labour Force Survey | September 2024 | 2024-10-11 | 08:30
+Labour Force Survey | October 2024 | 2024-11-08 | 08:30
+Labour Force Survey | November 2024 | 2024-12-06 | 08:30

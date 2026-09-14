@@ -1,0 +1,30 @@
+# source: https://www.bea.gov/news/archive?title=Personal+Income+and+Outlays&field_related_product_target_id=All&created_1=All (curl 2026-09-15) -- the release list
+# source: each release's own BEA page, quoted below per row; the date and time are that page's
+#         "EMBARGOED UNTIL RELEASE AT <time> <TZ>, <weekday>, <date>" header (curl 2026-09-15)
+# cross-checked against the previous release's "Next release: ..." line and, for every non-08:30
+#         release, against the release PDF/TXT itself
+# columns: release name | reference month | release date (ISO yyyy-mm-dd) | release time (Eastern, HH:MM 24h)
+# 2022-01-28 -> https://www.bea.gov/news/2022/personal-income-and-outlays-december-2021
+Personal Income and Outlays | December 2021 | 2022-01-28 | 08:30
+# 2022-02-25 -> https://www.bea.gov/news/2022/personal-income-and-outlays-january-2022
+Personal Income and Outlays | January 2022 | 2022-02-25 | 08:30
+# 2022-03-31 -> https://www.bea.gov/news/2022/personal-income-and-outlays-february-2022
+Personal Income and Outlays | February 2022 | 2022-03-31 | 08:30
+# 2022-04-29 -> https://www.bea.gov/news/2022/personal-income-and-outlays-march-2022
+Personal Income and Outlays | March 2022 | 2022-04-29 | 08:30
+# 2022-05-27 -> https://www.bea.gov/news/2022/personal-income-and-outlays-april-2022
+Personal Income and Outlays | April 2022 | 2022-05-27 | 08:30
+# 2022-06-30 -> https://www.bea.gov/news/2022/personal-income-and-outlays-may-2022
+Personal Income and Outlays | May 2022 | 2022-06-30 | 08:30
+# 2022-07-29 -> https://www.bea.gov/news/2022/personal-income-and-outlays-june-2022
+Personal Income and Outlays | June 2022 | 2022-07-29 | 08:30
+# 2022-08-26 -> https://www.bea.gov/news/2022/personal-income-and-outlays-july-2022
+Personal Income and Outlays | July 2022 | 2022-08-26 | 08:30
+# 2022-09-30 -> https://www.bea.gov/news/2022/personal-income-and-outlays-august-2022-and-annual-update
+Personal Income and Outlays | August 2022 | 2022-09-30 | 08:30
+# 2022-10-28 -> https://www.bea.gov/news/2022/personal-income-and-outlays-september-2022
+Personal Income and Outlays | September 2022 | 2022-10-28 | 08:30
+# 2022-12-01 -> https://www.bea.gov/index.php/news/2022/personal-income-and-outlays-october-2022
+Personal Income and Outlays | October 2022 | 2022-12-01 | 08:30
+# 2022-12-23 -> https://www.bea.gov/index.php/news/2022/personal-income-and-outlays-november-2022
+Personal Income and Outlays | November 2022 | 2022-12-23 | 08:30

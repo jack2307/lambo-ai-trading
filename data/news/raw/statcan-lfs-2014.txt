@@ -1,0 +1,42 @@
+# source: https://www150.statcan.gc.ca/n1/daily-quotidien/ (The Daily, one page per release; searched 2026-09-15)
+# columns: release name | reference month | release date (ISO yyyy-mm-dd) | release time (Eastern, HH:MM 24h)
+# time: 07:00 Eastern through the 2012-03-09 release, 08:30 Eastern from
+#      2012-04-05 on.  Note to users, Labour Force Survey Daily of 2011-12-02
+#      (daily-quotidien/111202/dq111202a-eng.htm): "Statistics Canada is moving
+#      to one release time, 8:30 a.m., for all data releases in The Daily.  This
+#      will mean a change in the release time for the Labour Force Survey, which
+#      is currently 7:00 a.m.  This change will be implemented with the release
+#      of LFS data on April 5, 2012."  Before that the LFS carried its own
+#      07:00 embargo ("Not for release before 7 A.M." on the Labour Force
+#      Information covers, 71-001-X) while the rest of The Daily went at 08:30.
+# note: the July 2014 estimates were released 2014-08-08, withdrawn after an error in the
+#      redesigned questionnaire (Labour Force Survey: Update, daily-quotidien/140813/
+#      dq140813a-eng.htm, 2014-08-13), and re-released corrected on 2014-08-15.  Both the
+#      original and the corrected release are rows here; the 08-13 update is not.
+# page: each row's date is the Daily page named after it
+# page: 2014-01-10 -> daily-quotidien/140110/dq140110a-eng.htm
+# page: 2014-02-07 -> daily-quotidien/140207/dq140207a-eng.htm
+# page: 2014-03-07 -> daily-quotidien/140207/dq140207a-eng.htm (next-release line)
+# page: 2014-04-04 -> daily-quotidien/140404/dq140404a-eng.htm
+# page: 2014-05-09 -> daily-quotidien/140509/dq140509a-eng.htm
+# page: 2014-06-06 -> daily-quotidien/140606/dq140606a-eng.htm
+# page: 2014-07-11 -> daily-quotidien/140711/dq140711a-eng.htm
+# page: 2014-08-08 -> daily-quotidien/140808/dq140808a-eng.htm
+# page: 2014-08-15 -> daily-quotidien/140815/dq140815a-eng.htm
+# page: 2014-09-05 -> daily-quotidien/140905/dq140905a-eng.htm
+# page: 2014-10-10 -> daily-quotidien/141010/dq141010a-eng.htm
+# page: 2014-11-07 -> daily-quotidien/141107/dq141107a-eng.htm
+# page: 2014-12-05 -> daily-quotidien/141205/dq141205a-eng.htm
+Labour Force Survey | December 2013 | 2014-01-10 | 08:30
+Labour Force Survey | January 2014 | 2014-02-07 | 08:30
+Labour Force Survey | February 2014 | 2014-03-07 | 08:30
+Labour Force Survey | March 2014 | 2014-04-04 | 08:30
+Labour Force Survey | April 2014 | 2014-05-09 | 08:30
+Labour Force Survey | May 2014 | 2014-06-06 | 08:30
+Labour Force Survey | June 2014 | 2014-07-11 | 08:30
+Labour Force Survey | July 2014 | 2014-08-08 | 08:30
+Labour Force Survey | July 2014 (corrected re-release) | 2014-08-15 | 08:30
+Labour Force Survey | August 2014 | 2014-09-05 | 08:30
+Labour Force Survey | September 2014 | 2014-10-10 | 08:30
+Labour Force Survey | October 2014 | 2014-11-07 | 08:30
+Labour Force Survey | November 2014 | 2014-12-05 | 08:30

@@ -1,0 +1,31 @@
+# source: https://www.bea.gov/news/archive?title=Personal+Income+and+Outlays&field_related_product_target_id=All&created_1=All (curl 2026-09-15) -- the release list
+# source: each release's own BEA page, quoted below per row; the date and time are that page's
+#         "EMBARGOED UNTIL RELEASE AT <time> <TZ>, <weekday>, <date>" header (curl 2026-09-15)
+# cross-checked against the previous release's "Next release: ..." line and, for every non-08:30
+#         release, against the release PDF/TXT itself
+# columns: release name | reference month | release date (ISO yyyy-mm-dd) | release time (Eastern, HH:MM 24h)
+# 2020-01-31 -> https://www.bea.gov/news/2020/personal-income-and-outlays-december-2019
+Personal Income and Outlays | December 2019 | 2020-01-31 | 08:30
+# 2020-02-28 -> https://www.bea.gov/news/2020/personal-income-and-outlays-january-2020
+Personal Income and Outlays | January 2020 | 2020-02-28 | 08:30
+# 2020-03-27 -> https://www.bea.gov/index.php/news/2020/personal-income-and-outlays-february-2020
+Personal Income and Outlays | February 2020 | 2020-03-27 | 08:30
+# 2020-04-30 -> https://www.bea.gov/index.php/news/2020/personal-income-and-outlays-march-2020
+Personal Income and Outlays | March 2020 | 2020-04-30 | 08:30
+# 2020-05-29 -> https://www.bea.gov/index.php/news/2020/personal-income-and-outlays-april-2020
+Personal Income and Outlays | April 2020 | 2020-05-29 | 08:30
+# 2020-06-26 -> https://www.bea.gov/index.php/news/2020/personal-income-and-outlays-may-2020
+Personal Income and Outlays | May 2020 | 2020-06-26 | 08:30
+# 2020-07-31 -> https://www.bea.gov/index.php/news/2020/personal-income-and-outlays-june-2020-and-annual-update
+Personal Income and Outlays | June 2020 | 2020-07-31 | 08:30
+# 2020-08-28 -> https://www.bea.gov/index.php/news/2020/personal-income-and-outlays-july-2020
+Personal Income and Outlays | July 2020 | 2020-08-28 | 08:30
+# 2020-10-01 -> https://www.bea.gov/index.php/news/2020/personal-income-and-outlays-august-2020
+Personal Income and Outlays | August 2020 | 2020-10-01 | 08:30
+# 2020-10-30 -> https://www.bea.gov/news/2020/personal-income-and-outlays-september-2020
+Personal Income and Outlays | September 2020 | 2020-10-30 | 08:30
+# 2020-11-25: released at 10:00, not 08:30: BEA shares the day with its own GDP release, which took the 08:30 slot (archive row for that date confirmed at 08:30)
+# 2020-11-25 -> https://www.bea.gov/news/2020/personal-income-and-outlays-october-2020
+Personal Income and Outlays | October 2020 | 2020-11-25 | 10:00
+# 2020-12-23 -> https://www.bea.gov/news/2020/personal-income-and-outlays-november-2020
+Personal Income and Outlays | November 2020 | 2020-12-23 | 08:30

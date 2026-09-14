@@ -1,0 +1,30 @@
+# source: https://www.bea.gov/news/archive?title=Personal+Income+and+Outlays&field_related_product_target_id=All&created_1=All (curl 2026-09-15) -- the release list
+# source: each release's own BEA page, quoted below per row; the date and time are that page's
+#         "EMBARGOED UNTIL RELEASE AT <time> <TZ>, <weekday>, <date>" header (curl 2026-09-15)
+# cross-checked against the previous release's "Next release: ..." line and, for every non-08:30
+#         release, against the release PDF/TXT itself
+# columns: release name | reference month | release date (ISO yyyy-mm-dd) | release time (Eastern, HH:MM 24h)
+# 2012-01-30 -> https://www.bea.gov/news/2012/personal-income-and-outlays-december-2011
+Personal Income and Outlays | December 2011 | 2012-01-30 | 08:30
+# 2012-03-01 -> https://www.bea.gov/news/2012/personal-income-and-outlays-january-2012
+Personal Income and Outlays | January 2012 | 2012-03-01 | 08:30
+# 2012-03-30 -> https://www.bea.gov/news/2012/personal-income-and-outlays-february-2012
+Personal Income and Outlays | February 2012 | 2012-03-30 | 08:30
+# 2012-04-30 -> https://www.bea.gov/news/2012/personal-income-and-outlays-march-2012
+Personal Income and Outlays | March 2012 | 2012-04-30 | 08:30
+# 2012-06-01 -> https://www.bea.gov/news/2012/personal-income-and-outlays-april-2012
+Personal Income and Outlays | April 2012 | 2012-06-01 | 08:30
+# 2012-06-29 -> https://www.bea.gov/news/2012/personal-income-and-outlays-may-2012
+Personal Income and Outlays | May 2012 | 2012-06-29 | 08:30
+# 2012-07-31 -> https://www.bea.gov/news/2012/personal-income-and-outlays-june-2012-revised-estimates-2009-through-may-2012
+Personal Income and Outlays | June 2012 | 2012-07-31 | 08:30
+# 2012-08-30 -> https://www.bea.gov/news/2012/personal-income-and-outlays-july-2012
+Personal Income and Outlays | July 2012 | 2012-08-30 | 08:30
+# 2012-09-28 -> https://www.bea.gov/news/2012/personal-income-and-outlays-august-2012
+Personal Income and Outlays | August 2012 | 2012-09-28 | 08:30
+# 2012-10-29 -> https://www.bea.gov/news/2012/personal-income-and-outlays-september-2012
+Personal Income and Outlays | September 2012 | 2012-10-29 | 08:30
+# 2012-11-30 -> https://www.bea.gov/news/2012/personal-income-and-outlays-october-2012
+Personal Income and Outlays | October 2012 | 2012-11-30 | 08:30
+# 2012-12-21 -> https://www.bea.gov/news/2012/personal-income-and-outlays-november-2012
+Personal Income and Outlays | November 2012 | 2012-12-21 | 08:30

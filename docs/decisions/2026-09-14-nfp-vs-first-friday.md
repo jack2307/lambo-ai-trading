@@ -243,15 +243,41 @@ registration and it is not claimed here.
   22–31, where Fridays already tilt down — the release adds **−0.409 $/oz at a
   Welch t of −0.50**, with medians of −0.24 against −0.26. Nothing.
 
-  So the hour is not about macro releases in general. What is left is the
-  narrower and better question: **is it employment news specifically?** Canada's
-  Labour Force Survey is the test that separates them — a jobs report, at the
-  same 08:30 minute, in a different country, on days that are mostly not US
-  employment days. Its schedule is being collected. The registration will
-  declare the median, a day-of-month-matched control, and — this is the part
-  the last two registrations lacked — **a test window on instruments never read
-  for any news question**: silver and the euro are on disk 2010–2026 and have
-  never been looked at for this family.
+  So the hour is not about macro releases in general. The narrower question —
+  **is it employment news specifically?** — then died the same way, and the
+  look is filed beside it (`lfs-exploratory.txt`).
+
+  Statistics Canada's Labour Force Survey schedule is now collected too, 201
+  releases, and it carries a control inside a single release that no design
+  could have arranged: StatCan published the LFS at **07:00** New York until
+  2012-03-09 and at **08:30** from 2012-04-05, a move announced in *The Daily*
+  of 2011-12-02 for administrative reasons with nothing to do with gold. The
+  same report, the same country, the same weekday, shifted from before the
+  measured hour to its closing minute. On Fridays carrying no US employment
+  report:
+
+  ```
+  gold, quiet Fridays, 2010-06 -> 2026-05       n     mean   median     up
+  Canada LFS at 07:00, before the window         6   +0.678   +1.61   50.0%
+  Canada LFS at 08:30, the closing minute       56   +0.622   +0.11   53.6%
+  no jobs report at all, same era              478   +0.023   +0.07   50.8%
+  the US employment report, for scale          178   -1.286   -0.90   33.1%
+  ```
+
+  A jobs report at the same minute, in the same hour, does **nothing** — if
+  anything the sign is up (+0.599 against its own baseline, Welch t +0.68).
+
+  Two candidate mechanisms, two negatives, and between them they leave exactly
+  one thing standing: it is not macro news, it is not employment news, it is
+  **the US Employment Situation and nothing else**. That is a narrower claim
+  than the parent made and a better-supported one, and it is still worth about
+  $46 a year inside a blackout the bot already enforces.
+
+  What is registrable after this is not another mechanism. It is the only
+  genuine out-of-sample test left for the loop's one surviving claim: **does
+  the same hour fall on instruments never read for any news question?** Silver
+  and the euro sit on disk 2010–2026 and have never been looked at for this
+  family. That registration follows this record.
 
 ## What this does not say
 

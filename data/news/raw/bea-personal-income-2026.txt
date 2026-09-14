@@ -1,0 +1,34 @@
+# source: https://www.bea.gov/news/archive?title=Personal+Income+and+Outlays&field_related_product_target_id=All&created_1=All (curl 2026-09-15) -- the release list
+# source: each release's own BEA page, quoted below per row; the date and time are that page's
+#         "EMBARGOED UNTIL RELEASE AT <time> <TZ>, <weekday>, <date>" header (curl 2026-09-15)
+# cross-checked against the previous release's "Next release: ..." line and, for every non-08:30
+#         release, against the release PDF/TXT itself
+# columns: release name | reference month | release date (ISO yyyy-mm-dd) | release time (Eastern, HH:MM 24h)
+# 2026 covers releases published through 2026-09-15 (this file's collection date).
+# BEA's schedule https://www.bea.gov/news/schedule/full lists the rest of 2026 as
+# September 30, October 29, November 25 and December 23, all 8:30 AM; those are
+# scheduled, not yet published, and are NOT rows below.
+# 2026-01-22: shutdown catch-up: October and November 2025 in one release
+# 2026-01-22: released at 10:00, not 08:30: BEA shares the day with its own GDP release, which took the 08:30 slot (archive row for that date confirmed at 08:30)
+# 2026-01-22 -> https://www.bea.gov/news/2026/personal-income-and-outlays-october-and-november-2025
+Personal Income and Outlays | October and November 2025 | 2026-01-22 | 10:00
+# 2026-02-20: shutdown catch-up; BEA scheduled and then rescheduled several early-2026 dates
+# 2026-02-20 -> https://www.bea.gov/news/2026/personal-income-and-outlays-december-2025
+Personal Income and Outlays | December 2025 | 2026-02-20 | 08:30
+# 2026-03-13: shutdown catch-up (BEA marks this date "New Date" on its release schedule)
+# 2026-03-13 -> https://www.bea.gov/news/2026/personal-income-and-outlays-january-2026
+Personal Income and Outlays | January 2026 | 2026-03-13 | 08:30
+# 2026-04-09: shutdown catch-up (BEA marks this date "New Date" on its release schedule)
+# 2026-04-09 -> https://www.bea.gov/news/2026/personal-income-and-outlays-february-2026
+Personal Income and Outlays | February 2026 | 2026-04-09 | 08:30
+# 2026-04-30 -> https://www.bea.gov/news/2026/personal-income-and-outlays-march-2026
+Personal Income and Outlays | March 2026 | 2026-04-30 | 08:30
+# 2026-05-28 -> https://www.bea.gov/news/2026/personal-income-and-outlays-april-2026
+Personal Income and Outlays | April 2026 | 2026-05-28 | 08:30
+# 2026-06-25 -> https://www.bea.gov/news/2026/personal-income-and-outlays-may-2026
+Personal Income and Outlays | May 2026 | 2026-06-25 | 08:30
+# 2026-07-30 -> https://www.bea.gov/news/2026/personal-income-and-outlays-june-2026
+Personal Income and Outlays | June 2026 | 2026-07-30 | 08:30
+# 2026-08-26: this release is not listed in BEA's news archive view; its page and PDF exist and BEA's 2026 full schedule lists "August 26 | 8:30 AM | Personal Income and Outlays, July 2026"
+# 2026-08-26 -> https://www.bea.gov/news/2026/personal-income-and-outlays-july-2026
+Personal Income and Outlays | July 2026 | 2026-08-26 | 08:30

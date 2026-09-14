@@ -1,0 +1,40 @@
+# source: https://www150.statcan.gc.ca/n1/daily-quotidien/ (The Daily, one page per release; searched 2026-09-15)
+# columns: release name | reference month | release date (ISO yyyy-mm-dd) | release time (Eastern, HH:MM 24h)
+# time: 07:00 Eastern through the 2012-03-09 release, 08:30 Eastern from
+#      2012-04-05 on.  Note to users, Labour Force Survey Daily of 2011-12-02
+#      (daily-quotidien/111202/dq111202a-eng.htm): "Statistics Canada is moving
+#      to one release time, 8:30 a.m., for all data releases in The Daily.  This
+#      will mean a change in the release time for the Labour Force Survey, which
+#      is currently 7:00 a.m.  This change will be implemented with the release
+#      of LFS data on April 5, 2012."  Before that the LFS carried its own
+#      07:00 embargo ("Not for release before 7 A.M." on the Labour Force
+#      Information covers, 71-001-X) while the rest of The Daily went at 08:30.
+# note: 2011-02-04 comes from daily-quotidien/110128/dq110128b-eng.htm ("the January 2011
+#      estimates were released on February 4") plus the existence of the 2011-02-04 Daily;
+#      2011-11-04 from the next-release line of daily-quotidien/111007/dq111007a-eng.htm
+#      plus the existence of the 2011-11-04 Daily (dq111104c-fra.htm).
+# page: each row's date is the Daily page named after it
+# page: 2011-01-07 -> daily-quotidien/110107/dq110107a-eng.htm
+# page: 2011-02-04 -> daily-quotidien/110128/dq110128b-eng.htm + daily-quotidien/110204/
+# page: 2011-03-11 -> daily-quotidien/110311/tdq110311-fra.htm
+# page: 2011-04-08 -> daily-quotidien/110408/dq110408a-eng.htm
+# page: 2011-05-06 -> daily-quotidien/110506/dq110506-eng.pdf
+# page: 2011-06-10 -> daily-quotidien/110610/tdq110610-eng.htm
+# page: 2011-07-08 -> daily-quotidien/110708/dq110708a-eng.htm
+# page: 2011-08-05 -> daily-quotidien/110805/dq110805a-eng.htm
+# page: 2011-09-09 -> daily-quotidien/110909/tdq110909-eng.htm
+# page: 2011-10-07 -> daily-quotidien/111007/dq111007a-eng.htm
+# page: 2011-11-04 -> daily-quotidien/111007/dq111007a-eng.htm (next-release line) + daily-quotidien/111104/
+# page: 2011-12-02 -> daily-quotidien/111202/dq111202a-eng.htm
+Labour Force Survey | December 2010 | 2011-01-07 | 07:00
+Labour Force Survey | January 2011 | 2011-02-04 | 07:00
+Labour Force Survey | February 2011 | 2011-03-11 | 07:00
+Labour Force Survey | March 2011 | 2011-04-08 | 07:00
+Labour Force Survey | April 2011 | 2011-05-06 | 07:00
+Labour Force Survey | May 2011 | 2011-06-10 | 07:00
+Labour Force Survey | June 2011 | 2011-07-08 | 07:00
+Labour Force Survey | July 2011 | 2011-08-05 | 07:00
+Labour Force Survey | August 2011 | 2011-09-09 | 07:00
+Labour Force Survey | September 2011 | 2011-10-07 | 07:00
+Labour Force Survey | October 2011 | 2011-11-04 | 07:00
+Labour Force Survey | November 2011 | 2011-12-02 | 07:00

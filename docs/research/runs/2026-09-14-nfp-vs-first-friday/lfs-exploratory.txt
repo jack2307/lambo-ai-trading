@@ -1,0 +1,22 @@
+how the two jobs reports overlap on Fridays, 2010-06 -> 2026-05
+   Fridays with usable bars           812
+   with a US employment report        178
+   with a Canada LFS                  189
+   with BOTH on the same morning      122
+   Canada only, no US report          67
+      of those, LFS at 08:30          61
+      of those, LFS at 07:00          6
+
+the control inside one release — Canada's jobs report, no US report that day:
+   LFS at 07:00 (before the window opens)       n   6  mean  +0.678  median  +1.61  up 50.0%
+   LFS at 08:30 (the window's closing minute)   n  56  mean  +0.622  median  +0.11  up 53.6%
+
+and the Fridays with neither jobs report, split at the same date:
+   no jobs report, before 2012-04-05            n  57  mean  -0.252  median  +0.44  up 59.6%
+   no jobs report, from 2012-04-05              n 478  mean  +0.023  median  +0.07  up 50.8%
+
+   US employment report (for scale)             n 178  mean  -1.286  median  -0.90  up 33.1%
+
+the difference that matters, both eras against their own no-report baseline:
+   before 2012-04-05    LFS at 07:00:  +0.929 $/oz vs baseline  Welch t +0.46  (n 6 vs 57)
+   from 2012-04-05      LFS at 08:30:  +0.599 $/oz vs baseline  Welch t +0.68  (n 56 vs 478)

@@ -1,0 +1,30 @@
+# source: https://www.bea.gov/news/archive?title=Personal+Income+and+Outlays&field_related_product_target_id=All&created_1=All (curl 2026-09-15) -- the release list
+# source: each release's own BEA page, quoted below per row; the date and time are that page's
+#         "EMBARGOED UNTIL RELEASE AT <time> <TZ>, <weekday>, <date>" header (curl 2026-09-15)
+# cross-checked against the previous release's "Next release: ..." line and, for every non-08:30
+#         release, against the release PDF/TXT itself
+# columns: release name | reference month | release date (ISO yyyy-mm-dd) | release time (Eastern, HH:MM 24h)
+# 2011-01-31 -> https://www.bea.gov/news/2011/personal-income-and-outlays-december-2010
+Personal Income and Outlays | December 2010 | 2011-01-31 | 08:30
+# 2011-02-28 -> https://www.bea.gov/news/2011/personal-income-and-outlays-january-2011
+Personal Income and Outlays | January 2011 | 2011-02-28 | 08:30
+# 2011-03-28 -> https://www.bea.gov/news/2011/personal-income-and-outlays-february-2011
+Personal Income and Outlays | February 2011 | 2011-03-28 | 08:30
+# 2011-04-29 -> https://www.bea.gov/news/2011/personal-income-and-outlays-march-2011
+Personal Income and Outlays | March 2011 | 2011-04-29 | 08:30
+# 2011-05-27 -> https://www.bea.gov/news/2011/personal-income-and-outlays-april-2011
+Personal Income and Outlays | April 2011 | 2011-05-27 | 08:30
+# 2011-06-27 -> https://www.bea.gov/news/2011/personal-income-and-outlays-may-2011
+Personal Income and Outlays | May 2011 | 2011-06-27 | 08:30
+# 2011-08-02 -> https://www.bea.gov/news/2011/personal-income-and-outlays-june-2011
+Personal Income and Outlays | June 2011 | 2011-08-02 | 08:30
+# 2011-08-29 -> https://www.bea.gov/news/2011/personal-income-and-outlays-july-2011
+Personal Income and Outlays | July 2011 | 2011-08-29 | 08:30
+# 2011-09-30 -> https://www.bea.gov/news/2011/personal-income-and-outlays-august-2011
+Personal Income and Outlays | August 2011 | 2011-09-30 | 08:30
+# 2011-10-28 -> https://www.bea.gov/news/2011/personal-income-and-outlays-september-2011
+Personal Income and Outlays | September 2011 | 2011-10-28 | 08:30
+# 2011-11-23 -> https://www.bea.gov/news/2011/personal-income-and-outlays-october-2011
+Personal Income and Outlays | October 2011 | 2011-11-23 | 08:30
+# 2011-12-23 -> https://www.bea.gov/news/2011/personal-income-and-outlays-november-2011
+Personal Income and Outlays | November 2011 | 2011-12-23 | 08:30

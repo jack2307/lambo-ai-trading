@@ -1,0 +1,36 @@
+# source: https://www150.statcan.gc.ca/n1/daily-quotidien/ (The Daily, one page per release; searched 2026-09-15)
+# columns: release name | reference month | release date (ISO yyyy-mm-dd) | release time (Eastern, HH:MM 24h)
+# time: 07:00 Eastern through the 2012-03-09 release, 08:30 Eastern from
+#      2012-04-05 on.  Note to users, Labour Force Survey Daily of 2011-12-02
+#      (daily-quotidien/111202/dq111202a-eng.htm): "Statistics Canada is moving
+#      to one release time, 8:30 a.m., for all data releases in The Daily.  This
+#      will mean a change in the release time for the Labour Force Survey, which
+#      is currently 7:00 a.m.  This change will be implemented with the release
+#      of LFS data on April 5, 2012."  Before that the LFS carried its own
+#      07:00 embargo ("Not for release before 7 A.M." on the Labour Force
+#      Information covers, 71-001-X) while the rest of The Daily went at 08:30.
+# page: each row's date is the Daily page named after it
+# page: 2023-01-06 -> daily-quotidien/230106/dq230106a-cansim-eng.htm
+# page: 2023-02-10 -> daily-quotidien/230210/dq230210a-eng.htm
+# page: 2023-03-10 -> daily-quotidien/230310/dq230310a-eng.htm
+# page: 2023-04-06 -> daily-quotidien/230406/dq230406a-eng.htm
+# page: 2023-05-05 -> daily-quotidien/230505/dq230505a-eng.htm
+# page: 2023-06-09 -> daily-quotidien/230609/dq230609a-eng.htm
+# page: 2023-07-07 -> daily-quotidien/230707/dq230707a-eng.htm
+# page: 2023-08-04 -> daily-quotidien/230804/dq230804a-eng.htm
+# page: 2023-09-08 -> daily-quotidien/230908/dq230908a-eng.htm
+# page: 2023-10-06 -> daily-quotidien/231006/dq231006a-eng.htm
+# page: 2023-11-03 -> daily-quotidien/231103/dq231103a-eng.htm
+# page: 2023-12-01 -> daily-quotidien/231201/dq231201a-eng.htm
+Labour Force Survey | December 2022 | 2023-01-06 | 08:30
+Labour Force Survey | January 2023 | 2023-02-10 | 08:30
+Labour Force Survey | February 2023 | 2023-03-10 | 08:30
+Labour Force Survey | March 2023 | 2023-04-06 | 08:30
+Labour Force Survey | April 2023 | 2023-05-05 | 08:30
+Labour Force Survey | May 2023 | 2023-06-09 | 08:30
+Labour Force Survey | June 2023 | 2023-07-07 | 08:30
+Labour Force Survey | July 2023 | 2023-08-04 | 08:30
+Labour Force Survey | August 2023 | 2023-09-08 | 08:30
+Labour Force Survey | September 2023 | 2023-10-06 | 08:30
+Labour Force Survey | October 2023 | 2023-11-03 | 08:30
+Labour Force Survey | November 2023 | 2023-12-01 | 08:30

@@ -1,0 +1,32 @@
+# source: https://www.bea.gov/news/archive?title=Personal+Income+and+Outlays&field_related_product_target_id=All&created_1=All (curl 2026-09-15) -- the release list
+# source: each release's own BEA page, quoted below per row; the date and time are that page's
+#         "EMBARGOED UNTIL RELEASE AT <time> <TZ>, <weekday>, <date>" header (curl 2026-09-15)
+# cross-checked against the previous release's "Next release: ..." line and, for every non-08:30
+#         release, against the release PDF/TXT itself
+# columns: release name | reference month | release date (ISO yyyy-mm-dd) | release time (Eastern, HH:MM 24h)
+# 2013-01-31 -> https://www.bea.gov/news/2013/personal-income-and-outlays-december-2012
+Personal Income and Outlays | December 2012 | 2013-01-31 | 08:30
+# 2013-03-01 -> https://www.bea.gov/news/2013/personal-income-and-outlays-january-2013
+Personal Income and Outlays | January 2013 | 2013-03-01 | 08:30
+# 2013-03-29 -> https://www.bea.gov/news/2013/personal-income-and-outlays-february-2013
+Personal Income and Outlays | February 2013 | 2013-03-29 | 08:30
+# 2013-04-29 -> https://www.bea.gov/news/2013/personal-income-and-outlays-march-2013
+Personal Income and Outlays | March 2013 | 2013-04-29 | 08:30
+# 2013-05-31 -> https://www.bea.gov/news/2013/personal-income-and-outlays-april-2013
+Personal Income and Outlays | April 2013 | 2013-05-31 | 08:30
+# 2013-06-27 -> https://www.bea.gov/news/2013/personal-income-and-outlays-may-2013
+Personal Income and Outlays | May 2013 | 2013-06-27 | 08:30
+# 2013-08-02 -> https://www.bea.gov/news/2013/personal-income-and-outlays-june-2013
+Personal Income and Outlays | June 2013 | 2013-08-02 | 08:30
+# 2013-08-30 -> https://www.bea.gov/news/2013/personal-income-and-outlays-july-2013
+Personal Income and Outlays | July 2013 | 2013-08-30 | 08:30
+# 2013-09-27 -> https://www.bea.gov/news/2013/personal-income-and-outlays-august-2013
+Personal Income and Outlays | August 2013 | 2013-09-27 | 08:30
+# 2013-11-08: delayed by the October 2013 lapse in appropriations; originally scheduled October 31, 2013 (the August-2013 release announced "Next release - October 31, 2013")
+# 2013-11-08 -> https://www.bea.gov/news/2013/personal-income-and-outlays-september-2013
+Personal Income and Outlays | September 2013 | 2013-11-08 | 08:30
+# 2013-12-06: still on the post-shutdown catch-up cadence; the September-2013 release (published Nov 8) announced "Next release - December 6, 2013 at 8:30 A.M. EST"
+# 2013-12-06 -> https://www.bea.gov/news/2013/personal-income-and-outlays-october-2013
+Personal Income and Outlays | October 2013 | 2013-12-06 | 08:30
+# 2013-12-23 -> https://www.bea.gov/news/2013/personal-income-and-outlays-november-2013
+Personal Income and Outlays | November 2013 | 2013-12-23 | 08:30

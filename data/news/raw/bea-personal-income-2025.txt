@@ -1,0 +1,31 @@
+# source: https://www.bea.gov/news/archive?title=Personal+Income+and+Outlays&field_related_product_target_id=All&created_1=All (curl 2026-09-15) -- the release list
+# source: each release's own BEA page, quoted below per row; the date and time are that page's
+#         "EMBARGOED UNTIL RELEASE AT <time> <TZ>, <weekday>, <date>" header (curl 2026-09-15)
+# cross-checked against the previous release's "Next release: ..." line and, for every non-08:30
+#         release, against the release PDF/TXT itself
+# columns: release name | reference month | release date (ISO yyyy-mm-dd) | release time (Eastern, HH:MM 24h)
+# 2025-01-31 -> https://www.bea.gov/news/2025/personal-income-and-outlays-december-2024
+Personal Income and Outlays | December 2024 | 2025-01-31 | 08:30
+# 2025-02-28 -> https://www.bea.gov/news/2025/personal-income-and-outlays-january-2025
+Personal Income and Outlays | January 2025 | 2025-02-28 | 08:30
+# 2025-03-28 -> https://www.bea.gov/news/2025/personal-income-and-outlays-february-2025
+Personal Income and Outlays | February 2025 | 2025-03-28 | 08:30
+# 2025-04-30: released at 10:00, not 08:30: BEA shares the day with its own GDP release, which took the 08:30 slot (archive row for that date confirmed at 08:30)
+# 2025-04-30 -> https://www.bea.gov/news/2025/personal-income-and-outlays-march-2025
+Personal Income and Outlays | March 2025 | 2025-04-30 | 10:00
+# 2025-05-30 -> https://www.bea.gov/news/2025/personal-income-and-outlays-april-2025
+Personal Income and Outlays | April 2025 | 2025-05-30 | 08:30
+# 2025-06-27 -> https://www.bea.gov/news/2025/personal-income-and-outlays-may-2025
+Personal Income and Outlays | May 2025 | 2025-06-27 | 08:30
+# 2025-07-31 -> https://www.bea.gov/news/2025/personal-income-and-outlays-june-2025
+Personal Income and Outlays | June 2025 | 2025-07-31 | 08:30
+# 2025-08-29 -> https://www.bea.gov/news/2025/personal-income-and-outlays-july-2025
+Personal Income and Outlays | July 2025 | 2025-08-29 | 08:30
+# 2025-09-26 -> https://www.bea.gov/news/2025/personal-income-and-outlays-august-2025
+Personal Income and Outlays | August 2025 | 2025-09-26 | 08:30
+# 2025-12-05: delayed by the October 1 - November 12, 2025 lapse in appropriations. The August-2025 release (Sept 26) had announced "Next release: October 31, 2025, at 8:30 a.m. EDT"; BEA's 2025 schedule marks October 30 "Cancelled" and November 26 "To Be Rescheduled". No September-2025 release in October or November 2025.
+# 2025-12-05 -> https://www.bea.gov/news/2025/personal-income-and-outlays-september-2025
+Personal Income and Outlays | September 2025 | 2025-12-05 | 10:00
+# 2025-12-23: data update, not a news release: BEA revised July-September 2025 personal income and outlays alongside the Q3 2025 GDP initial estimate. The page carries no embargo line; the accompanying GDP release (https://www.bea.gov/news/2025/gross-domestic-product-3rd-quarter-2025-initial-estimate-and-corporate-profits) reads "EMBARGOED UNTIL RELEASE AT 8:30 a.m. EST, Tuesday, December 23, 2025"
+# 2025-12-23 -> https://www.bea.gov/news/2025/personal-income-and-outlays-data-update-september-2025
+Personal Income and Outlays (Data Update) | July, August and September 2025 | 2025-12-23 | 08:30

@@ -1,0 +1,38 @@
+# source: https://www150.statcan.gc.ca/n1/daily-quotidien/ (The Daily, one page per release; searched 2026-09-15)
+# columns: release name | reference month | release date (ISO yyyy-mm-dd) | release time (Eastern, HH:MM 24h)
+# time: 07:00 Eastern through the 2012-03-09 release, 08:30 Eastern from
+#      2012-04-05 on.  Note to users, Labour Force Survey Daily of 2011-12-02
+#      (daily-quotidien/111202/dq111202a-eng.htm): "Statistics Canada is moving
+#      to one release time, 8:30 a.m., for all data releases in The Daily.  This
+#      will mean a change in the release time for the Labour Force Survey, which
+#      is currently 7:00 a.m.  This change will be implemented with the release
+#      of LFS data on April 5, 2012."  Before that the LFS carried its own
+#      07:00 embargo ("Not for release before 7 A.M." on the Labour Force
+#      Information covers, 71-001-X) while the rest of The Daily went at 08:30.
+# note: no COVID-era release was cancelled or moved.  Collection changed (the survey went
+#      to telephone-only in March 2020) but the twelve releases kept the normal calendar.
+# page: each row's date is the Daily page named after it
+# page: 2020-01-10 -> daily-quotidien/200110/dq200110a-eng.htm
+# page: 2020-02-07 -> daily-quotidien/200207/dq200207a-cansim-eng.htm
+# page: 2020-03-06 -> daily-quotidien/200306/dq200306a-eng.htm
+# page: 2020-04-09 -> daily-quotidien/200409/dq200409a-eng.htm
+# page: 2020-05-08 -> daily-quotidien/200508/dq200508a-eng.htm
+# page: 2020-06-05 -> daily-quotidien/200605/dq200605a-eng.htm
+# page: 2020-07-10 -> daily-quotidien/200710/dq200710a-eng.htm
+# page: 2020-08-07 -> daily-quotidien/200807/dq200807a-eng.htm
+# page: 2020-09-04 -> daily-quotidien/200904/dq200904a-eng.htm
+# page: 2020-10-09 -> daily-quotidien/201009/dq201009a-cansim-eng.htm
+# page: 2020-11-06 -> daily-quotidien/201106/dq201106a-eng.htm
+# page: 2020-12-04 -> daily-quotidien/201204/dq201204a-eng.htm
+Labour Force Survey | December 2019 | 2020-01-10 | 08:30
+Labour Force Survey | January 2020 | 2020-02-07 | 08:30
+Labour Force Survey | February 2020 | 2020-03-06 | 08:30
+Labour Force Survey | March 2020 | 2020-04-09 | 08:30
+Labour Force Survey | April 2020 | 2020-05-08 | 08:30
+Labour Force Survey | May 2020 | 2020-06-05 | 08:30
+Labour Force Survey | June 2020 | 2020-07-10 | 08:30
+Labour Force Survey | July 2020 | 2020-08-07 | 08:30
+Labour Force Survey | August 2020 | 2020-09-04 | 08:30
+Labour Force Survey | September 2020 | 2020-10-09 | 08:30
+Labour Force Survey | October 2020 | 2020-11-06 | 08:30
+Labour Force Survey | November 2020 | 2020-12-04 | 08:30

@@ -1,0 +1,36 @@
+# source: https://www150.statcan.gc.ca/n1/daily-quotidien/ (The Daily, one page per release; searched 2026-09-15)
+# columns: release name | reference month | release date (ISO yyyy-mm-dd) | release time (Eastern, HH:MM 24h)
+# time: 07:00 Eastern through the 2012-03-09 release, 08:30 Eastern from
+#      2012-04-05 on.  Note to users, Labour Force Survey Daily of 2011-12-02
+#      (daily-quotidien/111202/dq111202a-eng.htm): "Statistics Canada is moving
+#      to one release time, 8:30 a.m., for all data releases in The Daily.  This
+#      will mean a change in the release time for the Labour Force Survey, which
+#      is currently 7:00 a.m.  This change will be implemented with the release
+#      of LFS data on April 5, 2012."  Before that the LFS carried its own
+#      07:00 embargo ("Not for release before 7 A.M." on the Labour Force
+#      Information covers, 71-001-X) while the rest of The Daily went at 08:30.
+# page: each row's date is the Daily page named after it
+# page: 2025-01-10 -> daily-quotidien/250110/dq250110a-eng.htm
+# page: 2025-02-07 -> daily-quotidien/250207/dq250207a-eng.htm
+# page: 2025-03-07 -> daily-quotidien/250307/dq250307a-eng.htm
+# page: 2025-04-04 -> daily-quotidien/250404/dq250404a-eng.htm
+# page: 2025-05-09 -> daily-quotidien/250509/dq250509a-eng.htm
+# page: 2025-06-06 -> daily-quotidien/250606/dq250606a-eng.htm
+# page: 2025-07-11 -> daily-quotidien/250711/dq250711a-eng.htm
+# page: 2025-08-08 -> daily-quotidien/250808/dq250808a-eng.htm
+# page: 2025-09-05 -> daily-quotidien/250905/dq250905a-info-eng.htm
+# page: 2025-10-10 -> daily-quotidien/251010/dq251010a-eng.htm
+# page: 2025-11-07 -> daily-quotidien/251107/dq251107a-eng.htm
+# page: 2025-12-05 -> daily-quotidien/251205/dq251205a-eng.htm
+Labour Force Survey | December 2024 | 2025-01-10 | 08:30
+Labour Force Survey | January 2025 | 2025-02-07 | 08:30
+Labour Force Survey | February 2025 | 2025-03-07 | 08:30
+Labour Force Survey | March 2025 | 2025-04-04 | 08:30
+Labour Force Survey | April 2025 | 2025-05-09 | 08:30
+Labour Force Survey | May 2025 | 2025-06-06 | 08:30
+Labour Force Survey | June 2025 | 2025-07-11 | 08:30
+Labour Force Survey | July 2025 | 2025-08-08 | 08:30
+Labour Force Survey | August 2025 | 2025-09-05 | 08:30
+Labour Force Survey | September 2025 | 2025-10-10 | 08:30
+Labour Force Survey | October 2025 | 2025-11-07 | 08:30
+Labour Force Survey | November 2025 | 2025-12-05 | 08:30

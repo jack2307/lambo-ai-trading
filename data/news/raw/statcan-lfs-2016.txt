@@ -1,0 +1,36 @@
+# source: https://www150.statcan.gc.ca/n1/daily-quotidien/ (The Daily, one page per release; searched 2026-09-15)
+# columns: release name | reference month | release date (ISO yyyy-mm-dd) | release time (Eastern, HH:MM 24h)
+# time: 07:00 Eastern through the 2012-03-09 release, 08:30 Eastern from
+#      2012-04-05 on.  Note to users, Labour Force Survey Daily of 2011-12-02
+#      (daily-quotidien/111202/dq111202a-eng.htm): "Statistics Canada is moving
+#      to one release time, 8:30 a.m., for all data releases in The Daily.  This
+#      will mean a change in the release time for the Labour Force Survey, which
+#      is currently 7:00 a.m.  This change will be implemented with the release
+#      of LFS data on April 5, 2012."  Before that the LFS carried its own
+#      07:00 embargo ("Not for release before 7 A.M." on the Labour Force
+#      Information covers, 71-001-X) while the rest of The Daily went at 08:30.
+# page: each row's date is the Daily page named after it
+# page: 2016-01-08 -> daily-quotidien/160108/dq160108a-eng.htm
+# page: 2016-02-05 -> daily-quotidien/160205/dq160205a-eng.htm
+# page: 2016-03-11 -> daily-quotidien/160311/dq160311a-eng.htm
+# page: 2016-04-08 -> daily-quotidien/160408/dq160408a-eng.htm
+# page: 2016-05-06 -> daily-quotidien/160506/dq160506a-eng.htm
+# page: 2016-06-10 -> daily-quotidien/160610/dq160610a-eng.htm
+# page: 2016-07-08 -> daily-quotidien/160708/dq160708a-cansim-eng.htm
+# page: 2016-08-05 -> daily-quotidien/160805/dq160805a-eng.htm
+# page: 2016-09-09 -> daily-quotidien/160909/dq160909a-eng.htm
+# page: 2016-10-07 -> daily-quotidien/161007/dq161007a-eng.htm
+# page: 2016-11-04 -> daily-quotidien/161104/t001a-eng.htm
+# page: 2016-12-02 -> daily-quotidien/161202/dq161202a-eng.htm
+Labour Force Survey | December 2015 | 2016-01-08 | 08:30
+Labour Force Survey | January 2016 | 2016-02-05 | 08:30
+Labour Force Survey | February 2016 | 2016-03-11 | 08:30
+Labour Force Survey | March 2016 | 2016-04-08 | 08:30
+Labour Force Survey | April 2016 | 2016-05-06 | 08:30
+Labour Force Survey | May 2016 | 2016-06-10 | 08:30
+Labour Force Survey | June 2016 | 2016-07-08 | 08:30
+Labour Force Survey | July 2016 | 2016-08-05 | 08:30
+Labour Force Survey | August 2016 | 2016-09-09 | 08:30
+Labour Force Survey | September 2016 | 2016-10-07 | 08:30
+Labour Force Survey | October 2016 | 2016-11-04 | 08:30
+Labour Force Survey | November 2016 | 2016-12-02 | 08:30

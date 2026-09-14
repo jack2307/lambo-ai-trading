@@ -1,0 +1,30 @@
+# source: https://www.bea.gov/news/archive?title=Personal+Income+and+Outlays&field_related_product_target_id=All&created_1=All (curl 2026-09-15) -- the release list
+# source: each release's own BEA page, quoted below per row; the date and time are that page's
+#         "EMBARGOED UNTIL RELEASE AT <time> <TZ>, <weekday>, <date>" header (curl 2026-09-15)
+# cross-checked against the previous release's "Next release: ..." line and, for every non-08:30
+#         release, against the release PDF/TXT itself
+# columns: release name | reference month | release date (ISO yyyy-mm-dd) | release time (Eastern, HH:MM 24h)
+# 2015-02-02 -> https://www.bea.gov/news/2015/personal-income-and-outlays-december-2014
+Personal Income and Outlays | December 2014 | 2015-02-02 | 08:30
+# 2015-03-02 -> https://www.bea.gov/news/2015/personal-income-and-outlays-january-2015
+Personal Income and Outlays | January 2015 | 2015-03-02 | 08:30
+# 2015-03-30 -> https://www.bea.gov/news/2015/personal-income-and-outlays-february-2015
+Personal Income and Outlays | February 2015 | 2015-03-30 | 08:30
+# 2015-04-30 -> https://www.bea.gov/news/2015/personal-income-and-outlays-march-2015
+Personal Income and Outlays | March 2015 | 2015-04-30 | 08:30
+# 2015-06-01 -> https://www.bea.gov/news/2015/personal-income-and-outlays-april-2015
+Personal Income and Outlays | April 2015 | 2015-06-01 | 08:30
+# 2015-06-25 -> https://www.bea.gov/news/2015/personal-income-and-outlays-may-2015
+Personal Income and Outlays | May 2015 | 2015-06-25 | 08:30
+# 2015-08-03 -> https://www.bea.gov/news/2015/personal-income-and-outlays-june-2015-includes-historical-revisions
+Personal Income and Outlays | June 2015 | 2015-08-03 | 08:30
+# 2015-08-28 -> https://www.bea.gov/news/2015/personal-income-and-outlays-july-2015
+Personal Income and Outlays | July 2015 | 2015-08-28 | 08:30
+# 2015-09-28 -> https://www.bea.gov/news/2015/personal-income-and-outlays-august-2015
+Personal Income and Outlays | August 2015 | 2015-09-28 | 08:30
+# 2015-10-30 -> https://www.bea.gov/news/2015/personal-income-and-outlays-september-2015
+Personal Income and Outlays | September 2015 | 2015-10-30 | 08:30
+# 2015-11-25 -> https://www.bea.gov/news/2015/personal-income-and-outlays-october-2015
+Personal Income and Outlays | October 2015 | 2015-11-25 | 08:30
+# 2015-12-23 -> https://www.bea.gov/news/2015/personal-income-and-outlays-november-2015
+Personal Income and Outlays | November 2015 | 2015-12-23 | 08:30

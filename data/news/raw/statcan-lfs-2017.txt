@@ -1,0 +1,36 @@
+# source: https://www150.statcan.gc.ca/n1/daily-quotidien/ (The Daily, one page per release; searched 2026-09-15)
+# columns: release name | reference month | release date (ISO yyyy-mm-dd) | release time (Eastern, HH:MM 24h)
+# time: 07:00 Eastern through the 2012-03-09 release, 08:30 Eastern from
+#      2012-04-05 on.  Note to users, Labour Force Survey Daily of 2011-12-02
+#      (daily-quotidien/111202/dq111202a-eng.htm): "Statistics Canada is moving
+#      to one release time, 8:30 a.m., for all data releases in The Daily.  This
+#      will mean a change in the release time for the Labour Force Survey, which
+#      is currently 7:00 a.m.  This change will be implemented with the release
+#      of LFS data on April 5, 2012."  Before that the LFS carried its own
+#      07:00 embargo ("Not for release before 7 A.M." on the Labour Force
+#      Information covers, 71-001-X) while the rest of The Daily went at 08:30.
+# page: each row's date is the Daily page named after it
+# page: 2017-01-06 -> daily-quotidien/170106/dq170106a-eng.htm
+# page: 2017-02-10 -> daily-quotidien/170210/dq170210a-eng.htm
+# page: 2017-03-10 -> daily-quotidien/170310/dq170310a-eng.htm
+# page: 2017-04-07 -> daily-quotidien/170407/dq170407a-eng.htm
+# page: 2017-05-05 -> daily-quotidien/170505/dq170505a-eng.htm
+# page: 2017-06-09 -> daily-quotidien/170609/dq170609a-eng.htm
+# page: 2017-07-07 -> daily-quotidien/170707/dq170707a-eng.htm
+# page: 2017-08-04 -> daily-quotidien/170804/dq170804a-eng.htm
+# page: 2017-09-08 -> daily-quotidien/170908/dq170908a-eng.htm
+# page: 2017-10-06 -> daily-quotidien/171006/dq171006a-eng.htm
+# page: 2017-11-03 -> daily-quotidien/171103/dq171103a-eng.htm
+# page: 2017-12-01 -> daily-quotidien/171201/dq171201a-eng.htm
+Labour Force Survey | December 2016 | 2017-01-06 | 08:30
+Labour Force Survey | January 2017 | 2017-02-10 | 08:30
+Labour Force Survey | February 2017 | 2017-03-10 | 08:30
+Labour Force Survey | March 2017 | 2017-04-07 | 08:30
+Labour Force Survey | April 2017 | 2017-05-05 | 08:30
+Labour Force Survey | May 2017 | 2017-06-09 | 08:30
+Labour Force Survey | June 2017 | 2017-07-07 | 08:30
+Labour Force Survey | July 2017 | 2017-08-04 | 08:30
+Labour Force Survey | August 2017 | 2017-09-08 | 08:30
+Labour Force Survey | September 2017 | 2017-10-06 | 08:30
+Labour Force Survey | October 2017 | 2017-11-03 | 08:30
+Labour Force Survey | November 2017 | 2017-12-01 | 08:30

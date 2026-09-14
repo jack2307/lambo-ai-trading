@@ -1,0 +1,31 @@
+# source: https://www.bea.gov/news/archive?title=Personal+Income+and+Outlays&field_related_product_target_id=All&created_1=All (curl 2026-09-15) -- the release list
+# source: each release's own BEA page, quoted below per row; the date and time are that page's
+#         "EMBARGOED UNTIL RELEASE AT <time> <TZ>, <weekday>, <date>" header (curl 2026-09-15)
+# cross-checked against the previous release's "Next release: ..." line and, for every non-08:30
+#         release, against the release PDF/TXT itself
+# columns: release name | reference month | release date (ISO yyyy-mm-dd) | release time (Eastern, HH:MM 24h)
+# 2018-01-29 -> https://www.bea.gov/news/2018/personal-income-and-outlays-december-2017
+Personal Income and Outlays | December 2017 | 2018-01-29 | 08:30
+# 2018-03-01 -> https://www.bea.gov/news/2018/personal-income-and-outlays-january-2018
+Personal Income and Outlays | January 2018 | 2018-03-01 | 08:30
+# 2018-03-29 -> https://www.bea.gov/news/2018/personal-income-and-outlays-february-2018
+Personal Income and Outlays | February 2018 | 2018-03-29 | 08:30
+# 2018-04-30 -> https://www.bea.gov/news/2018/personal-income-and-outlays-march-2018
+Personal Income and Outlays | March 2018 | 2018-04-30 | 08:30
+# 2018-05-31 -> https://www.bea.gov/news/2018/personal-income-and-outlays-april-2018
+Personal Income and Outlays | April 2018 | 2018-05-31 | 08:30
+# 2018-06-29 -> https://www.bea.gov/news/2018/personal-income-and-outlays-may-2018
+Personal Income and Outlays | May 2018 | 2018-06-29 | 08:30
+# 2018-07-31 -> https://www.bea.gov/news/2018/personal-income-and-outlays-june-2018
+Personal Income and Outlays | June 2018 | 2018-07-31 | 08:30
+# 2018-08-30 -> https://www.bea.gov/news/2018/personal-income-and-outlays-july-2018
+Personal Income and Outlays | July 2018 | 2018-08-30 | 08:30
+# 2018-09-28 -> https://www.bea.gov/news/2018/personal-income-and-outlays-august-2018
+Personal Income and Outlays | August 2018 | 2018-09-28 | 08:30
+# 2018-10-29 -> https://www.bea.gov/news/2018/personal-income-and-outlays-september-2018
+Personal Income and Outlays | September 2018 | 2018-10-29 | 08:30
+# 2018-11-29 -> https://www.bea.gov/news/2018/personal-income-and-outlays-october-2018
+Personal Income and Outlays | October 2018 | 2018-11-29 | 08:30
+# 2018-12-21: released at 10:00, not 08:30: BEA shares the day with its own GDP release, which took the 08:30 slot (archive row for that date confirmed at 08:30)
+# 2018-12-21 -> https://www.bea.gov/news/2018/personal-income-and-outlays-november-2018
+Personal Income and Outlays | November 2018 | 2018-12-21 | 10:00
