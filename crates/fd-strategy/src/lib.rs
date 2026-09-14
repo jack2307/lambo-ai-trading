@@ -22,6 +22,7 @@ pub mod screen;
 pub mod session_hold;
 pub mod trend_pullback;
 pub mod tsmom;
+pub mod volman_box;
 pub mod volume_thrust;
 pub mod vwap_fade;
 

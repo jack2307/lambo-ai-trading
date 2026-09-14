@@ -69,6 +69,7 @@ pub fn register_all(registry: &mut Registry) {
     registry.register(Box::new(crate::screen::Rsi2Pullback));
     registry.register(Box::new(crate::screen::SqueezeBreak));
     registry.register(Box::new(crate::screen::StochReversal));
+    registry.register(Box::new(crate::volman_box::VolmanBox));
 }
 
 /* ---------------- classic technical baselines ---------------- */
