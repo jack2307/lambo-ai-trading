@@ -1,0 +1,30 @@
+1. the declared conditions, with the seed stability condition 1 needs
+
+   market        n       mean       t      up   sign p  percentile over 5 seeds
+   xauduka     186   -1.20497   -3.66   33.9%   0.0000   18.0   17.2   17.9   16.8   16.4
+   xagduka     184   -0.03859   -4.41   29.9%   0.0000    1.0    0.8    0.5    0.7    1.1
+   eurduka     189   -0.00012   -1.28   46.0%   0.3085   10.9    9.0   10.1   10.7   10.0
+
+2. the confound-free cell — releases on a second Friday (days 8-14),
+   against quiet Fridays on the same days. DECLARED AS DIRECTION ONLY.
+
+   xauduka    release n  25  mean  -1.73444  median  -1.39500  up  20.0%  sign p 0.0041
+              control n 143  mean  +0.38408  median  +0.19000  up  53.1%
+   xagduka    release n  24  mean  -0.01637  median  -0.02750  up  29.2%  sign p 0.0639
+              control n 144  mean  +0.00672  median  +0.00300  up  50.7%
+   eurduka    release n  25  mean  -0.00002  median  -0.00024  up  48.0%  sign p 1.0000
+              control n 145  mean  -0.00011  median  -0.00002  up  48.3%
+
+3. how independent is silver? the hour's move, gold against silver
+
+   on the 183 release hours: correlation +0.454
+   same sign on 68.9% of them
+   on all 802 Friday hours:  correlation +0.815, same sign 77.2%
+
+   silver's release hours where GOLD was up: n 62, of those silver up 30
+   silver's release hours where GOLD was down: n 121, of those silver up 25
+
+4. the euro in its own units (the run printed 'pip' but measured price)
+
+   mean -1.198 pips  median -1.100 pips  up 46.0%  t -1.28
+   quiet Fridays: mean -1.396 pips  median -1.200 pips  up 44.6%

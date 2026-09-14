@@ -1,0 +1,16 @@
+########## xagduka ##########
+xagduka 15m 2010-06-01 -> 2026-05-31: 374180 bars, 663 high-impact events
+a move is open-to-open; R is the trailing 20-day range
+
+US Employment Situation (NFP)  -60..0 min  184 of 191 events with bars at both ends
+  actual mean -0.039 $  t -4.41  up 29.9%
+  1000 date permutations (same weekday, same minute): mean -0.012 $
+  actual sits at the 4.8th percentile of them
+########## eurduka ##########
+eurduka 15m 2010-06-01 -> 2026-05-31: 398208 bars, 663 high-impact events
+a move is open-to-open; R is the trailing 20-day range
+
+US Employment Situation (NFP)  -60..0 min  189 of 191 events with bars at both ends
+  actual mean -0.000 pip  t -1.28  up 46.0%
+  1000 date permutations (same weekday, same minute): mean -0.000 pip
+  actual sits at the 52.0th percentile of them

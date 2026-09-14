@@ -1,0 +1,15 @@
+xauduka seed 1:   actual sits at the 1.2th percentile of them
+xauduka seed 7:   actual sits at the 1.3th percentile of them
+xauduka seed 13:   actual sits at the 1.3th percentile of them
+xauduka seed 42:   actual sits at the 0.9th percentile of them
+xauduka seed 2026:   actual sits at the 1.5th percentile of them
+xagduka seed 1:   actual sits at the 6.3th percentile of them
+xagduka seed 7:   actual sits at the 4.8th percentile of them
+xagduka seed 13:   actual sits at the 5.2th percentile of them
+xagduka seed 42:   actual sits at the 5.3th percentile of them
+xagduka seed 2026:   actual sits at the 5.5th percentile of them
+eurduka seed 1:   actual sits at the 57.8th percentile of them
+eurduka seed 7:   actual sits at the 52.0th percentile of them
+eurduka seed 13:   actual sits at the 54.4th percentile of them
+eurduka seed 42:   actual sits at the 55.9th percentile of them
+eurduka seed 2026:   actual sits at the 54.6th percentile of them
