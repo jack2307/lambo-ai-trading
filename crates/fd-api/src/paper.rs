@@ -46,7 +46,7 @@ use fd_strategy::registry::{BarContext, Exits, Intent, Params, Registry, Strateg
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
-use crate::dto::TradeDto;
+use crate::dto::{Point, TradeDto};
 use crate::error::ApiError;
 use crate::state::{AppState, TIMEFRAMES};
 
@@ -541,6 +541,32 @@ pub struct RunDetail {
     /// `[time, open, high, low, close]` for the last `bars` of the run's
     /// window, oldest first.
     pub bars: Vec<(i64, f64, f64, f64, f64)>,
+    /// The indicators the strategy declared, in the order it declared them.
+    pub indicators: Vec<IndicatorDto>,
+    /// Qualified key to its points over the returned `bars`, the time in
+    /// seconds the way the chart wants it. A non-finite value is left out
+    /// rather than sent as a null, so a warm-up is a gap in the line.
+    pub series: BTreeMap<String, Vec<Point>>,
+}
+
+/// One indicator the run's strategy declared, as the chart needs it.
+///
+/// `outputs` are the qualified keys of its series in [`RunDetail::series`] —
+/// one for a single-output indicator (`ema_21.ema`), several for one that
+/// draws a band or a histogram (`macd_12_26_9.macd`, `.signal`, `.histogram`).
+#[derive(Debug, Clone, Serialize)]
+pub struct IndicatorDto {
+    /// The indicator's id, e.g. `ema`.
+    pub id: String,
+    /// The instance key its outputs are qualified by, e.g. `ema_21`.
+    pub key: String,
+    /// The values the strategy asked for, in the definition's own order.
+    pub params: BTreeMap<String, f64>,
+    /// Qualified series keys, in the order the definition declares them.
+    pub outputs: Vec<String>,
+    /// `true` when the definition says the values belong over the candles;
+    /// `false` for an oscillator, which wants its own pane.
+    pub overlay: bool,
 }
 
 /// Closed trades a detail carries at most.
@@ -621,6 +647,87 @@ fn status_of(data: &Path, run: &PaperRun, rules: &TradingRules, guards: Option<&
 /// The rules and guards a run steps with, from the config the process
 /// loaded — not persisted with the run, so a config change applies at the
 /// next bar, and the status reflects it.
+/// The strategy's indicator series over `bars`, for the Desk's chart.
+///
+/// Computed here rather than kept from the step: the detail returns a slice
+/// of the window, and an indicator read on that slice is what should be drawn
+/// over it. Whether a series sits on the price or in its own pane comes from
+/// the indicator's own definition (`Pane`), never from a guess about its
+/// magnitude.
+///
+/// A strategy whose series cannot be built yields no overlays rather than an
+/// error: a chart without lines beats no detail at all, and a bad parameter
+/// was already refused at `start`.
+fn overlays(
+    registry: &Registry,
+    config: &PaperConfig,
+    rules: &TradingRules,
+    bars: &[Bar],
+) -> (Vec<IndicatorDto>, BTreeMap<String, Vec<Point>>) {
+    let mut drawn = Vec::new();
+    let mut series: BTreeMap<String, Vec<Point>> = BTreeMap::new();
+    if bars.is_empty() {
+        return (drawn, series);
+    }
+    let Ok(strategy) = registry.get(&config.strategy) else {
+        return (drawn, series);
+    };
+    let mut params = strategy.default_params();
+    for (name, value) in &config.params {
+        if params.contains(name) {
+            params.set(name, *value);
+        }
+    }
+    let specs = strategy.indicators(&params);
+    let Ok(mut computed) = compute_indicators(bars, &specs) else {
+        return (drawn, series);
+    };
+    // The sizing ATR is not one of the strategy's own series, but it is the
+    // unit its stop is written in, so the chart may as well be able to draw it.
+    ensure_fallback_atr(bars, &params, rules, &mut computed);
+
+    for spec in &specs {
+        let Some(def) = fd_indicators::definition(&spec.id) else { continue };
+        // The key is built from the definition's parameters in the definition's
+        // order, with the spec's overrides applied — the same way the engine
+        // built it when the strategy read the series.
+        let values: Vec<f64> =
+            def.params.iter().map(|(name, default)| spec.params.get(*name).copied().unwrap_or(*default)).collect();
+        let key = fd_indicators::indicator_key(def, &values);
+        let mut outputs = Vec::new();
+        for output in def.outputs {
+            let qualified = format!("{key}.{output}");
+            let Some(points) = computed.get(&qualified) else { continue };
+            let drawn_points: Vec<Point> = bars
+                .iter()
+                .zip(points.iter())
+                .filter(|(_, value)| value.is_finite())
+                .map(|(bar, value)| Point { time: bar.time / 1000, value: *value })
+                .collect();
+            if drawn_points.is_empty() {
+                continue;
+            }
+            series.insert(qualified.clone(), drawn_points);
+            outputs.push(qualified);
+        }
+        if outputs.is_empty() {
+            continue;
+        }
+        drawn.push(IndicatorDto {
+            id: spec.id.clone(),
+            key,
+            params: def
+                .params
+                .iter()
+                .map(|(name, default)| ((*name).to_string(), spec.params.get(*name).copied().unwrap_or(*default)))
+                .collect(),
+            outputs,
+            overlay: def.pane == fd_indicators::Pane::Overlay,
+        });
+    }
+    (drawn, series)
+}
+
 fn rules_and_guards(state: &AppState, config: &PaperConfig) -> Result<(TradingRules, Option<Guards>), ApiError> {
     let rules = state.trading_rules(&config.market)?;
     let guards = config
@@ -930,7 +1037,9 @@ pub async fn detail(
 
     let wanted = query.bars.unwrap_or(DEFAULT_DETAIL_BARS).min(run.config.window.max(1));
     let skip = run.bars.len().saturating_sub(wanted);
-    let bars = run.bars[skip..].iter().map(|b| (b.time, b.open, b.high, b.low, b.close)).collect();
+    let window = &run.bars[skip..];
+    let bars = window.iter().map(|b| (b.time, b.open, b.high, b.low, b.close)).collect();
+    let (indicators, series) = overlays(&state.registry, &run.config, &rules, window);
 
-    Ok(Json(RunDetail { run: status, equity_curve, fills, events, bars }))
+    Ok(Json(RunDetail { run: status, equity_curve, fills, events, bars, indicators, series }))
 }
