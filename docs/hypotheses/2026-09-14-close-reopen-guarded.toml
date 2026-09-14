@@ -1,0 +1,30 @@
+# Context batch for 2026-09-13-close-reopen-drift (closed) and the paper phase:
+# the weekday break row and the Friday leg with the configured guards ON —
+# the first guarded receipts in the repository. Decides nothing about the
+# closed record; it tells the risk role how often each guard acts on a
+# self-managed clock hold and what the open-loss cap, the weekend flat and
+# the news flat do to its numbers.
+[run]
+in_sample = "xauduka:15m"
+in_sample_from = "2018-06-16"
+in_sample_to = "2025-04-10"
+out_of_sample = "xauusd:15m"
+out_of_sample_from = "2025-04-11"
+seeds = 300
+direction_samples = 1000
+fixed = true
+guards = true
+
+[[hypothesis]]
+label = "close/1630-1815"
+base = "session-hold"
+filters = ["weekdays:MoTuWeTh", "hours:1615-1620"]
+overrides = { from = 1615, to = 1815, side = 1, riskDailyRanges = 1, rangeDays = 20 }
+why = "the closed weekday break row, guards on: the open-loss cap at 2R and the news flat are the ones that can act on a two-hour hold"
+
+[[hypothesis]]
+label = "close/fri-1630-1815"
+base = "session-hold"
+filters = ["weekdays:Fr", "hours:1615-1620"]
+overrides = { from = 1615, to = 1815, side = 1, riskDailyRanges = 1, rangeDays = 20 }
+why = "the closed Friday leg, guards on: the weekend flat at 16:55 New York should close every one of these holds on Friday at the 16:45 bar's close — the row should become a fifteen-minute hold, which is the guard doing its job"
