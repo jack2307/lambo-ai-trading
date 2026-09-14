@@ -1,0 +1,22 @@
+$ E:\rust\flowdesk\target\release\search.exe --market=xauduka --interval=15m --mode=hypotheses --batch-file=E:\rust\flowdesk\docs\hypotheses\2026-09-14-intraday-momentum.toml --seeds=300 --from=2010-06-01 --to=2018-06-15
+
+bounds:   --from=2010-06-01 --to=2018-06-15 kept 191809 of 378749 bars
+bars:     191809 from 2010-06-01 00:00 to 2018-06-14 23:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+== hypotheses `E:\rust\flowdesk\docs\hypotheses\2026-09-14-intraday-momentum.toml`: 3 declared, walk-forward (4 folds), each against 300 matched null runs ==
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+im/first     intraday-momentum    1624   0.603  -0.016    0.585    0.657        0   66%  fail: profit factor 0.603 < 1.2; expectancy -0.016R < 0.05R
+                                MoTuWeThFr + NY 15:15-15:20  — the test: the first half hour of New York (08:30-09:00) sets the side of the last hour before the close (15:30-16:45)
+im/day       intraday-momentum    1624   0.540  -0.020    0.585    0.657        0   11%  fail: profit factor 0.540 < 1.2; expectancy -0.020R < 0.05R
+                                MoTuWeThFr + NY 15:15-15:20  — the paper's second predictor: the day so far (08:30-15:00) sets the side of the same hold
+im/mid       intraday-momentum    1623   0.528  -0.020    0.585    0.657        0    5%  fail: profit factor 0.528 < 1.2; expectancy -0.020R < 0.05R
+                                MoTuWeThFr + NY 15:15-15:20  — the contrast: a half hour in the middle of the day, which the paper says predicts nothing; if it passes, the effect is a drift, not intraday momentum
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+

@@ -1,7 +1,7 @@
 # 2026-09-14-intraday-momentum: gold's first half hour of New York predicts its last hour before the close
 
 **Registered:** (commit time is authoritative) — before any run of this batch
-**Status:** in-sample run — every row fails the primary; closed, under review
+**Status:** decided — closed; `docs/decisions/2026-09-14-intraday-momentum.md` (the in-sample table below is from the first run, with the late-exiting null; the record has the corrected one — same verdicts)
 **Batch file:** `docs/hypotheses/2026-09-14-intraday-momentum.toml`
 
 ## Where this comes from

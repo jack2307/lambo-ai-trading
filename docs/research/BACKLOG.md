@@ -34,6 +34,16 @@ Closed ideas move to the bottom with a pointer to their decision record, so
   reopen** (data-integrity, `2026-09-13-tsmom-silver`): `weekdays` does not
   stop `tsmom` from acting on a sign flip at Sunday 18:00 as an exit. Decide
   whether an exit gate is wanted and say so in the filter's doc either way.
+- [ ] **Intraday reversal on gold, as a sign claim only** (adversary,
+  `2026-09-14-intraday-momentum`): the day-so-far sign (08:30 → 15:00)
+  predicted the opposite of the last hour (15:30 → 16:45) on 2010–18 at the
+  1st percentile of its own sides — one extreme of six two-sided draws, 64%
+  of it 2011, PF 0.765 where it was seen. Register the mirror (side = −sign,
+  every parameter frozen) on gold 2018-06 → 2026-05 and silver 2010–2026;
+  falsifier ≥ 95th of the direction null on both windows or ≥ 99th on one;
+  state before the run that the PF gate is unreachable at $0.28 on a $1.27
+  window, so the outcome is "direction exists / does not", never a paper
+  run. Low priority.
 - [ ] **Trend pullback on BTC with a time exit**: the side beat its mirror
   (99th) while the swing-stop structure lost 0.38R a trade; a re-registration
   needs an exit with a reason, not a wider stop. `2026-09-13-trend-pullback.md`.
@@ -93,6 +103,10 @@ Closed ideas move to the bottom with a pointer to their decision record, so
 
 ## Closed
 
+- [x] Intraday momentum on gold (Gao–Han–Li–Zhou) → the first half hour's
+  sign is a coin flip for the last hour (40th), the window loses the spread
+  (a coin flip earns 0.62), the day-so-far sign reverses at the 1st on the
+  window that produced it. Closed. `2026-09-14-intraday-momentum.md`.
 - [x] TSMOM on EURUSD, the adversary's terms → gate and sized null pass on
   2010–18 (PF 1.81, 100th), the row's own sides permuted 85th; one 356-day
   trade is 71% of net, PF 0.62 without the top five. Three assets, one
