@@ -35,6 +35,9 @@ import pyarrow.parquet as pq
 
 ROOT = Path(__file__).resolve().parents[1]
 
+#: Releases are announced on a New York clock; every window here follows it.
+NEW_YORK = "America/New_York"
+
 # Minutes relative to the release; the label is what the record will quote.
 WINDOWS: list[tuple[str, int, int]] = [
     ("day before", -1440, 0),
@@ -81,8 +84,22 @@ def load_events(lo: pd.Timestamp, hi: pd.Timestamp) -> pd.DataFrame:
     return events[events["impact"] == 3].sort_values("time_utc").reset_index(drop=True)
 
 
+#: How far past the minute asked for a bar may still be that minute's bar.
+#: One bar: the release is at 08:30 and the 15-minute bar that opens at 08:30
+#: is the one a reader means. Anything further away is a shut market, and the
+#: window has no observation — data-integrity, 2026-09-14, after four Good
+#: Fridays were scored as moves of exactly 0.0 because both ends of the window
+#: resolved to the same bar days later.
+TOLERANCE_NS = 15 * 60 * 1_000_000_000
+
+
 def open_at(times: np.ndarray, opens: np.ndarray, when_ns: int) -> float:
-    """The open of the first bar at or after `when_ns`; NaN past the end.
+    """The open of the first bar at or after `when_ns`, or NaN.
+
+    NaN when the series ends first **or** when the nearest bar is more than
+    [`TOLERANCE_NS`] past the minute asked for: on a closed market the next bar
+    can be days away, and using it silently turns a missing observation into a
+    real-looking one.
 
     Times are integer nanoseconds on both sides: numpy's `searchsorted` has no
     notion of a timezone and pandas refuses to compare an aware stamp with a
@@ -92,7 +109,9 @@ def open_at(times: np.ndarray, opens: np.ndarray, when_ns: int) -> float:
     a trade could have had.
     """
     i = int(np.searchsorted(times, when_ns, side="left"))
-    return float(opens[i]) if i < len(opens) else float("nan")
+    if i >= len(opens) or times[i] - when_ns > TOLERANCE_NS:
+        return float("nan")
+    return float(opens[i])
 
 
 def permutation(
@@ -115,17 +134,25 @@ def permutation(
     Returns (percentile of the actual mean, the null's own mean).
     """
     stamps = pd.DatetimeIndex(when)
-    minute = stamps[0].hour * 60 + stamps[0].minute
-    weekday = stamps[0].weekday()
+    # The release is a New York time, so the pool has to be built there. Taking
+    # the minute off a UTC stamp put every candidate at one fixed UTC minute,
+    # which is the right New York hour for half the year and an hour early for
+    # the other half; a third of the null then measured a quieter hour than the
+    # one it controlled (data-integrity and the adversary, 2026-09-14).
+    local = stamps.tz_convert(NEW_YORK)
+    minute = int(local[0].hour) * 60 + int(local[0].minute)
+    weekday = int(local[0].weekday())
     # Every candidate day in the bars' span with that weekday, stamped at the
-    # release minute; the real release days are left in, because removing them
-    # would make the null a sample of "days that were not announcements" and
-    # bias it by exactly the effect being measured.
-    first = pd.Timestamp(times[0], tz="UTC").normalize()
-    last = pd.Timestamp(times[-1], tz="UTC").normalize()
-    days = pd.date_range(first, last, freq="D", tz="UTC")
+    # release's New York minute; the real release days are left in, because
+    # removing them would make the null a sample of "days that were not
+    # announcements" and bias it by exactly the effect being measured.
+    first = pd.Timestamp(times[0], tz="UTC").tz_convert(NEW_YORK).normalize()
+    last = pd.Timestamp(times[-1], tz="UTC").tz_convert(NEW_YORK).normalize()
+    days = pd.date_range(first, last, freq="D", tz=NEW_YORK)
     days = days[days.weekday == weekday]
-    candidates = days + pd.Timedelta(minutes=minute)
+    # Adding the minutes in New York and converting keeps the wall clock fixed
+    # across both seasons, which is the whole point of the fix.
+    candidates = (days + pd.Timedelta(minutes=minute)).tz_convert("UTC")
 
     def mean_move(points: pd.DatetimeIndex) -> float:
         moves = []
@@ -200,7 +227,7 @@ def main() -> int:
         ])
         moves = moves[np.isfinite(moves)]
         t_stat = moves.mean() / moves.std(ddof=1) * np.sqrt(len(moves))
-        print(f"{name}  {a}..{b} min  {len(moves)} events")
+        print(f"{name}  {a}..{b} min  {len(moves)} of {len(when)} events with bars at both ends")
         print(f"  actual mean {moves.mean():+.3f} {args.unit}  t {t_stat:+.2f}  up {100 * (moves > 0).mean():.1f}%")
         print(f"  {args.draws} date permutations (same weekday, same minute): mean {null_mean:+.3f} {args.unit}")
         print(f"  actual sits at the {pct:.1f}th percentile of them")
