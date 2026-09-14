@@ -223,12 +223,35 @@ registration and it is not claimed here.
 - Nothing reopens *this* question. The control cell cannot be built from this
   calendar, and no amount of data on this feed creates quiet first Fridays
   that were never quiet.
-- The successor is registered separately: extend `data/news/events.csv` with
-  Canada's Labour Force Survey and US Personal Income/PCE release dates, then
-  ask whether the 07:30 → 08:30 hour falls before **any** 08:30 release, with
-  the statistic (the median), the control (day-of-month matched) and the
-  baseline declared before the split is read. The adversary named the same
-  experiment independently.
+- The successor was going to be *any* 08:30 release. **The first look killed
+  that and narrowed it**, and the look is filed with this record
+  (`pce-exploratory.txt`, exploratory on data already read, one cut, declared).
+  BEA's Personal Income and Outlays schedule is now collected — 199 releases,
+  each date and time taken from that release's own embargo header, 187 at
+  08:30 New York and 12 at 10:00. Ninety of them land on a Friday with no
+  employment report, which makes them the natural second release to test. They
+  do almost nothing:
+
+  ```
+  quiet Fridays, gold, 2010-06 -> 2026-05      n     mean   median     up
+  a PCE release at 08:30                      90   -0.198   -0.214   44.4%
+  no PCE release                             503   +0.090   +0.155   53.1%
+  the employment report, same feed            178   -1.286   -0.903   33.1%
+  ```
+
+  and matched on the day of the month — 161 of the 199 releases sit on days
+  22–31, where Fridays already tilt down — the release adds **−0.409 $/oz at a
+  Welch t of −0.50**, with medians of −0.24 against −0.26. Nothing.
+
+  So the hour is not about macro releases in general. What is left is the
+  narrower and better question: **is it employment news specifically?** Canada's
+  Labour Force Survey is the test that separates them — a jobs report, at the
+  same 08:30 minute, in a different country, on days that are mostly not US
+  employment days. Its schedule is being collected. The registration will
+  declare the median, a day-of-month-matched control, and — this is the part
+  the last two registrations lacked — **a test window on instruments never read
+  for any news question**: silver and the euro are on disk 2010–2026 and have
+  never been looked at for this family.
 
 ## What this does not say
 

@@ -1,0 +1,28 @@
+quiet Fridays (no US employment report), split on the BEA release
+
+group               n     mean   median      up
+PCE at 08:30       90   -0.198   -0.214   44.4%
+PCE at 10:00        4   +2.011   +1.196   75.0%
+no PCE            503   +0.090   +0.155   53.1%
+
+08:30 PCE minus no-PCE: -0.288 $/oz   Welch t -0.52
+
+for comparison, the US employment report on the same feed:
+NFP Fridays       178   -1.286   -0.903   33.1%
+
+========================================================================
+matched on the day of the month — 161 of 199 PCE releases are on days 22-31,
+and quiet Fridays on days 22-31 already read -0.432 mean / 46.6% up.
+========================================================================
+
+day of month                 with PCE 08:30                      without
+   days  1- 7   n   4   +2.274  med  -0.38  50.0% n  28   +0.728  med  -0.98  39.3%
+   days  8-14      n   1   too few           n 142   +0.258  med  +0.18  52.8%
+   days 15-21   n   3   +4.242  med  +1.01  66.7% n 170   +0.269  med  +0.44  60.6%
+   days 22-31   n  82   -0.706  med  -0.24  42.7% n 167   -0.297  med  -0.26  48.5%
+
+where the releases actually are (days 22-31): PCE minus no-PCE -0.409 $/oz  Welch t -0.50
+
+the comparison that matters, both matched on the day of the month:
+   an 08:30 PCE release adds -0.409 $/oz to a late-month Friday
+   an 08:30 employment report added -0.742 $/oz to a days-1-3 Friday (Welch t -0.45)
