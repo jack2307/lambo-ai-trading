@@ -1,7 +1,7 @@
 # 2026-09-14-intraday-momentum: gold's first half hour of New York predicts its last hour before the close
 
 **Registered:** (commit time is authoritative) — before any run of this batch
-**Status:** registered
+**Status:** in-sample run — every row fails the primary; closed, under review
 **Batch file:** `docs/hypotheses/2026-09-14-intraday-momentum.toml`
 
 ## Where this comes from
@@ -92,3 +92,25 @@ ounce is 0.6–2 bp. The units statement in the falsifier is the honest one.
 primary: 2090 weekdays with bars; 2023 carry the 08:30, 08:45, 15:15 and 16:30 New York bars
 confirmation: 2061 weekdays with bars; 1975 carry the 08:30, 08:45, 15:15 and 16:30 New York bars
 ```
+
+## In-sample (2010-06-01 → 2018-06-14, `xauduka` 15m)
+
+Fixed replay (`in-sample-fixed.txt`, 300 sized random holds of the same
+window) with the direction percentile (`direction-im-*.txt`):
+
+```
+hypothesis   trades  OOS PF  expect  null p50 null p95   pct  direction   verdict
+im/first       2022   0.606  -0.017    0.677    0.742    5%   40th       fail: profit factor 0.606 < 1.2
+im/day         2021   0.538  -0.021    0.677    0.742    0%    1st       fail: profit factor 0.538 < 1.2
+im/mid         2021   0.593  -0.018    0.677    0.742    1%   22nd       fail: profit factor 0.593 < 1.2
+```
+
+Walk-forward (`in-sample.txt`): 0.603 (9%) / 0.540 (0%) / 0.528 (0%).
+
+The first half hour's sign carries no direction for the last hour (40th
+on its own sides permuted). The day-so-far sign predicts the opposite of
+the last hour on this window — 1st percentile, p = 0.993 — which is an
+observation made after the fact, on the window that produced it, and is
+not this registration's claim; it is written down here so that if it is
+ever tested it is tested on data that has not been read. Closed. The
+confirmation is not opened.

@@ -1,0 +1,20 @@
+$ E:\rust\flowdesk\target\release\search.exe --market=xauduka --interval=15m --mode=null-dir --strategy=intraday-momentum --samples=1000 --params=firstFrom=830,firstTo=900,from=1515,to=1630,minMove=0,riskDailyRanges=1,rangeDays=20 --filters=weekdays;hours:1515-1520 --from=2010-06-01 --to=2018-06-15
+
+bounds:   --from=2010-06-01 --to=2018-06-15 kept 191809 of 378749 bars
+bars:     191809 from 2010-06-01 00:00 to 2018-06-14 23:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+  filters: MoTuWeThFr + NY 15:15-15:20
+== direction control: intraday-momentum, 2022 trades, 1000 coin-flip assignments ==
+  preset: firstFrom=830,firstTo=900,from=1515,to=1630,minMove=0,riskDailyRanges=1,rangeDays=20
+  the method's own trades — entry, exit, lots, costs — with each side a coin flip
+  profit factor of the same trades with random direction:
+    p05 0.555   p25 0.587   p50 0.619   p75 0.654   p95 0.691   max 0.749
+
+  actual: 0.606  ->  40th percentile  (p = 0.601)
+
+  Inside its own null. On this sample the direction rule has not been
+  distinguished from a coin flip, however good the profit factor looks.
+
