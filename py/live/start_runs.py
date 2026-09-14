@@ -49,7 +49,9 @@ def main() -> int:
     for run_id, market, tf, strategy, params, filters, label in RUNS:
         if only and run_id not in only:
             continue
-        payload = {"id": run_id, "market": market, "tf": tf, "strategy": strategy, "params": params, "filters": filters, "guards": True, "window": 600, "label": label}
+        # ict-sweep-mss-fvg needs 950 warm-up bars; everything else is fine at 600.
+        window = 1200 if strategy == "ict-sweep-mss-fvg" else 600
+        payload = {"id": run_id, "market": market, "tf": tf, "strategy": strategy, "params": params, "filters": filters, "guards": True, "window": window, "label": label}
         status, text = post(args.api, "/api/paper/start", payload)
         short = text[:140].replace("\n", " ")
         print(f"{run_id:18s} {status}  {short}")
