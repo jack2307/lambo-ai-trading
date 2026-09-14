@@ -292,6 +292,12 @@ pub struct MarketTradingOverride {
     pub swap_long_per_lot: f64,
     #[serde(default)]
     pub swap_short_per_lot: f64,
+    /// Calendar currencies whose scheduled releases flatten this market —
+    /// `["USD"]` for gold, `["USD", "EUR"]` for EURUSD. Empty (the default)
+    /// means every currency, which is how a Canadian rate decision came to
+    /// flatten a gold bot before this key existed.
+    #[serde(default)]
+    pub news_currencies: Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -380,6 +386,7 @@ impl Config {
                 min_lot: m.trading.min_lot,
                 swap_long_per_lot: m.trading.swap_long_per_lot,
                 swap_short_per_lot: m.trading.swap_short_per_lot,
+                news_currencies: m.trading.news_currencies.clone(),
             },
             big_trade_min_premium_usd: m.big_trades.min_premium_usd,
             cluster_floor: m.levels.cluster.floor,
@@ -610,6 +617,16 @@ min_delay_ms = 400
         assert!(btc.big_trade_min_premium_usd < gold.big_trade_min_premium_usd);
         // Clusters are measured in price units, so BTC's floor must be wider.
         assert!(btc.cluster_floor > gold.cluster_floor);
+        // The sample names no news currencies: every currency, not none.
+        assert!(gold.trading.news_currencies.is_empty());
+    }
+
+    #[test]
+    fn news_currencies_read_from_the_market_trading_table() {
+        let text = SAMPLE.replace("[markets.gold.trading]\n", "[markets.gold.trading]\nnews_currencies = [\"USD\", \"eur\"]\n");
+        let cfg = Config::from_toml(&text, "sample").expect("parses");
+        assert_eq!(cfg.market("gold").unwrap().trading.news_currencies, vec!["USD".to_string(), "eur".to_string()]);
+        assert!(cfg.market("btc").unwrap().trading.news_currencies.is_empty(), "each market has its own list");
     }
 
     #[test]

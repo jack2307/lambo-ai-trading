@@ -39,8 +39,8 @@ impl Strategy for Always {
 fn nothing_installed_means_never_in_blackout_and_a_no_op_filter() {
     assert_eq!(news::installed(), None);
     assert!(news::events().is_empty());
-    assert!(!news::in_blackout(0, 60 * 60_000, 30 * 60_000, 3));
-    assert!(!news::in_blackout(1_800_000_000_000, i64::MAX / 4, i64::MAX / 4, 1));
+    assert!(!news::in_blackout(0, 60 * 60_000, 30 * 60_000, 3, None));
+    assert!(!news::in_blackout(1_800_000_000_000, i64::MAX / 4, i64::MAX / 4, 1, Some(&["USD".to_string()])));
     assert_eq!(news::summary("data/news/events.parquet"), "news: none loaded — news: filters are no-ops");
 
     let f = Filtered { inner: &Always, filters: vec![Filter::parse("news:60-30").unwrap()] };

@@ -103,10 +103,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // hypotheses receipt so a record can quote which calendar it ran on.
     let news_line = load_news(&data);
     println!("{news_line}");
+    println!("{}", news_scope_line(&rules));
     // `--guards`: the configured risk guards on every run of every mode.
     // Printed right under the calendar so a receipt's header says whether
     // its numbers were bounded, and by what.
-    let guards = std::env::args().any(|a| a == "--guards").then(|| Guards::from_config(&config));
+    let guards = std::env::args().any(|a| a == "--guards").then(|| Guards::for_market(&config, &market)).transpose()?;
     let guards = guards.as_ref();
     println!("{}", guards_line(guards));
     println!();
@@ -188,6 +189,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         );
     }
     Ok(())
+}
+
+/// The header line that says which calendar currencies this market's
+/// `news:` filters and news guard read — `[markets.<id>.trading]
+/// news_currencies`, empty meaning every currency.
+fn news_scope_line(rules: &TradingRules) -> String {
+    if rules.news_currencies.is_empty() {
+        "news scope: every currency (news_currencies is empty)".to_string()
+    } else {
+        format!("news scope: {} (news_currencies)", rules.news_currencies.join("|"))
+    }
 }
 
 /// The header line that says whether the run was bounded, and by what.
@@ -431,7 +443,7 @@ fn run_direction_null(
     let filters: Vec<fd_strategy::filter::Filter> = match arg("filters", "")
         .split(';')
         .filter(|s| !s.is_empty())
-        .map(fd_strategy::filter::Filter::parse)
+        .map(|s| fd_strategy::filter::Filter::parse_for_market(s, &rules.news_currencies))
         .collect::<Result<Vec<_>, _>>()
     {
         Ok(f) => f,
@@ -827,6 +839,7 @@ fn run_hypotheses(
     }
     println!("swap: long {:.2} / short {:.2} USD per lot per night; spread {}", rules.swap_long_per_lot, rules.swap_short_per_lot, rules.spread);
     println!("{}", fd_strategy::news::summary(NEWS_FILE));
+    println!("{}", news_scope_line(rules));
     println!("{}", guards_line(guards));
     println!();
     println!(
@@ -932,7 +945,7 @@ fn run_cost_sensitivity(
             let scaled = TradingRules {
                 spread: rules.spread * fraction,
                 commission_per_lot: rules.commission_per_lot * fraction,
-                ..*rules
+                ..rules.clone()
             };
             match walk_forward_guarded(strategy.as_ref(), bars, &scaled, timeline, folds, select_by, min_trades_per_cell, guards)
             {

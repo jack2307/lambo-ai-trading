@@ -298,13 +298,16 @@ pub async fn backtest(
         params.set(name, *value);
     }
 
+    // The rules first: a `news:` filter is scoped to the market's
+    // `news_currencies`, which the rules carry.
+    let rules = state.trading_rules(&market)?;
     // Filters wrap the method exactly as `Filtered` does for the loop; a
     // misspelt filter is refused, not ignored.
     let filters = request
         .filters
         .iter()
         .filter(|f| !f.trim().is_empty())
-        .map(|f| Filter::parse(f))
+        .map(|f| Filter::parse_for_market(f, &rules.news_currencies))
         .collect::<Result<Vec<_>, _>>()
         .map_err(ApiError::BadRequest)?;
     let gated = Filtered { inner: strategy, filters };
@@ -318,8 +321,11 @@ pub async fn backtest(
         )));
     }
 
-    let rules = state.trading_rules(&market)?;
-    let guards = request.guards.then(|| Guards::from_config(&state.config));
+    let guards = request
+        .guards
+        .then(|| Guards::for_market(&state.config, &market))
+        .transpose()
+        .map_err(|e| ApiError::BadRequest(e.to_string()))?;
     // A date bound is a UTC day; `to` runs to the end of its day.
     let day = |text: &Option<String>, end: bool| -> Result<Option<i64>, ApiError> {
         let Some(text) = text.as_deref().map(str::trim).filter(|t| !t.is_empty()) else { return Ok(None) };

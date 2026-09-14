@@ -30,7 +30,7 @@ use crate::context::OptionsTimeline;
 use crate::guards::{Exposure, GuardKind, GuardState, Guards, Refusal, bar_interval_ms, guard_exit};
 
 /// Costs and sizing, shared by every strategy in a run.
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct TradingRules {
     pub contract_size: f64,
     pub spread: f64,
@@ -51,6 +51,12 @@ pub struct TradingRules {
     /// nothing, so zero reproduces it.
     pub swap_long_per_lot: f64,
     pub swap_short_per_lot: f64,
+    /// Calendar currencies whose releases the market's `news:` filters and
+    /// news guard react to (`[markets.<id>.trading] news_currencies`). Empty
+    /// = every currency, which is what the default rules and every receipt
+    /// before 2026-09-14 read.
+    #[serde(default)]
+    pub news_currencies: Vec<String>,
 }
 
 impl Default for TradingRules {
@@ -69,6 +75,7 @@ impl Default for TradingRules {
             fallback_atr_period: 14,
             swap_long_per_lot: 0.0,
             swap_short_per_lot: 0.0,
+            news_currencies: Vec::new(),
         }
     }
 }
@@ -222,6 +229,7 @@ pub fn trading_rules_for(config: &Config, market: &str) -> Result<TradingRules, 
         min_lot: spec.trading.min_lot,
         swap_long_per_lot: spec.trading.swap_long_per_lot,
         swap_short_per_lot: spec.trading.swap_short_per_lot,
+        news_currencies: spec.trading.news_currencies.clone(),
         // The rest is policy rather than venue convention, and is shared.
         commission_per_lot: config.trading.commission_per_lot,
         starting_equity_usd: config.trading.starting_equity_usd,

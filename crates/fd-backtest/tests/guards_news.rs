@@ -60,8 +60,8 @@ fn at(hour: i64, minute: i64) -> i64 {
 /// A high-impact release at 12:30 UTC and a medium one at 18:00.
 fn calendar() -> Vec<NewsEvent> {
     vec![
-        NewsEvent { time: at(12, 30), impact: 3, currency: "USD".into() },
-        NewsEvent { time: at(18, 0), impact: 2, currency: "EUR".into() },
+        NewsEvent { time: at(12, 30), impact: 3, currency: "USD".into(), name: "CPI m/m".into() },
+        NewsEvent { time: at(18, 0), impact: 2, currency: "EUR".into(), name: "ECB President Speaks".into() },
     ]
 }
 
@@ -130,6 +130,31 @@ fn the_impact_threshold_selects_which_releases_count() {
     assert_eq!(result.trades[1].exit_time, at(17, 0));
     assert_eq!(result.trades[2].entry_time, at(18, 45), "the 18:30 signal, first outside [17:00, 18:30)");
     assert_eq!(result.closed_by_guard.get("NEWS_FLAT"), Some(&2));
+}
+
+#[test]
+fn the_currency_list_scopes_the_guard_to_the_markets_releases() {
+    fd_strategy::news::install(calendar()).expect("this binary's one calendar");
+    let bars = day();
+    // A EUR-only market at impact >= 2: the 12:30 USD release is not its
+    // business, the 18:00 EUR one is. One close, at 17:00.
+    let eur = Guards { news_currencies: vec!["eur".into()], ..news_guards(2) };
+    let result = guarded(&bars, &eur);
+    assert_eq!(result.trades.len(), 2, "{:?}", result.trades.iter().map(|t| (t.entry_time, t.exit_reason.clone())).collect::<Vec<_>>());
+    assert_eq!(result.trades[0].exit_kind, ExitKind::Guard(GuardKind::News));
+    assert_eq!(result.trades[0].exit_time, at(17, 0));
+    assert_eq!(result.trades[1].entry_time, at(18, 45));
+    assert_eq!(result.closed_by_guard.get("NEWS_FLAT"), Some(&1));
+    // A USD market at the same threshold sees only the 12:30 release.
+    let usd = Guards { news_currencies: vec!["USD".into()], ..news_guards(2) };
+    let result = guarded(&bars, &usd);
+    assert_eq!(result.trades.len(), 2);
+    assert_eq!(result.trades[0].exit_time, at(11, 30));
+    assert_eq!(result.trades[1].exit_kind, ExitKind::EndOfData);
+    // A CAD market sees neither: the guarded run is the unguarded one.
+    let cad = Guards { news_currencies: vec!["CAD".into()], ..news_guards(2) };
+    let plain = run_backtest(&bars, &AlwaysLong, &AlwaysLong.default_params(), &rules(), None, Range::default());
+    assert_eq!(guarded(&bars, &cad).trades, plain.trades);
 }
 
 #[test]

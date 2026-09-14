@@ -140,7 +140,7 @@ fn an_engine_managed_method_is_the_same_trade_for_trade() {
     let ema = registry.get("ema-cross").expect("ema-cross");
     let rules = TradingRules { swap_long_per_lot: -1.2, swap_short_per_lot: 0.4, ..TradingRules::default() };
     same(ema, &[], None, &rules);
-    let guards = Guards::from_config(&config());
+    let guards = Guards::for_market(&config(), "gold").expect("gold guards");
     same(ema, &[], Some(&guards), &rules);
 }
 
@@ -151,7 +151,7 @@ fn a_self_managed_method_is_the_same_trade_for_trade() {
     assert_eq!(hold.exits(), Exits::Strategy);
     let rules = TradingRules::default();
     same(hold, &[], None, &rules);
-    let guards = Guards::from_config(&config());
+    let guards = Guards::for_market(&config(), "gold").expect("gold guards");
     same(hold, &[], Some(&guards), &rules);
 }
 
@@ -160,7 +160,7 @@ fn filters_wrap_the_book_as_they_wrap_the_engine() {
     let registry = Registry::with_builtins();
     let ema = registry.get("ema-cross").expect("ema-cross");
     let rules = TradingRules::default();
-    let guards = Guards::from_config(&config());
+    let guards = Guards::for_market(&config(), "gold").expect("gold guards");
     same(ema, &["weekdays", "hours:0300-1600", "flat:1645-1815", "vol:14/100:0.5-99"], None, &rules);
     same(ema, &["weekdays", "hours:0300-1600", "flat:1645-1815", "vol:14/100:0.5-99"], Some(&guards), &rules);
 }
@@ -172,7 +172,7 @@ fn the_guards_bite_in_the_fixture() {
     let registry = Registry::with_builtins();
     let ema = registry.get("ema-cross").expect("ema-cross");
     let rules = TradingRules::default();
-    let guards = Guards::from_config(&config());
+    let guards = Guards::for_market(&config(), "gold").expect("gold guards");
     let bars = random_walk(3000);
     let params = ema.default_params();
     let engine = run_backtest_guarded(&bars, ema, &params, &rules, Some(&guards), None, Range::default(), None);

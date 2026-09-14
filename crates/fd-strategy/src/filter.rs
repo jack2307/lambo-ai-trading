@@ -56,7 +56,13 @@ pub enum Filter {
     /// by its stop, target or the strategy exactly as without the filter.
     /// With no calendar installed the filter is a no-op (the receipt says
     /// `news: none loaded`).
-    News { before_min: u32, after_min: u32, min_impact: u8 },
+    ///
+    /// `currencies` scopes the calendar: only events of these currencies
+    /// (and the calendar's global `All`) count. Empty means **every**
+    /// currency. A spelling may name them (`news:60-30:3:USD|EUR`); when it
+    /// does not, [`Filter::parse_for_market`] fills in the market's
+    /// configured list, so a `news:60-30` on gold reads USD releases only.
+    News { before_min: u32, after_min: u32, min_impact: u8, currencies: Vec<String> },
 }
 
 impl Filter {
@@ -85,9 +91,13 @@ impl Filter {
     /// A filter from its one-line spelling, as a batch file writes it:
     /// `weekdays`, `hours:0800-1200`, `sessions:0100-0500|0600-1000`,
     /// `flat:1630-1815`, `vol:14/100:1.2-99`, `volabs:14:0.075-9`,
-    /// `news:60-30` (60 min before to 30 min after high-impact news) or
-    /// `news:60-30:2` (impact ≥ 2). Times are New York `hhmm`; news widths
-    /// are minutes.
+    /// `news:60-30` (60 min before to 30 min after high-impact news),
+    /// `news:60-30:2` (impact ≥ 2) or `news:60-30:3:USD|EUR` (those
+    /// currencies only; the impact is required when currencies are given).
+    /// Times are New York `hhmm`; news widths are minutes.
+    ///
+    /// A `news:` filter parsed here with no currency list reads **every**
+    /// currency. Callers that know the market use [`Filter::parse_for_market`].
     pub fn parse(spec: &str) -> Result<Self, String> {
         let spec = spec.trim();
         let bad = |why: &str| Err(format!("filter `{spec}`: {why}"));
@@ -135,15 +145,19 @@ impl Filter {
                 let period = period.trim().parse::<usize>().map_err(|_| format!("filter `{spec}`: `{period}` is not a period"))?;
                 Ok(Self::VolAbs { period, min_pct: num(lo)?, max_pct: num(hi)? })
             }
-            // `news:B-A[:I]` — B minutes before to A minutes after events of
-            // impact ≥ I (default 3, high). Both widths are required so that
-            // `news:60` cannot be read as "and nothing after".
+            // `news:B-A[:I[:C1|C2]]` — B minutes before to A minutes after
+            // events of impact ≥ I (default 3, high) of currencies C (default:
+            // every currency, or the market's list through
+            // `parse_for_market`). Both widths are required so that `news:60`
+            // cannot be read as "and nothing after".
             Some(("news", rest)) => {
-                let (widths, impact) = match rest.split_once(':') {
-                    Some((w, i)) => (w, Some(i)),
-                    None => (rest, None),
-                };
-                let (b, a) = widths.split_once('-').ok_or_else(|| format!("filter `{spec}`: expected news:before-after[:impact] in minutes"))?;
+                let mut parts = rest.splitn(3, ':');
+                let widths = parts.next().unwrap_or("");
+                let impact = parts.next();
+                let currencies = parts.next();
+                let (b, a) = widths
+                    .split_once('-')
+                    .ok_or_else(|| format!("filter `{spec}`: expected news:before-after[:impact[:CCY|CCY]] in minutes"))?;
                 let minutes = |t: &str| t.trim().parse::<u32>().map_err(|_| format!("filter `{spec}`: `{t}` is not a number of minutes"));
                 let (before_min, after_min) = (minutes(b)?, minutes(a)?);
                 let min_impact = match impact {
@@ -153,7 +167,20 @@ impl Filter {
                         _ => return bad("impact must be 1, 2 or 3 (3 = high)"),
                     },
                 };
-                Ok(Self::News { before_min, after_min, min_impact })
+                let currencies = match currencies {
+                    None => Vec::new(),
+                    Some(list) => {
+                        let codes: Vec<String> = list.split('|').map(|c| c.trim().to_ascii_uppercase()).filter(|c| !c.is_empty()).collect();
+                        if codes.is_empty() {
+                            return bad("expected currencies such as USD|EUR after the impact");
+                        }
+                        if let Some(odd) = codes.iter().find(|c| !c.chars().all(|ch| ch.is_ascii_alphabetic())) {
+                            return Err(format!("filter `{spec}`: `{odd}` is not a currency code"));
+                        }
+                        codes
+                    }
+                };
+                Ok(Self::News { before_min, after_min, min_impact, currencies })
             }
             Some(("vol", rest)) => {
                 let (periods, range) = rest.split_once(':').ok_or_else(|| format!("filter `{spec}`: expected vol:F/S:min-max"))?;
@@ -164,6 +191,31 @@ impl Filter {
                 Ok(Self::VolRegime { fast: period(fast)?, slow: period(slow)?, min_ratio: num(lo)?, max_ratio: num(hi)? })
             }
             Some(_) => bad("unknown filter"),
+        }
+    }
+
+    /// [`Filter::parse`], then scope a `news:` filter that names no
+    /// currencies to the market's configured list (`news_currencies`). A
+    /// spelling that names its own currencies keeps them; every other filter
+    /// is untouched. This is what `search` and the API call, so a batch
+    /// file's `news:60-30` means "the market's releases" and not "everyone's".
+    pub fn parse_for_market(spec: &str, news_currencies: &[String]) -> Result<Self, String> {
+        Self::parse(spec).map(|f| f.for_market(news_currencies))
+    }
+
+    /// The same filter, with an unscoped `news:` gate scoped to
+    /// `news_currencies`. Idempotent; a no-op on every other variant and on a
+    /// `news:` filter that already names its currencies.
+    #[must_use]
+    pub fn for_market(self, news_currencies: &[String]) -> Self {
+        match self {
+            Self::News { before_min, after_min, min_impact, currencies } if currencies.is_empty() => Self::News {
+                before_min,
+                after_min,
+                min_impact,
+                currencies: news_currencies.iter().map(|c| c.to_ascii_uppercase()).collect(),
+            },
+            other => other,
         }
     }
 
@@ -187,12 +239,13 @@ impl Filter {
                 format!("ATR{fast}/ATR{slow} in [{min_ratio}, {max_ratio}]")
             }
             Self::VolAbs { period, min_pct, max_pct } => format!("ATR{period}/close in [{min_pct}%, {max_pct}%]"),
-            Self::News { before_min, after_min, min_impact } => {
+            Self::News { before_min, after_min, min_impact, currencies } => {
                 let which = match min_impact {
                     3 => "high-impact".to_string(),
                     i => format!("impact≥{i}"),
                 };
-                format!("no entries {before_min} min before to {after_min} min after {which} news")
+                let scope = if currencies.is_empty() { String::new() } else { format!(" ({})", currencies.join("|")) };
+                format!("no entries {before_min} min before to {after_min} min after {which} news{scope}")
             }
         }
     }
@@ -332,11 +385,12 @@ impl Strategy for Filtered<'_> {
                 }
                 // Signal-bar time; the fill lands one bar later (see the
                 // variant's doc). No calendar installed → never blocked.
-                Filter::News { before_min, after_min, min_impact } => !news::in_blackout(
+                Filter::News { before_min, after_min, min_impact, currencies } => !news::in_blackout(
                     ctx.bar.time,
                     i64::from(*before_min) * 60_000,
                     i64::from(*after_min) * 60_000,
                     *min_impact,
+                    Some(currencies),
                 ),
             };
             if !allowed {
@@ -460,11 +514,15 @@ mod tests {
         assert!(Filter::parse("moon:full").unwrap_err().contains("unknown"));
     }
 
+    fn news(before_min: u32, after_min: u32, min_impact: u8, currencies: &[&str]) -> Filter {
+        Filter::News { before_min, after_min, min_impact, currencies: currencies.iter().map(|c| (*c).to_string()).collect() }
+    }
+
     #[test]
     fn the_news_filter_parses_widths_in_minutes_and_an_optional_impact() {
-        assert_eq!(Filter::parse("news:60-30").unwrap(), Filter::News { before_min: 60, after_min: 30, min_impact: 3 });
-        assert_eq!(Filter::parse("news:60-30:2").unwrap(), Filter::News { before_min: 60, after_min: 30, min_impact: 2 });
-        assert_eq!(Filter::parse("news:0-15:1").unwrap(), Filter::News { before_min: 0, after_min: 15, min_impact: 1 });
+        assert_eq!(Filter::parse("news:60-30").unwrap(), news(60, 30, 3, &[]));
+        assert_eq!(Filter::parse("news:60-30:2").unwrap(), news(60, 30, 2, &[]));
+        assert_eq!(Filter::parse("news:0-15:1").unwrap(), news(0, 15, 1, &[]));
         assert!(Filter::parse("news:").unwrap_err().contains("before-after"));
         assert!(Filter::parse("news:60").unwrap_err().contains("before-after"));
         assert!(Filter::parse("news:60-x").unwrap_err().contains("minutes"));
@@ -472,6 +530,32 @@ mod tests {
         assert!(Filter::parse("news:60-30:4").unwrap_err().contains("impact"));
         assert_eq!(Filter::parse("news:60-30").unwrap().describe(), "no entries 60 min before to 30 min after high-impact news");
         assert_eq!(Filter::parse("news:60-30:2").unwrap().describe(), "no entries 60 min before to 30 min after impact≥2 news");
+    }
+
+    #[test]
+    fn the_news_filter_parses_an_optional_currency_list_after_the_impact() {
+        assert_eq!(Filter::parse("news:60-30:3:USD|EUR").unwrap(), news(60, 30, 3, &["USD", "EUR"]));
+        assert_eq!(Filter::parse("news:60-30:2:usd").unwrap(), news(60, 30, 2, &["USD"]), "codes are upper-cased");
+        assert_eq!(
+            Filter::parse("news:60-30:3:USD|EUR").unwrap().describe(),
+            "no entries 60 min before to 30 min after high-impact news (USD|EUR)"
+        );
+        // The impact is required before a currency list: `news:60-30:USD`
+        // reads as an impact and is refused as one.
+        assert!(Filter::parse("news:60-30:USD").unwrap_err().contains("impact"));
+        assert!(Filter::parse("news:60-30:3:").unwrap_err().contains("currencies"));
+        assert!(Filter::parse("news:60-30:3:US1").unwrap_err().contains("currency code"));
+    }
+
+    #[test]
+    fn parse_for_market_scopes_an_unscoped_news_filter_and_nothing_else() {
+        let usd = vec!["usd".to_string()];
+        assert_eq!(Filter::parse_for_market("news:60-30", &usd).unwrap(), news(60, 30, 3, &["USD"]));
+        assert_eq!(Filter::parse_for_market("news:60-30", &[]).unwrap(), news(60, 30, 3, &[]), "an empty market list stays empty: every currency");
+        // A spelled list wins over the market's.
+        assert_eq!(Filter::parse_for_market("news:60-30:3:EUR", &usd).unwrap(), news(60, 30, 3, &["EUR"]));
+        assert_eq!(Filter::parse_for_market("weekdays", &usd).unwrap(), Filter::weekdays());
+        assert_eq!(Filter::parse_for_market("news:60-30", &usd).unwrap().describe(), "no entries 60 min before to 30 min after high-impact news (USD)");
     }
 
     /// Wants out on every bar it holds; never enters.
@@ -526,6 +610,15 @@ mod tests {
         assert!(matches!(intent_at(&f, medium, None), Intent::Enter { .. }));
         let f2 = Filtered { inner: &Always, filters: vec![Filter::parse("news:60-30:2").unwrap()] };
         assert!(matches!(intent_at(&f2, medium, None), Intent::None));
+
+        // The high CAD event at 15:00 blocks an unscoped filter and not a
+        // USD-scoped one — the whole point of the scope: a Canadian rate
+        // decision is not gold's business.
+        let cad = monday_utc(15, 0);
+        assert!(matches!(intent_at(&f, cad, None), Intent::None));
+        let usd = Filtered { inner: &Always, filters: vec![Filter::parse_for_market("news:60-30", &["USD".to_string()]).unwrap()] };
+        assert!(matches!(intent_at(&usd, cad, None), Intent::Enter { .. }));
+        assert!(matches!(intent_at(&usd, release, None), Intent::None), "the USD release still blocks");
 
         // An exit inside the window is not gated: a strategy that wants out
         // gets out.

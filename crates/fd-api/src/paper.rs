@@ -164,7 +164,9 @@ impl PaperRun {
 /// The filtered strategy and the full parameters a config names. Checked
 /// the way the backtest route checks a request: an unknown strategy, a
 /// parameter the strategy never declared or a misspelt filter is refused.
-fn resolve<'a>(registry: &'a Registry, config: &PaperConfig) -> Result<(Filtered<'a>, Params), ApiError> {
+/// `news_currencies` is the market's list, so a `news:` filter with no
+/// currencies of its own reads the market's releases and not everyone's.
+fn resolve<'a>(registry: &'a Registry, config: &PaperConfig, news_currencies: &[String]) -> Result<(Filtered<'a>, Params), ApiError> {
     let inner = registry.get(&config.strategy).map_err(|e| ApiError::BadRequest(e.to_string()))?;
     let mut params = inner.default_params();
     for (name, value) in &config.params {
@@ -177,7 +179,7 @@ fn resolve<'a>(registry: &'a Registry, config: &PaperConfig) -> Result<(Filtered
         .filters
         .iter()
         .filter(|f| !f.trim().is_empty())
-        .map(|f| Filter::parse(f))
+        .map(|f| Filter::parse_for_market(f, news_currencies))
         .collect::<Result<Vec<_>, _>>()
         .map_err(ApiError::BadRequest)?;
     Ok((Filtered { inner, filters }, params))
@@ -353,6 +355,8 @@ pub struct BlackoutDto {
     pub time: i64,
     pub currency: String,
     pub impact: u8,
+    /// The release's name; empty when the calendar did not carry one.
+    pub name: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -413,14 +417,16 @@ fn status_of(run: &PaperRun, rules: &TradingRules, guards: Option<&Guards>) -> R
         unrealised_usd_at_last_close: book.unrealised_usd(rules).unwrap_or(0.0),
     });
     // The next blackout the run's guards would act on: the first installed
-    // event at or after now with impact at or above the guards' threshold.
+    // event at or after now with impact at or above the guards' threshold
+    // **of the market's currencies** (`rules.news_currencies`; `All` events
+    // count). A Canadian rate decision is not a gold run's next blackout.
     let min_impact = guards.map_or(3, |g| g.news_min_impact);
     let now = now_ms();
     let events = fd_strategy::news::events();
     let next_blackout = events
         .iter()
-        .find(|e| e.time >= now && e.impact >= min_impact)
-        .map(|e| BlackoutDto { time: e.time, currency: e.currency.clone(), impact: e.impact });
+        .find(|e| e.time >= now && e.impact >= min_impact && e.concerns(Some(&rules.news_currencies)))
+        .map(|e| BlackoutDto { time: e.time, currency: e.currency.clone(), impact: e.impact, name: e.name.clone() });
     let skip = book.trades.len().saturating_sub(10);
     RunStatus {
         id: run.config.id(),
@@ -455,7 +461,11 @@ fn status_of(run: &PaperRun, rules: &TradingRules, guards: Option<&Guards>) -> R
 /// next bar, and the status reflects it.
 fn rules_and_guards(state: &AppState, config: &PaperConfig) -> Result<(TradingRules, Option<Guards>), ApiError> {
     let rules = state.trading_rules(&config.market)?;
-    let guards = config.guards.then(|| Guards::from_config(&state.config));
+    let guards = config
+        .guards
+        .then(|| Guards::for_market(&state.config, &config.market))
+        .transpose()
+        .map_err(|e| ApiError::BadRequest(e.to_string()))?;
     Ok((rules, guards))
 }
 
@@ -477,7 +487,11 @@ pub async fn start(State(state): State<Arc<AppState>>, Json(request): Json<Start
         guards: request.guards,
         window,
     };
-    let (strategy, params) = resolve(&state.registry, &config)?;
+    // Rules and guards before the strategy: the filters are scoped to the
+    // market's news currencies, which the rules carry. Neither reads the
+    // parameters, so the full-parameter config below needs no second look.
+    let (rules, guards) = rules_and_guards(&state, &config)?;
+    let (strategy, params) = resolve(&state.registry, &config, &rules.news_currencies)?;
     if strategy.needs_options() {
         return Err(ApiError::BadRequest(format!(
             "{} reads the options frame, and the paper loop has no live options timeline",
@@ -493,7 +507,6 @@ pub async fn start(State(state): State<Arc<AppState>>, Json(request): Json<Start
     }
     // The full parameters, so the state file says what ran.
     let config = PaperConfig { params: params.0.clone(), ..config };
-    let (rules, guards) = rules_and_guards(&state, &config)?;
 
     // Warm-up from the store: the last `window` bars, or none when the
     // store has nothing for this market yet — the poller will supply them.
@@ -550,8 +563,8 @@ pub async fn bar(State(state): State<Arc<AppState>>, Json(request): Json<BarRequ
     };
     let mut runs = state.paper.lock().expect("paper runs");
     let run = runs.get_mut(&id).ok_or_else(|| ApiError::NotFound(format!("no paper run for {id}")))?;
-    let (strategy, params) = resolve(&state.registry, &run.config)?;
     let (rules, guards) = rules_and_guards(&state, &run.config)?;
+    let (strategy, params) = resolve(&state.registry, &run.config, &rules.news_currencies)?;
     let bar_ms = timeframe_ms(&run.config.tf).unwrap_or(0);
 
     let (report, gap) = match run.accept(bar, &strategy, &params, &rules, guards.as_ref(), bar_ms)? {

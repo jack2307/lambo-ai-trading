@@ -234,8 +234,9 @@ impl Bar {
 /// Lives in the domain core rather than in the strategy crate so that the
 /// Parquet store can read it without depending on the strategies: the store
 /// reads files, the strategy crate installs the list once and every `news:`
-/// filter reads it. `currency` is carried for a future per-currency gate; the
-/// blackout filter keys on `impact` only (3 = high).
+/// filter reads it. The blackout keys on `impact` (3 = high) and, per market,
+/// on `currency` (`[markets.<id>.trading] news_currencies`); an event whose
+/// currency is `All` belongs to every market.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct NewsEvent {
     /// Epoch milliseconds, UTC.
@@ -244,6 +245,26 @@ pub struct NewsEvent {
     pub impact: u8,
     /// `"USD"`, `"EUR"`, … or `"All"`.
     pub currency: String,
+    /// The release's name (`"Non-Farm Employment Change"`), for a status
+    /// line; empty when the source did not say.
+    #[serde(default)]
+    pub name: String,
+}
+
+impl NewsEvent {
+    /// True when this event belongs to a market whose news currencies are
+    /// `currencies`: the list is `None` or empty (every currency), the event
+    /// is global (`All`, any case), or its currency is in the list
+    /// (case-insensitive).
+    #[must_use]
+    pub fn concerns(&self, currencies: Option<&[String]>) -> bool {
+        match currencies {
+            None | Some([]) => true,
+            Some(list) => {
+                self.currency.eq_ignore_ascii_case("All") || list.iter().any(|c| c.eq_ignore_ascii_case(&self.currency))
+            }
+        }
+    }
 }
 
 #[cfg(test)]

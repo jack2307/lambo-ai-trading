@@ -7,8 +7,9 @@
 //! writer is free to add or reorder columns, and a missing or retyped one
 //! fails loudly on the first read rather than as a column of nulls.
 //!
-//! Only what the blackout filter needs is loaded — `name` and `source` stay
-//! on disk. The binary that calls this installs the result through
+//! Only what the blackout filter and the paper status need is loaded —
+//! `source` stays on disk, and `name` is optional (empty when absent). The
+//! binary that calls this installs the result through
 //! `fd_strategy::news::install` once at startup; nothing here is reached from
 //! a hot path.
 
@@ -46,6 +47,9 @@ fn append_batch(batch: &RecordBatch, out: &mut Vec<NewsEvent>) -> Result<(), Sto
     let time = column::<TimestampMillisecondArray>(batch, "time")?;
     let currency = column::<StringArray>(batch, "currency")?;
     let impact = column::<Int8Array>(batch, "impact")?;
+    // The name is for a status line, not for the gate: a file without one
+    // still reads, with every name empty.
+    let name = column::<StringArray>(batch, "name").ok();
 
     out.reserve(batch.num_rows());
     for i in 0..batch.num_rows() {
@@ -57,7 +61,8 @@ fn append_batch(batch: &RecordBatch, out: &mut Vec<NewsEvent>) -> Result<(), Sto
         // huge one and block everything, so clamp at zero (never matches).
         let impact = u8::try_from(impact.value(i)).unwrap_or(0);
         let currency = if currency.is_valid(i) { currency.value(i).to_string() } else { String::new() };
-        out.push(NewsEvent { time: time.value(i), impact, currency });
+        let name = name.filter(|n| n.is_valid(i)).map_or_else(String::new, |n| n.value(i).to_string());
+        out.push(NewsEvent { time: time.value(i), impact, currency, name });
     }
     Ok(())
 }
@@ -113,9 +118,9 @@ mod tests {
         assert_eq!(
             events,
             vec![
-                NewsEvent { time: 1_789_000_000_000, impact: 3, currency: "USD".into() },
-                NewsEvent { time: 1_789_003_600_000, impact: 2, currency: "All".into() },
-                NewsEvent { time: 1_789_007_200_000, impact: 1, currency: String::new() },
+                NewsEvent { time: 1_789_000_000_000, impact: 3, currency: "USD".into(), name: "CPI".into() },
+                NewsEvent { time: 1_789_003_600_000, impact: 2, currency: "All".into(), name: "Holiday".into() },
+                NewsEvent { time: 1_789_007_200_000, impact: 1, currency: String::new(), name: "Unknown".into() },
             ]
         );
     }
@@ -133,7 +138,8 @@ mod tests {
                 ("currency", utf8(vec![Some("USD")])),
             ],
         );
-        assert_eq!(read_news(&path).unwrap(), vec![NewsEvent { time: 42, impact: 3, currency: "USD".into() }]);
+        // No `name` column: still an event, with an empty name.
+        assert_eq!(read_news(&path).unwrap(), vec![NewsEvent { time: 42, impact: 3, currency: "USD".into(), name: String::new() }]);
 
         let path = dir.path().join("no-impact.parquet");
         write_fixture(&path, &[("time", ts(vec![Some(42)])), ("currency", utf8(vec![Some("USD")]))]);

@@ -207,6 +207,11 @@ contract_size = 100.0
 spread = 0.3
 lot_step = 0.01
 min_lot = 0.01
+# Calendar currencies whose scheduled releases flatten this market (the
+# `news:` filters and the news-flat guard). An EMPTY list means EVERY
+# currency — which is how a Canadian rate decision came to flatten the gold
+# bot on 2026-09-14. Events the calendar marks `All` match any list.
+news_currencies = ["USD"]
 
 [markets.gold.big_trades]
 min_premium_usd = 100_000
@@ -243,6 +248,8 @@ contract_size = 1.0
 spread = 0.28
 lot_step = 0.01
 min_lot = 0.01
+# Gold is a dollar asset: USD releases only (empty = every currency).
+news_currencies = ["USD"]
 # MEASURED from this account's own history (2026-04-21 -> 2026-09-08: 340
 # closed positions, 87 held overnight, swap 0.00, commission 0.00): the account
 # is swap-free. symbol_info shows the generic rate (-82.76 points = -$0.83 per
@@ -276,6 +283,8 @@ contract_size = 1.0
 spread = 0.28
 lot_step = 0.01
 min_lot = 0.01
+# Same scope as xauusd: USD releases only (empty = every currency).
+news_currencies = ["USD"]
 swap_long_per_lot = 0.0
 swap_short_per_lot = 0.0
 
@@ -308,6 +317,8 @@ contract_size = 1.0
 spread = 0.021
 lot_step = 0.01
 min_lot = 0.01
+# Silver, priced in dollars: USD releases only (empty = every currency).
+news_currencies = ["USD"]
 swap_long_per_lot = 0.0
 swap_short_per_lot = 0.0
 
@@ -336,6 +347,8 @@ contract_size = 1.0
 spread = 0.00014
 lot_step = 0.01
 min_lot = 0.01
+# Both legs of the pair (empty = every currency).
+news_currencies = ["USD", "EUR"]
 swap_long_per_lot = 0.0
 swap_short_per_lot = 0.0
 
@@ -365,6 +378,8 @@ contract_size = 0.01
 spread = 17.05                      # MEASURED: 3.4x the 5.00 assumed for the Binance market
 lot_step = 0.01
 min_lot = 0.01
+# Dollar-denominated: USD releases only (empty = every currency).
+news_currencies = ["USD"]
 # Swap-free on this account too (measured, same history). The symbol's generic
 # terms are swap_mode=5: -20% a year of position value, ~-$0.64 per 0.01 BTC
 # lot per night at $115k — for an account that pays it.
@@ -393,6 +408,8 @@ contract_size = 1.0
 spread = 5.0
 lot_step = 0.001
 min_lot = 0.001
+# Dollar-denominated: USD releases only (empty = every currency).
+news_currencies = ["USD"]
 
 [markets.btc.big_trades]
 min_premium_usd = 25_000

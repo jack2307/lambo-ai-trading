@@ -268,12 +268,21 @@ fn matched_rate(bars: &[Bar], rules: &TradingRules, filters: &[Filter], target_t
     let mut p = RandomEntry.default_params();
     p.set("entryRate", PROBE);
     p.set("seed", 1.0);
-    let probe = Filtered { inner: &RandomEntry, filters: filters.to_vec() };
+    let probe = Filtered { inner: &RandomEntry, filters: scoped(filters, rules) };
     let got = run_backtest_guarded(bars, &probe, &p, rules, guards, None, Range::default(), None).trades.len();
     if got == 0 || target_trades == 0 {
         return PROBE;
     }
     (PROBE * target_trades as f64 / got as f64).clamp(0.0005, 1.0)
+}
+
+/// The hypothesis's filters with every unscoped `news:` gate scoped to the
+/// market's `news_currencies` (`Filter::for_market`). A batch file is
+/// parsed before it knows its market, so the scope is applied here, where
+/// the rules are — for the method and, through [`matched_rate`], for its
+/// null, so both read the same calendar.
+fn scoped(filters: &[Filter], rules: &TradingRules) -> Vec<Filter> {
+    filters.iter().cloned().map(|f| f.for_market(&rules.news_currencies)).collect()
 }
 
 /// `realised_hold` is the method's own hold distribution on this window, as
@@ -489,7 +498,7 @@ pub fn run_hypothesis_fixed_guarded(
     use crate::engine::{Range, run_backtest_guarded};
     let base = registry.get(&hypothesis.base).map_err(|e| e.to_string())?;
     let preset = Preset::new(base, &hypothesis.overrides)?;
-    let filtered = Filtered { inner: &preset, filters: hypothesis.filters.clone() };
+    let filtered = Filtered { inner: &preset, filters: scoped(&hypothesis.filters, rules) };
     let result = run_backtest_guarded(bars, &filtered, &preset.defaults, rules, guards, None, Range::default(), None);
     let drift = base.exits() == fd_strategy::registry::Exits::Strategy && preset.grid().is_empty();
     let rate = (!drift).then(|| matched_rate(bars, rules, &hypothesis.filters, result.trades.len(), guards));
@@ -500,7 +509,7 @@ pub fn run_hypothesis_fixed_guarded(
         .filter_map(|seed| {
             let (inner, defaults) = matched_control_for(base, &hypothesis.overrides, seed as f64 + 1.0, rate, hold);
             let control = Preset::bare(inner, defaults.clone());
-            let matched = Filtered { inner: &control, filters: hypothesis.filters.clone() };
+            let matched = Filtered { inner: &control, filters: scoped(&hypothesis.filters, rules) };
             let pf = run_backtest_guarded(bars, &matched, &defaults, rules, guards, None, Range::default(), None)
                 .metrics
                 .profit_factor;
@@ -564,7 +573,7 @@ pub fn run_hypothesis_guarded(
 ) -> Result<Option<HypothesisReport>, String> {
     let base = registry.get(&hypothesis.base).map_err(|e| e.to_string())?;
     let preset = Preset::new(base, &hypothesis.overrides)?;
-    let filtered = Filtered { inner: &preset, filters: hypothesis.filters.clone() };
+    let filtered = Filtered { inner: &preset, filters: scoped(&hypothesis.filters, rules) };
     let Some(result) = walk_forward_guarded(&filtered, bars, rules, None, folds, select_by, min_trades_per_cell, guards)
     else {
         return Ok(None);
@@ -592,7 +601,7 @@ pub fn run_hypothesis_guarded(
         .filter_map(|seed| {
             let (inner, defaults) = matched_control_for(base, &hypothesis.overrides, seed as f64 + 1.0, rate, hold);
             let control = Preset::bare(inner, defaults);
-            let matched = Filtered { inner: &control, filters: hypothesis.filters.clone() };
+            let matched = Filtered { inner: &control, filters: scoped(&hypothesis.filters, rules) };
             walk_forward_guarded(&matched, bars, rules, None, folds, select_by, min_trades_per_cell, guards)
                 .map(|r| r.oos.profit_factor)
                 .filter(|pf| pf.is_finite())

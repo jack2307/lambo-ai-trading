@@ -54,10 +54,14 @@
 //!   — no Friday bar of that feed *opens* at or after 16:55.
 //! * **News flat** (`news_flat_before_min` / `_after_min` / `news_min_impact`):
 //!   inside `[event − before, event + after)` of any installed event with
-//!   impact ≥ min ([`fd_strategy::news::in_blackout`] on the bar's open
-//!   time), the first bar inside closes the position at its close and no
-//!   entry fills inside or from a signal inside. Inert when no calendar is
-//!   installed.
+//!   impact ≥ min **of the market's currencies** (`[markets.<id>.trading]
+//!   news_currencies`, carried here as `news_currencies`; empty = every
+//!   currency, `All` events always count — [`fd_strategy::news::in_blackout`]
+//!   on the bar's open time), the first bar inside closes the position at its
+//!   close and no entry fills inside or from a signal inside. Inert when no
+//!   calendar is installed. The list is per market, which is why the guards
+//!   are built with [`Guards::for_market`] and not from the config alone:
+//!   before 2026-09-14 a Canadian rate decision flattened the gold bot.
 //!
 //! Ordering against the engine's own exits: the engine's stop, target and
 //! clock are consulted first, then the open-loss cap, then the weekend and
@@ -70,7 +74,7 @@
 use std::collections::VecDeque;
 
 use fd_core::clock::new_york_local;
-use fd_core::config::Config;
+use fd_core::config::{Config, ConfigError};
 use fd_core::types::Bar;
 use fd_strategy::registry::Side;
 
@@ -80,7 +84,7 @@ use crate::engine::{ExitKind, TradingRules, apply_costs};
 const DAY_MS: i64 = 86_400_000;
 const MINUTE_MS: i64 = 60_000;
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Guards {
     pub max_concurrent_positions: usize,
     pub max_trades_per_day: usize,
@@ -98,14 +102,19 @@ pub struct Guards {
     pub news_flat_after_min: u32,
     /// Lowest impact the news guard reacts to.
     pub news_min_impact: u8,
+    /// The calendar currencies the news guard reacts to. Empty = every
+    /// currency; an `All` event counts whatever the list.
+    pub news_currencies: Vec<String>,
 }
 
 impl Guards {
-    /// The configured guards, from `[trading.guards]`.
-    #[must_use]
-    pub fn from_config(config: &Config) -> Self {
+    /// The configured guards for one market: the shared `[trading.guards]`
+    /// plus the market's own `news_currencies`. An unknown market is the
+    /// config's error, so a typo cannot fall back to an all-currency guard.
+    pub fn for_market(config: &Config, market: &str) -> Result<Self, ConfigError> {
         let g = &config.trading.guards;
-        Self {
+        let spec = config.market(market)?;
+        Ok(Self {
             max_concurrent_positions: g.max_concurrent_positions,
             max_trades_per_day: g.max_trades_per_day,
             daily_loss_limit_usd: g.daily_loss_limit_usd,
@@ -116,7 +125,8 @@ impl Guards {
             news_flat_before_min: g.news_flat_before_min,
             news_flat_after_min: g.news_flat_after_min,
             news_min_impact: g.news_min_impact,
-        }
+            news_currencies: spec.trading.news_currencies.iter().map(|c| c.to_ascii_uppercase()).collect(),
+        })
     }
 
     /// Every guard off: no cap bites, no window closes anything. A guarded
@@ -135,6 +145,7 @@ impl Guards {
             news_flat_before_min: 0,
             news_flat_after_min: 0,
             news_min_impact: 3,
+            news_currencies: Vec::new(),
         }
     }
 
@@ -147,7 +158,8 @@ impl Guards {
             format!("{:02}:{:02} NY", self.flat_before_weekend_hhmm / 100, self.flat_before_weekend_hhmm % 100)
         };
         let news = if self.news_guard_on() {
-            format!("{}/{} (impact≥{})", self.news_flat_before_min, self.news_flat_after_min, self.news_min_impact)
+            let scope = if self.news_currencies.is_empty() { "any currency".to_string() } else { self.news_currencies.join("|") };
+            format!("{}/{} (impact≥{}, {scope})", self.news_flat_before_min, self.news_flat_after_min, self.news_min_impact)
         } else {
             "off".to_string()
         };
@@ -182,7 +194,8 @@ impl Guards {
     }
 
     /// True when the news guard is on and `t_ms` is inside the window of an
-    /// installed event. False with no calendar installed.
+    /// installed event of the market's currencies. False with no calendar
+    /// installed.
     #[must_use]
     pub fn in_news_window(&self, t_ms: i64) -> bool {
         self.news_guard_on()
@@ -191,6 +204,7 @@ impl Guards {
                 i64::from(self.news_flat_before_min) * MINUTE_MS,
                 i64::from(self.news_flat_after_min) * MINUTE_MS,
                 self.news_min_impact,
+                Some(&self.news_currencies),
             )
     }
 
@@ -509,7 +523,7 @@ mod tests {
             std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("..").join("..").join("config"),
         )
         .expect("the workspace config");
-        let guards = Guards::from_config(&config);
+        let guards = Guards::for_market(&config, "xauusd").expect("xauusd guards");
         assert_eq!(guards.max_concurrent_positions, config.trading.guards.max_concurrent_positions);
         assert_eq!(guards.max_trades_per_day, config.trading.guards.max_trades_per_day);
         assert_eq!(guards.daily_loss_limit_usd, config.trading.guards.daily_loss_limit_usd);
@@ -525,6 +539,45 @@ mod tests {
         // would be an intention again.
         assert!(guards.max_open_loss_r > 0.0 && guards.max_notional_pct_equity > 0.0);
         assert!(guards.flat_before_weekend_hhmm > 0 && guards.news_flat_before_min > 0);
+        // And the news scope is the market's, not everyone's.
+        assert_eq!(guards.news_currencies, vec!["USD".to_string()], "gold reads USD releases");
+    }
+
+    #[test]
+    fn the_news_currencies_are_the_markets_own() {
+        let config = Config::load(
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("..").join("..").join("config"),
+        )
+        .expect("the workspace config");
+        let by = |market: &str| Guards::for_market(&config, market).expect(market).news_currencies;
+        assert_eq!(by("xauusd"), vec!["USD".to_string()]);
+        assert_eq!(by("xauduka"), vec!["USD".to_string()]);
+        assert_eq!(by("gold"), vec!["USD".to_string()]);
+        assert_eq!(by("xagduka"), vec!["USD".to_string()]);
+        assert_eq!(by("eurduka"), vec!["USD".to_string(), "EUR".to_string()], "a pair sees both legs");
+        assert_eq!(by("btcusd"), vec!["USD".to_string()]);
+        assert_eq!(by("btc"), vec!["USD".to_string()]);
+        // The shared guards are the same for every market; only the scope differs.
+        let (a, b) = (Guards::for_market(&config, "xauusd").unwrap(), Guards::for_market(&config, "eurduka").unwrap());
+        assert_eq!((a.news_flat_before_min, a.news_flat_after_min, a.news_min_impact), (b.news_flat_before_min, b.news_flat_after_min, b.news_min_impact));
+        // An unknown market is refused, not defaulted to every currency.
+        assert!(Guards::for_market(&config, "nonesuch").is_err());
+        // A test config that lists lower-case codes reads them upper-cased,
+        // and one with no list reads every currency.
+        let text = std::fs::read_to_string(
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("..").join("..").join("config").join("default.toml"),
+        )
+        .expect("default.toml");
+        let text = text.replace("news_currencies = [\"USD\", \"EUR\"]", "news_currencies = [\"usd\", \"gbp\"]");
+        // Drop the key from the `[markets.btc.trading]` table, wherever it
+        // sits in it: the table runs to the next `[` header.
+        let start = text.find("[markets.btc.trading]").expect("the btc trading table");
+        let end = text[start + 1..].find("\n[").map_or(text.len(), |i| start + 1 + i);
+        let table: String = text[start..end].lines().filter(|l| !l.starts_with("news_currencies")).collect::<Vec<_>>().join("\n");
+        let text = format!("{}{table}{}", &text[..start], &text[end..]);
+        let cfg = Config::from_toml(&text, "test").expect("edited config parses");
+        assert_eq!(Guards::for_market(&cfg, "eurduka").unwrap().news_currencies, vec!["USD".to_string(), "GBP".to_string()]);
+        assert!(Guards::for_market(&cfg, "btc").unwrap().news_currencies.is_empty(), "no list = every currency");
     }
 
     #[test]
@@ -549,12 +602,17 @@ mod tests {
             max_trades_per_day: 4,
             daily_loss_limit_usd: 300.0,
             cooldown_ms: 30 * MINUTE,
+            news_currencies: vec!["USD".into()],
             ..Guards::unbounded()
         };
         assert_eq!(
             on.describe(),
-            "max_open_loss_r 2.0, notional 300%, weekend flat 16:55 NY, news flat 60/30 (impact≥3), daily cap 4, loss limit $300, cooldown 30 min"
+            "max_open_loss_r 2.0, notional 300%, weekend flat 16:55 NY, news flat 60/30 (impact≥3, USD), daily cap 4, loss limit $300, cooldown 30 min"
         );
+        let pair = Guards { news_currencies: vec!["USD".into(), "EUR".into()], ..on.clone() };
+        assert!(pair.describe().contains("news flat 60/30 (impact≥3, USD|EUR)"), "{}", pair.describe());
+        let unscoped = Guards { news_currencies: Vec::new(), ..on };
+        assert!(unscoped.describe().contains("news flat 60/30 (impact≥3, any currency)"), "{}", unscoped.describe());
         assert!(Guards::unbounded().describe().starts_with("max_open_loss_r off, notional off, weekend flat off, news flat off"));
     }
 

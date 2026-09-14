@@ -133,6 +133,8 @@ pub fn rules_from_manifest(market: &str) -> Option<TradingRules> {
         // The oracle never charged financing; the golden trades carry none.
         swap_long_per_lot: 0.0,
         swap_short_per_lot: 0.0,
+        // And no news calendar, so the scope is moot; every currency.
+        news_currencies: Vec::new(),
     })
 }
 
