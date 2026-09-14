@@ -44,6 +44,14 @@ NEWS = os.path.join(ROOT, "data", "news")
 RAW = os.path.join(NEWS, "raw")
 CSV_PATH = os.path.join(NEWS, "events.csv")
 PARQUET_PATH = os.path.join(NEWS, "events.parquet")
+#: The research calendar: everything in events.csv plus the sources in
+#: EXTRA_PARSERS. Kept apart from events.csv on purpose — fd-api and search
+#: load events.parquet at startup and the paper books enforce a news blackout
+#: from it, so adding releases there silently changes what a running book does.
+#: Point a research script at this one; move a source into the live calendar
+#: only as its own decision.
+EXTENDED_CSV_PATH = os.path.join(NEWS, "events-extended.csv")
+EXTENDED_PARQUET_PATH = os.path.join(NEWS, "events-extended.parquet")
 HEADER = ["time_utc", "currency", "name", "impact", "source"]
 
 FF_FEEDS = {
@@ -147,6 +155,44 @@ def parse_bls(path: str, year: int):
     return rows
 
 
+# ----------------------------------------------------------------------------- StatCan / BEA
+#: Raw file stem -> (label in the calendar, currency). Both sources are written
+#: in the same shape: name | reference month | ISO date | Eastern HH:MM. The
+#: TIME COMES FROM THE FILE and is never defaulted — Statistics Canada moved the
+#: Labour Force Survey from 07:00 to 08:30 Eastern partway through this span,
+#: and a release measured at the wrong hour is the fault this loop has logged
+#: twice already (faults 6 and 8, docs/decisions/2026-09-13-instrument-faults.md).
+EXTRA_SOURCES = {
+    "statcan-lfs": ("Canada Labour Force Survey", "CAD"),
+    "bea-personal-income": ("US Personal Income and Outlays (PCE)", "USD"),
+}
+
+
+def parse_extra(path: str, year: int):
+    """Rows from a hand-collected schedule in the shared pipe format.
+
+    A row whose time column is UNKNOWN is dropped and counted, never guessed:
+    the whole point of these two sources is the minute they land on.
+    """
+    stem = os.path.basename(path)[:-4].rsplit("-", 1)[0]
+    label, currency = EXTRA_SOURCES[stem]
+    rows, unknown = [], 0
+    for cols in raw_lines(path):
+        if len(cols) < 4:
+            raise ValueError(f"{path}: expected 4 columns, got {cols!r}")
+        _name, _ref, date_s, time_s = cols[:4]
+        if time_s.upper() == "UNKNOWN":
+            unknown += 1
+            continue
+        d = dt.date.fromisoformat(date_s)
+        hh, mm = (int(x) for x in time_s.split(":"))
+        local = dt.datetime(d.year, d.month, d.day, hh, mm)
+        rows.append((to_utc(local, NY), currency, label, 3, stem))
+    if unknown:
+        print(f"  {os.path.basename(path)}: {unknown} rows with no known release time, dropped")
+    return rows
+
+
 # ----------------------------------------------------------------------------- ECB
 ECB_TIME_CHANGE = dt.date(2022, 7, 21)  # press release moved from 13:45 to 14:15 CET
 
@@ -190,11 +236,12 @@ def fetch_ff(name: str) -> list | None:
 
 
 # ----------------------------------------------------------------------------- CSV / parquet
-def read_csv() -> dict:
+def read_csv(path: str = None) -> dict:
     rows = {}
-    if not os.path.exists(CSV_PATH):
+    path = path or CSV_PATH
+    if not os.path.exists(path):
         return rows
-    with open(CSV_PATH, encoding="utf-8", newline="") as f:
+    with open(path, encoding="utf-8", newline="") as f:
         rd = csv.DictReader(f)
         assert rd.fieldnames == HEADER, rd.fieldnames
         for r in rd:
@@ -203,9 +250,9 @@ def read_csv() -> dict:
     return rows
 
 
-def write_csv(rows: dict) -> list:
+def write_csv(rows: dict, path: str = None) -> list:
     ordered = sorted(rows.values(), key=lambda r: (r[0], r[1], r[2]))
-    with open(CSV_PATH, "w", encoding="utf-8", newline="") as f:
+    with open(path or CSV_PATH, "w", encoding="utf-8", newline="") as f:
         w = csv.writer(f, lineterminator="\n")
         w.writerow(HEADER)
         for t, cur, name, impact, source in ordered:
@@ -213,8 +260,10 @@ def write_csv(rows: dict) -> list:
     return ordered
 
 
-def build_parquet() -> pa.Table:
-    rows = sorted(read_csv().values(), key=lambda r: (r[0], r[1], r[2]))
+def build_parquet(csv_path: str = None, parquet_path: str = None) -> pa.Table:
+    csv_path = csv_path or CSV_PATH
+    parquet_path = parquet_path or PARQUET_PATH
+    rows = sorted(read_csv(csv_path).values(), key=lambda r: (r[0], r[1], r[2]))
     table = pa.table({
         "time": pa.array([r[0] for r in rows], pa.timestamp("ms", tz="UTC")),
         "currency": pa.array([r[1] for r in rows], pa.string()),
@@ -224,11 +273,11 @@ def build_parquet() -> pa.Table:
     })
     meta = {
         b"built_at": dt.datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ").encode(),
-        b"built_from": b"data/news/events.csv",
+        b"built_from": os.path.relpath(csv_path, ROOT).replace(os.sep, "/").encode(),
         b"doc": b"docs/news/README.md",
     }
     table = table.replace_schema_metadata(meta)
-    pq.write_table(table, PARQUET_PATH, compression="zstd", compression_level=3)
+    pq.write_table(table, parquet_path, compression="zstd", compression_level=3)
     return table
 
 
@@ -262,8 +311,11 @@ def main() -> int:
     ap.add_argument("--from-raw", action="store_true", help="re-parse data/news/raw into events.csv, then build")
     ap.add_argument("--build", action="store_true", help="rebuild events.parquet from events.csv")
     ap.add_argument("--refresh", action="store_true", help="fetch ForexFactory feeds, merge, build")
+    ap.add_argument("--extended", action="store_true",
+                    help="build events-extended.csv|parquet: events.csv plus StatCan LFS and BEA personal income. "
+                         "Never touches events.csv or events.parquet, which the paper books read.")
     args = ap.parse_args()
-    if not (args.from_raw or args.build or args.refresh):
+    if not (args.from_raw or args.build or args.refresh or args.extended):
         ap.print_help()
         return 2
 
@@ -279,6 +331,22 @@ def main() -> int:
                 merge(rows, ff_rows(json.load(f)))
         ordered = write_csv(rows)
         print(f"events.csv: {len(ordered)} rows from raw")
+
+    if args.extended:
+        # Start from the live calendar so the extended one is a superset, then
+        # add only the sources the live one deliberately does not carry.
+        rows = read_csv()
+        base = len(rows)
+        for path in sorted(glob.glob(os.path.join(RAW, "*-*.txt"))):
+            stem = os.path.basename(path)[:-4].rsplit("-", 1)[0]
+            if stem in EXTRA_SOURCES:
+                merge(rows, parse_extra(path, 0))
+        write_csv(rows, EXTENDED_CSV_PATH)
+        table = build_parquet(EXTENDED_CSV_PATH, EXTENDED_PARQUET_PATH)
+        print(f"events-extended.csv: {len(rows)} rows ({base} from the live calendar, "
+              f"{len(rows) - base} added)")
+        report(table)
+        return 0
 
     if args.refresh:
         rows = read_csv()

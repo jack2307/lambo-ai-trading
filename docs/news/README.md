@@ -184,3 +184,41 @@ python py/ingest/news_calendar.py --from-raw    # after editing anything in data
 moves an event the old row stays. When the Fed, BLS or ECB publish the next
 year, fetch the page by hand, add a `raw/<source>-<year>.txt` in the same
 pipe format, and run `--from-raw`.
+
+## The extended calendar (2026-09-15)
+
+`data/news/events-extended.csv|parquet` is **the research calendar**:
+everything in `events.csv`, plus two sources the live calendar deliberately
+does not carry.
+
+| source | release | currency | time |
+|---|---|---|---|
+| `statcan-lfs` | Canada Labour Force Survey | CAD | from the raw file — StatCan moved it from 07:00 to 08:30 Eastern partway through the span, so the hour is per-row and never defaulted |
+| `bea-personal-income` | US Personal Income and Outlays (PCE) | USD | 08:30 Eastern |
+
+Build it with `python py/ingest/news_calendar.py --extended`. That command
+**never writes `events.csv` or `events.parquet`**, and `--from-raw` still
+parses only the Fed, BLS and ECB files, so neither of the new sources can
+reach the live calendar by accident.
+
+**Why two calendars.** `fd-api` and `search` load `events.parquet` at startup
+and the ten paper books enforce a news blackout from it — 60 minutes before a
+high-impact release to 30 after. Adding twelve US personal-income dates a year
+would widen that blackout by about eighteen hours a year for every running
+book, in the middle of the two-week observation those books exist to produce.
+A research question is not a reason to change what a running bot does. Moving
+a source into the live calendar is its own decision, taken deliberately, with
+the books restarted on purpose.
+
+**Why these two.** `docs/decisions/2026-09-14-nfp-vs-first-friday.md` closed
+because eleven of its thirty-two control Fridays turned out to carry an 08:30
+New York macro print that the five-name calendar could not see — Canada's
+Labour Force Survey on five of them and US Personal Income/PCE on four. The
+successor question, whether gold's 07:30 → 08:30 hour falls before **any**
+08:30 release rather than before one particular one, cannot be asked until
+those dates exist. These two sources are that prerequisite and nothing more.
+
+Provenance is the same standard as the rest of this directory: every date
+comes from a page that was read, the raw files carry the URL and the fetch
+date in their header, and a release whose time could not be established is
+written `UNKNOWN` and dropped by the parser with a count, never guessed.
