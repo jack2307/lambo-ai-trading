@@ -306,7 +306,7 @@ export function Workbench({ catalog, market, onError }: Props) {
           </div>
           <label className="mt-2 block">
             <span className="text-muted-foreground block text-[11px]">
-              filters <span className="text-muted-foreground/60">· weekdays, hours:0800-1200, flat:1630-1815, vol:14/100:1.2-99, volabs:14:0.075-9</span>
+              filters <span className="text-muted-foreground/60">· weekdays, hours:0800-1200, flat:1630-1815, news:60-30 (no entry 60 min before to 30 after high-impact news), vol:14/100:1.2-99</span>
             </span>
             <textarea
               value={filtersText}
