@@ -57,6 +57,14 @@ pub struct TradingRules {
     /// before 2026-09-14 read.
     #[serde(default)]
     pub news_currencies: Vec<String>,
+    /// Decimals a recorded price is rounded to; see the market spec.
+    /// Two by default, which is what every run before 2026-09-14 used.
+    #[serde(default = "two")]
+    pub price_decimals: u32,
+}
+
+const fn two() -> u32 {
+    2
 }
 
 impl Default for TradingRules {
@@ -76,6 +84,7 @@ impl Default for TradingRules {
             swap_long_per_lot: 0.0,
             swap_short_per_lot: 0.0,
             news_currencies: Vec::new(),
+            price_decimals: 2,
         }
     }
 }
@@ -230,6 +239,7 @@ pub fn trading_rules_for(config: &Config, market: &str) -> Result<TradingRules, 
         swap_long_per_lot: spec.trading.swap_long_per_lot,
         swap_short_per_lot: spec.trading.swap_short_per_lot,
         news_currencies: spec.trading.news_currencies.clone(),
+        price_decimals: spec.trading.price_decimals,
         // The rest is policy rather than venue convention, and is shared.
         commission_per_lot: config.trading.commission_per_lot,
         starting_equity_usd: config.trading.starting_equity_usd,
@@ -701,13 +711,13 @@ pub fn close_position(
     Trade {
         direction: position.side,
         entry_time: position.entry_time,
-        entry_price: round2(position.entry_price),
+        entry_price: round_price(position.entry_price, rules),
         exit_time,
-        exit_price: round2(exit_price),
+        exit_price: round_price(exit_price, rules),
         exit_reason: exit_reason.to_string(),
         exit_kind: kind,
-        stop: round2(position.stop.unwrap_or(f64::NAN)),
-        target: position.target.map(round2),
+        stop: round_price(position.stop.unwrap_or(f64::NAN), rules),
+        target: position.target.map(|t| round_price(t, rules)),
         lots: position.lots,
         pnl_usd: round2(pnl),
         swap_usd: round2(swap),
@@ -826,6 +836,12 @@ pub fn metrics_of(trades: &[Trade], starting_equity: f64) -> Metrics {
 // rounds a half towards positive infinity. `f64::round` rounds away from zero
 // and so disagrees on every negative half — and PnL, R and excursions are
 // negative about as often as not.
+/// A price as the record keeps it: the instrument's decimals, so a pip on
+/// EURUSD survives and gold reads the way every earlier receipt does.
+fn round_price(v: f64, rules: &TradingRules) -> f64 {
+    fd_core::js_round_to(v, rules.price_decimals)
+}
+
 pub(crate) fn round2(v: f64) -> f64 {
     fd_core::js_round_to(v, 2)
 }

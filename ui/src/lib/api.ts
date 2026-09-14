@@ -99,7 +99,14 @@ export interface BacktestTrade {
   lots: number
   pnlUsd: number
   r: number
+  /**
+   * Worst excursion while the trade was open, **in R** — the engine divides by
+   * the position's risk before it rounds (`mae: position.mae / position.risk`),
+   * so this is already a multiple of the stop distance and never a price.
+   * Negative by construction.
+   */
   mae: number
+  /** Best excursion while the trade was open, **in R**. Positive by construction. */
   mfe: number
   holdMs: number
   reason: string
@@ -261,6 +268,26 @@ export interface PaperEvent {
   trade?: BacktestTrade
 }
 
+/**
+ * One indicator a paper run's strategy actually reads, as the strategy's own
+ * definition declares it — not a guess made from the strategy's name.
+ */
+export interface PaperIndicator {
+  id: string
+  /** Instance key, e.g. `ema_21`, `macd_12_26_9`, `keltner_20_10_1.5`. */
+  key: string
+  params: Record<string, number>
+  /**
+   * Fully-qualified series keys — the instance key, a dot, then the output
+   * name (`ema_21.ema`, `macd_12_26_9.histogram`). `ActiveIndicator.outputs`
+   * wants the bare output name instead, because `PriceChart` rebuilds the
+   * qualified key itself.
+   */
+  outputs: string[]
+  /** True when the series belongs over the candles; false when it wants a pane. */
+  overlay: boolean
+}
+
 /** `GET /api/paper/run/{id}` — one run's book, narration and recent bars. */
 export interface PaperRunDetail {
   run: PaperRun
@@ -269,8 +296,12 @@ export interface PaperRunDetail {
   equity_curve: [number, number][]
   fills: BacktestTrade[]
   events: PaperEvent[]
-  /** `[time, open, high, low, close]`, oldest first. */
+  /** `[time, open, high, low, close]`, oldest first. Times are **milliseconds**. */
   bars: [number, number, number, number, number][]
+  /** The indicators the run's strategy reads, in the order it declares them. */
+  indicators: PaperIndicator[]
+  /** Qualified output key → points. Times are **seconds**, unlike `bars`. */
+  series: Record<string, IndicatorPoint[]>
 }
 
 export interface Research {

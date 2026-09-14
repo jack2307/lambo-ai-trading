@@ -313,6 +313,8 @@ underlying = "SI"
 # generic rate, -22.7 points long. Contract unit one ounce, the convention
 # every Dukascopy-fed market here uses, so "lots" are ounces.
 symbol = "XAGUSD.sc"
+# silver quotes to three decimals.
+price_decimals = 3
 contract_size = 1.0
 spread = 0.021
 lot_step = 0.01
@@ -343,6 +345,8 @@ underlying = "6E"
 # (read-only): spread p50/p90 0.00014. Swap-free account. Contract unit one
 # euro, so "lots" are euros and P&L is in dollars.
 symbol = "EURUSD.sc"
+# EURUSD quotes to five decimals; two would report 1.16 for 1.15843.
+price_decimals = 5
 contract_size = 1.0
 spread = 0.00014
 lot_step = 0.01
@@ -375,6 +379,8 @@ underlying = "6E"
 
 [markets.eurusd.trading]
 symbol = "EURUSD.sc"
+# EURUSD quotes to five decimals.
+price_decimals = 5
 contract_size = 1.0
 spread = 0.00014
 lot_step = 0.01

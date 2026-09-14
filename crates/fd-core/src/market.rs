@@ -62,6 +62,11 @@ pub enum OptionsSource {
 }
 
 /// Trading conventions for the instrument actually bought and sold.
+/// Two decimals: what gold, BTC and the JavaScript oracle use.
+const fn default_price_decimals() -> u32 {
+    2
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct TradingSpec {
     pub symbol: String,
@@ -82,6 +87,15 @@ pub struct TradingSpec {
     /// filters and the news guard). Empty = every currency; an event marked
     /// `All` matches any list.
     pub news_currencies: Vec<String>,
+    /// Decimals a recorded price is rounded to.
+    ///
+    /// Two suits gold and BTC, and is what the JavaScript oracle used — the
+    /// golden parity files depend on it. A EURUSD trade rounded to two
+    /// decimals reports 1.16 for 1.15843 and its entry and exit become the
+    /// same number, which is how a record came to derive pips from P&L
+    /// instead of reading them (2026-09-14). Five for FX, three for silver.
+    #[serde(default = "default_price_decimals")]
+    pub price_decimals: u32,
 }
 
 /// One market's conventions.
@@ -169,7 +183,7 @@ mod tests {
             premium_in_underlying: false,
             multiplier: 100.0,
             underlying: "GC".into(),
-            trading: TradingSpec { symbol: "XAUUSD".into(), contract_size: 100.0, spread: 0.3, lot_step: 0.01, min_lot: 0.01, swap_long_per_lot: 0.0, swap_short_per_lot: 0.0, news_currencies: Vec::new() },
+            trading: TradingSpec { symbol: "XAUUSD".into(), contract_size: 100.0, spread: 0.3, lot_step: 0.01, min_lot: 0.01, swap_long_per_lot: 0.0, swap_short_per_lot: 0.0, news_currencies: Vec::new(), price_decimals: 2 },
             big_trade_min_premium_usd: 100_000.0,
             cluster_floor: 5.0,
             cluster_atr_fraction: 0.15,
@@ -187,7 +201,7 @@ mod tests {
             premium_in_underlying: true,
             multiplier: 1.0,
             underlying: "BTC".into(),
-            trading: TradingSpec { symbol: "BTCUSD".into(), contract_size: 1.0, spread: 5.0, lot_step: 0.001, min_lot: 0.001, swap_long_per_lot: 0.0, swap_short_per_lot: 0.0, news_currencies: Vec::new() },
+            trading: TradingSpec { symbol: "BTCUSD".into(), contract_size: 1.0, spread: 5.0, lot_step: 0.001, min_lot: 0.001, swap_long_per_lot: 0.0, swap_short_per_lot: 0.0, news_currencies: Vec::new(), price_decimals: 2 },
             big_trade_min_premium_usd: 25_000.0,
             cluster_floor: 100.0,
             cluster_atr_fraction: 0.15,

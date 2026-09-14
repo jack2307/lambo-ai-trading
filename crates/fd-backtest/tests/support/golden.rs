@@ -135,6 +135,8 @@ pub fn rules_from_manifest(market: &str) -> Option<TradingRules> {
         swap_short_per_lot: 0.0,
         // And no news calendar, so the scope is moot; every currency.
         news_currencies: Vec::new(),
+        // The oracle rounded every price to two decimals; parity depends on it.
+        price_decimals: 2,
     })
 }
 

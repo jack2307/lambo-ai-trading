@@ -298,6 +298,9 @@ pub struct MarketTradingOverride {
     /// flatten a gold bot before this key existed.
     #[serde(default)]
     pub news_currencies: Vec<String>,
+    /// See [`fd_core::market::TradingSpec::price_decimals`]; absent keeps two.
+    #[serde(default)]
+    pub price_decimals: Option<u32>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -387,6 +390,7 @@ impl Config {
                 swap_long_per_lot: m.trading.swap_long_per_lot,
                 swap_short_per_lot: m.trading.swap_short_per_lot,
                 news_currencies: m.trading.news_currencies.clone(),
+                price_decimals: m.trading.price_decimals.unwrap_or(2),
             },
             big_trade_min_premium_usd: m.big_trades.min_premium_usd,
             cluster_floor: m.levels.cluster.floor,

@@ -11,9 +11,16 @@
  * ┌ summary strip ───────────────────────────────────────────────┐
  * ├ runs table (fills the width) ──────────┬ drill-down ─────────┤
  * │ one row per run, sorted by id           │ equity curve        │
- * │                                         │ fills · events      │
+ * ├ chart: the run's own candles,           │ fills · events      │
+ * │ indicators, fills, stop / target bands  │                     │
+ * ├ fills — pick one and it is read out ────┤                     │
  * └─────────────────────────────────────────┴─────────────────────┘
  * ```
+ *
+ * Picking a fill opens a plain-language account of it under the table: what the
+ * strategy saw, where the entry, stop and target sat, and what actually closed
+ * it. No fill and no run total is evidence a strategy works, and the account
+ * says so under any run with fewer than thirty of them.
  *
  * Every figure carries its unit, because `1.03` is not a profit factor and
  * `−277` is not a loss until it says dollars.
@@ -21,13 +28,26 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
+import { PriceChart, type ActiveIndicator } from '@/components/PriceChart'
 import { Skeleton } from '@/components/ui/skeleton'
-import { api, type BacktestTrade, type PaperEvent, type PaperRun, type PaperRunDetail } from '@/lib/api'
+import { api, type Bar, type BacktestTrade, type PaperEvent, type PaperRun, type PaperRunDetail } from '@/lib/api'
 import { clock, num } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
 /** Height of the sticky app bar, which this page fills the rest of the viewport under. */
 const APP_BAR = 45
+
+/**
+ * Bars the drill-down asks for.
+ *
+ * `PriceChart` opens on its last 140 candles, so anything under that leaves the
+ * chart with nothing to scroll back into. 240 is a little under two days of 15m
+ * bars — enough context around the newest fills without making the poll heavy.
+ */
+const DETAIL_BARS = 240
+
+/** The chart's pane, in px. Fixed, because a chart that changes height on data reflows the column. */
+const CHART_H = 380
 
 /**
  * A run whose last closed bar is older than this is stale: the poller has
@@ -138,6 +158,13 @@ export function Desk() {
   // does not sit over the row you just opened.
   const [detailError, setDetailError] = useState<{ id: string; message: string } | null>(null)
   const [now, setNow] = useState(() => Date.now())
+  // Which fill the explanation below the table is describing. Held here rather
+  // than in the table because the table is rendered twice — once in the wide
+  // layout's left column, once in the rail under it — and a reader who picks a
+  // fill, then resizes, should still be reading the same fill. Tagged with the
+  // run it belongs to, so a key from the run you just left is simply not the
+  // run you are looking at rather than something an effect has to clear.
+  const [fillPick, setFillPick] = useState<{ id: string; key: string } | null>(null)
 
   // The book changes when a bar arrives — every five or fifteen minutes — so a
   // poll every 20 s is generous and costs one small JSON.
@@ -178,7 +205,7 @@ export function Desk() {
     let alive = true
     const read = () =>
       api
-        .paperRun(activeId, 120)
+        .paperRun(activeId, DETAIL_BARS)
         .then((d) => {
           if (!alive) return
           setDetail(d)
@@ -199,6 +226,17 @@ export function Desk() {
     setSelected(id)
     writeSelected(id)
   }, [])
+
+  const openFill = useCallback(
+    (key: string | null) => setFillPick(key && activeId ? { id: activeId, key } : null),
+    [activeId],
+  )
+
+  // The detail only ever belongs to one run; while a newly picked run is still
+  // loading, the panes below show their skeletons rather than the old run's
+  // chart under the new run's name.
+  const live = detail && detail.run.id === activeId ? detail : null
+  const pickedFill = fillPick && fillPick.id === activeId ? fillPick.key : null
 
   return (
     <div
@@ -221,21 +259,32 @@ export function Desk() {
         <NoRuns />
       ) : (
         <div className="flex min-h-0 flex-1 flex-col overflow-auto xl:flex-row xl:overflow-hidden">
-          <div className="min-w-0 shrink-0 overflow-x-auto xl:h-full xl:flex-1 xl:shrink xl:overflow-auto">
-            <RunsTable runs={sorted} now={now} selected={activeId} onPick={pick} />
+          <div className="flex min-w-0 shrink-0 flex-col xl:h-full xl:flex-1 xl:shrink xl:overflow-y-auto">
+            {/* Only the runs table is 1130px wide, so only the runs table
+                scrolls sideways; the chart and the fills below it stay put. */}
+            <div className="shrink-0 overflow-x-auto">
+              <RunsTable runs={sorted} now={now} selected={activeId} onPick={pick} />
+            </div>
+            {/* What the bot traded on: its own indicators over the candles it
+                stepped, with every fill's entry, exit and stop / target band. */}
+            <div className="border-border shrink-0 border-t">
+              <RunChart detail={live} />
+            </div>
             {/* The fills have seven columns and the rail has 460px; below the
                 runs table they get the width, and the space a ten-row table
                 leaves empty. Narrower than xl they stay in the rail. */}
             <div className="border-border hidden border-t xl:block">
-              <FillsSection detail={detail && detail.run.id === activeId ? detail : null} />
+              <FillsSection detail={live} openFill={pickedFill} onOpenFill={openFill} />
             </div>
           </div>
           <div className="min-w-0 border-t xl:h-full xl:w-[460px] xl:shrink-0 xl:overflow-y-auto xl:border-t-0 xl:border-l">
             <Drilldown
-              detail={detail && detail.run.id === activeId ? detail : null}
+              detail={live}
               summary={sorted.find((r) => r.id === activeId) ?? null}
               error={detailError && detailError.id === activeId ? detailError.message : null}
               now={now}
+              openFill={pickedFill}
+              onOpenFill={openFill}
             />
           </div>
         </div>
@@ -515,11 +564,15 @@ function Drilldown({
   summary,
   error,
   now,
+  openFill,
+  onOpenFill,
 }: {
   detail: PaperRunDetail | null
   summary: PaperRun | null
   error: string | null
   now: number
+  openFill: string | null
+  onOpenFill: (key: string | null) => void
 }) {
   if (error) {
     return (
@@ -574,7 +627,7 @@ function Drilldown({
         <Heading>
           Fills <span className="text-muted-foreground/70 num">{detail.fills.length}</span>
         </Heading>
-        <FillsTable fills={detail.fills} />
+        <FillsTable detail={detail} openFill={openFill} onOpenFill={onOpenFill} />
       </section>
 
       <section className="px-3 py-2">
@@ -593,7 +646,15 @@ function Drilldown({
  * The same table the rail shows on a narrow screen; here it has the room
  * its seven columns want, under a runs table that rarely fills the height.
  */
-function FillsSection({ detail }: { detail: PaperRunDetail | null }) {
+function FillsSection({
+  detail,
+  openFill,
+  onOpenFill,
+}: {
+  detail: PaperRunDetail | null
+  openFill: string | null
+  onOpenFill: (key: string | null) => void
+}) {
   if (!detail) {
     return (
       <div className="space-y-2 px-3 py-2">
@@ -608,7 +669,7 @@ function FillsSection({ detail }: { detail: PaperRunDetail | null }) {
         Fills <span className="text-muted-foreground/70 num">{detail.run.id}</span>{' '}
         <span className="text-muted-foreground/70 num">{detail.fills.length}</span>
       </Heading>
-      <FillsTable fills={detail.fills} />
+      <FillsTable detail={detail} openFill={openFill} onOpenFill={onOpenFill} />
     </section>
   )
 }
@@ -640,6 +701,130 @@ function ConfigLine({ run }: { run: PaperRun }) {
         </>
       )}
     </p>
+  )
+}
+
+/* ------------------------------------------------------------------ chart */
+
+/**
+ * Indicator line colours, named rather than written out.
+ *
+ * Lightweight Charts paints on a canvas, where `var(--sp)` is not a colour, so
+ * a token has to be resolved to whatever it currently computes to — but the
+ * component still never carries a colour of its own. Lime is deliberately
+ * absent: it is the one chrome accent (ui/DESIGN.md) and an indicator line is
+ * data, not a control.
+ */
+const LINE_TOKENS = ['--chart-2', '--chart-3', '--chart-4', '--chart-5', '--caution']
+
+/** What a palette token computes to right now. `gray` is a last resort no theme reaches. */
+function tokenValue(name: string): string {
+  if (typeof window === 'undefined') return 'gray'
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || 'gray'
+}
+
+/**
+ * The candles the run stepped, its own indicators, and every fill on top.
+ *
+ * Nothing here is chosen for the run: `detail.indicators` is what the
+ * strategy's definition declares it reads, and `overlay` on each one says
+ * whether its series belongs over the candles or wants a pane of its own.
+ */
+function RunChart({ detail }: { detail: PaperRunDetail | null }) {
+  // `bars` arrives as `[ms, o, h, l, c]` and `PriceChart` takes milliseconds
+  // and divides, so the tuple goes straight across. (`series` times are
+  // already seconds, which is what the chart wants there — the two halves of
+  // the payload are in different units and neither is converted here.)
+  const bars = useMemo<Bar[]>(
+    () => (detail?.bars ?? []).map(([time, open, high, low, close]) => ({ time, open, high, low, close })),
+    [detail],
+  )
+
+  const indicators = useMemo<ActiveIndicator[]>(() => {
+    const active: ActiveIndicator[] = []
+    for (const entry of detail?.indicators ?? []) {
+      // The wire sends fully-qualified outputs (`ema_21.ema`) and `PriceChart`
+      // glues `key + '.' + output` back together, so the prefix comes off
+      // here. Sliced by length rather than split on '.', because a float
+      // parameter puts a dot inside the key itself: `keltner_20_10_1.5`.
+      const prefix = `${entry.key}.`
+      active.push({
+        key: entry.key,
+        id: entry.id,
+        params: entry.params,
+        outputs: entry.outputs.map((o) => (o.startsWith(prefix) ? o.slice(prefix.length) : o)),
+        // Pane 0 is the candles. Every indicator whose own definition says it
+        // does not belong over them gets a pane of its own, numbered from 1.
+        pane: entry.overlay ? 0 : active.filter((e) => e.pane > 0).length + 1,
+        color: tokenValue(LINE_TOKENS[active.length % LINE_TOKENS.length]),
+      })
+    }
+    return active
+  }, [detail])
+
+  if (!detail) {
+    return (
+      <div className="space-y-2 px-3 py-2">
+        <Skeleton className="h-3 w-24" />
+        <Skeleton className="w-full" style={{ height: CHART_H - 26 }} />
+      </div>
+    )
+  }
+
+  if (bars.length === 0) {
+    return (
+      <section className="px-3 py-2">
+        <Heading>Chart</Heading>
+        <p className="text-muted-foreground py-8 text-center text-[11px]">
+          No bars to draw — the poller has fed this run nothing yet.
+        </p>
+      </section>
+    )
+  }
+
+  return (
+    <section className="px-3 py-2">
+      <Heading>
+        Chart <span className="text-muted-foreground/70 num">{detail.run.market}:{detail.run.tf}</span>{' '}
+        <span className="text-muted-foreground/70 num">{bars.length} bars</span>
+      </Heading>
+      <div className="border-border w-full overflow-hidden rounded-sm border" style={{ height: CHART_H }}>
+        {/* Keyed by run: a new run brings a different set of panes, and
+            remounting is cheaper to reason about than reconciling them. */}
+        <PriceChart
+          key={detail.run.id}
+          bars={bars}
+          indicators={indicators}
+          series={detail.series ?? {}}
+          frame={null}
+          showLevels={false}
+          trades={detail.fills}
+          showMarkers
+          showZones
+          liveBar={null}
+        />
+      </div>
+      <p className="text-muted-foreground mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px]">
+        {indicators.length === 0 ? (
+          <span>This strategy reads no indicator — it trades the clock or the bar itself.</span>
+        ) : (
+          indicators.map((entry) => (
+            <span key={entry.key} className="num inline-flex items-center gap-1">
+              <span
+                className="inline-block h-px w-3 align-middle"
+                style={{ backgroundColor: entry.color }}
+                aria-hidden
+              />
+              {entry.key}
+              {entry.pane > 0 && <span className="text-muted-foreground/60">pane {entry.pane}</span>}
+            </span>
+          ))
+        )}
+        <span className="text-muted-foreground/70">
+          entries and exits are marked; the bands behind them are each fill&rsquo;s stop and target.
+        </span>
+      </p>
+    </section>
   )
 }
 
@@ -766,54 +951,279 @@ function EquityCurve({ points }: { points: [number, number][] }) {
 
 const FILL_COLS = 'grid-cols-[96px_44px_56px_minmax(120px,1fr)_96px_72px_64px]'
 
-function FillsTable({ fills }: { fills: BacktestTrade[] }) {
-  if (fills.length === 0) {
+/** Identifies a fill across polls: a run cannot open two trades on the same bar. */
+const fillId = (fill: BacktestTrade, index: number) => `${fill.entryTime}-${fill.exitTime}-${index}`
+
+/**
+ * The run's closed trades, one per row, newest first.
+ *
+ * A row is a button: clicking it (or pressing Enter on it) opens the account of
+ * that fill beneath the table, and clicking it again closes it. ↑/↓ walk the
+ * rows the way they do in the runs table above.
+ */
+function FillsTable({
+  detail,
+  openFill,
+  onOpenFill,
+}: {
+  detail: PaperRunDetail
+  openFill: string | null
+  onOpenFill: (key: string | null) => void
+}) {
+  const rowRefs = useRef<(HTMLButtonElement | null)[]>([])
+  // Newest first, but keyed by the position the fill holds in the book, so the
+  // key survives the reversal and the next poll.
+  const rows = useMemo(
+    () => detail.fills.map((fill, index) => ({ fill, key: fillId(fill, index) })).reverse(),
+    [detail.fills],
+  )
+  const open = rows.find((row) => row.key === openFill) ?? null
+
+  const onKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>, index: number) => {
+    if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return
+    event.preventDefault()
+    const next = event.key === 'ArrowDown' ? Math.min(index + 1, rows.length - 1) : Math.max(index - 1, 0)
+    rowRefs.current[next]?.focus()
+  }
+
+  if (rows.length === 0) {
     return (
       <p className="text-muted-foreground py-2 text-[11px]">
         None yet — the first live bar decides; the warm-up bars do not.
       </p>
     )
   }
+
   return (
-    <div className="overflow-x-auto">
-      <div className="min-w-[600px]">
-        <div
-          className={cn(
-            'text-muted-foreground grid items-center gap-2 border-b pb-1 text-[10px] tracking-wide uppercase',
-            FILL_COLS,
-          )}
-        >
-          <span>exit time</span>
-          <span>side</span>
-          <span className="text-right">lots</span>
-          <span className="text-right">entry → exit</span>
-          <span>exit reason</span>
-          <span className="text-right">P&amp;L</span>
-          <span className="text-right">R</span>
-        </div>
-        {[...fills].reverse().map((fill, index) => (
+    <>
+      <div className="overflow-x-auto">
+        <div className="min-w-[600px]" role="group" aria-label="Closed fills">
           <div
-            key={`${fill.entryTime}-${fill.exitTime}-${index}`}
-            className={cn('grid items-center gap-2 border-b py-[3px] text-[11px] last:border-0', FILL_COLS)}
+            className={cn(
+              'text-muted-foreground grid items-center gap-2 border-b pb-1 text-[10px] tracking-wide uppercase',
+              FILL_COLS,
+            )}
           >
-            <span className="num text-muted-foreground">{shortStamp(fill.exitTime)}</span>
-            <span className={cn('num', fill.direction === 'LONG' ? 'text-lc' : 'text-lp')}>
-              {fill.direction.toLowerCase()}
-            </span>
-            <span className="num text-right">{num(fill.lots, fill.lots >= 100 ? 0 : 2)}</span>
-            <span className="num text-right">
-              {quote(fill.entryPrice)} <span className="text-muted-foreground">→</span> {quote(fill.exitPrice)}
-            </span>
-            <span className="text-muted-foreground truncate">{fill.exitReason.toLowerCase().replace(/_/g, ' ')}</span>
-            <span className={cn('num text-right', fill.pnlUsd >= 0 ? 'text-lc' : 'text-lp')}>
-              {signedUsd(fill.pnlUsd)}
-            </span>
-            <span className={cn('num text-right', fill.r >= 0 ? 'text-lc' : 'text-lp')}>{signedR(fill.r)}</span>
+            <span>exit time</span>
+            <span>side</span>
+            <span className="text-right">lots</span>
+            <span className="text-right">entry → exit</span>
+            <span>exit reason</span>
+            <span className="text-right">P&amp;L</span>
+            <span className="text-right">R</span>
           </div>
-        ))}
+          {rows.map(({ fill, key }, index) => {
+            const isOpen = key === openFill
+            return (
+              <button
+                key={key}
+                type="button"
+                ref={(el) => {
+                  rowRefs.current[index] = el
+                }}
+                onClick={() => onOpenFill(isOpen ? null : key)}
+                onKeyDown={(e) => onKeyDown(e, index)}
+                aria-expanded={isOpen}
+                aria-controls={`fill-account-${detail.run.id}`}
+                className={cn(
+                  'hover:bg-accent/60 focus-visible:ring-ring grid w-full items-center gap-2 border-b py-[3px] text-left text-[11px] transition-colors last:border-0 focus-visible:ring-2 focus-visible:ring-inset focus-visible:outline-none motion-reduce:transition-none',
+                  FILL_COLS,
+                  isOpen && 'bg-primary/10 shadow-[inset_2px_0_0_var(--primary)]',
+                )}
+              >
+                <span className="num text-muted-foreground">{shortStamp(fill.exitTime)}</span>
+                <span className={cn('num', fill.direction === 'LONG' ? 'text-lc' : 'text-lp')}>
+                  {fill.direction.toLowerCase()}
+                </span>
+                <span className="num text-right">{num(fill.lots, fill.lots >= 100 ? 0 : 2)}</span>
+                <span className="num text-right">
+                  {quote(fill.entryPrice)} <span className="text-muted-foreground">→</span> {quote(fill.exitPrice)}
+                </span>
+                <span className="text-muted-foreground truncate">
+                  {fill.exitReason.toLowerCase().replace(/_/g, ' ')}
+                </span>
+                <span className={cn('num text-right', fill.pnlUsd >= 0 ? 'text-lc' : 'text-lp')}>
+                  {signedUsd(fill.pnlUsd)}
+                </span>
+                <span className={cn('num text-right', fill.r >= 0 ? 'text-lc' : 'text-lp')}>{signedR(fill.r)}</span>
+              </button>
+            )
+          })}
+        </div>
       </div>
+      <div id={`fill-account-${detail.run.id}`}>
+        {open ? (
+          <FillAccount fill={open.fill} run={detail.run} />
+        ) : (
+          <p className="text-muted-foreground/70 mt-1.5 text-[10px]">
+            Pick a fill to read what the strategy saw, where its stop and target sat, and how it ended.
+          </p>
+        )}
+      </div>
+    </>
+  )
+}
+
+/* ------------------------------------------------------- one fill, in words */
+
+/** `2 h 15 min` — the scale a person holding a trade thinks in. */
+const heldFor = (ms: number | null | undefined): string => {
+  if (ms == null || !Number.isFinite(ms) || ms <= 0) return 'less than a minute'
+  const minutes = Math.round(ms / 60_000)
+  if (minutes < 1) return 'less than a minute'
+  if (minutes < 60) return `${minutes} min`
+  const hours = Math.floor(minutes / 60)
+  const restMin = minutes % 60
+  if (hours < 24) return restMin > 0 ? `${hours} h ${restMin} min` : `${hours} h`
+  const days = Math.floor(hours / 24)
+  const restH = hours % 24
+  return restH > 0 ? `${days} d ${restH} h` : `${days} d`
+}
+
+/**
+ * What ended the trade, in words.
+ *
+ * The guards spell themselves in SCREAMING_CASE and the engine's own exits are
+ * `STOP` and `TARGET`. Anything else is the strategy describing its own rule —
+ * `window closed`, say — and is quoted rather than paraphrased, because a
+ * paraphrase of a sentence we did not write is a sentence we invented.
+ */
+const exitSentence = (reason: string): string => {
+  switch (reason.trim().toUpperCase()) {
+    case 'STOP':
+      return 'Price reached the stop'
+    case 'TARGET':
+      return 'Price reached the target'
+    case 'WEEKEND_FLAT':
+      return 'The weekend guard closed it before Friday’s close'
+    case 'NEWS_FLAT':
+      return 'The news guard closed it before a release'
+    case 'OPEN_LOSS_CAP':
+      return 'The open-loss cap closed it at 2R'
+    case 'DAILY_LOSS_LIMIT':
+      return 'The daily loss limit closed the book, and this trade with it'
+    default:
+      return `The strategy’s own rule closed it — “${reason}”`
+  }
+}
+
+/**
+ * One fill, read out.
+ *
+ * Everything here is on the fill itself; nothing is modelled. `mae` and `mfe`
+ * arrive already divided by the position's risk (see `BacktestTrade`), so they
+ * are R and need no conversion — which is why the stop distance below is only
+ * ever used for the *target's* R, never for the excursion's.
+ */
+function FillAccount({ fill, run }: { fill: BacktestTrade; run: PaperRun }) {
+  const long = fill.direction === 'LONG'
+  const side = long ? 'long' : 'short'
+  const lots = num(fill.lots, fill.lots >= 100 ? 0 : 2)
+
+  const stopAway = Math.abs(fill.entryPrice - fill.stop)
+  // Prices come off the wire rounded to two decimals, so on a five-decimal
+  // market a stop a few pips away can arrive equal to the entry. "0.00 away"
+  // would be a lie; saying nothing about the distance in price is not.
+  const stopKnown = Number.isFinite(stopAway) && stopAway > 0
+  const targetAway = fill.target == null ? null : Math.abs(fill.target - fill.entryPrice)
+  const targetR = targetAway != null && stopKnown ? targetAway / stopAway : null
+
+  return (
+    <div className="border-border bg-card/50 mt-2 space-y-1.5 rounded-sm border px-3 py-2 text-[12px] leading-relaxed">
+      <p className="text-muted-foreground">
+        {fill.reason ? (
+          <>
+            <Label>What it saw</Label> the strategy wrote “
+            <span className="text-foreground">{fill.reason}</span>” as its reason for taking this one.
+          </>
+        ) : (
+          <>
+            <Label>What it saw</Label> the run recorded no entry sentence for this fill.
+          </>
+        )}
+      </p>
+
+      <p className="text-muted-foreground">
+        <Label>Entry</Label> it went{' '}
+        <span className={cn('num', long ? 'text-lc' : 'text-lp')}>{side}</span>{' '}
+        <span className="num text-foreground">{lots}</span> lots of{' '}
+        <span className="num">{run.market}</span> at{' '}
+        <span className="num text-foreground">{quote(fill.entryPrice)}</span>, on{' '}
+        <span className="num">{shortStamp(fill.entryTime)}</span>.
+      </p>
+
+      <p className="text-muted-foreground">
+        <Label>SL</Label> the stop sat at <span className="num text-foreground">{quote(fill.stop)}</span>
+        {stopKnown ? (
+          <>
+            , <span className="num">{quote(stopAway)}</span> in price {long ? 'below' : 'above'} the entry
+          </>
+        ) : (
+          <> (closer to the entry than the two decimals this feed reports prices in)</>
+        )}
+        . That distance <em className="not-italic">is</em> one R by construction — every R figure on this fill is a
+        multiple of it.
+        {fill.target == null && (
+          <>
+            {' '}
+            Here it is only the sizing unit: this strategy exits on its own rule, so the stop says how big the trade
+            was, not how it was meant to end.
+          </>
+        )}
+      </p>
+
+      <p className="text-muted-foreground">
+        <Label>TP</Label>{' '}
+        {fill.target == null ? (
+          <>no target — the strategy&rsquo;s own rule closes it, and nothing was set to take profit at.</>
+        ) : (
+          <>
+            the target sat at <span className="num text-foreground">{quote(fill.target)}</span>
+            {targetAway != null && (
+              <>
+                , <span className="num">{quote(targetAway)}</span> in price {long ? 'above' : 'below'} the entry
+              </>
+            )}
+            {targetR != null && (
+              <>
+                {' '}
+                — <span className="num text-foreground">{targetR.toFixed(2)}R</span> of reward against the 1R it was
+                risking
+              </>
+            )}
+            .
+          </>
+        )}
+      </p>
+
+      <p className="text-muted-foreground">
+        <Label>What happened</Label> {exitSentence(fill.exitReason)}. It closed at{' '}
+        <span className="num text-foreground">{quote(fill.exitPrice)}</span> on{' '}
+        <span className="num">{shortStamp(fill.exitTime)}</span>, held{' '}
+        <span className="num">{heldFor(fill.holdMs)}</span>, for{' '}
+        <span className={cn('num', fill.pnlUsd >= 0 ? 'text-lc' : 'text-lp')}>{signedUsd(fill.pnlUsd)}</span> —{' '}
+        <span className={cn('num', fill.r >= 0 ? 'text-lc' : 'text-lp')}>{signedR(fill.r)}</span>.
+      </p>
+
+      <p className="text-muted-foreground">
+        <Label>On the way</Label> it went as far as{' '}
+        <span className="num text-lc">{signedR(fill.mfe)}</span> in favour and{' '}
+        <span className="num text-lp">{signedR(fill.mae)}</span> against before it closed.
+      </p>
+
+      {run.trades < 30 && (
+        <p className="text-caution border-border border-t pt-1.5 text-[11px]">
+          This is one trade out of {run.trades} this run has closed. Fewer than 30 fills cannot be read as a result —
+          neither this fill nor the run&rsquo;s total says whether the strategy works.
+        </p>
+      )}
     </div>
   )
+}
+
+/** The word that opens each sentence. Weight, not colour — lime is for controls. */
+function Label({ children }: { children: React.ReactNode }) {
+  return <span className="text-foreground font-medium">{children} — </span>
 }
 
 /* ----------------------------------------------------------------- events */
