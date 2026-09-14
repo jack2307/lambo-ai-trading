@@ -1,4 +1,6 @@
 /target
+# A second build directory, used when the binaries in /target are running.
+/target-b
 **/*.rs.bk
 
 # Data is fetched, not committed — except the golden files, which are the
