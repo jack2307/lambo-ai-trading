@@ -12,7 +12,7 @@ use axum::Json;
 use axum::extract::State;
 use axum::response::IntoResponse;
 use axum::extract::{Path as PathParam, Query};
-use fd_api::paper::{DEFAULT_DETAIL_BARS, DetailQuery, bar, detail, start, status, stop};
+use fd_api::paper::{DEFAULT_DETAIL_BARS, DetailQuery, MAX_LIVE_AGE_MS, bar, detail, start, status, stop, tick};
 use fd_api::{ApiError, AppState};
 use fd_core::config::Config;
 use fd_core::types::Bar;
@@ -53,6 +53,23 @@ async fn post_bar(state: &Arc<AppState>, market: &str, tf: &str, b: Bar) -> Resu
     let body = json!({ "market": market, "tf": tf, "bar": { "time": b.time, "open": b.open, "high": b.high, "low": b.low, "close": b.close, "volume": b.volume } });
     let request = serde_json::from_value(body).expect("a bar body");
     bar(State(Arc::clone(state)), Json(request)).await.map(|Json(v)| serde_json::to_value(v).expect("json"))
+}
+
+/// The forming bar, as the poller posts it between two closed ones. `body`
+/// carries the `bar` and any quote; the stream is spelled out here.
+async fn post_tick(state: &Arc<AppState>, market: &str, tf: &str, body: Value) -> Result<Value, ApiError> {
+    let mut payload = json!({ "market": market, "tf": tf });
+    let (Some(target), Some(fields)) = (payload.as_object_mut(), body.as_object()) else { panic!("two json objects") };
+    for (key, value) in fields {
+        target.insert(key.clone(), value.clone());
+    }
+    let request = serde_json::from_value(payload).expect("a tick body");
+    tick(State(Arc::clone(state)), Json(request)).await.map(|Json(v)| serde_json::to_value(v).expect("json"))
+}
+
+/// A forming bar in `b`'s bucket, with a close that has moved since.
+fn forming(b: Bar, close: f64) -> Value {
+    json!({ "bar": { "time": b.time, "open": b.open, "high": b.high.max(close), "low": b.low.min(close), "close": close, "volume": 7.0 } })
 }
 
 async fn read_detail(state: &Arc<AppState>, id: &str, bars: Option<usize>) -> Result<Value, ApiError> {
@@ -518,4 +535,129 @@ async fn the_detail_carries_the_curve_the_fills_the_events_and_the_window() {
     assert!(bars[0][0].as_i64() < bars[9][0].as_i64());
 
     assert_eq!(read_detail(&state, "nobody", None).await.map(|_| ()).map_err(http_status), Err(404));
+}
+
+/// A tick is the screen's price and nothing else: it reaches the status and
+/// the detail, and it reaches no book, no counter and no file.
+#[tokio::test]
+async fn a_tick_is_reported_and_touches_nothing() {
+    let dir = tempfile::tempdir().expect("temp dir");
+    let state = state_over(dir.path(), 300);
+    start_run(&state, json!({ "id": "ticker", "market": "btc", "tf": "15m", "strategy": "ema-cross", "window": 200 }))
+        .await
+        .expect("start");
+    for i in 300..340 {
+        post_bar(&state, "btc", "15m", wave(i)).await.expect("bar");
+    }
+
+    let before = read_status(&state).await;
+    let run_before = run_named(&before, "ticker").clone();
+    assert!(run_before["live"].is_null(), "no tick yet, so no live price");
+    let run_dir = dir.path().join("paper").join("ticker");
+    let state_json_before = std::fs::read(run_dir.join("state.json")).expect("state.json");
+    let fills_before = std::fs::read(run_dir.join("fills.jsonl")).expect("fills.jsonl");
+
+    // The bucket after the last closed bar, still forming, a dollar up.
+    let next = wave(340);
+    let mut body = forming(next, next.open + 1.0);
+    body["bid"] = json!(next.open + 0.9);
+    body["ask"] = json!(next.open + 1.1);
+    let sent_at = now_ms();
+    assert_eq!(post_tick(&state, "btc", "15m", body).await.expect("tick"), json!({ "stored": true }));
+
+    let run = run_named(&read_status(&state).await, "ticker").clone();
+    let live = &run["live"];
+    assert_eq!(live["time"], next.time, "the forming bar keeps its own bucket");
+    assert_eq!(live["close"], next.open + 1.0);
+    assert_eq!(live["bid"], next.open + 0.9);
+    assert_eq!(live["ask"], next.open + 1.1);
+    assert_eq!(live["volume"], 7.0);
+    assert!(live["at"].as_i64().expect("at") >= sent_at, "`at` is the server's clock, not the sender's");
+
+    // Nothing the run decides on moved, on the wire or on disk.
+    for key in ["bars", "bars_seen", "trades", "last_bar_time", "equity", "net_usd", "gaps", "open", "last_fills"] {
+        assert_eq!(run[key], run_before[key], "a tick must not move `{key}`");
+    }
+    assert_eq!(std::fs::read(run_dir.join("state.json")).expect("state.json"), state_json_before, "a tick must not rewrite the book");
+    assert_eq!(std::fs::read(run_dir.join("fills.jsonl")).expect("fills.jsonl"), fills_before, "a tick must not write an event line");
+
+    // The chart reads it beside the bars rather than through the status entry.
+    let detail = read_detail(&state, "ticker", Some(10)).await.expect("detail");
+    assert_eq!(detail["live"]["close"], next.open + 1.0);
+    assert_eq!(detail["live"], detail["run"]["live"], "one value, carried twice");
+    assert_eq!(detail["bars"].as_array().map(Vec::len), Some(10));
+    assert_eq!(detail["bars"][9][0], wave(339).time, "the newest window bar is still the last closed one");
+}
+
+/// A tick belongs to one `market:tf`. Another stream's price is not this
+/// run's price, and a stream nobody trades is accepted all the same.
+#[tokio::test]
+async fn a_tick_is_keyed_by_stream() {
+    let dir = tempfile::tempdir().expect("temp dir");
+    let state = state_over(dir.path(), 300);
+    start_run(&state, json!({ "id": "only-15m", "market": "btc", "tf": "15m", "strategy": "ema-cross", "window": 200 }))
+        .await
+        .expect("start");
+
+    // `btc:1h` has no run — a closed bar there is 404, a tick is not.
+    assert_eq!(post_bar(&state, "btc", "1h", wave(340)).await.map(|_| ()).map_err(http_status), Err(404));
+    assert_eq!(post_tick(&state, "btc", "1h", forming(wave(340), 61_111.0)).await.expect("tick"), json!({ "stored": true }));
+    assert!(run_named(&read_status(&state).await, "only-15m")["live"].is_null(), "another stream's tick is not this run's price");
+
+    post_tick(&state, "btc", "15m", forming(wave(340), 60_222.0)).await.expect("tick");
+    assert_eq!(run_named(&read_status(&state).await, "only-15m")["live"]["close"], 60_222.0);
+}
+
+/// The checks a closed bar gets: finite, ordered, and a timeframe the API
+/// serves. A tick that fails one is refused rather than drawn.
+#[tokio::test]
+async fn a_malformed_tick_is_refused() {
+    let dir = tempfile::tempdir().expect("temp dir");
+    let state = state_over(dir.path(), 300);
+    start_run(&state, json!({ "id": "strict", "market": "btc", "tf": "15m", "strategy": "ema-cross", "window": 200 }))
+        .await
+        .expect("start");
+    let b = wave(340);
+
+    let inverted = json!({ "bar": { "time": b.time, "open": b.open, "high": b.low - 1.0, "low": b.low, "close": b.close } });
+    assert_eq!(post_tick(&state, "btc", "15m", inverted).await.map(|_| ()).map_err(http_status), Err(400), "high < low");
+
+    let unknown_tf = post_tick(&state, "btc", "3m", forming(b, b.close)).await;
+    assert_eq!(unknown_tf.map(|_| ()).map_err(http_status), Err(400), "3m is not a timeframe this API serves");
+
+    assert!(run_named(&read_status(&state).await, "strict")["live"].is_null(), "nothing refused was stored");
+}
+
+/// Older than ninety seconds is not a current price: the status drops it
+/// rather than let the client draw a dead feed as live.
+#[tokio::test]
+async fn a_stale_tick_is_not_reported() {
+    let dir = tempfile::tempdir().expect("temp dir");
+    let state = state_over(dir.path(), 300);
+    start_run(&state, json!({ "id": "stale", "market": "btc", "tf": "15m", "strategy": "ema-cross", "window": 200 }))
+        .await
+        .expect("start");
+    post_tick(&state, "btc", "15m", forming(wave(340), 60_333.0)).await.expect("tick");
+    assert_eq!(run_named(&read_status(&state).await, "stale")["live"]["close"], 60_333.0);
+
+    // Aged past the cut-off in place. The rule is on `at`, the moment the
+    // server received it, so this is exactly what a dead poller looks like.
+    {
+        let mut live = state.live_bars.lock().expect("live bars");
+        live.get_mut("btc:15m").expect("the stored tick").at -= MAX_LIVE_AGE_MS + 1;
+    }
+    assert!(run_named(&read_status(&state).await, "stale")["live"].is_null(), "a tick older than 90 s is not a price");
+    assert!(read_detail(&state, "stale", Some(5)).await.expect("detail")["live"].is_null());
+
+    // A fresh tick brings the price back: the stale one was dropped from the
+    // report, not from the map, and the next read overwrites it.
+    post_tick(&state, "btc", "15m", forming(wave(340), 60_444.0)).await.expect("tick");
+    assert_eq!(run_named(&read_status(&state).await, "stale")["live"]["close"], 60_444.0);
+}
+
+/// The server's own clock, the way the handler stamps `at`.
+fn now_ms() -> i64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |d| i64::try_from(d.as_millis()).unwrap_or(i64::MAX))
 }

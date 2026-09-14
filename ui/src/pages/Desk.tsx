@@ -24,13 +24,21 @@
  *
  * Every figure carries its unit, because `1.03` is not a profit factor and
  * `−277` is not a loss until it says dollars.
+ *
+ * One number on this screen is not a decision: the live price. The bot steps
+ * on closed bars, so between two of them every figure here is up to fifteen
+ * minutes old — which reads as a dead feed. `run.live` is the bar still
+ * forming, posted straight to the server by the same poller and kept out of
+ * every book; it is drawn so the screen moves, labelled so nobody mistakes it
+ * for something the bot acted on, and dropped by the server after ninety
+ * seconds so a stopped poller shows as no price rather than a frozen one.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { PriceChart, type ActiveIndicator } from '@/components/PriceChart'
 import { Skeleton } from '@/components/ui/skeleton'
-import { api, type Bar, type BacktestTrade, type PaperEvent, type PaperRun, type PaperRunDetail } from '@/lib/api'
+import { api, type Bar, type BacktestTrade, type LiveBar, type PaperEvent, type PaperRun, type PaperRunDetail } from '@/lib/api'
 import { clock, num } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
@@ -99,6 +107,42 @@ const ago = (ms: number | null | undefined, now: number): string => {
   return `${Math.round(minutes / 1440)} d`
 }
 
+/**
+ * How old the live price is, in seconds.
+ *
+ * Seconds, not the minutes `ago` deals in: the server drops a tick older than
+ * ninety seconds, so anything shown here is inside a minute and a half, and
+ * "0 min" would say nothing about whether the feed is moving.
+ */
+const liveAge = (at: number, now: number): string => `${Math.max(0, Math.round((now - at) / 1000))} s ago`
+
+/**
+ * `ask − bid`, at the precision the price itself is quoted in.
+ *
+ * A gold spread printed by `quote` would read `0.25000`, because `quote`
+ * chooses its decimals from the magnitude and a spread is a small number in a
+ * large market. It takes its decimals from the close instead.
+ */
+const spreadOf = (live: LiveBar): string | null => {
+  if (live.bid == null || live.ask == null || !Number.isFinite(live.bid) || !Number.isFinite(live.ask)) return null
+  const decimals = (quote(live.close).split('.')[1] ?? '').length
+  return (live.ask - live.bid).toFixed(decimals)
+}
+
+/**
+ * Which way the forming bar has gone since the bot last decided anything:
+ * `1`, `-1` or `0` against the previous closed bar's close.
+ */
+const liveDirection = (live: LiveBar, lastClose: number | null): number => {
+  if (lastClose == null || !Number.isFinite(lastClose)) return 0
+  return Math.sign(live.close - lastClose)
+}
+
+/** Up green, down red — the data colours, never the accent, which means selection here. */
+const DIRECTION_CLASS = ['text-lp', 'text-foreground', 'text-lc']
+/** The arrow carries the direction too, so colour is not the only channel. */
+const DIRECTION_MARK = ['▾', '·', '▴']
+
 /** `HH:MMZ` — the wall clock the whole product reads in, UTC. */
 const zulu = (ms: number | null | undefined): string =>
   ms == null || !Number.isFinite(ms) ? '—' : `${clock(ms)}Z`
@@ -166,8 +210,10 @@ export function Desk() {
   // run you are looking at rather than something an effect has to clear.
   const [fillPick, setFillPick] = useState<{ id: string; key: string } | null>(null)
 
-  // The book changes when a bar arrives — every five or fifteen minutes — so a
-  // poll every 20 s is generous and costs one small JSON.
+  // The book changes when a bar arrives — every five or fifteen minutes — but
+  // the live price rides on this same small JSON, so it is read every 10 s:
+  // half the old interval, and well inside the ninety seconds after which the
+  // server stops reporting a tick at all.
   useEffect(() => {
     let alive = true
     const read = () =>
@@ -183,11 +229,19 @@ export function Desk() {
           if (alive) setStatusError(e.message)
         })
     read()
-    const timer = window.setInterval(read, 20_000)
+    const timer = window.setInterval(read, 10_000)
     return () => {
       alive = false
       window.clearInterval(timer)
     }
+  }, [])
+
+  // The price arrives every 10 s; its *age* is a second hand, and an age that
+  // sat still for ten seconds at a time would itself look like a stuck feed.
+  // Only `now` changes here — no request, and nothing the chart depends on.
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 1_000)
+    return () => window.clearInterval(timer)
   }, [])
 
   const sorted = useMemo(() => [...(runs ?? [])].sort((a, b) => a.id.localeCompare(b.id)), [runs])
@@ -237,6 +291,11 @@ export function Desk() {
   // chart under the new run's name.
   const live = detail && detail.run.id === activeId ? detail : null
   const pickedFill = fillPick && fillPick.id === activeId ? fillPick.key : null
+  // The same field from whichever poll read it last: `/status` every 10 s,
+  // `/run/{id}` every 60. Taking it from the detail alone would leave the
+  // chart's forming candle a minute behind the price in the table above it.
+  const activeRun = sorted.find((r) => r.id === activeId) ?? null
+  const livePrice = activeRun?.live ?? live?.live ?? null
 
   return (
     <div
@@ -268,7 +327,7 @@ export function Desk() {
             {/* What the bot traded on: its own indicators over the candles it
                 stepped, with every fill's entry, exit and stop / target band. */}
             <div className="border-border shrink-0 border-t">
-              <RunChart detail={live} />
+              <RunChart detail={live} live={livePrice} />
             </div>
             {/* The fills have seven columns and the rail has 460px; below the
                 runs table they get the width, and the space a ten-row table
@@ -280,7 +339,7 @@ export function Desk() {
           <div className="min-w-0 border-t xl:h-full xl:w-[460px] xl:shrink-0 xl:overflow-y-auto xl:border-t-0 xl:border-l">
             <Drilldown
               detail={live}
-              summary={sorted.find((r) => r.id === activeId) ?? null}
+              summary={activeRun}
               error={detailError && detailError.id === activeId ? detailError.message : null}
               now={now}
               openFill={pickedFill}
@@ -389,8 +448,9 @@ function NoRuns() {
 
 /* ------------------------------------------------------------ runs table */
 
+/** Track widths; `RunsTable`'s `min-w` is their sum plus the gaps. */
 const RUN_COLS =
-  'grid-cols-[minmax(150px,1.4fr)_80px_104px_66px_74px_68px_80px_72px_minmax(140px,1fr)_minmax(130px,1fr)_86px]'
+  'grid-cols-[minmax(140px,1.2fr)_80px_96px_66px_66px_62px_80px_72px_minmax(120px,1fr)_minmax(104px,0.9fr)_112px]'
 
 function RunsTable({
   runs,
@@ -415,7 +475,7 @@ function RunsTable({
   }
 
   return (
-    <div className="min-w-[1130px]" role="group" aria-label="Paper runs">
+    <div className="min-w-[1078px]" role="group" aria-label="Paper runs">
       <div
         className={cn(
           'text-muted-foreground bg-background sticky top-0 z-10 grid items-center gap-2 border-b px-3 py-1 text-[10px] tracking-wide uppercase',
@@ -432,7 +492,7 @@ function RunsTable({
         <span className="text-right">PF</span>
         <span>open position</span>
         <span>guards</span>
-        <span className="text-right">last bar</span>
+        <span className="text-right">live price</span>
       </div>
 
       {runs.map((run, index) => {
@@ -486,9 +546,7 @@ function RunsTable({
             </span>
             <OpenCell run={run} />
             <GuardChips run={run} />
-            <span className="num text-muted-foreground text-right">
-              {run.last_bar_time ? `${ago(run.last_bar_time, now)} ago` : 'no bar yet'}
-            </span>
+            <LiveCell run={run} now={now} />
           </button>
         )
       })}
@@ -516,6 +574,45 @@ function StatusPill({ stale }: { stale: boolean }) {
         aria-hidden
       />
       {stale ? 'stale' : 'fed'}
+    </span>
+  )
+}
+
+/**
+ * The price right now, and how old it is.
+ *
+ * The forming bar's close against the last closed bar's close: up green, down
+ * red, with an arrow so the direction survives without colour. Underneath, the
+ * age in seconds — because a price with no age is the thing that made this
+ * screen look broken in the first place.
+ *
+ * With no live bar — no poller, or a market that is shut — the column is what
+ * it was before: how long ago the last bar closed.
+ */
+function LiveCell({ run, now }: { run: PaperRun; now: number }) {
+  const live = run.live
+  if (!live) {
+    return (
+      <span className="num text-muted-foreground text-right">
+        {run.last_bar_time ? `${ago(run.last_bar_time, now)} ago` : 'no bar yet'}
+      </span>
+    )
+  }
+  const direction = liveDirection(live, run.last_bar_close)
+  const spread = spreadOf(live)
+  return (
+    <span className="flex flex-col items-end leading-tight">
+      <span
+        className={cn(
+          'num whitespace-nowrap transition-colors duration-300 motion-reduce:transition-none',
+          DIRECTION_CLASS[direction + 1],
+        )}
+      >
+        <span aria-hidden>{DIRECTION_MARK[direction + 1]}</span> {quote(live.close)}
+      </span>
+      <span className="num text-muted-foreground/80 text-[10px] whitespace-nowrap" title={spread ? `spread ${spread}` : undefined}>
+        {liveAge(live.at, now)}
+      </span>
     </span>
   )
 }
@@ -606,6 +703,7 @@ function Drilldown({
             {run.market}:{run.tf} · last bar {run.last_bar_time ? `${ago(run.last_bar_time, now)} ago` : 'none'}
           </span>
         </div>
+        <LivePrice live={summary?.live ?? detail.live} lastClose={(summary ?? run).last_bar_close} now={now} />
         {run.label && <p className="text-muted-foreground mt-1 text-[11px] leading-snug">{run.label}</p>}
         <ConfigLine run={run} />
       </section>
@@ -646,6 +744,45 @@ function Drilldown({
  * The same table the rail shows on a narrow screen; here it has the room
  * its seven columns want, under a runs table that rarely fills the height.
  */
+/**
+ * The live price, the size the drill-down has room for.
+ *
+ * The same number as the row above, read larger, with the quote it came from
+ * and its age. The sentence under it is the whole point: this is the only
+ * figure on the screen the bot has not acted on.
+ */
+function LivePrice({ live, lastClose, now }: { live: LiveBar | null; lastClose: number | null; now: number }) {
+  if (!live) {
+    return (
+      <p className="text-muted-foreground mt-2 text-[11px]">
+        No live price — nothing has posted a forming bar in the last 90 seconds.
+      </p>
+    )
+  }
+  const direction = liveDirection(live, lastClose)
+  const spread = spreadOf(live)
+  return (
+    <div className="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+      <span
+        className={cn(
+          'num text-[22px] leading-none transition-colors duration-300 motion-reduce:transition-none',
+          DIRECTION_CLASS[direction + 1],
+        )}
+      >
+        <span aria-hidden>{DIRECTION_MARK[direction + 1]}</span> {quote(live.close)}
+      </span>
+      <span className="text-muted-foreground num text-[10px]">
+        {live.bid != null && live.ask != null
+          ? `bid ${quote(live.bid)} / ask ${quote(live.ask)}${spread ? ` · spread ${spread}` : ''}`
+          : 'no quote'}
+        {' · '}
+        {liveAge(live.at, now)}
+      </span>
+      <span className="text-muted-foreground/70 text-[10px]">forming bar — not traded on</span>
+    </div>
+  )
+}
+
 function FillsSection({
   detail,
   openFill,
@@ -730,7 +867,7 @@ function tokenValue(name: string): string {
  * strategy's definition declares it reads, and `overlay` on each one says
  * whether its series belongs over the candles or wants a pane of its own.
  */
-function RunChart({ detail }: { detail: PaperRunDetail | null }) {
+function RunChart({ detail, live }: { detail: PaperRunDetail | null; live: LiveBar | null }) {
   // `bars` arrives as `[ms, o, h, l, c]` and `PriceChart` takes milliseconds
   // and divides, so the tuple goes straight across. (`series` times are
   // already seconds, which is what the chart wants there — the two halves of
@@ -738,6 +875,17 @@ function RunChart({ detail }: { detail: PaperRunDetail | null }) {
   const bars = useMemo<Bar[]>(
     () => (detail?.bars ?? []).map(([time, open, high, low, close]) => ({ time, open, high, low, close })),
     [detail],
+  )
+
+  // The forming candle, in the shape the chart takes. `PriceChart` appends it
+  // past the last closed bar and ignores a frame older than one, so a stream
+  // that has fallen behind draws nothing rather than a candle in the past.
+  const forming = useMemo<Bar | null>(
+    () =>
+      live
+        ? { time: live.time, open: live.open, high: live.high, low: live.low, close: live.close }
+        : null,
+    [live],
   )
 
   const indicators = useMemo<ActiveIndicator[]>(() => {
@@ -801,7 +949,7 @@ function RunChart({ detail }: { detail: PaperRunDetail | null }) {
           trades={detail.fills}
           showMarkers
           showZones
-          liveBar={null}
+          liveBar={forming}
         />
       </div>
       <p className="text-muted-foreground mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px]">
@@ -822,6 +970,9 @@ function RunChart({ detail }: { detail: PaperRunDetail | null }) {
         )}
         <span className="text-muted-foreground/70">
           entries and exits are marked; the bands behind them are each fill&rsquo;s stop and target.
+        </span>
+        <span className="text-muted-foreground/70">
+          The bot decides on closed bars only; the last candle is still forming and is never traded on.
         </span>
       </p>
     </section>

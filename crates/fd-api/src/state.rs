@@ -38,6 +38,15 @@ pub struct AppState {
     /// step and its write to disk in turn. Reloaded from
     /// `<data>/paper/*/state.json` when the state is built.
     pub paper: Mutex<BTreeMap<String, crate::paper::PaperRun>>,
+    /// The bar still forming on each `market:tf`, as the pollers last
+    /// reported it — what the Desk draws as the current price between two
+    /// closed bars.
+    ///
+    /// Deliberately beside `paper` and not inside it: nothing in a run may
+    /// read a forming bar, and a separate mutex makes that structural rather
+    /// than a rule someone has to remember. Not persisted, and not reloaded:
+    /// a forming bar is worthless the moment the process stops.
+    pub live_bars: Mutex<BTreeMap<String, crate::paper::LiveBar>>,
 }
 
 pub struct BarSeries {
@@ -59,7 +68,20 @@ impl AppState {
             timelines: RwLock::new(HashMap::new()),
             live: crate::live::LiveHub::default(),
             paper: Mutex::new(paper),
+            live_bars: Mutex::new(BTreeMap::new()),
         }
+    }
+
+    /// The forming bar for one stream, or `None` when there is none or the
+    /// last one arrived more than [`crate::paper::MAX_LIVE_AGE_MS`] ago.
+    ///
+    /// The staleness rule lives here, at the one place the value leaves the
+    /// map, so no caller can draw a dead price as current by forgetting it.
+    pub fn live_bar(&self, market: &str, timeframe: &str) -> Option<crate::paper::LiveBar> {
+        let key = crate::paper::stream_key(market, timeframe);
+        let live = self.live_bars.lock().expect("live bars");
+        let bar = live.get(&key)?;
+        (crate::paper::now_ms() - bar.at <= crate::paper::MAX_LIVE_AGE_MS).then(|| bar.clone())
     }
 
     /// Point the research endpoint at a docs directory other than `./docs`.

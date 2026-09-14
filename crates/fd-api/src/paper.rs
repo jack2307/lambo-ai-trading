@@ -21,6 +21,12 @@
 //! manages the position and stores this bar's intent. Then the state is
 //! written, so a restart reloads the book and the window as they were.
 //!
+//! The Desk also shows the bar that is still forming, posted to
+//! `POST /api/paper/tick` by the same poller and kept in
+//! `AppState::live_bars` — never in a run, never on disk, and never read by
+//! anything in this module's decision path. It exists because a screen whose
+//! newest number is fifteen minutes old reads as broken; see [`tick`].
+//!
 //! One thing to know when reading a paper record against a backtest: the
 //! indicators are computed on the window, not on the whole history, so an
 //! indicator with memory (an EMA) differs from the backtest's by however
@@ -55,6 +61,14 @@ pub const DEFAULT_WINDOW: usize = 600;
 
 /// The longest run id accepted.
 pub const MAX_ID_LEN: usize = 40;
+
+/// How old a forming bar may be and still be shown as the current price.
+///
+/// Ninety seconds is a comfortable multiple of the poller's five-second
+/// cycle, so one missed read does not blank the screen; past it the poller
+/// is gone or the market is shut. A stale tick drawn as "now" is worse than
+/// no price at all — it is the exact lie this endpoint exists to stop.
+pub const MAX_LIVE_AGE_MS: i64 = 90_000;
 
 /// What a run was started with. `params` are the full parameters after the
 /// overrides, so a reload needs no registry lookup to know what ran.
@@ -110,6 +124,39 @@ pub fn default_run_id(market: &str, tf: &str, strategy: &str) -> String {
 #[must_use]
 pub fn stream_key(market: &str, tf: &str) -> String {
     format!("{market}:{tf}")
+}
+
+/// The bar still forming on a stream, plus the quote it was read with.
+///
+/// **Never decided on.** The paper loop steps on closed bars only
+/// (`PaperRun::accept`); this is what the screen draws so the owner can see
+/// the price move between them. It is held in `AppState::live_bars`, not in
+/// any run, and it is not persisted: a forming bar is worth nothing after a
+/// restart, and writing one per poll would rewrite ten state files a second
+/// for a number no book ever reads.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct LiveBar {
+    /// The bar's **open**, in epoch milliseconds — the bucket it belongs to,
+    /// not the moment it was read. The chart appends it as a candle.
+    pub time: i64,
+    pub open: f64,
+    pub high: f64,
+    pub low: f64,
+    pub close: f64,
+    #[serde(default)]
+    pub volume: Option<f64>,
+    /// The quote at the read, when the source had one. A non-finite one is
+    /// dropped rather than refused: the price is the point, the spread is
+    /// decoration.
+    #[serde(default)]
+    pub bid: Option<f64>,
+    #[serde(default)]
+    pub ask: Option<f64>,
+    /// When **the server** received it, in epoch milliseconds. The age the
+    /// client shows and the staleness rule are both measured from this and
+    /// not from `time`, so a clock the poller disagrees about cannot make a
+    /// dead feed look fresh.
+    pub at: i64,
 }
 
 /// `[a-z0-9_-]{1,40}`: a directory name that needs no escaping anywhere,
@@ -323,7 +370,7 @@ pub fn reload(data: &Path) -> BTreeMap<String, PaperRun> {
     runs
 }
 
-fn now_ms() -> i64 {
+pub(crate) fn now_ms() -> i64 {
     std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map_or(0, |d| i64::try_from(d.as_millis()).unwrap_or(i64::MAX))
@@ -385,6 +432,24 @@ pub struct BarRequest {
     pub market: String,
     pub tf: String,
     pub bar: BarIn,
+}
+
+/// `POST /api/paper/tick`: the forming bar, and the quote it was read at.
+#[derive(Debug, Deserialize)]
+pub struct TickRequest {
+    pub market: String,
+    pub tf: String,
+    pub bar: BarIn,
+    #[serde(default)]
+    pub bid: Option<f64>,
+    #[serde(default)]
+    pub ask: Option<f64>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct TickResponse {
+    /// Always true on a 200: the tick is stored or the request was refused.
+    pub stored: bool,
 }
 
 /// Which run to stop: by `id`, or by `market` + `tf` when exactly one run
@@ -495,6 +560,10 @@ pub struct RunStatus {
     pub bars_seen: usize,
     pub warmup_bars: usize,
     pub last_bar_time: Option<i64>,
+    /// The close of that bar. The reference the live price is read against:
+    /// without it the client can say the price but not whether it has moved
+    /// up or down since the bot last decided anything.
+    pub last_bar_close: Option<f64>,
     pub equity: f64,
     pub open: Option<OpenDto>,
     pub trades: usize,
@@ -507,6 +576,11 @@ pub struct RunStatus {
     pub skipped_no_atr: usize,
     pub gaps: usize,
     pub news: NewsDto,
+    /// The bar forming right now on this run's `market:tf`, or `null` when
+    /// no tick has arrived within [`MAX_LIVE_AGE_MS`]. Shown, never traded:
+    /// the run's own decisions are all in the fields above, which move only
+    /// when a bar closes.
+    pub live: Option<LiveBar>,
     /// The last ten closed trades, oldest first.
     pub last_fills: Vec<TradeDto>,
     /// Points on the book's equity curve (one per closed trade). The curve
@@ -528,6 +602,9 @@ pub struct StatusResponse {
 pub struct RunDetail {
     /// The same entry `/api/paper/status` carries for this run.
     pub run: RunStatus,
+    /// The same forming bar `run.live` carries, hoisted so the chart reads it
+    /// beside `bars` rather than through the status entry.
+    pub live: Option<LiveBar>,
     /// `[time_ms, equity]` after every closed trade, oldest first, led by
     /// `[started_at, starting equity]` so a run with no trade still draws
     /// a point.
@@ -586,7 +663,7 @@ pub struct DetailQuery {
     pub bars: Option<usize>,
 }
 
-fn status_of(data: &Path, run: &PaperRun, rules: &TradingRules, guards: Option<&Guards>) -> RunStatus {
+fn status_of(data: &Path, run: &PaperRun, rules: &TradingRules, guards: Option<&Guards>, live: Option<LiveBar>) -> RunStatus {
     let book = &run.book;
     let metrics = book.metrics(rules);
     let open = book.position.as_ref().map(|p| OpenDto {
@@ -627,6 +704,7 @@ fn status_of(data: &Path, run: &PaperRun, rules: &TradingRules, guards: Option<&
         bars_seen: run.bars_seen,
         warmup_bars: run.warmup_bars,
         last_bar_time: run.bars.last().map(|b| b.time),
+        last_bar_close: run.bars.last().map(|b| b.close),
         equity: fd_core::js_round_to(book.equity, 2),
         open,
         trades: book.trades.len(),
@@ -638,6 +716,7 @@ fn status_of(data: &Path, run: &PaperRun, rules: &TradingRules, guards: Option<&
         skipped_no_atr: book.skipped_no_atr,
         gaps: run.gaps,
         news: NewsDto { events_loaded: events.len(), next_blackout },
+        live,
         last_fills: book.trades[skip..].iter().map(TradeDto::from).collect(),
         equity_curve: book.equity_curve.len(),
         events: events_of(data, &run.config.id()).len(),
@@ -823,7 +902,7 @@ pub async fn start(State(state): State<Arc<AppState>>, Json(request): Json<Start
             "news": fd_strategy::news::summary("data/news/events.parquet"),
         }),
     )?;
-    let status = status_of(&state.data, &run, &rules, guards.as_ref());
+    let status = status_of(&state.data, &run, &rules, guards.as_ref(), state.live_bar(&run.config.market, &run.config.tf));
     runs.insert(id, run);
     Ok(Json(status))
 }
@@ -938,6 +1017,50 @@ pub async fn bar(State(state): State<Arc<AppState>>, Json(request): Json<BarRequ
     Ok(Json(BarResponse { accepted, reason, bars, runs: out }))
 }
 
+/// `POST /api/paper/tick`
+///
+/// The bar still **forming** on a `market:tf`, for the screen only.
+///
+/// This handler touches **no book, no run and no file**. It validates the
+/// bar exactly as [`bar`] validates a closed one — finite prices, `high >=
+/// low`, a timeframe the API serves — stores it in `AppState::live_bars`
+/// under `market:tf` with the server's own clock, and returns. It never
+/// takes the paper mutex, so a tick cannot delay or interleave with a
+/// closed bar's step, and nothing it stores can reach a decision: the only
+/// thing that appends to a run's window is [`PaperRun::accept`], from
+/// [`bar`].
+///
+/// A stream with no run is accepted, not 404'd: whether anyone is trading a
+/// symbol is not the poller's business, and a run started later wants the
+/// price already there.
+pub async fn tick(State(state): State<Arc<AppState>>, Json(request): Json<TickRequest>) -> Result<Json<TickResponse>, ApiError> {
+    if timeframe_ms(&request.tf).is_none() {
+        return Err(ApiError::BadRequest(format!("unknown timeframe: {}", request.tf)));
+    }
+    let bar = Bar {
+        time: request.bar.time,
+        open: request.bar.open,
+        high: request.bar.high,
+        low: request.bar.low,
+        close: request.bar.close,
+        volume: request.bar.volume,
+    };
+    check_bar(&bar)?;
+    let live = LiveBar {
+        time: bar.time,
+        open: bar.open,
+        high: bar.high,
+        low: bar.low,
+        close: bar.close,
+        volume: bar.volume.filter(|v| v.is_finite()),
+        bid: request.bid.filter(|v| v.is_finite()),
+        ask: request.ask.filter(|v| v.is_finite()),
+        at: now_ms(),
+    };
+    state.live_bars.lock().expect("live bars").insert(stream_key(&request.market, &request.tf), live);
+    Ok(Json(TickResponse { stored: true }))
+}
+
 /// `POST /api/paper/stop`
 pub async fn stop(State(state): State<Arc<AppState>>, Json(request): Json<StopRequest>) -> Result<Json<StopResponse>, ApiError> {
     let mut runs = state.paper.lock().expect("paper runs");
@@ -1005,7 +1128,8 @@ pub async fn status(State(state): State<Arc<AppState>>) -> Result<Json<StatusRes
     let mut out = Vec::with_capacity(runs.len());
     for run in runs.values() {
         let (rules, guards) = rules_and_guards(&state, &run.config)?;
-        out.push(status_of(&state.data, run, &rules, guards.as_ref()));
+        let live = state.live_bar(&run.config.market, &run.config.tf);
+        out.push(status_of(&state.data, run, &rules, guards.as_ref(), live));
     }
     Ok(Json(StatusResponse { runs: out }))
 }
@@ -1024,7 +1148,8 @@ pub async fn detail(
     let runs = state.paper.lock().expect("paper runs");
     let run = runs.get(&id).ok_or_else(|| ApiError::NotFound(format!("no paper run `{id}`")))?;
     let (rules, guards) = rules_and_guards(&state, &run.config)?;
-    let status = status_of(&state.data, run, &rules, guards.as_ref());
+    let live = state.live_bar(&run.config.market, &run.config.tf);
+    let status = status_of(&state.data, run, &rules, guards.as_ref(), live.clone());
 
     let book = &run.book;
     let mut equity_curve = Vec::with_capacity(book.equity_curve.len() + 1);
@@ -1046,5 +1171,5 @@ pub async fn detail(
     // from the one the strategy read, and a long period would be empty on it.
     let (indicators, series) = overlays(&state.registry, &run.config, &rules, &run.bars, skip);
 
-    Ok(Json(RunDetail { run: status, equity_curve, fills, events, bars, indicators, series }))
+    Ok(Json(RunDetail { run: status, live, equity_curve, fills, events, bars, indicators, series }))
 }

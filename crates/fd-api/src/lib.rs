@@ -41,6 +41,7 @@ pub fn router(state: Arc<AppState>, ui: Option<PathBuf>) -> Router {
         .route("/api/research", get(research::research))
         .route("/api/paper/start", post(paper::start))
         .route("/api/paper/bar", post(paper::bar))
+        .route("/api/paper/tick", post(paper::tick))
         .route("/api/paper/stop", post(paper::stop))
         .route("/api/paper/status", get(paper::status))
         .route("/api/paper/run/{id}", get(paper::detail))

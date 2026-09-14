@@ -22,7 +22,8 @@ produces, and the risk role and the news-desk read them the same way.
 ```
 MT5 terminal (live account, read-only)
    │  copy_rates_from_pos every 5 s — py/live/mt5_bars.py
-   ▼  POST /api/paper/bar {market, tf, bar}
+   ▼  POST /api/paper/bar  {market, tf, bar}          the closed bar — decided on
+   ▼  POST /api/paper/tick {market, tf, bar, bid, ask} the forming bar — shown only
 fd-api ── PaperRun (one per market:tf) ─────────────────────────────┐
    │  • rolling bar window (last N bars, N ≥ warmup)                  │
    │  • indicators recomputed on the window (fd-indicators)           │
@@ -33,6 +34,7 @@ fd-api ── PaperRun (one per market:tf) ────────────�
    │  • persist: data/paper/<run-id>/state.json + fills.jsonl         │
    ▼                                                                   │
 GET /api/paper/status  → Overview "Paper desk" panel                  │
+   (carries `live`: the forming bar, dropped after 90 s, never in a book) │
 POST /api/paper/start|stop  (config: market, tf, strategy, params,   │
                              filters, guards on/off)                  │
 ```
@@ -43,7 +45,12 @@ websocket later; the endpoint does not care who posts.
 ## Rules the loop enforces in code
 
 - **Bars, not ticks.** A decision is made once per closed bar, exactly as
-  in the backtest. A forming bar is never used.
+  in the backtest. A forming bar is never used — and since 2026-09-14 that
+  is structural: the forming bar arrives on its own endpoint
+  (`/api/paper/tick`), is held in `AppState::live_bars` under a separate
+  mutex, is never persisted, and no run, strategy or guard can reach it.
+  It exists because a desk whose newest number is fifteen minutes old
+  reads as a dead feed; the Desk draws it and labels it as not traded on.
 - **Fill model = the engine's.** Signal on bar i, fill at bar i+1's open
   with half the spread; stop/target/guard exits as `check_exit`. There is
   no second fill model to drift from the first.

@@ -199,6 +199,29 @@ export interface ResearchHypothesis {
   modifiedAt: number
 }
 
+/**
+ * The bar still forming on a `market:tf`, as `POST /api/paper/tick` last
+ * received it.
+ *
+ * Shown, never traded on. The paper loop decides on closed bars only, and the
+ * server drops this after ninety seconds rather than let a dead feed be drawn
+ * as a current price — so `live` being null is information, not a gap.
+ */
+export interface LiveBar {
+  /** The bar's **open**, in epoch milliseconds — its bucket, not the read. */
+  time: number
+  open: number
+  high: number
+  low: number
+  close: number
+  volume?: number | null
+  /** The quote at the read, when the source had one. */
+  bid?: number | null
+  ask?: number | null
+  /** When the **server** received it, epoch ms. The age is measured from here. */
+  at: number
+}
+
 /** One paper run, as `/api/paper/status` reports it (snake_case on the wire). */
 export interface PaperRun {
   id: string
@@ -215,6 +238,8 @@ export interface PaperRun {
   bars_seen: number
   warmup_bars: number
   last_bar_time: number | null
+  /** The close of that bar — what the live price is read up or down against. */
+  last_bar_close: number | null
   equity: number
   open: null | {
     side: 'LONG' | 'SHORT'
@@ -237,6 +262,8 @@ export interface PaperRun {
   skipped_no_atr: number
   gaps: number
   news: { events_loaded: number; next_blackout: null | { time: number; currency: string; impact: number; name?: string } }
+  /** The forming bar on this run's stream, or null when none arrived inside 90 s. */
+  live: LiveBar | null
   /** The last ten closed trades. The whole book is on `/api/paper/run/{id}`. */
   last_fills: BacktestTrade[]
   /** On `/status` these two are *counts*, kept light; the detail route carries the rows. */
@@ -291,6 +318,8 @@ export interface PaperIndicator {
 /** `GET /api/paper/run/{id}` — one run's book, narration and recent bars. */
 export interface PaperRunDetail {
   run: PaperRun
+  /** The same forming bar as `run.live`, beside the bars the chart draws. */
+  live: LiveBar | null
   /** `[epoch ms, equity]`, one point per closed trade plus the opening balance.
    *  Not sorted: warm-up trades close before the run's own start stamp. */
   equity_curve: [number, number][]
