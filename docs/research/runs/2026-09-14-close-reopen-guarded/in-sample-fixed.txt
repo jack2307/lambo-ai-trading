@@ -1,0 +1,27 @@
+$ E:\rust\flowdesk\target\release\search.exe --market=xauduka --interval=15m --mode=hypotheses --fixed --batch-file=E:\rust\flowdesk\docs\hypotheses\2026-09-14-close-reopen-guarded.toml --seeds=300 --from=2018-06-16 --to=2025-04-10 --guards
+
+bounds:   --from=2018-06-16 --to=2025-04-10 kept 160368 of 378749 bars
+bars:     160368 from 2018-06-17 22:00 to 2025-04-09 23:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from data/news/events.parquet
+guards: on — max_open_loss_r 2.0, notional 300%, weekend flat 16:55 NY, news flat 60/30 (impact≥3), daily cap 4, loss limit $300, cooldown 30 min
+
+== hypotheses `E:\rust\flowdesk\docs\hypotheses\2026-09-14-close-reopen-guarded.toml`: 2 declared, FIXED parameters over the whole window (no selection), each against 300 matched null runs ==
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+news: 747 events (2010-01-08 → 2027-12-08) from data/news/events.parquet
+guards: on — max_open_loss_r 2.0, notional 300%, weekend flat 16:55 NY, news flat 60/30 (impact≥3), daily cap 4, loss limit $300, cooldown 30 min
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+close/1630-1815 session-hold         1355   1.274   0.006    0.562    0.655        0  100%  fail: expectancy 0.006R < 0.05R
+                                MoTuWeTh + NY 16:15-16:20  — the closed weekday break row, guards on: the open-loss cap at 2R and the news flat are the ones that can act on a two-hour hold
+                                guards: nothing acted
+close/fri-1630-1815 session-hold          336   0.827  -0.004    0.535    0.668        0  100%  fail: profit factor 0.827 < 1.2; expectancy -0.004R < 0.05R
+                                Fr + NY 16:15-16:20  — the closed Friday leg, guards on: the weekend flat at 16:55 New York should close every one of these holds on Friday at the 16:45 bar's close — the row should become a fifteen-minute hold, which is the guard doing its job
+                                guards: refused none; closed WEEKEND_FLAT 336; sized down 0
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+

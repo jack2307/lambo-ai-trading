@@ -274,3 +274,24 @@ The direction null — the method's own trades with sides permuted — is
 unaffected and put every row where the sized column did (100th / 100th /
 100th / 99th / 25th / 100th on the primary). Nothing in the verdict moves.
 Fixed at `4eaef94`.
+
+## Addendum (2026-09-14, afternoon): the same rows with the guards on — the first guarded receipts
+
+The guards the risk role asked for now exist in the engine and apply to
+self-managed holds (`675b5ef`); `runs/2026-09-14-close-reopen-guarded/`
+is this record's two rows re-run with them on (context, decides nothing):
+
+```
+row                    trades  OOS PF  expect   pct  direction   guards
+close/1630-1815          1355   1.274   0.006  100%   100th      nothing acted
+close/fri-1630-1815       336   0.827  -0.004  100%    99th      closed WEEKEND_FLAT 336
+```
+
+The weekday break row is untouched — no release falls in 16:30–18:30, the
+open-loss cap at 2R is never reached by a two-hour hold. The Friday leg
+cannot exist under the guards: every one of its 336 holds is flattened at
+the 16:45 bar's close (17:00 New York) by the weekend guard, and what is
+left is a thirty-minute hold at PF 0.83. That is the guard doing what it
+was written to do, and the honest sentence for the paper phase: the row
+this record could not confirm on 68 Fridays is one the paper bot is not
+allowed to hold.

@@ -1,0 +1,22 @@
+$ E:\rust\flowdesk\target\release\search.exe --market=xauduka --interval=15m --mode=null-dir --strategy=session-hold --samples=1000 --params=from=1615,to=1815,side=1,riskDailyRanges=1,rangeDays=20 --filters=weekdays:Fr;hours:1615-1620 --from=2018-06-16 --to=2025-04-10 --guards
+
+bounds:   --from=2018-06-16 --to=2025-04-10 kept 160368 of 378749 bars
+bars:     160368 from 2018-06-17 22:00 to 2025-04-09 23:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from data/news/events.parquet
+guards: on — max_open_loss_r 2.0, notional 300%, weekend flat 16:55 NY, news flat 60/30 (impact≥3), daily cap 4, loss limit $300, cooldown 30 min
+
+  filters: Fr + NY 16:15-16:20
+== direction control: session-hold, 336 trades, 1000 coin-flip assignments ==
+  preset: from=1615,to=1815,side=1,riskDailyRanges=1,rangeDays=20
+  the method's own trades — entry, exit, lots, costs — with each side a coin flip
+  profit factor of the same trades with random direction:
+    p05 0.398   p25 0.484   p50 0.533   p75 0.587   p95 0.709   max 0.961
+
+  actual: 0.827  ->  99th percentile  (p = 0.006)
+
+  Outside its own null. That is a finding worth taking further.
+
