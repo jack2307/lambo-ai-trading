@@ -49,7 +49,7 @@ tokio-tungstenite = { version = "0.24", default-features = false, features = ["c
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "gzip"] }
 futures-util = { version = "0.3", default-features = false, features = ["sink", "std"] }
 axum = { version = "0.8", features = ["json", "tokio", "http1"] }
-tower-http = { version = "0.6", features = ["fs", "cors", "trace"] }
+tower-http = { version = "0.6", features = ["fs", "cors", "trace", "set-header"] }
 tokio-stream = { version = "0.1", features = ["sync"] }
 criterion = { version = "0.5", features = ["html_reports"] }
 

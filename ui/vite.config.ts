@@ -11,6 +11,12 @@ const API_TARGET = process.env.FLOWDESK_API ?? 'http://127.0.0.1:8138'
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  build: {
+    // Keep the previous hashed bundles: a tab opened before a rebuild still
+    // resolves the files its index.html names (a blank page otherwise).
+    // fd-api serves index.html with no-cache, so the next reload is current.
+    emptyOutDir: false,
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

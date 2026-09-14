@@ -46,7 +46,16 @@ pub fn router(state: Arc<AppState>, ui: Option<PathBuf>) -> Router {
             // Unknown paths fall back to index.html so the client's own routing
             // survives a reload — but only after the API routes have had their
             // chance, or a typo'd endpoint would answer with a page.
-            api.fallback_service(ServeDir::new(dir).fallback(ServeFile::new(index)))
+            // index.html must never be served from a browser cache: it names
+            // hashed bundles, and a stale copy after a rebuild points at files
+            // that no longer exist (a blank page, 2026-09-14). The bundles
+            // themselves are content-addressed and may cache forever.
+            let index = tower_http::set_header::SetResponseHeader::overriding(
+                ServeFile::new(index),
+                axum::http::header::CACHE_CONTROL,
+                axum::http::HeaderValue::from_static("no-cache"),
+            );
+            api.fallback_service(ServeDir::new(dir).fallback(index))
         }
         // Permissive CORS only in the no-SPA case, which is the dev setup where
         // the client is served from another port.
