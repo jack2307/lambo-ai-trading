@@ -1,0 +1,22 @@
+all release Fridays vs quiet Fridays, unmatched (what the parent did):
+   release n 178 mean  -1.286 median  -0.903 up 33.1%
+   quiet   n 597 mean  +0.059 median  +0.083 up 51.9%
+   difference  -1.345  Welch t -3.25  se 0.413
+
+matched on the turn of the month (both sides restricted to days 1-7):
+   release n 153 mean  -1.212 median  -0.873 up 35.3%
+   quiet   n  32 mean  +0.922 median  -0.979 up 40.6%
+   difference  -2.134  Welch t -1.27  se 1.674
+
+   and on days 1-3 only, where 26 of the 32 quiet first Fridays sit:
+   release n  53 mean  -1.063 median  -0.829 up 39.6%
+   quiet   n  26 mean  -0.322 median  -1.241 up 34.6%
+   difference  -0.742  Welch t -0.45  se 1.639
+
+the hour on EVERY weekday, quiet days only, by day of month —
+is the turn-of-month fall a Friday thing or a calendar thing?
+   days  1- 3  Fri n   26 mean  -0.322 median  -1.241 | Mon-Thu n   274 mean  +0.119 median  -0.005
+   days  4- 7  Fri n    6 mean  +6.309 median  +1.293 | Mon-Thu n   396 mean  -0.030 median  +0.329
+   days  8-14  Fri n  143 mean  +0.384 median  +0.190 | Mon-Thu n   626 mean  -0.063 median  -0.069
+   days 15-21  Fri n  173 mean  +0.338 median  +0.443 | Mon-Thu n   647 mean  -0.046 median  -0.095
+   days 22-31  Fri n  249 mean  -0.432 median  -0.242 | Mon-Thu n   942 mean  -0.077 median  -0.101
