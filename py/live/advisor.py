@@ -50,6 +50,26 @@ import urllib.request
 #: Nothing in the request may be larger than this, whatever a model says.
 MAX_FACTOR = 1.0
 
+#: Room for one JSON object, plus whatever the model thinks first.
+#:
+#: 512 was enough for a model that answers and far too little for one that
+#: reasons: measured on gpt-5, a 512 budget was consumed entirely by reasoning
+#: tokens and the reply came back EMPTY. An empty reply is read as a full-size
+#: allow — safe, and silently useless, because such an agent agrees with
+#: everything for ever while the log shows it working. Unused output tokens
+#: cost nothing, so the cap is set where a reasoning model can still speak.
+OPENAI_MAX_TOKENS = 4096
+
+#: Models that think before answering, and that therefore take `reasoning_effort`.
+#:
+#: "low" rather than the default: this panel is asked a small, bounded question
+#: about a trade it can see in full, and on the same prompt "low" cut reasoning
+#: from 448 tokens to 128 and latency from 3.8s to 2.3s with no change in the
+#: quality of the answer. Reasoning tokens are billed, and a cheaper advisor
+#: gets consulted more often.
+REASONING_PREFIXES = ("gpt-5", "o1", "o3", "o4")
+REASONING_EFFORT = "low"
+
 #: The default panel. Any agent may be pointed at any model with
 #: `--agent-model risk=gpt-4o`, and a mixed panel is not a compromise — it is
 #: the experiment. Every turn already records the model that produced it, so
@@ -216,25 +236,45 @@ def ask(prompt: str, model: str, provider: str, api_key: str, timeout: float) ->
         )
         text = "".join(b.get("text", "") for b in out.get("content", []) if b.get("type") == "text")
     else:
-        # The token cap changed name on OpenAI's newer models and the old name
-        # is rejected outright on some of them. Rather than keeping a list of
-        # which is which — a list that is wrong the week after it is written —
-        # send the current name and fall back once on a 400 that complains
-        # about it. One wasted request, on the first call of a run, and then
-        # never again.
-        body = {"model": model, "messages": [{"role": "user", "content": prompt}], "max_completion_tokens": 512}
+        body = {
+            "model": model,
+            "messages": [{"role": "user", "content": prompt}],
+            "max_completion_tokens": OPENAI_MAX_TOKENS,
+        }
+        if model.lower().startswith(REASONING_PREFIXES):
+            body["reasoning_effort"] = REASONING_EFFORT
         head = {"Authorization": f"Bearer {api_key}"}
-        try:
-            out = post_json(url, body, timeout=timeout, headers=head)
-        except urllib.error.HTTPError as e:
-            detail = e.read().decode("utf-8", "replace")
-            if e.code != 400 or "max_completion_tokens" not in detail:
-                raise RuntimeError(f"{e.code}: {detail[:300]}") from e
-            body.pop("max_completion_tokens")
-            body["max_tokens"] = 512
-            out = post_json(url, body, timeout=timeout, headers=head)
-        choices = out.get("choices") or []
+
+        # Two parameters here are newer than some of the models that accept
+        # this endpoint, and which model takes which is a list that would be
+        # wrong the week after it was written. So: send the current spelling,
+        # and on a 400 that names a parameter, drop or rename that one and try
+        # once more. At most two wasted requests on the first call of a run.
+        out = None
+        for attempt in range(3):
+            try:
+                out = post_json(url, body, timeout=timeout, headers=head)
+                break
+            except urllib.error.HTTPError as e:
+                detail = e.read().decode("utf-8", "replace")
+                if e.code != 400 or attempt == 2:
+                    raise RuntimeError(f"{e.code}: {detail[:300]}") from e
+                if "reasoning_effort" in detail and "reasoning_effort" in body:
+                    body.pop("reasoning_effort")
+                elif "max_completion_tokens" in detail and "max_completion_tokens" in body:
+                    body["max_tokens"] = body.pop("max_completion_tokens")
+                else:
+                    raise RuntimeError(f"400: {detail[:300]}") from e
+        choices = (out or {}).get("choices") or []
         text = (choices[0].get("message", {}).get("content") or "") if choices else ""
+        if not text.strip():
+            # Named rather than passed on as an empty string, so the log says
+            # what went wrong instead of showing an advisor that agreed.
+            spent = (out or {}).get("usage", {}).get("completion_tokens_details", {}).get("reasoning_tokens")
+            raise RuntimeError(
+                f"{model} returned no text"
+                + (f"; it spent {spent} tokens reasoning and had none left to answer with" if spent else "")
+            )
 
     return text, int((time.monotonic() - started) * 1000)
 
