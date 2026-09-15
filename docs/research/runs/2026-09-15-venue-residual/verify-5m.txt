@@ -1,0 +1,28 @@
+venue-residual, re-read as the reviews required, gold 5m, 2025-06-01 -> 2026-06-01
+mirror direction throughout (WITH the skew); 50,000 draws, Monte-Carlo error at the 97.5 gate 0.070 pp
+spread by entry hour, measured from 11.5M ticks: $0.26 in 20-23 UTC, $0.20 elsewhere; flat $0.28 shown for comparison
+clean exits only: no trade spans the daily stop or a weekend
+
+--- markup removed over 4h ---
+     k     n     ECN    VANT  null mu    edge   cost     net  net@flat  pctile      H1      H2
+     1  1341  +1.256  +0.628   +0.349  +0.279  0.520  +0.108    -0.044   77.60   75.90   55.13
+     6  1018  +0.783  +0.057   -0.072  +0.128  0.512  -0.456    -0.615   56.47   82.49   31.86
+    12   870  +2.512  +1.807   -0.119  +1.926  0.509  +1.298    +1.136   93.48   41.95   96.46
+   entry delayed, percentile on the Vantage leg:
+      k=1   delay 0/1/2:  77.60 (+0.628)    97.78 (+0.794)    19.55 (-0.237)
+      k=6   delay 0/1/2:  56.47 (+0.057)    44.15 (-0.528)    63.37 (-0.134)
+      k=12  delay 0/1/2:  93.48 (+1.807)    92.16 (+1.656)    69.66 (+0.438)
+
+--- markup removed over 24h ---
+     k     n     ECN    VANT  null mu    edge   cost     net  net@flat  pctile      H1      H2
+     1  1363  +0.873  +0.281   +0.352  -0.071  0.517  -0.236    -0.391   42.10   50.08   32.45
+     6  1019  +1.020  +0.288   +0.329  -0.041  0.511  -0.222    -0.384   49.09   71.19   30.57
+    12   866  +2.125  +1.386   +0.157  +1.229  0.507  +0.879    +0.714   83.59   33.31   90.28
+   entry delayed, percentile on the Vantage leg:
+      k=1   delay 0/1/2:  42.10 (+0.281)    99.53 (+0.938)    43.02 (+0.133)
+      k=6   delay 0/1/2:  49.09 (+0.288)    50.20 (-0.157)    60.27 (+0.103)
+      k=12  delay 0/1/2:  83.59 (+1.386)    84.99 (+1.479)    58.48 (-0.111)
+
+Sidak over the six registered cells: a two-sided p of 0.019 becomes 0.109.
+The gate is 97.5 per cell as registered; the family correction is stated
+here because the registration printed the multiplicity and never charged it.

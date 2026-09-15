@@ -2,7 +2,13 @@
 
 **Registered:** 2026-09-15 — written before any skew was computed; the only
 numbers read beforehand were the row counts and time ranges of the bar files.
-**Status:** registered
+**Status:** decided (→ `docs/decisions/2026-09-15-venue-residual.md`). The declared
+direction failed at the 1.90th / 12.75th / 0.95th percentile. Its mirror is
+admissible under the two-sided wording above, survives the staleness and momentum
+controls, and still reaches no cell's gate on the traded leg once trades may not
+span a weekend (best 93.48, and it is one half-year). Three roles blocked; the
+deciding one is that the residual is a sub-second quantity and both files are
+stamped to the minute. The out-of-sample BTC venue pair was **not** opened.
 **Script:** `scripts/venue_residual.py` (measurement; no strategy is implemented
 unless the in-sample survives, and a survivor earns a paper proposal, nothing more)
 **Batch file:** none — this is a two-feed measurement, not a `search` batch.

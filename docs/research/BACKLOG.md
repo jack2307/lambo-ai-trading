@@ -10,18 +10,24 @@ Closed ideas move to the bottom with a pointer to their decision record, so
 
 ## Open
 
-- [ ] **Measure the Vantage spread by UTC hour, read-only, for one week**
-  (adversary, `2026-09-15-pair-residual`), and it decides whether the loop has
-  an overnight gold–silver dislocation or an artefact. The whole surviving
-  effect sits between 17:00 and 02:00 UTC, where the 15-minute range is a third
-  of its 13:00 value, and the one spread number this repository owns is a
-  three-day median blended across every hour. Log `XAUUSD.sc` and `XAGUSD.sc`
-  bid/ask at a fixed cadence, bucket by hour, then re-price the 438 evening
-  trades at their own hour's p50 and p90. **Blocker to resolve first:**
-  `XAGUSD.sc` is not in the terminal's Market Watch and `symbol_select` is not
-  on the approved read-only call list for this machine's live account — the
-  symbol must be added by hand in the terminal, or that one call explicitly
-  permitted. Gold can be logged today; silver cannot.
+- [x] **Gold's spread by hour is measured — and the week of logging was the
+  wrong instrument for it.** (2026-09-15, receipt
+  `docs/research/runs/2026-09-15-venue-residual/spread-probe-30d.txt`.) The
+  168-hour logger would have produced about five observations of the 22:00 UTC
+  hour. `py/ingest/mt5_spread_probe.py --days=30` was already written, already
+  read-only, and reads tick **history**: 11,576,449 ticks, p50 **$0.19–0.20**
+  through Asia, London and New York, **$0.25 at the daily stop, $0.26–0.27 at
+  the reopen**, max 0.27 anywhere. The evening is 30% dearer than the day and
+  **cheaper than the $0.28 blend this repository has been charging everywhere** —
+  the thin-hour cost fear was the wrong way round. The logger runs to 2026-09-22
+  as confirmation, not as the decision.
+- [ ] **Re-price the 438 evening trades of `2026-09-15-pair-residual` at $0.26**,
+  now that the number exists, and say whether the overnight gold–silver
+  dislocation survives its own hour's cost. **The silver leg is still blocked and
+  it is an operator decision, not a research one:** `XAGUSD.sc` answers
+  `symbol_info` but returns no tick, and `symbol_select` is not on the approved
+  read-only call list for this machine's live account — the symbol must be added
+  by hand in the terminal, or that one call explicitly permitted.
 - [ ] **If the evening spread does not eat it, re-register the break-crossing
   hypothesis properly**: clock-based windows rather than bar counts, a one-bar
   entry latency (the effect survives one bar at +2.298 bp / 54.55% and fails at
@@ -29,6 +35,59 @@ Closed ideas move to the bottom with a pointer to their decision record, so
   cell is chosen. Note it would be re-entering the territory of
   `2026-09-13-close-reopen-drift`, which failed its gate as a unit.
 
+- [ ] **No trade may span a hole, in any measurement script** (risk,
+  data-integrity and execution-realist, independently, on
+  `2026-09-15-venue-residual`). `fires()` checked freshness on the **signal** bar
+  and exited `k` rows later regardless: 27 of 985 one-hour holds crossed the
+  daily stop, **eleven of them held over a weekend, the longest 51 hours**,
+  carrying 16% of the net — while `config/default.toml` sets
+  `flat_before_weekend_hhmm = 1655` precisely to forbid it. Fixed in
+  `scripts/venue_verify.py` (`clean_exit`); **`scripts/pair_residual.py`,
+  `news_drift.py`, `friday_cells.py` and `fx_window_drift.py` have not been
+  audited for it.** This is the same break-crossing fault that closed
+  `2026-09-15-pair-residual`, now found in a second instrument.
+- [ ] **A thin-hour mechanism needs an hour-matched null, not a volatility one**
+  (data-integrity, same record). The vol-decile control was chosen because
+  |skew| grows with volatility — but `sd(resid)` varies **6.43x** across UTC
+  hours while the ECN bar's range varies only **1.46x**, so the deciles are a
+  liquidity proxy: decile 0 is 73.6% evening bars at mean tick volume 485,
+  decile 9 is 20.7% at 2,621. Permuting signs *inside* the thin-hour bucket
+  cannot break a thin-hour mechanism. The repository's standing rule already
+  says a session gate needs a session-matched null; this extends it to any
+  control variable that is really a proxy for the hour.
+- [ ] **Print the null's centre, and a day-block interval, next to every
+  percentile** (adversary and risk, same record). A book 73% long in a year gold
+  rose 37% earns a drift the permutation is already centred on — the percentile
+  stays honest, the headline basis points do not, and +1.000 bp read as edge was
+  +0.587 bp of bull market. Separately, a sample **94% of whose trades share a
+  calendar day with another** is not n independent bets: the day-block bootstrap
+  put 95% intervals of `[-0.48, +4.63]` and `[-0.41, +1.16]` around percentiles
+  of 99.05 and 98.10. Both belong in the receipt, beside the percentile, always.
+- [ ] **A concentration gate, declared before the run** (risk, same record).
+  When the best 5% of trades are 271% of the net, one month is 98% of it and one
+  day 75%, four days have been measured rather than an effect. Risk will not
+  clear anything whose single best month exceeds ~40% of its total; write that
+  into `TEMPLATE.md` so it is declared rather than discovered.
+- [ ] **The Monte-Carlo error is printed at the wrong p** (data-integrity and
+  adversary, same record). `venue_residual.py` hardcodes `0.5/sqrt(draws)`, the
+  SE at p=0.5, printing 0.16 pp where the registration declared 0.07 and the
+  true binomial SE at p=0.975 with 100k draws is 0.047. Nothing turned on it
+  here; a run contradicting its own registration in print is still a fault.
+  Fixed in `venue_verify.py`; not in the scripts it was copied from.
+- [ ] **Automate the demo lock** (risk, same record, and it is the only safety
+  item on this list). `py/live/mt5_executor.py:139` refuses to run against a
+  non-demo account, and that refusal is the single thing between this repository
+  and a **live** Vantage terminal on this machine. It has no automated test —
+  `docs/paper/DESIGN.md` describes a manual procedure. A guard that is
+  remembered rather than tested is not a guard.
+- [ ] **Make `--guards` the default in `search`, not a flag** (risk, same record;
+  the existing "every receipt is unguarded" item, now with a number).
+  `search.rs:110` defaults it off. Applying the repository's **own configured**
+  guards to the venue study's trade list turned its five-minute row from +0.33 bp
+  to **−0.24 bp** — a 30-minute cooldown is structurally incompatible with a
+  five-minute hold, and `max_trades_per_day = 4` deletes a 39-trade day. A
+  measurement whose sign flips under the project's own limits is not a candidate
+  for anything, and the Python measurement scripts have no guard concept at all.
 - [ ] **The residual gate on an unread instrument** (adversary,
   `2026-09-15-nfp-cross-asset`), and it is the only experiment left that could
   settle the pre-NFP thread. Silver's fall could not be distinguished from
@@ -193,6 +252,25 @@ Closed ideas move to the bottom with a pointer to their decision record, so
 
 ## Closed
 
+- [x] Does a dealer's quote leave the consensus before the price moves? (the
+  owner's instruction of 2026-09-15: stop testing what is published, work the
+  data nobody else has) → **the question cannot be asked at bar resolution.**
+  The declared direction failed at the 1.90th / 12.75th / 0.95th percentile; its
+  mirror survived the momentum and staleness controls that were written to kill
+  it (plain momentum 75.76 / 13.69 where the residual read 98.10 / 99.05; a
+  deliberately **staler** ECN was *weaker*; correlation with the dealer's own
+  last-bar return −0.031) and then reached **no cell's gate** on the traded leg
+  once a trade was forbidden from spanning a weekend — best 93.48, and that is
+  one half of the window (H1 41.95, H2 96.46). The deciding objection is not a
+  percentile: the residual is **0.14 s of tape on an average bar and 6.2 s at a
+  fire**, one minute of misalignment is 21x it, and both feeds are stamped to the
+  minute — so "inventory" cannot be separated from two vendors' clock latency
+  with anything on disk. **No venue-comparison hypothesis should be registered at
+  bar resolution again**; it needs tick data with venue timestamps on both legs.
+  What the study did buy: an alignment proof that is reusable (52 weeks, 0
+  disagreements, both feeds shifting on exactly the two NY DST weeks), 30 days of
+  measured spread by hour, and six instrument faults above.
+  `2026-09-15-venue-residual.md`.
 - [x] Audit every horizon in the repository for fault 12 → **it lives in one
   instrument and that registration is already closed.** `news_drift.py` and
   `friday_cells.py` offset in clock minutes and resolve through a tolerance;
