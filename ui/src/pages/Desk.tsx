@@ -41,6 +41,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { api, type Bar, type BacktestTrade, type LiveBar, type PaperEvent, type PaperRun, type PaperRunDetail } from '@/lib/api'
 import { clock, num } from '@/lib/format'
 import { useTicks } from '@/lib/ticks'
+import { AnthropicMark, OpenAIMark } from '@/components/BrandMarks'
 import { cn } from '@/lib/utils'
 
 /** Height of the sticky app bar, which this page fills the rest of the viewport under. */
@@ -645,6 +646,40 @@ function RunsList({
  * book, and the whole campaign is the difference between the two; a badge
  * that made them look alike would hide the one comparison that matters.
  */
+/**
+ * Which house the decider belongs to, from the name it posted under.
+ *
+ * Read from the name rather than configured, for the same reason the badge
+ * itself is: the row must describe what actually drove this book. `codex/` is
+ * this repo's own marker for "the ChatGPT plan", so it is checked first — a
+ * name can carry the route and the model at once.
+ */
+function houseOf(name: string | undefined): 'openai' | 'anthropic' | null {
+  if (!name) return null
+  const n = name.toLowerCase()
+  if (n.startsWith('codex/') || n.startsWith('gpt') || /^o[134]/.test(n)) return 'openai'
+  if (n.startsWith('claude') || n.startsWith('opus') || n.startsWith('sonnet') || n.startsWith('haiku')) return 'anthropic'
+  return null
+}
+
+/**
+ * Who is driving this book, when it is not a rule.
+ *
+ * Shown from `run.decider`, which the API writes only when a decision is
+ * ACCEPTED — so this names something the book really did, never a model id
+ * someone typed into a config. A run whose strategy is `external` but which
+ * nobody has posted to reads "idle", which is the truth about it.
+ *
+ * The colour is not decoration. Each house wears its own palette, taken from
+ * the brand rather than invented: Anthropic's accent is #CC785C, and OpenAI's
+ * brand is monochrome, so theirs is a metal gradient rather than a colour
+ * borrowed from a product page. That also keeps the two readable apart at a
+ * glance on a list of fourteen rows, which is the actual job.
+ *
+ * The coin is deliberately styled apart from both and carries NO mark: it is
+ * the control, the campaign is the difference between it and the model, and a
+ * badge that made them look alike would hide the one comparison that matters.
+ */
 function DeciderTag({ run }: { run: PaperRun }) {
   if (run.strategy !== 'external' && !run.decider) return null
 
@@ -653,6 +688,7 @@ function DeciderTag({ run }: { run: PaperRun }) {
   const last = run.decider?.last
   const coin = last === 'coin'
   const total = Object.values(run.decider?.decisions ?? {}).reduce((a, b) => a + b, 0)
+  const house = coin || mixed ? null : houseOf(last)
 
   const text = last ? (coin ? 'coin' : last) : 'idle'
   const aside = run.decider?.stood_aside ?? 0
@@ -663,21 +699,47 @@ function DeciderTag({ run }: { run: PaperRun }) {
       ? `${last}: ${spoke}. Standing aside is a real answer; it keeps the badge alive without a trade.`
       : 'externally driven; nothing has posted to it yet'
 
+  // Gradients are inline rather than Tailwind classes because the stops are
+  // brand values, not theme tokens — putting #CC785C in the token set would
+  // imply the desk owns that colour, and it does not.
+  const skin =
+    house === 'anthropic'
+      ? {
+          // Anthropic clay, lifted toward its paper tone so 9px text stays legible
+          // on the dark ground.
+          backgroundImage: 'linear-gradient(100deg, rgba(204,120,92,0.34), rgba(204,120,92,0.08))',
+          borderColor: 'rgba(204,120,92,0.55)',
+          color: '#F0C4B0',
+        }
+      : house === 'openai'
+        ? {
+            // Monochrome, because their brand is. A metal sheen rather than a hue
+            // keeps it distinct from the flat grey the coin wears.
+            backgroundImage: 'linear-gradient(100deg, rgba(255,255,255,0.26), rgba(255,255,255,0.05))',
+            borderColor: 'rgba(255,255,255,0.45)',
+            color: '#F3F5F7',
+          }
+        : undefined
+
   return (
     <span
       title={title}
+      style={skin}
       className={cn(
         'mr-1 inline-flex items-center gap-1 rounded-sm border px-1 py-px align-middle text-[9px] tracking-wide uppercase',
-        mixed
-          ? 'border-caution/40 bg-caution/10 text-caution'
-          : coin
-            ? 'border-muted-foreground/30 bg-muted-foreground/10 text-muted-foreground'
-            : last
-              ? 'border-primary/40 bg-primary/10 text-primary'
-              : 'border-muted-foreground/25 bg-muted-foreground/5 text-muted-foreground/70',
+        !skin &&
+          (mixed
+            ? 'border-caution/40 bg-caution/10 text-caution'
+            : coin
+              ? 'border-muted-foreground/30 bg-muted-foreground/10 text-muted-foreground'
+              : last
+                ? 'border-primary/40 bg-primary/10 text-primary'
+                : 'border-muted-foreground/25 bg-muted-foreground/5 text-muted-foreground/70'),
       )}
     >
-      {!coin && <span aria-hidden>{mixed ? '\u26a0' : '\u25c6'}</span>}
+      {house === 'openai' && <OpenAIMark className="size-[9px] shrink-0" />}
+      {house === 'anthropic' && <AnthropicMark className="size-[9px] shrink-0" />}
+      {!house && !coin && <span aria-hidden>{mixed ? '\u26a0' : '\u25c6'}</span>}
       <span className="num normal-case">{text}</span>
     </span>
   )
