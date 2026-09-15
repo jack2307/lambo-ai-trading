@@ -56,6 +56,36 @@ after the intent has filled names a bar that is no longer last, and is logged
 and dropped rather than applied to whatever is pending now. That is the entire
 staleness protection and it needs no clock.
 
+## Which model, and why it is a question the log answers
+
+Either provider, and a mixed panel on purpose:
+
+```
+python py/live/advisor.py --model=gpt-4o                       # all three on OpenAI
+python py/live/advisor.py --agent-model risk=gpt-4o                           --agent-model news=claude-opus-5     # one each
+```
+
+The API is chosen from the model's name (`claude*` to Anthropic, `gpt*`, `o1`,
+`o3`, `o4` to OpenAI) and the key comes from `ANTHROPIC_API_KEY` or
+`OPENAI_API_KEY`. An agent whose key is missing is **named at startup and does
+not run** — a panel silently one advisor short is a panel whose verdicts mean
+something different from what the log will say they mean. A model name neither
+rule recognises is refused rather than guessed at; `--provider` settles it.
+
+Neither vendor SDK is imported. The whole of what this process needs from
+either API is "send one prompt, read one string", and two hundred lines of
+`urllib` beat two dependencies with versions to track and a release cadence
+that is not ours.
+
+**The mixed panel is not a compromise, it is the experiment.** Every turn
+already records the model that answered it, so after a few hundred
+consultations `scripts/advisor_review.py --agents` says which provider's
+objections were worth listening to — on this desk's own trades, at this desk's
+own costs, rather than on somebody's benchmark. Running risk on one vendor and
+news on another for a month is a cheaper and more relevant comparison than any
+published evaluation, because the thing being measured is money on these ten
+books.
+
 ## The shadow book, which is the actual point
 
 Here is the problem with every "AI risk layer" ever shipped: **a veto has no

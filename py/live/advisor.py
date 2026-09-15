@@ -1,8 +1,18 @@
 """A panel of advisors that may refuse a trade or make it smaller. Nothing else.
 
     python py/live/advisor.py --api=http://127.0.0.1:8138 --poll=20
-    python py/live/advisor.py --dry-run          # decide and print, post nothing
+    python py/live/advisor.py --dry-run          # decide and log locally, post nothing
     python py/live/advisor.py --rules-only       # no model calls at all
+    python py/live/advisor.py --model=gpt-4o     # the whole panel on OpenAI
+    python py/live/advisor.py --agent-model risk=gpt-4o --agent-model news=claude-opus-5
+
+Either provider, and a mixed panel on purpose. The API is chosen from the
+model's name (`claude*` -> Anthropic, `gpt*`/`o1`/`o3`/`o4` -> OpenAI) and the
+key is read from `ANTHROPIC_API_KEY` or `OPENAI_API_KEY`; an agent with no key
+is named at startup and does not run. Every turn records the model that
+answered it, so `scripts/advisor_review.py --agents` can later say which
+provider's objections were worth listening to — on this desk's own trades
+rather than on a benchmark.
 
 It polls `GET /api/paper/pending` for entries about to fill, asks each agent in
 turn, reconciles them, and posts one verdict to `POST /api/paper/advice` with
@@ -37,14 +47,51 @@ import time
 import urllib.error
 import urllib.request
 
-# The model this panel speaks with. Every turn records the model it used, so a
-# change here is visible in the log rather than inferred from a date.
-MODEL = "claude-opus-5"
-ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
-ANTHROPIC_VERSION = "2023-06-01"
-
 #: Nothing in the request may be larger than this, whatever a model says.
 MAX_FACTOR = 1.0
+
+#: The default panel. Any agent may be pointed at any model with
+#: `--agent-model risk=gpt-4o`, and a mixed panel is not a compromise — it is
+#: the experiment. Every turn already records the model that produced it, so
+#: after a few hundred consultations `advisor_review.py --agents` says which
+#: provider's objections were worth listening to, on this desk's own trades.
+DEFAULT_MODEL = "claude-opus-5"
+
+#: How to talk to each provider. Two shapes, one adapter each.
+#:
+#: Deliberately hand-rolled over `urllib` rather than importing two vendor
+#: SDKs: this process must start on a machine with nothing installed, and the
+#: whole of what it needs from either API is "send one prompt, read one
+#: string". An SDK would add a dependency, a version to track, and no ability
+#: this file uses.
+PROVIDERS = {
+    "anthropic": {
+        "url": "https://api.anthropic.com/v1/messages",
+        "env": "ANTHROPIC_API_KEY",
+        "prefixes": ("claude",),
+    },
+    "openai": {
+        "url": "https://api.openai.com/v1/chat/completions",
+        "env": "OPENAI_API_KEY",
+        "prefixes": ("gpt", "o1", "o3", "o4", "chatgpt"),
+    },
+}
+
+
+def provider_of(model: str) -> str:
+    """Which API a model name belongs to.
+
+    Named by prefix rather than configured, because a panel with four agents
+    should not need four more flags to say the obvious. `--provider` overrides
+    it for a model whose name this does not recognise.
+    """
+    lowered = model.lower()
+    for name, spec in PROVIDERS.items():
+        if lowered.startswith(spec["prefixes"]):
+            return name
+    raise ValueError(
+        f"cannot tell which API `{model}` belongs to; pass --provider anthropic|openai"
+    )
 
 
 def post_json(url: str, payload: dict, timeout: float = 30.0, headers: dict | None = None) -> dict:
@@ -155,20 +202,40 @@ LAST {len(tail)} BARS, oldest first
 """
 
 
-def ask(prompt: str, api_key: str, timeout: float) -> tuple[str, int]:
-    """One model call. Returns (text, latency_ms); raises on failure."""
+def ask(prompt: str, model: str, provider: str, api_key: str, timeout: float) -> tuple[str, int]:
+    """One model call, either provider. Returns (text, latency_ms); raises on failure."""
     started = time.monotonic()
-    out = post_json(
-        ANTHROPIC_URL,
-        {
-            "model": MODEL,
-            "max_tokens": 512,
-            "messages": [{"role": "user", "content": prompt}],
-        },
-        timeout=timeout,
-        headers={"x-api-key": api_key, "anthropic-version": ANTHROPIC_VERSION},
-    )
-    text = "".join(block.get("text", "") for block in out.get("content", []) if block.get("type") == "text")
+    url = PROVIDERS[provider]["url"]
+
+    if provider == "anthropic":
+        out = post_json(
+            url,
+            {"model": model, "max_tokens": 512, "messages": [{"role": "user", "content": prompt}]},
+            timeout=timeout,
+            headers={"x-api-key": api_key, "anthropic-version": "2023-06-01"},
+        )
+        text = "".join(b.get("text", "") for b in out.get("content", []) if b.get("type") == "text")
+    else:
+        # The token cap changed name on OpenAI's newer models and the old name
+        # is rejected outright on some of them. Rather than keeping a list of
+        # which is which — a list that is wrong the week after it is written —
+        # send the current name and fall back once on a 400 that complains
+        # about it. One wasted request, on the first call of a run, and then
+        # never again.
+        body = {"model": model, "messages": [{"role": "user", "content": prompt}], "max_completion_tokens": 512}
+        head = {"Authorization": f"Bearer {api_key}"}
+        try:
+            out = post_json(url, body, timeout=timeout, headers=head)
+        except urllib.error.HTTPError as e:
+            detail = e.read().decode("utf-8", "replace")
+            if e.code != 400 or "max_completion_tokens" not in detail:
+                raise RuntimeError(f"{e.code}: {detail[:300]}") from e
+            body.pop("max_completion_tokens")
+            body["max_tokens"] = 512
+            out = post_json(url, body, timeout=timeout, headers=head)
+        choices = out.get("choices") or []
+        text = (choices[0].get("message", {}).get("content") or "") if choices else ""
+
     return text, int((time.monotonic() - started) * 1000)
 
 
@@ -207,12 +274,16 @@ def rules_only(entry: dict) -> tuple[float, str]:
     return 1.0, "nothing in the rules objects"
 
 
-def consult(entry: dict, api_key: str | None, timeout: float) -> tuple[float, str, list[dict]]:
-    """Every agent in turn. Returns (verdict, reason, transcript)."""
+def consult(entry: dict, panel: list[dict], timeout: float) -> tuple[float, str, list[dict]]:
+    """Every agent in turn. Returns (verdict, reason, transcript).
+
+    `panel` is the agents that have a usable key, each carrying its own model,
+    provider and key. An empty panel is the arithmetic control.
+    """
     facts = brief(entry)
     transcript: list[dict] = []
 
-    if not api_key:
+    if not panel:
         factor, reason = rules_only(entry)
         transcript.append(
             {
@@ -228,13 +299,13 @@ def consult(entry: dict, api_key: str | None, timeout: float) -> tuple[float, st
         return factor, reason, transcript
 
     said: list[str] = []
-    for name, role in AGENTS:
+    for agent in panel:
         earlier = ""
         if said:
             earlier = "\n\nWHAT THE OTHER ADVISORS SAID\n" + "\n".join(said)
-        prompt = f"{role}\n\n{facts}{earlier}\n{SCHEMA}"
+        prompt = f"{agent['role']}\n\n{facts}{earlier}\n{SCHEMA}"
         try:
-            text, ms = ask(prompt, api_key, timeout)
+            text, ms = ask(prompt, agent["model"], agent["provider"], agent["key"], timeout)
             factor, reason = parse(text)
         except Exception as e:  # noqa: BLE001
             # One agent failing is not the panel failing. It is recorded as a
@@ -243,8 +314,12 @@ def consult(entry: dict, api_key: str | None, timeout: float) -> tuple[float, st
             text, ms, factor, reason = f"ERROR: {type(e).__name__}: {e}", 0, 1.0, "agent unavailable"
         transcript.append(
             {
-                "agent": name,
-                "model": MODEL,
+                "agent": agent["name"],
+                # The model that actually answered, not the one configured: a
+                # per-agent override or a fallback must be visible in the log,
+                # because the whole point of keeping this field is to be able
+                # to ask later which model said what.
+                "model": agent["model"],
                 "prompt": prompt,
                 "response": text,
                 "latency_ms": ms,
@@ -252,7 +327,7 @@ def consult(entry: dict, api_key: str | None, timeout: float) -> tuple[float, st
                 "reason": reason,
             }
         )
-        said.append(f"  {name}: {factor:.2f} — {reason}")
+        said.append(f"  {agent['name']}: {factor:.2f} — {reason}")
 
     # The minimum, not the mean: any one advisor can refuse and none can
     # overrule a refusal. See the module docstring.
@@ -296,14 +371,47 @@ def main() -> int:
                     help="decide, print and log locally; post nothing, so no book can be changed")
     ap.add_argument("--rules-only", action="store_true", help="no model calls; use the arithmetic control")
     ap.add_argument("--once", action="store_true", help="one pass, then exit")
+    ap.add_argument("--model", default=DEFAULT_MODEL,
+                    help=f"the model every agent uses unless overridden (default {DEFAULT_MODEL})")
+    ap.add_argument("--provider", choices=sorted(PROVIDERS), default=None,
+                    help="force the API for a model name the prefix rule does not recognise")
+    ap.add_argument("--agent-model", action="append", default=[], metavar="AGENT=MODEL",
+                    help="give one agent its own model, e.g. risk=gpt-4o. Repeatable, and a mixed "
+                         "panel is the point: the log records which model said what.")
     args = ap.parse_args()
 
-    api_key = None if args.rules_only else os.environ.get("ANTHROPIC_API_KEY")
-    if not args.rules_only and not api_key:
-        print("no ANTHROPIC_API_KEY in the environment; falling back to --rules-only", flush=True)
+    overrides = {}
+    for pair in args.agent_model:
+        if "=" not in pair:
+            sys.exit(f"--agent-model wants AGENT=MODEL, got {pair!r}")
+        who, what = pair.split("=", 1)
+        if who not in {name for name, _ in AGENTS}:
+            sys.exit(f"no agent `{who}`; the panel is {', '.join(name for name, _ in AGENTS)}")
+        overrides[who] = what
+
+    panel: list[dict] = []
+    if not args.rules_only:
+        for name, role in AGENTS:
+            model = overrides.get(name, args.model)
+            try:
+                provider = args.provider or provider_of(model)
+            except ValueError as e:
+                sys.exit(str(e))
+            key = os.environ.get(PROVIDERS[provider]["env"])
+            if not key:
+                # Named, not guessed at: a panel silently one agent short is a
+                # panel whose verdicts mean something different from what the
+                # log will say they mean.
+                print(f"  {name}: no {PROVIDERS[provider]['env']} for {model} — this agent will not run", flush=True)
+                continue
+            panel.append({"name": name, "role": role, "model": model, "provider": provider, "key": key})
+
+    if not args.rules_only and not panel:
+        print("no usable key for any agent; falling back to the arithmetic control", flush=True)
+
+    who = "rules only" if not panel else ", ".join(f"{a['name']}:{a['model']}" for a in panel)
     print(
-        f"advisor: polling {args.api}/api/paper/pending every {args.poll:g}s; "
-        f"{'rules only' if not api_key else f'{len(AGENTS)} agents on {MODEL}'}"
+        f"advisor: polling {args.api}/api/paper/pending every {args.poll:g}s; {who}"
         f"{' (dry run, posting nothing)' if args.dry_run else ''}",
         flush=True,
     )
@@ -323,7 +431,7 @@ def main() -> int:
             # another about the same unchanged facts.
             if intent in seen or entry.get("advised"):
                 continue
-            factor, reason, transcript = consult(entry, api_key, args.timeout)
+            factor, reason, transcript = consult(entry, panel, args.timeout)
             seen.add(intent)
             stamp = dt.datetime.now(dt.timezone.utc).strftime("%H:%M:%SZ")
             verdict = "VETO" if factor <= 0 else ("cut" if factor < 1 else "allow")
