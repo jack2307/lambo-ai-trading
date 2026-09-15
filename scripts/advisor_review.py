@@ -93,7 +93,11 @@ def main() -> int:
         counts = defaultdict(int)
         for c in consults:
             counts[verdict_of(float(c.get("size_factor", 1.0)))] += 1
-            if not c.get("applied"):
+            if c.get("dry_run"):
+                # A rehearsal. Counted separately and never as a late verdict:
+                # the panel was not slow, it had no power.
+                counts["dry"] += 1
+            elif not c.get("applied"):
                 counts["too late"] += 1
             for turn in c.get("transcript") or []:
                 agent = turn.get("agent", "?")
@@ -122,7 +126,7 @@ def main() -> int:
         print("  starts from the moment an advisor first speaks and not from zero.")
         return 0
 
-    print(f"{'run':18s} {'seen':>5s} {'allow':>6s} {'cut':>5s} {'veto':>5s} {'late':>5s} "
+    print(f"{'run':18s} {'seen':>5s} {'allow':>6s} {'cut':>5s} {'veto':>5s} {'dry':>4s} {'late':>5s} "
           f"{'book net':>10s} {'shadow net':>11s} {'advice cost':>12s}")
     for name, n, counts, book, shadow in per_run:
         # A run with no APPLIED advice has no pair of totals to compare, and a
@@ -132,7 +136,7 @@ def main() -> int:
         cost = f"{book - shadow:+.2f}" if both else "-"
         print(
             f"{name:18s} {n:5d} {counts.get('allow', 0):6d} {counts.get('cut', 0):5d} "
-            f"{counts.get('veto', 0):5d} {counts.get('too late', 0):5d} "
+            f"{counts.get('veto', 0):5d} {counts.get('dry', 0):4d} {counts.get('too late', 0):5d} "
             f"{(f'{book:.2f}' if both else '-'):>10s} {(f'{shadow:.2f}' if both else '-'):>11s} {cost:>12s}"
         )
 

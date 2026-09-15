@@ -260,12 +260,40 @@ def consult(entry: dict, api_key: str | None, timeout: float) -> tuple[float, st
     return worst["size_factor"], f"{worst['agent']}: {worst['reason']}", transcript
 
 
+def dry_log(entry: dict, factor: float, reason: str, transcript: list[dict]) -> None:
+    """Record a verdict the desk never saw, in the place it would have gone.
+
+    The server writes `advice.jsonl` when a verdict is posted; a dry run posts
+    nothing, so it writes its own line here. Same file, same shape, same reader
+    — with `applied: false` and `dry_run: true`, which is the truth and is what
+    stops a rehearsal being counted as a decision.
+    """
+    root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+    path = os.path.join(root, "data", "paper", entry["run"], "advice.jsonl")
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    record = {
+        "kind": "consultation",
+        "at": int(time.time() * 1000),
+        "intent_id": entry["intent_id"],
+        "pending_now": entry["intent_id"],
+        "applied": False,
+        "dry_run": True,
+        "size_factor": factor,
+        "raw_size_factor": factor,
+        "reason": reason,
+        "transcript": transcript,
+    }
+    with open(path, "a", encoding="utf-8") as f:
+        f.write(json.dumps(record) + chr(10))
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--api", default="http://127.0.0.1:8138")
     ap.add_argument("--poll", type=float, default=20.0, help="seconds between polls")
     ap.add_argument("--timeout", type=float, default=45.0, help="seconds for one model call")
-    ap.add_argument("--dry-run", action="store_true", help="decide and print; post nothing")
+    ap.add_argument("--dry-run", action="store_true",
+                    help="decide, print and log locally; post nothing, so no book can be changed")
     ap.add_argument("--rules-only", action="store_true", help="no model calls; use the arithmetic control")
     ap.add_argument("--once", action="store_true", help="one pass, then exit")
     args = ap.parse_args()
@@ -301,6 +329,15 @@ def main() -> int:
             verdict = "VETO" if factor <= 0 else ("cut" if factor < 1 else "allow")
             print(f"{stamp} {entry['run']:16s} {entry['side']:5s} {verdict:5s} {factor:.2f} — {reason}", flush=True)
             if args.dry_run:
+                # A dry run that leaves no trace defeats its own purpose. The
+                # point of running the panel without power is to find out
+                # whether it is sane BEFORE it can refuse a real entry, and
+                # that judgement needs the same record a live run would leave.
+                # Written beside the run's own log, with `applied: false` and a
+                # `dry_run` flag, so advisor_review.py reads it exactly like
+                # any other consultation and nothing here can be mistaken for
+                # something the desk acted on.
+                dry_log(entry, factor, reason, transcript)
                 continue
             try:
                 reply = post_json(
