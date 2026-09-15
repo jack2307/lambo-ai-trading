@@ -58,11 +58,23 @@ const DETAIL_BARS = 240
 const CHART_H = 380
 
 /**
- * A run whose last closed bar is older than this is stale: the poller has
- * stopped, or the market is shut. Forty-five minutes is three 15m bars, so a
- * single late bar does not raise the flag.
+ * How many of a run's OWN bars may pass before it is called stale.
+ *
+ * Bars rather than minutes, and that is the whole point. A flat 45-minute
+ * threshold is three missed bars on a 15-minute book and **nine** on a
+ * five-minute one, so the two five-minute books could lose most of an hour of
+ * feed and still show a reassuring pulsing green dot. The reader wants the
+ * same question answered for every row — "is this one still being fed" — and
+ * the only unit in which that question means the same thing on both books is
+ * the book's own bar.
  */
-const STALE_MS = 45 * 60_000
+const STALE_BARS = 3
+
+/** The timeframes a run can carry, in milliseconds. */
+const TF_MS: Record<string, number> = { '1m': 60_000, '5m': 300_000, '15m': 900_000, '1h': 3_600_000 }
+
+/** Fallback for a timeframe this table does not know: the old flat window. */
+const STALE_MS_FALLBACK = 45 * 60_000
 
 /** The selected run, remembered per browser. A reload should land where you were. */
 const SELECTED_KEY = 'fd.desk.selected'
@@ -189,7 +201,10 @@ const GUARD_LABEL: Record<string, string> = {
 }
 const guardLabel = (key: string) => GUARD_LABEL[key] ?? key.toLowerCase().replace(/_/g, ' ')
 
-const isStale = (run: PaperRun, now: number) => (run.last_bar_time ? now - run.last_bar_time > STALE_MS : true)
+const staleAfter = (tf: string): number => (TF_MS[tf] ?? 0) * STALE_BARS || STALE_MS_FALLBACK
+
+const isStale = (run: PaperRun, now: number) =>
+  run.last_bar_time ? now - run.last_bar_time > staleAfter(run.tf) : true
 
 /* ------------------------------------------------------------------ page */
 
