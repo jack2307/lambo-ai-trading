@@ -338,20 +338,34 @@ def main() -> int:
     state = load_state()
     print(f"telegram: watching the desk, answering chat {allowed} only", flush=True)
     while True:
+        # Reading the desk and reaching Telegram are separate failures and must
+        # be reported as such. Wrapped together, an unreachable Telegram —
+        # "chat not found" before anyone has pressed /start, a network blip —
+        # came back as "the desk stopped answering", which is a false alarm
+        # about the one thing this exists to watch.
+        runs = None
         try:
             runs = desk("/api/paper/status")["runs"]
-            if state.get("api_down"):
-                say(token, allowed, "✅ The desk is answering again.")
-                state["api_down"] = False
-            for line in changes(runs, state, time.time() * 1000):
-                say(token, allowed, line)
         except Exception as e:  # noqa: BLE001
             if not state.get("api_down"):
+                state["api_down"] = True
                 try:
                     say(token, allowed, f"⚠️ The desk stopped answering ({type(e).__name__}).")
-                except RuntimeError:
-                    pass
-                state["api_down"] = True
+                except RuntimeError as t:
+                    print(f"desk down, and telegram unreachable: {t}", flush=True)
+
+        if runs is not None:
+            lines = changes(runs, state, time.time() * 1000)
+            if state.get("api_down"):
+                state["api_down"] = False
+                lines.insert(0, "✅ The desk is answering again.")
+            for line in lines:
+                try:
+                    say(token, allowed, line)
+                except RuntimeError as t:
+                    # The desk is fine; the messenger is not. Say so on stdout
+                    # and keep the state, so nothing is announced twice later.
+                    print(f"could not send: {t}", flush=True)
 
         if not args.no_commands:
             try:
