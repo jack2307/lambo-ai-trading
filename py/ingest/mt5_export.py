@@ -108,11 +108,23 @@ def fetch_windowed(symbol: str, tf_name: str, days: int | None, log) -> list[tup
     """
     tf = mt5_timeframe(tf_name)
     window = dt.timedelta(days=WINDOW_DAYS[tf_name])
+    # `copy_rates_range` takes its bounds in the SERVER's clock, not UTC, and
+    # this server runs UTC+3 (UTC+2 out of New York DST). Asking for a window
+    # ending at `now` in UTC therefore asked for a window ending three hours in
+    # the terminal's past, and every export silently stopped three hours short
+    # of the market — for weeks, because a file that ends "a few hours ago"
+    # looks fine until a paper book warms from it and opens with a four-hour
+    # hole in its history.
+    #
+    # The still-forming bar is dropped later by `to_utc_rows` against real UTC,
+    # so reaching to the server's now cannot pull in a partial bar.
     now = dt.datetime.now(UTC)
-    floor = now - dt.timedelta(days=days) if days else None
+    offset = dt.timedelta(seconds=server_offset_seconds(int(now.timestamp()) + 3 * 3600))
+    now_server = now + offset
+    floor = now_server - dt.timedelta(days=days) if days else None
     rows: dict[int, tuple] = {}
     empty_windows = 0
-    end = now
+    end = now_server
     while True:
         start = end - window
         if floor is not None and end <= floor:
@@ -224,6 +236,14 @@ def main() -> int:
                     merged[row[0]] = row  # a re-pulled bar replaces the stored one
                 rows = [merged[k] for k in sorted(merged)]
 
+                # How far behind the market this file now ends. Printed every
+                # run because the three-hour lag above survived three separate
+                # sightings: each time the file looked plausible on its own, and
+                # only a book warming from it made the hole visible.
+                if fresh:
+                    behind_min = (now_utc_ms - fresh[-1][0]) / 60000.0
+                    log(f"  {symbol} {tf_name}: last bar is {behind_min:.0f} min behind now"
+                        + ("  <-- CHECK THIS" if behind_min > 90 else ""))
                 # Gaps larger than a weekend are worth knowing about.
                 gaps = [(a, b) for a, b in zip(rows, rows[1:]) if b[0] - a[0] > 3 * 86_400_000]
                 metadata = {
