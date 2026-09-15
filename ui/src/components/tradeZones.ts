@@ -42,6 +42,16 @@ export interface TradeZone {
   target: number | null
   /** Shown against the stop band; kept short enough to sit inside it. */
   label?: string
+  /**
+   * The one trade the reader is asking about, picked in the fills table.
+   *
+   * When any zone carries this, every other zone is drawn faint and this one
+   * keeps its full weight and gains a bracket. Dimming the rest rather than
+   * hiding them is deliberate: a trade means little without the ones either
+   * side of it, and a chart that empties when you click a row has answered a
+   * different question from the one asked.
+   */
+  focused?: boolean
 }
 
 export interface ZoneColors {
@@ -51,11 +61,16 @@ export interface ZoneColors {
   stop: string
   entry: string
   text: string
+  /** The chrome accent, for the bracket around the trade in focus. */
+  focus: string
 }
 
 /** How opaque the bands are. Low enough that candles stay readable through them. */
 const FILL_ALPHA = 0.13
 const EDGE_ALPHA = 0.55
+
+/** What the unfocused zones fade to once one trade is picked. */
+const DIMMED = 0.28
 
 function withAlpha(color: string, alpha: number): string {
   const trimmed = color.trim()
@@ -94,7 +109,12 @@ class ZonesRenderer implements IPrimitivePaneRenderer {
       const hr = scope.horizontalPixelRatio
       const vr = scope.verticalPixelRatio
 
+      // One pass to learn whether anything is picked, so a chart with no
+      // selection draws exactly as it did before this existed.
+      const picked = this.zones.some((z) => z.focused)
+
       for (const zone of this.zones) {
+        const weight = !picked ? 1 : zone.focused ? 1 : DIMMED
         const x1 = timeScale.timeToCoordinate(zone.from as unknown as Time)
         const x2 = timeScale.timeToCoordinate(zone.to as unknown as Time)
         const entryY = this.series.priceToCoordinate(zone.entry)
@@ -113,21 +133,27 @@ class ZonesRenderer implements IPrimitivePaneRenderer {
 
         const stopY = this.series.priceToCoordinate(zone.stop)
         if (stopY !== null) {
-          this.band(ctx, left, width, entry, stopY * vr, this.colors.stop, Math.max(1, hr))
-          this.labelled(ctx, left, width, stopY * vr, zone.label ?? 'stoploss', this.colors.stop, vr)
+          this.band(ctx, left, width, entry, stopY * vr, this.colors.stop, Math.max(1, hr), weight)
+          // A faded band's caption is unreadable and still collides with its
+          // neighbours, so the labels belong to whatever is in focus.
+          if (weight === 1) {
+            this.labelled(ctx, left, width, stopY * vr, zone.label ?? 'stoploss', this.colors.stop, vr)
+          }
         }
 
         if (zone.target !== null && Number.isFinite(zone.target)) {
           const targetY = this.series.priceToCoordinate(zone.target)
           if (targetY !== null) {
-            this.band(ctx, left, width, entry, targetY * vr, this.colors.target, Math.max(1, hr))
-            this.labelled(ctx, left, width, targetY * vr, 'target', this.colors.target, vr)
+            this.band(ctx, left, width, entry, targetY * vr, this.colors.target, Math.max(1, hr), weight)
+            if (weight === 1) {
+              this.labelled(ctx, left, width, targetY * vr, 'target', this.colors.target, vr)
+            }
           }
         }
 
         // The entry itself, so the two bands have a visible hinge.
         ctx.save()
-        ctx.strokeStyle = withAlpha(this.colors.entry, 0.9)
+        ctx.strokeStyle = withAlpha(this.colors.entry, 0.9 * weight)
         ctx.lineWidth = Math.max(1, hr)
         ctx.setLineDash([4 * hr, 3 * hr])
         ctx.beginPath()
@@ -135,6 +161,24 @@ class ZonesRenderer implements IPrimitivePaneRenderer {
         ctx.lineTo(left + width, entry)
         ctx.stroke()
         ctx.restore()
+
+        // The bracket. Two full-height verticals at the trade's own edges, in
+        // the chrome accent, so the eye lands on WHEN as well as on what — a
+        // dimmed neighbour can still be darker than an unlit candle, and the
+        // span is the thing the reader clicked a row to find.
+        if (picked && zone.focused) {
+          ctx.save()
+          ctx.strokeStyle = withAlpha(this.colors.focus, 0.85)
+          ctx.lineWidth = Math.max(1, hr)
+          ctx.setLineDash([])
+          for (const x of [left, left + width]) {
+            ctx.beginPath()
+            ctx.moveTo(x, 0)
+            ctx.lineTo(x, scope.bitmapSize.height)
+            ctx.stroke()
+          }
+          ctx.restore()
+        }
       }
     })
   }
@@ -148,13 +192,14 @@ class ZonesRenderer implements IPrimitivePaneRenderer {
     to: number,
     color: string,
     lineWidth: number,
+    weight = 1,
   ): void {
     const top = Math.min(from, to)
     const height = Math.abs(to - from)
     ctx.save()
-    ctx.fillStyle = withAlpha(color, FILL_ALPHA)
+    ctx.fillStyle = withAlpha(color, FILL_ALPHA * weight)
     ctx.fillRect(left, top, width, height)
-    ctx.strokeStyle = withAlpha(color, EDGE_ALPHA)
+    ctx.strokeStyle = withAlpha(color, EDGE_ALPHA * weight)
     ctx.lineWidth = lineWidth
     ctx.beginPath()
     // Only the boundary that matters: the price the trade was waiting for.

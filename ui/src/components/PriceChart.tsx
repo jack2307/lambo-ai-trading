@@ -46,6 +46,15 @@ interface Props {
   showZones: boolean
   /** The bucket currently being built from the live feed, if any. */
   liveBar?: Bar | null
+  /**
+   * The one trade the reader picked in the fills table, if any.
+   *
+   * Everything else stays drawn and fades; this one keeps its bands, its
+   * captions and its markers, gains a bracket at its two edges, and the chart
+   * scrolls to it. Matched on the pair of stamps rather than on an index,
+   * because the fills list is reversed for display and re-fetched every minute.
+   */
+  focus?: BacktestTrade | null
 }
 
 /** Reads a CSS custom property so the chart can never drift from the theme. */
@@ -69,6 +78,7 @@ export function PriceChart({
   showMarkers,
   showZones,
   liveBar,
+  focus = null,
 }: Props) {
   const container = useRef<HTMLDivElement>(null)
   const chart = useRef<IChartApi | null>(null)
@@ -134,6 +144,7 @@ export function PriceChart({
       stop: theme.bear,
       entry: token('--primary', '#8dff08'),
       text: theme.muted,
+      focus: token('--primary', '#8dff08'),
     })
     candles.current.attachPrimitive(zones.current)
 
@@ -175,6 +186,37 @@ export function PriceChart({
       chart.current.timeScale().fitContent()
     }
   }, [bars])
+
+  /**
+   * Bring the picked trade into view.
+   *
+   * Logical indices rather than timestamps: `setVisibleRange` takes times that
+   * must exist on the series, and a trade that opened on a bar the window no
+   * longer carries would silently do nothing. Finding the two bars by index
+   * also gives the honest answer when the trade is off the loaded window —
+   * `entry < 0` means the chart is showing 240 bars and this fill is older,
+   * which is a thing to leave alone rather than to fake a scroll for.
+   *
+   * Only runs when the picked trade changes. A reader who then scrolls away
+   * is not yanked back on the next sixty-second poll.
+   */
+  useEffect(() => {
+    if (!focus || !chart.current || bars.length === 0) return
+    const entry = bars.findIndex((b) => b.time >= focus.entryTime)
+    if (entry < 0) return
+    let exit = bars.findIndex((b) => b.time >= focus.exitTime)
+    if (exit < 0) exit = bars.length - 1
+    // Half the trade's own length either side, and never so tight that a
+    // trade closed on its entry bar fills the screen with two candles.
+    const pad = Math.max(8, Math.round((exit - entry) * 0.6))
+    chart.current.timeScale().setVisibleLogicalRange({
+      from: Math.max(0, entry - pad),
+      to: Math.min(bars.length + 4, exit + pad),
+    })
+    // `bars` is deliberately absent: a poll that appends one bar must not
+    // re-centre a chart the reader has since scrolled.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focus])
 
   // The forming bucket from the live feed.
   //
@@ -277,27 +319,44 @@ export function PriceChart({
       return
     }
 
+    // Markers have no opacity of their own, so a picked trade is separated by
+    // losing the others' labels rather than by fading them: ten arrows each
+    // carrying a price is unreadable at the best of times, and the one row the
+    // reader clicked is the only one whose numbers they asked for.
+    const picked = focus
+      ? trades.find((t) => t.entryTime === focus.entryTime && t.exitTime === focus.exitTime) ?? null
+      : null
+
     const points: SeriesMarker<Time>[] = []
     for (const trade of trades) {
       const long = trade.direction === 'LONG'
+      const lit = !picked || trade === picked
       points.push({
         time: seconds(trade.entryTime),
         position: long ? 'belowBar' : 'aboveBar',
-        color: long ? token('--lc', '#46c98a') : token('--lp', '#e05d6a'),
+        color: lit
+          ? long
+            ? token('--lc', '#46c98a')
+            : token('--lp', '#e05d6a')
+          : token('--muted-foreground', '#9aa39a'),
         shape: long ? 'arrowUp' : 'arrowDown',
-        text: `${trade.direction} ${trade.entryPrice}`,
+        text: lit ? `${trade.direction} ${trade.entryPrice}` : '',
       })
       points.push({
         time: seconds(trade.exitTime),
         position: long ? 'aboveBar' : 'belowBar',
-        color: trade.pnlUsd > 0 ? token('--sp', '#3fbcc0') : token('--sc', '#d99446'),
+        color: lit
+          ? trade.pnlUsd > 0
+            ? token('--sp', '#3fbcc0')
+            : token('--sc', '#d99446')
+          : token('--muted-foreground', '#9aa39a'),
         shape: 'circle',
-        text: `${trade.exitReason} ${trade.r}R`,
+        text: lit ? `${trade.exitReason} ${trade.r}R` : '',
       })
     }
     points.sort((a, b) => (a.time as number) - (b.time as number))
     markers.current.setMarkers(points)
-  }, [trades, showMarkers])
+  }, [trades, showMarkers, focus])
 
   // Stop and target bands, one per trade.
   useEffect(() => {
@@ -312,6 +371,7 @@ export function PriceChart({
         direction: trade.direction,
         from: Math.floor(trade.entryTime / 1000),
         to: Math.floor(trade.exitTime / 1000),
+        focused: focus != null && trade.entryTime === focus.entryTime && trade.exitTime === focus.exitTime,
         entry: trade.entryPrice,
         stop: trade.stop,
         // A strategy that manages its own exit reports no target; drawing one
@@ -319,7 +379,7 @@ export function PriceChart({
         target: trade.target,
       })),
     )
-  }, [trades, showZones])
+  }, [trades, showZones, focus])
 
   return <div ref={container} className="h-full w-full" />
 }

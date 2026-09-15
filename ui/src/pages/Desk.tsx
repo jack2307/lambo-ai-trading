@@ -296,6 +296,12 @@ export function Desk() {
   // chart's forming candle a minute behind the price in the table above it.
   const activeRun = sorted.find((r) => r.id === activeId) ?? null
   const livePrice = activeRun?.live ?? live?.live ?? null
+  // The fill the chart is asked to show. Derived from the same key the table
+  // marks open, so the row and the bands can never point at different trades.
+  const focusFill = useMemo(
+    () => (pickedFill && live ? (live.fills.find((f, i) => fillId(f, i) === pickedFill) ?? null) : null),
+    [pickedFill, live],
+  )
 
   return (
     <div
@@ -317,34 +323,46 @@ export function Desk() {
       ) : sorted.length === 0 ? (
         <NoRuns />
       ) : (
+        /* The chart owns the screen and the list of books moved to the rail.
+           A ten-row table across the top pushed the candles into a 380px
+           letterbox for the sake of columns a reader consults once a session;
+           the chart is the thing being read continuously, so it takes the
+           height and the run list becomes a picker beside it. */
         <div className="flex min-h-0 flex-1 flex-col overflow-auto xl:flex-row xl:overflow-hidden">
-          <div className="flex min-w-0 shrink-0 flex-col xl:h-full xl:flex-1 xl:shrink xl:overflow-y-auto">
-            {/* Only the runs table is 1130px wide, so only the runs table
-                scrolls sideways; the chart and the fills below it stay put. */}
-            <div className="shrink-0 overflow-x-auto">
-              <RunsTable runs={sorted} now={now} selected={activeId} onPick={pick} />
-            </div>
+          <div className="flex min-w-0 flex-col xl:h-full xl:min-w-0 xl:flex-1">
             {/* What the bot traded on: its own indicators over the candles it
-                stepped, with every fill's entry, exit and stop / target band. */}
-            <div className="border-border shrink-0 border-t">
-              <RunChart detail={live} live={livePrice} />
+                stepped, with every fill's entry, exit and stop / target band.
+                Fills the column's height above xl and keeps a floor below it,
+                where the page scrolls instead. */}
+            <div className="border-border min-h-[340px] shrink-0 border-b xl:min-h-0 xl:flex-1 xl:shrink">
+              <RunChart detail={live} live={livePrice} focus={focusFill} />
             </div>
-            {/* The fills have seven columns and the rail has 460px; below the
-                runs table they get the width, and the space a ten-row table
-                leaves empty. Narrower than xl they stay in the rail. */}
-            <div className="border-border hidden border-t xl:block">
+            {/* The fills have seven columns and the rail has 460px, so they
+                stay here where the width is. Capped at two fifths of the
+                column: a long book must not push the chart off the screen the
+                move above was made to give it. Below xl they are in the rail. */}
+            <div className="hidden xl:block xl:max-h-[40%] xl:shrink-0 xl:overflow-y-auto">
               <FillsSection detail={live} openFill={pickedFill} onOpenFill={openFill} />
             </div>
           </div>
-          <div className="min-w-0 border-t xl:h-full xl:w-[460px] xl:shrink-0 xl:overflow-y-auto xl:border-t-0 xl:border-l">
-            <Drilldown
-              detail={live}
-              summary={activeRun}
-              error={detailError && detailError.id === activeId ? detailError.message : null}
-              now={now}
-              openFill={pickedFill}
-              onOpenFill={openFill}
-            />
+          <div className="flex min-w-0 flex-col border-t xl:h-full xl:w-[460px] xl:shrink-0 xl:border-t-0 xl:border-l">
+            {/* The books, compact. The picker the wide table used to be, in the
+                width a rail has: everything the wide table's eleven columns
+                carried that is not per-run configuration, and the rest moved
+                into the drill-down under it where it belongs to one run. */}
+            <div className="border-border shrink-0 border-b xl:max-h-[46%] xl:overflow-y-auto">
+              <RunsList runs={sorted} now={now} selected={activeId} onPick={pick} />
+            </div>
+            <div className="min-h-0 xl:flex-1 xl:overflow-y-auto">
+              <Drilldown
+                detail={live}
+                summary={activeRun}
+                error={detailError && detailError.id === activeId ? detailError.message : null}
+                now={now}
+                openFill={pickedFill}
+                onOpenFill={openFill}
+              />
+            </div>
           </div>
         </div>
       )}
@@ -448,11 +466,20 @@ function NoRuns() {
 
 /* ------------------------------------------------------------ runs table */
 
-/** Track widths; `RunsTable`'s `min-w` is their sum plus the gaps. */
-const RUN_COLS =
-  'grid-cols-[minmax(140px,1.2fr)_80px_96px_66px_66px_62px_80px_72px_minmax(120px,1fr)_minmax(104px,0.9fr)_112px]'
-
-function RunsTable({
+/**
+ * The books, as a picker in the rail.
+ *
+ * This replaced an eleven-column table that ran the full width of the screen.
+ * The columns were not wasted — they were just in the wrong place: a reader
+ * watches the candles continuously and consults a run's guards once a session,
+ * so the chart now has the width and the list has what a picker needs. The
+ * two columns that belonged to one run rather than to the comparison, the open
+ * position and the guards that fired, moved into the drill-down below.
+ *
+ * Two lines a row: what it is and what it has made, then what it is trading
+ * and what that is worth right now. Ten of those fit a rail without scrolling.
+ */
+function RunsList({
   runs,
   now,
   selected,
@@ -465,8 +492,7 @@ function RunsTable({
 }) {
   const rowRefs = useRef<(HTMLButtonElement | null)[]>([])
 
-  // ↑/↓ walk the rows, Enter opens the one under the cursor — a button already
-  // fires its click on Enter, so the only thing missing is the walk.
+  // The same walk the fills table has: ↑/↓ move the cursor, Enter opens.
   const onKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>, index: number) => {
     if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return
     event.preventDefault()
@@ -475,24 +501,11 @@ function RunsTable({
   }
 
   return (
-    <div className="min-w-[1078px]" role="group" aria-label="Paper runs">
-      <div
-        className={cn(
-          'text-muted-foreground bg-background sticky top-0 z-10 grid items-center gap-2 border-b px-3 py-1 text-[10px] tracking-wide uppercase',
-          RUN_COLS,
-        )}
-      >
-        <span>run</span>
-        <span>market:tf</span>
-        <span>strategy</span>
-        <span>status</span>
-        <span className="text-right">bars</span>
-        <span className="text-right">trades</span>
-        <span className="text-right">net</span>
-        <span className="text-right">PF</span>
-        <span>open position</span>
-        <span>guards</span>
-        <span className="text-right">live price</span>
+    <div role="group" aria-label="Paper runs">
+      <div className="text-muted-foreground bg-background sticky top-0 z-10 flex items-baseline gap-2 border-b px-3 py-1 text-[10px] tracking-wide uppercase">
+        <span>books</span>
+        <span className="num text-muted-foreground/70 normal-case">{runs.length}</span>
+        <span className="text-muted-foreground/60 ml-auto normal-case">click to load the chart</span>
       </div>
 
       {runs.map((run, index) => {
@@ -509,44 +522,39 @@ function RunsTable({
             onKeyDown={(e) => onKeyDown(e, index)}
             aria-pressed={isOn}
             className={cn(
-              'hover:bg-accent/60 focus-visible:ring-ring grid w-full items-center gap-2 border-b px-3 py-[5px] text-left text-xs transition-colors last:border-0 focus-visible:ring-2 focus-visible:ring-inset focus-visible:outline-none',
-              RUN_COLS,
+              'hover:bg-accent/60 focus-visible:ring-ring w-full border-b px-3 py-[6px] text-left transition-colors last:border-0 focus-visible:ring-2 focus-visible:ring-inset focus-visible:outline-none',
               isOn && 'bg-primary/10 shadow-[inset_2px_0_0_var(--primary)]',
             )}
           >
-            <span className="min-w-0 truncate">
-              <span className="num">{run.id}</span>
-              {run.label && <span className="text-muted-foreground ml-2 text-[10px]">{run.label}</span>}
+            <span className="flex items-center gap-2 text-xs">
+              <StatusPill stale={stale} />
+              <span className="num min-w-0 flex-1 truncate">{run.id}</span>
+              <span
+                className={cn(
+                  'num shrink-0',
+                  run.net_usd > 0 && 'text-lc',
+                  run.net_usd < 0 && 'text-lp',
+                  run.net_usd === 0 && 'text-muted-foreground',
+                )}
+              >
+                {signedUsd(run.net_usd)}
+              </span>
             </span>
-            <span className="num text-muted-foreground truncate">
-              {run.market}:{run.tf}
+            <span className="mt-0.5 flex items-end gap-2 text-[10px] leading-tight">
+              <span className="text-muted-foreground min-w-0 flex-1 truncate">
+                <span className="num">{run.strategy}</span>
+                <span className="text-muted-foreground/60"> · {run.market}:{run.tf}</span>
+                <span className="text-muted-foreground/60">
+                  {' '}
+                  · {run.trades} fill{run.trades === 1 ? '' : 's'}
+                  {run.profit_factor != null && ` · PF ${num(run.profit_factor)}`}
+                  {run.open && <span className={run.open.side === 'LONG' ? 'text-lc' : 'text-lp'}> · {run.open.side.toLowerCase()}</span>}
+                </span>
+              </span>
+              <span className="shrink-0">
+                <LiveCell run={run} now={now} />
+              </span>
             </span>
-            <span className="text-muted-foreground truncate">{run.strategy}</span>
-            <StatusPill stale={stale} />
-            <span className="num text-right">
-              {run.bars_seen}
-              <span className="text-muted-foreground"> bars</span>
-            </span>
-            <span className="num text-right">
-              {run.trades}
-              <span className="text-muted-foreground"> fills</span>
-            </span>
-            <span
-              className={cn(
-                'num text-right',
-                run.net_usd > 0 && 'text-lc',
-                run.net_usd < 0 && 'text-lp',
-                run.net_usd === 0 && 'text-muted-foreground',
-              )}
-            >
-              {signedUsd(run.net_usd)}
-            </span>
-            <span className="num text-muted-foreground text-right">
-              {run.profit_factor == null ? '—' : `PF ${num(run.profit_factor)}`}
-            </span>
-            <OpenCell run={run} />
-            <GuardChips run={run} />
-            <LiveCell run={run} now={now} />
           </button>
         )
       })}
@@ -705,6 +713,17 @@ function Drilldown({
         </div>
         <LivePrice live={summary?.live ?? detail.live} lastClose={(summary ?? run).last_bar_close} now={now} />
         {run.label && <p className="text-muted-foreground mt-1 text-[11px] leading-snug">{run.label}</p>}
+        {/* The two columns that left the runs table when it became a rail
+            picker: both describe this one run rather than compare it to the
+            others, so this is where they belonged all along. */}
+        <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
+          <span className="text-muted-foreground text-[10px] tracking-wide uppercase">position</span>
+          <OpenCell run={run} />
+        </div>
+        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
+          <span className="text-muted-foreground text-[10px] tracking-wide uppercase">guards</span>
+          <GuardChips run={run} />
+        </div>
         <ConfigLine run={run} />
       </section>
 
@@ -867,7 +886,16 @@ function tokenValue(name: string): string {
  * strategy's definition declares it reads, and `overlay` on each one says
  * whether its series belongs over the candles or wants a pane of its own.
  */
-function RunChart({ detail, live }: { detail: PaperRunDetail | null; live: LiveBar | null }) {
+function RunChart({
+  detail,
+  live,
+  focus,
+}: {
+  detail: PaperRunDetail | null
+  live: LiveBar | null
+  /** The fill picked in the table below, or null. */
+  focus: BacktestTrade | null
+}) {
   // `bars` arrives as `[ms, o, h, l, c]` and `PriceChart` takes milliseconds
   // and divides, so the tuple goes straight across. (`series` times are
   // already seconds, which is what the chart wants there — the two halves of
@@ -931,12 +959,18 @@ function RunChart({ detail, live }: { detail: PaperRunDetail | null; live: LiveB
   }
 
   return (
-    <section className="px-3 py-2">
+    <section className="flex h-full min-h-0 flex-col px-3 py-2">
       <Heading>
         Chart <span className="text-muted-foreground/70 num">{detail.run.market}:{detail.run.tf}</span>{' '}
         <span className="text-muted-foreground/70 num">{bars.length} bars</span>
+        {focus && (
+          <span className="text-primary num ml-2 normal-case">
+            showing the {focus.direction.toLowerCase()} closed {shortStamp(focus.exitTime)} — click the row again to
+            release
+          </span>
+        )}
       </Heading>
-      <div className="border-border w-full overflow-hidden rounded-sm border" style={{ height: CHART_H }}>
+      <div className="border-border min-h-0 w-full flex-1 overflow-hidden rounded-sm border" style={{ minHeight: CHART_H - 60 }}>
         {/* Keyed by run: a new run brings a different set of panes, and
             remounting is cheaper to reason about than reconciling them. */}
         <PriceChart
@@ -949,6 +983,7 @@ function RunChart({ detail, live }: { detail: PaperRunDetail | null; live: LiveB
           trades={detail.fills}
           showMarkers
           showZones
+          focus={focus}
           liveBar={forming}
         />
       </div>
