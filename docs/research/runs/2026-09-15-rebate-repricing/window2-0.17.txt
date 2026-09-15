@@ -1,0 +1,1 @@
+xauusd 1630-1815 MoTuWeTh side 1: 281 trades  PF 1.565  exp 0.0175R  win 59.8%  net $498  return 4.98%  maxDD $124 (1.19%)  avgMAE -0.072R  avgMFE 0.096R  hold 126 min

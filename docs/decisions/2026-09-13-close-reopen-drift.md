@@ -295,3 +295,61 @@ left is a thirty-minute hold at PF 0.83. That is the guard doing what it
 was written to do, and the honest sentence for the paper phase: the row
 this record could not confirm on 68 Fridays is one the paper bot is not
 allowed to hold.
+
+## Amendment, 2026-09-15: the cost this record charged is not the cost this account pays
+
+The owner's introducing-broker rebate is **$10–12 per standard lot**, and a
+standard lot of gold is 100 ounces. This record charged a flat **$0.28 an
+ounce**, which is $28 a lot. So the cost it was closed against was between
+**36% and 43% too high** for an account that receives its own rebate.
+
+That is a fact about the account, not a parameter. It is written here rather
+than acted on, and the numbers below are a **re-pricing of the same trades**,
+not a new search: same rows, same windows, same 1,355 and 281 holds, the only
+thing changed being what a round trip costs.
+
+**First window, `xauduka` 2018-06-16 → 2025-04-10, 1,355 holds:**
+
+| | $0.28/oz (as recorded) | $0.17/oz (rebate $11/lot) |
+|---|---|---|
+| profit factor | 1.376 | **1.723** |
+| expectancy | 0.0077 R | **0.0131 R** |
+| win rate | 49.7% | **54.8%** |
+| net on $10,000 | $1,093 | **$1,928** |
+| return over the span | 10.93% | **19.28%** |
+| max drawdown | $279 (2.51%) | $237 (1.98%) |
+| profit factor without the top five | 1.242 | **1.568** |
+
+**Second window, `xauusd` (Vantage) 2025-04-11 → 2026-09-12, 281 holds:**
+
+| | $0.28 | $0.17 | $0.10 |
+|---|---|---|---|
+| profit factor | 1.508 | 1.565 | 1.602 |
+| expectancy | 0.0160 R | 0.0175 R | 0.0184 R |
+| net on $10,000 | $455 | $498 | $525 |
+
+**What this does and does not change.**
+
+It does not reopen the record's verdict on the **0.05 R expectancy gate**. The
+hold still earns 0.013–0.018 R where the gate wanted 0.05, and the record's own
+amendment already says that gate *"was never testable by that gate for a hold
+whose whole move is smaller than it"*. A cheaper round trip does not make a
+two-hour hold into a five-percent-of-range one.
+
+What it changes is the sentence this record leads with — *"by about the spread
+until 2023"*. At this account's true net cost that sentence is wrong: the drift
+is **about twice the spread**, the concentration falls away (the top five drop
+from 36% of net to 21%), and the drawdown gets smaller rather than larger.
+
+**And it is still small.** Nineteen percent over seven years is about **2.6% a
+year** on a $10,000 account at 1% risk, and the second window runs at roughly
+3.3% a year annualised. That is a real number and it is not a living.
+
+**The one thing to check before any of this is acted on**, and it is the
+owner's to answer, not mine: the rebate must be paid on *this* account's own
+volume — i.e. the trading account sits under his own introducing-broker link.
+If it does not, the $0.28 column is the right one and this amendment is void.
+
+Nothing is promoted here. Re-pricing a closed record is not a registration, and
+turning the drift into a book needs one — with the rebate written into the
+market's cost before the window is opened, not after.
