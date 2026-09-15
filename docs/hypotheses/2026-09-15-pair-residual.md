@@ -95,7 +95,6 @@ unknowable, so it is bracketed:
 | | gold | silver | round trip |
 |---|---|---|---|
 | **proportional** — today's quote over today's level | 0.62 bp | 2.78 bp ($0.021 at $75.56) | **3.40 bp** |
-
 | **dollar-constant** — today's quote over the span's mean level | 1.62 bp | 8.64 bp | **10.26 bp** |
 
 > **Correction, same day, before the reviews reported** (data-integrity): this
