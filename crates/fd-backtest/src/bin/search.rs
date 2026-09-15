@@ -101,6 +101,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             rules.trail.activate_r = a;
         }
     }
+    // `--spread=<price units>` reprices the round trip for this run only. The
+    // configured 0.28 for gold was a SINGLE read of the terminal; the logger
+    // has since sampled thousands and the p50 is 0.220 with a maximum of 0.260,
+    // so every receipt in docs/ is charged a cost above anything ever observed.
+    // Repricing is a recorded amendment, never a config edit, so this flag
+    // exists to measure what the amendment would be worth before anyone makes
+    // one.
+    if let Some(v) = std::env::args().find_map(|a| a.strip_prefix("--spread=").map(str::to_string)) {
+        let s: f64 = v.trim().parse().map_err(|_| format!("--spread wants a number, got `{v}`"))?;
+        rules.spread = s;
+    }
+    println!("spread:   {} per round trip", rules.spread);
     println!(
         "trail:    {}",
         if rules.trail.enabled {
