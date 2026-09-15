@@ -1557,6 +1557,9 @@ pub async fn advice(
 
     if fresh {
         run.advice = Some(verdict.clone());
+        // Same reason as the intent route: a verdict the advisor was told was
+        // accepted must still be there when the intent it judges fills.
+        persist(&state.data, run)?;
     }
     Ok(Json(AdviceResponse { accepted: fresh, size_factor: verdict.size_factor, reason: verdict.reason }))
 }
@@ -1706,6 +1709,10 @@ pub async fn intent(
     // record, and a bar on which nothing happened is not an event in it. The
     // decider's own log (`decisions.jsonl`) already holds every reply whole.
     if side.is_none() {
+        // Persisted for the badge's sake: `last_at` is how the desk tells a
+        // model that is standing aside from a process that died, and a counter
+        // that resets on every API restart cannot carry that.
+        persist(&state.data, run)?;
         return Ok(Json(IntentResponse {
             accepted: true,
             reason: "stood aside; the book is unchanged".to_string(),
@@ -1724,6 +1731,15 @@ pub async fn intent(
             "decider": body.decider,
         }),
     )?;
+    // **Before answering, not after.** This route tells the caller "accepted,
+    // fills at the next bar's open", and that promise has to survive the
+    // fifteen minutes until that bar arrives. The pending intent lived only in
+    // memory until now, so a restart inside that window — a deploy, a crash —
+    // silently cancelled a trade the model had been told was on. It was
+    // observed doing exactly that: two stand-asides recorded at 16:15 were
+    // gone from both badges after a 16:17 restart, and an entry would have
+    // vanished the same way, without a line anywhere saying so.
+    persist(&state.data, run)?;
     Ok(Json(IntentResponse { accepted: true, reason: "fills at the next bar's open".to_string() }))
 }
 

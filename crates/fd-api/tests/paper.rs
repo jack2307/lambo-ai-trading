@@ -189,6 +189,63 @@ async fn a_stand_aside_names_the_decider_without_touching_the_book() {
 }
 
 #[tokio::test]
+async fn an_accepted_intent_survives_a_restart_and_still_fills() {
+    // The route answers "accepted, fills at the next bar's open", and that
+    // promise has to outlive a deploy. Until this test the pending intent lived
+    // only in memory: a restart inside the fifteen minutes before the next bar
+    // silently cancelled a trade the model had been told was on, with no line
+    // anywhere saying so. Observed for real — two stand-asides recorded at
+    // 16:15 were gone from both badges after a 16:17 restart.
+    let dir = tempfile::tempdir().expect("temp dir");
+    let state = state_over(dir.path(), 300);
+    start_run(&state, json!({ "market": "btc", "tf": "15m", "strategy": "external", "id": "ai", "window": 200 }))
+        .await
+        .expect("start");
+    post_bar(&state, "btc", "15m", wave(300)).await.expect("bar");
+
+    let ok = post_intent(&state, json!({
+        "run": "ai", "bar_time": wave(300).time, "side": "LONG",
+        "stop": 59_000.0, "reason": "survives", "decider": "claude-opus-5",
+    })).await.expect("call");
+    assert_eq!(ok["accepted"], true, "{ok}");
+
+    // A restart is a new state over the same data directory — no bar has been
+    // posted since the intent, so only the intent route can have written it.
+    let reborn = Arc::new(AppState::new(config(), dir.path().to_path_buf()));
+    let d = run_named(&read_status(&reborn).await, "ai")["decider"].clone();
+    assert_eq!(d["last"], "claude-opus-5", "the badge survived the restart: {d}");
+    assert_eq!(d["decisions"]["claude-opus-5"], 1);
+
+    // And the trade itself is still pending: the NEXT bar must open it.
+    let reply = post_bar(&reborn, "btc", "15m", wave(301)).await.expect("bar");
+    assert_eq!(reply["runs"][0]["opened"], true, "the intent still filled after a restart: {reply}");
+    let st = run_named(&read_status(&reborn).await, "ai").clone();
+    assert_eq!(st["open"]["side"], "LONG", "{st}");
+}
+
+#[tokio::test]
+async fn a_stand_aside_also_survives_a_restart() {
+    // `last_at` is how the desk tells a model that is standing aside from a
+    // process that died. A counter that resets on every API restart cannot
+    // carry that, so the stand-aside path persists too.
+    let dir = tempfile::tempdir().expect("temp dir");
+    let state = state_over(dir.path(), 300);
+    start_run(&state, json!({ "market": "btc", "tf": "15m", "strategy": "external", "id": "ai", "window": 200 }))
+        .await
+        .expect("start");
+    post_bar(&state, "btc", "15m", wave(300)).await.expect("bar");
+    post_intent(&state, json!({
+        "run": "ai", "bar_time": wave(300).time, "side": "NONE",
+        "reason": "chop", "decider": "codex/gpt-5.6-sol",
+    })).await.expect("call");
+
+    let reborn = Arc::new(AppState::new(config(), dir.path().to_path_buf()));
+    let d = run_named(&read_status(&reborn).await, "ai")["decider"].clone();
+    assert_eq!(d["last"], "codex/gpt-5.6-sol");
+    assert_eq!(d["stood_aside"], 1, "{d}");
+}
+
+#[tokio::test]
 async fn a_rule_based_book_cannot_be_claimed_by_a_decider() {
     // The badge is only meaningful because the route refuses rule-based runs
     // outright. Without this, anything could post a gpt-5 badge onto a book
