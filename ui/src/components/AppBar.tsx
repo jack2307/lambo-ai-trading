@@ -14,12 +14,13 @@ interface Props {
 }
 
 /**
- * The order is the working day: the book first, then the bench you change it
- * on, then the tape, then what the loop is proving, then the floor it happens
- * on. Desk is the default.
+ * The order is the working day: the book first, then what the book has added
+ * up to, then the bench you change it on, then the tape, then what the loop is
+ * proving, then the floor it happens on. Desk is the default.
  */
 const VIEWS: { id: View; label: string }[] = [
   { id: 'desk', label: 'Desk' },
+  { id: 'analytics', label: 'Analytics' },
   { id: 'workbench', label: 'Workbench' },
   { id: 'tape', label: 'Tape' },
   { id: 'research', label: 'Research' },

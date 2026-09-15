@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 
 import { AppBar } from '@/components/AppBar'
 import { ErrorBanner } from '@/components/ErrorBanner'
+import { Analytics } from '@/pages/Analytics'
 import { Desk } from '@/pages/Desk'
 import { Floor } from '@/pages/Floor'
 import { Research } from '@/pages/Research'
@@ -11,9 +12,9 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Toaster } from '@/components/ui/sonner'
 import { api, type Catalog } from '@/lib/api'
 
-export type View = 'desk' | 'workbench' | 'tape' | 'research' | 'floor'
+export type View = 'desk' | 'analytics' | 'workbench' | 'tape' | 'research' | 'floor'
 
-const VIEWS: View[] = ['desk', 'workbench', 'tape', 'research', 'floor']
+const VIEWS: View[] = ['desk', 'analytics', 'workbench', 'tape', 'research', 'floor']
 
 function viewFromHash(): View {
   const hash = window.location.hash.replace('#', '') as View
@@ -64,10 +65,13 @@ export default function App() {
 
       {error && <ErrorBanner message={error} onDismiss={() => setError(null)} />}
 
-      {/* The Desk and the Floor read no catalog, so neither waits on one: the
-          default screen must not be held behind a request it does not use. */}
+      {/* The Desk, Analytics and the Floor read no catalog, so none waits on
+          one: the default screen must not be held behind a request it does not
+          use, and Analytics asks only the paper routes. */}
       {view === 'desk' ? (
         <Desk />
+      ) : view === 'analytics' ? (
+        <Analytics />
       ) : view === 'floor' ? (
         <Floor />
       ) : !catalog ? (
