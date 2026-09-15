@@ -1,0 +1,40 @@
+quote asymmetry, XAUUSD.sc, 2026-01-20 -> 2026-06-16 (exclusive), fill lag 1s
+142,991 minutes over 104 days; 13,989,357 one-sided revisions (23.8%), 44,728,486 two-sided
+price-derived classification disagrees with the tick's own flags on 41,473 of 58,741,703 revisions (0.071%)
+declared: zOS > 0 precedes a RISE, no mirror. Gate 97.5 on the matched null (100,000 draws), the day-block 95% interval must exclude zero,
+no month over 40% of the net, at least 200 trades, and the control arm must NOT clear the gate.
+4 cells per arm and that is the multiplicity.
+
+=== SIGNAL — one-sided revisions (the dealer deciding) ===
+    W   k      n   net bp    up%  pctile   CI low  CI high  worst mo   share  guard n  guard bp
+E:\rust\flowdesk\scripts\quote_asymmetry.py:77: UserWarning: Converting to PeriodArray/Index representation will drop timezone information.
+  month = pd.DatetimeIndex(df["minute"]).to_period("M").astype(str).to_numpy()
+    1   5   5046  -0.2414  47.5%   79.92  -0.5917  +0.1290   2026-05   54.5%      386   +0.0039
+E:\rust\flowdesk\scripts\quote_asymmetry.py:77: UserWarning: Converting to PeriodArray/Index representation will drop timezone information.
+  month = pd.DatetimeIndex(df["minute"]).to_period("M").astype(str).to_numpy()
+    1  30   2295  +0.0797  48.8%   71.98  -1.1967  +1.3542   2026-02  513.8%      386   -1.8259
+      (W=1: 0.1% of trades sit alone in their hour x decile bucket)
+E:\rust\flowdesk\scripts\quote_asymmetry.py:77: UserWarning: Converting to PeriodArray/Index representation will drop timezone information.
+  month = pd.DatetimeIndex(df["minute"]).to_period("M").astype(str).to_numpy()
+    5   5   3151  +0.0778  48.0%   96.33  -0.5037  +0.7337   2026-01  312.1%      386   +0.6751
+E:\rust\flowdesk\scripts\quote_asymmetry.py:77: UserWarning: Converting to PeriodArray/Index representation will drop timezone information.
+  month = pd.DatetimeIndex(df["minute"]).to_period("M").astype(str).to_numpy()
+    5  30   1726  +0.5672  50.3%   80.31  -1.4157  +2.5791   2026-02  134.4%      386   +1.3868
+      (W=5: 0.3% of trades sit alone in their hour x decile bucket)
+
+=== CONTROL — two-sided revisions (price moving) ===
+    W   k      n   net bp    up%  pctile   CI low  CI high  worst mo   share  guard n  guard bp
+E:\rust\flowdesk\scripts\quote_asymmetry.py:77: UserWarning: Converting to PeriodArray/Index representation will drop timezone information.
+  month = pd.DatetimeIndex(df["minute"]).to_period("M").astype(str).to_numpy()
+    1   5   4027  -0.8421  44.4%   23.53  -1.4010  -0.2998   2026-05   34.6%      395   +1.1358
+E:\rust\flowdesk\scripts\quote_asymmetry.py:77: UserWarning: Converting to PeriodArray/Index representation will drop timezone information.
+  month = pd.DatetimeIndex(df["minute"]).to_period("M").astype(str).to_numpy()
+    1  30   1789  -0.4762  45.1%   73.33  -2.3487  +1.4162   2026-05  158.2%      395   +4.2501
+      (W=1: 0.3% of trades sit alone in their hour x decile bucket)
+E:\rust\flowdesk\scripts\quote_asymmetry.py:77: UserWarning: Converting to PeriodArray/Index representation will drop timezone information.
+  month = pd.DatetimeIndex(df["minute"]).to_period("M").astype(str).to_numpy()
+    5   5   2679  -0.7371  45.6%   43.87  -1.5593  +0.1019   2026-02   34.3%      393   +1.1866
+E:\rust\flowdesk\scripts\quote_asymmetry.py:77: UserWarning: Converting to PeriodArray/Index representation will drop timezone information.
+  month = pd.DatetimeIndex(df["minute"]).to_period("M").astype(str).to_numpy()
+    5  30   1315  +0.8283  45.8%   96.74  -1.9609  +3.7239   2026-01  171.9%      391   +2.4558
+      (W=5: 0.8% of trades sit alone in their hour x decile bucket)
