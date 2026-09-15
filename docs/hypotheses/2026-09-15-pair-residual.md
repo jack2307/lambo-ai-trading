@@ -96,6 +96,8 @@ unknowable, so it is bracketed:
 |---|---|---|---|
 | **proportional** — today's quote over today's level | 0.62 bp | 2.78 bp ($0.021 at $75.56) | **3.40 bp** |
 
+| **dollar-constant** — today's quote over the span's mean level | 1.62 bp | 8.64 bp | **10.26 bp** |
+
 > **Correction, same day, before the reviews reported** (data-integrity): this
 > row first read 0.49 bp and 3.27 bp. That came from the live terminal quote of
 > $0.21 over the live price of $4,296 on 2026-09-15, which is a different level
@@ -105,7 +107,6 @@ unknowable, so it is bracketed:
 > net is negative at either — but a committed document carrying a number the
 > instrument does not use is the shape of fault 10 and is corrected in place
 > rather than in a commit message.
-| **dollar-constant** — today's quote over the span's mean level | 1.62 bp | 8.64 bp | **10.26 bp** |
 
 Against that, the best cell in twenty-seven nets **+3.3 bp at the optimistic
 bound and −3.5 bp at the pessimistic one**. And the product of trade count and
