@@ -62,7 +62,7 @@ Either provider, and a mixed panel on purpose:
 
 ```
 python py/live/advisor.py --model=gpt-4o                       # all three on OpenAI
-python py/live/advisor.py --agent-model risk=gpt-4o                           --agent-model news=claude-opus-5     # one each
+python py/live/advisor.py --agent-model risk=gpt-4o --agent-model news=claude-opus-5
 ```
 
 The API is chosen from the model's name (`claude*` to Anthropic, `gpt*`, `o1`,
