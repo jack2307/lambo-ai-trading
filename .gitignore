@@ -27,3 +27,5 @@ config/local.toml
 
 # The runner smoke test leaves receipts nobody needs to keep.
 /docs/research/runs/smoke-test/
+# Spread samples: raw quotes, megabytes a week, rebuilt by re-running the logger.
+/data/spreads
