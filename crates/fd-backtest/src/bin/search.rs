@@ -82,7 +82,34 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         return Ok(());
     }
 
-    let rules = fd_backtest::engine::trading_rules_for(&config, &market)?;
+    let mut rules = fd_backtest::engine::trading_rules_for(&config, &market)?;
+    // `--trail=<distance_r>,<activate_r>` overrides `[trading.trail]` for this
+    // run only, so a sweep over trail settings does not need a config edit per
+    // cell — and cannot leave one behind. `--trail=off` forces it off whatever
+    // the config says, which is what the control arm of such a sweep needs.
+    if let Some(spec) = std::env::args().find_map(|a| a.strip_prefix("--trail=").map(str::to_string)) {
+        if spec == "off" {
+            rules.trail.enabled = false;
+        } else {
+            let mut parts = spec.split(',');
+            let d: f64 = parts.next().unwrap_or("").trim().parse()
+                .map_err(|_| format!("--trail wants <distance_r>,<activate_r> or `off`, got `{spec}`"))?;
+            let a: f64 = parts.next().unwrap_or("").trim().parse()
+                .map_err(|_| format!("--trail wants <distance_r>,<activate_r> or `off`, got `{spec}`"))?;
+            rules.trail.enabled = true;
+            rules.trail.distance_r = d;
+            rules.trail.activate_r = a;
+        }
+    }
+    println!(
+        "trail:    {}",
+        if rules.trail.enabled {
+            format!("ON distance {}R activate {}R", rules.trail.distance_r, rules.trail.activate_r)
+        } else {
+            "off".to_string()
+        }
+    );
+    let rules = rules;
     let gate = PromisingGate {
         min_trades: config.backtest.promising.min_trades,
         min_profit_factor: config.backtest.promising.min_profit_factor,
