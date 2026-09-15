@@ -47,6 +47,15 @@ interface Props {
   /** The bucket currently being built from the live feed, if any. */
   liveBar?: Bar | null
   /**
+   * An entry decided at the last close, waiting for the next open.
+   *
+   * Drawn dashed, and with no entry line: the entry price does not exist yet
+   * and inventing one — the last close, say — would put a level on the chart
+   * that nothing will ever fill at. The stop and the target ARE decided, so
+   * those are the two that get drawn.
+   */
+  pending?: { side: string; stop: number | null; target: number | null } | null
+  /**
    * The one trade the reader picked in the fills table, if any.
    *
    * Everything else stays drawn and fades; this one keeps its bands, its
@@ -78,6 +87,7 @@ export function PriceChart({
   showMarkers,
   showZones,
   liveBar,
+  pending,
   focus = null,
 }: Props) {
   const container = useRef<HTMLDivElement>(null)
@@ -85,6 +95,7 @@ export function PriceChart({
   const candles = useRef<ISeriesApi<'Candlestick'> | null>(null)
   const overlays = useRef<Map<string, ISeriesApi<'Line' | 'Histogram'>>>(new Map())
   const priceLines = useRef<IPriceLine[]>([])
+  const pendingLines = useRef<IPriceLine[]>([])
   const markers = useRef<ISeriesMarkersPluginApi<Time> | null>(null)
   const zones = useRef<TradeZones | null>(null)
 
@@ -269,6 +280,39 @@ export function PriceChart({
       }
     }
   }, [indicators, series])
+
+  // The waiting trade. Its own effect and its own line handles, so it can
+  // appear and clear on every bar without touching the options levels, which
+  // change on a completely different clock.
+  useEffect(() => {
+    const series = candles.current
+    if (!series) return
+    for (const line of pendingLines.current) series.removePriceLine(line)
+    pendingLines.current = []
+    if (!pending) return
+
+    const long = pending.side === 'LONG'
+    const rows: [string, number | null, string][] = [
+      [`pending ${pending.side.toLowerCase()} · stop`, pending.stop, token('--lp', '#e05d6a')],
+      [`pending ${pending.side.toLowerCase()} · target`, pending.target, token('--lc', '#46c98a')],
+    ]
+    for (const [title, price, color] of rows) {
+      if (price == null || !Number.isFinite(price)) continue
+      pendingLines.current.push(
+        series.createPriceLine({
+          price,
+          color,
+          lineWidth: 1,
+          // Dotted, not dashed: the fill bands of a trade that HAPPENED are
+          // dashed already, and a level that may still never exist must not
+          // look like one that did.
+          lineStyle: 1,
+          axisLabelVisible: true,
+          title: `${long ? '\u25b2' : '\u25bc'} ${title}`,
+        }),
+      )
+    }
+  }, [pending])
 
   // Options-derived levels, drawn as price lines on the candles.
   useEffect(() => {

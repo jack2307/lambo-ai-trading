@@ -613,6 +613,23 @@ pub struct OpenDto {
     pub usd_per_point: f64,
 }
 
+/// An entry that has been decided but has not filled.
+///
+/// Between the close that decided it and the open that fills it, a trade is
+/// real — it will happen, at a price nobody knows yet — and the desk showed
+/// nothing at all for that whole bar. On a fifteen-minute book that is fifteen
+/// minutes of a book looking flat while a position is already committed.
+#[derive(Debug, Serialize)]
+pub struct PendingDto {
+    pub side: String,
+    pub stop: Option<f64>,
+    pub target: Option<f64>,
+    /// The sentence whoever decided it wrote for taking the trade.
+    pub reason: String,
+    /// The bar whose close produced it. The fill is the NEXT bar's open.
+    pub decided_on: Option<i64>,
+}
+
 #[derive(Debug, Serialize)]
 pub struct BlackoutDto {
     pub time: i64,
@@ -666,6 +683,11 @@ pub struct RunStatus {
     pub last_bar_close: Option<f64>,
     pub equity: f64,
     pub open: Option<OpenDto>,
+    /// An entry decided at the last close and waiting for the next open. Never
+    /// set at the same time as a fill on the same bar: the book takes one
+    /// position, so a pending entry means the book is flat right now and will
+    /// not be after the next bar opens.
+    pub pending: Option<PendingDto>,
     pub trades: usize,
     pub net_usd: f64,
     /// `null` with no losing trade yet (the engine's infinity).
@@ -843,6 +865,16 @@ fn status_of(data: &Path, run: &PaperRun, rules: &TradingRules, guards: Option<&
     let horizon = soonest.as_ref().map(|(_, t)| *t);
     let horizon_days = horizon.map(|t| (t - now) / 86_400_000);
     let skip = book.trades.len().saturating_sub(10);
+    let pending = match run.book.pending() {
+        Some(Intent::Enter { side, stop, target, reason }) => Some(PendingDto {
+            side: format!("{side:?}").to_uppercase(),
+            stop: *stop,
+            target: *target,
+            reason: reason.clone(),
+            decided_on: run.bars.last().map(|b| b.time),
+        }),
+        _ => None,
+    };
     RunStatus {
         id: run.config.id(),
         label: run.config.label.clone(),
@@ -861,6 +893,7 @@ fn status_of(data: &Path, run: &PaperRun, rules: &TradingRules, guards: Option<&
         last_bar_close: run.bars.last().map(|b| b.close),
         equity: fd_core::js_round_to(book.equity, 2),
         open,
+        pending,
         trades: book.trades.len(),
         net_usd: metrics.net_pnl_usd,
         profit_factor: metrics.profit_factor,

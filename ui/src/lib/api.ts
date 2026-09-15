@@ -274,6 +274,20 @@ export interface PaperRun {
     risk: number
     unrealised_usd_at_last_close: number
   }
+  /**
+   * An entry decided at the last close and waiting for the next open.
+   *
+   * Between those two moments the trade is real — it will happen, at a price
+   * nobody knows yet — so a book with one is not flat, it is committed.
+   */
+  pending: null | {
+    side: 'LONG' | 'SHORT' | string
+    stop: number | null
+    target: number | null
+    reason: string
+    /** The bar whose close produced it; the fill is the NEXT bar's open. */
+    decided_on: number | null
+  }
   trades: number
   net_usd: number
   profit_factor: number | null

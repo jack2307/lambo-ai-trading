@@ -632,6 +632,7 @@ function RunsList({
                   {run.profit_factor != null && ` · PF ${num(run.profit_factor)}`}
                 </span>
                 {run.open && <OpenBadge run={run} tick={ticks[`${run.market}:${run.tf}`]} />}
+                {!run.open && run.pending && <PendingBadge pending={run.pending} />}
                 <span className="text-muted-foreground/60">
                 </span>
               </span>
@@ -1065,6 +1066,31 @@ function LiveCell({ run, now }: { run: PaperRun; now: number }) {
 }
 
 /**
+ * A trade that is decided but has not filled.
+ *
+ * Dashed, and never the same shape as an open position: the book is flat right
+ * now and will not be after the next bar opens, and those are different facts.
+ * Showing nothing at all for that bar — which is what the desk did until now —
+ * made a committed book look idle for a full fifteen minutes.
+ */
+function PendingBadge({ pending }: { pending: NonNullable<PaperRun['pending']> }) {
+  const long = pending.side === 'LONG'
+  return (
+    <span
+      className={cn(
+        'num mr-1 inline-flex shrink-0 items-center gap-1 rounded-sm border border-dashed px-1 py-px text-[10px]',
+        long ? 'border-lc/50 text-lc/90' : 'border-lp/50 text-lp/90',
+      )}
+      title={`${pending.side} decided, fills at the next bar's open — ${pending.reason}`}
+    >
+      <span aria-hidden>{long ? '\u25b3' : '\u25bd'}</span>
+      {pending.side.toLowerCase()}
+      <span className="text-muted-foreground">waiting</span>
+    </span>
+  )
+}
+
+/**
  * Mark an open position at the live price.
  *
  * `unrealised_usd_at_last_close` is the engine's own number and is the one the
@@ -1121,6 +1147,32 @@ function OpenBadge({ run, tick }: { run: PaperRun; tick?: LiveBar }) {
 function PositionBar({ run, live }: { run: PaperRun; live: LiveBar | null | undefined }) {
   const open = run.open
   if (!open) {
+    // Flat and committed are different states and must not look alike. The
+    // pending one carries no P&L on purpose: there is no entry price yet, so
+    // every number a mark would need is missing, and inventing one would be
+    // the only dishonest thing on this panel.
+    const p = run.pending
+    if (p) {
+      const long = p.side === 'LONG'
+      return (
+        <div className={cn('mt-2 rounded-sm border border-dashed px-2.5 py-2', long ? 'border-lc/40' : 'border-lp/40')}>
+          <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
+            <span className={cn('num rounded-sm border border-dashed px-1 text-[11px] font-medium', long ? 'border-lc/50 text-lc' : 'border-lp/50 text-lp')}>
+              {p.side}
+            </span>
+            <span className="text-muted-foreground text-[11px]">decided — fills at the next bar&rsquo;s open</span>
+            <span className="num text-muted-foreground/70 ml-auto text-[10px]">
+              on the {shortStamp(p.decided_on)} bar
+            </span>
+          </div>
+          <div className="text-muted-foreground mt-1.5 flex flex-wrap gap-x-4 text-[10px]">
+            <span className="num text-lp">stop {quote(p.stop)}</span>
+            <span className="num text-lc">target {quote(p.target)}</span>
+          </div>
+          {p.reason && <p className="text-muted-foreground/80 mt-1.5 text-[11px] leading-snug">{p.reason}</p>}
+        </div>
+      )
+    }
     return (
       <div className="mt-1.5 flex items-center gap-3 text-[11px]">
         <span className="text-muted-foreground text-[10px] tracking-wide uppercase">position</span>
@@ -1537,6 +1589,7 @@ function RunChart({
         {/* Keyed by run: a new run brings a different set of panes, and
             remounting is cheaper to reason about than reconciling them. */}
         <PriceChart
+        pending={detail.run.pending}
           key={detail.run.id}
           bars={bars}
           indicators={indicators}
