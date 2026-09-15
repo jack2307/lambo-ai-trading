@@ -41,6 +41,8 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import json
+import glob
+import io
 import os
 import shutil
 import subprocess
@@ -87,6 +89,61 @@ DEFAULT_MODEL = "claude-opus-5"
 #: whole of what it needs from either API is "send one prompt, read one
 #: string". An SDK would add a dependency, a version to track, and no ability
 #: this file uses.
+# Where the Codex binary lives. The npm package (`@openai/codex`) does not
+# install its Windows platform binary on this machine — `npm i -g` leaves a
+# shim that throws "Missing optional dependency @openai/codex-win32-x64" — but
+# the Codex desktop app ships a working `codex.exe` under AppData. So: the
+# environment wins, then PATH, then the app's own copy.
+CODEX_APP_GLOB = os.path.join(
+    os.environ.get("LOCALAPPDATA", ""), "OpenAI", "Codex", "bin", "*", "codex.exe"
+)
+
+
+_CODEX_BIN: list = []
+
+
+def codex_bin() -> str:
+    """The first Codex executable that actually RUNS.
+
+    Presence on PATH is not enough and was actively misleading here: the npm
+    package leaves a `codex.CMD` shim that shadows the working binary and
+    throws `Missing optional dependency @openai/codex-win32-x64` on every
+    call. A locator that stopped at the first name it found picked the broken
+    one. So each candidate is tried with `--version` and the first that exits
+    cleanly wins; the answer is cached, because this is once per process, not
+    once per bar.
+    """
+    if _CODEX_BIN:
+        return _CODEX_BIN[0]
+    candidates = []
+    named = os.environ.get("CODEX_BIN")
+    if named:
+        candidates.append(named)
+    candidates.extend(sorted(glob.glob(CODEX_APP_GLOB), reverse=True))
+    found = shutil.which("codex")
+    if found:
+        candidates.append(found)
+
+    tried = []
+    for path in candidates:
+        if not os.path.isfile(path):
+            continue
+        try:
+            probe = subprocess.run([path, "--version"], stdout=subprocess.PIPE,
+                                   stderr=subprocess.PIPE, timeout=60)
+        except (OSError, subprocess.TimeoutExpired) as e:
+            tried.append(f"{path}: {type(e).__name__}")
+            continue
+        if probe.returncode == 0:
+            _CODEX_BIN.append(path)
+            return path
+        tried.append(f"{path}: exit {probe.returncode}")
+    raise RuntimeError(
+        "no working codex binary; set CODEX_BIN or install the Codex app. Tried: "
+        + "; ".join(tried or ["nothing"])
+    )
+
+
 # The system prompt the CLI provider runs under. It REPLACES Claude Code's
 # own, which is what keeps a decision call from dragging a coding agent's
 # tools, skills and project files into a question about forty candles.
@@ -116,7 +173,28 @@ PROVIDERS = {
         "url": None,
         "env": None,
         "prefixes": ("claude", "opus", "sonnet", "haiku"),
-        "cli": True,
+        "cli": "claude",
+    },
+    # The ChatGPT plan, through the Codex CLI, rather than a metered OpenAI
+    # key. Owner's instruction, 2026-09-15: "GPT cũng lấy gói ra đi". Same
+    # shape and same reasoning as `claude-cli` above; the flags differ because
+    # the tool does.
+    #
+    # `--ignore-user-config` is the load-bearing one here. `~/.codex/config.toml`
+    # on this machine belongs to the Codex DESKTOP app and enables its plugins
+    # (browser, documents, pdf, spreadsheets). None of those belong anywhere
+    # near a question about forty candles, and loading them would also mean a
+    # trading loop and a desktop app sharing one mutable config file.
+    #
+    # Listed AFTER `openai` so a bare `gpt-5` keeps going to the metered API it
+    # is already running on: switching a live campaign's provider silently
+    # would change its decider mid-book. Ask for the plan by name —
+    # `--model=codex/gpt-5` — or pass `--provider codex-cli`.
+    "codex-cli": {
+        "url": None,
+        "env": None,
+        "prefixes": ("codex/", "codex-"),
+        "cli": "codex",
     },
     "anthropic": {
         "url": "https://api.anthropic.com/v1/messages",
@@ -301,14 +379,88 @@ def ask_cli(prompt: str, model: str, timeout: float) -> str:
     return text
 
 
+def ask_codex(prompt: str, model: str, timeout: float) -> str:
+    """One decision through the Codex CLI, on the account's ChatGPT plan.
+
+    UNVERIFIED as of 2026-09-15: `codex login status` says "Not logged in" on
+    this machine, and the login is a browser flow that cannot be completed
+    headlessly. The shape below is read from `codex exec --help` of the
+    installed binary (0.148.0-alpha.15), not guessed — but no reply has ever
+    come back through it, so treat the first live run as the test.
+
+    Locked down the same way the Claude path is, because the same thing is
+    true of both: this is an agent runtime being used as a completion, and
+    everything it can reach that is not the model is a liability.
+
+      --sandbox read-only     it may not write
+      --ignore-user-config    the desktop app's plugins stay out of it
+      --ignore-rules          no execpolicy file changes behaviour under us
+      --ephemeral             no session files; every bar asked cold
+      --skip-git-repo-check   the scratch cwd is not a repository
+      -C <scratch>            started in the repo it would read the repo
+
+    The final message is taken from `--output-last-message`, a file, rather
+    than scraped out of the JSONL event stream: one documented value beats
+    parsing a log whose shape is free to change.
+    """
+    exe = codex_bin()
+    with tempfile.TemporaryDirectory() as work:
+        out_file = os.path.join(work, "last.txt")
+        argv = [
+            exe, "exec",
+            "--model", model,
+            "--sandbox", "read-only",
+            "--ignore-user-config",
+            "--ignore-rules",
+            "--ephemeral",
+            "--skip-git-repo-check",
+            "--color", "never",
+            "-C", work,
+            "-o", out_file,
+            "-",
+        ]
+        try:
+            done = subprocess.run(
+                argv, input=prompt.encode("utf-8"), stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                timeout=timeout, cwd=work,
+            )
+        except subprocess.TimeoutExpired as e:
+            raise RuntimeError(f"{model} did not answer within {timeout:.0f}s") from e
+        if done.returncode != 0:
+            # Codex prints a banner first and the reason last, and on a missing
+            # login it retries ten times before saying anything useful. Scan
+            # BOTH streams and name the common case, or the log at 3am says
+            # "exited 1" over a workdir listing.
+            blob = (done.stdout.decode("utf-8", "replace") + chr(10)
+                    + done.stderr.decode("utf-8", "replace"))
+            low = blob.lower()
+            if "401" in blob or "unauthorized" in low or "not logged in" in low:
+                raise RuntimeError(
+                    f"codex is not authenticated (401). Run `{exe} login` once, "
+                    "in an interactive terminal - it opens a browser."
+                )
+            tail = chr(10).join(line for line in blob.splitlines() if line.strip())[-400:]
+            raise RuntimeError(f"codex exited {done.returncode}: ...{tail}")
+        try:
+            with io.open(out_file, encoding="utf-8") as fh:
+                text = fh.read()
+        except OSError as e:
+            raise RuntimeError(f"codex wrote no final message: {e}") from e
+    if not text.strip():
+        raise RuntimeError(f"{model} returned no text through the Codex CLI")
+    return text
+
+
 def ask(prompt: str, model: str, provider: str, api_key: str, timeout: float) -> tuple[str, int]:
     """One model call, either provider. Returns (text, latency_ms); raises on failure."""
     started = time.monotonic()
     spec = PROVIDERS[provider]
     url = spec["url"]
 
-    if spec.get("cli"):
+    if spec.get("cli") == "claude":
         text = ask_cli(prompt, model, timeout)
+    elif spec.get("cli") == "codex":
+        text = ask_codex(prompt, model, timeout)
     elif provider == "anthropic":
         out = post_json(
             url,
