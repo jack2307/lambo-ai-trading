@@ -35,6 +35,47 @@ Closed ideas move to the bottom with a pointer to their decision record, so
   cell is chosen. Note it would be re-entering the territory of
   `2026-09-13-close-reopen-drift`, which failed its gate as a unit.
 
+- [ ] **A measurement script must find an edge you plant in it** (the strongest
+  thing to come out of 2026-09-15, and no script but one has it).
+  `scripts/quote_asymmetry_selftest.py` keeps every real thing — minutes, quotes,
+  broker-clock hours, volatility — and replaces only the signal column with
+  `noise + β × forward return`, then runs the registered machinery unchanged. It
+  showed the harness maps realised gross onto percentile monotonically
+  (+0.129→66.06, +0.197→89.23, +0.341→98.53, +0.418→99.33), finds a planted
+  +0.34 bp edge above the gate, and never scores pure noise above it across six
+  seeds. That converts "my null result is not a bug" from an argument into a
+  receipt. **`pair_residual.py`, `news_drift.py`, `friday_cells.py`,
+  `fx_window_drift.py` and `venue_residual.py` have no such test**, and three
+  faults shipped inside one file in one day says they need one.
+- [ ] **Size every intraday registration against the noise floor before writing
+  it** (2026-09-15-quote-asymmetry). At ~5,000 non-overlapping five-minute trades
+  on this account the per-trade dispersion is 15.5 bp, so the standard error of
+  the mean is **0.22 bp** and the 97.5 gate sits at about **+0.30 bp of realised
+  gross** — against a measured round trip of 0.455 bp. A registration whose
+  plausible edge is below that floor is not a test, and the sample it would need
+  should be computed in the hypothesis file rather than discovered in the record.
+- [ ] **A direction gate belongs on gross, a tradability gate on net; say which
+  is which** (design fault, same record). The registration promised gate 4 the
+  role of deciding "direction exists, not a trade", then wrote it on net returns,
+  so it could not play that role: clearing gates 2+3+4 together needed a gross
+  edge of ~2.4x the round trip (joint power ~14% at the observed effect size),
+  while gate 3 alone had ~85%. Every future falsifier states the two separately.
+- [ ] **A construction that does not cancel opposing revisions inside the
+  minute** (the only reopening path for the tick family). 91.2% of one-sided
+  point movement nets away before `os_sum` is formed. Counts, run lengths, or
+  the largest revision of the minute are all different mechanisms rather than a
+  new threshold — and the out-of-sample window 2026-06-16 → 2026-09-12 has never
+  been opened, so a re-registration has a clean market to be judged on.
+- [ ] **Commit the code that produced a receipt before replacing it** (process
+  fault, same record). The VOID run is preserved but the code that made it never
+  entered git, so the amendment cannot be audited against the thing it amends.
+  `git log --follow` shows both files entering at the amendment commit.
+- [ ] **`mt5_quote_features.py` stamps `tz="UTC"` on broker-clock times.**
+  `copy_ticks_range` returns the server clock (Vantage: UTC+3 summer, UTC+2
+  winter) and the ingest stores it unconverted — the sessions running 01:00–23:58
+  are the tell. Matching on it is fine and arguably better (phase of the trading
+  day, daily stop at the day boundary), but the label is a lie and the next
+  reader will believe it. Either convert or rename the column.
 - [ ] **No trade may span a hole, in any measurement script** (risk,
   data-integrity and execution-realist, independently, on
   `2026-09-15-venue-residual`). `fires()` checked freshness on the **signal** bar
@@ -252,6 +293,24 @@ Closed ideas move to the bottom with a pointer to their decision record, so
 
 ## Closed
 
+- [x] Does a one-sided quote revision say where the price goes next? (the second
+  mechanism invented rather than read, and the first study in this loop that
+  assumes **no spread anywhere** — a long is filled at the ask and exits at the
+  bid, from the tick that would have filled it) → **no.** 56.8M ticks over 104
+  sessions, 23.8% of revisions moving one side only, classified correctly
+  (0.071% disagreement with the broker's own flags, all of it one systematic
+  re-send) and rebuilding byte-for-byte from a fresh fetch. No cell reaches the
+  97.5 gate (best **94.08**), every day-block interval contains zero, and the
+  40% concentration ceiling the registration set for itself fails in all four
+  cells — **2026-01-30, the session gold fell 9.5%, carries 62% of the best
+  cell**. Three diagnostics the registration forced into print each contradict
+  the mechanism: the quantity is **strongest at a thirty-second fill delay**,
+  only the **narrowing** half carries anything (the widening half — the clearer
+  inventory story — is nothing or negative), and days with **more** one-sided
+  revisions carry **less** signal. The instrument was tested rather than
+  defended (see the self-test item above) and is sound: the effect is **one
+  standard error wide**. Out-of-sample and the euro confirmation stay unopened.
+  `2026-09-15-quote-asymmetry.md`.
 - [x] Does a dealer's quote leave the consensus before the price moves? (the
   owner's instruction of 2026-09-15: stop testing what is published, work the
   data nobody else has) → **the question cannot be asked at bar resolution.**
