@@ -3,7 +3,15 @@
 **Registered:** 2026-09-15 — written before any feature was built or any return
 read. The only numbers read beforehand are the tick-history inventory in
 `py/ingest/mt5_tick_depth.py`'s output (depth, tick counts, one-sided share).
-**Status:** registered
+**Status:** decided (-> `docs/decisions/2026-09-15-quote-asymmetry.md`). No cell
+reached the 97.5 gate (best 94.08), every day-block interval contained zero, the
+declared 40% concentration ceiling failed in all four cells, and the mechanism's
+own decomposition contradicted the story three ways: the quantity strengthens
+with fill latency, only the NARROWING half carries anything, and days with more
+one-sided revisions carry less signal. A harness self-test finds a planted
++0.34 bp edge above the gate and never scores noise above it, so the instrument
+is sound and the effect is one standard error wide (0.22 bp on 5,047 trades).
+The out-of-sample window and the euro confirmation were NOT opened.
 **Script:** `scripts/quote_asymmetry.py` (to be written after this commit)
 **Batch file:** none — a tick-level measurement, not a `search` batch.
 

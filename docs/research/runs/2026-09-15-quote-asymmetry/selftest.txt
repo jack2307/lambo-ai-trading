@@ -1,0 +1,37 @@
+harness self-test, XAUUSD.sc, 2026-01-20 -> 2026-06-16, fill lag 1s
+real minutes, real quotes, real hours; ONLY the signal column is synthetic
+20,000 permutation draws per row
+
+the study's own measured gross edges, for comparison:
+   W=1 k=5 +0.214 bp   W=1 k=30 +0.538 bp   W=5 k=5 +0.531 bp   W=5 k=30 +1.023 bp
+
+--- W=1 k=5 ---
+     planted      n  gross bp   net bp  t(day)  pctile   verdict
+        0.00   5008   -0.0564  -0.5115   -0.28   33.11   ok (noise below gate)
+        0.00   5050   -0.0831  -0.5377   -0.46   29.84   ok (noise below gate)
+        0.00   5090   +0.0762  -0.3790   +0.41   80.06   ok (noise below gate)
+        0.02   5102   +0.3412  -0.1154   +2.15   98.53   FOUND
+        0.05   4976   +1.5552  +1.0996   +4.85  100.00   FOUND
+        0.10   5024   +3.3308  +2.8755   +5.95  100.00   FOUND
+        0.20   5020   +6.1537  +5.6982   +6.38  100.00   FOUND
+
+--- W=5 k=30 ---
+     planted      n  gross bp   net bp  t(day)  pctile   verdict
+        0.00   1978   +0.3662  -0.0876   +0.42   77.59   ok (noise below gate)
+        0.00   2002   -0.7855  -1.2380   -0.93   22.59   ok (noise below gate)
+        0.00   2004   +0.1015  -0.3514   +0.14   25.36   ok (noise below gate)
+        0.02   1968   +3.5095  +3.0554   +3.77  100.00   FOUND
+        0.05   1944   +5.9098  +5.4554   +4.70  100.00   FOUND
+        0.10   1915  +11.9127 +11.4586   +5.69  100.00   FOUND
+        0.20   1794  +19.9928 +19.5348   +7.95  100.00   FOUND
+
+read it this way: find the planted row whose gross bp is closest to the study's
+own measured gross for that cell, and look at its percentile. That is the power
+the instrument actually had at the effect size the data actually showed.
+bracketing the study own +0.215 bp at W=1 k=5, 20,000 draws
+  planted      n  gross bp  t(day)  pctile   verdict
+    0.005   5012   +0.1285   +0.63   66.06   missed
+    0.008   5045   +0.1476   +0.82   74.15   missed
+    0.010   5091   +0.4182   +2.17   99.33   FOUND
+    0.012   5098   +0.0336   +0.21   71.28   missed
+    0.015   4998   +0.1969   +1.01   89.23   missed

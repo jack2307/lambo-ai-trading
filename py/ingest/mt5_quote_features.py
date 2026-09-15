@@ -158,7 +158,17 @@ def main() -> int:
         outdir = ROOT / "data" / "ticks" / a.symbol.replace(".", "_")
         outdir.mkdir(parents=True, exist_ok=True)
         print(f"{a.symbol}: point {point}, window {a.start} -> {a.end} (exclusive)")
-        print(f"fetched {datetime.now(timezone.utc):%Y-%m-%dT%H:%M:%SZ}, writing to {outdir}")
+        stamp = f"{datetime.now(timezone.utc):%Y-%m-%dT%H:%M:%SZ}"
+        print(f"fetched {stamp}, writing to {outdir}")
+        # The registration promised the fetch date would be recorded WITH the
+        # features, because this history is the broker's and a refetch could
+        # differ. Printing it to stdout is not recording it.
+        import json as _json
+        side = outdir / "_fetch.json"
+        log = _json.loads(side.read_text()) if side.exists() else {"fetches": []}
+        log["fetches"].append({"at": stamp, "symbol": a.symbol,
+                               "from": a.start, "to": a.end, "point": point})
+        side.write_text(_json.dumps(log, indent=2))
 
         day = datetime.fromisoformat(a.start).replace(tzinfo=timezone.utc)
         stop = datetime.fromisoformat(a.end).replace(tzinfo=timezone.utc)
