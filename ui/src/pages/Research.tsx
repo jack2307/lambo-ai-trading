@@ -27,6 +27,7 @@ import {
   SectionHeader,
 } from '@/components/dashboard/primitives'
 import { ResearchPanel } from '@/components/dashboard/ResearchPanel'
+import { ScoutingBoard } from '@/components/dashboard/ScoutingBoard'
 import { Skeleton } from '@/components/ui/skeleton'
 import { api, type BarsResponse, type Catalog, type LeaderboardRow, type OptionsFrame, type Research as ResearchData } from '@/lib/api'
 import { TEAM } from '@/lib/org'
@@ -205,6 +206,22 @@ export function Research({ catalog, market, onError }: Props) {
         <ResearchPanel
           research={research}
           updatedAgo={research ? `${Math.max(0, Math.round((now - research.updatedAt) / 60_000))} min since the files changed` : '…'}
+        />
+      </section>
+
+      {/* ---- scouting: ideas before they are hypotheses ---- */}
+      <section>
+        <SectionHeader
+          title="Scouting"
+          subtitle="Three roles, and only one of them may propose. A scout writes the idea, a historian says whether this desk has already closed it under another name, and a feasibility gate says whether it can be tested with what is on this disk. Either gate kills it alone, and the rejected ones stay on the board — the reason an idea died is what stops the team proposing it again."
+        />
+        <ScoutingBoard
+          research={research}
+          updatedAgo={
+            research
+              ? `${Math.max(0, Math.round((now - research.updatedAt) / 60_000))} min since the files changed`
+              : '…'
+          }
         />
       </section>
 

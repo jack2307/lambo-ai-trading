@@ -30,6 +30,91 @@ pub struct Research {
     pub hypotheses: Vec<Hypothesis>,
     pub backlog: Backlog,
     pub decisions: Vec<Decision>,
+    /// What the scouting team has proposed, and what the gates said about it.
+    /// See `docs/research/SCOUTING.md`.
+    pub scouting: Vec<Proposal>,
+}
+
+/// One idea, before it is a hypothesis.
+///
+/// Read from `docs/research/scouting/*.json` and passed through almost
+/// untouched — the one thing this reader computes is `status`, because a role
+/// that could set its own proposal's status could promote it, and none of them
+/// can. Everything else is what the agents wrote.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Proposal {
+    pub id: String,
+    #[serde(default)]
+    pub title: String,
+    #[serde(default)]
+    pub proposed_at: i64,
+    #[serde(default)]
+    pub scout: ScoutFields,
+    #[serde(default)]
+    pub verdicts: Vec<Verdict>,
+    /// Derived here from the verdicts, never read from the file.
+    #[serde(default)]
+    pub status: String,
+    #[serde(default)]
+    pub registered_as: Option<String>,
+    #[serde(default)]
+    pub file: String,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct ScoutFields {
+    #[serde(default)]
+    pub mechanism: String,
+    #[serde(default)]
+    pub why_unarbitraged: String,
+    #[serde(default)]
+    pub data_needed: Vec<String>,
+    #[serde(default)]
+    pub falsifier_sketch: String,
+    #[serde(default)]
+    pub closest_known: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Verdict {
+    pub role: String,
+    pub verdict: String,
+    #[serde(default)]
+    pub at: i64,
+    #[serde(default)]
+    pub note: String,
+    #[serde(default)]
+    pub evidence: Vec<String>,
+    /// Feasibility fills these; the others leave them empty.
+    #[serde(default)]
+    pub instrument: String,
+    #[serde(default)]
+    pub sample: String,
+}
+
+/// A verdict that kills a proposal outright, whoever said it.
+fn is_fatal(v: &str) -> bool {
+    matches!(v.to_ascii_uppercase().as_str(), "CLOSED" | "BLOCKED" | "BROKEN")
+}
+
+/// The status, from the verdicts alone.
+///
+/// Derived rather than stored so that no role can promote its own work: a
+/// proposal is shortlisted only when BOTH gates have spoken and neither
+/// objected, and one fatal verdict is enough to reject it however many
+/// approvals it collected first.
+fn status_of(p: &Proposal) -> String {
+    if p.registered_as.as_ref().is_some_and(|r| !r.is_empty()) {
+        return "registered".to_string();
+    }
+    if p.verdicts.iter().any(|v| is_fatal(&v.verdict)) {
+        return "rejected".to_string();
+    }
+    let gate = |role: &str| p.verdicts.iter().any(|v| v.role.eq_ignore_ascii_case(role));
+    if gate("historian") && gate("feasibility") {
+        return "shortlisted".to_string();
+    }
+    "proposed".to_string()
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -159,7 +244,32 @@ pub fn read_research(docs: &Path) -> Research {
         .collect();
     decisions.sort_by(|a, b| b.file.cmp(&a.file));
 
-    Research { updated_at, hypotheses, backlog, decisions }
+    let mut scouting: Vec<Proposal> = list_files(&docs.join("research").join("scouting"), "json")
+        .into_iter()
+        .filter_map(|p| {
+            updated_at = updated_at.max(mtime(&p));
+            // A half-written file is an agent that is still typing, not a
+            // corrupt repository: skip it and pick it up on the next poll
+            // rather than failing the whole screen.
+            let text = std::fs::read_to_string(&p).ok()?;
+            let mut parsed: Proposal = serde_json::from_str(&text).ok()?;
+            parsed.file = p.file_name()?.to_string_lossy().to_string();
+            parsed.status = status_of(&parsed);
+            Some(parsed)
+        })
+        .collect();
+    // Live work first, then the graveyard, newest within each.
+    let rank = |s: &str| match s {
+        "shortlisted" => 0,
+        "registered" => 1,
+        "proposed" => 2,
+        _ => 3,
+    };
+    scouting.sort_by(|a, b| {
+        rank(&a.status).cmp(&rank(&b.status)).then(b.proposed_at.cmp(&a.proposed_at))
+    });
+
+    Research { updated_at, hypotheses, backlog, decisions, scouting }
 }
 
 fn read_hypothesis(docs: &Path, md: &Path) -> Option<Hypothesis> {

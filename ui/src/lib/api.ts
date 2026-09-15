@@ -345,11 +345,39 @@ export interface PaperRunDetail {
   series: Record<string, IndicatorPoint[]>
 }
 
+/** One idea, before it is a hypothesis. `docs/research/SCOUTING.md`. */
+export interface Proposal {
+  id: string
+  title: string
+  proposed_at: number
+  scout: {
+    mechanism: string
+    why_unarbitraged: string
+    data_needed: string[]
+    falsifier_sketch: string
+    closest_known: string
+  }
+  verdicts: {
+    role: string
+    verdict: string
+    at: number
+    note: string
+    evidence: string[]
+    instrument: string
+    sample: string
+  }[]
+  /** Derived by the server from the verdicts; no agent can write it. */
+  status: 'proposed' | 'shortlisted' | 'registered' | 'rejected'
+  registered_as: string | null
+  file: string
+}
+
 export interface Research {
   updatedAt: number
   hypotheses: ResearchHypothesis[]
   backlog: { open: { title: string; note: string }[]; closed: { title: string; note: string }[] }
   decisions: { file: string; date: string; title: string }[]
+  scouting: Proposal[]
 }
 
 /** A failed request carries the server's message, not a status code alone. */
