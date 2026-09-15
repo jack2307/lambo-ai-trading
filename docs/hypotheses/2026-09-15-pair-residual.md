@@ -2,7 +2,16 @@
 
 **Registered:** (commit time is authoritative) — before `2018-06-16 → 2026-05-31`
 is read for this question
-**Status:** registered
+**Status:** decided — `docs/decisions/2026-09-15-pair-residual.md`. **Closed on
+the registered claim.** All three conditions passed as written and neither
+review could break the code — causality is proven bitwise and a deliberate
+look-ahead flips the sign — but the lookback and the hold are counted in BARS,
+so on the 1,257 of 1,706 trades where four hours really means four hours the
+cell reads +0.287 bp at 52.51% won with a sign test of 0.0803, failing
+conditions 2 and 3. **And the sentence below claiming this cell "is not the
+maximum of any column" is wrong on the column that matters**: conditions 2 and
+3 are both functions of the win rate, and the registered cell's 57.59% ranks
+1 of 27. Faults 12 and 13.
 **Instrument:** `scripts/pair_residual.py`, committed with this file
 
 ## Why this family, when twenty-nine registrations have died

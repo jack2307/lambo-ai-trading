@@ -226,3 +226,44 @@ is computed, which is the part no test can reach.
     the precision the gate needs, not from the instrument's default.** At
     100,000 draws the standard error is 0.07, and every percentile gate in this
     repository should say what precision it requires before it is run.
+
+## Addendum, 2026-09-15 (afternoon): a unit that is not time, and a gate chosen after the cell
+
+From `2026-09-15-pair-residual`. Both are about the instrument of judgement
+rather than the instrument of measurement, which is where this loop's faults
+have been migrating since fault 10.
+
+12. **A horizon counted in rows on a tape with a hole in it** (data-integrity
+    and the adversary). The lookback and the hold were bar counts, so "four
+    hours" stretched silently across Dukascopy's daily one-hour break, a
+    weekend, or a day on which one of two paired instruments had no feed at
+    all. Fifteen percent of the holds were not four hours of market and they
+    carried **53% of the gross**; requiring the lookback to be clean as well
+    put **93% of the gross into 26% of the trades**, and seven trades held
+    straight across a day with one leg absent, five of them averaging +91 bp.
+    On the 1,257 honest trades the cell failed two of its three declared
+    conditions. The rule: **a window measured in bars is measured in a quantity
+    the market does not have.** Every horizon in this repository is currently a
+    bar count, and on a feed with a daily break that is not a duration. Where a
+    claim is about a duration, the window must be checked against the stamps.
+
+13. **The gate and the cell were chosen on the same statistic** (adversary).
+    The registration gated the win rate — twice, since its sign test is a
+    function of the same number — and then selected its cell from twenty-seven
+    with the sentence *"it is not the maximum of any column."* That was checked
+    against gross and against the t-statistic and was true of both. It was not
+    checked against the win rate, where the registered cell ranks **1 of 27**.
+    The gate was chosen well, for power and to avoid fault 11's seed problem;
+    the cell was chosen to look principled; and the two were never crossed. The
+    rule: **a cell is "the middle" only of the statistic it will be judged by**,
+    and a registration claiming a cell was not cherry-picked must say so about
+    the gated column specifically.
+
+And one that is not numbered because it is not about an instrument at all, only
+about care: in the review prompts for this run I attributed a figure — "206
+intra-week holes totalling 4,287 hours" for the silver feed — to
+`2026-09-15-nfp-cross-asset.md`. The figure was real but it lived in that run's
+data-integrity report, not in the record, and data-integrity checked the record
+and said so. **A number quoted from memory is a number that has not been
+checked**, and that applies to what is put in front of a reviewer exactly as it
+applies to what is put in a record.

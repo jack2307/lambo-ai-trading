@@ -10,6 +10,29 @@ Closed ideas move to the bottom with a pointer to their decision record, so
 
 ## Open
 
+- [ ] **Measure the Vantage spread by UTC hour, read-only, for one week**
+  (adversary, `2026-09-15-pair-residual`), and it decides whether the loop has
+  an overnight gold–silver dislocation or an artefact. The whole surviving
+  effect sits between 17:00 and 02:00 UTC, where the 15-minute range is a third
+  of its 13:00 value, and the one spread number this repository owns is a
+  three-day median blended across every hour. Log `XAUUSD.sc` and `XAGUSD.sc`
+  bid/ask at a fixed cadence, bucket by hour, then re-price the 438 evening
+  trades at their own hour's p50 and p90. **Blocker to resolve first:**
+  `XAGUSD.sc` is not in the terminal's Market Watch and `symbol_select` is not
+  on the approved read-only call list for this machine's live account — the
+  symbol must be added by hand in the terminal, or that one call explicitly
+  permitted. Gold can be logged today; silver cannot.
+- [ ] **If the evening spread does not eat it, re-register the break-crossing
+  hypothesis properly**: clock-based windows rather than bar counts, a one-bar
+  entry latency (the effect survives one bar at +2.298 bp / 54.55% and fails at
+  two), the hour declared in advance, and the gated statistic named before the
+  cell is chosen. Note it would be re-entering the territory of
+  `2026-09-13-close-reopen-drift`, which failed its gate as a unit.
+- [ ] **Audit every horizon in the repository for fault 12.** Every window in
+  `scripts/` and in the engine is a bar count, and on a feed with a daily break
+  and a weekend that is not a duration. Where a claim is about a duration, the
+  span must be checked against the stamps.
+
 - [ ] **The residual gate on an unread instrument** (adversary,
   `2026-09-15-nfp-cross-asset`), and it is the only experiment left that could
   settle the pre-NFP thread. Silver's fall could not be distinguished from
@@ -174,6 +197,17 @@ Closed ideas move to the bottom with a pointer to their decision record, so
 
 ## Closed
 
+- [x] Does silver's move against gold come back? → **not as registered.** All
+  three declared conditions passed and neither review could break the code
+  (causality proven bitwise; a deliberate look-ahead flips the sign to −21.3 bp)
+  — but the windows are counted in bars, so on the 1,257 of 1,706 trades where
+  four hours really means four hours the cell reads +0.287 bp at 52.51% won,
+  p 0.0803, failing two of three. The registered cell was also the **argmax of
+  the win rate** across all 27 exploratory cells, the exact statistic both gates
+  are functions of. What is left is real and is not this: an overnight,
+  break-crossing gold–silver dislocation, 100th percentile of two nulls, not
+  reducible to either leg, decayed to nothing since 2022.
+  `2026-09-15-pair-residual.md`.
 - [x] Does the pre-NFP hour exist on instruments never read for a news
   question? → **no**. The euro refuses outright (the release adds +0.312 pips
   at t +0.28; the drift is the already-closed European-hours effect). Silver's

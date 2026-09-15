@@ -1,0 +1,23 @@
+27 cells, 2 of them the registered one (it appears in both grids by construction)
+
+ranked by WIN RATE, which is what conditions 2 and 3 both gate on:
+   dev  4h  z 2.0  k 16   n  1785   win 57.59%   gross  +3.832   t +2.47  <-- REGISTERED
+   dev  4h  z 2.0  k 16   n  1785   win 57.59%   gross  +3.832   t +2.47  <-- REGISTERED
+   dev  4h  z 1.5  k 32   n  2353   win 57.03%   gross  +3.950   t +2.52
+   dev  4h  z 2.0  k 32   n  1425   win 56.98%   gross  +3.530   t +1.60
+   dev  4h  z 1.5  k 16   n  3223   win 56.75%   gross  +3.178   t +3.02
+   dev  4h  z 1.5  k 16   n  3223   win 56.75%   gross  +3.178   t +3.02
+
+ranked by GROSS, which is what the registration checked:
+   dev  4h  z 4.0  k 16   win 54.08%   gross  +6.716
+   dev  4h  z 4.0  k 32   win 54.17%   gross  +6.688
+   dev  4h  z 3.0  k 32   win 54.02%   gross  +5.374
+
+ranked by t, which the registration also checked:
+   dev  4h  z 1.5  k  4   win 55.89%   t +4.11
+   dev  4h  z 1.5  k  8   win 55.98%   t +3.80
+   dev  4h  z 1.5  k 16   win 56.75%   t +3.02
+
+the registered cell's win rate of 57.59% ranks 1 of 27.
+The registration said it was not the maximum of any column. On the column
+the falsifier actually gates, it is.
