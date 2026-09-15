@@ -1,0 +1,31 @@
+the declared cell on the test window: 1706 non-overlapping trades, 931 of them profitable
+   gross +3.108 bp   median +4.824   win 54.6%
+   exact two-sided sign test against a fair coin: p = 1.733e-04
+   net at the optimistic bound -0.292 bp, at the pessimistic -7.152 bp
+
+the three conditions declared at 0a9e4a3, judged:
+   1. gross positive            +3.108 bp    -> PASS
+   2. win rate >= 53.5%         54.6%       -> PASS
+   3. exact sign test p <= 0.01 1.73e-04    -> PASS
+
+  year  trades  gross bp   median     win
+  2018      88    +1.800   +5.583   59.1%
+  2019     243    +5.613   +4.655   60.5%
+  2020     248    +8.172   +9.497   56.9%
+  2021     199    +5.243   +8.997   56.3%
+  2022     217    +4.007   +3.356   52.1%
+  2023     180    -7.376   -4.414   43.9%
+  2024     216    +2.689   +7.760   57.4%
+  2025     235    +0.559   +1.833   51.1%
+  2026      80    +5.703   +7.393   53.8%
+
+first half   n  853  gross +5.805  win 57.2%  sign p 0.0000
+
+second half  n  853  gross +0.412  win 51.9%  sign p 0.2732
+
+leave-one-year-out on the gross mean: [+2.247, +4.345], full +3.108
+
+the tail, since the median exceeds the mean:
+   p1 -219.8  p5 -98.0  p25 -23.6  p50 +4.8  p75 +32.0  p95 +104.4  p99 +213.9
+   worst -958.1 bp, best +621.9 bp
+   dropping the single worst trade: gross +3.672 bp

@@ -1,0 +1,9 @@
+gold/silver residual, 15m, 2018-06-16 -> 2026-05-31
+beta over 20 trading days, causal; non-overlapping trades only
+a round trip costs 3.40 bp if spreads scale with price, 10.26 bp if they are constant in dollars
+1 cells are printed below and that is the multiplicity: the best of 1 looks is not evidence, it is a search
+
+residual accumulated over 4h: 182204 aligned bars, 179483 with a z-score, mean beta 1.518, mean |dev| 34.6 bp
+    thr    k  trades  gross bp   median     win  net@3.40  net@10.26       t
+    2.0   16    1706    +3.108   +4.824   54.6%    -0.292     -7.152   +1.67
+
