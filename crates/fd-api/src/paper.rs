@@ -1220,8 +1220,54 @@ pub async fn tick(State(state): State<Arc<AppState>>, Json(request): Json<TickRe
         ask: request.ask.filter(|v| v.is_finite()),
         at: now_ms(),
     };
-    state.live_bars.lock().expect("live bars").insert(stream_key(&request.market, &request.tf), live);
+    let key = stream_key(&request.market, &request.tf);
+    state.live_bars.lock().expect("live bars").insert(key.clone(), live.clone());
+    // Anyone watching hears it now rather than on their next poll. `send`
+    // fails only when nobody is subscribed, which is the normal case and not
+    // an error: the bar is already stored and `/status` will carry it.
+    let _ = state.ticks.send(TickEvent { market: request.market, tf: request.tf, stream: key, live });
     Ok(Json(TickResponse { stored: true }))
+}
+
+/// One forming bar, as it reached the desk.
+///
+/// Carries the stream it belongs to because one connection sees every market:
+/// a screen filters client-side rather than opening a socket per book.
+#[derive(Debug, Clone, Serialize)]
+pub struct TickEvent {
+    pub market: String,
+    pub tf: String,
+    /// `market:tf`, the same key `/status` uses.
+    pub stream: String,
+    pub live: LiveBar,
+}
+
+/// `GET /api/paper/stream` — every forming bar, pushed.
+///
+/// Server-sent events rather than a websocket. The traffic is one-way, the
+/// browser reconnects on its own, it survives a proxy that does not know about
+/// upgrades, and it is about fifteen lines. A websocket would buy the ability
+/// to send upward, which nothing here wants: the only thing that reaches this
+/// process from outside is a bar, and that already has a POST.
+///
+/// A keep-alive comment goes down the wire every fifteen seconds so a quiet
+/// market is distinguishable from a dead connection — by the browser, which
+/// reconnects, and by a reader, who would otherwise be looking at a stopped
+/// clock with no way to tell.
+pub async fn stream(
+    State(state): State<Arc<AppState>>,
+) -> axum::response::Sse<impl futures_util::Stream<Item = Result<axum::response::sse::Event, std::convert::Infallible>>> {
+    use axum::response::sse::{Event, KeepAlive};
+    use tokio_stream::StreamExt as _;
+
+    let rx = state.ticks.subscribe();
+    let events = tokio_stream::wrappers::BroadcastStream::new(rx).filter_map(|tick| {
+        // A lagged receiver is a browser that fell behind; it is dropped and
+        // picks up from the newest tick, which is what a price wants.
+        let tick = tick.ok()?;
+        Some(Ok(Event::default().event("tick").json_data(&tick).ok()?))
+    });
+    axum::response::Sse::new(events).keep_alive(KeepAlive::default().interval(std::time::Duration::from_secs(15)))
 }
 
 /// `POST /api/paper/stop`

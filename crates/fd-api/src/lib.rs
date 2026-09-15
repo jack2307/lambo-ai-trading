@@ -49,6 +49,9 @@ pub fn router(state: Arc<AppState>, ui: Option<PathBuf>) -> Router {
         // these two: it reads what is about to happen and may ask for less.
         .route("/api/paper/pending", get(paper::pending))
         .route("/api/paper/advice", post(paper::advice))
+        // The forming candle, pushed. Removes the last of the three polls
+        // between a tick in the terminal and the chart on the screen.
+        .route("/api/paper/stream", get(paper::stream))
         .with_state(state);
 
     match ui.filter(|dir| dir.is_dir()) {

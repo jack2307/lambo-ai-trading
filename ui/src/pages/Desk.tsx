@@ -40,6 +40,7 @@ import { PriceChart, type ActiveIndicator } from '@/components/PriceChart'
 import { Skeleton } from '@/components/ui/skeleton'
 import { api, type Bar, type BacktestTrade, type LiveBar, type PaperEvent, type PaperRun, type PaperRunDetail } from '@/lib/api'
 import { clock, num } from '@/lib/format'
+import { useTicks } from '@/lib/ticks'
 import { cn } from '@/lib/utils'
 
 /** Height of the sticky app bar, which this page fills the rest of the viewport under. */
@@ -217,6 +218,10 @@ export function Desk() {
   // does not sit over the row you just opened.
   const [detailError, setDetailError] = useState<{ id: string; message: string } | null>(null)
   const [now, setNow] = useState(() => Date.now())
+  // The forming candle, pushed. The ten-second status poll still carries one,
+  // and is still what keeps the table honest when the stream is down — this
+  // only ever overrides it with something NEWER, never with something older.
+  const { ticks, connected: streaming } = useTicks()
   // Which fill the explanation below the table is describing. Held here rather
   // than in the table because the table is rendered twice — once in the wide
   // layout's left column, once in the rail under it — and a reader who picks a
@@ -310,7 +315,17 @@ export function Desk() {
   // `/run/{id}` every 60. Taking it from the detail alone would leave the
   // chart's forming candle a minute behind the price in the table above it.
   const activeRun = sorted.find((r) => r.id === activeId) ?? null
-  const livePrice = activeRun?.live ?? live?.live ?? null
+  // Whichever of the three sources read the market last. The stream is
+  // normally newest by nine seconds; comparing `at` rather than preferring the
+  // stream outright means a stalled socket cannot pin the chart to an old
+  // candle while the polls are still bringing fresh ones.
+  const livePrice = useMemo(() => {
+    const streamed = activeRun ? (ticks[`${activeRun.market}:${activeRun.tf}`] ?? null) : null
+    const polled = activeRun?.live ?? live?.live ?? null
+    if (!streamed) return polled
+    if (!polled) return streamed
+    return streamed.at >= polled.at ? streamed : polled
+  }, [activeRun, ticks, live])
   // The fill the chart is asked to show. Derived from the same key the table
   // marks open, so the row and the bands can never point at different trades.
   const focusFill = useMemo(
@@ -323,7 +338,7 @@ export function Desk() {
       className="flex min-h-0 flex-col overflow-hidden"
       style={{ height: `calc(100dvh - ${APP_BAR}px)` }}
     >
-      <SummaryStrip runs={sorted} now={now} loading={runs === null} error={statusError} />
+      <SummaryStrip runs={sorted} now={now} loading={runs === null} error={statusError} streaming={streaming} />
 
       {statusError && runs === null ? (
         <p className="text-destructive px-3 py-4 text-[13px]">
@@ -366,7 +381,7 @@ export function Desk() {
                 carried that is not per-run configuration, and the rest moved
                 into the drill-down under it where it belongs to one run. */}
             <div className="border-border shrink-0 border-b xl:max-h-[46%] xl:overflow-y-auto">
-              <RunsList runs={sorted} now={now} selected={activeId} onPick={pick} />
+              <RunsList runs={sorted} now={now} selected={activeId} onPick={pick} ticks={ticks} />
             </div>
             <div className="min-h-0 xl:flex-1 xl:overflow-y-auto">
               <Drilldown
@@ -392,11 +407,15 @@ function SummaryStrip({
   now,
   loading,
   error,
+  streaming,
 }: {
   runs: PaperRun[]
   now: number
   loading: boolean
   error: string | null
+  /** Whether the push stream is connected. A chart that has quietly stopped
+   *  updating looks exactly like a quiet market; this is how a reader tells. */
+  streaming: boolean
 }) {
   const stats = useMemo(() => {
     const midnight = startOfDayUtc(now)
@@ -469,6 +488,13 @@ function SummaryStrip({
       {/* A guard that stops guarding on a date nobody is watching is the
           failure this desk keeps logging. Shown from ninety days out, in the
           strip rather than in a file, and it goes red inside a month. */}
+      <span className="num" title="The forming candle is pushed over /api/paper/stream. Polling still runs underneath it.">
+        {streaming ? (
+          <span className="text-lc">streaming</span>
+        ) : (
+          <span className="text-caution">polling only</span>
+        )}
+      </span>
       {stats.horizon !== null && stats.horizon.days < 90 && (
         <span
           className={cn('num', stats.horizon.days < 30 ? 'text-destructive' : 'text-caution')}
@@ -517,12 +543,22 @@ function RunsList({
   now,
   selected,
   onPick,
+  ticks,
 }: {
   runs: PaperRun[]
   now: number
   selected: string | null
   onPick: (id: string) => void
+  /** Streamed forming bars by `market:tf`; newer than the row's own. */
+  ticks: Record<string, LiveBar>
 }) {
+  /** The row with its live price replaced, when the stream has a fresher one. */
+  const streamed = (run: PaperRun): PaperRun | null => {
+    const tick = ticks[`${run.market}:${run.tf}`]
+    if (!tick || (run.live && run.live.at >= tick.at)) return null
+    return { ...run, live: tick }
+  }
+
   const rowRefs = useRef<(HTMLButtonElement | null)[]>([])
 
   // The same walk the fills table has: ↑/↓ move the cursor, Enter opens.
@@ -585,7 +621,7 @@ function RunsList({
                 </span>
               </span>
               <span className="shrink-0">
-                <LiveCell run={run} now={now} />
+                <LiveCell run={streamed(run) ?? run} now={now} />
               </span>
             </span>
           </button>

@@ -27,7 +27,7 @@ Start-Sleep -Seconds 2
 $logs = Join-Path $Root 'data\paper\logs'
 New-Item -ItemType Directory -Force -Path $logs | Out-Null
 foreach ($s in $streams) {
-    $args = @('py/live/mt5_bars.py', "--symbol=$($s.symbol)", "--market=$($s.market)", "--tf=$($s.tf)", "--warm=$($s.warm)", '--poll=10')
+    $args = @('py/live/mt5_bars.py', "--symbol=$($s.symbol)", "--market=$($s.market)", "--tf=$($s.tf)", "--warm=$($s.warm)", '--poll=5', '--tick-poll=1')
     Start-Process -FilePath $Python -ArgumentList $args -WorkingDirectory $Root -WindowStyle Hidden `
         -RedirectStandardOutput (Join-Path $logs "$($s.log).out") -RedirectStandardError (Join-Path $logs "$($s.log).err")
     Write-Host "started $($s.symbol) $($s.tf) -> $($s.market) (warm $($s.warm))"

@@ -47,6 +47,14 @@ pub struct AppState {
     /// than a rule someone has to remember. Not persisted, and not reloaded:
     /// a forming bar is worthless the moment the process stops.
     pub live_bars: Mutex<BTreeMap<String, crate::paper::LiveBar>>,
+    /// Every forming bar, the instant it arrives, for anyone watching.
+    ///
+    /// A broadcast channel rather than a queue: a screen that was not
+    /// connected when a tick arrived does not want it later, and the next one
+    /// is a second away. Lagging receivers are dropped by design — a slow
+    /// client gets the newest candle, never a backlog of stale ones, which is
+    /// the only behaviour a price display can honestly have.
+    pub ticks: tokio::sync::broadcast::Sender<crate::paper::TickEvent>,
 }
 
 pub struct BarSeries {
@@ -69,6 +77,10 @@ impl AppState {
             live: crate::live::LiveHub::default(),
             paper: Mutex::new(paper),
             live_bars: Mutex::new(BTreeMap::new()),
+            // Sixty-four is a couple of minutes of ticks across every stream:
+            // enough that a browser blocked on a repaint is not disconnected,
+            // small enough that nothing accumulates when nobody is watching.
+            ticks: tokio::sync::broadcast::channel(64).0,
         }
     }
 

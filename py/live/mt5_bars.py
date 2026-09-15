@@ -38,6 +38,11 @@ M15), a tick prints at most one line a minute, and a change in the tick's
 state — the first one through, a failure, a recovery — prints straight away.
 A failed tick never interrupts the closed-bar loop; the price on the screen is
 worth less than the bars the book is built from.
+
+The two run on separate clocks. `--tick-poll` (a second) is the forming bar,
+which is the only thing on the chart that is supposed to move; `--poll` (five
+seconds) is the closed-bar check, which on a 15-minute stream has something new
+four times an hour and would otherwise be asked 3,600 times for it.
 """
 
 from __future__ import annotations
@@ -88,7 +93,12 @@ def main() -> int:
     ap.add_argument("--market", default="xauusd", help="the market id fd-api knows the symbol as")
     ap.add_argument("--tf", default="M15")
     ap.add_argument("--api", default="http://127.0.0.1:8138")
-    ap.add_argument("--poll", type=float, default=5.0, help="seconds between reads")
+    ap.add_argument("--poll", type=float, default=5.0, help="seconds between CLOSED-BAR reads")
+    ap.add_argument("--tick-poll", type=float, default=1.0,
+                    help="seconds between forming-bar reads. Separate from --poll because the two "
+                         "have nothing in common: a closed 15-minute bar arrives four times an hour "
+                         "and asking for it every second is 3,600 pointless requests, while the "
+                         "forming bar is the only thing on the screen that is supposed to move.")
     ap.add_argument("--warm", type=int, default=400, help="closed bars to send on startup")
     ap.add_argument("--once", action="store_true", help="send the warm-up bars and exit")
     ap.add_argument("--no-tick", action="store_true", help="closed bars only: do not send the forming bar")
@@ -202,10 +212,18 @@ def main() -> int:
         tick()
         if args.once:
             return 0
+        # Two clocks. The fast one is the price on the screen; the slow one is
+        # the only thing a book is built from, and it must not be starved by
+        # the fast one — so a closed-bar read that runs long simply delays the
+        # next closed-bar read rather than the ticks in between.
+        next_bars = 0.0
         while True:
-            time.sleep(args.poll)
-            for row in closed_bars(3):
-                send(row)
+            time.sleep(max(0.05, args.tick_poll))
+            now = time.monotonic()
+            if now >= next_bars:
+                next_bars = now + max(args.poll, args.tick_poll)
+                for row in closed_bars(3):
+                    send(row)
             tick()
     except KeyboardInterrupt:
         return 0
