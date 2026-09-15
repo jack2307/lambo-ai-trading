@@ -165,3 +165,62 @@ freedom" — and it applies here for the same reason.
 observations a year apart in twelve, the best case is about sixteen trades a
 year on a euro pair at 1.4 pips. It is a question about whether mandated flow
 prints, and the answer is worth having either way.
+
+## Amendment, 2026-09-15, before the window was opened
+
+The equity series are in `data/equity/` with their provenance, and collecting
+them turned up two things that change what this registration is allowed to
+claim. Both are recorded here, **before `scripts/monthend_fix_slope.py` was
+run for the first time**, because deciding either of them after seeing a
+number would be tuning.
+
+**1. The price-return substitution has a measurable, one-directional size.**
+Both series are price return, as the registration already declared. The
+collector quantified the gap: euro-area dividend yield ran roughly 3–4% a year
+against the US at 1.5–2%, so the price-return differential **understates the
+value differential by about 15 basis points a month, persistently**.
+
+Persistently is the word that matters. A constant bias in the conditioning
+variable moves the **intercept** and not the slope, and the slope is what this
+registration gates on — so it does not invalidate the test. It does mean the
+variable is a *proxy* whose centre is displaced, and the record must say so
+rather than describing a total-return variable it never had.
+
+**2. Yahoo serves the EURO STOXX 50 on the wrong exchange calendar.** It lists
+`^STOXX50E` on SIX Swiss and returns the Swiss trading calendar, not the
+Xetra/Eurex calendar the index is actually computed on. Forty-nine weekdays are
+absent that are not euro-area holidays: seventeen Ascension Days, twelve Swiss
+National Days, twelve Berchtoldstags, and eight rows the source simply returns
+as null. The collector proved the index was published on those days by fetching
+a Xetra-listed EURO STOXX 50 ETF and finding it traded on all fourteen sampled
+dates. **Nothing was filled in**, which is the right call.
+
+It reaches this registration in **five of the 192 month-ends**, and in each the
+conditioning variable is measured through a close one to four trading days older
+than intended:
+
+| month | what goes wrong |
+|---|---|
+| **2011-05** | the file's last May row is 05-27; the real last Xetra day was 05-31 |
+| 2014-05, 2019-05, 2025-05 | Ascension Day sits the day before the last business day |
+| 2014-12 | the prior close falls back to 12-23 instead of 12-29 |
+
+**Declared now:** the headline is the **full 192**, and the run additionally
+reports the slope with those five months removed. If the two disagree
+materially the record says so and the five-month cut becomes the honest
+number; if they agree the defect is noise and the record says that instead.
+Choosing between them after seeing which is larger is exactly the move this
+loop has thirty-one records warning about, so the rule is fixed here.
+
+One structural equivalent on the US side is **not** a defect and is kept: in
+2012-10 the prior close comes from 10-26 rather than 10-30, because the NYSE
+was shut for Hurricane Sandy. A market that was closed is the correct answer.
+
+**And one thing the registration will not do.** The EURO STOXX 50 is
+**single-sourced** — Stooq serves a proof-of-work interstitial, the ECB portal
+has no such series, and four other routes failed. The S&P has an independent
+FRED cross-check over 2016–2026 which agreed on 2,503 of 2,512 overlapping
+days, seven of the nine mismatches sub-cent and both real ones mid-month where
+this regression never reads. The euro leg has no such check. That is a caveat
+for the decision record, not a reason to withdraw: the registration's
+withdrawal condition was that an index could not be *obtained*, and it was.

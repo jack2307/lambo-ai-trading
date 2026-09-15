@@ -1,0 +1,17 @@
+month-end fix slope, eurduka 15m, 2010-06-01 -> 2026-05-31
+192 month-ends found, 192 with both a window and an equity month
+window 15:45-16:15 London: mean 2.00 bars, min 2
+a round trip costs 1.21 bp; the registration calls 1.2-2.9 bp UNDERPOWERED, not 'no'
+
+the declared cell, and the three placebos (100,000 draws each):
+  FIX (the claim)          n  192  slope   -16.231 bp per 1.0 log return  =  -0.497 bp per 1 sd  percentile  31.64
+  placebo: day before      n  192  slope   +53.352 bp per 1.0  =  +1.633 bp per 1 sd  percentile  99.03
+  placebo: 13:45 window    n  192  slope   -44.693 bp per 1.0  =  -1.368 bp per 1 sd  percentile   4.75
+  placebo: gold instead    n  191  slope    +9.901 bp per 1.0  =  +0.480 bp per 1 sd  percentile  67.72
+
+the same cell without the 5 month-ends whose EURO STOXX prior
+close is early (Yahoo serves the index on the Swiss calendar; amendment, 2026-09-15):
+  FIX, defect months out   n  187  slope   -12.972 bp per 1.0  =  -0.399 bp per 1 sd  percentile  35.33
+
+  the claim is worth -0.497 bp per 1 sd of the equity variable
+  which is inside the round trip: the mechanism, if it exists, is not a trade

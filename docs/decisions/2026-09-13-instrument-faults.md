@@ -300,3 +300,36 @@ and the bound is the useful part:
 So fault 12 lives in exactly one instrument, `scripts/pair_residual.py`, and
 that registration is closed. The rule stands for everything written next:
 **where a claim names a duration, the span is checked against the stamps.**
+
+## Addendum, 2026-09-15 (evening): two in one instrument, both caught before the result was written
+
+From `scripts/monthend_fix_slope.py`, on its first run, and caught because the
+run printed 168 of 192 month-ends rather than 192 and the discrepancy was
+chased before the number beside it was believed. Both readings are kept: the
+faulted run read the claim at the 26.77th percentile on 168 observations, the
+corrected one at the 31.64th on 192.
+
+14. **A daylight-saving off-by-one in a date comparison** (the third of this
+    species; faults 6 and 8 are the others). The conditioning variable is read
+    "through the close prior to the last business day", and the cutoff was a
+    **London midnight** compared against equity closes stamped at **UTC
+    midnight**. In British Summer Time a London midnight is 23:00 UTC the
+    previous day, so `index <= through` silently stepped back one trading day
+    for seven months of the year and got the right answer for the other five.
+    Proven rather than argued: `through = 2018-06-28` returned the close of
+    2018-06-27, while `through = 2018-01-30` returned 2018-01-30. The fix is
+    to compare **calendar dates**, which have no offset. The rule this
+    repository now has three records for: **a wall clock is not an instant, and
+    a comparison that mixes them is wrong for part of every year.**
+
+15. **A "last day" that was not a business day.** The month-end was taken as
+    the last day the FX feed had bars in. The foreign-exchange week reopens on
+    **Sunday evening**, so a month whose last calendar day is a Sunday has a
+    21:00–23:45 stub carrying no 16:00 window at all — and twenty-four of the
+    192 month-ends were exactly that, silently dropped as "no window". The
+    registration said *the last business day*; a Sunday evening is not one.
+    Restricting to weekdays recovered all 24 and took both placebos from 142
+    and 168 to 192. The rule: **when a claim names a business day, the
+    instrument must test the weekday, not trust the feed to only contain
+    them** — this feed contains a Sunday on purpose, and it has now cost two
+    records (see also the `session-hold` reopen item in the backlog).

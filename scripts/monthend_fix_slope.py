@@ -123,12 +123,22 @@ def month_to_date(series: pd.Series, through: pd.Timestamp) -> float:
     close on or before `through`, or none in the previous month, returns NaN and
     is dropped rather than approximated.
     """
-    prior = series[series.index <= through]
+    # Compared on the CALENDAR DATE, never on the instant.
+    #
+    # `through` is a London midnight, which in British Summer Time is 23:00 UTC
+    # the previous day, while an equity close is stamped at UTC midnight of its
+    # own trading day. Comparing instants therefore stepped back one trading
+    # day for seven months of the year and got the right answer for five —
+    # a daylight-saving off-by-one, which is the third time this repository has
+    # logged that species (faults 6, 8, now 14). A date has no offset.
+    cutoff = through.date()
+    dates = series.index.date
+    prior = series[dates <= cutoff]
     if prior.empty:
         return float("nan")
     last = prior.iloc[-1]
-    month_start = through.replace(day=1)
-    before = series[series.index < month_start]
+    month_start = through.replace(day=1).date()
+    before = series[dates < month_start]
     if before.empty:
         return float("nan")
     return float(np.log(last / before.iloc[-1]))
@@ -144,12 +154,19 @@ def build(lo: pd.Timestamp, hi: pd.Timestamp) -> pd.DataFrame:
     """One row per month-end: the windows, the conditioning variables, the bars."""
     eur = load_bars("eurduka", lo, hi)
     gold = load_bars("xauduka", lo, hi)
-    spx = load_equity("spx")
-    stoxx = load_equity("stoxx50e")
+    spx = load_equity("sp500")
+    stoxx = load_equity("euro_stoxx_50")
 
-    # The trading days the euro feed actually has, on a London clock. The last
-    # of each month is the month-end; the one before it is the day placebo.
-    days = pd.DatetimeIndex(sorted(set(eur["time"].dt.tz_convert(LONDON).dt.normalize())))
+    # The trading days the euro feed actually has, on a London clock — WEEKDAYS
+    # ONLY.
+    #
+    # The FX week reopens on Sunday evening, so a month whose last calendar day
+    # is a Sunday has a 21:00-23:45 stub that contains no 16:00 window at all.
+    # Taking "the last day with bars" made twenty-four of the 192 month-ends a
+    # Sunday evening and lost them, and the registration says the last BUSINESS
+    # day. A Sunday evening is not one.
+    stamps = eur["time"].dt.tz_convert(LONDON)
+    days = pd.DatetimeIndex(sorted(set(stamps[stamps.dt.weekday < 5].dt.normalize())))
     by_month: dict[tuple[int, int], list[pd.Timestamp]] = {}
     for d in days:
         by_month.setdefault((d.year, d.month), []).append(d)
@@ -181,6 +198,12 @@ def build(lo: pd.Timestamp, hi: pd.Timestamp) -> pd.DataFrame:
                 "bars_win": n_win,
                 "equity": equity,
                 "gold": gold_mtd,
+                # The five month-ends where Yahoo's Swiss calendar for the
+                # EURO STOXX 50 puts the prior close one to four trading days
+                # too early. Named in the registration's amendment BEFORE the
+                # first run, so the robustness cut cannot be chosen later.
+                "stoxx_calendar_defect": (year, month) in
+                {(2011, 5), (2014, 5), (2019, 5), (2025, 5), (2014, 12)},
             }
         )
     return pd.DataFrame(rows)
@@ -244,6 +267,13 @@ def main() -> int:
     report("placebo: 13:45 window", win["equity"].to_numpy(), win["placebo_win_bp"].to_numpy(), args.draws, args.seed, "1.0")
     au = usable.dropna(subset=["gold"])
     report("placebo: gold instead", au["gold"].to_numpy(), au["fix_bp"].to_numpy(), args.draws, args.seed, "1.0")
+
+    # The declared robustness cut. Reported always, never chosen between.
+    clean = usable[~usable["stoxx_calendar_defect"]]
+    print()
+    print(f"the same cell without the {int(usable['stoxx_calendar_defect'].sum())} month-ends whose EURO STOXX prior")
+    print("close is early (Yahoo serves the index on the Swiss calendar; amendment, 2026-09-15):")
+    report("FIX, defect months out", clean["equity"].to_numpy(), clean["fix_bp"].to_numpy(), args.draws, args.seed, "1.0")
 
     print()
     print(f"  the claim is worth {headline:+.3f} bp per 1 sd of the equity variable")
