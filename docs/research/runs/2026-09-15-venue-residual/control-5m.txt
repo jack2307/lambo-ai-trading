@@ -1,0 +1,20 @@
+control, gold 5m, 2025-06-01 -> 2026-06-01, markup 4h, threshold 2.0
+signs are reported in the direction the data took, not the one declared:
+a POSITIVE number means the price moved WITH the skew (the mirror of the
+registration), which is what the in-sample run found.
+round trip on XAUUSD 0.67 bp; null 100,000 draws, sign permuted in volatility deciles
+
+    signal   k  fires   ECN bp  Vantage bp      net    up%  pctile
+     resid   1   1526   +1.539      +1.000   +0.328  54.8%  98.10
+     resid   6   1142   +1.626      +1.050   +0.378  54.4%  87.25
+     resid  12    985   +3.298      +2.771   +2.099  54.7%  99.05
+       mom   1   2851   +0.187      +0.247   -0.425  48.4%  75.76
+       mom   6   1897   +1.469      +1.504   +0.833  49.0%  94.55
+       mom  12   1468   -1.388      -1.336   -2.007  46.3%  13.69
+     stale   1   2818   +0.304      +0.340   -0.332  48.9%  82.35
+     stale   6   1887   +1.133      +1.153   +0.481  49.4%  90.01
+     stale  12   1455   -0.440      -0.422   -1.094  47.4%  34.89
+
+correlation between the registered residual and the dealer's own last-bar return: -0.031
+fires by UTC hour (all fires, before the non-overlap rule):
+   00:64  01:81  02:42  03:35  04:19  05:51  06:33  07:40  08:63  09:40  10:16  11:30  12:99  13:138  14:90  15:61  16:43  17:45  18:43  19:45  20:163  21:69  22:196  23:234

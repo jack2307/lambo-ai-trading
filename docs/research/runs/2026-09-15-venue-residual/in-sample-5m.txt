@@ -1,0 +1,22 @@
+venue residual, gold 5m, XAUUSD (dealer) vs XAUDUKA (ECN), 2025-06-01 -> 2026-06-01
+declared before the run: a POSITIVE skew precedes a FALL; the mirror is a
+second look, so the gate is the TWO-SIDED 97.5th, not the 95th.
+null: sign permuted within volatility deciles, 100,000 draws (standard error 0.16 pp on a percentile)
+6 cells below and that is the multiplicity: the best of 6 is a search
+
+markup removed over 4h (48 bars), z over 1380 bars: 69,795 aligned bars, 68,367 with a z
+   mean raw skew +0.62 bp, mean |residual| 0.22 bp, round trip on XAUUSD 0.67 bp at $0.28 / $4,168
+    thr   k  fires   ECN bp    up%  pctile  Vantage bp      net
+    2.0   1   1526   -1.539  45.1%   1.90      -1.000   -1.672
+    2.0   6   1142   -1.626  45.5%  12.75      -1.050   -1.722
+    2.0  12    985   -3.298  45.3%   0.95      -2.771   -3.443
+
+markup removed over 24h (276 bars), z over 1380 bars: 69,795 aligned bars, 68,139 with a z
+   mean raw skew +0.62 bp, mean |residual| 0.22 bp, round trip on XAUUSD 0.67 bp at $0.28 / $4,168
+    thr   k  fires   ECN bp    up%  pctile  Vantage bp      net
+    2.0   1   1545   -1.216  46.0%   9.70      -0.706   -1.378
+    2.0   6   1147   -1.561  44.9%  29.23      -0.933   -1.605
+    2.0  12    992   -2.672  45.8%   7.64      -2.078   -2.750
+
+gate: pctile >= 97.5 AND fires >= 200 AND net > 0. A pass on the percentile
+with a failure on the net is 'direction exists, not a trade'.
