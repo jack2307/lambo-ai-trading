@@ -96,3 +96,50 @@ websocket later; the endpoint does not care who posts.
 5. Run it: `session-hold` or `ema-cross` on `xauusd:15m`, guards on, for
    two weeks; the news-desk publishes the blackout schedule each Monday;
    the risk role reads the fills after.
+
+## The store goes stale, and a new book warms from it
+
+Found 2026-09-15 while starting the AI trader campaign, and it will bite again.
+
+**The poller feeds the API, not the store.** `py/live/mt5_bars.py` posts closed
+bars to `/api/paper/bar`, where they enter each running book's window in
+memory. Nothing writes them back to `data/bars/`. So a book that is *running*
+is current, and the parquet behind it silently falls behind by however long
+the pollers have been up.
+
+A book that is *started* warms from that parquet. On the day this was found the
+store's `XAUUSD-15m` ended **Friday 11 Sep 20:45** while the live books were at
+**Tuesday 15 Sep 14:30** — so a new book opened with an 89.8-hour hole at the
+live edge, and the model driving it was shown thirty-nine bars from last week
+and one from today. It reasoned about a support level three days and fifty
+dollars away from the market.
+
+Two more things compound it, both worth knowing:
+
+* **`fd-api` loads the bar store at startup and holds it.** Refreshing the
+  parquet changes nothing until the process is restarted, so the fix is two
+  steps and doing only the first looks like the fix failing.
+* **`py/ingest/mt5_export.py` lags the poller by about three hours.** Re-running
+  it twice on the same afternoon both times ended the file at 11:45 UTC while
+  the poller was posting 14:30 bars. The exporter's range end is short; the
+  cause is not yet found and is on the backlog.
+
+**The fix that works, in order:**
+
+```
+python py/ingest/mt5_export.py --symbols=XAUUSD.sc --timeframes=M15 --days=30
+# restart fd-api so it reloads the parquet
+# recreate the book, which now warms from fresh data
+python py/live/mt5_bars.py --symbol=XAUUSD.sc --market=xauusd --tf=M15 --warm=600 --once --no-tick
+```
+
+The last line is what closes the exporter's three-hour lag: the poller reads
+the terminal directly and posts every closed bar it has, and the API accepts
+the ones newer than each book's last while refusing the rest. After it, the new
+book held 600 continuous bars with six gaps, every one of them a weekend, a
+daily 17:00–18:00 New York halt, or the Labor Day early close on 07 September.
+
+**Check this before trusting any newly started book**, and especially before
+one that shows a chart to a model: a hole at the live edge does not look like
+an error, it looks like a quiet market, and the decision on the other side of
+it looks like reasoning.
