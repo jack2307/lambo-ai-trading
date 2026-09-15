@@ -42,7 +42,10 @@ import argparse
 import datetime as dt
 import json
 import os
+import shutil
+import subprocess
 import sys
+import tempfile
 import time
 import urllib.error
 import urllib.request
@@ -84,7 +87,37 @@ DEFAULT_MODEL = "claude-opus-5"
 #: whole of what it needs from either API is "send one prompt, read one
 #: string". An SDK would add a dependency, a version to track, and no ability
 #: this file uses.
+# The system prompt the CLI provider runs under. It REPLACES Claude Code's
+# own, which is what keeps a decision call from dragging a coding agent's
+# tools, skills and project files into a question about forty candles.
+CLI_SYSTEM_PROMPT = (
+    "You are a trading decider answering one question about one instrument. "
+    "Answer with JSON and nothing else. Do not explain, do not use tools, do "
+    "not ask questions."
+)
+
 PROVIDERS = {
+    # The subscription, through the Claude Code CLI, rather than a metered API
+    # key. The owner's instruction, 2026-09-15: "lấy từ gói luôn ko cần qua
+    # API". `env` is None because there is no key to find — the CLI carries
+    # the account's own credentials.
+    #
+    # It is listed FIRST so a Claude model goes to the plan by default;
+    # `--provider anthropic` still forces the metered API for anyone who wants
+    # it. The flags matter and each one is load-bearing:
+    #   --allowed-tools ""        a decider must not read files or run commands
+    #   --strict-mcp-config       no MCP server joins a trading decision
+    #   --no-session-persistence  every bar is asked cold, with no memory of
+    #                             the last one, exactly like the HTTP models
+    #   --system-prompt           replaces Claude Code's, see above
+    # and the prompt goes in on STDIN, never argv: it carries quotes, dollar
+    # signs and newlines, and Windows argv quoting would mangle it silently.
+    "claude-cli": {
+        "url": None,
+        "env": None,
+        "prefixes": ("claude", "opus", "sonnet", "haiku"),
+        "cli": True,
+    },
     "anthropic": {
         "url": "https://api.anthropic.com/v1/messages",
         "env": "ANTHROPIC_API_KEY",
@@ -110,7 +143,8 @@ def provider_of(model: str) -> str:
         if lowered.startswith(spec["prefixes"]):
             return name
     raise ValueError(
-        f"cannot tell which API `{model}` belongs to; pass --provider anthropic|openai"
+        f"cannot tell which API `{model}` belongs to; pass --provider "
+        + "|".join(sorted(PROVIDERS))
     )
 
 
@@ -222,12 +256,60 @@ LAST {len(tail)} BARS, oldest first
 """
 
 
+def ask_cli(prompt: str, model: str, timeout: float) -> str:
+    """One decision through the Claude Code CLI, on the account's own plan.
+
+    Runs from a scratch directory on purpose. Started inside the repository it
+    would pick up `CLAUDE.md`, the agents and the skills, and a question about
+    forty candles would arrive carrying a coding agent's whole working
+    context — slower, dearer, and no longer the question that was asked.
+
+    An empty reply RAISES, for the reason the OpenAI branch does: an empty
+    string parses downstream as a stand-aside, so a broken call would look
+    exactly like a model that declined, forever, while the log showed it
+    working.
+    """
+    exe = shutil.which("claude")
+    if not exe:
+        raise RuntimeError("no `claude` on PATH; the plan is reached through the Claude Code CLI")
+    argv = [
+        exe, "-p", "--model", model,
+        "--allowed-tools", "",
+        "--strict-mcp-config",
+        "--no-session-persistence",
+        "--system-prompt", CLI_SYSTEM_PROMPT,
+        "--output-format", "json",
+    ]
+    try:
+        done = subprocess.run(
+            argv, input=prompt.encode("utf-8"), stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            timeout=timeout, cwd=tempfile.gettempdir(),
+        )
+    except subprocess.TimeoutExpired as e:
+        raise RuntimeError(f"{model} did not answer within {timeout:.0f}s") from e
+    if done.returncode != 0:
+        raise RuntimeError(f"claude exited {done.returncode}: {done.stderr.decode('utf-8', 'replace')[:300]}")
+    try:
+        out = json.loads(done.stdout.decode("utf-8", "replace"))
+    except ValueError as e:
+        raise RuntimeError(f"claude returned unreadable JSON: {done.stdout[:200]!r}") from e
+    if out.get("is_error"):
+        raise RuntimeError(f"claude reported an error: {str(out.get('result'))[:300]}")
+    text = str(out.get("result") or "")
+    if not text.strip():
+        raise RuntimeError(f"{model} returned no text through the CLI")
+    return text
+
+
 def ask(prompt: str, model: str, provider: str, api_key: str, timeout: float) -> tuple[str, int]:
     """One model call, either provider. Returns (text, latency_ms); raises on failure."""
     started = time.monotonic()
-    url = PROVIDERS[provider]["url"]
+    spec = PROVIDERS[provider]
+    url = spec["url"]
 
-    if provider == "anthropic":
+    if spec.get("cli"):
+        text = ask_cli(prompt, model, timeout)
+    elif provider == "anthropic":
         out = post_json(
             url,
             {"model": model, "max_tokens": 512, "messages": [{"role": "user", "content": prompt}]},
@@ -437,12 +519,15 @@ def main() -> int:
                 provider = args.provider or provider_of(model)
             except ValueError as e:
                 sys.exit(str(e))
-            key = os.environ.get(PROVIDERS[provider]["env"])
+            env = PROVIDERS[provider]["env"]
+            # A keyless provider (the plan, through the CLI) has nothing to
+            # look up; only a metered one can be missing its key.
+            key = os.environ.get(env) if env else ""
             if not key:
                 # Named, not guessed at: a panel silently one agent short is a
                 # panel whose verdicts mean something different from what the
                 # log will say they mean.
-                print(f"  {name}: no {PROVIDERS[provider]['env']} for {model} — this agent will not run", flush=True)
+                print(f"  {name}: no {env} for {model} — this agent will not run", flush=True)
                 continue
             panel.append({"name": name, "role": role, "model": model, "provider": provider, "key": key})
 

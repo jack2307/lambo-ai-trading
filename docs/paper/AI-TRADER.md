@@ -29,11 +29,21 @@ different routes with two different powers:
 
 ## The control, which is the whole experiment
 
-Two books run on the same stream:
+Books run on the same stream in **matched pairs**, one pair per model:
 
-- **`ai-xau`** — takes the side the model asked for.
-- **`ai-xau-coin`** — takes a trade at the **same bar**, with the **same stop
+| model | reached through | its book | its coin |
+|---|---|---|---|
+| `gpt-5` | the OpenAI API, metered | `ai-xau` | `ai-xau-coin` |
+| `claude-opus-5` | the account's **plan**, via the Claude Code CLI | `ai-xau-opus` | `ai-xau-opus-coin` |
+
+- the **model book** takes the side the model asked for.
+- the **coin book** takes a trade at the **same bar**, with the **same stop
   distance**, on a **coin-flip side**.
+
+Each model gets its **own** coin, and this is not duplication for its own
+sake. The two models decide on different bars and set different stops, so one
+shared coin book could be matched to at most one of them; against the other it
+would be a different experiment wearing the same name.
 
 Same entry times, same hours, same sizing, same guards, same news blackout. The
 only difference between the two books is whether the direction came from a
@@ -87,6 +97,27 @@ Two hundred trades is roughly ten days at the desk's current rate. At that
 count a 4-point edge over the coin is about the smallest thing the sample can
 resolve, which is why the number is 4 and not 1.
 
+### Two models means two chances, and the threshold moves to pay for it
+
+Added 2026-09-15, before the first live trade of either campaign, because it
+is worthless declared afterwards.
+
+Running two models against two coins is **two chances to clear p ≤ 0.05**. At
+that threshold a pair of independent campaigns produces at least one false
+winner about 9.75% of the time — nearly one run in ten would hand back a
+"result" that is the second ticket in a raffle. The loop has closed thirty-two
+registrations without this mistake and will not start now.
+
+So each campaign is judged at **p ≤ 0.025** (Bonferroni over the two), and the
+other two conditions are unchanged and apply per campaign. A model that clears
+0.04 has **not** passed; it has produced the most interesting failure so far,
+which is a different sentence and must be written as one.
+
+Adding a third model later moves the threshold again, and a model may not be
+added after seeing another's results and then judged at the old number.
+Whichever model looks better at the end was not selected for on this basis:
+both were registered here, before either traded.
+
 **No outcome of this makes anything live.** A pass means the question moves to
 a demo account with the executor's locks intact; it does not mean money.
 
@@ -107,8 +138,33 @@ coin, the log says what it was thinking while it did.
 ## Running it
 
 ```
-python py/live/ai_trader.py --model=gpt-5 --market=xauusd --tf=15m
+# the metered model
+python py/live/ai_trader.py --model=gpt-5 --market=xauusd --tf=15m \
+    --run=ai-xau --control=ai-xau-coin --seed=7
+
+# the plan's model — no API key is involved; `claude` carries the account's
+# own credentials, which is why `provider_of` sends every Claude model to the
+# CLI by default. `--provider anthropic` forces the metered API instead.
+python py/live/ai_trader.py --model=claude-opus-5 --market=xauusd --tf=15m \
+    --run=ai-xau-opus --control=ai-xau-opus-coin --seed=11
 ```
+
+The two coins take different seeds so their flip sequences are independent.
+With one seed both controls would flip identically, and on any bar where both
+models happened to trade, the two campaigns would share a control's luck —
+which is the one thing a control may not do.
+
+### What the plan's model costs, measured
+
+A decision through the CLI, measured on this machine 2026-09-15: **~$0.036 and
+~1.7-4.7s**, steady state, because the prompt cache is reused across
+processes. At one decision per 15-minute bar that is roughly $3.50 a day.
+
+Two details are worth keeping in view. The first call after a cold cache cost
+$0.22, six times the steady-state figure, so a restart loop that never warms
+would be expensive in a way the average hides. The second is that this spends
+**plan quota, not cash** — the same quota the owner's interactive sessions
+draw on, so a campaign left running competes with the desk's own work.
 
 One decision per closed bar, at most one open position, both books driven from
 the same call. The full prompt and reply of every decision go to

@@ -174,9 +174,12 @@ def main() -> int:
         provider = args.provider or provider_of(args.model)
     except ValueError as e:
         sys.exit(str(e))
-    key = os.environ.get(PROVIDERS[provider]["env"])
-    if not key:
-        sys.exit(f"no {PROVIDERS[provider]['env']} in the environment for {args.model}")
+    # A keyless provider reaches the model through the account's own plan
+    # (the Claude Code CLI); only a metered one can be missing a key.
+    env = PROVIDERS[provider]["env"]
+    key = os.environ.get(env) if env else ""
+    if env and not key:
+        sys.exit(f"no {env} in the environment for {args.model}")
 
     coin = random.Random(args.seed)
     print(
