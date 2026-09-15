@@ -19,8 +19,17 @@ param(
 )
 
 $campaigns = @(
-    # gpt-5 goes through the metered OpenAI API (OPENAI_API_KEY).
-    @{ model = 'gpt-5';         run = 'ai-xau';      control = 'ai-xau-coin';      seed = 7;  log = 'ai_trader_gpt5' },
+    # OpenAI's model through the account's ChatGPT PLAN, via the Codex CLI.
+    # No OPENAI_API_KEY is involved. The `codex/` prefix is what routes it to
+    # the plan — a bare `gpt-*` would still mean the metered API.
+    #
+    # The model is `gpt-5.6-sol` and NOT `gpt-5`: a ChatGPT account refuses
+    # `gpt-5`, `gpt-5-codex` and `codex-mini-latest` outright ("not supported
+    # when using Codex with a ChatGPT account"). This is the name Codex itself
+    # defaults to on this plan, read from its own banner. That makes it a
+    # DIFFERENT model from the one the API campaign ran, which is why that
+    # campaign's books were closed rather than repointed.
+    @{ model = 'codex/gpt-5.6-sol'; run = 'ai-xau-sol'; control = 'ai-xau-sol-coin'; seed = 7;  log = 'ai_trader_sol' },
     # claude-opus-5 goes through the account's PLAN, via the Claude Code CLI.
     # No API key is involved; see the `claude-cli` provider in advisor.py.
     @{ model = 'claude-opus-5'; run = 'ai-xau-opus'; control = 'ai-xau-opus-coin'; seed = 11; log = 'ai_trader_opus5' }
@@ -53,13 +62,13 @@ if ($alive.Count -gt 0) {
     exit 1
 }
 
-# Start-Process hands the child THIS process's environment, not the registry.
-# A shell started before the key was saved to the User scope has never seen it,
-# and the campaign then dies at startup saying the key is missing while
-# `setx` swears it is set. Read it from the registry when the process lacks it.
-if (-not $env:OPENAI_API_KEY) {
-    $env:OPENAI_API_KEY = [Environment]::GetEnvironmentVariable('OPENAI_API_KEY', 'User')
-}
+# No key is loaded here on purpose. Both campaigns now run on the account's
+# own plans — Codex for OpenAI's model, Claude Code for Anthropic's — so
+# nothing these processes do should be able to reach a metered API even by
+# accident. The previous version of this script read OPENAI_API_KEY out of the
+# User registry scope, because Start-Process hands the child THIS process's
+# environment and a shell older than the key had never seen it. That problem
+# is gone with the key.
 
 $logs = Join-Path $Root 'data\paper\logs'
 New-Item -ItemType Directory -Force -Path $logs | Out-Null

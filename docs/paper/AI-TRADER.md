@@ -33,8 +33,26 @@ Books run on the same stream in **matched pairs**, one pair per model:
 
 | model | reached through | its book | its coin |
 |---|---|---|---|
-| `gpt-5` | the OpenAI API, metered | `ai-xau` | `ai-xau-coin` |
-| `claude-opus-5` | the account's **plan**, via the Claude Code CLI | `ai-xau-opus` | `ai-xau-opus-coin` |
+| `gpt-5.6-sol` | the **ChatGPT plan**, via the Codex CLI | `ai-xau-sol` | `ai-xau-sol-coin` |
+| `claude-opus-5` | the **Claude plan**, via the Claude Code CLI | `ai-xau-opus` | `ai-xau-opus-coin` |
+
+No metered API key is involved in either. Owner's instruction, 2026-09-15:
+*"cho dùng gói đừng dùng API nữa"*.
+
+**The OpenAI model is `gpt-5.6-sol`, and that is not a renaming of `gpt-5`.**
+A ChatGPT account refuses `gpt-5`, `gpt-5-codex` and `codex-mini-latest`
+outright — *"not supported when using Codex with a ChatGPT account"* — and
+`gpt-5.6-sol` is what Codex itself defaults to on this plan, read from its own
+banner rather than guessed. It is therefore a **different model** from the one
+the first campaign ran for half an hour on the API, which is why that
+campaign's books (`ai-xau`, `ai-xau-coin`) were **closed rather than
+repointed**: one book holding two models is a record nobody can read, and the
+badge would have flagged it as mixed, correctly.
+
+Those books closed at **+$25.62 each** — the model and its coin both went
+long, both made the same money. One trade proves nothing, but it is a fair
+picture of what the control is for: an outcome identical to a coin's carries
+no information about direction, however well the model explained itself.
 
 - the **model book** takes the side the model asked for.
 - the **coin book** takes a trade at the **same bar**, with the **same stop
@@ -138,16 +156,30 @@ coin, the log says what it was thinking while it did.
 ## Running it
 
 ```
-# the metered model
-python py/live/ai_trader.py --model=gpt-5 --market=xauusd --tf=15m \
-    --run=ai-xau --control=ai-xau-coin --seed=7
+powershell -NoProfile -File py\live\start_ai_traders.ps1
+```
 
-# the plan's model — no API key is involved; `claude` carries the account's
-# own credentials, which is why `provider_of` sends every Claude model to the
-# CLI by default. `--provider anthropic` forces the metered API instead.
+which is one process per model, guarded by a system-wide mutex so it cannot be
+run twice. Individually:
+
+```
+# OpenAI's model on the ChatGPT plan. The `codex/` prefix is what routes it
+# there; a bare `gpt-*` still means the metered API, deliberately, so nothing
+# falls back to a paid key by accident.
+python py/live/ai_trader.py --model=codex/gpt-5.6-sol --market=xauusd --tf=15m \
+    --run=ai-xau-sol --control=ai-xau-sol-coin --seed=7
+
+# Anthropic's model on the Claude plan. `provider_of` sends every Claude model
+# to the CLI by default; `--provider anthropic` forces the metered API.
 python py/live/ai_trader.py --model=claude-opus-5 --market=xauusd --tf=15m \
     --run=ai-xau-opus --control=ai-xau-opus-coin --seed=11
 ```
+
+Codex needs a one-time `codex login` (a browser flow). The binary is **not**
+the npm package: `npm i -g @openai/codex` leaves a shim that throws on Windows
+and shadows the working `codex.exe` the Codex desktop app ships, so
+`codex_bin()` probes candidates with `--version` and takes the first that
+actually runs.
 
 The two coins take different seeds so their flip sequences are independent.
 With one seed both controls would flip identically, and on any bar where both
@@ -156,9 +188,12 @@ which is the one thing a control may not do.
 
 ### What the plan's model costs, measured
 
-A decision through the CLI, measured on this machine 2026-09-15: **~$0.036 and
-~1.7-4.7s**, steady state, because the prompt cache is reused across
-processes. At one decision per 15-minute bar that is roughly $3.50 a day.
+A decision through the Claude CLI, measured on this machine 2026-09-15:
+**~$0.036 and ~1.7-4.7s**, steady state, because the prompt cache is reused
+across processes. At one decision per 15-minute bar that is roughly $3.50 a
+day. Through the Codex CLI the same decision takes **~16-19s** — an order of
+magnitude slower, comfortably inside the 90s timeout and the 15-minute bar,
+but worth knowing before anyone points this at a one-minute chart.
 
 Two details are worth keeping in view. The first call after a cold cache cost
 $0.22, six times the steady-state figure, so a restart loop that never warms

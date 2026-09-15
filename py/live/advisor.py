@@ -404,6 +404,13 @@ def ask_codex(prompt: str, model: str, timeout: float) -> str:
     parsing a log whose shape is free to change.
     """
     exe = codex_bin()
+    # `codex/gpt-5.6-sol` names the route and the model in one string: the
+    # prefix is what sent it here (a bare `gpt-*` still means the metered API),
+    # and Codex itself must not see it. Keeping the prefix on the badge is
+    # deliberate — the desk then says which model AND which account paid for
+    # it, and those are two different facts about the same book.
+    if model.startswith("codex/"):
+        model = model.split("/", 1)[1]
     with tempfile.TemporaryDirectory() as work:
         out_file = os.path.join(work, "last.txt")
         argv = [
@@ -675,7 +682,11 @@ def main() -> int:
             # A keyless provider (the plan, through the CLI) has nothing to
             # look up; only a metered one can be missing its key.
             key = os.environ.get(env) if env else ""
-            if not key:
+            # `env` None means the provider needs no key at all (a plan, through
+            # a CLI). Only a METERED provider can be missing one — testing the
+            # empty key alone dropped every plan-backed agent and silently fell
+            # the whole panel back to the arithmetic control.
+            if env and not key:
                 # Named, not guessed at: a panel silently one agent short is a
                 # panel whose verdicts mean something different from what the
                 # log will say they mean.
