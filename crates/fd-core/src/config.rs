@@ -155,6 +155,39 @@ pub struct TradingConfig {
     // the live planner the prototype had and this port does not yet; they
     // come back when the code that enforces them does.
     pub guards: GuardsConfig,
+    #[serde(default)]
+    pub trail: TrailConfig,
+}
+
+/// A stop that follows the trade, in the unit the engine already sizes with.
+///
+/// Distances are in **R** — the position's own risk, the distance from its
+/// entry to its original stop — and not in ATR or in price. The engine stores
+/// that number on every position already, so a trail measured in it needs no
+/// second series, cannot disagree with the R every receipt is quoted in, and
+/// means the same thing on gold at $4,000 as on the euro at 1.16.
+///
+/// Off by default, and deliberately so: every result in `docs/decisions/` was
+/// measured without one, and a trail switched on globally would silently make
+/// those numbers unreproducible.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TrailConfig {
+    /// Nothing happens at all unless this is true.
+    pub enabled: bool,
+    /// How far behind the best price the stop follows, in R.
+    pub distance_r: f64,
+    /// The trail does not start until the trade has gone this far in its
+    /// favour. Zero would start it at entry, where it is just a tighter stop.
+    pub activate_r: f64,
+}
+
+impl Default for TrailConfig {
+    fn default() -> Self {
+        // The defaults are a shape, not a recommendation: trail a full R behind
+        // the best price once the trade is a full R ahead, so a winner that
+        // gives back everything it made closes at about breakeven.
+        Self { enabled: false, distance_r: 1.0, activate_r: 1.0 }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

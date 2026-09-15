@@ -96,6 +96,21 @@ min_lot = 0.01
 # on 2026-09-13: no code read them, and a limit nobody reads is an intention.
 # They return with the live planner that enforces them.
 
+# A stop that follows the trade, measured in R — the distance from the entry to
+# the original stop, which is the unit every receipt in docs/ is already quoted
+# in. OFF, and it must stay off unless a registration turns it on: every number
+# in docs/decisions/ was measured without one, and switching it on globally
+# would make all of them unreproducible without changing a single receipt.
+#
+# The engine ratchets AFTER a bar's exit check, never before, so the stop a bar
+# is tested against was set from the close of the bar before it. A trail moved
+# from the same bar's high and then tested against that bar's low is look-ahead
+# and is the easiest way in this repository to make a losing rule look good.
+[trading.trail]
+enabled = false
+distance_r = 1.0
+activate_r = 1.0
+
 [trading.guards]
 max_concurrent_positions = 1
 max_trades_per_day = 4

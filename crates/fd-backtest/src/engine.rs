@@ -42,6 +42,8 @@ pub struct TradingRules {
     /// Target distance as a multiple of risk. Zero disables the default target.
     pub reward_risk: f64,
     pub max_hold_ms: i64,
+    /// A stop that follows the trade. Off unless a registration turns it on.
+    pub trail: fd_core::config::TrailConfig,
     pub lot_step: f64,
     pub min_lot: f64,
     /// ATR period used when the strategy declares none.
@@ -78,6 +80,9 @@ impl Default for TradingRules {
             stop_atr: 1.2,
             reward_risk: 1.8,
             max_hold_ms: 14_400_000,
+            // Off, like the config's own default: a rule that changes every
+            // number in docs/decisions/ does not arrive switched on.
+            trail: fd_core::config::TrailConfig::default(),
             lot_step: 0.01,
             min_lot: 0.01,
             fallback_atr_period: 14,
@@ -247,6 +252,7 @@ pub fn trading_rules_for(config: &Config, market: &str) -> Result<TradingRules, 
         stop_atr: config.trading.stop_atr,
         reward_risk: config.trading.reward_risk,
         max_hold_ms: config.trading.max_hold_ms,
+        trail: config.trading.trail.clone(),
         fallback_atr_period: config.backtest.fallback_atr_period,
     })
 }
@@ -483,6 +489,9 @@ pub fn run_backtest_guarded(
                 trades.push(trade);
             } else {
                 track_excursion(open, bar);
+                // The ratchet is last, so the stop it leaves behind belongs to
+                // the NEXT bar and never to the one just tested.
+                trail_stop(open, bar, rules);
             }
         }
 
@@ -669,6 +678,56 @@ pub fn check_exit(position: &Live, bar: &Bar, rules: &TradingRules) -> Option<(f
     None
 }
 
+/// Move a trailing stop up behind a winning trade, from the bar that just closed.
+///
+/// **Call this after the bar's exit check and not before.** A stop raised from
+/// this bar's high and then tested against this bar's low is look-ahead: the
+/// trade would be credited with an exit at a level that did not exist while the
+/// bar was forming. Ratcheting here, at the end of the bar, means the stop a
+/// bar is tested against was fixed by the close of the bar before it — which is
+/// also the only version a live book could actually place.
+///
+/// Three things it deliberately will not do:
+///
+/// * **It never creates a stop.** A position the strategy left unstopped stays
+///   unstopped; giving it one would change the method rather than manage it.
+/// * **It never moves a stop backwards.** That is what makes it a ratchet, and
+///   without it a trade could widen its own risk after the fact.
+/// * **It never touches a self-managed position.** The strategy owns every exit
+///   there, and the stop is a sizing unit rather than an order — the same rule
+///   `check_exit` follows.
+///
+/// Distances are in R, the position's own `risk`, so the rule reads the same on
+/// every instrument and matches the unit every receipt is quoted in.
+pub fn trail_stop(position: &mut Live, bar: &Bar, rules: &TradingRules) -> bool {
+    let trail = &rules.trail;
+    if !trail.enabled || position.self_managed {
+        return false;
+    }
+    // No original stop is no risk unit and no thing to ratchet.
+    let Some(current) = position.stop else { return false };
+    if !(position.risk > 0.0) || !trail.distance_r.is_finite() || trail.distance_r <= 0.0 {
+        return false;
+    }
+
+    let long = position.side.is_long();
+    // The best price the trade has seen, this bar included — the bar has closed.
+    let best = if long { bar.high.max(position.entry_price) } else { bar.low.min(position.entry_price) };
+    let gained = if long { best - position.entry_price } else { position.entry_price - best };
+    if gained < trail.activate_r * position.risk {
+        return false;
+    }
+
+    let offset = trail.distance_r * position.risk;
+    let candidate = if long { best - offset } else { best + offset };
+    let improved = if long { candidate > current } else { candidate < current };
+    if !improved {
+        return false;
+    }
+    position.stop = Some(candidate);
+    true
+}
+
 pub fn track_excursion(position: &mut Live, bar: &Bar) {
     let long = position.side.is_long();
     let best = if long { bar.high - position.entry_price } else { position.entry_price - bar.low };
@@ -852,3 +911,123 @@ fn round4(v: f64) -> f64 {
 
 /// Unused import guard: `OptionsView` is part of the public context shape.
 const _: Option<fn(&OptionsView<'_>)> = None;
+
+#[cfg(test)]
+mod trail_tests {
+    use super::*;
+    use fd_core::config::TrailConfig;
+
+    fn bar(time: i64, open: f64, high: f64, low: f64, close: f64) -> Bar {
+        Bar { time, open, high, low, close, volume: None }
+    }
+
+    fn long_at(entry: f64, stop: f64) -> Live {
+        Live {
+            side: Side::Long,
+            entry_time: 0,
+            entry_price: entry,
+            stop: Some(stop),
+            target: None,
+            lots: 1.0,
+            risk: entry - stop,
+            reason: "t".into(),
+            mae: 0.0,
+            mfe: 0.0,
+            self_managed: false,
+        }
+    }
+
+    fn rules_with(trail: TrailConfig) -> TradingRules {
+        let mut rules = TradingRules::default();
+        rules.spread = 0.0;
+        rules.commission_per_lot = 0.0;
+        rules.trail = trail;
+        rules
+    }
+
+    #[test]
+    fn does_nothing_until_the_trade_has_gone_far_enough() {
+        let rules = rules_with(TrailConfig { enabled: true, distance_r: 1.0, activate_r: 1.0 });
+        let mut open = long_at(100.0, 90.0); // one R is 10
+        // Best price 105: half an R ahead, which is not the R the rule asked for.
+        assert!(!trail_stop(&mut open, &bar(1, 100.0, 105.0, 99.0, 104.0), &rules));
+        assert_eq!(open.stop, Some(90.0));
+        // 110 is exactly one R, and the stop moves to one R behind it.
+        assert!(trail_stop(&mut open, &bar(2, 104.0, 110.0, 103.0, 109.0), &rules));
+        assert_eq!(open.stop, Some(100.0));
+    }
+
+    #[test]
+    fn ratchets_and_never_gives_ground_back() {
+        let rules = rules_with(TrailConfig { enabled: true, distance_r: 1.0, activate_r: 1.0 });
+        let mut open = long_at(100.0, 90.0);
+        trail_stop(&mut open, &bar(1, 100.0, 120.0, 99.0, 118.0), &rules);
+        assert_eq!(open.stop, Some(110.0));
+        // A lower high must not drag the stop back down.
+        assert!(!trail_stop(&mut open, &bar(2, 118.0, 112.0, 108.0, 109.0), &rules));
+        assert_eq!(open.stop, Some(110.0));
+    }
+
+    #[test]
+    fn a_short_trails_the_other_way() {
+        let rules = rules_with(TrailConfig { enabled: true, distance_r: 1.0, activate_r: 1.0 });
+        let mut open = Live { side: Side::Short, risk: 10.0, stop: Some(110.0), ..long_at(100.0, 90.0) };
+        open.entry_price = 100.0;
+        assert!(trail_stop(&mut open, &bar(1, 100.0, 101.0, 80.0, 82.0), &rules));
+        assert_eq!(open.stop, Some(90.0));
+        assert!(!trail_stop(&mut open, &bar(2, 82.0, 95.0, 88.0, 94.0), &rules));
+        assert_eq!(open.stop, Some(90.0));
+    }
+
+    #[test]
+    fn refuses_a_position_it_was_told_not_to_manage() {
+        let rules = rules_with(TrailConfig { enabled: true, distance_r: 1.0, activate_r: 1.0 });
+        let mut open = Live { self_managed: true, ..long_at(100.0, 90.0) };
+        assert!(!trail_stop(&mut open, &bar(1, 100.0, 140.0, 99.0, 139.0), &rules));
+        assert_eq!(open.stop, Some(90.0), "the strategy owns every exit on a self-managed position");
+    }
+
+    #[test]
+    fn never_invents_a_stop_the_strategy_did_not_set() {
+        let rules = rules_with(TrailConfig { enabled: true, distance_r: 1.0, activate_r: 1.0 });
+        let mut open = Live { stop: None, ..long_at(100.0, 90.0) };
+        assert!(!trail_stop(&mut open, &bar(1, 100.0, 140.0, 99.0, 139.0), &rules));
+        assert_eq!(open.stop, None);
+    }
+
+    #[test]
+    fn off_by_default_changes_nothing() {
+        let rules = rules_with(TrailConfig::default());
+        let mut open = long_at(100.0, 90.0);
+        assert!(!trail_stop(&mut open, &bar(1, 100.0, 200.0, 99.0, 199.0), &rules));
+        assert_eq!(open.stop, Some(90.0), "every receipt in docs/ was measured with this off");
+    }
+
+    /// The fault this whole ordering exists to prevent.
+    ///
+    /// One bar spikes to 130 and then collapses to 95. Ratcheting from that
+    /// bar's own high would put the stop at 120 and then test 95 against it,
+    /// booking a +2R exit at a price that never traded after the high. Done in
+    /// the engine's order — exit check, then ratchet — the bar closes with the
+    /// original stop untouched at 90, which is what a live book would have had.
+    #[test]
+    fn a_stop_is_never_tested_against_a_level_set_by_the_same_bar() {
+        let rules = rules_with(TrailConfig { enabled: true, distance_r: 1.0, activate_r: 1.0 });
+        let mut open = long_at(100.0, 90.0);
+        let spike = bar(1, 100.0, 130.0, 95.0, 96.0);
+
+        // The engine's order: the exit check first, against the stop as it stood.
+        let exit = check_exit(&open, &spike, &rules);
+        assert!(exit.is_none(), "90 was never touched on this bar");
+
+        // Only then does the ratchet see the bar.
+        assert!(trail_stop(&mut open, &spike, &rules));
+        assert_eq!(open.stop, Some(120.0));
+
+        // And 120 is what the NEXT bar is tested against, not this one.
+        let next = bar(2, 96.0, 97.0, 94.0, 95.0);
+        let (price, kind) = check_exit(&open, &next, &rules).expect("the trail is hit on the next bar");
+        assert!(matches!(kind, ExitKind::Stop));
+        assert!((price - 96.0).abs() < 1e-9, "gapped through the trail, so it fills at the open: {price}");
+    }
+}

@@ -30,7 +30,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::engine::{
     ExitKind, Live, Metrics, Refused, Trade, TradingRules, apply_costs, check_exit, close_position, metrics_of,
-    open_position, round2, track_excursion,
+    open_position, round2, track_excursion, trail_stop,
 };
 use crate::guards::{Exposure, GuardState, Guards, guard_exit};
 
@@ -216,6 +216,9 @@ impl PaperBook {
                 report.trades.push(trade);
             } else {
                 track_excursion(open, bar);
+                // Same order as the backtest, for the same reason: the stop a
+                // bar is tested against was fixed by the close before it.
+                trail_stop(open, bar, rules);
             }
         }
 

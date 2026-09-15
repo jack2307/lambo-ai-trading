@@ -119,6 +119,9 @@ pub fn rules_from_manifest(market: &str) -> Option<TradingRules> {
     let trading = &manifest["config"]["trading"];
     let backtest = &manifest["config"]["backtest"];
     Some(TradingRules {
+        // The golden files were produced by the JS oracle, which has no trail;
+        // parity would be meaningless with one switched on here.
+        trail: fd_core::config::TrailConfig::default(),
         contract_size: num(&trading["contractSize"]),
         spread: num(&trading["spread"]),
         commission_per_lot: num(&trading["commissionPerLot"]),
