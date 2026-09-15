@@ -237,7 +237,14 @@ export interface PaperRun {
    * an intent is accepted. `decisions` keyed by more than one name means the
    * book's net is not one decider's record.
    */
-  decider: null | { last: string; last_at: number; decisions: Record<string, number> }
+  decider: null | {
+    last: string
+    last_at: number
+    /** Accepted ENTRIES per decider name. */
+    decisions: Record<string, number>
+    /** Bars a decider looked at and asked for nothing. */
+    stood_aside: number
+  }
   params: Record<string, number>
   filters: string[]
   guards: boolean

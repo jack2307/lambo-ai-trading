@@ -655,10 +655,12 @@ function DeciderTag({ run }: { run: PaperRun }) {
   const total = Object.values(run.decider?.decisions ?? {}).reduce((a, b) => a + b, 0)
 
   const text = last ? (coin ? 'coin' : last) : 'idle'
+  const aside = run.decider?.stood_aside ?? 0
+  const spoke = last ? `${total} trade${total === 1 ? '' : 's'}, ${aside} stood aside` : ''
   const title = mixed
     ? `driven by ${names.length} deciders (${names.map((n) => `${n} ${run.decider?.decisions[n]}`).join(', ')}) — this book's net is not any one of their records`
     : last
-      ? `${total} accepted decision${total === 1 ? '' : 's'} from ${last}`
+      ? `${last}: ${spoke}. Standing aside is a real answer; it keeps the badge alive without a trade.`
       : 'externally driven; nothing has posted to it yet'
 
   return (

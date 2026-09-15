@@ -243,6 +243,17 @@ def main() -> int:
 
         stamp = dt.datetime.now(dt.timezone.utc).strftime("%H:%M:%SZ")
         if decision["side"] == "NONE":
+            # Tell the desk anyway. A stand-aside sets no intent and changes no
+            # book, but it is the only thing separating a model that is
+            # thinking and declining from a model that stopped running an hour
+            # ago — from the outside both show zero trades.
+            if not args.dry_run:
+                try:
+                    post_json(f"{args.api}/api/paper/intent", dict(
+                        run=args.run, side="NONE", bar_time=last_time,
+                        reason=decision["reason"][:200], decider=args.model))
+                except Exception as e:  # noqa: BLE001
+                    print(f"{stamp} stand-aside not recorded: {type(e).__name__}: {e}", flush=True)
             print(f"{stamp} bar {dt.datetime.utcfromtimestamp(last_time/1000):%H:%MZ}  "
                   f"NONE  {decision['reason'][:80]}", flush=True)
         elif not args.dry_run:

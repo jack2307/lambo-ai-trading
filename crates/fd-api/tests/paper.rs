@@ -157,6 +157,38 @@ async fn the_decider_badge_names_only_decisions_the_book_actually_took() {
 }
 
 #[tokio::test]
+async fn a_stand_aside_names_the_decider_without_touching_the_book() {
+    // The reason NONE is accepted at all: a model that declines is still
+    // driving the book, and from the outside a declining model and a dead
+    // process look identical — both show zero trades. It must nonetheless be
+    // incapable of putting on a position.
+    let dir = tempfile::tempdir().expect("temp dir");
+    let state = state_over(dir.path(), 300);
+    start_run(&state, json!({ "market": "btc", "tf": "15m", "strategy": "external", "id": "ai", "window": 200 }))
+        .await
+        .expect("start");
+    post_bar(&state, "btc", "15m", wave(300)).await.expect("bar");
+
+    let aside = post_intent(&state, json!({
+        "run": "ai", "bar_time": wave(300).time, "side": "NONE",
+        "reason": "chop", "decider": "claude-opus-5",
+    })).await.expect("call");
+    assert_eq!(aside["accepted"], true, "{aside}");
+
+    let d = run_named(&read_status(&state).await, "ai")["decider"].clone();
+    assert_eq!(d["last"], "claude-opus-5", "the badge names who is driving");
+    assert_eq!(d["stood_aside"], 1);
+    assert!(d["decisions"].as_object().expect("a map").is_empty(), "declining is not a trade: {d}");
+
+    // The next bar must fill nothing: a stand-aside left no pending intent.
+    let reply = post_bar(&state, "btc", "15m", wave(301)).await.expect("bar");
+    assert_eq!(reply["runs"][0]["opened"], false, "a stand-aside cannot open a position: {reply}");
+    let st = run_named(&read_status(&state).await, "ai").clone();
+    assert!(st["open"].is_null(), "no position: {st}");
+    assert_eq!(st["trades"], 0);
+}
+
+#[tokio::test]
 async fn a_rule_based_book_cannot_be_claimed_by_a_decider() {
     // The badge is only meaningful because the route refuses rule-based runs
     // outright. Without this, anything could post a gpt-5 badge onto a book

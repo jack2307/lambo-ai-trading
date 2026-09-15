@@ -1582,8 +1582,17 @@ pub struct Decider {
     pub last: String,
     /// Epoch ms of the last accepted intent.
     pub last_at: i64,
-    /// Accepted intents per decider name, over the life of the run.
+    /// Accepted ENTRIES per decider name, over the life of the run.
     pub decisions: BTreeMap<String, usize>,
+    /// Times a decider looked at a bar and asked for nothing.
+    ///
+    /// Counted because without it the desk cannot tell a model that is
+    /// standing aside from a model that is not running at all — both show
+    /// zero trades, and on an instrument that spends most of its day going
+    /// nowhere, standing aside is the common correct answer. `last_at` moves
+    /// on a stand-aside too, so a badge that has gone quiet means the process
+    /// has, not that the market did.
+    pub stood_aside: usize,
 }
 
 /// `POST /api/paper/intent` — an entry proposed from outside the process.
@@ -1637,10 +1646,18 @@ pub async fn intent(
     State(state): State<Arc<AppState>>,
     Json(body): Json<IntentRequest>,
 ) -> Result<Json<IntentResponse>, ApiError> {
+    // NONE is a real answer and is deliberately accepted here. A decider that
+    // looked and wanted nothing has still driven this bar, and recording it is
+    // the only way the desk can tell "the model is standing aside" from "the
+    // model is not running". It sets no pending intent — the book is left
+    // exactly as it was.
     let side = match body.side.to_ascii_uppercase().as_str() {
-        "LONG" => Side::Long,
-        "SHORT" => Side::Short,
-        other => return Err(ApiError::BadRequest(format!("side must be LONG or SHORT, got `{other}`"))),
+        "LONG" => Some(Side::Long),
+        "SHORT" => Some(Side::Short),
+        "NONE" => None,
+        other => {
+            return Err(ApiError::BadRequest(format!("side must be LONG, SHORT or NONE, got `{other}`")));
+        }
     };
     let mut runs = state.paper.lock().expect("paper runs");
     let run = runs
@@ -1665,19 +1682,34 @@ pub async fn intent(
         }));
     }
 
-    run.book.decide(Intent::Enter {
-        side,
-        stop: body.stop.filter(|v| v.is_finite()),
-        target: body.target.filter(|v| v.is_finite()),
-        reason: if body.reason.is_empty() { "external".to_string() } else { body.reason.clone() },
-    });
+    if let Some(side) = side {
+        run.book.decide(Intent::Enter {
+            side,
+            stop: body.stop.filter(|v| v.is_finite()),
+            target: body.target.filter(|v| v.is_finite()),
+            reason: if body.reason.is_empty() { "external".to_string() } else { body.reason.clone() },
+        });
+    }
     // Only now, past every refusal above: the badge names a decision the book
     // actually took, never one it was merely offered.
     if let Some(name) = body.decider.as_deref().map(str::trim).filter(|n| !n.is_empty()) {
         let d = run.decider.get_or_insert_with(Decider::default);
         d.last = name.to_string();
         d.last_at = now_ms();
-        *d.decisions.entry(name.to_string()).or_insert(0) += 1;
+        if side.is_some() {
+            *d.decisions.entry(name.to_string()).or_insert(0) += 1;
+        } else {
+            d.stood_aside += 1;
+        }
+    }
+    // A stand-aside is not written to `fills.jsonl`: that file is the book's
+    // record, and a bar on which nothing happened is not an event in it. The
+    // decider's own log (`decisions.jsonl`) already holds every reply whole.
+    if side.is_none() {
+        return Ok(Json(IntentResponse {
+            accepted: true,
+            reason: "stood aside; the book is unchanged".to_string(),
+        }));
     }
     record(
         &state.data,
