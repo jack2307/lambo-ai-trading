@@ -1,0 +1,60 @@
+market xauusd | 21 cells | in-sample 2022-06-16..2025-09-15 | held out 2025-09-15..2026-09-15
+
+== in sample: choosing one cell by MEDIAN expectancy, never by best ==
+method set, fixed by the control arm (100+ trades): bb-fade, doji-reversal, donchian-breakout, ema-cross, ict-sweep-mss-fvg, intraday-momentum, keltner-break, macd-cross, orb, pdhl, rsi-reversion, rsi2-pullback, session-hold, squeeze-break, stoch-reversal, trend-pullback, volume-thrust, vwap-fade
+
+cell          median exp    vs off   PF>1
+off              -0.0675        --      0
+2.0,1.0          -0.0655   +0.0020      0
+2.0,0.5          -0.0655   +0.0020      0
+2.0,2.0          -0.0675   +0.0000      0
+2.0,1.5          -0.0675   +0.0000      0
+1.5,2.0          -0.0675   +0.0000      0
+1.0,2.0          -0.0675   +0.0000      0
+0.75,2.0         -0.0675   +0.0000      0
+0.5,2.0          -0.0675   +0.0000      0
+0.75,1.5         -0.0680   -0.0005      0
+1.5,1.5          -0.0685   -0.0010      0
+1.5,0.5          -0.0685   -0.0010      0
+1.0,1.5          -0.0685   -0.0010      0
+0.5,1.5          -0.0685   -0.0010      0
+0.75,1.0         -0.0700   -0.0025      0
+0.5,1.0          -0.0700   -0.0025      0
+0.75,0.5         -0.0710   -0.0035      0
+0.5,0.5          -0.0710   -0.0035      0
+1.5,1.0          -0.0715   -0.0040      0
+1.0,1.0          -0.0715   -0.0040      0
+1.0,0.5          -0.0790   -0.0115      0
+
+chosen in sample: 2.0,1.0
+
+== held out: the chosen cell, and every other cell for the null ==
+cell          median exp    vs off   PF>1
+off              -0.0440        --      3
+0.5,0.5          -0.0240   +0.0200      3
+0.5,1.0          -0.0230   +0.0210      2
+0.5,1.5          -0.0300   +0.0140      3
+0.5,2.0          -0.0410   +0.0030      3
+0.75,0.5         -0.0230   +0.0210      4
+0.75,1.0         -0.0330   +0.0110      3
+0.75,1.5         -0.0310   +0.0130      3
+0.75,2.0         -0.0415   +0.0025      3
+1.0,0.5          -0.0475   -0.0035      4
+1.0,1.0          -0.0355   +0.0085      4
+1.0,1.5          -0.0325   +0.0115      3
+1.0,2.0          -0.0420   +0.0020      3
+1.5,0.5          -0.0400   +0.0040      3
+1.5,1.0          -0.0400   +0.0040      4
+1.5,1.5          -0.0325   +0.0115      3
+1.5,2.0          -0.0430   +0.0010      3
+2.0,0.5          -0.0345   +0.0095      3
+2.0,1.0          -0.0345   +0.0095      3  <- chosen
+2.0,1.5          -0.0350   +0.0090      3
+2.0,2.0          -0.0435   +0.0005      3
+
+== the two declared tests ==
+1. beats `off` out of sample : True  (-0.0345 vs -0.0440, delta +0.0095)
+   PF>1 count not reduced    : True  (3 vs 3 with the trail off)
+2. selection carried signal  : True  (the chosen cell sits at the 53th percentile of all cells out of sample; below 50 means choosing it on the first window was noise)
+
+VERDICT: SURVIVES
