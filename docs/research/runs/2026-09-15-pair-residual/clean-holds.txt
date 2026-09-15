@@ -1,0 +1,28 @@
+the declared cell, 1706 trades, gross +3.108 bp
+
+split on whether the HOLD was really four hours of market:
+   hold exactly 240 min                   n  1452  gross   +1.710  median   +3.822  win  53.5%  sign p 0.0080  share of gross sum  46.8%
+   hold longer (break, weekend, hole)     n   254  gross  +11.103  median   +7.280  win  60.6%  sign p 0.0008  share of gross sum  53.2%
+
+   gap-crossing holds are 14.9% of trades
+
+and with the LOOKBACK required to be clean as well:
+   both window and hold exactly 240 min   n  1257  gross   +0.287  median   +3.209  win  52.5%  sign p 0.0803  share of gross sum   6.8%
+   either one stretched                   n   449  gross  +11.008  median   +7.366  win  60.4%  sign p 0.0000  share of gross sum  93.2%
+
+the declared conditions, judged on the clean subset:
+   1. gross positive            +0.287 bp  -> PASS
+   2. win rate >= 53.5%         52.51%    -> FAIL
+   3. exact sign test p <= 0.01 0.0803     -> FAIL
+   net at the optimistic cost bound: -3.113 bp
+
+by entry hour UTC — where Dukascopy's daily break sits:
+   20:00  n   33  gross  +64.019  win  78.8%  share of gross  +39.8%
+   22:00  n   27  gross  +33.281  win  66.7%  share of gross  +16.9%
+   19:00  n   44  gross  +20.286  win  68.2%  share of gross  +16.8%
+   06:00  n   50  gross  +16.530  win  52.0%  share of gross  +15.6%
+   23:00  n   24  gross  +27.315  win  62.5%  share of gross  +12.4%
+   09:00  n   50  gross  +12.118  win  66.0%  share of gross  +11.4%
+
+   entries 20:00-23:45 UTC: n 95 (5.6% of trades), gross +35.34, share of gross sum 63.3%
+   every other hour:        n 1611, gross +1.208, win 53.8%

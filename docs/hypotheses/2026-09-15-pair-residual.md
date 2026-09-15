@@ -94,7 +94,17 @@ unknowable, so it is bracketed:
 
 | | gold | silver | round trip |
 |---|---|---|---|
-| **proportional** — today's quote over today's level | 0.49 bp (measured read-only, 2026-09-15) | 2.78 bp ($0.021 at $75.56) | **3.27 bp** |
+| **proportional** — today's quote over today's level | 0.62 bp | 2.78 bp ($0.021 at $75.56) | **3.40 bp** |
+
+> **Correction, same day, before the reviews reported** (data-integrity): this
+> row first read 0.49 bp and 3.27 bp. That came from the live terminal quote of
+> $0.21 over the live price of $4,296 on 2026-09-15, which is a different level
+> from the one the data ends at. The instrument uses $0.28 over the span's last
+> close of $4,539.335 = 0.617 bp, and both receipts print 3.40. **The numbers
+> the instrument actually uses are the ones above.** Nothing depends on it — the
+> net is negative at either — but a committed document carrying a number the
+> instrument does not use is the shape of fault 10 and is corrected in place
+> rather than in a commit message.
 | **dollar-constant** — today's quote over the span's mean level | 1.62 bp | 8.64 bp | **10.26 bp** |
 
 Against that, the best cell in twenty-seven nets **+3.3 bp at the optimistic
