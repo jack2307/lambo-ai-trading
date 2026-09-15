@@ -28,10 +28,6 @@ Closed ideas move to the bottom with a pointer to their decision record, so
   two), the hour declared in advance, and the gated statistic named before the
   cell is chosen. Note it would be re-entering the territory of
   `2026-09-13-close-reopen-drift`, which failed its gate as a unit.
-- [ ] **Audit every horizon in the repository for fault 12.** Every window in
-  `scripts/` and in the engine is a bar count, and on a feed with a daily break
-  and a weekend that is not a duration. Where a claim is about a duration, the
-  span must be checked against the stamps.
 
 - [ ] **The residual gate on an unread instrument** (adversary,
   `2026-09-15-nfp-cross-asset`), and it is the only experiment left that could
@@ -197,6 +193,14 @@ Closed ideas move to the bottom with a pointer to their decision record, so
 
 ## Closed
 
+- [x] Audit every horizon in the repository for fault 12 → **it lives in one
+  instrument and that registration is already closed.** `news_drift.py` and
+  `friday_cells.py` offset in clock minutes and resolve through a tolerance;
+  `fx_window_drift.py` selects by minute-of-day; the engine holds in
+  milliseconds throughout and its filters are clock windows. Indicator periods
+  are bar counts and are meant to be. One lesser asymmetry named in
+  `fx_window_drift.py` (a partial day's drift netted against a full span's trend
+  share) moves no verdict. Written up in `2026-09-13-instrument-faults.md`.
 - [x] Does silver's move against gold come back? → **not as registered.** All
   three declared conditions passed and neither review could break the code
   (causality proven bitwise; a deliberate look-ahead flips the sign to −21.3 bp)

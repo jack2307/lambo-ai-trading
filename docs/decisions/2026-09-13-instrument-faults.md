@@ -267,3 +267,36 @@ data-integrity report, not in the record, and data-integrity checked the record
 and said so. **A number quoted from memory is a number that has not been
 checked**, and that applies to what is put in front of a reviewer exactly as it
 applies to what is put in a record.
+
+### The audit fault 12 demanded, done the same afternoon
+
+Fault 12 — a horizon counted in rows on a tape with a daily break — could in
+principle sit under every closed record in this directory, so the backlog item
+it created was worked immediately rather than queued. The damage is bounded,
+and the bound is the useful part:
+
+- **`scripts/news_drift.py`** (the whole pre-NFP thread, four records) offsets
+  with `pd.Timedelta(minutes=...)` from each release stamp and resolves each end
+  through `open_at`, which since `436582c` refuses a bar more than one interval
+  from the minute asked for. Clock-based at both ends. **Not affected.**
+- **`scripts/friday_cells.py`** takes its two ends from New-York wall-clock
+  minutes on a named day. **Not affected.**
+- **`scripts/fx_window_drift.py`** (`2026-09-14-fx-local-hours` and its sign
+  record) selects bars by clock minute-of-day, not by count. **Not affected**,
+  with one lesser asymmetry worth naming: a day's drift is summed over whatever
+  bars exist inside the window while the trend share it is netted against
+  assumes the window's full clock span, so a day with a feed gap is charged a
+  full share against a partial drift. The `count >= 4` filter bounds it, and
+  that record closed on its profit gate rather than on its drift, so no verdict
+  moves — but it is the same species and belongs on the list.
+- **The engine** holds in **milliseconds** throughout: `max_hold_ms`,
+  `hold_ms`, and the control hold's `held + interval >= minutes * 60_000`.
+  Filters are clock windows (`hours:HHMM-HHMM`), and `session-hold` takes
+  minutes of day. **Not affected.**
+- Indicator periods (`atrPeriod`, `rangeDays`, `boxBars`) are bar counts and
+  are *supposed* to be: a 14-bar average is a statement about fourteen bars.
+  Fault 12 is only about claiming a **duration** while holding a **count**.
+
+So fault 12 lives in exactly one instrument, `scripts/pair_residual.py`, and
+that registration is closed. The rule stands for everything written next:
+**where a claim names a duration, the span is checked against the stamps.**
