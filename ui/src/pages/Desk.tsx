@@ -630,7 +630,9 @@ function RunsList({
                   {' '}
                   · {run.trades} fill{run.trades === 1 ? '' : 's'}
                   {run.profit_factor != null && ` · PF ${num(run.profit_factor)}`}
-                  {run.open && <span className={run.open.side === 'LONG' ? 'text-lc' : 'text-lp'}> · {run.open.side.toLowerCase()}</span>}
+                </span>
+                {run.open && <OpenBadge run={run} tick={ticks[`${run.market}:${run.tf}`]} />}
+                <span className="text-muted-foreground/60">
                 </span>
               </span>
               <span className="shrink-0">
@@ -1062,19 +1064,146 @@ function LiveCell({ run, now }: { run: PaperRun; now: number }) {
   )
 }
 
-function OpenCell({ run }: { run: PaperRun }) {
-  if (!run.open) return <span className="text-muted-foreground truncate">flat</span>
+/**
+ * Mark an open position at the live price.
+ *
+ * `unrealised_usd_at_last_close` is the engine's own number and is the one the
+ * book will be judged on, but it is up to a bar old. Beside a price that is
+ * moving, a figure that stale is the wrong one to show — so the live mark is
+ * computed here from the tick when there is one, and the API's number is used
+ * when there is not. The two agree at every bar close by construction.
+ */
+function markToLive(
+  open: NonNullable<PaperRun['open']>,
+  price: number | null | undefined,
+): { usd: number; live: boolean } {
+  if (price == null || !Number.isFinite(price) || !open.usd_per_point) {
+    return { usd: open.unrealised_usd_at_last_close, live: false }
+  }
+  const dir = open.side === 'LONG' ? 1 : -1
+  return { usd: (price - open.entry_price) * dir * open.usd_per_point, live: true }
+}
+
+/** A compact open-position badge for a row in the books list. */
+function OpenBadge({ run, tick }: { run: PaperRun; tick?: LiveBar }) {
   const open = run.open
+  if (!open) return null
+  const price = tick?.close ?? run.live?.close ?? run.last_bar_close
+  const { usd } = markToLive(open, price)
+  const long = open.side === 'LONG'
   return (
-    <span className="num truncate">
-      <span className={open.side === 'LONG' ? 'text-lc' : 'text-lp'}>{open.side.toLowerCase()}</span>
-      <span className="text-muted-foreground"> · </span>
-      {num(open.lots, open.lots >= 100 ? 0 : 2)}
-      <span className="text-muted-foreground"> lots · </span>
-      <span className={open.unrealised_usd_at_last_close >= 0 ? 'text-lc' : 'text-lp'}>
-        {signedUsd(open.unrealised_usd_at_last_close)}
-      </span>
+    <span
+      className={cn(
+        'num mr-1 inline-flex shrink-0 items-center gap-1 rounded-sm border px-1 py-px text-[10px]',
+        long ? 'border-lc/45 bg-lc/10 text-lc' : 'border-lp/45 bg-lp/10 text-lp',
+      )}
+      title={`open ${open.side} ${open.lots} lots from ${open.entry_price}`}
+    >
+      <span aria-hidden>{long ? '\u25b2' : '\u25bc'}</span>
+      {open.side.toLowerCase()}
+      <span className={usd >= 0 ? 'text-lc' : 'text-lp'}>{signedUsd(usd)}</span>
     </span>
+  )
+}
+
+/**
+ * The open position, as a track from its stop to its target.
+ *
+ * The number that matters while a trade is on is not the entry price, it is
+ * how close the price is to the two levels that will end it. A row of figures
+ * makes the reader do that subtraction; a track does it for them, and the same
+ * bar reads the same way on every book — a rule strategy, an AI book and its
+ * coin control all size and exit under the same engine, so they all get this.
+ *
+ * Flat books keep a one-line "flat", because an empty frame where a position
+ * would be is worse than a word.
+ */
+function PositionBar({ run, live }: { run: PaperRun; live: LiveBar | null | undefined }) {
+  const open = run.open
+  if (!open) {
+    return (
+      <div className="mt-1.5 flex items-center gap-3 text-[11px]">
+        <span className="text-muted-foreground text-[10px] tracking-wide uppercase">position</span>
+        <span className="text-muted-foreground">flat</span>
+      </div>
+    )
+  }
+
+  const long = open.side === 'LONG'
+  const price = live?.close ?? run.last_bar_close ?? open.entry_price
+  const { usd, live: marked } = markToLive(open, price)
+  const r = open.risk > 0 ? (price - open.entry_price) * (long ? 1 : -1) / open.risk : null
+
+  // Left is ALWAYS the stop and right is ALWAYS the target, whichever way the
+  // trade faces, so "left is bad, right is good" needs no thinking about.
+  //
+  // Anchoring on the stop rather than on the lower price is the whole point.
+  // Ordering the track by price put a short's target on the left, while the
+  // labels stayed stop-left/target-right: the marker for a position sitting
+  // 2.4% from its stop was drawn hard against the right edge, under the word
+  // "target". A chart that is merely unclear wastes a second; that one read as
+  // the opposite of the truth, in the direction that loses money.
+  const { stop, target } = open
+  const span = stop != null && target != null ? target - stop : null
+  const pos = (v: number) =>
+    span && span !== 0 ? Math.min(100, Math.max(0, ((v - stop!) / span) * 100)) : null
+  const atPrice = span ? pos(price) : null
+  const atEntry = span ? pos(open.entry_price) : null
+
+  return (
+    <div className={cn('mt-2 rounded-sm border px-2.5 py-2', long ? 'border-lc/35 bg-lc/[0.06]' : 'border-lp/35 bg-lp/[0.06]')}>
+      <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
+        <span className={cn('num rounded-sm px-1 text-[11px] font-medium', long ? 'bg-lc/20 text-lc' : 'bg-lp/20 text-lp')}>
+          {open.side}
+        </span>
+        <span className="num text-[13px]">{quote(open.entry_price)}</span>
+        <span className="text-muted-foreground num text-[10px]">{num(open.lots, open.lots >= 100 ? 0 : 2)} lots</span>
+        <span className={cn('num ml-auto text-[15px] font-semibold', usd >= 0 ? 'text-lc' : 'text-lp')}>
+          {signedUsd(usd)}
+        </span>
+        {r != null && (
+          <span className={cn('num text-[11px]', r >= 0 ? 'text-lc' : 'text-lp')}>{signedR(r)}</span>
+        )}
+      </div>
+
+      {span ? (
+        <>
+          {/* stop ......... entry ... now ......... target */}
+          <div className="relative mt-2 h-1.5 rounded-full bg-black/40">
+            <div
+              className="absolute inset-y-0 left-0 rounded-full bg-lp/30"
+              style={{ width: `${atEntry ?? 0}%` }}
+              aria-hidden
+            />
+            {atEntry != null && (
+              <span className="bg-muted-foreground/70 absolute top-1/2 h-3 w-px -translate-y-1/2" style={{ left: `${atEntry}%` }} aria-hidden />
+            )}
+            {atPrice != null && (
+              <span
+                className={cn('absolute top-1/2 size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full ring-2 ring-black/50', usd >= 0 ? 'bg-lc' : 'bg-lp')}
+                style={{ left: `${atPrice}%` }}
+                aria-hidden
+              />
+            )}
+          </div>
+          <div className="text-muted-foreground mt-1 flex justify-between text-[10px]">
+            <span className="num text-lp">stop {quote(open.stop)}</span>
+            <span className="num">{marked ? 'live' : 'at last close'} {quote(price)}</span>
+            <span className="num text-lc">target {quote(open.target)}</span>
+          </div>
+        </>
+      ) : (
+        <div className="text-muted-foreground mt-1.5 text-[10px]">
+          {open.stop == null && open.target == null
+            ? 'self-managed: the strategy owns the exit, so there is no stop or target to sit between'
+            : `stop ${quote(open.stop)} · target ${quote(open.target)} · the desk closes it at the maximum hold if neither is hit`}
+        </div>
+      )}
+
+      <div className="text-muted-foreground/70 mt-1 text-[10px]">
+        worst {signedR(open.mae)} · best {signedR(open.mfe)} · opened {shortStamp(open.entry_time)}
+      </div>
+    </div>
   )
 }
 
@@ -1153,10 +1282,7 @@ function Drilldown({
         {/* The two columns that left the runs table when it became a rail
             picker: both describe this one run rather than compare it to the
             others, so this is where they belonged all along. */}
-        <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
-          <span className="text-muted-foreground text-[10px] tracking-wide uppercase">position</span>
-          <OpenCell run={run} />
-        </div>
+        <PositionBar run={run} live={summary?.live ?? detail.live} />
         <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
           <span className="text-muted-foreground text-[10px] tracking-wide uppercase">guards</span>
           <GuardChips run={run} />

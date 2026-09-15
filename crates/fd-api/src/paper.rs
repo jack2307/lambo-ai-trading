@@ -602,6 +602,15 @@ pub struct OpenDto {
     pub risk: f64,
     /// Marked at the last close less exit costs, before commission and swap.
     pub unrealised_usd_at_last_close: f64,
+    /// Dollars per one unit of price movement: `lots x contract_size`.
+    ///
+    /// Sent so the desk can mark the position against the LIVE tick instead of
+    /// the last close. Without it the client can only repeat a number that is
+    /// up to fifteen minutes old, which is the wrong number to show beside a
+    /// price that is moving — and it cannot be derived from the fields above
+    /// either, because `unrealised / (close - entry)` divides by zero exactly
+    /// when a position opens.
+    pub usd_per_point: f64,
 }
 
 #[derive(Debug, Serialize)]
@@ -768,6 +777,7 @@ fn status_of(data: &Path, run: &PaperRun, rules: &TradingRules, guards: Option<&
         mfe: fd_core::js_round_to(p.mfe / p.risk, 4),
         risk: p.risk,
         unrealised_usd_at_last_close: book.unrealised_usd(rules).unwrap_or(0.0),
+        usd_per_point: p.lots * rules.contract_size,
     });
     // The next blackout the run's guards would act on: the first installed
     // event at or after now with impact at or above the guards' threshold

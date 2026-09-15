@@ -261,6 +261,12 @@ export interface PaperRun {
     entry_time: number
     entry_price: number
     lots: number
+    /**
+     * Dollars per one unit of price movement (`lots x contract_size`), so the
+     * position can be marked against the LIVE tick rather than a close that
+     * may be fifteen minutes old.
+     */
+    usd_per_point: number
     stop: number | null
     target: number | null
     mae: number
