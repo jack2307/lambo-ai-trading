@@ -49,6 +49,10 @@ pub fn router(state: Arc<AppState>, ui: Option<PathBuf>) -> Router {
         // these two: it reads what is about to happen and may ask for less.
         .route("/api/paper/pending", get(paper::pending))
         .route("/api/paper/advice", post(paper::advice))
+        // An entry proposed from outside, for a run whose strategy is
+        // `external`. Fills at the next bar like every rule; cannot arrive
+        // late and still trade; cannot reach a broker.
+        .route("/api/paper/intent", post(paper::intent))
         // The forming candle, pushed. Removes the last of the three polls
         // between a tick in the terminal and the chart on the screen.
         .route("/api/paper/stream", get(paper::stream))

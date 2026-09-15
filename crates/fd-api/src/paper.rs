@@ -49,7 +49,7 @@ use fd_core::types::Bar;
 use fd_indicators::compute_indicators;
 use fd_store::timeframe_ms;
 use fd_strategy::filter::{Filter, Filtered};
-use fd_strategy::registry::{BarContext, Exits, Intent, Params, Registry, Strategy};
+use fd_strategy::registry::{BarContext, Exits, Intent, Params, Registry, Strategy, Side};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
@@ -1549,6 +1549,100 @@ pub async fn advice(
         run.advice = Some(verdict.clone());
     }
     Ok(Json(AdviceResponse { accepted: fresh, size_factor: verdict.size_factor, reason: verdict.reason }))
+}
+
+/// `POST /api/paper/intent` — an entry proposed from outside the process.
+///
+/// The mailbox for a run whose strategy is `external`. See
+/// `crates/fd-strategy/src/external.rs` for why a decider that needs a network
+/// call cannot live inside `on_bar`, and `docs/paper/AI-TRADER.md` for the
+/// campaign this exists to run.
+///
+/// What it cannot do is as important as what it can:
+///
+/// * It **cannot act on the bar it was shown.** The intent goes into the same
+///   `pending` slot every rule uses and fills at the NEXT bar's open.
+/// * It **cannot arrive late and still trade.** `bar_time` names the bar the
+///   decision was made on; if that bar is no longer the run's last, the run
+///   has moved on and the intent is refused. Slowness costs a trade, never a
+///   bad fill.
+/// * It **cannot set an unbounded trade.** The run's strategy is
+///   `Exits::Engine`, so the stop, the target and the maximum hold belong to
+///   the desk.
+/// * It **cannot reach a broker.** This is a paper book. The only code in this
+///   repository that can send an order is `py/live/mt5_executor.py`, and it
+///   refuses any account that is not a demo.
+#[derive(Debug, Deserialize)]
+pub struct IntentRequest {
+    pub run: String,
+    /// The bar the decision was made on, epoch ms — the run's last bar.
+    pub bar_time: i64,
+    /// `LONG` or `SHORT`. There is no third value and no way to express a size.
+    pub side: String,
+    pub stop: Option<f64>,
+    pub target: Option<f64>,
+    #[serde(default)]
+    pub reason: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct IntentResponse {
+    pub accepted: bool,
+    /// Why not, when not: the run's last bar against the one named.
+    pub reason: String,
+}
+
+pub async fn intent(
+    State(state): State<Arc<AppState>>,
+    Json(body): Json<IntentRequest>,
+) -> Result<Json<IntentResponse>, ApiError> {
+    let side = match body.side.to_ascii_uppercase().as_str() {
+        "LONG" => Side::Long,
+        "SHORT" => Side::Short,
+        other => return Err(ApiError::BadRequest(format!("side must be LONG or SHORT, got `{other}`"))),
+    };
+    let mut runs = state.paper.lock().expect("paper runs");
+    let run = runs
+        .get_mut(&body.run)
+        .ok_or_else(|| ApiError::NotFound(format!("no paper run `{}`", body.run)))?;
+
+    // Only a run that has declared itself externally driven. A rule-based book
+    // must never be steerable from outside: its trades are its own or the
+    // comparison between books means nothing.
+    if run.config.strategy != "external" {
+        return Err(ApiError::BadRequest(format!(
+            "run `{}` uses strategy `{}`; only an `external` run takes posted intents",
+            body.run, run.config.strategy
+        )));
+    }
+
+    let last = run.bars.last().map(|b| b.time).unwrap_or(0);
+    if last != body.bar_time {
+        return Ok(Json(IntentResponse {
+            accepted: false,
+            reason: format!("decided on bar {} but the run is on {last}", body.bar_time),
+        }));
+    }
+
+    run.book.decide(Intent::Enter {
+        side,
+        stop: body.stop.filter(|v| v.is_finite()),
+        target: body.target.filter(|v| v.is_finite()),
+        reason: if body.reason.is_empty() { "external".to_string() } else { body.reason.clone() },
+    });
+    record(
+        &state.data,
+        &body.run,
+        &json!({
+            "kind": "intent",
+            "time": body.bar_time,
+            "side": body.side.to_ascii_uppercase(),
+            "stop": body.stop,
+            "target": body.target,
+            "reason": body.reason,
+        }),
+    )?;
+    Ok(Json(IntentResponse { accepted: true, reason: "fills at the next bar's open".to_string() }))
 }
 
 /// The conversation log: its own file, never `fills.jsonl`.

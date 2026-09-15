@@ -56,6 +56,7 @@ pub fn register_all(registry: &mut Registry) {
     registry.register(Box::new(crate::ict::IctSweepMssFvg));
     registry.register(Box::new(crate::orb::OpeningRangeBreakout));
     registry.register(Box::new(crate::pdhl::PreviousDayLevels));
+    registry.register(Box::new(crate::external::External));
     registry.register(Box::new(crate::session_hold::SessionHold));
     registry.register(Box::new(crate::intraday_momentum::IntradayMomentum));
     registry.register(Box::new(crate::vwap_fade::VwapFade));
