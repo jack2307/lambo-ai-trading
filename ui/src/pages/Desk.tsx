@@ -405,6 +405,9 @@ function SummaryStrip({
     let today = 0
     let capped = false
     let blackout: { time: number; name: string } | null = null
+    // The shortest calendar on the desk, because the guard fails per run and a
+    // desk is only as covered as its least covered book.
+    let horizon: { days: number; name: string } | null = null
     for (const run of runs) {
       if (isStale(run, now)) stale += 1
       net += run.net_usd
@@ -417,8 +420,12 @@ function SummaryStrip({
       if (next && (!blackout || next.time < blackout.time)) {
         blackout = { time: next.time, name: next.name ?? next.currency }
       }
+      const days = run.news.horizon_days
+      if (typeof days === 'number' && (horizon === null || days < horizon.days)) {
+        horizon = { days, name: run.news.horizon_name ?? 'the calendar' }
+      }
     }
-    return { stale, net, today, capped, blackout }
+    return { stale, net, today, capped, blackout, horizon }
   }, [runs, now])
 
   if (loading) {
@@ -459,6 +466,17 @@ function SummaryStrip({
           <span>none scheduled</span>
         )}
       </span>
+      {/* A guard that stops guarding on a date nobody is watching is the
+          failure this desk keeps logging. Shown from ninety days out, in the
+          strip rather than in a file, and it goes red inside a month. */}
+      {stats.horizon !== null && stats.horizon.days < 90 && (
+        <span
+          className={cn('num', stats.horizon.days < 30 ? 'text-destructive' : 'text-caution')}
+          title="The first release series to run out. After its last entry the news blackout stops for that release, silently."
+        >
+          {stats.horizon.name} ends in {stats.horizon.days}d
+        </span>
+      )}
       {error && <span className="text-destructive ml-auto truncate">status: {error}</span>}
     </div>
   )

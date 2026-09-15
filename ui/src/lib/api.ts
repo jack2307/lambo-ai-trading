@@ -261,7 +261,19 @@ export interface PaperRun {
   sized_down: number
   skipped_no_atr: number
   gaps: number
-  news: { events_loaded: number; next_blackout: null | { time: number; currency: string; impact: number; name?: string } }
+  news: {
+    events_loaded: number
+    next_blackout: null | { time: number; currency: string; impact: number; name?: string }
+    /** The last event this run's guards could ever act on, and the days to it.
+     *  A calendar is a finite list; the day after its last entry the news guard
+     *  stops guarding without failing and without logging. */
+    horizon?: number | null
+    horizon_days?: number | null
+    /** Which series runs out first — the thing to go and refresh. A long
+     *  series masks a short one, so this is the minimum across names and not
+     *  the last event on the file. */
+    horizon_name?: string | null
+  }
   /** The forming bar on this run's stream, or null when none arrived inside 90 s. */
   live: LiveBar | null
   /** The last ten closed trades. The whole book is on `/api/paper/run/{id}`. */

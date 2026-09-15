@@ -613,6 +613,19 @@ pub struct BlackoutDto {
 pub struct NewsDto {
     pub events_loaded: usize,
     pub next_blackout: Option<BlackoutDto>,
+    /// The LAST event this run's guards would ever act on, and how far away it
+    /// is in days.
+    ///
+    /// A calendar is a finite list, and the day after its last entry the news
+    /// guard stops guarding without failing, without logging, and without
+    /// anybody noticing. The scheduled US layer runs out on 2026-12-10 while
+    /// the Fed's own dates run to 2027-12 — so the number that matters is not
+    /// how long the FILE lasts but how long it lasts **for this run's
+    /// currencies**, which is what this is.
+    pub horizon: Option<i64>,
+    pub horizon_days: Option<i64>,
+    /// Which series runs out first — the thing to go and refresh.
+    pub horizon_name: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -756,10 +769,62 @@ fn status_of(data: &Path, run: &PaperRun, rules: &TradingRules, guards: Option<&
     let min_impact = guards.map_or(3, |g| g.news_min_impact);
     let now = now_ms();
     let events = fd_strategy::news::events();
+    let relevant = |e: &&fd_strategy::news::NewsEvent| {
+        e.impact >= min_impact && e.concerns(Some(&rules.news_currencies))
+    };
     let next_blackout = events
         .iter()
-        .find(|e| e.time >= now && e.impact >= min_impact && e.concerns(Some(&rules.news_currencies)))
+        .find(|e| e.time >= now && relevant(e))
         .map(|e| BlackoutDto { time: e.time, currency: e.currency.clone(), impact: e.impact, name: e.name.clone() });
+    // How much calendar this run has left — and the FIRST series to run out,
+    // not the last.
+    //
+    // The obvious version of this number is a lie. Taking the latest relevant
+    // event gives 2027-12-08, because the Fed publishes its own meeting dates
+    // two years ahead; meanwhile the BLS layer ends 2026-12-10, so CPI and the
+    // employment report stop being blacked out in eighty-six days while the
+    // desk displays four hundred and forty-nine. A long series masks a short
+    // one, and the guard fails per release and not per calendar.
+    //
+    // So: group by event name, take the last date of each series that still
+    // has a future entry, and report the SMALLEST — with the name attached,
+    // because "US CPI ends in 86d" is actionable and "the calendar ends" is
+    // not. A series with no future entry at all is skipped rather than
+    // reported as overdue: `FOMC (unscheduled)` is a record of things that
+    // happened, not a schedule, and its last entry is always in the past.
+    //
+    // And only a series that RECURS has a horizon at all. The live
+    // ForexFactory layer is one week of whatever was on the wire, so each of
+    // its names appears once or twice and every one of them "runs out" in a
+    // few days by design; reported naively, the desk warns that `FOMC
+    // Economic Projections ends in 1d` for ever and the real expiry is buried
+    // under the noise. Twelve entries is a year of a monthly release, and it
+    // separates the four scheduled series (143 to 203 entries each) from the
+    // weekly feed (one or two) and from `FOMC (unscheduled)` (nine, and not a
+    // schedule). A `source` field on NewsEvent would be the exact
+    // discriminator; the in-memory type does not carry one, and a count is
+    // both honest about what it measures and impossible to get wrong.
+    const RECURRING: usize = 12;
+    let mut last_of: BTreeMap<&str, i64> = BTreeMap::new();
+    let mut seen: BTreeMap<&str, usize> = BTreeMap::new();
+    let mut has_future: BTreeMap<&str, bool> = BTreeMap::new();
+    for e in events.iter().filter(relevant) {
+        let slot = last_of.entry(e.name.as_str()).or_insert(e.time);
+        *slot = (*slot).max(e.time);
+        *seen.entry(e.name.as_str()).or_insert(0) += 1;
+        *has_future.entry(e.name.as_str()).or_insert(false) |= e.time >= now;
+    }
+    let soonest = last_of
+        .iter()
+        .filter(|(name, _)| {
+            has_future.get(*name).copied().unwrap_or(false)
+                && seen.get(*name).copied().unwrap_or(0) >= RECURRING
+        })
+        .min_by_key(|(_, t)| **t)
+        .map(|(name, t)| ((*name).to_string(), *t));
+    let horizon_name = soonest.as_ref().map(|(n, _)| n.clone());
+    let horizon = soonest.as_ref().map(|(_, t)| *t);
+    let horizon_days = horizon.map(|t| (t - now) / 86_400_000);
     let skip = book.trades.len().saturating_sub(10);
     RunStatus {
         id: run.config.id(),
@@ -786,7 +851,7 @@ fn status_of(data: &Path, run: &PaperRun, rules: &TradingRules, guards: Option<&
         sized_down: book.sized_down_by_guard,
         skipped_no_atr: book.skipped_no_atr,
         gaps: run.gaps,
-        news: NewsDto { events_loaded: events.len(), next_blackout },
+        news: NewsDto { events_loaded: events.len(), next_blackout, horizon, horizon_days, horizon_name },
         live,
         last_fills: book.trades[skip..].iter().map(TradeDto::from).collect(),
         equity_curve: book.equity_curve.len(),

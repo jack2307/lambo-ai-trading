@@ -222,3 +222,43 @@ Provenance is the same standard as the rest of this directory: every date
 comes from a page that was read, the raw files carry the URL and the fetch
 date in their header, and a release whose time could not be established is
 written `UNKNOWN` and dropped by the parser with a count, never guessed.
+
+
+## The calendar runs out, and the desk now says when
+
+Checked 2026-09-15. The scheduled layer does not end all at once:
+
+| series | last entry on file |
+|---|---|
+| US Employment Situation (NFP) | **2026-12-04** |
+| US CPI | **2026-12-10** |
+| ECB rate decision | 2027-10-28 |
+| FOMC | 2027-12-08 |
+
+The day after a series' last entry, the news guard stops blacking out that
+release — without failing, without logging, and without anybody noticing. So
+`/api/paper/status` now carries `news.horizon`, `horizon_days` and
+`horizon_name`, and the Desk's top strip shows **`US Employment Situation
+(NFP) ends in 80d`** in amber from ninety days out and in red inside thirty.
+
+Two things that number gets right, both found by looking at what it printed:
+
+* **It is the first series to expire, not the last event on the file.** The
+  obvious version reported 449 days, because the Fed publishes its meeting
+  dates two years ahead — a long series masking a short one, while CPI and the
+  employment report were eighty-six days from going unguarded.
+* **Only a recurring series has a horizon.** The live ForexFactory layer is one
+  week of whatever was on the wire, so every one of its names "runs out" in a
+  few days by design. Its second version reported `FOMC Economic Projections
+  ends in 1d`, for ever. A series needs twelve entries to count, which
+  separates the four scheduled ones (143–203 entries) from the weekly feed
+  (one or two) and from `FOMC (unscheduled)` (nine, and not a schedule).
+
+**2027 cannot be collected yet.** `data/news/raw/bls-2027.txt` exists with a
+documented header and **zero rows**: BLS has published no 2027 schedule as of
+2026-09-15. `schedule/2027/home.htm` is a genuine 404, `schedule/news_release/`
+links 2026 only, and both `cpi.htm` and `empsit.htm` stop at reference month
+November 2026. The BLS rule (the employment report on the third Friday after
+the reference week) may *check* a list and never generate one, so the file is
+empty on purpose and the gap stays visible. BLS posts the next year in the
+autumn of the preceding one — re-check from October 2026.

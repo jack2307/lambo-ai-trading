@@ -1,0 +1,29 @@
+# source: NO 2027 BLS SCHEDULE IS PUBLISHED AS OF 2026-09-15. Pages actually read (WebFetch 2026-09-15): https://www.bls.gov/schedule/2027/home.htm -> HTTP 404 (the per-year page does not exist); https://www.bls.gov/schedule/2027/01_sched.htm -> HTTP 404; https://www.bls.gov/schedule/news_release/ -> links February 2026 .. December 2026 and "ENTIRE YEAR, 2026" only, no 2027 link; https://www.bls.gov/schedule/news_release/cpi.htm -> 13 rows, November 2025 .. November 2026 reference months, last release Dec. 10, 2026, no 2027 row; https://www.bls.gov/schedule/news_release/empsit.htm -> 13 rows, November 2025 .. November 2026 reference months, last release Dec. 04, 2026, no 2027 row; https://www.bls.gov/schedule/news_release/current_year.asp -> covers 2026, no next-year link or note; https://www.bls.gov/schedule/ -> 2026 only, page last modified February 18, 2026; https://www.bls.gov/schedule/schedule/by_prog/all_sched.htm -> September 2026 only, latest date listed October 2, 2026; https://www.bls.gov/bls/archived_sched.htm -> 2000..2025 per-year pages plus a pre-2000 PDF, no 2027; https://www.bls.gov/bls/bls2027sched.pdf -> HTTP 404; https://www.bls.gov/cpi/ -> no 2027 text, no multi-year advance schedule.
+# columns: release name | reference month | release date (as printed) | release time (ET, as printed)
+#
+# ZERO ROWS. Every 2027 Consumer Price Index and Employment Situation date is
+# missing: reference months December 2026 through November 2027 for both
+# releases (24 rows, releases falling January 2027 through December 2027).
+#
+# Fetcher note: plain curl with a browser User-Agent gets HTTP 403 from
+# www.bls.gov (Akamai bot block). WebFetch reaches the origin and was the
+# working route; the 404s above are genuine origin 404s, not the block --
+# the control fetch of https://www.bls.gov/schedule/2026/home.htm through the
+# same route loaded and showed 2026 only (last CPI: December 10, 2026, 08:30 AM).
+#
+# The release TIME is not in doubt and is not the gap: every row on every BLS
+# page read today prints 08:30 AM for both releases. The DATES are the gap, and
+# they are deliberately not written here. The BLS rule (Employment Situation on
+# the third Friday after the reference week; CPI mid-month) may check a list,
+# never generate one -- see docs/news/README.md and the instrument-fault record.
+#
+# BLS posts the next calendar year in the autumn of the preceding year (the
+# 2026 per-year page is itself stamped February 18, 2026). Re-check
+# https://www.bls.gov/schedule/news_release/ and
+# https://www.bls.gov/bls/archived_sched.htm from roughly October 2026; when a
+# 2027 page appears, replace this file with its rows and run
+# `python py/ingest/news_calendar.py --from-raw`.
+#
+# Operational consequence, unchanged by this file: the US BLS layer of
+# data/news/events.parquet still ends 2026-12-10. Any paper or demo book still
+# running after that date has NO CPI or Employment Situation blackout.
