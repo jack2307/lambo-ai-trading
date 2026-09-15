@@ -1,0 +1,336 @@
+"""A panel of advisors that may refuse a trade or make it smaller. Nothing else.
+
+    python py/live/advisor.py --api=http://127.0.0.1:8138 --poll=20
+    python py/live/advisor.py --dry-run          # decide and print, post nothing
+    python py/live/advisor.py --rules-only       # no model calls at all
+
+It polls `GET /api/paper/pending` for entries about to fill, asks each agent in
+turn, reconciles them, and posts one verdict to `POST /api/paper/advice` with
+the whole conversation attached.
+
+**Read `docs/paper/ADVISOR.md` before changing anything here.** The contract in
+that file is enforced on the Rust side — this process has no way to choose a
+side, move a stop, set a price, enlarge a trade, or open one nobody asked for,
+because the route it posts to has no field for any of it. What is left is one
+number in [0, 1], and the only honest thing this file can get wrong is that
+number.
+
+**The panel is conservative by construction.** The verdict is the MINIMUM of
+the agents' numbers, so any one of them can veto and none can overrule a
+refusal. That is the right asymmetry for a thing whose whole job is to say no:
+an advisor that could be talked round by a more confident colleague is just a
+slower way of allowing everything.
+
+**If this process dies, the desk trades exactly as the strategy decided.** No
+advice is posted, the intent fills unmodified, and nothing retries. That is the
+declared default and it is worth more than any uptime this script could offer.
+"""
+
+from __future__ import annotations
+
+import argparse
+import datetime as dt
+import json
+import os
+import sys
+import time
+import urllib.error
+import urllib.request
+
+# The model this panel speaks with. Every turn records the model it used, so a
+# change here is visible in the log rather than inferred from a date.
+MODEL = "claude-opus-5"
+ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
+ANTHROPIC_VERSION = "2023-06-01"
+
+#: Nothing in the request may be larger than this, whatever a model says.
+MAX_FACTOR = 1.0
+
+
+def post_json(url: str, payload: dict, timeout: float = 30.0, headers: dict | None = None) -> dict:
+    body = json.dumps(payload).encode("utf-8")
+    head = {"Content-Type": "application/json"}
+    head.update(headers or {})
+    req = urllib.request.Request(url, data=body, headers=head, method="POST")
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        return json.loads(r.read().decode("utf-8"))
+
+
+def get_json(url: str, timeout: float = 15.0):
+    with urllib.request.urlopen(url, timeout=timeout) as r:
+        return json.loads(r.read().decode("utf-8"))
+
+
+# --------------------------------------------------------------- the agents
+
+#: Each agent gets one job and is judged on it alone.
+#:
+#: Separate agents rather than one prompt with three paragraphs, because the
+#: log records a size_factor per agent: after a few hundred consultations the
+#: question "were the news objections worth listening to" has an answer, and an
+#: agent that is always wrong can be dropped on evidence. One prompt produces
+#: one verdict and no way to attribute it.
+AGENTS: list[tuple[str, str]] = [
+    (
+        "risk",
+        """You are the risk advisor on a paper trading desk. A strategy has already decided to take
+the trade below. You cannot change its direction, its stop, its target or its price, and you
+cannot make it larger. You may only let it through at full size, make it smaller, or refuse it.
+
+Refuse or cut ONLY for a reason visible in what you are shown. Do not refuse because you dislike
+the strategy, because the market "feels" uncertain, or because you would have traded differently:
+the strategy's edge, if it has one, is not yours to second-guess and this desk has thirty closed
+registrations saying that overriding a rule on instinct is how a rule stops being testable.
+
+Good reasons to cut or refuse: the book is already deep in drawdown today; this run has just lost
+several in a row and is compounding into it; the position would be far larger than the recent
+norm; the stop is implausibly wide or narrow against the bars you can see.""",
+    ),
+    (
+        "news",
+        """You are the news advisor on a paper trading desk. The engine already enforces a hard
+blackout around scheduled high-impact releases, so a trade reaching you is one the calendar
+allowed. Your job is the thing the calendar cannot see.
+
+You cannot change direction, stop, target or price, and you cannot make the trade larger. You may
+only allow, cut, or refuse.
+
+Cut or refuse only when the timing itself is the problem: an hour the feed is thin, a session
+rollover, the last bars before a weekend, or an event you have specific reason to believe sits
+inside the hold. If nothing about the clock is wrong, allow at 1.0 and say so plainly. An advisor
+that finds a reason every time is an advisor with no information in it.""",
+    ),
+    (
+        "arbiter",
+        """You are the arbiter. You are shown the same trade and what the other advisors said.
+
+Your job is NOT to average them. It is to check that any cut or refusal rests on something
+actually visible in the trade, and to strike down an objection that does not. You may be more
+permissive than your colleagues, never less: the desk takes the minimum of all verdicts, so a
+refusal you disagree with still stands. Say clearly which objection you accept and which you
+think is noise, because that sentence is what gets scored later.""",
+    ),
+]
+
+SCHEMA = """
+Answer with JSON and nothing else:
+
+  {"size_factor": <number between 0 and 1>, "reason": "<one sentence, under 200 characters>"}
+
+1.0 means take the trade as the strategy sized it. 0.0 means refuse it. Anything between makes it
+smaller by that fraction. There is no way to ask for more than 1.0 and a larger number is clamped.
+"""
+
+
+def brief(entry: dict) -> str:
+    """The trade, as the panel sees it. Facts only; no opinion of mine in it."""
+    bars = entry.get("bars") or []
+    tail = bars[-24:]
+    rows = "\n".join(
+        f"  {dt.datetime.utcfromtimestamp(t / 1000):%Y-%m-%d %H:%MZ}  O {o:g}  H {h:g}  L {lo:g}  C {c:g}"
+        for t, o, h, lo, c in tail
+    )
+    sig = entry.get("signal_bar") or (0, 0, 0, 0, 0)
+    stop = entry.get("stop")
+    target = entry.get("target")
+    return f"""RUN        {entry['run']}  ({entry.get('label') or 'no label'})
+INSTRUMENT {entry['market']}:{entry['tf']}
+STRATEGY   {entry['strategy']}  params {json.dumps(entry.get('params', {}), sort_keys=True)}
+FILTERS    {', '.join(entry.get('filters') or []) or 'none'}
+
+THE TRADE  {entry['side']} — fills at the open of the next bar
+  stop     {stop if stop is not None else 'none'}
+  target   {target if target is not None else 'none (the strategy manages its own exit)'}
+  the strategy's own reason: {entry.get('reason', '')}
+
+SIGNAL BAR {dt.datetime.utcfromtimestamp(sig[0] / 1000):%Y-%m-%d %H:%MZ}  close {sig[4]:g}
+
+THIS BOOK SO FAR
+  advised    {entry.get('book_trades', 0)} trades, net ${entry.get('book_net_usd', 0):+.2f}
+  unadvised  {entry.get('shadow_trades', 0)} trades, net ${entry.get('shadow_net_usd', 0):+.2f}
+  (the second is the same strategy with no advisor; the gap is what advice has cost or saved)
+
+LAST {len(tail)} BARS, oldest first
+{rows}
+"""
+
+
+def ask(prompt: str, api_key: str, timeout: float) -> tuple[str, int]:
+    """One model call. Returns (text, latency_ms); raises on failure."""
+    started = time.monotonic()
+    out = post_json(
+        ANTHROPIC_URL,
+        {
+            "model": MODEL,
+            "max_tokens": 512,
+            "messages": [{"role": "user", "content": prompt}],
+        },
+        timeout=timeout,
+        headers={"x-api-key": api_key, "anthropic-version": ANTHROPIC_VERSION},
+    )
+    text = "".join(block.get("text", "") for block in out.get("content", []) if block.get("type") == "text")
+    return text, int((time.monotonic() - started) * 1000)
+
+
+def parse(text: str) -> tuple[float, str]:
+    """The number and the sentence, or a full-size allow.
+
+    A reply this cannot read is NOT treated as a refusal. A parser bug that
+    silently stopped the desk trading would look exactly like a quiet market,
+    and the whole design says the failure mode of an advisor is no advice.
+    """
+    start, end = text.find("{"), text.rfind("}")
+    if start < 0 or end <= start:
+        return 1.0, f"unparseable reply, allowed at full size: {text[:120]!r}"
+    try:
+        obj = json.loads(text[start : end + 1])
+        factor = float(obj.get("size_factor", 1.0))
+    except (ValueError, TypeError) as e:
+        return 1.0, f"unparseable reply, allowed at full size: {e}"
+    if factor != factor:  # NaN
+        return 1.0, "reply was not a number, allowed at full size"
+    return max(0.0, min(MAX_FACTOR, factor)), str(obj.get("reason", ""))[:200]
+
+
+def rules_only(entry: dict) -> tuple[float, str]:
+    """The panel with no model in it: a stand-in, and a control.
+
+    Worth keeping permanently rather than deleting once the models work. It is
+    the thing a model advisor has to beat — if a panel of three models cannot
+    outscore four lines of arithmetic, the log will say so, and that is exactly
+    the kind of question this whole apparatus exists to answer.
+    """
+    if entry.get("book_net_usd", 0.0) <= -300.0:
+        return 0.0, "this book is already 300 down; no new risk today"
+    if entry.get("stop") is None:
+        return 0.5, "no stop on the entry; half size"
+    return 1.0, "nothing in the rules objects"
+
+
+def consult(entry: dict, api_key: str | None, timeout: float) -> tuple[float, str, list[dict]]:
+    """Every agent in turn. Returns (verdict, reason, transcript)."""
+    facts = brief(entry)
+    transcript: list[dict] = []
+
+    if not api_key:
+        factor, reason = rules_only(entry)
+        transcript.append(
+            {
+                "agent": "rules",
+                "model": "none",
+                "prompt": facts,
+                "response": json.dumps({"size_factor": factor, "reason": reason}),
+                "latency_ms": 0,
+                "size_factor": factor,
+                "reason": reason,
+            }
+        )
+        return factor, reason, transcript
+
+    said: list[str] = []
+    for name, role in AGENTS:
+        earlier = ""
+        if said:
+            earlier = "\n\nWHAT THE OTHER ADVISORS SAID\n" + "\n".join(said)
+        prompt = f"{role}\n\n{facts}{earlier}\n{SCHEMA}"
+        try:
+            text, ms = ask(prompt, api_key, timeout)
+            factor, reason = parse(text)
+        except Exception as e:  # noqa: BLE001
+            # One agent failing is not the panel failing. It is recorded as a
+            # full-size allow so it cannot silently become a veto, and the
+            # error is kept in the transcript where a reader will find it.
+            text, ms, factor, reason = f"ERROR: {type(e).__name__}: {e}", 0, 1.0, "agent unavailable"
+        transcript.append(
+            {
+                "agent": name,
+                "model": MODEL,
+                "prompt": prompt,
+                "response": text,
+                "latency_ms": ms,
+                "size_factor": factor,
+                "reason": reason,
+            }
+        )
+        said.append(f"  {name}: {factor:.2f} — {reason}")
+
+    # The minimum, not the mean: any one advisor can refuse and none can
+    # overrule a refusal. See the module docstring.
+    worst = min(transcript, key=lambda t: t["size_factor"])
+    return worst["size_factor"], f"{worst['agent']}: {worst['reason']}", transcript
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
+    ap.add_argument("--api", default="http://127.0.0.1:8138")
+    ap.add_argument("--poll", type=float, default=20.0, help="seconds between polls")
+    ap.add_argument("--timeout", type=float, default=45.0, help="seconds for one model call")
+    ap.add_argument("--dry-run", action="store_true", help="decide and print; post nothing")
+    ap.add_argument("--rules-only", action="store_true", help="no model calls; use the arithmetic control")
+    ap.add_argument("--once", action="store_true", help="one pass, then exit")
+    args = ap.parse_args()
+
+    api_key = None if args.rules_only else os.environ.get("ANTHROPIC_API_KEY")
+    if not args.rules_only and not api_key:
+        print("no ANTHROPIC_API_KEY in the environment; falling back to --rules-only", flush=True)
+    print(
+        f"advisor: polling {args.api}/api/paper/pending every {args.poll:g}s; "
+        f"{'rules only' if not api_key else f'{len(AGENTS)} agents on {MODEL}'}"
+        f"{' (dry run, posting nothing)' if args.dry_run else ''}",
+        flush=True,
+    )
+
+    seen: set[str] = set()
+    while True:
+        try:
+            entries = get_json(f"{args.api}/api/paper/pending")
+        except Exception as e:  # noqa: BLE001
+            print(f"pending: {type(e).__name__}: {e}", flush=True)
+            entries = []
+
+        for entry in entries:
+            intent = entry["intent_id"]
+            # Already answered, by this process or another. Asking twice would
+            # cost model calls and could only overwrite one verdict with
+            # another about the same unchanged facts.
+            if intent in seen or entry.get("advised"):
+                continue
+            factor, reason, transcript = consult(entry, api_key, args.timeout)
+            seen.add(intent)
+            stamp = dt.datetime.now(dt.timezone.utc).strftime("%H:%M:%SZ")
+            verdict = "VETO" if factor <= 0 else ("cut" if factor < 1 else "allow")
+            print(f"{stamp} {entry['run']:16s} {entry['side']:5s} {verdict:5s} {factor:.2f} — {reason}", flush=True)
+            if args.dry_run:
+                continue
+            try:
+                reply = post_json(
+                    f"{args.api}/api/paper/advice",
+                    {
+                        "run": entry["run"],
+                        "intent_id": intent,
+                        "size_factor": factor,
+                        "reason": reason,
+                        "transcript": transcript,
+                    },
+                )
+                if not reply.get("accepted"):
+                    # The intent filled while the panel was thinking. Logged on
+                    # the server either way; here it is a latency measurement.
+                    print(f"   too late for {intent}; the bar had already filled", flush=True)
+            except Exception as e:  # noqa: BLE001
+                print(f"   advice POST failed: {type(e).__name__}: {e}", flush=True)
+
+        # Keep the memory of what has been answered from growing without bound
+        # over a long run; an intent id names a bar and never comes back.
+        if len(seen) > 4000:
+            seen = set(list(seen)[-1000:])
+        if args.once:
+            return 0
+        time.sleep(args.poll)
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main())
+    except KeyboardInterrupt:
+        sys.exit(0)

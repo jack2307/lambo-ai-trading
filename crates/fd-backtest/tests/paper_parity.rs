@@ -81,7 +81,7 @@ fn paper_run(bars: &[Bar], strategy: &dyn Strategy, params: &Params, rules: &Tra
             None => atr.get(i).copied(),
         }
         .filter(|v| v.is_finite());
-        book.step(bar, atr_prev, rules, guards, bar_ms, |position| {
+        book.step(bar, atr_prev, rules, guards, bar_ms, None, |position| {
             if i < warmup {
                 return Intent::None;
             }

@@ -43,6 +43,7 @@ use std::sync::Arc;
 use axum::Json;
 use axum::extract::{Path as PathParam, Query, State};
 use fd_backtest::engine::{ensure_fallback_atr, sizing_atr_key};
+use fd_backtest::paper::Advice;
 use fd_backtest::{Guards, PaperBook, StepReport, Trade, TradingRules};
 use fd_core::types::Bar;
 use fd_indicators::compute_indicators;
@@ -182,6 +183,36 @@ pub struct PaperRun {
     /// posted.
     pub bars: Vec<Bar>,
     pub book: PaperBook,
+    /// **The counterfactual.** The same strategy, on the same bars, under the
+    /// same guards, that never hears an advisor.
+    ///
+    /// This is what makes an advisor answerable. Without it a veto is an
+    /// opinion with no outcome: the trade did not happen, so nobody can say
+    /// whether refusing it saved money or cost it, and a log of such opinions
+    /// teaches nothing however long it runs. With it, every intervention has a
+    /// measurable price — the difference between these two books IS the
+    /// advisor's effect, in dollars, over exactly the same market.
+    ///
+    /// It holds its own position and can therefore diverge: once one book
+    /// takes a trade the other refused, the strategy is asked from two
+    /// different states. That divergence is the answer, not a bug in it.
+    /// `None` until the first bar after this run was created or reloaded, then
+    /// **a clone of the advised book at that instant**.
+    ///
+    /// Cloning rather than starting empty is what makes the comparison honest
+    /// on a run that already has history: no advisor has ever spoken to it, so
+    /// the two books were identical up to this moment by construction, and
+    /// seeding the counterfactual with that shared past means the difference
+    /// between them from here on is caused by advice and by nothing else. A
+    /// shadow started empty beside a book with fourteen trades would read as a
+    /// $200 advisor bill on its first day.
+    #[serde(default)]
+    pub shadow: Option<PaperBook>,
+    /// The verdict waiting for the pending intent, if an advisor has posted
+    /// one. Taken when the intent fills, so a stale verdict cannot outlive
+    /// the intent it was about.
+    #[serde(default)]
+    pub advice: Option<Advice>,
     /// Bars posted and accepted since the start.
     pub bars_seen: usize,
     /// Bars the store supplied at the start.
@@ -195,7 +226,7 @@ pub enum Accepted {
     /// The bar's time is the last bar's: already seen, nothing done.
     Seen,
     /// Appended and stepped.
-    Stepped { report: StepReport, gap: Option<usize> },
+    Stepped { report: StepReport, gap: Option<usize>, advice: Option<Advice> },
 }
 
 /// A bar's prices must be finite and ordered; checked once per POST, not
@@ -208,6 +239,18 @@ fn check_bar(bar: &Bar) -> Result<(), ApiError> {
 }
 
 impl PaperRun {
+    /// A stable name for the intent currently pending.
+    ///
+    /// The run, and the bar whose close produced the intent. An advisor asks
+    /// about this string and answers with it, so a verdict that arrives after
+    /// the intent has filled names a bar that is no longer last and is
+    /// dropped rather than applied to whatever is pending now. That is the
+    /// whole of the staleness protection and it needs no clock.
+    #[must_use]
+    pub fn pending_id(&self) -> String {
+        format!("{}:{}", self.config.id, self.bars.last().map_or(0, |b| b.time))
+    }
+
     /// One closed bar. `Err` for a bar older than the last or malformed;
     /// `Ok(Seen)` for the last bar again.
     pub fn accept(
@@ -236,6 +279,16 @@ impl PaperRun {
             }
         }
 
+        // Read BEFORE the arriving bar is pushed: the pending intent belongs to
+        // the bar that is still last, and that is the name the advisor saw.
+        let pending_id = self.pending_id();
+
+        // And the counterfactual is taken BEFORE this bar is stepped, so it
+        // never inherits a fill that advice has already touched.
+        if self.shadow.is_none() {
+            self.shadow = Some(self.book.clone());
+        }
+
         self.bars.push(bar);
         if self.bars.len() > self.config.window.max(1) {
             let excess = self.bars.len() - self.config.window.max(1);
@@ -256,14 +309,32 @@ impl PaperRun {
         let resolved: Vec<&[f64]> = keys.iter().map(|k| ind.get(k).map_or(&[][..], |s| &s[..])).collect();
         let warmup = strategy.warmup(params);
 
-        let report = self.book.step(&bars[i], atr_prev, rules, guards, bar_ms, |position| {
+        // The advice is consumed here and nowhere else: an advisor that posted
+        // about an intent which has since been withdrawn finds it already
+        // gone, and an intent nobody advised on fills exactly as the strategy
+        // decided it. The only failure mode of a dead advisor is no advice.
+        let advice = self.advice.take().filter(|a| a.intent_id == pending_id);
+        let report = self.book.step(&bars[i], atr_prev, rules, guards, bar_ms, advice.as_ref(), |position| {
             if i < warmup {
                 return Intent::None;
             }
             let ctx = BarContext { bar: &bars[i], i, bars, ind: &ind, series: &resolved, options: None, position, params };
             strategy.on_bar(&ctx)
         });
-        Ok(Accepted::Stepped { report, gap })
+
+        // The same bar through the book that never hears anyone. Stepped after
+        // the advised one and never before, so a panic here could not leave the
+        // real book half-advanced.
+        let shadow = self.shadow.as_mut().expect("seeded above");
+        shadow.step(&bars[i], atr_prev, rules, guards, bar_ms, None, |position| {
+            if i < warmup {
+                return Intent::None;
+            }
+            let ctx = BarContext { bar: &bars[i], i, bars, ind: &ind, series: &resolved, options: None, position, params };
+            strategy.on_bar(&ctx)
+        });
+
+        Ok(Accepted::Stepped { report, gap, advice })
     }
 }
 
@@ -883,6 +954,9 @@ pub async fn start(State(state): State<Arc<AppState>>, Json(request): Json<Start
     }
     let run = PaperRun {
         book: PaperBook::new(&rules, strategy.exits() == Exits::Strategy),
+        // Cloned from the book on its first bar; see the field's own note.
+        shadow: None,
+        advice: None,
         started_at: now_ms(),
         warmup_bars: history.len(),
         bars: history,
@@ -916,7 +990,7 @@ fn feed_run(state: &AppState, run: &mut PaperRun, bar: Bar) -> Result<RunBarResp
     let (strategy, params) = resolve(&state.registry, &run.config, &rules.news_currencies)?;
     let bar_ms = timeframe_ms(&run.config.tf).unwrap_or(0);
 
-    let (report, gap) = match run.accept(bar, &strategy, &params, &rules, guards.as_ref(), bar_ms)? {
+    let (report, gap, applied) = match run.accept(bar, &strategy, &params, &rules, guards.as_ref(), bar_ms)? {
         Accepted::Seen => {
             return Ok(RunBarResponse {
                 id,
@@ -929,7 +1003,7 @@ fn feed_run(state: &AppState, run: &mut PaperRun, bar: Bar) -> Result<RunBarResp
                 gap: None,
             });
         }
-        Accepted::Stepped { report, gap } => (report, gap),
+        Accepted::Stepped { report, gap, advice } => (report, gap, advice),
     };
 
     persist(&state.data, run)?;
@@ -938,6 +1012,30 @@ fn feed_run(state: &AppState, run: &mut PaperRun, bar: Bar) -> Result<RunBarResp
     }
     if let Some(why) = &report.refused {
         record(&state.data, &id, &json!({ "kind": "refused", "time": bar.time, "reason": why }))?;
+    }
+    // The advisor's own line, and the shadow book beside it. Written whether
+    // the verdict changed the trade or waved it through, because "the panel
+    // looked and allowed it" is the record that makes an allow answerable
+    // later — a log of only the interventions cannot be scored.
+    if let Some(advice) = &applied {
+        record(
+            &state.data,
+            &id,
+            &json!({
+                "kind": "advice",
+                "time": bar.time,
+                "intent_id": advice.intent_id,
+                "size_factor": advice.size_factor,
+                "reason": advice.reason,
+                "applied": report.advice.is_some(),
+                "vetoed": advice.vetoes(),
+                // The counterfactual's running total at this instant. The
+                // difference between the two is the advisor's bill to date.
+                "book_net_usd": fd_core::js_round_to(run.book.equity - rules.starting_equity_usd, 2),
+                "shadow_net_usd": run.shadow.as_ref().map(|s| fd_core::js_round_to(s.equity - rules.starting_equity_usd, 2)),
+                "shadow_trades": run.shadow.as_ref().map_or(0, |s| s.trades.len()),
+            }),
+        )?;
     }
     if report.no_risk {
         record(&state.data, &id, &json!({ "kind": "refused", "time": bar.time, "reason": "NO_RISK_UNIT" }))?;
@@ -1172,4 +1270,193 @@ pub async fn detail(
     let (indicators, series) = overlays(&state.registry, &run.config, &rules, &run.bars, skip);
 
     Ok(Json(RunDetail { run: status, live, equity_curve, fills, events, bars, indicators, series }))
+}
+
+/* ------------------------------------------------ the advisor's two routes */
+
+/// One run with an entry waiting to fill, as an advisor needs to see it.
+///
+/// Everything here is already known to the run: nothing is computed for the
+/// advisor's benefit and nothing is hidden from it. The one thing it never
+/// receives is a way to act — there is no field on the reply it posts back in
+/// which a side, a price, or a larger size could be expressed.
+#[derive(Debug, Serialize)]
+pub struct PendingEntry {
+    pub run: String,
+    pub intent_id: String,
+    pub market: String,
+    pub tf: String,
+    pub strategy: String,
+    pub label: Option<String>,
+    pub params: BTreeMap<String, f64>,
+    pub filters: Vec<String>,
+    /// LONG or SHORT, the stop and target the strategy set, and the sentence
+    /// it wrote for taking the trade.
+    pub side: String,
+    pub stop: Option<f64>,
+    pub target: Option<f64>,
+    pub reason: String,
+    /// The bar whose close produced the intent; the fill is the next open.
+    pub signal_bar: (i64, f64, f64, f64, f64),
+    /// The tail of the window, oldest first, so a model can see the shape.
+    pub bars: Vec<(i64, f64, f64, f64, f64)>,
+    /// What this book has done so far, and what the unadvised one has.
+    pub book_trades: usize,
+    pub book_net_usd: f64,
+    pub shadow_trades: usize,
+    pub shadow_net_usd: f64,
+    /// A verdict already posted for this same intent, if one has been.
+    pub advised: bool,
+}
+
+/// `GET /api/paper/pending` — every run whose next bar would open a trade.
+///
+/// The advisor polls this. It is deliberately a poll and not a push: the model
+/// lives outside this process, on the other side of a socket that can be down
+/// for an hour without the desk noticing, and a bar that fills unadvised is
+/// the correct behaviour rather than an error to retry.
+pub async fn pending(State(state): State<Arc<AppState>>) -> Result<Json<Vec<PendingEntry>>, ApiError> {
+    let runs = state.paper.lock().expect("paper runs");
+    let mut out = Vec::new();
+    for run in runs.values() {
+        let Some(Intent::Enter { side, stop, target, reason }) = run.book.pending() else { continue };
+        let (rules, _) = rules_and_guards(&state, &run.config)?;
+        let Some(last) = run.bars.last() else { continue };
+        let tail: Vec<_> =
+            run.bars.iter().rev().take(120).rev().map(|b| (b.time, b.open, b.high, b.low, b.close)).collect();
+        let intent_id = run.pending_id();
+        out.push(PendingEntry {
+            run: run.config.id(),
+            advised: run.advice.as_ref().is_some_and(|a| a.intent_id == intent_id),
+            intent_id,
+            market: run.config.market.clone(),
+            tf: run.config.tf.clone(),
+            strategy: run.config.strategy.clone(),
+            label: run.config.label.clone(),
+            params: run.config.params.clone(),
+            filters: run.config.filters.clone(),
+            side: format!("{side:?}").to_uppercase(),
+            stop: *stop,
+            target: *target,
+            reason: reason.clone(),
+            signal_bar: (last.time, last.open, last.high, last.low, last.close),
+            bars: tail,
+            book_trades: run.book.trades.len(),
+            book_net_usd: fd_core::js_round_to(run.book.equity - rules.starting_equity_usd, 2),
+            shadow_trades: run.shadow.as_ref().map_or(0, |s| s.trades.len()),
+            shadow_net_usd: run
+                .shadow
+                .as_ref()
+                .map_or(0.0, |s| fd_core::js_round_to(s.equity - rules.starting_equity_usd, 2)),
+        });
+    }
+    Ok(Json(out))
+}
+
+/// One agent's turn in the panel, exactly as it happened.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct Turn {
+    /// Which advisor spoke: `risk`, `news`, `arbiter`.
+    pub agent: String,
+    pub model: String,
+    /// The prompt as sent and the reply as received, both whole.
+    ///
+    /// Stored unabridged on purpose. A summary of a prompt cannot be replayed
+    /// against a changed prompt, and replay is the only way a past mistake
+    /// gets fixed rather than merely counted.
+    pub prompt: String,
+    pub response: String,
+    #[serde(default)]
+    pub latency_ms: i64,
+    /// What this agent alone would have done, before the panel reconciled.
+    #[serde(default = "one")]
+    pub size_factor: f64,
+    #[serde(default)]
+    pub reason: String,
+}
+
+fn one() -> f64 {
+    1.0
+}
+
+/// `POST /api/paper/advice` — a panel's verdict on one pending intent.
+#[derive(Debug, Deserialize)]
+pub struct AdviceRequest {
+    pub run: String,
+    pub intent_id: String,
+    /// The panel's reconciled number. Clamped to `[0, 1]` on arrival, so a
+    /// service that tries to scale a trade up is capped rather than trusted:
+    /// this route is incapable of making a position larger than the strategy
+    /// asked for.
+    pub size_factor: f64,
+    pub reason: String,
+    /// Every turn, in order. May be empty for a rule-based advisor.
+    #[serde(default)]
+    pub transcript: Vec<Turn>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct AdviceResponse {
+    pub accepted: bool,
+    /// The number actually stored, after clamping.
+    pub size_factor: f64,
+    pub reason: String,
+}
+
+pub async fn advice(
+    State(state): State<Arc<AppState>>,
+    Json(body): Json<AdviceRequest>,
+) -> Result<Json<AdviceResponse>, ApiError> {
+    let mut runs = state.paper.lock().expect("paper runs");
+    let run =
+        runs.get_mut(&body.run).ok_or_else(|| ApiError::NotFound(format!("no paper run `{}`", body.run)))?;
+
+    let verdict = Advice::new(body.intent_id.clone(), body.size_factor, body.reason.clone());
+    // Stale or mistaken: the intent this names is not the one pending. Logged
+    // anyway and applied to nothing — a verdict that arrived too late is a
+    // fact about the advisor's latency and is worth keeping.
+    let current = run.pending_id();
+    let fresh = current == body.intent_id && matches!(run.book.pending(), Some(Intent::Enter { .. }));
+
+    log_consultation(
+        &state.data,
+        &body.run,
+        &json!({
+            "kind": "consultation",
+            "at": now_ms(),
+            "intent_id": body.intent_id,
+            "pending_now": current,
+            "applied": fresh,
+            "size_factor": verdict.size_factor,
+            "raw_size_factor": body.size_factor,
+            "reason": verdict.reason,
+            "transcript": body.transcript,
+        }),
+    )?;
+
+    if fresh {
+        run.advice = Some(verdict.clone());
+    }
+    Ok(Json(AdviceResponse { accepted: fresh, size_factor: verdict.size_factor, reason: verdict.reason }))
+}
+
+/// The conversation log: its own file, never `fills.jsonl`.
+///
+/// Kept apart because the two have different lifetimes and different readers.
+/// `fills.jsonl` is what the book did and is replayed on restart; this is what
+/// was said about it, is never replayed, and will be orders of magnitude
+/// larger once whole prompts are in it. Mixing them would make the book's own
+/// reload scan megabytes of transcript to find its trades.
+fn log_consultation(data: &Path, id: &str, event: &serde_json::Value) -> Result<(), ApiError> {
+    let dir = run_dir(data, id);
+    std::fs::create_dir_all(&dir).map_err(|e| ApiError::Internal(format!("paper: {}: {e}", dir.display())))?;
+    let path = dir.join("advice.jsonl");
+    let mut file = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&path)
+        .map_err(|e| ApiError::Internal(format!("paper: {}: {e}", path.display())))?;
+    use std::io::Write as _;
+    writeln!(file, "{event}").map_err(|e| ApiError::Internal(format!("paper: {}: {e}", path.display())))?;
+    Ok(())
 }

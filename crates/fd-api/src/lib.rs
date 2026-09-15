@@ -45,6 +45,10 @@ pub fn router(state: Arc<AppState>, ui: Option<PathBuf>) -> Router {
         .route("/api/paper/stop", post(paper::stop))
         .route("/api/paper/status", get(paper::status))
         .route("/api/paper/run/{id}", get(paper::detail))
+        // The advisor lives outside this process and speaks only through
+        // these two: it reads what is about to happen and may ask for less.
+        .route("/api/paper/pending", get(paper::pending))
+        .route("/api/paper/advice", post(paper::advice))
         .with_state(state);
 
     match ui.filter(|dir| dir.is_dir()) {
