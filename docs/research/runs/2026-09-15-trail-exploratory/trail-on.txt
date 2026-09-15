@@ -1,0 +1,29 @@
+== every method at its default parameters ==
+strategy              trades     win%    profit   expect      maxDD$
+maxpain-magnet             9    77.8%     6.846    0.661         103
+tsmom                     17    41.2%     2.084    0.444         230
+rsi2-pullback           2726    51.1%     1.031    0.019        4742
+rsi-reversion           1542    51.0%     1.014    0.013        5694
+orb                      589    47.7%     1.002    0.006        2969
+macd-cross              4221    49.3%     1.000    0.006        7941
+ema-cross               1229    48.2%     0.999    0.005        4573
+squeeze-break            712    48.6%     0.986   -0.001        3165
+volume-thrust           1241    48.2%     0.971   -0.008        3585
+bb-fade                 5006    51.0%     0.964   -0.012        9899
+session-hold             729    52.3%     0.959    0.026       13501
+keltner-break           3295    47.2%     0.955   -0.020        6467
+stoch-reversal          4837    49.3%     0.946   -0.015        8643
+donchian-breakout       3556    44.3%     0.931   -0.026        6901
+vwap-fade               4033    46.5%     0.901   -0.032        9383
+pdhl                     558    45.9%     0.856   -0.066        3965
+doji-reversal            696    39.5%     0.698   -0.195        7918
+intraday-momentum        725    44.4%     0.683   -0.019        1429
+level-reversion           14    50.0%     1.019    0.016         494
+trend-pullback          2959    30.0%     0.408   -0.451       10009
+ict-sweep-mss-fvg          6    16.7%     0.506   -0.338         246
+flow-momentum              4    75.0%     0.876   -0.030         101
+flow-at-level              2     0.0%     0.000   -1.031         205
+buy-and-hold               1   100.0%       inf  100.566           0
+gap-fade                   0     NaN%       NaN      NaN           0
+volman-box                 0     NaN%       NaN      NaN           0
+

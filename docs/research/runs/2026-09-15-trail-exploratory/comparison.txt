@@ -1,0 +1,32 @@
+strategy                      win %             profit factor         max drawdown $
+                         off     on       off      on   delta      off     on    pct
+maxpain-magnet         66.7%  77.8%     3.298   6.846  +3.548      205    103  -49.8
+flow-momentum           0.0%  75.0%     0.000   0.876  +0.876      299    101  -66.2
+vwap-fade              35.1%  46.5%     0.865   0.901  +0.036     9448   9383   -0.7
+level-reversion        41.7%  50.0%     0.989   1.019  +0.030      527    494   -6.3
+keltner-break          42.1%  47.2%     0.952   0.955  +0.003     6413   6467   +0.8
+pdhl                   40.1%  45.9%     0.854   0.856  +0.002     4196   3965   -5.5
+tsmom                  41.2%  41.2%     2.084   2.084  +0.000      230    230   +0.0
+rsi2-pullback          51.1%  51.1%     1.031   1.031  +0.000     4742   4742   +0.0
+session-hold           52.3%  52.3%     0.959   0.959  +0.000    13501  13501   +0.0
+intraday-momentum      44.4%  44.4%     0.683   0.683  +0.000     1429   1429   +0.0
+ict-sweep-mss-fvg      16.7%  16.7%     0.506   0.506  +0.000      246    246   +0.0
+flow-at-level           0.0%   0.0%     0.000   0.000  +0.000      205    205   +0.0
+squeeze-break          42.0%  48.6%     0.987   0.986  -0.001     4215   3165  -24.9
+stoch-reversal         43.5%  49.3%     0.950   0.946  -0.004     8127   8643   +6.3
+macd-cross             43.4%  49.3%     1.010   1.000  -0.010     7382   7941   +7.6
+bb-fade                45.6%  51.0%     0.975   0.964  -0.011     9661   9899   +2.5
+donchian-breakout      35.5%  44.3%     0.943   0.931  -0.012     6823   6901   +1.1
+rsi-reversion          46.7%  51.0%     1.028   1.014  -0.014     6263   5694   -9.1
+orb                    44.3%  47.7%     1.016   1.002  -0.014     2213   2969  +34.2
+volume-thrust          43.8%  48.2%     0.989   0.971  -0.018     3081   3585  +16.4
+trend-pullback         28.7%  30.0%     0.427   0.408  -0.019    10011  10009   -0.0
+ema-cross              40.0%  48.2%     1.023   0.999  -0.024     4488   4573   +1.9
+doji-reversal          34.9%  39.5%     0.729   0.698  -0.031     7941   7918   -0.3
+
+  profit factor improved on 4 of 23, worsened on 9, unchanged on 10
+  methods above a profit factor of 1.0: 7 without the trail, 6 with it
+  mean change in max drawdown -4.0%, mean change in win rate +7.6 points
+
+  EXPLORATORY. One cell, one instrument, in sample, unguarded, no null.
+  Nothing here is a result and nothing here turns the trail on.
