@@ -16,6 +16,7 @@ param(
 $streams = @(
     @{ symbol = 'XAUUSD.sc'; market = 'xauusd'; tf = 'M15'; log = 'mt5_bars_xau_m15'; warm = $Warm },
     @{ symbol = 'XAUUSD.sc'; market = 'xauusd'; tf = 'M5';  log = 'mt5_bars_xau_m5';  warm = ($Warm * 3) },
+    @{ symbol = 'BTCUSD.sc'; market = 'btcusd'; tf = 'M15'; log = 'mt5_bars_btc_m15'; warm = $Warm },
     @{ symbol = 'EURUSD.sc'; market = 'eurusd'; tf = 'M15'; log = 'mt5_bars_eur_m15'; warm = $Warm }
 )
 

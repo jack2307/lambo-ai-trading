@@ -62,7 +62,7 @@ def writer_for(symbol: str):
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--symbols", nargs="+", default=["XAUUSD.sc", "XAGUSD.sc"])
+    ap.add_argument("--symbols", nargs="+", default=["XAUUSD.sc", "BTCUSD.sc", "XAGUSD.sc"])
     ap.add_argument("--interval", type=float, default=20.0, help="seconds between samples")
     ap.add_argument("--hours", type=float, default=0.0, help="stop after this many hours; 0 runs until killed")
     args = ap.parse_args()

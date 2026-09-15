@@ -10,7 +10,14 @@
 
 multiplier = 100            # overridden per market
 underlying = "GC"
-market = "gold"             # default market; --market=<id> overrides
+# The desk's default market. It is the Vantage cent pair, not COMEX gold:
+# every number this system is meant to act on has to be quoted at the price
+# and the contract the account actually trades. `gold` (the OTL/COMEX tape,
+# 100 oz a lot) and `btc` (Binance spot, 1 BTC a lot) remain defined and
+# remain useful as reference tapes, but they are no longer what an unqualified
+# run means. Owner's instruction, 2026-09-15: gold and BTC both on Vantage
+# prices, the `.sc` cent pairs first.
+market = "xauusd"           # default market; --market=<id> overrides
 
 [models]
 # Swappable model registries. Only the profile mode and the max-pain proxy have
@@ -243,6 +250,22 @@ atr_fraction = 0.15
 #   XAUUSD.sc  contract 1 oz     spread 28 pts    = $0.28
 #   BTCUSD.sc  contract 0.01 BTC spread ~1705 pts = $17.05
 # Spreads are per unit of underlying; times contract size for the per-lot cost.
+#
+# 2026-09-15: those two were each a SINGLE read of the spread. The logger
+# (py/live/spread_log.py) has since sampled XAUUSD.sc 2,315 times over 12.8
+# hours and the distribution is much tighter and LOWER than the number charged
+# here: p10 0.210, p50 0.220, p90 0.220, max 0.260 — the configured 0.28 is
+# above every spread ever observed, and charges roughly 27% too much.
+#
+# It is NOT changed here, for the same reason `[trading.trail]` stays off:
+# every receipt in docs/decisions/ was measured at 0.28, and moving the number
+# globally would make all of them unreproducible without editing a single
+# receipt. Repricing is an explicit, recorded amendment — the way the rebate
+# repricing was done — not a silent edit. Two things are still missing before
+# that amendment can be written: the 21:00 UTC rollover hour and a weekend,
+# neither of which the 12.8-hour sample covers. The logger is running 168
+# hours and now samples BTCUSD.sc too, whose 17.05 has never been checked over
+# time at all.
 
 [markets.xauusd]
 label = "Vantage XAUUSD.sc CFD (MT5 bars, no options)"

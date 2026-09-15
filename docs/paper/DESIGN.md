@@ -97,6 +97,59 @@ websocket later; the endpoint does not care who posts.
    two weeks; the news-desk publishes the blackout schedule each Monday;
    the risk role reads the fills after.
 
+## The desk trades the cent pairs, on the broker's own prices
+
+Owner's instruction, 2026-09-15: gold and BTC both run on Vantage prices, and
+the `.sc` cent pairs come first.
+
+Most of that was already true and worth stating plainly, because "cent pair"
+turned out to mean something narrower than it sounds. Read from the terminal
+on 2026-09-15:
+
+| symbol | contract | one lot is | a lot of notional |
+|---|---|---|---|
+| `XAUUSD.sc` | 1.00 | 1 ounce | ~$4,285 |
+| `BTCUSD.sc` | 0.01 | 0.01 BTC | ~$769 |
+
+Neither symbol is quoted in cents. They are **cent-sized**: one hundredth of
+the standard contract (100 oz of gold, 1 BTC), which is why `contract_size` is
+1.0 and 0.01 rather than 100.0 and 1.0. `XAUUSD` and `BTCUSD` without the
+suffix are not offered on this account at all. The `xauusd` and `btcusd`
+markets in `config/default.toml` were already defined against them with those
+contract sizes, measured 2026-09-12.
+
+What actually changed:
+
+* **The default market is `xauusd`, not `gold`.** An unqualified run now means
+  the pair the account trades. `gold` (COMEX tape, 100 oz a lot) and `btc`
+  (Binance spot, 1 BTC a lot) stay defined and stay useful as reference tapes,
+  but they are no longer what a run means when nobody says.
+* **BTC is fed like gold.** `start_pollers.ps1` starts a fourth stream,
+  `BTCUSD.sc` M15 into the `btcusd` market. Before this the BTC parquet was
+  three days stale and no live process touched it.
+* **The BTC store is current.** 100,782 M15 bars, 2023-10-05 to now, and
+  **zero holes in the last 14 days** — BTC is 24/7 on this broker, with none
+  of the daily-halt or weekend gaps gold shows.
+* **The spread logger samples BTC.** `BTCUSD.sc`'s configured 17.05 had never
+  been checked over time.
+
+### What BTC costs, which is the part worth knowing before trading it
+
+At the spreads read today, per unit of notional traded:
+
+| symbol | spread | as bp of price | per lot |
+|---|---|---|---|
+| `XAUUSD.sc` | 0.22 | 0.51 bp | $0.22 on $4,285 |
+| `BTCUSD.sc` | 17.06 | 2.22 bp | $0.17 on $769 |
+
+A BTC lot looks cheaper and is not. Because a cent BTC lot carries a sixth of
+the notional, the same dollar risk buys several times as many lots, and cost
+scales with notional: **BTC costs about 4.3x gold for the same money at
+risk.** Thirty-two closed registrations already say intraday direction at
+gold's cost is close to a coin. Starting a BTC book is therefore a
+registration decision with a worse cost hurdle, not a free extension of the
+gold desk — so the feed is live and ready, and no BTC book has been started.
+
 ## The store goes stale, and a new book warms from it
 
 Found 2026-09-15 while starting the AI trader campaign, and it will bite again.
