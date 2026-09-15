@@ -1,0 +1,57 @@
+friday_cells self-test, xauduka 15m, 2010-06-01 -> 2026-05-31
+378,741 bars, 191 releases, 835 Fridays, 2,000 null draws
+
+the published construction: C n=25, D n=565, C mean -1.734 $, up 20.0%, percentile 6.55
+
+A. CALIBRATION - 40 fake release assignments, same cell sizes
+   C is a random subset of later Fridays; its percentile must be uniform.
+   fake  1: C n= 24 mean  -0.573 up 54.2% pctile  25.80
+   fake  2: C n= 25 mean  +0.508 up 56.0% pctile  65.75
+   fake  3: C n= 23 mean  -0.412 up 43.5% pctile  30.75
+   fake  4: C n= 25 mean  -2.399 up 68.0% pctile   0.40
+   fake  5: C n= 23 mean  -0.440 up 43.5% pctile  27.95
+   fake  6: C n= 25 mean  +0.428 up 60.0% pctile  63.95
+   fake  7: C n= 23 mean  +0.731 up 56.5% pctile  75.85
+   fake  8: C n= 23 mean  +0.085 up 52.2% pctile  50.05
+   fake  9: C n= 25 mean  -0.191 up 48.0% pctile  38.65
+   fake 10: C n= 25 mean  +0.909 up 68.0% pctile  81.10
+   fake 11: C n= 24 mean  -0.159 up 29.2% pctile  37.75
+   fake 12: C n= 25 mean  -0.048 up 44.0% pctile  42.60
+   fake 13: C n= 25 mean  -0.420 up 36.0% pctile  29.00
+   fake 14: C n= 25 mean  -1.078 up 52.0% pctile  10.45
+   fake 15: C n= 24 mean  +0.419 up 54.2% pctile  64.25
+   fake 16: C n= 24 mean  +1.507 up 54.2% pctile  92.50
+   fake 17: C n= 25 mean  -0.749 up 48.0% pctile  17.60
+   fake 18: C n= 23 mean  -1.458 up 34.8% pctile   7.00
+   fake 19: C n= 24 mean  -1.370 up 45.8% pctile   9.75
+   fake 20: C n= 23 mean  +0.878 up 56.5% pctile  78.40
+   fake 21: C n= 23 mean  -1.203 up 47.8% pctile  10.40
+   fake 22: C n= 25 mean  -0.259 up 52.0% pctile  34.80
+   fake 23: C n= 24 mean  +0.252 up 54.2% pctile  56.10
+   fake 24: C n= 24 mean  -0.597 up 50.0% pctile  25.20
+   fake 25: C n= 25 mean  +0.097 up 56.0% pctile  51.60
+   fake 26: C n= 24 mean  +0.020 up 45.8% pctile  48.00
+   fake 27: C n= 24 mean  +2.021 up 54.2% pctile  97.90
+   fake 28: C n= 25 mean  -0.654 up 48.0% pctile  20.25
+   fake 29: C n= 25 mean  -0.509 up 52.0% pctile  25.35
+   fake 30: C n= 24 mean  +0.893 up 54.2% pctile  79.30
+   fake 31: C n= 25 mean  +0.667 up 48.0% pctile  74.10
+   fake 32: C n= 25 mean  +0.283 up 44.0% pctile  58.35
+   fake 33: C n= 23 mean  -0.145 up 56.5% pctile  38.25
+   fake 34: C n= 24 mean  +0.463 up 41.7% pctile  64.90
+   fake 35: C n= 25 mean  +0.351 up 52.0% pctile  62.10
+   fake 36: C n= 24 mean  +0.339 up 41.7% pctile  60.25
+   fake 37: C n= 24 mean  -2.081 up 29.2% pctile   5.00
+   fake 38: C n= 23 mean  +0.731 up 47.8% pctile  73.40
+   fake 39: C n= 25 mean  -0.986 up 44.0% pctile  13.10
+   fake 40: C n= 24 mean  -0.229 up 50.0% pctile  37.40
+
+   40 fakes: min 0.40 median 40.62 max 97.90 mean 44.63
+   below the 5th: 1 (expected 2.0); below the 1st: 1 (expected 0.4)
+   verdict: calibrated
+
+B. FAULT 9 - the screen applied to BOTH arms instead of one
+   as published (screen on controls only): C n=25 mean -1.734 up 20.0% pctile 6.55
+   screen on both arms:                    C n=0 mean +nan up nan% pctile nan
+   releases dropped from C by the symmetric screen: 25
+   the surviving number moves by nan percentile points.

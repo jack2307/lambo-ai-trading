@@ -62,6 +62,26 @@ Closed ideas move to the bottom with a pointer to their decision record, so
   both live. Build and validate the measurement (large print -> hedging flow in
   the following N minutes) against the days already on disk, **declare nothing**,
   and register when the tape reaches three months.
+- [x] **Two of them now do, and both live findings survived it**
+  (`docs/decisions/2026-09-15-selftest-audit.md`, 2026-09-15). `news_drift.py`
+  recovers a planted drift to the penny with a monotone percentile
+  (0.00/0.90/**2.70**/8.70/17.60 at -1.0/-0.5/**0**/+0.5/+1.0 dollars), and on
+  twenty **fake** release-date sets reads min 15.70 / median 50.35 / mean 48.86
+  with **zero below the 5th percentile** — so the pre-NFP drift is the release,
+  not the instrument. `friday_cells.py` on forty fake release assignments reads
+  median 40.62 with 1 below the 5th (expected 2.0) and 1 below the 1st
+  (expected 0.4): within noise at both tails. **Fault 9 measured and immaterial
+  to the live number** — 0 of the 25 later-Friday releases carry a second
+  high-impact event, so applying the screen to both arms moves the percentile by
+  **0.00**. The fault stays open below because it will bite another cell.
+  Also found: the as-filed cell-C percentile wanders 4.7 / 6.1 / 6.55 across
+  seeds and draw counts, two points on a figure quoted to one decimal.
+- [ ] **The remaining three still have no self-test**: `pair_residual.py`,
+  `fx_window_drift.py`, `venue_residual.py`. They hold closures rather than live
+  findings, so a fault there buries rather than invents — but the gold-silver
+  overnight dislocation is an open observation resting on `pair_residual.py`,
+  and a buried effect is still a wrong answer. Pattern to copy:
+  `scripts/news_drift_selftest.py` (plant a known size, then feed fake dates).
 - [ ] **A measurement script must find an edge you plant in it** (the strongest
   thing to come out of 2026-09-15, and no script but one has it).
   `scripts/quote_asymmetry_selftest.py` keeps every real thing — minutes, quotes,

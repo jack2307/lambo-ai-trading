@@ -1,0 +1,41 @@
+news_drift self-test, xauduka 15m, 2018-06-01 -> 2026-06-01
+187,860 bars, 95 'US Employment Situation (NFP)' releases, 1,000 permutation draws
+the window under test is the registered one: the hour before, -60 -> 0
+
+A. RECOVERY - a drift planted in the hour before, and nowhere else
+    planted $    n  mean move  recovered    up%  pctile
+        +0.00   91    -1.5404    +0.0000  35.2%    2.70
+        -1.00   91    -2.5404    -1.0000  24.2%    0.00  ok
+        -0.50   91    -2.0404    -0.5000  28.6%    0.90  ok
+        +0.50   91    -1.0404    +0.5000  41.8%    8.70  ok
+        +1.00   91    -0.5404    +1.0000  51.6%   17.60  ok
+   delta = 0 is the real data; its percentile is the published finding.
+   'recovered' must equal 'planted' to the penny, and the percentile must be monotone.
+
+B. CALIBRATION - real bars, FAKE release dates from the null's own pool
+   if the harness is honest these are roughly uniform on 0-100.
+   fake set  1: n  91  mean  +0.0443  up  47.3%  pctile  58.00
+   fake set  2: n  92  mean  -0.0229  up  46.7%  pctile  53.50
+   fake set  3: n  93  mean  +0.2420  up  51.6%  pctile  68.70
+   fake set  4: n  91  mean  -0.6814  up  44.0%  pctile  19.50
+   fake set  5: n  89  mean  +0.0227  up  49.4%  pctile  55.40
+   fake set  6: n  95  mean  -0.4609  up  51.6%  pctile  30.90
+   fake set  7: n  91  mean  +0.5951  up  47.3%  pctile  86.20
+   fake set  8: n  91  mean  -0.6083  up  52.7%  pctile  25.70
+   fake set  9: n  91  mean  -0.2602  up  44.0%  pctile  41.90
+   fake set 10: n  93  mean  +0.1633  up  51.6%  pctile  65.90
+   fake set 11: n  92  mean  -0.2838  up  47.8%  pctile  40.90
+   fake set 12: n  92  mean  -0.1167  up  48.9%  pctile  47.20
+   fake set 13: n  92  mean  -0.8113  up  43.5%  pctile  15.70
+   fake set 14: n  92  mean  -0.3240  up  44.6%  pctile  37.60
+   fake set 15: n  92  mean  +0.5913  up  51.1%  pctile  86.10
+   fake set 16: n  91  mean  -0.7758  up  48.4%  pctile  18.30
+   fake set 17: n  94  mean  -0.7197  up  46.8%  pctile  20.60
+   fake set 18: n  90  mean  +0.3686  up  53.3%  pctile  75.40
+   fake set 19: n  93  mean  +0.3089  up  52.7%  pctile  71.90
+   fake set 20: n  90  mean  +0.0509  up  44.4%  pctile  57.90
+
+   20 fake sets: min 15.70  median 50.35  max 86.20  mean 48.86
+   below the 5th percentile: 0 of 20 (expected about 1.0)
+   below the 50th: 10 of 20 (expected about 10)
+   verdict: calibrated
