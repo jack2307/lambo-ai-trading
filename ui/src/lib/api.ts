@@ -459,4 +459,63 @@ export const api = {
   /** One run in full. `bars` is how many recent bars to send back with it. */
   paperRun: (id: string, bars = 120) =>
     request<PaperRunDetail>(`/api/paper/run/${encodeURIComponent(id)}?bars=${bars}`),
+
+  /** What the models said about one book. Newest first. */
+  paperReasoning: (id: string, limit = 50) =>
+    request<Reasoning>(`/api/paper/reasoning/${encodeURIComponent(id)}?limit=${limit}`),
+}
+
+/** One decision an outside decider made, as its own log recorded it. */
+export interface Decision {
+  at: number
+  /** The bar it decided on; the fill, if any, was the NEXT bar's open. */
+  bar_time: number
+  model: string
+  side: 'LONG' | 'SHORT' | 'NONE' | string
+  reason: string
+  /** The reply as received, whole — what the summary can be checked against. */
+  response: string
+  latency_ms: number
+  posted: boolean
+  /** Set when the desk refused the decision before it reached a book. */
+  refused_locally: string
+  dry_run: boolean
+  /**
+   * Size of the prompt that produced this, in characters. The prompt itself is
+   * deliberately NOT sent: ~3.7KB a bar, ninety-six bars a day. It stays in
+   * `data/paper/<run>/decisions.jsonl`, which is the replayable record.
+   */
+  prompt_chars: number
+}
+
+/** One agent's turn in an advisor consultation. */
+export interface Turn {
+  agent: string
+  model: string
+  reason: string
+  response: string
+  latency_ms: number
+  size_factor: number | null
+}
+
+/** One consultation of the advisor panel over a pending intent. */
+export interface Consultation {
+  at: number
+  intent_id: string
+  applied: boolean
+  dry_run: boolean
+  size_factor: number | null
+  reason: string
+  turns: Turn[]
+}
+
+/**
+ * The two logs, kept apart because they are two different powers over a trade:
+ * a decider choosing a side on its OWN book, and the advisor panel refusing or
+ * shrinking somebody ELSE's trade.
+ */
+export interface Reasoning {
+  run: string
+  decisions: Decision[]
+  consultations: Consultation[]
 }

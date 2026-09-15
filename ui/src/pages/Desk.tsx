@@ -42,6 +42,7 @@ import { api, type Bar, type BacktestTrade, type LiveBar, type PaperEvent, type 
 import { clock, num } from '@/lib/format'
 import { useTicks } from '@/lib/ticks'
 import { AnthropicMark, OpenAIMark } from '@/components/BrandMarks'
+import type { Consultation, Decision, Reasoning } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
 /** Height of the sticky app bar, which this page fills the rest of the viewport under. */
@@ -219,6 +220,9 @@ export function Desk() {
   // does not sit over the row you just opened.
   const [detailError, setDetailError] = useState<{ id: string; message: string } | null>(null)
   const [now, setNow] = useState(() => Date.now())
+  // Which of the two bottom panels is showing. The fills are the default
+  // because they are what the book DID; the log is what it was thinking.
+  const [bottomTab, setBottomTab] = useState<'fills' | 'log'>('fills')
   // The forming candle, pushed. The ten-second status poll still carries one,
   // and is still what keeps the table honest when the stream is down — this
   // only ever overrides it with something NEWER, never with something older.
@@ -372,8 +376,15 @@ export function Desk() {
                 stay here where the width is. Capped at two fifths of the
                 column: a long book must not push the chart off the screen the
                 move above was made to give it. Below xl they are in the rail. */}
-            <div className="hidden xl:block xl:max-h-[40%] xl:shrink-0 xl:overflow-y-auto">
-              <FillsSection detail={live} openFill={pickedFill} onOpenFill={openFill} />
+            <div className="hidden xl:flex xl:max-h-[40%] xl:shrink-0 xl:flex-col xl:overflow-hidden">
+              <BottomTabs tab={bottomTab} onTab={setBottomTab} />
+              <div className="min-h-0 flex-1 overflow-y-auto">
+                {bottomTab === 'fills' ? (
+                  <FillsSection detail={live} openFill={pickedFill} onOpenFill={openFill} />
+                ) : (
+                  <ReasoningSection runId={activeId} />
+                )}
+              </div>
             </div>
           </div>
           <div className="flex min-w-0 flex-col border-t xl:h-full xl:w-[460px] xl:shrink-0 xl:border-t-0 xl:border-l">
@@ -742,6 +753,249 @@ function DeciderTag({ run }: { run: PaperRun }) {
       {!house && !coin && <span aria-hidden>{mixed ? '\u26a0' : '\u25c6'}</span>}
       <span className="num normal-case">{text}</span>
     </span>
+  )
+}
+
+/** The two bottom panels: what the book did, and what it was thinking. */
+function BottomTabs({ tab, onTab }: { tab: 'fills' | 'log'; onTab: (t: 'fills' | 'log') => void }) {
+  const items: { id: 'fills' | 'log'; label: string }[] = [
+    { id: 'fills', label: 'fills' },
+    { id: 'log', label: 'ai log' },
+  ]
+  return (
+    <div className="bg-background flex shrink-0 items-center gap-1 border-b px-3 py-1">
+      {items.map((it) => (
+        <button
+          key={it.id}
+          type="button"
+          onClick={() => onTab(it.id)}
+          aria-pressed={tab === it.id}
+          className={cn(
+            'focus-visible:ring-ring rounded-sm px-2 py-0.5 text-[10px] tracking-wide uppercase transition-colors focus-visible:ring-2 focus-visible:outline-none',
+            tab === it.id
+              ? 'bg-primary/15 text-primary'
+              : 'text-muted-foreground hover:text-foreground',
+          )}
+        >
+          {it.label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+/**
+ * What the models said about this book.
+ *
+ * Two logs, shown apart because they are two different powers over a trade: a
+ * decider choosing a side on its own book, and the advisor panel refusing or
+ * shrinking somebody else's. A rule-based run usually has only the second, an
+ * `external` run only the first, and a run with neither says so rather than
+ * showing an empty frame.
+ *
+ * Polled rather than streamed. These are written by processes outside this one,
+ * at one entry per closed bar; a socket for something that moves every fifteen
+ * minutes would be machinery for its own sake.
+ */
+function ReasoningSection({ runId }: { runId: string | null }) {
+  const [data, setData] = useState<Reasoning | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!runId) {
+      setData(null)
+      return
+    }
+    let alive = true
+    const load = () => {
+      api
+        .paperReasoning(runId, 50)
+        .then((r) => {
+          if (!alive) return
+          setData(r)
+          setError(null)
+        })
+        .catch((e: unknown) => {
+          if (!alive) return
+          setError(e instanceof Error ? e.message : String(e))
+        })
+    }
+    // Cleared first, so a slow answer for the previous book cannot land under
+    // the heading of the one just opened.
+    setData(null)
+    setError(null)
+    load()
+    const timer = window.setInterval(load, 20_000)
+    return () => {
+      alive = false
+      window.clearInterval(timer)
+    }
+  }, [runId])
+
+  if (!runId) return null
+  if (error) return <p className="text-destructive px-3 py-3 text-[12px]">Could not read the log: {error}</p>
+  if (!data) return <div className="px-3 py-3"><Skeleton className="h-4 w-64" /></div>
+
+  const empty = data.decisions.length === 0 && data.consultations.length === 0
+  if (empty) {
+    return (
+      <p className="text-muted-foreground px-3 py-3 text-[12px]">
+        No model has spoken about this book. Rule-based books carry an advisor
+        transcript only once the panel has seen a pending trade; an AI book
+        carries one from its first bar.
+      </p>
+    )
+  }
+
+  return (
+    <div className="px-3 py-2">
+      {data.decisions.length > 0 && (
+        <>
+          <SectionHead>
+            decisions <span className="text-muted-foreground/70 normal-case">— the book&rsquo;s own decider, one per closed bar</span>
+          </SectionHead>
+          <ul className="mt-1 space-y-1">
+            {data.decisions.map((d) => (
+              <DecisionRow key={`${d.bar_time}-${d.at}`} d={d} />
+            ))}
+          </ul>
+        </>
+      )}
+      {data.consultations.length > 0 && (
+        <>
+          <SectionHead>
+            advisor panel <span className="text-muted-foreground/70 normal-case">— may refuse or shrink, never choose a side</span>
+          </SectionHead>
+          <ul className="mt-1 space-y-1">
+            {data.consultations.map((c) => (
+              <ConsultationRow key={`${c.intent_id}-${c.at}`} c={c} />
+            ))}
+          </ul>
+        </>
+      )}
+    </div>
+  )
+}
+
+function SectionHead({ children }: { children: React.ReactNode }) {
+  return (
+    <h3 className="text-muted-foreground mt-2 text-[10px] tracking-wide uppercase first:mt-0">{children}</h3>
+  )
+}
+
+/** LONG / SHORT / NONE, coloured the way the fills table colours a side. */
+function SidePill({ side }: { side: string }) {
+  const up = side === 'LONG'
+  const down = side === 'SHORT'
+  return (
+    <span
+      className={cn(
+        'num shrink-0 rounded-sm border px-1 text-[10px]',
+        up && 'border-lc/40 bg-lc/10 text-lc',
+        down && 'border-lp/40 bg-lp/10 text-lp',
+        !up && !down && 'border-muted-foreground/30 text-muted-foreground',
+      )}
+    >
+      {side.toLowerCase()}
+    </span>
+  )
+}
+
+function DecisionRow({ d }: { d: Decision }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <li className="border-border/60 rounded-sm border">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="hover:bg-accent/40 focus-visible:ring-ring flex w-full items-start gap-2 px-2 py-1 text-left focus-visible:ring-2 focus-visible:ring-inset focus-visible:outline-none"
+      >
+        <span className="num text-muted-foreground shrink-0 text-[11px]">{shortStamp(d.bar_time)}</span>
+        <SidePill side={d.side} />
+        <span className="min-w-0 flex-1 text-[12px] leading-snug">{d.reason || <span className="text-muted-foreground">(no reason given)</span>}</span>
+        <span className="num text-muted-foreground/70 shrink-0 text-[10px]">
+          {(d.latency_ms / 1000).toFixed(1)}s
+        </span>
+      </button>
+      {open && (
+        <div className="border-border/60 space-y-1 border-t px-2 py-1.5 text-[11px]">
+          <p className="text-muted-foreground">
+            <span className="num">{d.model}</span> · decided {shortStamp(d.at)} ·{' '}
+            {/* The state that matters is whether this reached a book, and why not. */}
+            {d.dry_run
+              ? 'dry run — nothing was posted'
+              : d.refused_locally
+                ? `refused by the desk: ${d.refused_locally}`
+                : d.posted
+                  ? 'posted; fills at the next bar\u2019s open'
+                  : 'not posted'}
+          </p>
+          <pre className="text-muted-foreground/90 overflow-x-auto rounded-sm bg-black/30 p-1.5 text-[10px] whitespace-pre-wrap">
+            {d.response || '(empty reply)'}
+          </pre>
+          <p className="text-muted-foreground/60 text-[10px]">
+            prompt kept whole: {d.prompt_chars.toLocaleString()} characters, in
+            data/paper/{'{'}run{'}'}/decisions.jsonl — a summary cannot be replayed against a changed prompt.
+          </p>
+        </div>
+      )}
+    </li>
+  )
+}
+
+function ConsultationRow({ c }: { c: Consultation }) {
+  const [open, setOpen] = useState(false)
+  const cut = c.size_factor != null && c.size_factor < 1
+  return (
+    <li className="border-border/60 rounded-sm border">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="hover:bg-accent/40 focus-visible:ring-ring flex w-full items-start gap-2 px-2 py-1 text-left focus-visible:ring-2 focus-visible:ring-inset focus-visible:outline-none"
+      >
+        <span className="num text-muted-foreground shrink-0 text-[11px]">{shortStamp(c.at)}</span>
+        <span
+          className={cn(
+            'num shrink-0 rounded-sm border px-1 text-[10px]',
+            c.size_factor === 0
+              ? 'border-lp/40 bg-lp/10 text-lp'
+              : cut
+                ? 'border-caution/40 bg-caution/10 text-caution'
+                : 'border-lc/40 bg-lc/10 text-lc',
+          )}
+        >
+          {c.size_factor === 0 ? 'veto' : cut ? `\u00d7${c.size_factor?.toFixed(2)}` : 'allow'}
+        </span>
+        <span className="min-w-0 flex-1 text-[12px] leading-snug">{c.reason}</span>
+        <span className="num text-muted-foreground/70 shrink-0 text-[10px]">{c.turns.length} agents</span>
+      </button>
+      {open && (
+        <div className="border-border/60 space-y-1.5 border-t px-2 py-1.5">
+          <p className="text-muted-foreground text-[11px]">
+            {c.dry_run ? 'dry run — the verdict was not applied' : c.applied ? 'applied to the book' : 'not applied'} ·{' '}
+            <span className="num">{c.intent_id}</span>
+          </p>
+          {c.turns.map((t) => (
+            <div key={t.agent} className="border-border/40 border-l-2 pl-2">
+              <p className="text-[11px]">
+                <span className="num text-primary">{t.agent}</span>{' '}
+                <span className="num text-muted-foreground/70">{t.model}</span>{' '}
+                <span className="text-muted-foreground/60 num">
+                  {(t.latency_ms / 1000).toFixed(1)}s
+                  {t.size_factor != null && ` \u00b7 \u00d7${t.size_factor.toFixed(2)}`}
+                </span>
+              </p>
+              <p className="text-muted-foreground text-[11px] leading-snug">{t.reason}</p>
+            </div>
+          ))}
+          <p className="text-muted-foreground/60 text-[10px]">
+            The verdict is the MIN of the panel, so one agent can refuse alone.
+          </p>
+        </div>
+      )}
+    </li>
   )
 }
 

@@ -45,6 +45,10 @@ pub fn router(state: Arc<AppState>, ui: Option<PathBuf>) -> Router {
         .route("/api/paper/stop", post(paper::stop))
         .route("/api/paper/status", get(paper::status))
         .route("/api/paper/run/{id}", get(paper::detail))
+        // What the models said about one book: the decider's own decisions and
+        // the advisor panel's consultations, kept apart because they are two
+        // different powers over a trade.
+        .route("/api/paper/reasoning/{id}", get(paper::reasoning))
         // The advisor lives outside this process and speaks only through
         // these two: it reads what is about to happen and may ask for less.
         .route("/api/paper/pending", get(paper::pending))

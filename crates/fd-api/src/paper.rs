@@ -1727,6 +1727,170 @@ pub async fn intent(
     Ok(Json(IntentResponse { accepted: true, reason: "fills at the next bar's open".to_string() }))
 }
 
+/* --------------------------------------------- reading the models back */
+
+/// One decision an outside decider made, as its own log recorded it.
+///
+/// The prompt is **not** carried. It is ~3.7 KB per bar and ninety-six bars a
+/// day, so shipping it to a browser that renders two hundred characters of it
+/// would move megabytes to show a sentence. `prompt_chars` is sent instead, so
+/// the desk can say the prompt was kept whole without carrying it; the file
+/// beside the book remains the replayable record.
+#[derive(Debug, Serialize)]
+pub struct DecisionDto {
+    /// When the decider answered, epoch ms.
+    pub at: i64,
+    /// The bar it decided on. The fill, if any, was the NEXT bar's open.
+    pub bar_time: i64,
+    pub model: String,
+    pub side: String,
+    pub reason: String,
+    /// The reply as received, whole — it is short, and it is the thing a
+    /// reader is actually checking the summary against.
+    pub response: String,
+    pub latency_ms: i64,
+    pub posted: bool,
+    /// Set when this desk refused the decision before it reached a book.
+    pub refused_locally: String,
+    pub dry_run: bool,
+    pub prompt_chars: usize,
+}
+
+/// One agent's turn in an advisor consultation.
+#[derive(Debug, Serialize)]
+pub struct TurnDto {
+    pub agent: String,
+    pub model: String,
+    pub reason: String,
+    pub response: String,
+    pub latency_ms: i64,
+    pub size_factor: Option<f64>,
+}
+
+/// One consultation of the advisor panel over a pending intent.
+#[derive(Debug, Serialize)]
+pub struct ConsultationDto {
+    pub at: i64,
+    pub intent_id: String,
+    /// Whether the verdict actually reached the book, or was a dry run.
+    pub applied: bool,
+    pub dry_run: bool,
+    pub size_factor: Option<f64>,
+    pub reason: String,
+    pub turns: Vec<TurnDto>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ReasoningResponse {
+    pub run: String,
+    /// Newest first, both of them.
+    pub decisions: Vec<DecisionDto>,
+    pub consultations: Vec<ConsultationDto>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ReasoningQuery {
+    pub limit: Option<usize>,
+}
+
+/// Default and ceiling for how many entries come back.
+pub const DEFAULT_REASONING: usize = 50;
+pub const MAX_REASONING: usize = 500;
+
+fn s_of(v: &serde_json::Value, key: &str) -> String {
+    v.get(key).and_then(|x| x.as_str()).unwrap_or("").to_string()
+}
+fn i_of(v: &serde_json::Value, key: &str) -> i64 {
+    v.get(key).and_then(serde_json::Value::as_i64).unwrap_or(0)
+}
+fn b_of(v: &serde_json::Value, key: &str) -> bool {
+    v.get(key).and_then(serde_json::Value::as_bool).unwrap_or(false)
+}
+
+/// The last `limit` lines of a JSONL file, oldest first, skipping unreadable
+/// ones rather than failing: a half-written last line (the writer was killed
+/// mid-append) must not take the whole panel down.
+fn tail_jsonl(path: &Path, limit: usize) -> Vec<serde_json::Value> {
+    let Ok(text) = std::fs::read_to_string(path) else { return Vec::new() };
+    let lines: Vec<&str> = text.lines().filter(|l| !l.trim().is_empty()).collect();
+    lines
+        .iter()
+        .skip(lines.len().saturating_sub(limit))
+        .filter_map(|l| serde_json::from_str(l).ok())
+        .collect()
+}
+
+/// `GET /api/paper/reasoning/{id}` — what the models said about this book.
+///
+/// Two different logs, kept apart because they are two different powers:
+/// `decisions.jsonl` is a decider choosing a side on its own book, and
+/// `advice.jsonl` is the advisor panel refusing or shrinking somebody else's
+/// trade. A rule-based run has only the second; an `external` run usually has
+/// only the first.
+pub async fn reasoning(
+    State(state): State<Arc<AppState>>,
+    PathParam(id): PathParam<String>,
+    Query(query): Query<ReasoningQuery>,
+) -> Result<Json<ReasoningResponse>, ApiError> {
+    let limit = query.limit.unwrap_or(DEFAULT_REASONING).clamp(1, MAX_REASONING);
+    let dir = run_dir(&state.data, &id);
+    if !dir.is_dir() {
+        return Err(ApiError::NotFound(format!("no paper run `{id}`")));
+    }
+
+    let mut decisions: Vec<DecisionDto> = tail_jsonl(&dir.join("decisions.jsonl"), limit)
+        .iter()
+        .map(|v| {
+            let d = v.get("decision").cloned().unwrap_or(serde_json::Value::Null);
+            DecisionDto {
+                at: i_of(v, "at"),
+                bar_time: i_of(v, "bar_time"),
+                model: s_of(v, "model"),
+                side: s_of(&d, "side"),
+                reason: s_of(&d, "reason"),
+                response: s_of(v, "response"),
+                latency_ms: i_of(v, "latency_ms"),
+                posted: b_of(v, "posted"),
+                refused_locally: s_of(v, "refused_locally"),
+                dry_run: b_of(v, "dry_run"),
+                prompt_chars: v.get("prompt").and_then(|p| p.as_str()).map_or(0, str::len),
+            }
+        })
+        .collect();
+    decisions.reverse();
+
+    let mut consultations: Vec<ConsultationDto> = tail_jsonl(&dir.join("advice.jsonl"), limit)
+        .iter()
+        .map(|v| ConsultationDto {
+            at: i_of(v, "at"),
+            intent_id: s_of(v, "intent_id"),
+            applied: b_of(v, "applied"),
+            dry_run: b_of(v, "dry_run"),
+            size_factor: v.get("size_factor").and_then(serde_json::Value::as_f64),
+            reason: s_of(v, "reason"),
+            turns: v
+                .get("transcript")
+                .and_then(|t| t.as_array())
+                .map(|rows| {
+                    rows.iter()
+                        .map(|t| TurnDto {
+                            agent: s_of(t, "agent"),
+                            model: s_of(t, "model"),
+                            reason: s_of(t, "reason"),
+                            response: s_of(t, "response"),
+                            latency_ms: i_of(t, "latency_ms"),
+                            size_factor: t.get("size_factor").and_then(serde_json::Value::as_f64),
+                        })
+                        .collect()
+                })
+                .unwrap_or_default(),
+        })
+        .collect();
+    consultations.reverse();
+
+    Ok(Json(ReasoningResponse { run: id, decisions, consultations }))
+}
+
 /// The conversation log: its own file, never `fills.jsonl`.
 ///
 /// Kept apart because the two have different lifetimes and different readers.
