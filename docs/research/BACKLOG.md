@@ -35,6 +35,33 @@ Closed ideas move to the bottom with a pointer to their decision record, so
   cell is chosen. Note it would be re-entering the territory of
   `2026-09-13-close-reopen-drift`, which failed its gate as a unit.
 
+- [ ] **Every registration states its minimum detectable effect BEFORE its
+  falsifier** (`docs/decisions/2026-09-15-intraday-frontier.md`, and it is the
+  rule three dead ideas bought). The table is there: at five minutes on this
+  account a mechanism needs ~0.9 bp of gross edge per trade, at thirty minutes
+  ~2.0 bp, and raising a threshold makes the bar HIGHER because the sample falls
+  faster than the effect can grow. Say what prior makes the required size
+  plausible, or do not write the registration.
+- [x] **Short-horizon reversal after a large two-sided quote move — closed by
+  arithmetic.** The one interval in `2026-09-15-quote-asymmetry` that excluded
+  zero: reversion is worth **+0.41 bp** and the round trip costs **0.455 bp**.
+  The effect is smaller than the cost, more data cannot move that, and every
+  threshold where it might exceed the cost is one where five months cannot
+  measure it (4σ: needs 1.53 bp detectable, would have to be 3.7x its 2σ size).
+  Not a test — a subtraction.
+- [x] **Retail order flow at this dealer — not in the data.** The one variable
+  with a payer story that is not speculative. `copy_ticks_range` returns `last`,
+  `volume` and `volume_real` all zero on `XAUUSD.sc` and `EURUSD.sc`, and
+  `TICK_FLAG_BUY/SELL/LAST/VOLUME` are never set (observed flags: 1028, 1154,
+  1158 — quotes only). Probed 2026-09-15. Nothing reopens this without a
+  different data source.
+- [ ] **The options tape is the one place the frontier is favourable, and until
+  about December the honest work is the instrument.** Dealer hedging after a
+  large print is mechanical, price-insensitive flow — the only payer story on
+  the shelf that does not require someone to be wrong. Gold holds 9 days, BTC 5,
+  both live. Build and validate the measurement (large print -> hedging flow in
+  the following N minutes) against the days already on disk, **declare nothing**,
+  and register when the tape reaches three months.
 - [ ] **A measurement script must find an edge you plant in it** (the strongest
   thing to come out of 2026-09-15, and no script but one has it).
   `scripts/quote_asymmetry_selftest.py` keeps every real thing — minutes, quotes,
