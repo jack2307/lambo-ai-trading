@@ -230,6 +230,14 @@ export interface PaperRun {
   market: string
   tf: string
   strategy: string
+  /**
+   * Who has actually driven this book, for a run driven from outside the
+   * process; `null` on every rule-based run and on an `external` run nobody
+   * has posted to yet. Earned, never configured: the API writes it only when
+   * an intent is accepted. `decisions` keyed by more than one name means the
+   * book's net is not one decider's record.
+   */
+  decider: null | { last: string; last_at: number; decisions: Record<string, number> }
   params: Record<string, number>
   filters: string[]
   guards: boolean

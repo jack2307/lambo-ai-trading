@@ -12,7 +12,7 @@ use axum::Json;
 use axum::extract::State;
 use axum::response::IntoResponse;
 use axum::extract::{Path as PathParam, Query};
-use fd_api::paper::{DEFAULT_DETAIL_BARS, DetailQuery, MAX_LIVE_AGE_MS, bar, detail, start, status, stop, tick};
+use fd_api::paper::{DEFAULT_DETAIL_BARS, DetailQuery, MAX_LIVE_AGE_MS, bar, detail, intent, start, status, stop, tick};
 use fd_api::{ApiError, AppState};
 use fd_core::config::Config;
 use fd_core::types::Bar;
@@ -100,6 +100,80 @@ fn http_status(err: ApiError) -> u16 {
 /// The status entry of one run, by id.
 fn run_named<'a>(s: &'a Value, id: &str) -> &'a Value {
     s["runs"].as_array().expect("runs").iter().find(|r| r["id"] == id).unwrap_or_else(|| panic!("no run {id} in {s}"))
+}
+
+async fn post_intent(state: &Arc<AppState>, body: Value) -> Result<Value, ApiError> {
+    let request = serde_json::from_value(body).expect("an intent body");
+    intent(State(Arc::clone(state)), Json(request)).await.map(|Json(v)| serde_json::to_value(v).expect("json"))
+}
+
+#[tokio::test]
+async fn the_decider_badge_names_only_decisions_the_book_actually_took() {
+    let dir = tempfile::tempdir().expect("temp dir");
+    let state = state_over(dir.path(), 300);
+
+    start_run(&state, json!({ "market": "btc", "tf": "15m", "strategy": "external", "id": "ai", "window": 200 }))
+        .await
+        .expect("start");
+    post_bar(&state, "btc", "15m", wave(300)).await.expect("bar");
+
+    // Nobody has posted to it, so it claims nobody. A model name typed into a
+    // config would have put a badge here on a book no model ever traded.
+    assert!(run_named(&read_status(&state).await, "ai")["decider"].is_null(), "an undriven book claims no decider");
+
+    // A decision made on a bar the run has already moved past is refused —
+    // and a refused intent must not claim the badge either. This is the whole
+    // point of recording it past the refusals rather than on arrival.
+    let stale = post_intent(&state, json!({
+        "run": "ai", "bar_time": wave(299).time, "side": "LONG",
+        "stop": 59_000.0, "decider": "gpt-5",
+    })).await.expect("call");
+    assert_eq!(stale["accepted"], false, "{stale}");
+    assert!(run_named(&read_status(&state).await, "ai")["decider"].is_null(), "a refused intent claims nothing");
+
+    let ok = post_intent(&state, json!({
+        "run": "ai", "bar_time": wave(300).time, "side": "LONG",
+        "stop": 59_000.0, "reason": "test", "decider": "gpt-5",
+    })).await.expect("call");
+    assert_eq!(ok["accepted"], true, "{ok}");
+    let d = run_named(&read_status(&state).await, "ai")["decider"].clone();
+    assert_eq!(d["last"], "gpt-5");
+    assert_eq!(d["decisions"]["gpt-5"], 1);
+    assert!(d["last_at"].as_i64().expect("a stamp") > 0);
+
+    // A second decider on the same book: both are kept. One `name` field
+    // would have quietly relabelled the whole run as the newer one's record,
+    // which is exactly the number nobody could read afterwards.
+    post_bar(&state, "btc", "15m", wave(301)).await.expect("bar");
+    post_intent(&state, json!({
+        "run": "ai", "bar_time": wave(301).time, "side": "SHORT",
+        "stop": 61_000.0, "decider": "coin",
+    })).await.expect("call");
+    let d = run_named(&read_status(&state).await, "ai")["decider"].clone();
+    assert_eq!(d["last"], "coin", "the badge shows who spoke last");
+    assert_eq!(d["decisions"].as_object().expect("a map").len(), 2, "both deciders are kept: {d}");
+    assert_eq!(d["decisions"]["gpt-5"], 1);
+    assert_eq!(d["decisions"]["coin"], 1);
+}
+
+#[tokio::test]
+async fn a_rule_based_book_cannot_be_claimed_by_a_decider() {
+    // The badge is only meaningful because the route refuses rule-based runs
+    // outright. Without this, anything could post a gpt-5 badge onto a book
+    // gpt-5 has no part in.
+    let dir = tempfile::tempdir().expect("temp dir");
+    let state = state_over(dir.path(), 300);
+    start_run(&state, json!({ "market": "btc", "tf": "15m", "strategy": "ema-cross", "id": "rule", "window": 200 }))
+        .await
+        .expect("start");
+    post_bar(&state, "btc", "15m", wave(300)).await.expect("bar");
+
+    let refused = post_intent(&state, json!({
+        "run": "rule", "bar_time": wave(300).time, "side": "LONG",
+        "stop": 59_000.0, "decider": "gpt-5",
+    })).await;
+    assert_eq!(refused.map(|_| ()).map_err(http_status), Err(400));
+    assert!(run_named(&read_status(&state).await, "rule")["decider"].is_null());
 }
 
 #[tokio::test]

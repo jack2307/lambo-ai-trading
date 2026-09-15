@@ -611,6 +611,7 @@ function RunsList({
             </span>
             <span className="mt-0.5 flex items-end gap-2 text-[10px] leading-tight">
               <span className="text-muted-foreground min-w-0 flex-1 truncate">
+                <DeciderTag run={run} />
                 <span className="num">{run.strategy}</span>
                 <span className="text-muted-foreground/60"> · {run.market}:{run.tf}</span>
                 <span className="text-muted-foreground/60">
@@ -628,6 +629,55 @@ function RunsList({
         )
       })}
     </div>
+  )
+}
+
+/**
+ * Who is driving this book, when it is not a rule.
+ *
+ * Shown from `run.decider`, which the API writes only when an intent is
+ * ACCEPTED — so this names a decision the book really took, never one that
+ * was merely offered or a model id someone typed into a config. A run whose
+ * strategy is `external` but which nobody has posted to reads "idle", which
+ * is the truth about it.
+ *
+ * The coin is deliberately styled apart from the model. It is the control
+ * book, and the whole campaign is the difference between the two; a badge
+ * that made them look alike would hide the one comparison that matters.
+ */
+function DeciderTag({ run }: { run: PaperRun }) {
+  if (run.strategy !== 'external' && !run.decider) return null
+
+  const names = Object.keys(run.decider?.decisions ?? {})
+  const mixed = names.length > 1
+  const last = run.decider?.last
+  const coin = last === 'coin'
+  const total = Object.values(run.decider?.decisions ?? {}).reduce((a, b) => a + b, 0)
+
+  const text = last ? (coin ? 'coin' : last) : 'idle'
+  const title = mixed
+    ? `driven by ${names.length} deciders (${names.map((n) => `${n} ${run.decider?.decisions[n]}`).join(', ')}) — this book's net is not any one of their records`
+    : last
+      ? `${total} accepted decision${total === 1 ? '' : 's'} from ${last}`
+      : 'externally driven; nothing has posted to it yet'
+
+  return (
+    <span
+      title={title}
+      className={cn(
+        'mr-1 inline-flex items-center gap-1 rounded-sm border px-1 py-px align-middle text-[9px] tracking-wide uppercase',
+        mixed
+          ? 'border-caution/40 bg-caution/10 text-caution'
+          : coin
+            ? 'border-muted-foreground/30 bg-muted-foreground/10 text-muted-foreground'
+            : last
+              ? 'border-primary/40 bg-primary/10 text-primary'
+              : 'border-muted-foreground/25 bg-muted-foreground/5 text-muted-foreground/70',
+      )}
+    >
+      {!coin && <span aria-hidden>{mixed ? '\u26a0' : '\u25c6'}</span>}
+      <span className="num normal-case">{text}</span>
+    </span>
   )
 }
 

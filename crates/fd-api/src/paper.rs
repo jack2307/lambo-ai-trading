@@ -213,6 +213,10 @@ pub struct PaperRun {
     /// the intent it was about.
     #[serde(default)]
     pub advice: Option<Advice>,
+    /// Who has been posting this book's entries, if anyone has. `None` on
+    /// every rule-based run and on an `external` run nobody has driven yet.
+    #[serde(default)]
+    pub decider: Option<Decider>,
     /// Bars posted and accepted since the start.
     pub bars_seen: usize,
     /// Bars the store supplied at the start.
@@ -635,6 +639,9 @@ pub struct RunStatus {
     pub market: String,
     pub tf: String,
     pub strategy: String,
+    /// Who has actually driven this book, for runs driven from outside. `null`
+    /// on a rule-based run. See [`Decider`].
+    pub decider: Option<Decider>,
     pub params: BTreeMap<String, f64>,
     pub filters: Vec<String>,
     pub guards: bool,
@@ -832,6 +839,7 @@ fn status_of(data: &Path, run: &PaperRun, rules: &TradingRules, guards: Option<&
         market: run.config.market.clone(),
         tf: run.config.tf.clone(),
         strategy: run.config.strategy.clone(),
+        decider: run.decider.clone(),
         params: run.config.params.clone(),
         filters: run.config.filters.clone(),
         guards: run.config.guards,
@@ -1022,6 +1030,8 @@ pub async fn start(State(state): State<Arc<AppState>>, Json(request): Json<Start
         // Cloned from the book on its first bar; see the field's own note.
         shadow: None,
         advice: None,
+        // Claimed by whoever posts the first accepted intent, never at start.
+        decider: None,
         started_at: now_ms(),
         warmup_bars: history.len(),
         bars: history,
@@ -1551,6 +1561,31 @@ pub async fn advice(
     Ok(Json(AdviceResponse { accepted: fresh, size_factor: verdict.size_factor, reason: verdict.reason }))
 }
 
+/// Who has actually been posting a run's entries.
+///
+/// **Earned, not declared.** Nothing writes this at `start`: it is written
+/// only when an intent is ACCEPTED, so a name here means a decision this book
+/// really took, on a bar it really was on. A run configured as `external`
+/// that nobody ever posted to carries `None`, which is the truth about it —
+/// the alternative, a model name typed into a config field, would put a
+/// gpt-5 badge on a book gpt-5 never traded.
+///
+/// `decisions` is a map and not a counter on purpose. If two different things
+/// drive one book — a model swapped mid-campaign, a coin posting to the
+/// model's run by mistake — the book's net is not attributable to either of
+/// them, and a single `name` field would hide exactly that. More than one key
+/// here means the number on this row cannot be read as one decider's record.
+#[derive(Debug, Clone, Default, PartialEq, Deserialize, Serialize)]
+pub struct Decider {
+    /// What the most recent poster called itself: a model id (`gpt-5`), or
+    /// `coin` for the control book.
+    pub last: String,
+    /// Epoch ms of the last accepted intent.
+    pub last_at: i64,
+    /// Accepted intents per decider name, over the life of the run.
+    pub decisions: BTreeMap<String, usize>,
+}
+
 /// `POST /api/paper/intent` — an entry proposed from outside the process.
 ///
 /// The mailbox for a run whose strategy is `external`. See
@@ -1583,6 +1618,12 @@ pub struct IntentRequest {
     pub target: Option<f64>,
     #[serde(default)]
     pub reason: String,
+    /// What the poster calls itself — a model id (`gpt-5`) or `coin`. Recorded
+    /// on the run only when the intent is accepted, and shown on the desk so a
+    /// book driven by a model is never mistaken for a rule. Absent posts still
+    /// trade; they just leave the badge unclaimed.
+    #[serde(default)]
+    pub decider: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -1630,6 +1671,14 @@ pub async fn intent(
         target: body.target.filter(|v| v.is_finite()),
         reason: if body.reason.is_empty() { "external".to_string() } else { body.reason.clone() },
     });
+    // Only now, past every refusal above: the badge names a decision the book
+    // actually took, never one it was merely offered.
+    if let Some(name) = body.decider.as_deref().map(str::trim).filter(|n| !n.is_empty()) {
+        let d = run.decider.get_or_insert_with(Decider::default);
+        d.last = name.to_string();
+        d.last_at = now_ms();
+        *d.decisions.entry(name.to_string()).or_insert(0) += 1;
+    }
     record(
         &state.data,
         &body.run,
@@ -1640,6 +1689,7 @@ pub async fn intent(
             "stop": body.stop,
             "target": body.target,
             "reason": body.reason,
+            "decider": body.decider,
         }),
     )?;
     Ok(Json(IntentResponse { accepted: true, reason: "fills at the next bar's open".to_string() }))

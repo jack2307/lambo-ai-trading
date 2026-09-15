@@ -247,10 +247,15 @@ def main() -> int:
             # posts must succeed. A campaign that loses its control silently
             # produces a number nobody can read.
             flip = "LONG" if coin.random() < 0.5 else "SHORT"
+            # Each book says who drove it. The desk reads this back as a
+            # badge, so the model's book and the coin's are never mistaken
+            # for one another or for a rule — and the API records it only
+            # when the intent is actually accepted.
             body = dict(bar_time=last_time, stop=decision.get("stop"),
                         target=decision.get("target"), reason=decision["reason"][:200])
             try:
-                a = post_json(f"{args.api}/api/paper/intent", dict(run=args.run, side=decision["side"], **body))
+                a = post_json(f"{args.api}/api/paper/intent",
+                              dict(run=args.run, side=decision["side"], decider=args.model, **body))
                 # The control's stop must be the same DISTANCE on its own side,
                 # or the two books are not sized alike and the comparison dies.
                 d = abs(float(decision["stop"]) - last_close)
@@ -261,7 +266,7 @@ def main() -> int:
                     c_target = last_close + td if flip == "LONG" else last_close - td
                 b = post_json(f"{args.api}/api/paper/intent", dict(
                     run=args.control, side=flip, bar_time=last_time, stop=c_stop,
-                    target=c_target, reason=f"coin: {flip}"))
+                    target=c_target, reason=f"coin: {flip}", decider="coin"))
                 posted = bool(a.get("accepted")) and bool(b.get("accepted"))
                 print(f"{stamp} bar {dt.datetime.utcfromtimestamp(last_time/1000):%H:%MZ}  "
                       f"{decision['side']:5s} vs coin {flip:5s}  "
