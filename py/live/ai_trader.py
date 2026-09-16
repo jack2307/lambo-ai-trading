@@ -526,6 +526,40 @@ def main() -> int:
                 return int(f.read().strip())
         except (OSError, ValueError):
             return None
+
+    def beat() -> None:
+        """Say "still here" every poll, for both books this process drives.
+
+        Until this existed, the only evidence a book was still being driven was
+        a decision, and decisions arrive one per CLOSED BAR. So a trader that
+        had been killed looked identical to one thinking about the current bar
+        for up to two bars - half an hour on a 15m book - and the desk went on
+        showing a stopped experiment as a running one.
+
+        The poll is thirty seconds and independent of the market, so this makes
+        the same question answerable in about a minute, and answerable at three
+        in the morning with the market shut.
+
+        Written for the control book too. The coin is driven by this same
+        process and stops when it does; making the desk infer that from a
+        naming convention works, but only the process actually knows.
+        """
+        now = int(time.time() * 1000)
+        for run in (args.run, args.control):
+            if not run:
+                continue
+            path = os.path.join(ROOT, "data", "paper", run, "driver.json")
+            tmp = path + ".tmp"
+            try:
+                os.makedirs(os.path.dirname(path), exist_ok=True)
+                with open(tmp, "w", encoding="utf-8") as f:
+                    json.dump({"at": now, "model": args.model, "run": args.run,
+                               "pid": os.getpid(), "poll_s": args.poll}, f)
+                os.replace(tmp, path)
+            except (OSError, TypeError, ValueError):
+                # A missed beat costs a book being called stopped for one poll.
+                # It must never cost a decision.
+                pass
     print(
         f"ai trader: {args.model} on {args.market}:{args.tf} -> {args.run}, "
         f"coin -> {args.control}{' (dry run)' if args.dry_run else ''}",
@@ -536,6 +570,7 @@ def main() -> int:
     if decided_on is not None:
         print(f"resuming: bar {decided_on} was already decided", flush=True)
     while True:
+        beat()
         try:
             detail = get_json(f"{args.api}/api/paper/run/{args.run}?bars={args.context_bars}")
         except Exception as e:  # noqa: BLE001

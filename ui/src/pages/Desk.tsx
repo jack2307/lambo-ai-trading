@@ -307,6 +307,17 @@ const BROKER_STALE_MS = 45_000
 const DECIDER_STALE_BARS = 1.5
 
 /**
+ * How many of a driver's own polls it may miss before its book reads as
+ * stopped.
+ *
+ * Three, against a cadence the driver reports itself — about ninety seconds on
+ * the default thirty-second poll. Enough to ride out one slow write or a
+ * process briefly descheduled, short enough that "is anything driving this?"
+ * stops being a half-hour question.
+ */
+const DRIVER_MISSED_POLLS = 3
+
+/**
  * The books whose decider has gone quiet.
  *
  * The status pill says `fed`, and `fed` is about the FEED - bars are arriving.
@@ -321,21 +332,40 @@ const DECIDER_STALE_BARS = 1.5
  * convention and the `--control` flag that creates the pair uses it; a coin
  * whose sibling is not found is left unjudged rather than guessed at.
  */
-function silentBooks(runs: PaperRun[]): Set<string> {
+function silentBooks(runs: PaperRun[], now: number): Set<string> {
   const out = new Set<string>()
+  const mark = (id: string) => {
+    out.add(id)
+    const coin = `${id}-coin`
+    if (runs.some((x) => x.id === coin)) out.add(coin)
+  }
+
   for (const r of runs) {
-    const d = r.decider
-    if (!d || d.last === 'coin' || !d.last_at || !r.last_bar_time) continue
-    const step = TF_MS[r.tf] ?? 900_000
+    // First choice: the driver's own heartbeat. It is written every poll,
+    // independent of the market, so a killed process shows within a couple of
+    // polls instead of within a couple of bar closes — and it still answers at
+    // three in the morning with the market shut, when no bar will close for
+    // days. Judged against the driver's OWN cadence, not a number baked in
+    // here, so a slow-polling driver is not called dead for being slow.
+    if (r.driver?.at) {
+      const poll = (r.driver.poll_s ?? 30) * 1000
+      if (now - r.driver.at > poll * DRIVER_MISSED_POLLS) mark(r.id)
+      // A heartbeat that is present and fresh settles the question: a book with
+      // a live driver is not stopped, whatever its bars say.
+      continue
+    }
+
+    // Fallback, for a book whose driver predates the heartbeat or is a rule.
     // Measured against the book's own last CLOSED BAR rather than the wall
     // clock. A model answers at every close, so the gap between the last close
     // and its last word is the number of closes it missed — and over a weekend
     // or a dead feed no bar closes, so nothing is called stopped merely because
     // time passed.
+    const d = r.decider
+    if (!d || d.last === 'coin' || !d.last_at || !r.last_bar_time) continue
+    const step = TF_MS[r.tf] ?? 900_000
     if (r.last_bar_time - d.last_at <= step * DECIDER_STALE_BARS) continue
-    out.add(r.id)
-    const coin = `${r.id}-coin`
-    if (runs.some((x) => x.id === coin)) out.add(coin)
+    mark(r.id)
   }
   return out
 }
@@ -851,7 +881,7 @@ function RunsList({
     return { ...run, live: tick }
   }
 
-  const silent = useMemo(() => silentBooks(runs), [runs])
+  const silent = useMemo(() => silentBooks(runs, now), [runs, now])
 
   const rowRefs = useRef<(HTMLButtonElement | null)[]>([])
 

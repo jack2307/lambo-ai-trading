@@ -380,6 +380,38 @@ fn resolve<'a>(registry: &'a Registry, config: &PaperConfig, news_currencies: &[
 
 /* ---------------- persistence ---------------- */
 
+/// Whatever process is driving this book, as it last said so.
+///
+/// A decision only arrives on a closed bar, so until this existed a driver that
+/// had been killed looked exactly like one thinking about the current bar - for
+/// up to two bars, half an hour on a 15m book. The driver writes this every
+/// poll instead, independent of the market, so the same question is answerable
+/// in about a minute and answerable with the market shut.
+///
+/// Absent means nobody has ever written one for this book - a rule-driven run,
+/// or a driver older than the feature. It does NOT mean stopped, and the client
+/// falls back to reading the decider's bar gap in that case.
+#[derive(Debug, Default, Serialize, Deserialize)]
+#[serde(default)]
+pub struct DriverDto {
+    /// When the driver last said it was alive, epoch ms.
+    pub at: i64,
+    pub model: Option<String>,
+    /// The book this process is primarily driving; a control book names its
+    /// model's run here, which is how the desk knows the pair stops together.
+    pub run: Option<String>,
+    pub pid: Option<i64>,
+    /// The driver's own poll interval in seconds, so the client can judge
+    /// staleness against the cadence the driver actually keeps rather than
+    /// against a number baked into the UI.
+    pub poll_s: Option<f64>,
+}
+
+fn driver_of(data: &Path, id: &str) -> Option<DriverDto> {
+    let text = std::fs::read_to_string(run_dir(data, id).join("driver.json")).ok()?;
+    serde_json::from_str(&text).ok()
+}
+
 /// Every account that has mirrored this book, newest snapshot first.
 ///
 /// A list and not an option, because one book can legitimately run on several
@@ -852,6 +884,10 @@ pub struct RunStatus {
     /// gaps, refusals, guard closes, stopped). The lines themselves are on
     /// `GET /api/paper/run/{id}`.
     pub events: usize,
+    /// The process driving this book, as it last reported. `null` when none
+    /// has ever written one, which is not the same as stopped - see
+    /// [`DriverDto`].
+    pub driver: Option<DriverDto>,
     /// The broker accounts this book is mirrored into - empty when no
     /// executor has ever run it, and more than one when it runs on several
     /// accounts at once. See [`BrokerDto`]: a present entry is not a connected
@@ -1172,6 +1208,7 @@ fn status_of(data: &Path, run: &PaperRun, rules: &TradingRules, guards: Option<&
         equity_curve: book.equity_curve.len(),
         events: events_of(data, &run.config.id()).len(),
         brokers: brokers_of(data, &run.config.id()),
+        driver: driver_of(data, &run.config.id()),
     }
 }
 

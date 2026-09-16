@@ -338,6 +338,26 @@ export interface PaperRun {
    * `at` before believing any number in it.
    */
   brokers: PaperBroker[]
+  /**
+   * The process driving this book, as it last reported — written every poll,
+   * not every bar.
+   *
+   * `null` means nobody has ever written one (a rule-driven run, or a driver
+   * older than the feature), which is NOT the same as stopped: the desk falls
+   * back to the decider's bar gap in that case.
+   */
+  driver: null | {
+    /** When the driver last said it was alive, epoch ms. */
+    at: number
+    model: string | null
+    /** The book the process primarily drives — a control book names its
+     *  model's run here, which is how the pair is known to stop together. */
+    run: string | null
+    pid: number | null
+    /** The driver's own poll interval, so staleness is judged against the
+     *  cadence it actually keeps rather than a number baked into the UI. */
+    poll_s: number | null
+  }
 }
 
 /** What the broker's account holds for one book, as the executor last saw it. */
