@@ -230,7 +230,16 @@ pub enum Accepted {
     /// The bar's time is the last bar's: already seen, nothing done.
     Seen,
     /// Appended and stepped.
-    Stepped { report: StepReport, gap: Option<usize>, advice: Option<Advice> },
+    Stepped {
+        report: StepReport,
+        gap: Option<usize>,
+        advice: Option<Advice>,
+        /// What the counterfactual book closed on this same bar. Carried out
+        /// rather than dropped, because the shadow's trades need appending to
+        /// the run's history exactly as the advised book's do — it is a book
+        /// with a P&L, not a scratch calculation.
+        shadow_closed: Vec<fd_backtest::engine::Trade>,
+    },
 }
 
 /// A bar's prices must be finite and ordered; checked once per POST, not
@@ -330,7 +339,7 @@ impl PaperRun {
         // the advised one and never before, so a panic here could not leave the
         // real book half-advanced.
         let shadow = self.shadow.as_mut().expect("seeded above");
-        shadow.step(&bars[i], atr_prev, rules, guards, bar_ms, None, |position| {
+        let shadow_report = shadow.step(&bars[i], atr_prev, rules, guards, bar_ms, None, |position| {
             if i < warmup {
                 return Intent::None;
             }
@@ -338,7 +347,8 @@ impl PaperRun {
             strategy.on_bar(&ctx)
         });
 
-        Ok(Accepted::Stepped { report, gap, advice })
+        let shadow_closed = shadow_report.trades.clone();
+        Ok(Accepted::Stepped { report, gap, advice, shadow_closed })
     }
 }
 
@@ -415,6 +425,80 @@ fn events_of(data: &Path, id: &str) -> Vec<serde_json::Value> {
         .collect()
 }
 
+/// One closed trade as `trades.jsonl` carries it: the trade itself, whole, and
+/// which of the run's two books it belongs to.
+///
+/// The engine's own `Trade` is serialised rather than a display shape, so a
+/// reload reconstructs exactly what was closed — `fills.jsonl` is written for
+/// a reader and drops `exit_kind` and `swap_usd`, which metrics need.
+#[derive(Debug, Deserialize, Serialize)]
+struct HistoryLine {
+    /// `main` or `shadow`.
+    book: String,
+    trade: fd_backtest::engine::Trade,
+    /// Book equity immediately after this trade closed, so the curve is read
+    /// back rather than re-derived from a fold that could drift.
+    equity: f64,
+}
+
+/// Append every trade closed on this step to the run's history.
+fn append_history(data: &Path, id: &str, book: &str, trades: &[fd_backtest::engine::Trade], equity: f64) {
+    if trades.is_empty() {
+        return;
+    }
+    let dir = run_dir(data, id);
+    if std::fs::create_dir_all(&dir).is_err() {
+        return;
+    }
+    let Ok(mut file) = std::fs::OpenOptions::new().create(true).append(true).open(dir.join("trades.jsonl")) else {
+        return;
+    };
+    use std::io::Write as _;
+    for trade in trades {
+        let line = HistoryLine { book: book.to_string(), trade: trade.clone(), equity };
+        if let Ok(text) = serde_json::to_string(&line) {
+            let _ = writeln!(file, "{text}");
+        }
+    }
+}
+
+/// Put `trades` and `equity_curve` back on a book loaded from its state file.
+///
+/// A half-written last line is skipped rather than fatal: the writer is a
+/// process that gets killed, and one lost trade must not cost the history.
+fn restore_history(data: &Path, run: &mut PaperRun) {
+    let path = run_dir(data, &run.config.id()).join("trades.jsonl");
+
+    // A book written before the history moved out still carries its trades in
+    // `state.json`. Migrate them across on first sight rather than letting the
+    // next `persist` drop them: this change must cost nobody their record.
+    if !path.exists() {
+        let id = run.config.id();
+        if !run.book.trades.is_empty() {
+            append_history(data, &id, "main", &run.book.trades, run.book.equity);
+        }
+        if let Some(shadow) = run.shadow.as_ref() {
+            if !shadow.trades.is_empty() {
+                append_history(data, &id, "shadow", &shadow.trades, shadow.equity);
+            }
+        }
+        // Already in memory from the state file; nothing further to read.
+        if !run.book.trades.is_empty() || run.shadow.as_ref().is_some_and(|s| !s.trades.is_empty()) {
+            return;
+        }
+    }
+
+    let Ok(text) = std::fs::read_to_string(&path) else { return };
+    for line in text.lines().filter(|l| !l.trim().is_empty()) {
+        let Ok(entry) = serde_json::from_str::<HistoryLine>(line) else { continue };
+        let book = if entry.book == "shadow" { run.shadow.as_mut() } else { Some(&mut run.book) };
+        if let Some(book) = book {
+            book.equity_curve.push((entry.trade.exit_time, entry.equity));
+            book.trades.push(entry.trade);
+        }
+    }
+}
+
 /// Every `state.json` under `<data>/paper/`, keyed by run id. A file that
 /// does not parse is reported on stderr and skipped rather than taking the
 /// process down: the other runs are still worth keeping.
@@ -435,6 +519,7 @@ pub fn reload(data: &Path) -> BTreeMap<String, PaperRun> {
             Ok(mut run) => {
                 let id = run.config.id();
                 run.config.id.clone_from(&id);
+                restore_history(data, &mut run);
                 if let Some(previous) = runs.insert(id.clone(), run) {
                     eprintln!("paper: two state files claim run `{id}`; keeping {}, the earlier one was for {}", path.display(), previous.config.stream());
                 }
@@ -1116,7 +1201,7 @@ fn feed_run(state: &AppState, run: &mut PaperRun, bar: Bar) -> Result<RunBarResp
     let (strategy, params) = resolve(&state.registry, &run.config, &rules.news_currencies)?;
     let bar_ms = timeframe_ms(&run.config.tf).unwrap_or(0);
 
-    let (report, gap, applied) = match run.accept(bar, &strategy, &params, &rules, guards.as_ref(), bar_ms)? {
+    let (report, gap, applied, shadow_closed) = match run.accept(bar, &strategy, &params, &rules, guards.as_ref(), bar_ms)? {
         Accepted::Seen => {
             return Ok(RunBarResponse {
                 id,
@@ -1129,7 +1214,7 @@ fn feed_run(state: &AppState, run: &mut PaperRun, bar: Bar) -> Result<RunBarResp
                 gap: None,
             });
         }
-        Accepted::Stepped { report, gap, advice } => (report, gap, advice),
+        Accepted::Stepped { report, gap, advice, shadow_closed } => (report, gap, advice, shadow_closed),
     };
 
     persist(&state.data, run)?;
@@ -1165,6 +1250,13 @@ fn feed_run(state: &AppState, run: &mut PaperRun, bar: Bar) -> Result<RunBarResp
     }
     if report.no_risk {
         record(&state.data, &id, &json!({ "kind": "refused", "time": bar.time, "reason": "NO_RISK_UNIT" }))?;
+    }
+    // The durable history, appended once per close. `fills.jsonl` beside it is
+    // written for a READER and drops `exit_kind` and `swap_usd`; this carries
+    // the engine's own `Trade`, so a reload reconstructs exactly what closed.
+    append_history(&state.data, &id, "main", &report.trades, run.book.equity);
+    if let Some(shadow) = run.shadow.as_ref() {
+        append_history(&state.data, &id, "shadow", &shadow_closed, shadow.equity);
     }
     for trade in &report.trades {
         record(&state.data, &id, &trade_event("trade", trade))?;

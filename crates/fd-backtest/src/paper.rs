@@ -59,8 +59,24 @@ pub struct StepReport {
 pub struct PaperBook {
     pub equity: f64,
     pub position: Option<Live>,
+    /// Every closed trade. **Not persisted** — see `equity_curve` below.
+    #[serde(default, skip_serializing)]
     pub trades: Vec<Trade>,
     /// `(time, equity)` after each closed trade — the engine's curve.
+    ///
+    /// Neither this nor `trades` is written into the book's state file, and
+    /// that is the whole point. The state file is rewritten on EVERY bar —
+    /// ninety-six times a day per book — and these two grow without bound. At
+    /// the guards' four trades a day, ten years is ten thousand trades, about
+    /// 3.9 MB a book; rewriting that ninety-six times a day across fourteen
+    /// books is 5.2 GB of writes a day to record one bar. The cost of a bar
+    /// must not depend on how long the book has been running.
+    ///
+    /// They live in `trades.jsonl` beside the book instead, appended once per
+    /// close, and are rebuilt from it at load. Append-only is also the safer
+    /// shape for a file written by a process that gets killed: a torn last
+    /// line costs one trade, not the history.
+    #[serde(default, skip_serializing)]
     pub equity_curve: Vec<(i64, f64)>,
     pub skipped_no_atr: usize,
     pub skipped_by_guard: BTreeMap<String, usize>,

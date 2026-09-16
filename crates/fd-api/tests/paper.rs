@@ -246,6 +246,40 @@ async fn a_stand_aside_also_survives_a_restart() {
 }
 
 #[tokio::test]
+async fn a_books_history_survives_a_restart_without_living_in_its_state_file() {
+    // The cost of recording one bar must not depend on how long the book has
+    // been running. `trades` and `equity_curve` grow without bound and the
+    // state file is rewritten EVERY bar, so they were moved out to an
+    // append-only `trades.jsonl`. This holds both halves of that: the state
+    // file no longer carries them, and a reload still reports the same book.
+    let dir = tempfile::tempdir().expect("temp dir");
+    let state = state_over(dir.path(), 300);
+    start_run(&state, json!({ "market": "btc", "tf": "15m", "strategy": "ema-cross", "id": "b", "window": 200 }))
+        .await
+        .expect("start");
+    for i in 300..380 {
+        post_bar(&state, "btc", "15m", wave(i)).await.expect("bar");
+    }
+    let before = run_named(&read_status(&state).await, "b").clone();
+    assert!(before["trades"].as_u64().expect("trades") > 0, "the tape must close something: {before}");
+
+    // The state file must NOT carry the history any more.
+    let text = std::fs::read_to_string(dir.path().join("paper").join("b").join("state.json")).expect("state");
+    let parsed: Value = serde_json::from_str(&text).expect("json");
+    assert!(parsed["book"]["trades"].is_null(), "trades are out of the state file: {}", &text[..200.min(text.len())]);
+    assert!(parsed["book"]["equity_curve"].is_null(), "the curve is out too");
+    assert!(dir.path().join("paper").join("b").join("trades.jsonl").is_file(), "history was written");
+
+    // And a reload reports exactly what the live run did.
+    let reborn = Arc::new(AppState::new(config(), dir.path().to_path_buf()));
+    let after = run_named(&read_status(&reborn).await, "b").clone();
+    assert_eq!(after["trades"], before["trades"], "trade count survived");
+    assert_eq!(after["net_usd"], before["net_usd"], "net survived");
+    assert_eq!(after["profit_factor"], before["profit_factor"], "metrics survived");
+    assert_eq!(after["equity_curve"], before["equity_curve"], "the curve survived");
+}
+
+#[tokio::test]
 async fn a_rule_based_book_cannot_be_claimed_by_a_decider() {
     // The badge is only meaningful because the route refuses rule-based runs
     // outright. Without this, anything could post a gpt-5 badge onto a book
