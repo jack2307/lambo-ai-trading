@@ -109,11 +109,24 @@ runs = [
     "xau-macd-asia",
     "ai-xau-ds-ctx",
     "ai-xau-ds-ctx-coin",
-    "ai-xau-opus-ctx",
-    "ai-xau-opus-ctx-coin",
     "ai-xau-sol-ctx",
     "ai-xau-sol-ctx-coin",
 ]
+
+# Opus is deliberately NOT mirrored here - owner's instruction, 2026-09-16.
+# Its book and its coin go on running on paper, where nothing about them
+# changes; what stops is sending their decisions to a broker.
+#
+# Its coin control came out with it, and that is not tidiness. A `-coin` book
+# exists to answer one question about one model, so a coin left mirroring alone
+# would put a random-direction position on the account every few bars with
+# nothing to compare it against - cost and margin spent to measure nothing.
+# Whenever a model leaves this list, its coin leaves with it.
+#
+# Removing a book from `runs` only stops the mirror from OPENING. Check it is
+# flat on the account first: the launcher stops every executor, so a book
+# dropped while it holds a position leaves that position behind with nobody
+# reconciling it. Both Opus books were flat when this was done.
 
 # A second account looks like this. Note the separate terminal directory - two
 # entries pointing at one terminal would be two executors fighting over one

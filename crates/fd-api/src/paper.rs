@@ -1733,6 +1733,17 @@ fn account_registry(dir: &Path) -> Vec<AccountSpec> {
     toml::from_str::<AccountFile>(&text).map(|f| f.account).unwrap_or_default()
 }
 
+/// How far behind the freshest snapshot on an account a book may be and still
+/// count as mirroring it.
+///
+/// Every executor on one account polls at the same cadence, so a book more than
+/// a few polls behind the newest one has stopped rather than slowed. This is a
+/// RELATIVE window on purpose: it says "this book stopped while its neighbours
+/// kept going", which is true whether the whole desk has been down for an hour
+/// or is running normally. Whether the ACCOUNT itself is live is a separate
+/// question the client answers from `at`.
+const MIRROR_LAG_MS: i64 = 60_000;
+
 /// `GET /api/paper/accounts` - the broker side, one entry per account.
 ///
 /// Separate from `/status` because it answers a question that is not about any
@@ -1740,6 +1751,29 @@ fn account_registry(dir: &Path) -> Vec<AccountSpec> {
 /// it on every screen, including the ones that never load a book, so it is
 /// kept small deliberately - an account summary, not a copy of every run.
 pub async fn accounts(State(state): State<Arc<AppState>>) -> Result<Json<AccountsResponse>, ApiError> {
+    // Collected first, then summarised, because `mirroring` is decided against
+    // the freshest snapshot on the account and that is not known until every
+    // book has been read. Reported as they were found, a book whose executor
+    // stopped hours ago counted the same as one reporting now - the desk said
+    // "mirroring 8/6" after two books were dropped from the registry and left
+    // their last file behind.
+    let seen: Vec<(String, BrokerDto)> = {
+        let runs = state.paper.lock().expect("paper runs");
+        runs.values()
+            .flat_map(|run| {
+                let id = run.config.id();
+                brokers_of(&state.data, &id).into_iter().map(move |b| (id.clone(), b))
+            })
+            .collect()
+    };
+    let mut newest: BTreeMap<i64, i64> = BTreeMap::new();
+    for (_, b) in &seen {
+        if let Some(login) = b.login {
+            let slot = newest.entry(login).or_insert(b.at);
+            *slot = (*slot).max(b.at);
+        }
+    }
+
     let mut by_login: BTreeMap<i64, AccountDto> = BTreeMap::new();
 
     // The registry first, so a configured account appears whether or not
@@ -1768,11 +1802,8 @@ pub async fn accounts(State(state): State<Arc<AppState>>) -> Result<Json<Account
 
     // Then what is actually reporting, which overwrites the registry's guesses
     // about the account and never its intent.
-    let runs = state.paper.lock().expect("paper runs");
-    let mut seen_live: BTreeMap<i64, bool> = BTreeMap::new();
-    for run in runs.values() {
-        let id = run.config.id();
-        for b in brokers_of(&state.data, &id) {
+    let mut said: BTreeMap<i64, bool> = BTreeMap::new();
+    for (id, b) in seen {
         let Some(login) = b.login else { continue };
         let entry = by_login.entry(login).or_insert_with(|| AccountDto {
             id: b.account.clone(),
@@ -1793,6 +1824,11 @@ pub async fn accounts(State(state): State<Arc<AppState>>) -> Result<Json<Account
             mirroring: Vec::new(),
             positions: 0,
         });
+        // A book left behind by a stopped executor describes an account as it
+        // was, so it must not contribute to how the account is now.
+        if b.at < newest.get(&login).copied().unwrap_or(0) - MIRROR_LAG_MS {
+            continue;
+        }
         // The freshest snapshot wins the account's numbers: two executors on
         // one account both report the same balance, and the older one would
         // otherwise overwrite the newer with a remembered figure.
@@ -1808,20 +1844,22 @@ pub async fn accounts(State(state): State<Arc<AppState>>) -> Result<Json<Account
                 entry.server = b.server.clone();
             }
         }
-        // Reset the registry's intent the first time a real executor speaks for
+        // Reset the registry's intent the first time a live executor speaks for
         // this account, then AND across the rest: one book sending real orders
         // makes the account a live one, however many others are only watching.
-        let live = seen_live.entry(login).or_insert(false);
-        if !*live {
+        let told = said.entry(login).or_insert(false);
+        if !*told {
             entry.dry_run = true;
-            *live = true;
+            *told = true;
         }
         entry.dry_run &= b.dry_run.unwrap_or(false);
         if b.position.is_some() {
             entry.positions += 1;
         }
-        entry.mirroring.push(id.clone());
-        }
+        entry.mirroring.push(id);
+    }
+    for a in by_login.values_mut() {
+        a.mirroring.sort();
     }
     Ok(Json(AccountsResponse { accounts: by_login.into_values().collect() }))
 }
