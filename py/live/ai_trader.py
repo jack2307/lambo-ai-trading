@@ -182,13 +182,37 @@ def main() -> int:
         sys.exit(f"no {env} in the environment for {args.model}")
 
     coin = random.Random(args.seed)
+    # Which bar was last decided, on disk. A restart used to forget, re-ask the
+    # current bar, spend another model call on it and post a SECOND intent for
+    # it — visible in the log as two entries for one bar, and it flipped the
+    # coin twice for a single trade. Harmless to the books (the pending slot is
+    # simply overwritten) but it pollutes the campaign's own record, which is
+    # the only thing this campaign produces.
+    mark_path = os.path.join(ROOT, "data", "paper", args.run, "decided_on.txt")
+
+    def remember(t: int) -> None:
+        try:
+            os.makedirs(os.path.dirname(mark_path), exist_ok=True)
+            with open(mark_path, "w", encoding="utf-8") as f:
+                f.write(str(t))
+        except OSError:
+            pass  # a lost mark costs one duplicate call, never a wrong trade
+
+    def recall() -> int | None:
+        try:
+            with open(mark_path, encoding="utf-8") as f:
+                return int(f.read().strip())
+        except (OSError, ValueError):
+            return None
     print(
         f"ai trader: {args.model} on {args.market}:{args.tf} -> {args.run}, "
         f"coin -> {args.control}{' (dry run)' if args.dry_run else ''}",
         flush=True,
     )
 
-    decided_on: int | None = None
+    decided_on: int | None = recall()
+    if decided_on is not None:
+        print(f"resuming: bar {decided_on} was already decided", flush=True)
     while True:
         try:
             detail = get_json(f"{args.api}/api/paper/run/{args.run}?bars={args.bars}")
@@ -240,6 +264,7 @@ def main() -> int:
                         "reason": f"the model was unreachable; NOT a decision: {type(e).__name__}"}
 
         decided_on = last_time
+        remember(last_time)
         posted = False
         refused = ""
         if decision["side"] != "NONE":

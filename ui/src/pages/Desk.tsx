@@ -1144,6 +1144,28 @@ function OpenBadge({ run, tick }: { run: PaperRun; tick?: LiveBar }) {
  * Flat books keep a one-line "flat", because an empty frame where a position
  * would be is worse than a word.
  */
+/**
+ * The price a pending entry will actually fill at, once that is knowable.
+ *
+ * It fills at the OPEN of the bar after the one it was decided on. Before that
+ * bar starts there is genuinely no such price and nothing should be drawn. But
+ * the moment it starts forming, its open is already set and is EXACTLY the
+ * fill — not an estimate — and the desk was hiding a number it already had.
+ *
+ * Claimed only when the forming bar is exactly one timeframe after the
+ * decision. A stream that has skipped or is lagging must not have some other
+ * bar's open presented as the fill.
+ */
+function pendingFill(
+  pending: NonNullable<PaperRun['pending']>,
+  live: LiveBar | null | undefined,
+  tf: string,
+): number | null {
+  const step = TF_MS[tf]
+  if (!step || !live || pending.decided_on == null) return null
+  return live.time === pending.decided_on + step && Number.isFinite(live.open) ? live.open : null
+}
+
 function PositionBar({ run, live }: { run: PaperRun; live: LiveBar | null | undefined }) {
   const open = run.open
   if (!open) {
@@ -1154,20 +1176,40 @@ function PositionBar({ run, live }: { run: PaperRun; live: LiveBar | null | unde
     const p = run.pending
     if (p) {
       const long = p.side === 'LONG'
+      const fill = pendingFill(p, live, run.tf)
       return (
         <div className={cn('mt-2 rounded-sm border border-dashed px-2.5 py-2', long ? 'border-lc/40' : 'border-lp/40')}>
           <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
             <span className={cn('num rounded-sm border border-dashed px-1 text-[11px] font-medium', long ? 'border-lc/50 text-lc' : 'border-lp/50 text-lp')}>
               {p.side}
             </span>
-            <span className="text-muted-foreground text-[11px]">decided — fills at the next bar&rsquo;s open</span>
+            {fill != null ? (
+              <span className="text-[11px]">
+                <span className="text-muted-foreground">fills at </span>
+                <span className="num text-[13px]">{quote(fill)}</span>
+                <span className="text-muted-foreground/70"> — this bar&rsquo;s open, already set</span>
+              </span>
+            ) : (
+              <span className="text-muted-foreground text-[11px]">decided — fills at the next bar&rsquo;s open, which has not started</span>
+            )}
             <span className="num text-muted-foreground/70 ml-auto text-[10px]">
               on the {shortStamp(p.decided_on)} bar
             </span>
           </div>
           <div className="text-muted-foreground mt-1.5 flex flex-wrap gap-x-4 text-[10px]">
-            <span className="num text-lp">stop {quote(p.stop)}</span>
-            <span className="num text-lc">target {quote(p.target)}</span>
+            <span className="num text-lp">
+              stop {quote(p.stop)}
+              {fill != null && p.stop != null && ` (${quote(Math.abs(fill - p.stop))} away)`}
+            </span>
+            <span className="num text-lc">
+              target {quote(p.target)}
+              {fill != null && p.target != null && ` (${quote(Math.abs(p.target - fill))} away)`}
+            </span>
+            {fill != null && p.stop != null && p.target != null && (
+              <span className="num">
+                R:R {num(Math.abs(p.target - fill) / Math.max(1e-9, Math.abs(fill - p.stop)), 2)}
+              </span>
+            )}
           </div>
           {p.reason && <p className="text-muted-foreground/80 mt-1.5 text-[11px] leading-snug">{p.reason}</p>}
         </div>
@@ -1590,6 +1632,7 @@ function RunChart({
             remounting is cheaper to reason about than reconciling them. */}
         <PriceChart
         pending={detail.run.pending}
+        pendingFill={detail.run.pending ? pendingFill(detail.run.pending, live, detail.run.tf) : null}
           key={detail.run.id}
           bars={bars}
           indicators={indicators}

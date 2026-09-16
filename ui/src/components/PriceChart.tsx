@@ -56,6 +56,12 @@ interface Props {
    */
   pending?: { side: string; stop: number | null; target: number | null } | null
   /**
+   * The price the pending entry will fill at, when that is already knowable —
+   * the forming bar's open. Null before that bar starts, and then nothing is
+   * drawn, because a level nothing can fill at is worse than no level.
+   */
+  pendingFill?: number | null
+  /**
    * The one trade the reader picked in the fills table, if any.
    *
    * Everything else stays drawn and fades; this one keeps its bands, its
@@ -88,6 +94,7 @@ export function PriceChart({
   showZones,
   liveBar,
   pending,
+  pendingFill,
   focus = null,
 }: Props) {
   const container = useRef<HTMLDivElement>(null)
@@ -295,6 +302,8 @@ export function PriceChart({
     const rows: [string, number | null, string][] = [
       [`pending ${pending.side.toLowerCase()} · stop`, pending.stop, token('--lp', '#e05d6a')],
       [`pending ${pending.side.toLowerCase()} · target`, pending.target, token('--lc', '#46c98a')],
+      // Drawn only once the forming bar exists, when its open IS the fill.
+      ['fills here', pendingFill ?? null, token('--primary', '#8dff08')],
     ]
     for (const [title, price, color] of rows) {
       if (price == null || !Number.isFinite(price)) continue
@@ -312,7 +321,7 @@ export function PriceChart({
         }),
       )
     }
-  }, [pending])
+  }, [pending, pendingFill])
 
   // Options-derived levels, drawn as price lines on the candles.
   useEffect(() => {
