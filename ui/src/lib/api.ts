@@ -327,6 +327,85 @@ export interface PaperRun {
   /** On `/status` these two are *counts*, kept light; the detail route carries the rows. */
   equity_curve?: number
   events?: number
+  /**
+   * The broker account this book is mirrored into, as the executor last saw
+   * it — `null` when no executor has ever run this book.
+   *
+   * A present `broker` is NOT a connected one. The API is Rust and cannot ask
+   * a MetaTrader terminal anything, so this is a file the executor writes each
+   * poll and the API serves back; when the executor stops, the file stays. Read
+   * `at` before believing any number here.
+   */
+  broker: null | PaperBroker
+}
+
+/** What the broker's account holds for one book, as the executor last saw it. */
+export interface PaperBroker {
+  /** When the executor last looked, epoch ms. The freshness of everything else. */
+  at: number
+  login: number | null
+  server: string | null
+  /** False would be a real-money account, which the executor refuses to trade. */
+  demo: boolean | null
+  currency: string | null
+  balance: number | null
+  equity: number | null
+  margin: number | null
+  margin_free: number | null
+  /** `null` on a flat account, rather than 0 — which would read as a stop-out. */
+  margin_level: number | null
+  symbol: string | null
+  /** The STANDARD symbol's contract size, which is 100x the cent book's. */
+  contract_size: number | null
+  magic: number | null
+  lot_scale: number | null
+  /** True while the executor reconciles but sends nothing. */
+  dry_run: boolean | null
+  bid: number | null
+  ask: number | null
+  /** What the BOOK wanted when this snapshot was taken, beside what the
+   *  account holds — the pair is the point, so that a row can say which of the
+   *  two is ahead rather than just "out of sync". */
+  book_side: string | null
+  book_lots: number | null
+  /** Banked on the account in its own currency, and over how many exits — the
+   *  counterpart to the paper book's `net_usd` and `trades`. */
+  realised: number | null
+  closed: number | null
+  position: null | {
+    ticket: number | null
+    side: string | null
+    lots: number | null
+    entry_price: number | null
+    price_now: number | null
+    sl: number | null
+    tp: number | null
+    /** In the ACCOUNT's currency — the broker's number, not the book's. */
+    profit: number | null
+    swap: number | null
+    opened_at: number | null
+  }
+  /** Why the last open was refused, if it was. */
+  blocked: string | null
+}
+
+/** One broker account, as `/api/paper/accounts` reports it. */
+export interface BrokerAccount {
+  login: number
+  server: string | null
+  demo: boolean | null
+  currency: string | null
+  balance: number | null
+  equity: number | null
+  margin: number | null
+  margin_level: number | null
+  /** True only when EVERY book here is in dry run. */
+  dry_run: boolean
+  /** Newest snapshot across this account's books. */
+  at: number
+  runs: string[]
+  /** How many of those books hold a position in the account. */
+  positions: number
 }
 
 /**
@@ -486,6 +565,8 @@ export const api = {
 
   research: () => request<Research>('/api/research'),
   paperStatus: () => request<{ runs: PaperRun[] }>('/api/paper/status'),
+
+  paperAccounts: () => request<{ accounts: BrokerAccount[] }>('/api/paper/accounts'),
 
   /** One run in full. `bars` is how many recent bars to send back with it. */
   paperRun: (id: string, bars = 120) =>

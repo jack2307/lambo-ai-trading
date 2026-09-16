@@ -43,6 +43,7 @@ import argparse
 import datetime as dt
 import hashlib
 import json
+import os
 import sys
 import time
 import urllib.request
@@ -95,6 +96,66 @@ def clamp_volume(info, raw: float) -> tuple:
 def notional_of(info, vol: float, price: float) -> float:
     """What the order is actually worth, in the account's currency."""
     return vol * info.trade_contract_size * price
+
+
+def realised_of(mt5, magic: int) -> tuple:
+    """What this book has actually BANKED on the account, and over how many exits.
+
+    The paper book's `net_usd` is the rule executed perfectly at the bar's
+    price. This is the same rule after a spread, a slip and a fill, and the
+    difference between the two numbers is the entire reason for running a
+    mirror at all - so the account view is not worth much without it.
+
+    Deals are matched by the book's magic number, which is how one account
+    carries several books without their results running together.
+
+    The window is deliberately far wider than it needs to be. MT5 takes history
+    bounds in SERVER time, not UTC, and this desk has been caught by that
+    before; 400 days back and two days forward makes a three-hour offset
+    irrelevant instead of making it a bug to remember.
+
+    Commission is summed over every deal and profit and swap only over the
+    closing ones: an entry deal carries a charge but no result, and counting
+    its zero profit as a trade would inflate the count by exactly double.
+    """
+    now = dt.datetime.now()
+    deals = mt5.history_deals_get(now - dt.timedelta(days=400), now + dt.timedelta(days=2))
+    if deals is None:
+        return None, 0
+    total, closed = 0.0, 0
+    for d in deals:
+        if d.magic != magic:
+            continue
+        total += d.commission
+        if d.entry != mt5.DEAL_ENTRY_IN:
+            total += d.profit + d.swap
+            closed += 1
+    return round(total, 2), closed
+
+
+def write_snapshot(path, payload: dict) -> None:
+    """The broker's side of this book, for anything that cannot reach MT5.
+
+    `fd-api` is Rust and has no way to ask a terminal anything, so the only
+    process that can see the account is this one. It writes what it sees each
+    poll and the API serves the file. Written whole then renamed, because a
+    reader that catches a half-written file would show a half-true account.
+
+    The timestamp is the point of it: a file that has stopped moving means this
+    executor has stopped, and a reader that cannot tell a live account from a
+    remembered one is worse than a reader with no account at all.
+    """
+    tmp = path.with_suffix(".tmp")
+    try:
+        with open(tmp, "w", encoding="utf-8") as fh:
+            json.dump(payload, fh)
+        os.replace(tmp, path)
+    except (OSError, TypeError, ValueError):
+        # A snapshot is a convenience and must never stop the mirror. Caught
+        # narrowly on purpose: these three are the ways WRITING can fail, and
+        # swallowing everything here would have hidden the NameError that made
+        # this function crash every executor the first time it ran.
+        pass
 
 
 def main() -> int:
@@ -181,6 +242,10 @@ def main() -> int:
             }
             return send(req, f"close {why}")
 
+        def nonlocal_blocked(why) -> None:
+            nonlocal blocked
+            blocked = why
+
         def open_like(book_open: dict) -> bool:
             tick = mt5.symbol_info_tick(args.symbol)
             is_long = book_open["side"] == "LONG"
@@ -198,6 +263,7 @@ def main() -> int:
                     reason="order notional exceeds the sanity ceiling; nothing sent")
                 print(f"REFUSED: {vol} lots = {notional:,.0f} on {equity:,.0f} equity "
                       f"({notional / equity:.1f}x, ceiling {args.max_notional_ratio}x). Nothing sent.", flush=True)
+                nonlocal_blocked(f"{vol} lots is {notional / equity:.0f}x equity, over the {args.max_notional_ratio}x ceiling")
                 return False
             req = {
                 "action": mt5.TRADE_ACTION_DEAL, "symbol": args.symbol, "volume": vol,
@@ -214,6 +280,56 @@ def main() -> int:
                 req["tp"] = float(book_open["target"])
             return send(req, f"open {book_open['side'].lower()} {vol}")
 
+        snap_path = ROOT / "data" / "paper" / args.run / "broker.json"
+        blocked = None  # why the last open was refused, if it was
+
+        def snapshot(held, book_open) -> None:
+            acc = mt5.account_info()
+            realised, closed = realised_of(mt5, magic)
+            tick = mt5.symbol_info_tick(args.symbol)
+            pos = held[0] if held else None
+            payload = {
+                "at": int(time.time() * 1000),
+                "login": getattr(acc, "login", None),
+                "server": getattr(acc, "server", None),
+                "demo": getattr(acc, "trade_mode", None) == mt5.ACCOUNT_TRADE_MODE_DEMO,
+                "currency": getattr(acc, "currency", None),
+                "balance": getattr(acc, "balance", None),
+                "equity": getattr(acc, "equity", None),
+                "margin": getattr(acc, "margin", None),
+                "margin_free": getattr(acc, "margin_free", None),
+                # MT5 reports 0 for a flat account; null says "no ratio" rather
+                # than claiming a level of zero, which would read as a stop-out.
+                "margin_level": (getattr(acc, "margin_level", 0.0) or None),
+                "symbol": args.symbol,
+                "contract_size": info.trade_contract_size,
+                "magic": magic,
+                "lot_scale": args.lot_scale,
+                "dry_run": bool(args.dry_run),
+                "bid": getattr(tick, "bid", None),
+                "ask": getattr(tick, "ask", None),
+                # What the book wants versus what the account holds. Kept as two
+                # fields rather than one "in sync" flag: the interesting state is
+                # WHICH of them is ahead, and a boolean throws that away.
+                "book_side": (book_open or {}).get("side"),
+                "book_lots": (book_open or {}).get("lots"),
+                "realised": realised, "closed": closed,
+                "position": None if pos is None else {
+                    "ticket": pos.ticket,
+                    "side": "LONG" if pos.type == mt5.POSITION_TYPE_BUY else "SHORT",
+                    "lots": pos.volume,
+                    "entry_price": pos.price_open,
+                    "price_now": pos.price_current,
+                    "sl": pos.sl or None,
+                    "tp": pos.tp or None,
+                    "profit": pos.profit,
+                    "swap": pos.swap,
+                    "opened_at": int(pos.time) * 1000,
+                },
+                "blocked": blocked,
+            }
+            write_snapshot(snap_path, payload)
+
         while True:
             if stop_file.exists():
                 for p in positions():
@@ -224,10 +340,12 @@ def main() -> int:
                 run = read_status(args.api, args.run)
             except Exception as e:  # noqa: BLE001
                 log(out, "api-unreachable", error=str(e)[:200])
+                snapshot(positions(), None)
                 time.sleep(args.poll)
                 continue
             if run is None:
                 log(out, "run-missing", run=args.run)
+                snapshot(positions(), None)
                 time.sleep(args.poll)
                 continue
             book_open = run.get("open")
@@ -244,6 +362,7 @@ def main() -> int:
                         close(p, "side changed")
                         open_like(book_open)
                         break
+            snapshot(positions(), book_open)
             time.sleep(args.poll)
     except KeyboardInterrupt:
         return 0

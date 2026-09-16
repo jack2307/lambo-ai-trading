@@ -14,6 +14,21 @@ import { api, type Catalog } from '@/lib/api'
 
 export type View = 'desk' | 'analytics' | 'workbench' | 'tape' | 'research' | 'floor'
 
+/**
+ * Which side of the desk is on screen: what the strategies DECIDED, or what a
+ * broker account actually did with those decisions.
+ *
+ * They are two different books and the difference is the measurement. The
+ * paper book is the rule executed perfectly at the bar's price; the account is
+ * the same rule after a spread, a slip and a fill. Showing them in one merged
+ * view would make that difference unreadable, which is why this is a switch
+ * and not a column.
+ *
+ * `paper` is the default and the fallback: it is the only one that is true
+ * when nothing is connected.
+ */
+export type Book = 'paper' | 'account'
+
 const VIEWS: View[] = ['desk', 'analytics', 'workbench', 'tape', 'research', 'floor']
 
 function viewFromHash(): View {
@@ -25,6 +40,7 @@ export default function App() {
   const [view, setView] = useState<View>(viewFromHash)
   const [catalog, setCatalog] = useState<Catalog | null>(null)
   const [market, setMarket] = useState<string>('')
+  const [book, setBook] = useState<Book>('paper')
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -61,6 +77,8 @@ export default function App() {
         markets={catalog?.markets ?? []}
         market={market}
         onMarketChange={setMarket}
+        book={book}
+        onBookChange={setBook}
       />
 
       {error && <ErrorBanner message={error} onDismiss={() => setError(null)} />}
@@ -69,7 +87,7 @@ export default function App() {
           one: the default screen must not be held behind a request it does not
           use, and Analytics asks only the paper routes. */}
       {view === 'desk' ? (
-        <Desk />
+        <Desk book={book} />
       ) : view === 'analytics' ? (
         <Analytics />
       ) : view === 'floor' ? (

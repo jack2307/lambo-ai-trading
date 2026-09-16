@@ -380,6 +380,16 @@ fn resolve<'a>(registry: &'a Registry, config: &PaperConfig, news_currencies: &[
 
 /* ---------------- persistence ---------------- */
 
+/// The executor's last look at the broker, if one has ever run this book.
+///
+/// Absent, unreadable and malformed are all the same answer - `None` - on
+/// purpose: this is a view of somebody else's file, and no state of it should
+/// be able to fail a status request for every other book.
+fn broker_of(data: &Path, id: &str) -> Option<BrokerDto> {
+    let text = std::fs::read_to_string(run_dir(data, id).join("broker.json")).ok()?;
+    serde_json::from_str(&text).ok()
+}
+
 fn run_dir(data: &Path, id: &str) -> PathBuf {
     data.join("paper").join(id)
 }
@@ -824,6 +834,83 @@ pub struct RunStatus {
     /// gaps, refusals, guard closes, stopped). The lines themselves are on
     /// `GET /api/paper/run/{id}`.
     pub events: usize,
+    /// The broker account this book is mirrored into, or `null` when no
+    /// executor has ever run it. See [`BrokerDto`] - in particular that a
+    /// present `broker` is not a connected one; read its `at`.
+    pub broker: Option<BrokerDto>,
+}
+
+/// What the broker's account looks like for one book, as the executor last saw it.
+///
+/// This API is Rust and cannot ask a MetaTrader terminal anything: the only
+/// process that can see the account is the executor mirroring the book, so it
+/// writes what it sees to `data/paper/<run>/broker.json` each poll and this
+/// serves the file back unchanged. Every field is optional because the file is
+/// written by another program - a shape that drifts should cost a field, not
+/// the whole account.
+///
+/// `at` is the part that matters. A stale file is a stopped executor, not a
+/// live account, and the client decides what counts as stale rather than
+/// having a threshold baked in here.
+#[derive(Debug, Default, Serialize, Deserialize)]
+#[serde(default)]
+pub struct BrokerDto {
+    /// When the executor last looked, epoch ms.
+    pub at: i64,
+    pub login: Option<i64>,
+    pub server: Option<String>,
+    /// False would mean a real-money account, which the executor refuses to
+    /// trade; carried so the client can say so rather than assume.
+    pub demo: Option<bool>,
+    pub currency: Option<String>,
+    pub balance: Option<f64>,
+    pub equity: Option<f64>,
+    pub margin: Option<f64>,
+    pub margin_free: Option<f64>,
+    /// `null` on a flat account rather than zero, which would read as a
+    /// stop-out.
+    pub margin_level: Option<f64>,
+    pub symbol: Option<String>,
+    pub contract_size: Option<f64>,
+    pub magic: Option<i64>,
+    pub lot_scale: Option<f64>,
+    /// True while the executor is reconciling but sending nothing.
+    pub dry_run: Option<bool>,
+    pub bid: Option<f64>,
+    pub ask: Option<f64>,
+    /// What the BOOK wanted at that moment, kept beside what the account
+    /// holds. Two fields rather than one "in sync" flag, because the useful
+    /// state is which of them is ahead and a boolean throws that away.
+    pub book_side: Option<String>,
+    pub book_lots: Option<f64>,
+    /// What this book has actually banked on the account, in the account's
+    /// currency, and over how many exits. The direct counterpart to the paper
+    /// book's `net_usd` and `trades`, and the pair the mirror exists to
+    /// compare.
+    pub realised: Option<f64>,
+    pub closed: Option<usize>,
+    pub position: Option<BrokerPositionDto>,
+    /// Why the last open was refused, if it was.
+    pub blocked: Option<String>,
+}
+
+/// The position the account actually holds for this book, as opposed to the
+/// one the book says it holds.
+#[derive(Debug, Default, Serialize, Deserialize)]
+#[serde(default)]
+pub struct BrokerPositionDto {
+    pub ticket: Option<i64>,
+    pub side: Option<String>,
+    pub lots: Option<f64>,
+    pub entry_price: Option<f64>,
+    pub price_now: Option<f64>,
+    pub sl: Option<f64>,
+    pub tp: Option<f64>,
+    /// In the ACCOUNT's currency, which is the broker's number and not the
+    /// book's - the whole reason for showing both sides.
+    pub profit: Option<f64>,
+    pub swap: Option<f64>,
+    pub opened_at: Option<i64>,
 }
 
 #[derive(Debug, Serialize)]
@@ -1023,6 +1110,7 @@ fn status_of(data: &Path, run: &PaperRun, rules: &TradingRules, guards: Option<&
         last_fills: book.trades[skip..].iter().map(TradeDto::from).collect(),
         equity_curve: book.equity_curve.len(),
         events: events_of(data, &run.config.id()).len(),
+        broker: broker_of(data, &run.config.id()),
     }
 }
 
@@ -1505,6 +1593,85 @@ pub async fn stop(State(state): State<Arc<AppState>>, Json(request): Json<StopRe
         equity: fd_core::js_round_to(run.book.equity, 2),
         net_usd: metrics.net_pnl_usd,
     }))
+}
+
+/// One broker account, and the books being mirrored into it.
+#[derive(Debug, Serialize)]
+pub struct AccountDto {
+    pub login: i64,
+    pub server: Option<String>,
+    pub demo: Option<bool>,
+    pub currency: Option<String>,
+    pub balance: Option<f64>,
+    pub equity: Option<f64>,
+    pub margin: Option<f64>,
+    pub margin_level: Option<f64>,
+    /// True when EVERY book mirrored here is in dry run - the account is
+    /// connected and watching, but nothing it shows was ever sent.
+    pub dry_run: bool,
+    /// The newest snapshot across those books. Whether this account counts as
+    /// connected is the client's call, from this.
+    pub at: i64,
+    /// Book ids mirrored into this account, and how many hold a position here.
+    pub runs: Vec<String>,
+    pub positions: usize,
+}
+
+/// `GET /api/paper/accounts` - the broker side, one entry per account.
+///
+/// Separate from `/status` because it answers a question that is not about any
+/// one book: is a broker connected at all, and which one. The app bar asks it
+/// on every screen, including the ones that never load a book, so it is kept
+/// small deliberately - an account summary, not a copy of every run.
+pub async fn accounts(State(state): State<Arc<AppState>>) -> Result<Json<AccountsResponse>, ApiError> {
+    let runs = state.paper.lock().expect("paper runs");
+    let mut by_login: BTreeMap<i64, AccountDto> = BTreeMap::new();
+    for run in runs.values() {
+        let id = run.config.id();
+        let Some(b) = broker_of(&state.data, &id) else { continue };
+        let Some(login) = b.login else { continue };
+        let entry = by_login.entry(login).or_insert_with(|| AccountDto {
+            login,
+            server: b.server.clone(),
+            demo: b.demo,
+            currency: b.currency.clone(),
+            balance: b.balance,
+            equity: b.equity,
+            margin: b.margin,
+            margin_level: b.margin_level,
+            // Starts true and is ANDed below: one book sending real orders
+            // makes the account a live one, however many others are only
+            // watching.
+            dry_run: true,
+            at: 0,
+            runs: Vec::new(),
+            positions: 0,
+        });
+        // The freshest snapshot wins the account's numbers: two executors on
+        // one account both report the same balance, and the older one would
+        // otherwise overwrite the newer with a remembered figure.
+        if b.at > entry.at {
+            entry.at = b.at;
+            entry.balance = b.balance;
+            entry.equity = b.equity;
+            entry.margin = b.margin;
+            entry.margin_level = b.margin_level;
+            entry.server = b.server.clone();
+            entry.demo = b.demo;
+            entry.currency = b.currency.clone();
+        }
+        entry.dry_run &= b.dry_run.unwrap_or(false);
+        if b.position.is_some() {
+            entry.positions += 1;
+        }
+        entry.runs.push(id);
+    }
+    Ok(Json(AccountsResponse { accounts: by_login.into_values().collect() }))
+}
+
+#[derive(Debug, Serialize)]
+pub struct AccountsResponse {
+    pub accounts: Vec<AccountDto>,
 }
 
 /// `GET /api/paper/status`
