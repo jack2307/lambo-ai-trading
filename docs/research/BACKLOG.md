@@ -55,8 +55,32 @@ Closed ideas move to the bottom with a pointer to their decision record, so
   `TICK_FLAG_BUY/SELL/LAST/VOLUME` are never set (observed flags: 1028, 1154,
   1158 — quotes only). Probed 2026-09-15. Nothing reopens this without a
   different data source.
-- [ ] **The options tape is the one place the frontier is favourable, and until
-  about December the honest work is the instrument.** Dealer hedging after a
+- [x] **The options tape question is now REGISTERED AND LOCKED**
+  (`docs/hypotheses/2026-09-16-dealer-hedge-demand.md`, commit ee445ee,
+  2026-09-16) — written three months before the data it runs on exists, which is
+  a stronger protection than anything applied afterwards. **It may not be run
+  until the tape holds 500 non-overlapping bursts**, about December. Sized from
+  inventory before any return was read: gross hedge demand **502,395 oz/day =
+  2.0% of COMEX volume**, **net 23,899 oz = 0.096%**, and a single $100k print
+  **1,223 oz = 0.005%** — so the individual print cannot be the event and the
+  registration says so in advance; the object is the signed residual of a flow
+  that cancels **21:1**. MDE 1.59 bp at 500 bursts against a square-root-impact
+  sizing of 2–4 bp. **The collector must not be stopped**: `fd-ingest --bin
+  collect --market=gold` and `--market=btc`; history not captured as it happens
+  is gone.
+- [ ] **Four ideas killed by inventory on 2026-09-15/16, recorded so they are not
+  re-proposed.** (a) **Quote-revision runs**: the distribution is geometric with
+  median 2 and **max 8** — there is no "the dealer repeated a decision eight
+  times", so the persistence story has no events. (b) **Quote freezes**: the
+  longest silence in five sampled days is **10.8 s**, the resume spread is only
+  **1.05x** baseline (so not defensive), and ≥5 s gaps in busy hours are **2 of
+  96** — a silence here is an empty market, not a decision. (c) **Retail order
+  flow from the IB book**: the Vantage rebate report carries `totalLots`,
+  `totalrebate` and per-category volume — **volume, no direction, no per-trade
+  time**. It cannot supply the missing variable and the client data was
+  therefore not touched. (d) **Dealer positioning before a release** — ~50 events
+  in eight months of ticks needs an edge a third the size of the release.
+- [ ] **The options tape instrument work, if it is wanted before the lock lifts.** Dealer hedging after a
   large print is mechanical, price-insensitive flow — the only payer story on
   the shelf that does not require someone to be wrong. Gold holds 9 days, BTC 5,
   both live. Build and validate the measurement (large print -> hedging flow in
