@@ -358,3 +358,46 @@ Measured on the same account, in a deliberate one-lot round trip: **slippage
 and zero commission** — the spread is the whole cost here. That is what the
 mirror should be measuring, and it is a different number entirely from the six
 to eleven points above.
+
+## What the plan routes would cost if they were billed
+
+2026-09-16. Measured from `decisions.jsonl`, priced from the vendors' own pages
+the same day. A 15-minute book closes 96 bars a day and the trader asks once
+per close, so a full day is 96 calls per model.
+
+    claude-opus-5      $5.00 in / $0.50 cache read / $25.00 out per MTok
+    gpt-5.6-sol        $4.00 in / $0.40 cached     / $20.00 out per MTok
+    deepseek-flash     $0.30 in / $0.006 cached    /  $1.20 out per MTok (peak)
+
+    model              calls  fresh in  cached in   out    projected per day
+    claude-opus-5         94   266,661    552,421  2,502   $1.71
+    codex/gpt-5.6-sol     93         -          -      -   $0.74 to $1.83
+    deepseek-flash        37    79,415        128 81,736   $0.16 to $0.32
+
+Three things about these numbers, each of which changes how they should be
+read.
+
+**Only DeepSeek's is a bill.** It is on the metered API and the figure is what
+the account is actually charged. The other two are counterfactuals: those calls
+drew on a plan quota, which is a real cost and not a dollar one, and the desk
+records `cost_usd: null` for them rather than `$0.00` for exactly that reason.
+
+**The GPT figure is a range because Codex only reports one number.** Its banner
+prints a total with no input/output split and no cache share, so the range runs
+from "every token a cache read, Claude's own 0.3% output share" to "every token
+fresh input". The truth is somewhere inside and this desk cannot narrow it
+without a split the CLI does not give.
+
+**These are the CLI route's token counts, not the task's.** Opus through the
+Claude CLI spends 8,713 input tokens per call on this question; DeepSeek
+straight at its API spends 2,146 on the same one. The difference is the CLI's
+own system prompt, re-read every call and mostly served from cache, which is
+why the cached share is 67% and why the figure is not ten times worse than it
+is. Pointing these books at the APIs directly would change the input shape
+substantially, and nothing here measures what that would cost.
+
+Output volume is a model property and not a route one: Opus emits 27 tokens per
+call here and DeepSeek emits 2,209, because one answers in JSON and the other
+reasons out loud on the way there. At $25/MTok that difference would dominate
+any direct-API comparison, and it is the reason the cheap model is not as cheap
+as its input price suggests.
