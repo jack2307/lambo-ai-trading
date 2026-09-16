@@ -73,16 +73,20 @@ export function AppBar({ view, onViewChange, markets, market, onMarketChange, bo
     }
   }, [])
 
-  const live = accounts.filter((a) => now - a.at < BROKER_STALE_MS)
-  const connected = live.length > 0
+  const isLive = (a: BrokerAccount) => a.at > 0 && now - a.at < BROKER_STALE_MS
+  const live = accounts.filter(isLive)
+  const chosen = typeof book === 'number' ? (accounts.find((a) => a.login === book) ?? null) : null
 
   // Falling back is not cosmetic. If the executors stop while the desk is
-  // showing the account, every figure on screen freezes at its last value and
+  // showing an account, every figure on screen freezes at its last value and
   // goes on looking current; dropping to paper is the only reading that stays
-  // true without anyone watching.
+  // true without anyone watching. The same applies to an account that vanishes
+  // from the registry while it is selected.
   useEffect(() => {
-    if (book === 'account' && !connected) onBookChange('paper')
-  }, [book, connected, onBookChange])
+    if (typeof book !== 'number') return
+    const still = accounts.find((a) => a.login === book)
+    if (!still || !(still.at > 0 && Date.now() - still.at < BROKER_STALE_MS)) onBookChange('paper')
+  }, [book, accounts, onBookChange])
   return (
     <header className="bg-card/80 sticky top-0 z-20 flex flex-wrap items-center gap-4 border-b px-4 py-2 backdrop-blur">
       <div className="flex items-baseline gap-2 text-[15px] font-semibold tracking-tight">
@@ -131,30 +135,67 @@ export function AppBar({ view, onViewChange, markets, market, onMarketChange, bo
       )}
 
       <div className="ml-auto flex items-center gap-2">
-        <div className="bg-background flex gap-1 rounded-full border p-[3px]" role="group" aria-label="Book">
-          {(['paper', 'account'] as Book[]).map((id) => (
+        <div className="bg-background flex items-center gap-1 rounded-full border p-[3px]" role="group" aria-label="Book">
+          <Button
+            variant="ghost"
+            size="sm"
+            aria-pressed={book === 'paper'}
+            onClick={() => onBookChange('paper')}
+            className={cn(
+              'h-6 rounded-full px-3 text-xs font-medium transition-colors',
+              book === 'paper' ? 'bg-accent text-foreground' : 'text-muted-foreground hover:text-foreground',
+            )}
+          >
+            paper
+          </Button>
+
+          {/* One account is a button; several is a picker. The common case
+              stays a two-way switch you can hit without reading, and the list
+              only appears once there is something to choose between. */}
+          {accounts.length <= 1 ? (
             <Button
-              key={id}
               variant="ghost"
               size="sm"
-              aria-pressed={book === id}
-              disabled={id === 'account' && !connected}
-              title={
-                id === 'account' && !connected
-                  ? 'no executor is reporting an account; start one with py/live/start_executors.ps1'
-                  : undefined
-              }
-              onClick={() => onBookChange(id)}
+              aria-pressed={typeof book === 'number'}
+              disabled={accounts.length === 0 || !isLive(accounts[0])}
+              title={accountHint(accounts[0])}
+              onClick={() => accounts[0] && onBookChange(accounts[0].login)}
               className={cn(
                 'h-6 rounded-full px-3 text-xs font-medium transition-colors',
-                book === id ? 'bg-accent text-foreground' : 'text-muted-foreground hover:text-foreground',
+                typeof book === 'number' ? 'bg-accent text-foreground' : 'text-muted-foreground hover:text-foreground',
               )}
             >
-              {id}
+              {accounts[0]?.label ?? 'account'}
             </Button>
-          ))}
+          ) : (
+            <Select
+              value={typeof book === 'number' ? String(book) : ''}
+              onValueChange={(v) => onBookChange(Number(v))}
+            >
+              <SelectTrigger
+                size="sm"
+                className={cn(
+                  'h-6 rounded-full border-0 px-3 text-xs font-medium',
+                  typeof book === 'number' ? 'bg-accent text-foreground' : 'text-muted-foreground',
+                )}
+              >
+                <SelectValue placeholder="account" />
+              </SelectTrigger>
+              <SelectContent>
+                {accounts.map((a) => (
+                  // An account that is defined but not reporting is listed and
+                  // not selectable: hiding it would make a mirror that died
+                  // look like an account nobody ever set up.
+                  <SelectItem key={a.login} value={String(a.login)} disabled={!isLive(a)}>
+                    {a.label}
+                    {!isLive(a) && ' \u2014 not running'}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </div>
-        <BrokerCaption accounts={accounts} live={live} now={now} />
+        <BrokerCaption accounts={accounts} live={live} chosen={chosen} now={now} />
       </div>
     </header>
   )
@@ -170,20 +211,46 @@ export function AppBar({ view, onViewChange, markets, market, onMarketChange, bo
  * position nobody is now reconciling. The second one names how long it has
  * been quiet, because that is the number you act on.
  */
+/** Why the account button is unavailable, said where the reader's hand is. */
+function accountHint(a: BrokerAccount | undefined): string | undefined {
+  if (!a) return 'no account is defined - add an [[account]] block to config/accounts.toml'
+  if (a.at === 0) return 'this account has never reported - start its mirror with py/live/start_executors.ps1'
+  return undefined
+}
+
 function BrokerCaption({
   accounts,
   live,
+  chosen,
   now,
 }: {
   accounts: BrokerAccount[]
   live: BrokerAccount[]
+  /** The account currently on screen, when one is. It is described in
+   *  preference to any other: a caption about a different account than the one
+   *  being read is worse than no caption. */
+  chosen: BrokerAccount | null
   now: number
 }) {
   if (accounts.length === 0) {
-    return <p className="text-muted-foreground text-[11px]">paper only &middot; no broker is connected</p>
+    return (
+      <p className="text-muted-foreground text-[11px]" title="Add an [[account]] block to config/accounts.toml">
+        paper only &middot; no broker is configured
+      </p>
+    )
   }
-  if (live.length === 0) {
-    const newest = accounts.reduce((a, b) => (a.at > b.at ? a : b))
+  const reported = accounts.filter((a) => a.at > 0)
+  if (live.length === 0 && !chosen) {
+    // Configured-and-never-started is a different thing from was-running-and-
+    // stopped, and only the second is a problem to go and look at.
+    if (reported.length === 0) {
+      return (
+        <p className="text-muted-foreground text-[11px]" title={accounts.map((a) => a.label).join(', ')}>
+          {accounts.length} account{accounts.length === 1 ? '' : 's'} configured &middot; none running
+        </p>
+      )
+    }
+    const newest = reported.reduce((a, b) => (a.at > b.at ? a : b))
     const mins = Math.round((now - newest.at) / 60000)
     return (
       <p className="text-lp text-[11px]">
@@ -192,7 +259,7 @@ function BrokerCaption({
       </p>
     )
   }
-  const a = live[0]
+  const a = chosen ?? live[0]
   const money =
     a.equity == null
       ? null
@@ -209,7 +276,22 @@ function BrokerCaption({
       {a.server && <span className="text-muted-foreground/60"> &middot; {a.server}</span>}
       {money && <span className="num"> &middot; {money}</span>}
       {a.dry_run && <span className="text-muted-foreground/60"> &middot; dry run, nothing is sent</span>}
-      {live.length > 1 && <span className="text-muted-foreground/60"> &middot; +{live.length - 1} more</span>}
+      {!chosen && live.length > 1 && (
+        <span className="text-muted-foreground/60"> &middot; +{live.length - 1} more</span>
+      )}
+      {/* Mirrored against intended. The registry names the books this account
+          should carry; this says how many of them are actually reporting, so a
+          mirror that quietly failed to start is visible without opening a log. */}
+      {chosen && chosen.runs.length > 0 && (
+        <span
+          className={cn(
+            chosen.mirroring.length < chosen.runs.length ? 'text-caution' : 'text-muted-foreground/60',
+          )}
+        >
+          {' '}
+          &middot; {chosen.mirroring.length}/{chosen.runs.length} books
+        </span>
+      )}
     </p>
   )
 }

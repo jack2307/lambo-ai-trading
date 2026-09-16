@@ -19,8 +19,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let ui = PathBuf::from(arg("ui", "ui/dist"));
     let docs = PathBuf::from(arg("docs", "docs"));
 
-    let config = Config::load(arg("config", "config"))?;
-    let state = Arc::new(AppState::new(config, data.clone()).with_docs(docs));
+    let config_dir = PathBuf::from(arg("config", "config"));
+    let config = Config::load(&config_dir)?;
+    let state = Arc::new(
+        AppState::new(config, data.clone()).with_docs(docs).with_config_dir(config_dir),
+    );
 
     // The scheduled-news calendar every `news:` filter reads, installed once
     // for the process. Missing or unreadable is not fatal: the filters are

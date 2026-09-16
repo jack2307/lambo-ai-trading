@@ -22,6 +22,10 @@ pub struct AppState {
     pub data: PathBuf,
     /// Where the research loop writes: hypotheses, run receipts, decisions.
     pub docs: PathBuf,
+    /// The config directory, for the files that are read per REQUEST rather
+    /// than loaded into `config` at startup - the broker account registry is
+    /// one, so that adding an account does not mean restarting the desk.
+    pub config_dir: PathBuf,
     pub registry: Registry,
     /// Resampled series, keyed by `market/timeframe`.
     ///
@@ -70,6 +74,7 @@ impl AppState {
         Self {
             config,
             docs: PathBuf::from("docs"),
+            config_dir: PathBuf::from("config"),
             data,
             registry: Registry::with_builtins(),
             bars: RwLock::new(HashMap::new()),
@@ -100,6 +105,12 @@ impl AppState {
     #[must_use]
     pub fn with_docs(mut self, docs: PathBuf) -> Self {
         self.docs = docs;
+        self
+    }
+
+    #[must_use]
+    pub fn with_config_dir(mut self, dir: PathBuf) -> Self {
+        self.config_dir = dir;
         self
     }
 

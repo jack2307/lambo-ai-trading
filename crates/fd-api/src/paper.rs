@@ -1595,56 +1595,147 @@ pub async fn stop(State(state): State<Arc<AppState>>, Json(request): Json<StopRe
     }))
 }
 
-/// One broker account, and the books being mirrored into it.
+/// One `[[account]]` block of `config/accounts.toml`.
+///
+/// The registry is read per REQUEST rather than loaded at startup, so adding
+/// an account is editing one file - not editing a file and restarting a desk
+/// that is carrying live positions.
+#[derive(Debug, Deserialize)]
+struct AccountSpec {
+    id: String,
+    label: Option<String>,
+    login: i64,
+    server: Option<String>,
+    #[serde(default = "yes")]
+    enabled: bool,
+    /// The registry's intent. Whether an executor is actually running dry is
+    /// its own business and is reported separately - see [`AccountDto`].
+    #[serde(default = "yes")]
+    dry_run: bool,
+    #[serde(default)]
+    runs: Vec<String>,
+}
+
+const fn yes() -> bool {
+    true
+}
+
+#[derive(Debug, Deserialize)]
+struct AccountFile {
+    #[serde(default)]
+    account: Vec<AccountSpec>,
+}
+
+/// One broker account: what the registry says it should be, and what it is.
+///
+/// The two are kept apart on purpose. `runs` is the books the registry names;
+/// `mirroring` is the books whose executor is actually reporting right now.
+/// An account configured and not running shows as itself with `at: 0` and an
+/// empty `mirroring`, which is a state worth seeing - it is how a mirror that
+/// died at three in the morning looks.
 #[derive(Debug, Serialize)]
 pub struct AccountDto {
+    /// The registry id, or `login-<n>` for an executor started outside it.
+    pub id: String,
+    pub label: String,
     pub login: i64,
     pub server: Option<String>,
+    /// False when no `[[account]]` block claims this login - someone started
+    /// an executor by hand. Shown rather than hidden: an account trading
+    /// without an entry in the registry is exactly the thing the registry
+    /// exists to make visible.
+    pub configured: bool,
+    pub enabled: bool,
+    /// What `config/accounts.toml` says this account should mirror.
+    pub runs: Vec<String>,
     pub demo: Option<bool>,
     pub currency: Option<String>,
     pub balance: Option<f64>,
     pub equity: Option<f64>,
     pub margin: Option<f64>,
     pub margin_level: Option<f64>,
-    /// True when EVERY book mirrored here is in dry run - the account is
-    /// connected and watching, but nothing it shows was ever sent.
+    /// True when EVERY reporting book here is in dry run - the account is
+    /// connected and watching, but nothing it shows was ever sent. Falls back
+    /// to the registry's intent when nothing is reporting.
     pub dry_run: bool,
-    /// The newest snapshot across those books. Whether this account counts as
-    /// connected is the client's call, from this.
+    /// The newest snapshot across this account's books; 0 when none has ever
+    /// reported. Whether that counts as connected is the client's call.
     pub at: i64,
-    /// Book ids mirrored into this account, and how many hold a position here.
-    pub runs: Vec<String>,
+    /// Books whose executor is reporting into this account.
+    pub mirroring: Vec<String>,
+    /// How many of those hold a position on the account.
     pub positions: usize,
+}
+
+/// The `[[account]]` blocks, or an empty list.
+///
+/// A missing or malformed registry is not an error here. The desk must still
+/// list the accounts that are actually reporting - which it can do from the
+/// snapshots alone - and a broken config file should cost the labels, not the
+/// view of what is trading.
+fn account_registry(dir: &Path) -> Vec<AccountSpec> {
+    let Ok(text) = std::fs::read_to_string(dir.join("accounts.toml")) else { return Vec::new() };
+    toml::from_str::<AccountFile>(&text).map(|f| f.account).unwrap_or_default()
 }
 
 /// `GET /api/paper/accounts` - the broker side, one entry per account.
 ///
 /// Separate from `/status` because it answers a question that is not about any
-/// one book: is a broker connected at all, and which one. The app bar asks it
-/// on every screen, including the ones that never load a book, so it is kept
-/// small deliberately - an account summary, not a copy of every run.
+/// one book: which accounts exist, and is anything connected. The app bar asks
+/// it on every screen, including the ones that never load a book, so it is
+/// kept small deliberately - an account summary, not a copy of every run.
 pub async fn accounts(State(state): State<Arc<AppState>>) -> Result<Json<AccountsResponse>, ApiError> {
-    let runs = state.paper.lock().expect("paper runs");
     let mut by_login: BTreeMap<i64, AccountDto> = BTreeMap::new();
+
+    // The registry first, so a configured account appears whether or not
+    // anything is running it.
+    for spec in account_registry(&state.config_dir) {
+        by_login.entry(spec.login).or_insert(AccountDto {
+            label: spec.label.unwrap_or_else(|| spec.id.clone()),
+            id: spec.id,
+            login: spec.login,
+            server: spec.server,
+            configured: true,
+            enabled: spec.enabled,
+            runs: spec.runs,
+            demo: None,
+            currency: None,
+            balance: None,
+            equity: None,
+            margin: None,
+            margin_level: None,
+            dry_run: spec.dry_run,
+            at: 0,
+            mirroring: Vec::new(),
+            positions: 0,
+        });
+    }
+
+    // Then what is actually reporting, which overwrites the registry's guesses
+    // about the account and never its intent.
+    let runs = state.paper.lock().expect("paper runs");
+    let mut seen_live: BTreeMap<i64, bool> = BTreeMap::new();
     for run in runs.values() {
         let id = run.config.id();
         let Some(b) = broker_of(&state.data, &id) else { continue };
         let Some(login) = b.login else { continue };
         let entry = by_login.entry(login).or_insert_with(|| AccountDto {
+            id: format!("login-{login}"),
+            label: format!("login {login}"),
             login,
             server: b.server.clone(),
+            configured: false,
+            enabled: true,
+            runs: Vec::new(),
             demo: b.demo,
             currency: b.currency.clone(),
             balance: b.balance,
             equity: b.equity,
             margin: b.margin,
             margin_level: b.margin_level,
-            // Starts true and is ANDed below: one book sending real orders
-            // makes the account a live one, however many others are only
-            // watching.
             dry_run: true,
             at: 0,
-            runs: Vec::new(),
+            mirroring: Vec::new(),
             positions: 0,
         });
         // The freshest snapshot wins the account's numbers: two executors on
@@ -1656,15 +1747,25 @@ pub async fn accounts(State(state): State<Arc<AppState>>) -> Result<Json<Account
             entry.equity = b.equity;
             entry.margin = b.margin;
             entry.margin_level = b.margin_level;
-            entry.server = b.server.clone();
             entry.demo = b.demo;
             entry.currency = b.currency.clone();
+            if entry.server.is_none() {
+                entry.server = b.server.clone();
+            }
+        }
+        // Reset the registry's intent the first time a real executor speaks for
+        // this account, then AND across the rest: one book sending real orders
+        // makes the account a live one, however many others are only watching.
+        let live = seen_live.entry(login).or_insert(false);
+        if !*live {
+            entry.dry_run = true;
+            *live = true;
         }
         entry.dry_run &= b.dry_run.unwrap_or(false);
         if b.position.is_some() {
             entry.positions += 1;
         }
-        entry.runs.push(id);
+        entry.mirroring.push(id);
     }
     Ok(Json(AccountsResponse { accounts: by_login.into_values().collect() }))
 }

@@ -25,9 +25,12 @@ export type View = 'desk' | 'analytics' | 'workbench' | 'tape' | 'research' | 'f
  * and not a column.
  *
  * `paper` is the default and the fallback: it is the only one that is true
- * when nothing is connected.
+ * when nothing is connected. Any other value is an account's LOGIN - the one
+ * identifier that is the same in the registry, in the snapshot and on the
+ * broker's own screen, so the desk and the terminal can never be talking
+ * about different accounts while agreeing on a name.
  */
-export type Book = 'paper' | 'account'
+export type Book = 'paper' | number
 
 const VIEWS: View[] = ['desk', 'analytics', 'workbench', 'tape', 'research', 'floor']
 

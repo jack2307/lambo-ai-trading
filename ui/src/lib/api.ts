@@ -389,22 +389,40 @@ export interface PaperBroker {
   blocked: string | null
 }
 
-/** One broker account, as `/api/paper/accounts` reports it. */
+/**
+ * One broker account, as `/api/paper/accounts` reports it: what
+ * `config/accounts.toml` says it should be, merged with what is actually
+ * running.
+ *
+ * `runs` is intent and `mirroring` is fact. An account configured but not
+ * running comes back with `at: 0` and an empty `mirroring`, which is a state
+ * worth showing — it is what a mirror that died overnight looks like.
+ */
 export interface BrokerAccount {
+  /** The registry id, or `login-<n>` for an executor started outside it. */
+  id: string
+  label: string
   login: number
   server: string | null
+  /** False when no `[[account]]` block claims this login — someone started an
+   *  executor by hand. Shown rather than hidden. */
+  configured: boolean
+  enabled: boolean
+  /** Books the registry says this account should mirror. */
+  runs: string[]
   demo: boolean | null
   currency: string | null
   balance: number | null
   equity: number | null
   margin: number | null
   margin_level: number | null
-  /** True only when EVERY book here is in dry run. */
+  /** True only when EVERY reporting book here is in dry run. */
   dry_run: boolean
-  /** Newest snapshot across this account's books. */
+  /** Newest snapshot across this account's books; 0 when none ever reported. */
   at: number
-  runs: string[]
-  /** How many of those books hold a position in the account. */
+  /** Books whose executor is actually reporting into this account. */
+  mirroring: string[]
+  /** How many of those hold a position on the account. */
   positions: number
 }
 

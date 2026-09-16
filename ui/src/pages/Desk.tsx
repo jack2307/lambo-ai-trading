@@ -285,8 +285,9 @@ const isStale = (run: PaperRun, now: number) =>
  */
 const BROKER_STALE_MS = 45_000
 
-const brokerLive = (run: PaperRun, now: number): PaperRun['broker'] =>
-  run.broker && now - run.broker.at < BROKER_STALE_MS ? run.broker : null
+/** This run's mirror into the SELECTED account, if it is still reporting. */
+const brokerLive = (run: PaperRun, now: number, login: number | null): PaperRun['broker'] =>
+  run.broker && run.broker.login === login && now - run.broker.at < BROKER_STALE_MS ? run.broker : null
 
 /** Money in the BROKER's currency, which is not the paper book's. */
 function brokerMoney(v: number | null | undefined, currency: string | null | undefined): string {
@@ -296,6 +297,9 @@ function brokerMoney(v: number | null | undefined, currency: string | null | und
 }
 
 export function Desk({ book }: { book: Book }) {
+  // Everything below asks one question of the mode - which account, or none -
+  // so it is asked once here rather than re-derived at each use.
+  const account = typeof book === 'number' ? book : null
   const [runs, setRuns] = useState<PaperRun[] | null>(null)
   const [statusError, setStatusError] = useState<string | null>(null)
   const [selected, setSelected] = useState<string | null>(readSelected)
@@ -362,14 +366,14 @@ export function Desk({ book }: { book: Book }) {
   // alphabetical order did.
   const sorted = useMemo(() => {
     const byId = [...(runs ?? [])].sort((a, b) => a.id.localeCompare(b.id))
-    if (book !== 'account') return byId
-    const on = (r: PaperRun) => (r.broker && now - r.broker.at < BROKER_STALE_MS ? 0 : 1)
+    if (account == null) return byId
+    const on = (r: PaperRun) => (brokerLive(r, now, account) ? 0 : 1)
     return byId.sort((a, b) => on(a) - on(b))
     // `now` deliberately absent: it ticks every second and would reorder the
     // list under the reader's cursor. Freshness only ever moves a book from
     // mirrored to not, and the next status poll reorders it then.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [runs, book])
+  }, [runs, account])
 
   // The row the drill-down reads, derived rather than stored: a remembered id
   // that no longer names a run (renamed, never started) falls to the first row
@@ -443,7 +447,7 @@ export function Desk({ book }: { book: Book }) {
       className="flex min-h-0 flex-col overflow-hidden"
       style={{ height: `calc(100dvh - ${APP_BAR}px)` }}
     >
-      <SummaryStrip runs={sorted} now={now} loading={runs === null} error={statusError} streaming={streaming} book={book} />
+      <SummaryStrip runs={sorted} now={now} loading={runs === null} error={statusError} streaming={streaming} account={account} />
 
       {statusError && runs === null ? (
         <p className="text-destructive px-3 py-4 text-[13px]">
@@ -493,7 +497,7 @@ export function Desk({ book }: { book: Book }) {
                 carried that is not per-run configuration, and the rest moved
                 into the drill-down under it where it belongs to one run. */}
             <div className="border-border shrink-0 border-b xl:max-h-[46%] xl:overflow-y-auto">
-              <RunsList runs={sorted} now={now} selected={activeId} onPick={pick} ticks={ticks} book={book} />
+              <RunsList runs={sorted} now={now} selected={activeId} onPick={pick} ticks={ticks} account={account} />
             </div>
             <div className="min-h-0 xl:flex-1 xl:overflow-y-auto">
               <Drilldown
@@ -520,15 +524,16 @@ function SummaryStrip({
   loading,
   error,
   streaming,
-  book,
+  account,
 }: {
   runs: PaperRun[]
   now: number
   loading: boolean
   error: string | null
-  /** Which book the totals are of. The two nets are different numbers and the
-   *  strip must never show one under the other's name. */
-  book: Book
+  /** The account the totals are of, or null for the paper book. The two nets
+   *  are different numbers and the strip must never show one under the other's
+   *  name. */
+  account: number | null
   /** Whether the push stream is connected. A chart that has quietly stopped
    *  updating looks exactly like a quiet market; this is how a reader tells. */
   streaming: boolean
@@ -581,8 +586,8 @@ function SummaryStrip({
         {' · '}
         <span className={stats.stale > 0 ? 'text-caution' : undefined}>{stats.stale} stale</span>
       </span>
-      {book === 'account' ? (
-        <AccountTotals runs={runs} now={now} />
+      {account != null ? (
+        <AccountTotals runs={runs} now={now} account={account} />
       ) : (
         <>
           <span className="num">
@@ -642,8 +647,10 @@ function SummaryStrip({
  * the count and not a sum, because adding them would be arithmetic on two
  * different units.
  */
-function AccountTotals({ runs, now }: { runs: PaperRun[]; now: number }) {
-  const live = runs.map((r) => brokerLive(r, now)).filter((b): b is NonNullable<typeof b> => b != null)
+function AccountTotals({ runs, now, account }: { runs: PaperRun[]; now: number; account: number }) {
+  const live = runs
+    .map((r) => brokerLive(r, now, account))
+    .filter((b): b is NonNullable<typeof b> => b != null)
   if (live.length === 0) return <span className="num text-muted-foreground">no mirror reporting</span>
   const currencies = new Set(live.map((b) => b.currency ?? ''))
   const banked = live.reduce((sum, b) => sum + (b.realised ?? 0), 0)
@@ -716,7 +723,7 @@ function RunsList({
   selected,
   onPick,
   ticks,
-  book,
+  account,
 }: {
   runs: PaperRun[]
   now: number
@@ -724,10 +731,10 @@ function RunsList({
   onPick: (id: string) => void
   /** Streamed forming bars by `market:tf`; newer than the row's own. */
   ticks: Record<string, LiveBar>
-  /** Which book the rows describe: what the rules decided, or what an account
-   *  did with it. Never merged into one row - the gap between them is the
-   *  measurement, and a merged row hides exactly that. */
-  book: Book
+  /** The account the rows describe, or null for the paper book. Never merged
+   *  into one row - the gap between what the rule decided and what an account
+   *  did with it is the measurement, and a merged row hides exactly that. */
+  account: number | null
 }) {
   /** The row with its live price replaced, when the stream has a fresher one. */
   const streamed = (run: PaperRun): PaperRun | null => {
@@ -749,9 +756,9 @@ function RunsList({
   return (
     <div role="group" aria-label="Paper runs">
       <div className="text-muted-foreground bg-background sticky top-0 z-10 flex items-baseline gap-2 border-b px-3 py-1 text-[10px] tracking-wide uppercase">
-        <span>{book === 'account' ? 'books on the account' : 'books'}</span>
+        <span>{account != null ? 'books on the account' : 'books'}</span>
         <span className="num text-muted-foreground/70 normal-case">
-          {book === 'account' ? runs.filter((r) => brokerLive(r, now)).length : runs.length}
+          {account != null ? runs.filter((r) => brokerLive(r, now, account)).length : runs.length}
         </span>
         <span className="text-muted-foreground/60 ml-auto normal-case">click to load the chart</span>
       </div>
@@ -759,11 +766,11 @@ function RunsList({
       {runs.map((run, index) => {
         const stale = isStale(run, now)
         const isOn = run.id === selected
-        const broker = brokerLive(run, now)
+        const broker = brokerLive(run, now, account)
         // A book nobody mirrors is not an empty account - it is a book that is
         // not on the account at all, and saying "0.00" for it would be a
         // measurement nobody made.
-        const unmirrored = book === 'account' && !broker
+        const unmirrored = account != null && !broker
         return (
           <button
             key={run.id}
@@ -783,7 +790,7 @@ function RunsList({
             <span className="flex items-center gap-2 text-xs">
               <StatusPill stale={stale} />
               <span className="num min-w-0 flex-1 truncate">{run.id}</span>
-              {book === 'account' ? (
+              {account != null ? (
                 <span
                   className={cn(
                     'num shrink-0',
@@ -817,11 +824,11 @@ function RunsList({
                   {/* "closed", not "fills". A book holding an open position read
                       "0 fills" beside a badge saying it was long two USC down —
                       both true, and together they say nothing happened. */}
-                  · {book === 'account' ? (broker?.closed ?? 0) : run.trades} closed
-                  {book === 'paper' && run.profit_factor != null && ` · PF ${num(run.profit_factor)}`}
-                  {book === 'account' && broker?.symbol && ` · ${broker.symbol}`}
+                  · {account != null ? (broker?.closed ?? 0) : run.trades} closed
+                  {account == null && run.profit_factor != null && ` · PF ${num(run.profit_factor)}`}
+                  {account != null && broker?.symbol && ` · ${broker.symbol}`}
                 </span>
-                {book === 'account' ? (
+                {account != null ? (
                   <BrokerBadge broker={broker} />
                 ) : (
                   <>
