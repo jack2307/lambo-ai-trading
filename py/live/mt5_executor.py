@@ -423,7 +423,55 @@ def main() -> int:
             r = adverse / risk
             return r if abs(r) > args.max_join_r else None
 
+        def already_taken(book_open: dict, run: dict) -> dict | None:
+            """The account's own fill for the book position it is holding, if any.
+
+            This closes a hole that only opens on a LIVE account, and only
+            between two bars.
+
+            The paper book learns about a stop or a target when a bar CLOSES -
+            it reads the bar's high and low, so it never misses one and never
+            prices one wrongly, but it finds out at the close. The broker holds
+            the real orders and exits the instant price touches. So for up to a
+            whole bar the account is flat while the book still says it is
+            holding, and that is exactly the state the reconciler reads as
+            "open it" - which would re-enter the trade that just stopped out,
+            at a worse price, on the same bar.
+
+            Asked of the ACCOUNT rather than remembered in this process, so it
+            survives a restart of the executor: a mirror that forgot its own
+            history across a restart would make the same mistake at the worst
+            possible moment.
+
+            Matched by the bar the book entered on. The broker's fill is a few
+            seconds after the book's bar stamp, never before it and never into
+            the next bar, so one bar's width identifies it without needing the
+            two clocks to agree exactly.
+            """
+            entry = book_open.get("entry_time")
+            if not entry:
+                return None
+            step = TF_MS.get(run.get("tf") or "", 900_000)
+            _, _, fills = history_of(mt5, magic)
+            for f in fills:
+                got = f.get("entryTime")
+                if got is not None and entry <= got < entry + step:
+                    return f
+            return None
+
         def open_like(book_open: dict, run: dict) -> bool:
+            taken = already_taken(book_open, run)
+            if taken is not None:
+                nonlocal_standing_out(
+                    f"this account already traded the book's current position "
+                    f"({taken.get('direction')} from {taken.get('entryPrice')}, "
+                    f"closed {taken.get('exitReason') or 'out'} for {taken.get('pnl')})")
+                log(out, "already-taken", side=book_open.get("side"),
+                    book_entry=book_open.get("entry_price"), fill=taken,
+                    reason="the broker closed this trade before the book's bar did; "
+                           "re-opening would take the same trade twice")
+                return False
+
             late = too_old(book_open, run)
             if late is not None:
                 nonlocal_standing_out(f"the book opened this {late:.0f} bars ago")
