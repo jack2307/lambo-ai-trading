@@ -33,8 +33,8 @@ Books run on the same stream in **matched pairs**, one pair per model:
 
 | model | reached through | its book | its coin |
 |---|---|---|---|
-| `gpt-5.6-sol` | the **ChatGPT plan**, via the Codex CLI | `ai-xau-sol` | `ai-xau-sol-coin` |
-| `claude-opus-5` | the **Claude plan**, via the Claude Code CLI | `ai-xau-opus` | `ai-xau-opus-coin` |
+| `gpt-5.6-sol` | the **ChatGPT plan**, via the Codex CLI | `ai-xau-sol-ctx` | `ai-xau-sol-ctx-coin` |
+| `claude-opus-5` | the **Claude plan**, via the Claude Code CLI | `ai-xau-opus-ctx` | `ai-xau-opus-ctx-coin` |
 
 No metered API key is involved in either. Owner's instruction, 2026-09-15:
 *"cho dùng gói đừng dùng API nữa"*.
@@ -97,6 +97,69 @@ It posts `{run, bar_time, side, stop, target, reason}` and nothing else.
 - **It cannot reach a broker.** This is a paper book.
   `py/live/mt5_executor.py` is still the only code that can send an order and
   it still refuses any account that is not a demo.
+
+## Amendment, 2026-09-16: the decider is told more
+
+The first prompt carried forty bars of OHLC and nothing else. Two things
+followed from that, and the owner found the second one:
+
+* The model was **proposing trades into rules it could not see**. On
+  2026-09-16 the desk refused four of `ai-xau-sol`'s proposals for hitting a
+  daily cap the model had never been told about, and sized four more down by a
+  notional cap it had never been told about either. It was also setting stops
+  without being told the ATR it is sized against.
+* It knew nothing about the desk's own calendar, so it could propose an entry
+  into a news blackout the desk would refuse.
+
+The prompt now carries two more blocks.
+
+**The desk's state.** Equity and net, ATR and what 1R is in price, the live
+spread, the daily trade cap and how many proposals it has already cost, the
+notional cap, the daily loss limit, the cooldown, the maximum hold, and the
+next scheduled release with the blackout window around it. The guard numbers
+are **parsed from `config/default.toml`**, not typed here: a limit quoted to
+the model that did not match the one enforced would be worse than silence,
+because the model would plan around a rule that is not the rule.
+
+**Market context.** EMA(21) and EMA(55), RSI(14), the session, today's and the
+previous day's high and low, the range of the window, and the last eight hours
+aggregated to 1h from the same bars so it cannot disagree with them.
+
+### Why the second block is defensible here and would not be in a sweep
+
+I argued against it first, and I was importing the wrong discipline. In a
+parameter sweep every added input is another cell and another chance for
+selection noise, which is why `docs/decisions/` is full of registrations that
+died. **This is a forward test with a falsifier fixed in advance and a coin
+control.** There is no selection: the model cannot overfit data it has not
+seen, and the coin measures whatever it does. Extra inputs can genuinely help
+or genuinely hurt, and the campaign reports which.
+
+The cost that IS real: if the campaign passes, we will not know which input did
+it. That is a second-order question and it stays open. The first-order question
+is whether any of this beats a coin, and nothing here makes that easier to fake.
+
+### What this amendment costs
+
+The four books opened on the sparse prompt are **closed**, because a prompt
+change is a decider change and one book holding two deciders is a record nobody
+can read. They closed at:
+
+| book | trades | net |
+|---|---|---|
+| `ai-xau-sol` | 4 | +$151.36 |
+| `ai-xau-sol-coin` | 4 | +$13.89 |
+| `ai-xau-opus` | 1 | −$27.01 |
+| `ai-xau-opus-coin` | 1 | −$27.01 |
+
+Five trades between them. Nothing there is a result, and the +$137 gap on the
+Codex pair is four trades of noise — it is recorded so that nobody later
+remembers it as a promising start.
+
+Closing them also means this campaign **cannot say whether the added context
+helped**, because the sparse arm is too short to compare against. Running both
+prompts side by side would answer that, at twice the token cost and while the
+first-order question is still unanswered. Not done; available on request.
 
 ## The falsifier, declared before the first trade
 

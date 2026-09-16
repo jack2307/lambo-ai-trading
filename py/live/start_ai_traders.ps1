@@ -29,10 +29,10 @@ $campaigns = @(
     # defaults to on this plan, read from its own banner. That makes it a
     # DIFFERENT model from the one the API campaign ran, which is why that
     # campaign's books were closed rather than repointed.
-    @{ model = 'codex/gpt-5.6-sol'; run = 'ai-xau-sol'; control = 'ai-xau-sol-coin'; seed = 7;  log = 'ai_trader_sol' },
+    @{ model = 'codex/gpt-5.6-sol'; run = 'ai-xau-sol-ctx'; control = 'ai-xau-sol-ctx-coin'; seed = 7;  log = 'ai_trader_sol_ctx' },
     # claude-opus-5 goes through the account's PLAN, via the Claude Code CLI.
     # No API key is involved; see the `claude-cli` provider in advisor.py.
-    @{ model = 'claude-opus-5'; run = 'ai-xau-opus'; control = 'ai-xau-opus-coin'; seed = 11; log = 'ai_trader_opus5' }
+    @{ model = 'claude-opus-5'; run = 'ai-xau-opus-ctx'; control = 'ai-xau-opus-ctx-coin'; seed = 11; log = 'ai_trader_opus_ctx' }
 )
 
 # Two copies of this script running at once is not a nuisance, it is a

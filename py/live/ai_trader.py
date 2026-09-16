@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import io
 import json
 import os
 import random
@@ -53,6 +54,12 @@ not hit first.
 
 {position}
 
+THE DESK'S STATE — these are the rules you are already playing under, not advice
+{desk}
+
+MARKET CONTEXT — computed from the same bars, for convenience; none of it is a signal
+{context}
+
 LAST {n} BARS of {market}:{tf}, oldest first, times UTC
 {bars}
 
@@ -63,6 +70,186 @@ Answer with JSON and nothing else:
 
 "NONE" is a real answer and is often the right one. If you propose a trade, the stop must be on the
 losing side of the last close and the target on the winning side, or it will be refused."""
+
+
+def read_limits() -> dict:
+    """The guard numbers, from the config the engine actually reads.
+
+    Parsed rather than hard-coded: a limit quoted to the model that does not
+    match the one enforced would be worse than saying nothing, because the
+    model would plan around a rule that is not the rule.
+    """
+    path = os.path.join(ROOT, "config", "default.toml")
+    out = {}
+    try:
+        text = io.open(path, encoding="utf-8").read()
+    except OSError:
+        return out
+    block = text.split("[trading.guards]", 1)
+    if len(block) < 2:
+        return out
+    for line in block[1].splitlines():
+        line = line.split("#", 1)[0].strip()
+        if line.startswith("["):
+            break
+        if "=" in line:
+            k, v = (x.strip() for x in line.split("=", 1))
+            try:
+                out[k] = float(v.replace("_", ""))
+            except ValueError:
+                pass
+    return out
+
+
+def ema(values: list, period: int):
+    if len(values) < period:
+        return None
+    k = 2.0 / (period + 1)
+    e = sum(values[:period]) / period
+    for v in values[period:]:
+        e = v * k + e * (1 - k)
+    return e
+
+
+def rsi(values: list, period: int = 14):
+    if len(values) <= period:
+        return None
+    gains, losses = [], []
+    for a, b in zip(values, values[1:]):
+        d = b - a
+        gains.append(max(d, 0.0))
+        losses.append(max(-d, 0.0))
+    ag = sum(gains[:period]) / period
+    al = sum(losses[:period]) / period
+    for g, l in zip(gains[period:], losses[period:]):
+        ag = (ag * (period - 1) + g) / period
+        al = (al * (period - 1) + l) / period
+    if al == 0:
+        return 100.0
+    return 100.0 - 100.0 / (1.0 + ag / al)
+
+
+def session_of(hour: int) -> str:
+    """New York hours are what the desk's own filters are written in."""
+    if 0 <= hour < 7:
+        return "Asia"
+    if 7 <= hour < 12:
+        return "London"
+    if 12 <= hour < 21:
+        return "New York"
+    return "late/rollover"
+
+
+def desk_block(detail: dict, limits: dict, atr, run: str) -> str:
+    """What the desk knows about this book and had been keeping to itself.
+
+    Every line here is a rule already being enforced. The model was proposing
+    trades into a daily cap it had already hit — four of them on 2026-09-16 —
+    and setting stops without being told the volatility unit it is sized
+    against. None of this is new market information and none of it adds a
+    degree of freedom; it is the rulebook.
+    """
+    r = detail.get("run") or {}
+    live = detail.get("live") or {}
+    lines = []
+
+    equity = r.get("equity")
+    net = r.get("net_usd")
+    lines.append(f"- equity ${equity:,.2f}, net {net:+,.2f} since this book started, {r.get('trades', 0)} closed trades")
+
+    if atr:
+        risk = atr * 1.2  # [trading] stop_atr
+        lines.append(f"- ATR(14) is {atr:.2f}. The desk sizes on 1.2 x ATR, so 1R is about {risk:.2f} in price.")
+        lines.append("  A stop much tighter than that will be mostly noise; much wider and your size shrinks.")
+
+    spread = live.get("spread")
+    if spread:
+        lines.append(f"- spread right now {spread:.2f} (about {100 * spread / max(1e-9, atr * 1.2):.1f}% of 1R per round trip)" if atr
+                     else f"- spread right now {spread:.2f}")
+
+    cap = int(limits.get("max_trades_per_day", 0) or 0)
+    refused = (r.get("skipped_by_guard") or {}).get("DAILY_TRADE_CAP", 0)
+    if cap:
+        lines.append(f"- the desk allows {cap} trades a day on this book."
+                     + (f" It has already REFUSED {refused} of your proposals for hitting that cap." if refused else ""))
+    if r.get("sized_down"):
+        lines.append(f"- {r['sized_down']} of your trades were sized DOWN by the notional cap "
+                     f"({int(limits.get('max_notional_pct_equity', 0))}% of equity).")
+    loss = limits.get("daily_loss_limit_usd")
+    if loss:
+        lines.append(f"- the book stops trading for the day at ${loss:,.0f} of realised loss.")
+    cooldown = limits.get("cooldown_ms")
+    if cooldown:
+        lines.append(f"- there is a {int(cooldown / 60000)} minute cooldown after every trade.")
+    hold = limits.get("max_hold_ms") or 14_400_000
+    lines.append(f"- maximum hold is {int(hold / 3600000)} hours; the desk closes the position then whatever the price.")
+
+    news = r.get("news") or {}
+    nb = news.get("next_blackout")
+    if nb:
+        mins = (nb["time"] - time.time() * 1000) / 60000
+        when = "IN PROGRESS" if -30 <= mins <= 60 else f"in {mins:,.0f} minutes"
+        lines.append(f"- next scheduled release: {nb.get('name')} ({nb.get('currency')}, impact {nb.get('impact')}) {when}.")
+        lines.append("  The desk goes flat from 60 minutes before to 30 minutes after, and will refuse an entry inside that window.")
+    return chr(10).join(lines)
+
+
+def context_block(bars: list) -> str:
+    """Ordinary technical context, computed from the same bars.
+
+    Explicitly labelled as convenience rather than signal. The desk has closed
+    thirty-two registrations and none of these indicators survived out of
+    sample on this instrument at this timeframe; they are here because the
+    owner asked for them, and because a forward test with a declared falsifier
+    is not harmed by extra inputs the way a parameter sweep is.
+    """
+    closes = [b[4] for b in bars]
+    highs = [b[2] for b in bars]
+    lows = [b[3] for b in bars]
+    last = closes[-1]
+    lines = []
+
+    for period in (21, 55):
+        e = ema(closes, period)
+        if e:
+            lines.append(f"- EMA({period}) {e:.2f} — price is {'above' if last > e else 'below'} it by {abs(last - e):.2f}")
+    r = rsi(closes)
+    if r is not None:
+        lines.append(f"- RSI(14) {r:.1f}")
+
+    # Sessions and day levels, in UTC because the bars are.
+    now = dt.datetime.utcfromtimestamp(bars[-1][0] / 1000)
+    lines.append(f"- session: {session_of(now.hour)} (bar stamped {now:%H:%MZ})")
+
+    today = now.date()
+    td = [b for b in bars if dt.datetime.utcfromtimestamp(b[0] / 1000).date() == today]
+    if td:
+        lines.append(f"- today so far: high {max(b[2] for b in td):.2f}, low {min(b[3] for b in td):.2f}")
+    prev = today - dt.timedelta(days=1)
+    yd = [b for b in bars if dt.datetime.utcfromtimestamp(b[0] / 1000).date() == prev]
+    if yd:
+        lines.append(f"- previous day: high {max(b[2] for b in yd):.2f}, low {min(b[3] for b in yd):.2f}")
+
+    lines.append(f"- range of the window shown: high {max(highs):.2f}, low {min(lows):.2f}")
+
+    # A higher timeframe, aggregated from the same bars so it cannot disagree
+    # with them.
+    hourly = {}
+    for t, o, h, l, c in bars:
+        k = t - (t % 3_600_000)
+        if k not in hourly:
+            hourly[k] = [o, h, l, c]
+        else:
+            hourly[k][1] = max(hourly[k][1], h)
+            hourly[k][2] = min(hourly[k][2], l)
+            hourly[k][3] = c
+    keys = sorted(hourly)[-8:]
+    if len(keys) >= 4:
+        lines.append("- last hours (1h, aggregated from these bars):")
+        for k in keys:
+            o, h, l, c = hourly[k]
+            lines.append(f"    {dt.datetime.utcfromtimestamp(k / 1000):%m-%d %H:%MZ}  O {o:g} H {h:g} L {l:g} C {c:g}")
+    return chr(10).join(lines)
 
 
 def post_json(url: str, payload: dict, timeout: float = 20.0) -> dict:
@@ -162,7 +349,9 @@ def main() -> int:
     ap.add_argument("--provider", choices=sorted(PROVIDERS), default=None)
     ap.add_argument("--market", default="xauusd")
     ap.add_argument("--tf", default="15m")
-    ap.add_argument("--bars", type=int, default=40, help="bars shown to the model")
+    ap.add_argument("--bars", type=int, default=40, help="bars shown to the model one by one")
+    ap.add_argument("--context-bars", type=int, default=240,
+                    help="bars fetched for indicators, day levels and the hourly view")
     ap.add_argument("--poll", type=float, default=20.0)
     ap.add_argument("--timeout", type=float, default=90.0)
     ap.add_argument("--seed", type=int, default=7, help="the coin's seed, so the control replays")
@@ -181,6 +370,7 @@ def main() -> int:
     if env and not key:
         sys.exit(f"no {env} in the environment for {args.model}")
 
+    limits = read_limits()
     coin = random.Random(args.seed)
     # Which bar was last decided, on disk. A restart used to forget, re-ask the
     # current bar, spend another model call on it and post a SECOND intent for
@@ -215,7 +405,7 @@ def main() -> int:
         print(f"resuming: bar {decided_on} was already decided", flush=True)
     while True:
         try:
-            detail = get_json(f"{args.api}/api/paper/run/{args.run}?bars={args.bars}")
+            detail = get_json(f"{args.api}/api/paper/run/{args.run}?bars={args.context_bars}")
         except Exception as e:  # noqa: BLE001
             print(f"cannot read {args.run}: {type(e).__name__}: {e}", flush=True)
             if args.once:
@@ -239,14 +429,24 @@ def main() -> int:
             time.sleep(args.poll)
             continue
 
+        shown = bars[-args.bars:]
         rows = chr(10).join(
-            f"  {dt.datetime.utcfromtimestamp(t / 1000):%Y-%m-%d %H:%MZ}  "
-            f"O {o:g}  H {h:g}  L {lo:g}  C {c:g}"
-            for t, o, h, lo, c in bars
+            f"  {dt.datetime.utcfromtimestamp(b[0] / 1000):%Y-%m-%d %H:%MZ}  "
+            f"O {b[1]:g}  H {b[2]:g}  L {b[3]:g}  C {b[4]:g}"
+            for b in shown
         )
+        atr_series = (detail.get("series") or {}).get("atr_14.atr") or []
+        atr_now = None
+        for p in reversed(atr_series):
+            v = p.get("value") if isinstance(p, dict) else (p[1] if isinstance(p, (list, tuple)) and len(p) > 1 else None)
+            if v is not None and v == v:
+                atr_now = float(v)
+                break
         prompt = PROMPT.format(
-            market=args.market, tf=args.tf, n=len(bars), bars=rows,
+            market=args.market, tf=args.tf, n=len(shown), bars=rows,
             position=describe_position(detail),
+            desk=desk_block(detail, limits, atr_now, args.run),
+            context=context_block(bars),
         )
 
         try:
