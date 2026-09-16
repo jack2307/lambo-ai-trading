@@ -76,10 +76,25 @@ def read_status(api: str, run: str) -> dict | None:
     return None
 
 
-def clamp_volume(info, raw: float) -> float:
+def clamp_volume(info, raw: float) -> tuple:
+    """The broker's own volume grid, and whether it changed the answer.
+
+    Returns `(volume, clipped)`. `clipped` says the symbol's min/max moved the
+    size rather than merely rounding it to the step, and that is worth saying
+    out loud: a mirror that cannot send the book's size is no longer mirroring
+    the book, and the difference must appear in the record instead of being
+    absorbed quietly. On 2026-09-16 a book asking for 256.3 lots arrived at the
+    broker's 100.0 ceiling with nothing said about it.
+    """
     step = info.volume_step or 0.01
     vol = round(round(raw / step) * step, 8)
-    return max(info.volume_min, min(info.volume_max, vol))
+    held = max(info.volume_min, min(info.volume_max, vol))
+    return held, abs(held - vol) > step / 2
+
+
+def notional_of(info, vol: float, price: float) -> float:
+    """What the order is actually worth, in the account's currency."""
+    return vol * info.trade_contract_size * price
 
 
 def main() -> int:
@@ -92,6 +107,18 @@ def main() -> int:
     ap.add_argument("--poll", type=float, default=15.0)
     ap.add_argument("--lot-scale", type=float, default=1.0, help="terminal volume = book lots x this")
     ap.add_argument("--deviation", type=int, default=30, help="max slippage in points for a market order")
+    # A ceiling on SIZE, which this program had none of.
+    #
+    # Not the desk's rule restated - the desk caps notional at 300% of equity
+    # and owns that decision. This is a sanity bound far above it, there to
+    # catch an order that is wrong by a FACTOR rather than by a judgement: a
+    # unit error, a mis-declared contract size, an ATR that came back zero.
+    # The one that prompted it asked for 100 lots of EURUSD - $11.5m against a
+    # $10k account - because the book's contract size was declared 1,000 times
+    # too small. Every risk number in the book was right; only the lots were
+    # wrong, and lots are the one thing that crosses over to here.
+    ap.add_argument("--max-notional-ratio", type=float, default=10.0,
+                    help="refuse to open if order notional exceeds this multiple of account equity")
     ap.add_argument("--dry-run", action="store_true", help="reconcile and log, send nothing")
     args = ap.parse_args()
 
@@ -157,11 +184,25 @@ def main() -> int:
         def open_like(book_open: dict) -> bool:
             tick = mt5.symbol_info_tick(args.symbol)
             is_long = book_open["side"] == "LONG"
-            vol = clamp_volume(info, float(book_open["lots"]) * args.lot_scale)
+            vol, clipped = clamp_volume(info, float(book_open["lots"]) * args.lot_scale)
+            if clipped:
+                log(out, "clipped", asked=float(book_open["lots"]) * args.lot_scale, sending=vol,
+                    volume_min=info.volume_min, volume_max=info.volume_max)
+            price = tick.ask if is_long else tick.bid
+            equity = getattr(mt5.account_info(), "equity", 0.0) or 0.0
+            notional = notional_of(info, vol, price)
+            if equity > 0 and notional > args.max_notional_ratio * equity:
+                log(out, "refused-size", asked_lots=float(book_open["lots"]), sending_lots=vol,
+                    notional=round(notional, 2), equity=round(equity, 2),
+                    ratio=round(notional / equity, 2), limit=args.max_notional_ratio,
+                    reason="order notional exceeds the sanity ceiling; nothing sent")
+                print(f"REFUSED: {vol} lots = {notional:,.0f} on {equity:,.0f} equity "
+                      f"({notional / equity:.1f}x, ceiling {args.max_notional_ratio}x). Nothing sent.", flush=True)
+                return False
             req = {
                 "action": mt5.TRADE_ACTION_DEAL, "symbol": args.symbol, "volume": vol,
                 "type": mt5.ORDER_TYPE_BUY if is_long else mt5.ORDER_TYPE_SELL,
-                "price": tick.ask if is_long else tick.bid, "deviation": args.deviation, "magic": magic,
+                "price": price, "deviation": args.deviation, "magic": magic,
                 "comment": f"flowdesk {args.run}"[:31], "type_time": mt5.ORDER_TIME_GTC, "type_filling": mt5.ORDER_FILLING_IOC,
             }
             # The book's stop is a real order only for engine-managed strategies;

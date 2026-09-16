@@ -23,12 +23,24 @@ param(
     # process and its own magic number.
     [string[]]$Runs = @('xau-ema'),
 
-    # Size relative to the paper book. 1.0 sends the book's own lots.
+    # Size relative to the paper book.
+    #
+    # 1.0 is right and is not a coincidence. The paper desk prices the CENT
+    # symbols and the demo account only carries the STANDARD ones, but every
+    # pair's contract size is exactly 100x larger on the standard symbol
+    # (MEASURED 2026-09-16: XAUUSD 1 -> 100, BTCUSD 0.01 -> 1, EURUSD
+    # 1000 -> 100000) and the demo's 10,000 USD is exactly 100x the book's
+    # 10,000 USC. Both sides of the ratio scale together, so the same lot
+    # number carries the same fraction of equity on either account. Do not
+    # "convert" it.
     [double]$LotScale = 1.0,
 
     [switch]$DryRun,
     [string]$Terminal = 'C:\MT5-demo\terminal64.exe',
-    [string]$Symbol = 'XAUUSD.sc',
+
+    # Leave empty to resolve per book from its own market. Set it only to force
+    # one symbol on every book, which is a thing you want roughly never.
+    [string]$Symbol = '',
     [string]$Python = 'C:\Python39\python.exe',
     [string]$Root = ''
 )
@@ -42,9 +54,45 @@ if (-not $Root) {
 }
 if (-not $Root) { $Root = (Get-Location).Path }
 
+# `powershell -File script.ps1 -Runs a,b` hands the parameter over as the single
+# string "a,b" - only a dot-sourced call binds it as an array. The documented
+# invocation at the top of this file is the -File form, so it arrived as one
+# run named "xau-ema,eur-hours" and was skipped as an unknown market. Split
+# here so both forms mean the same thing.
+$Runs = @($Runs | ForEach-Object { $_ -split ',' } | Where-Object { $_ })
+
 if (-not (Test-Path $Terminal)) {
     Write-Error "no terminal at $Terminal"
     exit 1
+}
+
+# Paper market -> the symbol that market trades on a STANDARD account.
+#
+# The paper desk quotes cent symbols (`XAUUSD.sc`) because the live Vantage
+# account is a cent account. A demo account has no `.sc` book at all - checked
+# against account 26108386, whose 1200 symbols contain XAUUSD and BTCUSD and no
+# cent variant of either - so the mirror has to name the standard symbol. This
+# table is the whole translation, and it is deliberately explicit: deriving it
+# by stripping ".sc" would silently produce a tradable-looking symbol on some
+# other broker where the cent book is spelled differently.
+$SYMBOL_OF = @{
+    'xauusd'  = 'XAUUSD'
+    'xauduka' = 'XAUUSD'
+    'gold'    = 'XAUUSD'
+    'xagduka' = 'XAGUSD'
+    'eurusd'  = 'EURUSD'
+    'eurduka' = 'EURUSD'
+    'btcusd'  = 'BTCUSD'
+    'btc'     = 'BTCUSD'
+}
+
+function Resolve-Symbol([string]$run) {
+    if ($Symbol) { return $Symbol }
+    $state = Join-Path $Root "data\paper\$run\state.json"
+    if (-not (Test-Path $state)) { return $null }
+    $market = (Get-Content $state -Raw | ConvertFrom-Json).config.market
+    if (-not $market) { return $null }
+    return $SYMBOL_OF[[string]$market]
 }
 
 # Two copies of an executor on one book is two copies of every order. The
@@ -82,14 +130,23 @@ try {
             continue
         }
 
+        # A book whose market has no standard symbol is skipped rather than
+        # guessed at. Sending an order on the wrong instrument is worse than
+        # not sending one.
+        $sym = Resolve-Symbol $run
+        if (-not $sym) {
+            Write-Host "skipping $run - no standard symbol known for its market; add it to SYMBOL_OF"
+            continue
+        }
+
         $args = @('py/live/mt5_executor.py', "--run=$run", "--terminal=$Terminal",
-                  "--login=$Login", "--symbol=$Symbol", "--lot-scale=$LotScale")
+                  "--login=$Login", "--symbol=$sym", "--lot-scale=$LotScale")
         if ($DryRun) { $args += '--dry-run' }
         Start-Process -FilePath $Python -ArgumentList $args -WorkingDirectory $Root -WindowStyle Hidden `
             -RedirectStandardOutput (Join-Path $logs "exec_$run.out") `
             -RedirectStandardError (Join-Path $logs "exec_$run.err")
         $mode = if ($DryRun) { 'DRY RUN' } else { 'LIVE' }
-        Write-Host "mirroring $run -> account $Login on $Symbol at x$LotScale [$mode]"
+        Write-Host "mirroring $run -> account $Login on $sym at x$LotScale [$mode]"
     }
 
     Start-Sleep -Seconds 3

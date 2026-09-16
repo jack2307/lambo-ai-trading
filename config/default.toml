@@ -366,7 +366,14 @@ underlying = "SI"
 symbol = "XAGUSD.sc"
 # silver quotes to three decimals.
 price_decimals = 3
-contract_size = 1.0
+# MEASURED: symbol_info("XAGUSD.sc").trade_contract_size on the live account,
+# 2026-09-16. It was declared 1.0 before, copied from the gold block where
+# 1.0 is right. The error cancelled out of every result -- lots are sized as
+# risk/(stop x contract_size) and P&L is points x lots x contract_size, so the
+# product is invariant and so are R, notional and margin -- but the LOTS number
+# was wrong by the same factor, and lots is exactly what an executor sends to
+# MT5. Harmless on paper, not harmless live.
+contract_size = 50.0
 spread = 0.021
 lot_step = 0.01
 min_lot = 0.01
@@ -398,7 +405,14 @@ underlying = "6E"
 symbol = "EURUSD.sc"
 # EURUSD quotes to five decimals; two would report 1.16 for 1.15843.
 price_decimals = 5
-contract_size = 1.0
+# MEASURED: symbol_info("EURUSD.sc").trade_contract_size on the live account,
+# 2026-09-16. It was declared 1.0 before, copied from the gold block where
+# 1.0 is right. The error cancelled out of every result -- lots are sized as
+# risk/(stop x contract_size) and P&L is points x lots x contract_size, so the
+# product is invariant and so are R, notional and margin -- but the LOTS number
+# was wrong by the same factor, and lots is exactly what an executor sends to
+# MT5. Harmless on paper, not harmless live.
+contract_size = 1000.0
 spread = 0.00014
 lot_step = 0.01
 min_lot = 0.01
@@ -445,7 +459,14 @@ units_per_usd = 100.0
 leverage = 2000.0                  # MEASURED: account_info().leverage, 2026-09-16
 
 price_decimals = 5
-contract_size = 1.0
+# MEASURED: symbol_info("EURUSD.sc").trade_contract_size on the live account,
+# 2026-09-16. It was declared 1.0 before, copied from the gold block where
+# 1.0 is right. The error cancelled out of every result -- lots are sized as
+# risk/(stop x contract_size) and P&L is points x lots x contract_size, so the
+# product is invariant and so are R, notional and margin -- but the LOTS number
+# was wrong by the same factor, and lots is exactly what an executor sends to
+# MT5. Harmless on paper, not harmless live.
+contract_size = 1000.0
 spread = 0.00014
 lot_step = 0.01
 min_lot = 0.01
