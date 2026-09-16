@@ -1,0 +1,40 @@
+XAUUSD.sc - 2026-06-02 to 2026-09-11, 6677 bars of 15m against 1m
+
+`market` is what the desk does today: always in, at the next open.
+`limit`  waits for a better price and takes NO trade if it never comes.
+
+--- every bar treated as a LONG signal ---
+offset   wait     fill %       market        limit limit - market
+(R)      (min)               R/signal     R/signal       R/signal
+0.10     5         70.4%      -0.0151      -0.0239        -0.0088
+0.10     15        81.9%      -0.0151      -0.0309        -0.0158
+0.10     30        87.3%      -0.0151      -0.0283        -0.0132
+0.20     5         47.4%      -0.0151      -0.0157        -0.0006
+0.20     15        66.3%      -0.0151      -0.0315        -0.0164
+0.20     30        75.8%      -0.0151      -0.0380        -0.0229
+0.30     5         30.7%      -0.0151      -0.0011        +0.0140
+0.30     15        52.1%      -0.0151      -0.0156        -0.0005
+0.30     30        65.3%      -0.0151      -0.0336        -0.0185
+0.50     5         13.0%      -0.0151      -0.0093        +0.0058
+0.50     15        31.1%      -0.0151      -0.0258        -0.0107
+0.50     30        46.5%      -0.0151      -0.0282        -0.0131
+
+--- every bar treated as a SHORT signal ---
+offset   wait     fill %       market        limit limit - market
+(R)      (min)               R/signal     R/signal       R/signal
+0.10     5         70.3%      +0.0151      -0.0109        -0.0260
+0.10     15        81.7%      +0.0151      -0.0129        -0.0280
+0.10     30        86.7%      +0.0151      -0.0132        -0.0283
+0.20     5         47.3%      +0.0151      +0.0100        -0.0051
+0.20     15        65.6%      +0.0151      -0.0177        -0.0328
+0.20     30        74.6%      +0.0151      -0.0138        -0.0288
+0.30     5         31.4%      +0.0151      +0.0114        -0.0037
+0.30     15        51.8%      +0.0151      -0.0217        -0.0368
+0.30     30        63.3%      +0.0151      -0.0147        -0.0298
+0.50     5         14.4%      +0.0151      +0.0149        -0.0002
+0.50     15        31.1%      +0.0151      -0.0231        -0.0381
+0.50     30        45.9%      +0.0151      -0.0204        -0.0355
+
+Both arms run over the same horizon from the same signal, so the period's
+drift lands on both and cancels. `limit - market` positive means the better
+price on the fills paid for the trades that got away.
