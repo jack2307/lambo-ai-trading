@@ -35,6 +35,7 @@ Books run on the same stream in **matched pairs**, one pair per model:
 |---|---|---|---|
 | `gpt-5.6-sol` | the **ChatGPT plan**, via the Codex CLI | `ai-xau-sol-ctx` | `ai-xau-sol-ctx-coin` |
 | `claude-opus-5` | the **Claude plan**, via the Claude Code CLI | `ai-xau-opus-ctx` | `ai-xau-opus-ctx-coin` |
+| `deepseek-flash` | the DeepSeek API, metered and cheap | `ai-xau-ds-ctx` | `ai-xau-ds-ctx-coin` |
 
 No metered API key is involved in either. Owner's instruction, 2026-09-15:
 *"cho dùng gói đừng dùng API nữa"*.
@@ -160,6 +161,56 @@ Closing them also means this campaign **cannot say whether the added context
 helped**, because the sparse arm is too short to compare against. Running both
 prompts side by side would answer that, at twice the token cost and while the
 first-order question is still unanswered. Not done; available on request.
+
+## Amendment, 2026-09-16: a third arm, and the threshold moves again
+
+`deepseek-flash` joins on the owner's request, and the threshold every arm is
+judged at moves with it. **This is written before the new books took a trade**,
+because a threshold declared afterwards is worth nothing.
+
+| arms | each judged at |
+|---|---|
+| 2 | p ≤ 0.0250 |
+| **3** | **p ≤ 0.0167** |
+| 4 | p ≤ 0.0125 |
+
+Three independent campaigns at p ≤ 0.05 would produce at least one false
+winner about 14% of the time. Bonferroni over three is 0.05/3 = 0.0167, and
+the other two conditions are unchanged and still apply per campaign.
+
+### Why this arm is worth an arm
+
+The other two are frontier models reached through subscriptions. This one is
+deliberately the cheap one, and the question it answers is not "can DeepSeek
+trade" but **"does model quality matter here at all?"** If a model costing a
+dollar a month scores the same as Opus 5, that is a finding about the task and
+not about the model — and it is the cheapest finding available.
+
+Measured on the real prompt, 2026-09-16:
+
+| | latency | tokens per decision | cost, one 15m book |
+|---|---|---|---|
+| `deepseek-flash` | **1.5 s** | 2,658 in / 195 out | **$1.03–2.06 / month** |
+| `deepseek-v4-pro` | 2.7 s | 2,711 in / 113 out | $4.01–8.02 / month |
+| `claude-opus-5` (plan) | 5.8 s | 26,509 total | ~$80 / month equivalent |
+| `gpt-5.6-sol` (plan) | 16.6 s | 17,148 total | plan quota |
+
+`deepseek-flash` was chosen over `v4-pro` for being the sharper contrast as
+well as the cheaper one. If it turns out too weak to produce a readable
+decision, `v4-pro` is the fallback — and swapping it would be a NEW arm with
+new books, not a change to this one.
+
+The cost table is worth reading twice. A direct API call spends 2,853 tokens on
+the question; the CLI route spends 26,509 on the same question, because
+95% of a CLI call is the harness. The subscriptions are not cheaper, they are
+prepaid.
+
+### What this arm does not get
+
+No special treatment. Same prompt, same guards, same sizing, same 10,000 USC,
+its own coin on its own seed. If it is better, the comparison says so; if the
+API is down, its badge goes quiet exactly like Opus's did for eight hours on
+2026-09-15.
 
 ## The falsifier, declared before the first trade
 

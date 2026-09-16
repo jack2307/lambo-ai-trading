@@ -44,6 +44,7 @@ import json
 import glob
 import io
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -147,6 +148,8 @@ def codex_bin() -> str:
 # The system prompt the CLI provider runs under. It REPLACES Claude Code's
 # own, which is what keeps a decision call from dragging a coding agent's
 # tools, skills and project files into a question about forty candles.
+ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+
 CLI_SYSTEM_PROMPT = (
     "You are a trading decider answering one question about one instrument. "
     "Answer with JSON and nothing else. Do not explain, do not use tools, do "
@@ -201,12 +204,50 @@ PROVIDERS = {
         "env": "ANTHROPIC_API_KEY",
         "prefixes": ("claude",),
     },
+    # DeepSeek speaks the OpenAI chat API, so it needs no branch in `ask` —
+    # only a base URL and a key. Priced per token rather than by subscription:
+    # measured 2026-09-16 at roughly $1/month for one 15m book on
+    # `deepseek-flash`, against about $80/month equivalent for the same book on
+    # the Claude plan, because a direct API call spends 1,427 tokens where the
+    # CLI route spends 26,509 on the same question.
+    "deepseek": {
+        "url": "https://api.deepseek.com/v1/chat/completions",
+        "env": "DEEPSEEK_API_KEY",
+        "config_section": "ai.deepseek",
+        "prefixes": ("deepseek",),
+    },
     "openai": {
         "url": "https://api.openai.com/v1/chat/completions",
         "env": "OPENAI_API_KEY",
         "prefixes": ("gpt", "o1", "o3", "o4", "chatgpt"),
     },
 }
+
+
+def key_for(provider: str) -> str:
+    """The provider's key, from the environment or from `config/local.toml`.
+
+    Two places because they suit different secrets. A key exported into the
+    environment is convenient for one shell; a key in the gitignored config is
+    there after a reboot and is not visible in a process list. Environment
+    wins, so a shell can override the file without editing it.
+    """
+    spec = PROVIDERS[provider]
+    env = spec.get("env")
+    if env:
+        from_env = os.environ.get(env)
+        if from_env:
+            return from_env
+    section = spec.get("config_section")
+    if not section:
+        return ""
+    path = os.path.join(ROOT, "config", "local.toml")
+    try:
+        text = io.open(path, encoding="utf-8").read()
+    except OSError:
+        return ""
+    m = re.search(r"\[" + re.escape(section) + r"\][^\[]*?api_key\s*=\s*\"([^\"]+)\"", text, re.S)
+    return m.group(1) if m else ""
 
 
 def provider_of(model: str) -> str:

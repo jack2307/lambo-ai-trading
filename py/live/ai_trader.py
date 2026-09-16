@@ -365,10 +365,14 @@ def main() -> int:
         sys.exit(str(e))
     # A keyless provider reaches the model through the account's own plan
     # (the Claude Code CLI); only a metered one can be missing a key.
+    # `key_for` looks in the environment and then in the gitignored
+    # `config/local.toml`, so a metered provider works after a reboot without
+    # anyone exporting anything.
+    from advisor import key_for
     env = PROVIDERS[provider]["env"]
-    key = os.environ.get(env) if env else ""
+    key = key_for(provider)
     if env and not key:
-        sys.exit(f"no {env} in the environment for {args.model}")
+        sys.exit(f"no {env} in the environment or config/local.toml for {args.model}")
 
     limits = read_limits()
     coin = random.Random(args.seed)

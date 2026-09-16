@@ -32,7 +32,13 @@ $campaigns = @(
     @{ model = 'codex/gpt-5.6-sol'; run = 'ai-xau-sol-ctx'; control = 'ai-xau-sol-ctx-coin'; seed = 7;  log = 'ai_trader_sol_ctx' },
     # claude-opus-5 goes through the account's PLAN, via the Claude Code CLI.
     # No API key is involved; see the `claude-cli` provider in advisor.py.
-    @{ model = 'claude-opus-5'; run = 'ai-xau-opus-ctx'; control = 'ai-xau-opus-ctx-coin'; seed = 11; log = 'ai_trader_opus_ctx' }
+    @{ model = 'claude-opus-5'; run = 'ai-xau-opus-ctx'; control = 'ai-xau-opus-ctx-coin'; seed = 11; log = 'ai_trader_opus_ctx' },
+    # DeepSeek's cheap model, straight at the metered API — no CLI, no plan.
+    # Measured 2026-09-16: 1.5s and roughly a dollar a month for one 15m book,
+    # because a direct call spends 2,853 tokens on the question where the CLI
+    # route spends 26,509 on the same one. It is here to answer whether model
+    # quality matters for this task at all; see the amendment in AI-TRADER.md.
+    @{ model = 'deepseek-flash'; run = 'ai-xau-ds-ctx'; control = 'ai-xau-ds-ctx-coin'; seed = 23; log = 'ai_trader_ds' }
 )
 
 # Two copies of this script running at once is not a nuisance, it is a
