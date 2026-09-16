@@ -68,10 +68,14 @@ lot_scale = 1.0
 # Reconcile and record, send nothing. The account still appears on the desk and
 # still reports its balance; what it will not do is place an order.
 #
-# Leave a new account here until you have watched it agree with the book for a
-# while. It costs nothing and it is the only way to find out that a book's
-# lots are wrong BEFORE the broker finds out for you.
-dry_run = true
+# Turned off 2026-09-16 on the owner's explicit instruction, after a day of dry
+# runs on this account in which every book reconciled, the sizes came out right
+# and nothing was refused. This is a DEMO account and the executor refuses a
+# real-money one outright, whatever this file says.
+#
+# It still takes `-Live` on the command line for an order to leave the machine:
+# the file grants permission, the command line spends it.
+dry_run = false
 
 # False hides the account from the launcher's `-All` without deleting what you
 # worked out to set it up.
@@ -82,8 +86,34 @@ enabled = true
 #
 # Each book gets its own process and its own magic number, so one account can
 # carry several books without their results running together - the executor
-# matches positions and history by magic, never by symbol alone.
-runs = ["xau-ema", "xau-macd-asia"]
+# matches positions and history by magic, never by symbol alone. Checked for
+# collisions across these eight on 2026-09-16: none.
+#
+# The three AI books are here with their COIN CONTROLS, which is not optional.
+# The campaign asks whether a model's direction beats a coin, and the coin is
+# how that question is answered. Mirroring the models alone would produce a
+# live P&L with nothing to read it against - "the AI made +X on the demo" is
+# unreadable without knowing what a coin made on the same bars through the same
+# spread. Drop the `-coin` entries only if the campaign itself is dropped.
+#
+# What this account CANNOT reproduce is that each paper book has its own 10,000
+# USC while all eight share this one account. Each still sizes as though it
+# owned the whole thing, so their risk adds up here and does not there: eight
+# books at the desk's 300% notional cap is 24x this account's equity in
+# notional at once, about 8% of it at risk. Safe at 1:500 - margin level near
+# 2000% against a 30% stop-out - but safe by arithmetic, which is why the
+# executor now also refuses any open that would take the ACCOUNT below a 500%
+# margin level.
+runs = [
+    "xau-ema",
+    "xau-macd-asia",
+    "ai-xau-ds-ctx",
+    "ai-xau-ds-ctx-coin",
+    "ai-xau-opus-ctx",
+    "ai-xau-opus-ctx-coin",
+    "ai-xau-sol-ctx",
+    "ai-xau-sol-ctx-coin",
+]
 
 # A second account looks like this. Note the separate terminal directory - two
 # entries pointing at one terminal would be two executors fighting over one

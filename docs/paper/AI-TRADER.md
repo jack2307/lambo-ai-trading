@@ -321,3 +321,40 @@ the same call. The full prompt and reply of every decision go to
 the same reason as the advisor's log: a summary cannot be replayed against a
 changed prompt, and replay is the only way a mistake gets fixed rather than
 counted.
+
+## The first three trades on the demo account do not count
+
+2026-09-16. The AI books and their coin controls were mirrored onto the Vantage
+demo account 26108386. The first three fills are an artefact and must be
+excluded from any comparison between the books and the account:
+
+    ai-xau-ds-ctx        book 4338.31   account 4348.95   +10.64
+    ai-xau-sol-ctx       book 4342.92   account 4348.98    +6.06
+    ai-xau-sol-ctx-coin  book 4342.92   account 4348.98    +6.06
+
+That is not slippage. MetaTrader starts with its Algo Trading button off, and
+every `order_send` from the Python API comes back `10027 AutoTrading disabled
+by client` until someone turns it on — the account, the login and the
+connection are all fine, and the terminal simply refuses to let a program
+trade. Thirty-six orders were refused at that gate. When it was opened, three
+books were already long, and the reconciler did what a reconciler does: it made
+the account match the book, at the price available *then*.
+
+The three went on to bank +38.28, +37.92 and +37.92. They are excluded anyway.
+A profit earned from a worse entry than the book's is no more comparable than a
+loss would have been, and the direction of the error is the point: **the longer
+a book has been right, the worse the mirror's entry**, so late joins are biased
+and the bias flatters nothing consistently.
+
+The executor now refuses to join a position the book opened more than
+`--max-adopt-bars` (default 1) ago, and logs `not-adopted` when it does. The
+mirror sits that trade out and joins on the next one, where it can enter within
+a bar of the book. Age is measured against the book's own `last_bar_time`
+rather than the wall clock: over a weekend or a feed outage the wall clock
+would call every position stale while the book has not advanced a bar.
+
+Measured on the same account, in a deliberate one-lot round trip: **slippage
+0.00 on entry and +0.01 on exit, 236 ms and 240 ms, spread 0.29 (29 points),
+and zero commission** — the spread is the whole cost here. That is what the
+mirror should be measuring, and it is a different number entirely from the six
+to eleven points above.

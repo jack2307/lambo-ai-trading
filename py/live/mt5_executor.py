@@ -224,6 +224,43 @@ def main() -> int:
     # wrong, and lots are the one thing that crosses over to here.
     ap.add_argument("--max-notional-ratio", type=float, default=10.0,
                     help="refuse to open if order notional exceeds this multiple of account equity")
+    # A floor under the whole ACCOUNT, which the per-order ceiling above does
+    # not provide.
+    #
+    # Each paper book sizes as though it owns its own 10,000 USC. Mirrored, they
+    # share one account, so eight books each taking 300% of "their" equity put
+    # 24x the account's equity in notional on it at once. At 1:500 that is a
+    # margin level around 2000% and perfectly safe - but safe by today's
+    # arithmetic, not by any rule. This is the rule: no executor opens a
+    # position that would take the ACCOUNT's margin level below this.
+    #
+    # 500% is far above the broker's 30% stop-out and far below where these
+    # sizes land, so it never binds in normal running and catches the case
+    # where someone adds books, raises lot_scale, or the broker cuts leverage.
+    # Each executor checks it independently and sees the same account, so they
+    # arrive at the same answer without having to talk to each other.
+    ap.add_argument("--min-margin-level", type=float, default=500.0,
+                    help="refuse to open if the ACCOUNT's margin level would fall below this percent")
+    # How stale a book's position may be before this refuses to join it.
+    #
+    # The reconciler's job is to make the account match the book, and taken
+    # literally that means opening a position the book started hours ago - at
+    # today's price. On 2026-09-16, the first minute of live running did exactly
+    # that: three books were already long, the terminal's Algo Trading gate had
+    # been shut, and the moment it opened the mirror bought 6 to 11 points above
+    # where the books had entered.
+    #
+    # Nothing failed. The account simply held the right direction at the wrong
+    # price, and the trade it will eventually report is not the trade the book
+    # took - which destroys the one measurement the mirror exists for. Worse, it
+    # is biased: the longer a book has been RIGHT, the worse the mirror's entry.
+    #
+    # So a position older than this is not adopted. The mirror sits the trade
+    # out and joins on the next one, where it can enter within a bar of the
+    # book. One bar of lag is allowed because the book's `entry_time` is a bar
+    # stamp and the executor polls every 15 seconds inside it.
+    ap.add_argument("--max-adopt-bars", type=float, default=1.0,
+                    help="do not open a mirror for a book position older than this many bars")
     ap.add_argument("--dry-run", action="store_true", help="reconcile and log, send nothing")
     args = ap.parse_args()
 
@@ -307,7 +344,32 @@ def main() -> int:
             nonlocal blocked
             blocked = why
 
-        def open_like(book_open: dict) -> bool:
+        TF_MS = {"1m": 60_000, "5m": 300_000, "15m": 900_000, "1h": 3_600_000}
+
+        def too_old(book_open: dict, run: dict) -> float | None:
+            """Bars between the book's entry and its latest bar, or None if fresh.
+
+            Measured against the book's own clock (`last_bar_time`) rather than
+            the wall clock: the book only moves when a bar closes, and over a
+            weekend or a feed outage the wall clock would call every position
+            stale while the book has not advanced a single bar.
+            """
+            step = TF_MS.get(run.get("tf") or "", 900_000)
+            entry, last = book_open.get("entry_time"), run.get("last_bar_time")
+            if not entry or not last:
+                return None
+            bars = (last - entry) / step
+            return bars if bars > args.max_adopt_bars else None
+
+        def open_like(book_open: dict, run: dict) -> bool:
+            late = too_old(book_open, run)
+            if late is not None:
+                nonlocal_blocked(f"not joined: the book opened this {late:.0f} bars ago")
+                log(out, "not-adopted", side=book_open.get("side"), lots=book_open.get("lots"),
+                    book_entry=book_open.get("entry_price"), bars_old=round(late, 1),
+                    limit=args.max_adopt_bars,
+                    reason="the book opened this too long ago to mirror at a comparable price")
+                return False
             tick = mt5.symbol_info_tick(args.symbol)
             is_long = book_open["side"] == "LONG"
             vol, clipped = clamp_volume(info, float(book_open["lots"]) * args.lot_scale)
@@ -326,6 +388,28 @@ def main() -> int:
                       f"({notional / equity:.1f}x, ceiling {args.max_notional_ratio}x). Nothing sent.", flush=True)
                 nonlocal_blocked(f"{vol} lots is {notional / equity:.0f}x equity, over the {args.max_notional_ratio}x ceiling")
                 return False
+            # What this order would tie up, and what the account would look
+            # like holding it. `order_calc_margin` is the broker's own answer
+            # rather than notional/leverage, which is wrong for any symbol with
+            # a margin rate of its own.
+            need = mt5.order_calc_margin(
+                mt5.ORDER_TYPE_BUY if is_long else mt5.ORDER_TYPE_SELL, args.symbol, vol, price)
+            acc_now = mt5.account_info()
+            used = getattr(acc_now, "margin", 0.0) or 0.0
+            eq = getattr(acc_now, "equity", 0.0) or 0.0
+            if need is not None and eq > 0:
+                after = 100.0 * eq / (used + need) if (used + need) > 0 else float("inf")
+                if after < args.min_margin_level:
+                    log(out, "refused-margin", lots=vol, margin_needed=round(need, 2),
+                        margin_used=round(used, 2), equity=round(eq, 2),
+                        level_after=round(after, 1), floor=args.min_margin_level,
+                        reason="opening this would take the account below its margin floor")
+                    print(f"REFUSED: margin level would be {after:.0f}% "
+                          f"(floor {args.min_margin_level:.0f}%). Nothing sent.", flush=True)
+                    nonlocal_blocked(f"margin level would be {after:.0f}%, under the "
+                                     f"{args.min_margin_level:.0f}% floor")
+                    return False
+
             req = {
                 "action": mt5.TRADE_ACTION_DEAL, "symbol": args.symbol, "volume": vol,
                 "type": mt5.ORDER_TYPE_BUY if is_long else mt5.ORDER_TYPE_SELL,
@@ -339,7 +423,10 @@ def main() -> int:
                 req["sl"] = float(book_open["stop"])
             if book_open.get("target") is not None:
                 req["tp"] = float(book_open["target"])
-            return send(req, f"open {book_open['side'].lower()} {vol}")
+            ok = send(req, f"open {book_open['side'].lower()} {vol}")
+            if ok:
+                nonlocal_blocked(None)
+            return ok
 
         snap_path = here / "broker.json"
         blocked = None  # why the last open was refused, if it was
@@ -376,6 +463,9 @@ def main() -> int:
                 "book_side": (book_open or {}).get("side"),
                 "book_lots": (book_open or {}).get("lots"),
                 "realised": realised, "closed": closed, "fills": fills,
+                # Cleared on every successful open, so `blocked` describes the
+                # state now rather than the last thing that ever went wrong.
+                "margin_floor": args.min_margin_level,
                 "position": None if pos is None else {
                     "ticket": pos.ticket,
                     "side": "LONG" if pos.type == mt5.POSITION_TYPE_BUY else "SHORT",
@@ -417,13 +507,13 @@ def main() -> int:
                 for p in held:
                     close(p, "book flat")
             elif book_open is not None and not held:
-                open_like(book_open)
+                open_like(book_open, run)
             elif book_open is not None and held:
                 want_long = book_open["side"] == "LONG"
                 for p in held:
                     if (p.type == mt5.POSITION_TYPE_BUY) != want_long:
                         close(p, "side changed")
-                        open_like(book_open)
+                        open_like(book_open, run)
                         break
             snapshot(positions(), book_open)
             time.sleep(args.poll)
