@@ -41,7 +41,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { api, type Bar, type BacktestTrade, type LiveBar, type PaperEvent, type PaperRun, type PaperRunDetail } from '@/lib/api'
 import { clock, num } from '@/lib/format'
 import { useTicks } from '@/lib/ticks'
-import { AnthropicMark, OpenAIMark } from '@/components/BrandMarks'
+import { ClaudeMark, DeepSeekMark, OpenAIMark } from '@/components/BrandMarks'
 import type { Consultation, Decision, Reasoning } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
@@ -736,11 +736,12 @@ function RunsList({
  * this repo's own marker for "the ChatGPT plan", so it is checked first — a
  * name can carry the route and the model at once.
  */
-function houseOf(name: string | undefined): 'openai' | 'anthropic' | null {
+function houseOf(name: string | undefined): 'openai' | 'claude' | 'deepseek' | null {
   if (!name) return null
   const n = name.toLowerCase()
+  if (n.startsWith('deepseek')) return 'deepseek'
   if (n.startsWith('codex/') || n.startsWith('gpt') || /^o[134]/.test(n)) return 'openai'
-  if (n.startsWith('claude') || n.startsWith('opus') || n.startsWith('sonnet') || n.startsWith('haiku')) return 'anthropic'
+  if (n.startsWith('claude') || n.startsWith('opus') || n.startsWith('sonnet') || n.startsWith('haiku')) return 'claude'
   return null
 }
 
@@ -784,24 +785,26 @@ function DeciderTag({ run }: { run: PaperRun }) {
   // Gradients are inline rather than Tailwind classes because the stops are
   // brand values, not theme tokens — putting #CC785C in the token set would
   // imply the desk owns that colour, and it does not.
-  const skin =
-    house === 'anthropic'
-      ? {
-          // Anthropic clay, lifted toward its paper tone so 9px text stays legible
-          // on the dark ground.
-          backgroundImage: 'linear-gradient(100deg, rgba(204,120,92,0.34), rgba(204,120,92,0.08))',
-          borderColor: 'rgba(204,120,92,0.55)',
-          color: '#F0C4B0',
-        }
-      : house === 'openai'
-        ? {
-            // Monochrome, because their brand is. A metal sheen rather than a hue
-            // keeps it distinct from the flat grey the coin wears.
-            backgroundImage: 'linear-gradient(100deg, rgba(255,255,255,0.26), rgba(255,255,255,0.05))',
-            borderColor: 'rgba(255,255,255,0.45)',
-            color: '#F3F5F7',
-          }
-        : undefined
+  // Each house in the colour its own mark is published in, lifted until 9px
+  // text holds on the dark ground. Inline rather than Tailwind classes because
+  // these are brand values, not theme tokens — putting #D97757 in the token set
+  // would imply the desk owns that colour.
+  const SKINS = {
+    claude: { rgb: '217,119,87', text: '#F2C3AC' },   // #D97757
+    deepseek: { rgb: '77,107,254', text: '#B9C6FF' }, // #4D6BFE
+    // OpenAI's brand is monochrome, so theirs is a metal sheen rather than a
+    // borrowed hue — which also keeps it distinct from the flat grey the coin
+    // wears.
+    openai: { rgb: '255,255,255', text: '#F3F5F7' },
+  } as const
+  const tone = house ? SKINS[house] : null
+  const skin = tone
+    ? {
+        backgroundImage: `linear-gradient(100deg, rgba(${tone.rgb},0.32), rgba(${tone.rgb},0.06))`,
+        borderColor: `rgba(${tone.rgb},0.5)`,
+        color: tone.text,
+      }
+    : undefined
 
   return (
     <span
@@ -819,8 +822,9 @@ function DeciderTag({ run }: { run: PaperRun }) {
                 : 'border-muted-foreground/25 bg-muted-foreground/5 text-muted-foreground/70'),
       )}
     >
-      {house === 'openai' && <OpenAIMark className="size-[9px] shrink-0" />}
-      {house === 'anthropic' && <AnthropicMark className="size-[9px] shrink-0" />}
+      {house === 'openai' && <OpenAIMark className="size-[10px] shrink-0" />}
+      {house === 'claude' && <ClaudeMark className="size-[10px] shrink-0" />}
+      {house === 'deepseek' && <DeepSeekMark className="size-[10px] shrink-0" />}
       {!house && !coin && <span aria-hidden>{mixed ? '\u26a0' : '\u25c6'}</span>}
       <span className="num normal-case">{text}</span>
     </span>
