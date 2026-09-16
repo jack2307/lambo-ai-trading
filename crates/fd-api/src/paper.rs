@@ -1370,12 +1370,107 @@ fn overlays(
 
 fn rules_and_guards(state: &AppState, config: &PaperConfig) -> Result<(TradingRules, Option<Guards>), ApiError> {
     let rules = state.trading_rules(&config.market)?;
-    let guards = config
-        .guards
-        .then(|| Guards::for_market(&state.config, &config.market))
-        .transpose()
-        .map_err(|e| ApiError::BadRequest(e.to_string()))?;
+    let guards = config.guards.then(|| state.guards_for(&config.market)).transpose()?;
     Ok((rules, guards))
+}
+
+/// Guard values set from the desk, each `None` meaning "leave the config's".
+///
+/// Every field is optional so that an edit says what it changed and nothing
+/// else - a payload of whole-struct values would silently pin the fields the
+/// user never touched to whatever the form happened to hold.
+///
+/// `max_concurrent_positions` is deliberately absent. One position per book is
+/// not a risk setting here, it is an assumption the reconciler, the mirror and
+/// the whole desk are built on; exposing a control that breaks them would be
+/// offering a switch with no wiring behind it.
+#[derive(Debug, Default, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(default)]
+pub struct GuardEdit {
+    pub max_trades_per_day: Option<usize>,
+    pub daily_loss_limit_usd: Option<f64>,
+    /// Minutes, because that is what a person types. Stored as ms in `Guards`.
+    pub cooldown_min: Option<f64>,
+    pub max_open_loss_r: Option<f64>,
+    pub max_notional_pct_equity: Option<f64>,
+    pub flat_before_weekend_hhmm: Option<u32>,
+    pub news_flat_before_min: Option<u32>,
+    pub news_flat_after_min: Option<u32>,
+    pub news_min_impact: Option<u8>,
+}
+
+impl GuardEdit {
+    pub fn apply(&self, g: &mut Guards) {
+        if let Some(v) = self.max_trades_per_day {
+            g.max_trades_per_day = v;
+        }
+        if let Some(v) = self.daily_loss_limit_usd {
+            g.daily_loss_limit_usd = v;
+        }
+        if let Some(v) = self.cooldown_min {
+            g.cooldown_ms = (v * 60_000.0).round() as i64;
+        }
+        if let Some(v) = self.max_open_loss_r {
+            g.max_open_loss_r = v;
+        }
+        if let Some(v) = self.max_notional_pct_equity {
+            g.max_notional_pct_equity = v;
+        }
+        if let Some(v) = self.flat_before_weekend_hhmm {
+            g.flat_before_weekend_hhmm = v;
+        }
+        if let Some(v) = self.news_flat_before_min {
+            g.news_flat_before_min = v;
+        }
+        if let Some(v) = self.news_flat_after_min {
+            g.news_flat_after_min = v;
+        }
+        if let Some(v) = self.news_min_impact {
+            g.news_min_impact = v;
+        }
+    }
+
+    /// Rejects values that are not a setting but a mistake.
+    ///
+    /// Deliberately narrow. This refuses the impossible - a negative loss
+    /// limit, an hour that is not on a clock - and allows everything that is
+    /// merely aggressive, including turning a guard off with 0, because which
+    /// risks to run is the desk owner's to decide and not this function's.
+    pub fn check(&self) -> Result<(), ApiError> {
+        let bad = |m: &str| Err(ApiError::BadRequest(m.to_string()));
+        if self.daily_loss_limit_usd.is_some_and(|v| v < 0.0 || !v.is_finite()) {
+            return bad("daily loss limit must be zero or more (0 turns it off)");
+        }
+        if self.cooldown_min.is_some_and(|v| v < 0.0 || !v.is_finite()) {
+            return bad("cooldown must be zero or more minutes (0 turns it off)");
+        }
+        if self.max_open_loss_r.is_some_and(|v| v < 0.0 || !v.is_finite()) {
+            return bad("open-loss cap must be zero or more R (0 turns it off)");
+        }
+        if self.max_notional_pct_equity.is_some_and(|v| v < 0.0 || !v.is_finite()) {
+            return bad("notional cap must be zero or more percent (0 turns it off)");
+        }
+        if self.flat_before_weekend_hhmm.is_some_and(|v| v != 0 && (v > 2359 || v % 100 > 59)) {
+            return bad("weekend-flat time must be an HHMM on the clock, or 0 to turn it off");
+        }
+        if self.news_min_impact.is_some_and(|v| v > 3) {
+            return bad("news impact must be 0-3");
+        }
+        Ok(())
+    }
+}
+
+/// Read the desk's guard edits, or an empty set.
+///
+/// A missing file is the normal case and means "the config's values stand". A
+/// malformed one is treated the same rather than refusing to start: the desk
+/// coming up under the CONFIGURED guards is always safe, while a desk that
+/// will not come up at all is not.
+pub fn load_guard_edits(dir: &Path) -> GuardEdit {
+    std::fs::read_to_string(dir.join("guards.toml"))
+        .ok()
+        .and_then(|t| toml::from_str(&t).ok())
+        .unwrap_or_default()
 }
 
 /* ---------------- handlers ---------------- */
@@ -2043,6 +2138,145 @@ pub async fn pause(
         )?;
     }
     Ok(Json(PauseResponse { id, paused: body.paused, holding }))
+}
+
+/// One guard as the desk shows it: what it is now, and what the file says.
+#[derive(Debug, Serialize)]
+pub struct GuardsView {
+    /// The values in force, config plus edits.
+    pub effective: GuardValues,
+    /// The values `config/default.toml` holds, so the panel can offer "put it
+    /// back" without the client having to remember what back was.
+    pub configured: GuardValues,
+    /// The edits themselves - which fields the desk has taken over.
+    pub edited: GuardEdit,
+    /// Books running under these guards right now.
+    pub guarded_runs: usize,
+}
+
+#[derive(Debug, Serialize)]
+pub struct GuardValues {
+    pub max_concurrent_positions: usize,
+    pub max_trades_per_day: usize,
+    pub daily_loss_limit_usd: f64,
+    pub cooldown_min: f64,
+    pub max_open_loss_r: f64,
+    pub max_notional_pct_equity: f64,
+    pub flat_before_weekend_hhmm: u32,
+    pub news_flat_before_min: u32,
+    pub news_flat_after_min: u32,
+    pub news_min_impact: u8,
+}
+
+impl From<&Guards> for GuardValues {
+    fn from(g: &Guards) -> Self {
+        Self {
+            max_concurrent_positions: g.max_concurrent_positions,
+            max_trades_per_day: g.max_trades_per_day,
+            daily_loss_limit_usd: g.daily_loss_limit_usd,
+            cooldown_min: fd_core::js_round_to(g.cooldown_ms as f64 / 60_000.0, 2),
+            max_open_loss_r: g.max_open_loss_r,
+            max_notional_pct_equity: g.max_notional_pct_equity,
+            flat_before_weekend_hhmm: g.flat_before_weekend_hhmm,
+            news_flat_before_min: g.news_flat_before_min,
+            news_flat_after_min: g.news_flat_after_min,
+            news_min_impact: g.news_min_impact,
+        }
+    }
+}
+
+/// The market the panel reads guards from.
+///
+/// Guards are global except for `news_currencies`, which is per market, so one
+/// has to be named to show a complete set. The desk's own default market is
+/// used and the client may ask for another; either way every value on the
+/// panel except the currency list is the same for every book.
+fn guard_market(state: &AppState) -> String {
+    state.config.market.clone()
+}
+
+/// `GET /api/paper/guards`
+pub async fn guards_get(State(state): State<Arc<AppState>>) -> Result<Json<GuardsView>, ApiError> {
+    let market = guard_market(&state);
+    let configured = Guards::for_market(&state.config, &market)
+        .map_err(|e| ApiError::BadRequest(e.to_string()))?;
+    let effective = state.guards_for(&market)?;
+    let guarded_runs = state.paper.lock().expect("paper runs").values().filter(|r| r.config.guards).count();
+    Ok(Json(GuardsView {
+        effective: (&effective).into(),
+        configured: (&configured).into(),
+        edited: state.guard_edits.read().expect("guard edits").clone(),
+        guarded_runs,
+    }))
+}
+
+/// `POST /api/paper/guards` - change the guards every guarded book runs under.
+///
+/// Two things happen besides the change itself, and both matter more than it
+/// does.
+///
+/// It is WRITTEN INTO EVERY GUARDED BOOK'S RECORD. A book's numbers only mean
+/// something under a stated set of rules, and a desk where the rules could move
+/// without leaving a mark would produce a P&L curve that cannot be read: trades
+/// before and after the change were taken under different constraints and
+/// nothing would say where the line is. The event carries the values, so the
+/// record is self-contained.
+///
+/// And it is persisted to `config/guards.toml`, so it survives a restart.
+/// Guards that quietly reverted to the file's values on the next restart would
+/// be worse than no control at all - the desk would be running rules nobody
+/// chose and everybody assumed.
+pub async fn guards_set(
+    State(state): State<Arc<AppState>>,
+    Json(body): Json<GuardEdit>,
+) -> Result<Json<GuardsView>, ApiError> {
+    body.check()?;
+
+    let before = state.guards_for(&guard_market(&state))?;
+    // The lock is taken, used and released before anything is awaited: a guard
+    // held across an await makes the whole handler non-Send and axum refuses
+    // it, which is the compiler catching a real hazard rather than a nuisance.
+    let unchanged = {
+        let mut edits = state.guard_edits.write().expect("guard edits");
+        let same = *edits == body;
+        if !same {
+            *edits = body.clone();
+        }
+        same
+    };
+    if unchanged {
+        return guards_get(State(state)).await;
+    }
+    let after = state.guards_for(&guard_market(&state))?;
+
+    let path = state.config_dir.join("guards.toml");
+    let text = toml::to_string_pretty(&body).map_err(|e| ApiError::Internal(format!("guards: {e}")))?;
+    const HEADER: &str = concat!(
+        "# Guard values changed from the desk. Written by the API, not by hand.\n",
+        "# `config/default.toml` holds the standing values and the reasoning behind\n",
+        "# each one; this file is only what the desk has taken over. Deleting it puts\n",
+        "# every guard back to the file's value.\n\n",
+    );
+    std::fs::write(&path, format!("{HEADER}{text}"))
+    .map_err(|e| ApiError::Internal(format!("guards: {}: {e}", path.display())))?;
+
+    // Every guarded book is told, by id, in its own file. A single central log
+    // would be one more place to remember to look when reading a book later.
+    let ids: Vec<String> = {
+        let runs = state.paper.lock().expect("paper runs");
+        runs.values().filter(|r| r.config.guards).map(|r| r.config.id()).collect()
+    };
+    let entry = json!({
+        "kind": "guards_changed",
+        "time": now_ms(),
+        "from": GuardValues::from(&before),
+        "to": GuardValues::from(&after),
+    });
+    for id in &ids {
+        record(&state.data, id, &entry)?;
+    }
+
+    guards_get(State(state)).await
 }
 
 /// `GET /api/paper/status`

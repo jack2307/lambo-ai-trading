@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import type { Book, View } from '@/App'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { GuardsPanel } from '@/components/GuardsPanel'
 import { api, type BrokerAccount, type MarketInfo } from '@/lib/api'
 import { PRODUCT } from '@/lib/brand'
 import { cn } from '@/lib/utils'
@@ -135,6 +136,7 @@ export function AppBar({ view, onViewChange, markets, market, onMarketChange, bo
       )}
 
       <div className="ml-auto flex items-center gap-2">
+        <GuardsPanel />
         <div className="bg-background flex items-center gap-1 rounded-full border p-[3px]" role="group" aria-label="Book">
           <Button
             variant="ghost"

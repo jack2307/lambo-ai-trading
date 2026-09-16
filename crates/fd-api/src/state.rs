@@ -26,6 +26,13 @@ pub struct AppState {
     /// than loaded into `config` at startup - the broker account registry is
     /// one, so that adding an account does not mean restarting the desk.
     pub config_dir: PathBuf,
+    /// Guard values changed from the desk, layered over `config`.
+    ///
+    /// Kept beside the config rather than in it: `config/default.toml` is the
+    /// file a person edits and a commit records, and a control that silently
+    /// rewrote it would make the repository disagree with itself. These land in
+    /// `config/guards.toml`, which is the desk's own scratch layer and says so.
+    pub guard_edits: RwLock<crate::paper::GuardEdit>,
     pub registry: Registry,
     /// Resampled series, keyed by `market/timeframe`.
     ///
@@ -75,6 +82,7 @@ impl AppState {
             config,
             docs: PathBuf::from("docs"),
             config_dir: PathBuf::from("config"),
+            guard_edits: RwLock::new(crate::paper::GuardEdit::default()),
             data,
             registry: Registry::with_builtins(),
             bars: RwLock::new(HashMap::new()),
@@ -110,8 +118,17 @@ impl AppState {
 
     #[must_use]
     pub fn with_config_dir(mut self, dir: PathBuf) -> Self {
+        self.guard_edits = RwLock::new(crate::paper::load_guard_edits(&dir));
         self.config_dir = dir;
         self
+    }
+
+    /// The guards for one market with the desk's edits applied.
+    pub fn guards_for(&self, market: &str) -> Result<fd_backtest::Guards, crate::error::ApiError> {
+        let mut guards = fd_backtest::Guards::for_market(&self.config, market)
+            .map_err(|e| crate::error::ApiError::BadRequest(e.to_string()))?;
+        self.guard_edits.read().expect("guard edits").apply(&mut guards);
+        Ok(guards)
     }
 
     /// Trading rules for one market.

@@ -455,6 +455,42 @@ export interface BrokerFill {
  * running comes back with `at: 0` and an empty `mirroring`, which is a state
  * worth showing — it is what a mirror that died overnight looks like.
  */
+/** The guard values in force, as numbers a person reads and types. */
+export interface GuardValues {
+  /** Not editable: the reconciler, the mirror and the desk are all built on
+   *  one position per book, so a control for it would be a switch with
+   *  nothing behind it. */
+  max_concurrent_positions: number
+  max_trades_per_day: number
+  daily_loss_limit_usd: number
+  cooldown_min: number
+  max_open_loss_r: number
+  max_notional_pct_equity: number
+  flat_before_weekend_hhmm: number
+  news_flat_before_min: number
+  news_flat_after_min: number
+  news_min_impact: number
+}
+
+/**
+ * Which guards the desk has taken over from the config file.
+ *
+ * Every field optional, so an edit says what it changed and nothing else — a
+ * whole-struct payload would silently pin the fields nobody touched to
+ * whatever the form happened to be holding.
+ */
+export type GuardEdit = Partial<Omit<GuardValues, 'max_concurrent_positions'>>
+
+export interface GuardsView {
+  /** In force now: the file's values with the desk's edits on top. */
+  effective: GuardValues
+  /** What `config/default.toml` holds, so "back to the file" needs no memory. */
+  configured: GuardValues
+  edited: GuardEdit
+  /** How many books are running under these right now. */
+  guarded_runs: number
+}
+
 export interface BrokerAccount {
   /** The registry id, or `login-<n>` for an executor started outside it. */
   id: string
@@ -642,6 +678,10 @@ export const api = {
   paperStatus: () => request<{ runs: PaperRun[] }>('/api/paper/status'),
 
   paperAccounts: () => request<{ accounts: BrokerAccount[] }>('/api/paper/accounts'),
+
+  guards: () => request<GuardsView>('/api/paper/guards'),
+
+  setGuards: (edit: GuardEdit) => post<GuardsView>('/api/paper/guards', edit),
 
   paperPause: (run: string, paused: boolean) =>
     post<{ id: string; paused: boolean; holding: boolean }>('/api/paper/pause', { run, paused }),

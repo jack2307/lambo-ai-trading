@@ -29,3 +29,8 @@ config/local.toml
 /docs/research/runs/smoke-test/
 # Spread samples: raw quotes, megabytes a week, rebuilt by re-running the logger.
 /data/spreads
+
+# Guard values changed from the desk at runtime. `config/default.toml` is
+# the file a person edits and a commit records; this is the layer the desk
+# took over, and committing it would make two files claim the same authority.
+/config/guards.toml

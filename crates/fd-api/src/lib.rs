@@ -46,6 +46,7 @@ pub fn router(state: Arc<AppState>, ui: Option<PathBuf>) -> Router {
         .route("/api/paper/status", get(paper::status))
         .route("/api/paper/accounts", get(paper::accounts))
         .route("/api/paper/pause", post(paper::pause))
+        .route("/api/paper/guards", get(paper::guards_get).post(paper::guards_set))
         .route("/api/paper/run/{id}", get(paper::detail))
         // What the models said about one book: the decider's own decisions and
         // the advisor panel's consultations, kept apart because they are two
