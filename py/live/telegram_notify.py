@@ -204,6 +204,12 @@ def decider_gone(run: dict, now_ms: float) -> bool:
         return False
     if is_dead(run, now_ms):
         return False
+    # A book holding a position is not asked at all — the desk allows one at a
+    # time, so there is nothing to decide and the trader skips the call. Its
+    # `last_at` freezes for as long as the trade runs, up to the four-hour
+    # maximum hold, and alarming on that would fire on every winning trade.
+    if run.get("open"):
+        return False
     step = TF_MS.get(run.get("tf", ""), 900_000)
     return (now_ms - last) > step * DECIDER_STALE_BARS and market_open(run.get("market", ""), int(now_ms))
 

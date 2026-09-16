@@ -453,6 +453,36 @@ def main() -> int:
             context=context_block(bars),
         )
 
+        # A book already holding a position has nothing to decide. The desk
+        # allows one at a time, so any entry would be refused, and the prompt
+        # says so in as many words — the model was being paid to read the
+        # answer back. Measured before this: 33% to 65% of every book's calls
+        # were made in this state.
+        #
+        # The bar is still RECORDED, with no usage and no latency, so the log
+        # has no unexplained gap. It is not posted to the desk, because nothing
+        # was decided and a bar the model never saw must not be counted as a
+        # stand-aside — the same rule that keeps a failed call from being one.
+        held = (detail.get("run") or {}).get("open")
+        if held:
+            decided_on = last_time
+            remember(last_time)
+            reason = (f"not asked: already {held['side']} from {held['entry_price']}, "
+                      "and the desk allows one position at a time")
+            print(f"{dt.datetime.now(dt.timezone.utc):%H:%M:%SZ} bar "
+                  f"{dt.datetime.utcfromtimestamp(last_time/1000):%H:%MZ}  SKIP  {reason[:70]}", flush=True)
+            log(args.run, {
+                "at": int(time.time() * 1000), "bar_time": last_time, "model": args.model,
+                "prompt": "", "response": "", "latency_ms": 0,
+                "usage": {}, "cost_usd": None, "skipped": True,
+                "decision": {"side": "NONE", "reason": reason},
+                "posted": False, "refused_locally": "", "dry_run": bool(args.dry_run),
+            })
+            if args.once:
+                return 0
+            time.sleep(args.poll)
+            continue
+
         try:
             usage = {}
             text, ms = ask(prompt, args.model, provider, key, args.timeout, usage)
