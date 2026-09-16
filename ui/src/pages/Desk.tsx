@@ -298,6 +298,40 @@ const brokerLive = (run: PaperRun, now: number, login: number | null): PaperBrok
   return b && now - b.at < BROKER_STALE_MS ? b : null
 }
 
+/**
+ * The account's completed trades in the shape the chart draws.
+ *
+ * `r`, `stop` and `target` come back as NaN and null because the broker has
+ * none of them: it knows what it filled, not what the rule intended. The chart
+ * omits an R it cannot read and draws no stop band for these, which is the
+ * honest rendering - a zero in those fields would look like a measurement.
+ *
+ * Drawn at the BROKER's prices on purpose. Against the same bars the book
+ * decided on, the distance between the two entry markers is the slippage.
+ */
+function accountTrades(broker: PaperBroker | null): BacktestTrade[] {
+  if (!broker) return []
+  return (broker.fills ?? [])
+    .filter((f) => f.entryTime != null && f.exitTime != null && f.entryPrice != null && f.exitPrice != null)
+    .map((f) => ({
+      direction: (f.direction ?? 'LONG') as 'LONG' | 'SHORT',
+      entryTime: f.entryTime as number,
+      entryPrice: f.entryPrice as number,
+      exitTime: f.exitTime as number,
+      exitPrice: f.exitPrice as number,
+      exitReason: f.exitReason || 'closed',
+      stop: Number.NaN,
+      target: null,
+      lots: f.lots ?? 0,
+      pnlUsd: f.pnl ?? 0,
+      r: Number.NaN,
+      mae: Number.NaN,
+      mfe: Number.NaN,
+      holdMs: (f.exitTime as number) - (f.entryTime as number),
+      reason: '',
+    }))
+}
+
 /** Money in the BROKER's currency, which is not the paper book's. */
 function brokerMoney(v: number | null | undefined, currency: string | null | undefined): string {
   if (v == null || !Number.isFinite(v)) return '--'
@@ -388,6 +422,22 @@ export function Desk({ book }: { book: Book }) {
   // that no longer names a run (renamed, never started) falls to the first row
   // without spending a render correcting itself.
   const activeId = selected && sorted.some((r) => r.id === selected) ? selected : (sorted[0]?.id ?? null)
+
+  // The selected account's record of the run being drilled into, or null while
+  // the desk is on the paper book. Everything under the chart reads this and
+  // not `detail`, which is always the paper book: the panel used to show
+  // "3 closed, net +64 USC" under a heading that said "books on the account".
+  //
+  // Deliberately not recomputed against `now`. Freshness is already enforced
+  // where the account is CHOSEN - the app bar drops back to paper when the
+  // selected account stops reporting, which makes `account` null and this null
+  // with it - and depending on the clock here would rebuild the chart's trade
+  // array once a second for no reason.
+  const activeBroker = useMemo(() => {
+    if (account == null) return null
+    const run = sorted.find((r) => r.id === activeId)
+    return run?.brokers?.find((b) => b.login === account) ?? null
+  }, [sorted, activeId, account])
 
   // The selected run in full: at once on selection, then every 60 s. The detail
   // is heavier than the status and changes no faster. Nothing is cleared here —
@@ -483,7 +533,7 @@ export function Desk({ book }: { book: Book }) {
                 Fills the column's height above xl and keeps a floor below it,
                 where the page scrolls instead. */}
             <div className="border-border min-h-[340px] shrink-0 border-b xl:min-h-0 xl:flex-1 xl:shrink">
-              <RunChart detail={live} live={livePrice} focus={focusFill} />
+              <RunChart detail={live} live={livePrice} focus={focusFill} broker={activeBroker} />
             </div>
             {/* The fills have seven columns and the rail has 460px, so they
                 stay here where the width is. Capped at two fifths of the
@@ -493,7 +543,7 @@ export function Desk({ book }: { book: Book }) {
               <BottomTabs tab={bottomTab} onTab={setBottomTab} />
               <div className="min-h-0 flex-1 overflow-y-auto">
                 {bottomTab === 'fills' ? (
-                  <FillsSection detail={live} openFill={pickedFill} onOpenFill={openFill} />
+                  <FillsSection detail={live} openFill={pickedFill} onOpenFill={openFill} broker={activeBroker} />
                 ) : (
                   <ReasoningSection runId={activeId} detail={live} />
                 )}
@@ -512,6 +562,7 @@ export function Desk({ book }: { book: Book }) {
               <Drilldown
                 detail={live}
                 summary={activeRun}
+                broker={activeBroker}
                 error={detailError && detailError.id === activeId ? detailError.message : null}
                 now={now}
                 openFill={pickedFill}
@@ -1739,6 +1790,7 @@ function GuardChips({ run }: { run: PaperRun }) {
 function Drilldown({
   detail,
   summary,
+  broker,
   error,
   now,
   openFill,
@@ -1746,6 +1798,8 @@ function Drilldown({
 }: {
   detail: PaperRunDetail | null
   summary: PaperRun | null
+  /** The selected account's record of this book, or null on the paper book. */
+  broker: PaperBroker | null
   error: string | null
   now: number
   openFill: string | null
@@ -1796,29 +1850,44 @@ function Drilldown({
         <ConfigLine run={run} />
       </section>
 
-      <section className="px-3 py-2">
-        <Heading>Equity</Heading>
-        <EquityCurve points={detail.equity_curve} />
-        <p className="text-muted-foreground num mt-1 text-[10px]">
-          {run.trades} closed{run.open ? ' · 1 open' : ''} · net {accountMoney(run.net_usd, run)} ·{' '}
-          {run.profit_factor == null ? 'no PF yet' : `PF ${num(run.profit_factor)}`} ·{' '}
-          {run.bars_seen} bars seen{run.gaps > 0 ? ` · ${run.gaps} gap${run.gaps === 1 ? '' : 's'}` : ''}
-          {run.trades > 0 && run.trades < 30 && (
-            <span className="text-caution"> · {run.trades} closed is too few to read as a result</span>
-          )}
-        </p>
-      </section>
+      {broker ? (
+        <AccountEquity broker={broker} />
+      ) : (
+        <section className="px-3 py-2">
+          <Heading>Equity</Heading>
+          <EquityCurve points={detail.equity_curve} />
+          <p className="text-muted-foreground num mt-1 text-[10px]">
+            {run.trades} closed{run.open ? ' · 1 open' : ''} · net {accountMoney(run.net_usd, run)} ·{' '}
+            {run.profit_factor == null ? 'no PF yet' : `PF ${num(run.profit_factor)}`} ·{' '}
+            {run.bars_seen} bars seen{run.gaps > 0 ? ` · ${run.gaps} gap${run.gaps === 1 ? '' : 's'}` : ''}
+            {run.trades > 0 && run.trades < 30 && (
+              <span className="text-caution"> · {run.trades} closed is too few to read as a result</span>
+            )}
+          </p>
+        </section>
+      )}
 
       <section className="px-3 py-2 xl:hidden">
         <Heading>
-          Fills <span className="text-muted-foreground/70 num">{detail.fills.length}</span>
+          Fills{' '}
+          <span className="text-muted-foreground/70 num">
+            {broker ? (broker.fills?.length ?? 0) : detail.fills.length}
+          </span>
         </Heading>
-        <FillsTable detail={detail} openFill={openFill} onOpenFill={onOpenFill} />
+        {broker ? (
+          <BrokerFillsTable broker={broker} />
+        ) : (
+          <FillsTable detail={detail} openFill={openFill} onOpenFill={onOpenFill} />
+        )}
       </section>
 
       <section className="px-3 py-2">
         <Heading>
           Events <span className="text-muted-foreground/70 num">{detail.events.length}</span>
+          {/* Said out loud while an account is on screen: these are the BOOK's
+              events - gaps in its feed, guards that fired, the run starting -
+              and not the account's. */}
+          {broker && <span className="text-muted-foreground/60 normal-case"> · paper book</span>}
         </Heading>
         <EventsList events={detail.events} />
       </section>
@@ -1875,10 +1944,13 @@ function FillsSection({
   detail,
   openFill,
   onOpenFill,
+  broker,
 }: {
   detail: PaperRunDetail | null
   openFill: string | null
   onOpenFill: (key: string | null) => void
+  /** The selected account's record of this book, or null on the paper book. */
+  broker: PaperBroker | null
 }) {
   if (!detail) {
     return (
@@ -1892,9 +1964,16 @@ function FillsSection({
     <section className="px-3 py-2">
       <Heading>
         Fills <span className="text-muted-foreground/70 num">{detail.run.id}</span>{' '}
-        <span className="text-muted-foreground/70 num">{detail.fills.length}</span>
+        <span className="text-muted-foreground/70 num">
+          {broker ? (broker.fills?.length ?? 0) : detail.fills.length}
+        </span>
+        {broker && <span className="text-muted-foreground/60 normal-case"> · on {broker.account}</span>}
       </Heading>
-      <FillsTable detail={detail} openFill={openFill} onOpenFill={onOpenFill} />
+      {broker ? (
+        <BrokerFillsTable broker={broker} />
+      ) : (
+        <FillsTable detail={detail} openFill={openFill} onOpenFill={onOpenFill} />
+      )}
     </section>
   )
 }
@@ -1959,11 +2038,15 @@ function RunChart({
   detail,
   live,
   focus,
+  broker,
 }: {
   detail: PaperRunDetail | null
   live: LiveBar | null
   /** The fill picked in the table below, or null. */
   focus: BacktestTrade | null
+  /** The selected account's record of this book, when the desk is showing an
+   *  account rather than the paper book. */
+  broker: PaperBroker | null
 }) {
   // `bars` arrives as `[ms, o, h, l, c]` and `PriceChart` takes milliseconds
   // and divides, so the tuple goes straight across. (`series` times are
@@ -2042,6 +2125,9 @@ function RunChart({
       <div className="border-border min-h-0 w-full flex-1 overflow-hidden rounded-sm border" style={{ minHeight: CHART_H - 60 }}>
         {/* Keyed by run: a new run brings a different set of panes, and
             remounting is cheaper to reason about than reconciling them. */}
+        {/* No stop bands on the account's trades: the stop belongs to the
+            book, and drawing the book's level around a broker's fill would mix
+            the two records the switch exists to keep apart. */}
         <PriceChart
           key={detail.run.id}
           open={detail.run.open}
@@ -2052,9 +2138,9 @@ function RunChart({
           series={detail.series ?? {}}
           frame={null}
           showLevels={false}
-          trades={detail.fills}
+          trades={broker ? accountTrades(broker) : detail.fills}
           showMarkers
-          showZones
+          showZones={!broker}
           focus={focus}
           liveBar={forming}
         />
@@ -2076,7 +2162,9 @@ function RunChart({
           ))
         )}
         <span className="text-muted-foreground/70">
-          entries and exits are marked; the bands behind them are each fill&rsquo;s stop and target.
+          {broker
+            ? `marks are ${broker.account}'s own fills, at the prices it got — no stop bands, because the stop belongs to the book and not to the account.`
+            : 'entries and exits are marked; the bands behind them are each fill’s stop and target.'}
         </span>
         <span className="text-muted-foreground/70">
           The bot decides on closed bars only; the last candle is still forming and is never traded on.
@@ -2104,6 +2192,121 @@ const PLOT = { w: 700, h: 168, l: 62, r: 16, t: 12, b: 26 }
  * had. The curve is not sorted on the wire — warm-up trades close before the
  * run's own start stamp — so it is sorted here before anything is measured.
  */
+/**
+ * The account's balance through this book's trades, and what it came to.
+ *
+ * Built from the broker's own closed trades rather than from the paper book's
+ * equity curve, and it starts from the balance the account had BEFORE them
+ * (`balance - realised`), so the line is a real account balance and not a
+ * cumulative P&L drawn as though it were one.
+ *
+ * No profit factor. It is a ratio of gross win to gross loss and the broker
+ * reports neither; computing it from this handful of fills would be a
+ * different number from the book's under the same name.
+ */
+function AccountEquity({ broker }: { broker: PaperBroker }) {
+  const fills = (broker.fills ?? []).filter((f) => f.exitTime != null)
+  const base = (broker.balance ?? 0) - (broker.realised ?? 0)
+  const points: [number, number][] = []
+  if (fills.length > 0) {
+    const first = fills[0]
+    points.push([(first.entryTime ?? first.exitTime) as number, base])
+    let cum = base
+    for (const f of fills) {
+      cum += f.pnl ?? 0
+      points.push([f.exitTime as number, cum])
+    }
+  }
+  const open = broker.position?.profit ?? null
+  return (
+    <section className="px-3 py-2">
+      <Heading>
+        Equity <span className="text-muted-foreground/70 num normal-case">on {broker.account}</span>
+      </Heading>
+      {points.length === 0 ? (
+        <p className="text-muted-foreground px-1 py-6 text-center text-[11px]">
+          No curve yet — this account has closed no trade on this book.
+        </p>
+      ) : (
+        <EquityCurve points={points} />
+      )}
+      <p className="text-muted-foreground num mt-1 text-[10px]">
+        {broker.closed ?? 0} closed{broker.position ? ' · 1 open' : ''} · banked{' '}
+        <span className={(broker.realised ?? 0) >= 0 ? 'text-lc' : 'text-lp'}>
+          {brokerMoney(broker.realised, broker.currency)}
+        </span>
+        {open != null && (
+          <>
+            {' · open '}
+            <span className={open >= 0 ? 'text-lc' : 'text-lp'}>{brokerMoney(open, broker.currency)}</span>
+          </>
+        )}
+        {broker.dry_run && <span className="text-muted-foreground/60"> · dry run, nothing was sent</span>}
+      </p>
+    </section>
+  )
+}
+
+/**
+ * What the account actually filled, one row per completed trade.
+ *
+ * Fewer columns than the paper book's table and that is the point: there is no
+ * R, no MAE and no MFE here, because a broker has no stop distance to measure
+ * them against. Showing the columns with zeroes in them would read as a
+ * measurement that nobody made.
+ */
+function BrokerFillsTable({ broker }: { broker: PaperBroker }) {
+  const fills = [...(broker.fills ?? [])].reverse()
+  if (fills.length === 0) {
+    return (
+      <p className="text-muted-foreground px-1 py-4 text-[11px]">
+        This account has filled nothing on this book yet.
+        {broker.dry_run && ' It is in dry run, so it never will until that is turned off.'}
+      </p>
+    )
+  }
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-[11px]">
+        <thead className="text-muted-foreground text-[10px] tracking-wide uppercase">
+          <tr className="border-b">
+            <th className="py-1 pr-2 text-left font-medium">exit time (+07)</th>
+            <th className="py-1 pr-2 text-left font-medium">side</th>
+            <th className="py-1 pr-2 text-right font-medium">lots</th>
+            <th className="py-1 pr-2 text-right font-medium">entry &rarr; exit</th>
+            <th className="py-1 pr-2 text-left font-medium">reason</th>
+            <th className="py-1 text-right font-medium">P&amp;L</th>
+          </tr>
+        </thead>
+        <tbody>
+          {fills.map((f, i) => (
+            <tr key={`${f.entryTime}-${f.exitTime}-${i}`} className="border-b last:border-0">
+              <td className="num py-1 pr-2">{vnStamp(f.exitTime)}</td>
+              <td className={cn('num py-1 pr-2', f.direction === 'LONG' ? 'text-lc' : 'text-lp')}>
+                {(f.direction ?? '').toLowerCase()}
+              </td>
+              <td className="num py-1 pr-2 text-right">{f.lots}</td>
+              <td className="num py-1 pr-2 text-right">
+                {quote(f.entryPrice)} &rarr; {quote(f.exitPrice)}
+              </td>
+              <td className="text-muted-foreground py-1 pr-2">{f.exitReason || '--'}</td>
+              <td
+                className={cn(
+                  'num py-1 text-right',
+                  (f.pnl ?? 0) > 0 && 'text-lc',
+                  (f.pnl ?? 0) < 0 && 'text-lp',
+                )}
+              >
+                {brokerMoney(f.pnl, broker.currency)}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
 function EquityCurve({ points }: { points: [number, number][] }) {
   if (!points || points.length === 0) {
     return (

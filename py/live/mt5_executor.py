@@ -98,39 +98,74 @@ def notional_of(info, vol: float, price: float) -> float:
     return vol * info.trade_contract_size * price
 
 
-def realised_of(mt5, magic: int) -> tuple:
-    """What this book has actually BANKED on the account, and over how many exits.
+MAX_FILLS = 40
 
-    The paper book's `net_usd` is the rule executed perfectly at the bar's
-    price. This is the same rule after a spread, a slip and a fill, and the
-    difference between the two numbers is the entire reason for running a
-    mirror at all - so the account view is not worth much without it.
+
+def history_of(mt5, magic: int) -> tuple:
+    """This book's closed trades ON THE ACCOUNT, and what they came to.
+
+    Returns `(realised, closed, fills)`. The paper book's fills are the rule
+    executed perfectly at the bar's price; these are what the broker actually
+    did, and the desk shows one or the other rather than mixing them - the
+    difference between the two entry prices IS the slippage, and it is only
+    visible if neither number is quietly standing in for the other.
 
     Deals are matched by the book's magic number, which is how one account
-    carries several books without their results running together.
+    carries several books without their results running together, and grouped
+    by `position_id` - one position is one trade however many deals closed it.
 
     The window is deliberately far wider than it needs to be. MT5 takes history
     bounds in SERVER time, not UTC, and this desk has been caught by that
     before; 400 days back and two days forward makes a three-hour offset
     irrelevant instead of making it a bug to remember.
 
-    Commission is summed over every deal and profit and swap only over the
-    closing ones: an entry deal carries a charge but no result, and counting
-    its zero profit as a trade would inflate the count by exactly double.
+    Commission is counted on every deal and profit and swap only on the closing
+    ones: an entry deal carries a charge but no result, and counting its zero
+    profit as a trade would double the count.
     """
     now = dt.datetime.now()
     deals = mt5.history_deals_get(now - dt.timedelta(days=400), now + dt.timedelta(days=2))
     if deals is None:
-        return None, 0
-    total, closed = 0.0, 0
+        return None, 0, []
+
+    total = 0.0
+    trades = {}
     for d in deals:
         if d.magic != magic:
             continue
         total += d.commission
-        if d.entry != mt5.DEAL_ENTRY_IN:
+        t = trades.setdefault(d.position_id, {
+            "direction": None, "entryTime": None, "entryPrice": None,
+            "exitTime": None, "exitPrice": None, "lots": None,
+            "exitReason": "", "pnl": 0.0,
+        })
+        t["pnl"] += d.commission
+        if d.entry == mt5.DEAL_ENTRY_IN:
+            # DEAL_TYPE_BUY on the way IN is a long position.
+            t["direction"] = "LONG" if d.type == mt5.DEAL_TYPE_BUY else "SHORT"
+            t["entryTime"] = int(d.time_msc)
+            t["entryPrice"] = d.price
+            t["lots"] = d.volume
+        else:
             total += d.profit + d.swap
-            closed += 1
-    return round(total, 2), closed
+            t["pnl"] += d.profit + d.swap
+            # The LAST closing deal wins the exit: a position closed in parts
+            # ends when its final part does.
+            if t["exitTime"] is None or int(d.time_msc) >= t["exitTime"]:
+                t["exitTime"] = int(d.time_msc)
+                t["exitPrice"] = d.price
+                # The broker's own word for why it ended. "sl"/"tp" come from
+                # MT5 itself; anything else is the comment the executor wrote,
+                # and an empty one stays empty rather than being guessed at.
+                t["exitReason"] = (d.comment or "").strip()[:24]
+
+    fills = [t for t in trades.values()
+             if t["entryTime"] is not None and t["exitTime"] is not None]
+    fills.sort(key=lambda t: t["entryTime"])
+    for t in fills:
+        t["pnl"] = round(t["pnl"], 2)
+    closed = len(fills)
+    return round(total, 2), closed, fills[-MAX_FILLS:]
 
 
 def write_snapshot(path, payload: dict) -> None:
@@ -311,7 +346,7 @@ def main() -> int:
 
         def snapshot(held, book_open) -> None:
             acc = mt5.account_info()
-            realised, closed = realised_of(mt5, magic)
+            realised, closed, fills = history_of(mt5, magic)
             tick = mt5.symbol_info_tick(args.symbol)
             pos = held[0] if held else None
             payload = {
@@ -340,7 +375,7 @@ def main() -> int:
                 # WHICH of them is ahead, and a boolean throws that away.
                 "book_side": (book_open or {}).get("side"),
                 "book_lots": (book_open or {}).get("lots"),
-                "realised": realised, "closed": closed,
+                "realised": realised, "closed": closed, "fills": fills,
                 "position": None if pos is None else {
                     "ticket": pos.ticket,
                     "side": "LONG" if pos.type == mt5.POSITION_TYPE_BUY else "SHORT",

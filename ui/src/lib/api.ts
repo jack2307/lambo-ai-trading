@@ -376,6 +376,10 @@ export interface PaperBroker {
    *  counterpart to the paper book's `net_usd` and `trades`. */
   realised: number | null
   closed: number | null
+  /** The account's own closed trades, oldest first - what the BROKER did, as
+   *  against the paper book's fills, which are the rule executed perfectly at
+   *  the bar's price. */
+  fills: BrokerFill[]
   position: null | {
     ticket: number | null
     side: string | null
@@ -391,6 +395,26 @@ export interface PaperBroker {
   }
   /** Why the last open was refused, if it was. */
   blocked: string | null
+}
+
+/**
+ * One trade the account actually completed.
+ *
+ * Deliberately not a `BacktestTrade`. A broker has no stop distance, so it has
+ * no R, no MAE and no MFE, and a zero in those fields would read as a
+ * measurement rather than as an absence.
+ */
+export interface BrokerFill {
+  direction: 'LONG' | 'SHORT' | null
+  entryTime: number | null
+  entryPrice: number | null
+  exitTime: number | null
+  exitPrice: number | null
+  lots: number | null
+  /** `sl`/`tp` from MT5, or the executor's comment. Empty, never guessed. */
+  exitReason: string | null
+  /** In the account's currency, commission and swap included. */
+  pnl: number | null
 }
 
 /**

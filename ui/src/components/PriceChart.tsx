@@ -427,7 +427,10 @@ export function PriceChart({
             : token('--sc', '#d99446')
           : token('--muted-foreground', '#9aa39a'),
         shape: 'circle',
-        text: lit ? `${trade.exitReason} ${trade.r}R` : '',
+        // A broker's fill has no R - it knows what it filled, not what the
+        // rule risked - and it arrives here with r NaN rather than 0 so that
+        // an absence never renders as a measurement.
+        text: lit ? `${trade.exitReason}${Number.isFinite(trade.r) ? ` ${trade.r}R` : ''}` : '',
       })
     }
     points.sort((a, b) => (a.time as number) - (b.time as number))

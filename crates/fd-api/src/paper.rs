@@ -911,9 +911,42 @@ pub struct BrokerDto {
     /// compare.
     pub realised: Option<f64>,
     pub closed: Option<usize>,
+    /// The account's own closed trades for this book, oldest first - what the
+    /// BROKER did, as against the paper book's `fills`, which are the rule
+    /// executed perfectly at the bar's price. Kept separate rather than
+    /// merged: the gap between the two entry prices is the slippage, and it is
+    /// only visible while neither stands in for the other.
+    #[serde(default)]
+    pub fills: Vec<BrokerFillDto>,
     pub position: Option<BrokerPositionDto>,
     /// Why the last open was refused, if it was.
     pub blocked: Option<String>,
+}
+
+/// One trade the account actually completed.
+///
+/// Deliberately NOT the same shape as a paper trade. A broker has no stop
+/// distance, so it has no R, no MAE and no MFE, and a field carrying a zero
+/// for those would read as a measurement rather than as an absence.
+#[derive(Debug, Default, Serialize, Deserialize)]
+#[serde(default)]
+pub struct BrokerFillDto {
+    pub direction: Option<String>,
+    #[serde(rename = "entryTime")]
+    pub entry_time: Option<i64>,
+    #[serde(rename = "entryPrice")]
+    pub entry_price: Option<f64>,
+    #[serde(rename = "exitTime")]
+    pub exit_time: Option<i64>,
+    #[serde(rename = "exitPrice")]
+    pub exit_price: Option<f64>,
+    pub lots: Option<f64>,
+    /// The broker's own word for why it ended - `sl`/`tp` from MT5 itself, or
+    /// the comment the executor wrote. Empty rather than guessed at.
+    #[serde(rename = "exitReason")]
+    pub exit_reason: Option<String>,
+    /// In the ACCOUNT's currency, commission and swap included.
+    pub pnl: Option<f64>,
 }
 
 /// The position the account actually holds for this book, as opposed to the
