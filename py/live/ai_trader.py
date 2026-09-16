@@ -194,6 +194,66 @@ def desk_block(detail: dict, limits: dict, atr, run: str) -> str:
     return chr(10).join(lines)
 
 
+def price_profile(bars: list, buckets: int = 24) -> list:
+    """Where the session spent its activity, by price.
+
+    **This is not a volume profile and must not be called one.** The `volume`
+    column on a Vantage CFD bar is TICK volume — the number of price changes —
+    and the parquet metadata says so. There are no traded contracts to profile.
+    What this measures is how much price ACTIVITY happened at each level, which
+    is a different and weaker thing, and the prompt says which it is.
+
+    Each bar's activity is spread evenly across the range it covered, which is
+    the honest approximation available from OHLC: the bar does not say where
+    inside its range the ticks fell.
+    """
+    lo = min(b[3] for b in bars)
+    hi = max(b[2] for b in bars)
+    if not (hi > lo):
+        return []
+    step = (hi - lo) / buckets
+    hist = [0.0] * buckets
+    for b in bars:
+        activity = b[5] if len(b) > 5 and b[5] else 1.0
+        first = max(0, min(buckets - 1, int((b[3] - lo) / step)))
+        last = max(0, min(buckets - 1, int((b[2] - lo) / step)))
+        span = last - first + 1
+        for i in range(first, last + 1):
+            hist[i] += activity / span
+    return [(lo + (i + 0.5) * step, hist[i]) for i in range(buckets)]
+
+
+def profile_block(bars: list) -> str:
+    """POC and the 70% value area, from the activity profile."""
+    prof = price_profile(bars)
+    if not prof:
+        return ""
+    total = sum(v for _, v in prof)
+    if total <= 0:
+        return ""
+    poc_i = max(range(len(prof)), key=lambda i: prof[i][1])
+    lo_i = hi_i = poc_i
+    got = prof[poc_i][1]
+    # Grow outward from the POC, always toward the busier side, until 70% is in.
+    while got < 0.70 * total and (lo_i > 0 or hi_i < len(prof) - 1):
+        down = prof[lo_i - 1][1] if lo_i > 0 else -1.0
+        up = prof[hi_i + 1][1] if hi_i < len(prof) - 1 else -1.0
+        if up >= down:
+            hi_i += 1
+            got += up
+        else:
+            lo_i -= 1
+            got += down
+    last = bars[-1][4]
+    where = "inside" if prof[lo_i][0] <= last <= prof[hi_i][0] else ("above" if last > prof[hi_i][0] else "below")
+    return (
+        "- activity profile over the window (TICK activity, not traded contracts — a CFD has no\n"
+        "  real volume; each bar's ticks are spread evenly across its range):\n"
+        f"    point of control {prof[poc_i][0]:.2f} — the price level with the most activity\n"
+        f"    70% value area {prof[lo_i][0]:.2f} to {prof[hi_i][0]:.2f}; last close is {where} it"
+    )
+
+
 def context_block(bars: list) -> str:
     """Ordinary technical context, computed from the same bars.
 
@@ -232,6 +292,10 @@ def context_block(bars: list) -> str:
 
     lines.append(f"- range of the window shown: high {max(highs):.2f}, low {min(lows):.2f}")
 
+    block = profile_block(bars)
+    if block:
+        lines.append(block)
+
     # A higher timeframe, aggregated from the same bars so it cannot disagree
     # with them.
     hourly = {}
@@ -250,6 +314,70 @@ def context_block(bars: list) -> str:
             o, h, l, c = hourly[k]
             lines.append(f"    {dt.datetime.utcfromtimestamp(k / 1000):%m-%d %H:%MZ}  O {o:g} H {h:g} L {l:g} C {c:g}")
     return chr(10).join(lines)
+
+
+HOLD_PROMPT = """You are watching ONE open position on {market} {tf} bars. You did not necessarily
+open it and you cannot add to it, reverse it, or move its stop.
+
+You are being asked one question and nothing else: **has the reason for this trade broken?**
+
+{position_detail}
+
+YOUR ANSWER IS RECORDED, NOT ACTED ON. The desk still owns the exit: the stop, the target and the
+maximum hold close this position, not you. Nothing you say here changes the book. It is being
+collected to find out whether a model can tell, ahead of the stop, that a trade has stopped
+working — and if that turns out to be true it becomes a separate campaign with its own control.
+So answer as you would if it counted, and do not hedge to look safe.
+
+MARKET CONTEXT
+{context}
+
+LAST {n} BARS of {market}:{tf}, oldest first, times UTC
+{bars}
+
+Answer with JSON and nothing else:
+
+  {{"action": "HOLD" | "CLOSE", "reason": "<one sentence, under 200 characters, naming what in the
+    bars above changed your mind or did not>"}}
+
+"HOLD" is the right answer most of the time. Say CLOSE only when the thing that made this trade
+worth taking is no longer there."""
+
+
+def describe_open(detail: dict, rules_atr) -> str:
+    """The position as the desk sees it, for the hold-or-close question."""
+    o = (detail.get("run") or {}).get("open") or {}
+    if not o:
+        return "No position."
+    run = detail.get("run") or {}
+    last = run.get("last_bar_close")
+    bars_held = ""
+    if o.get("entry_time") and run.get("last_bar_time"):
+        step = {"1m": 60_000, "5m": 300_000, "15m": 900_000, "1h": 3_600_000}.get(run.get("tf"), 900_000)
+        bars_held = f", held {max(0, (run['last_bar_time'] - o['entry_time']) // step)} bars"
+    return (
+        f"YOU ARE {o['side']} from {o['entry_price']}, {o.get('lots')} lots{bars_held}.\n"
+        f"  stop {o.get('stop')} · target {o.get('target')} · last close {last}\n"
+        f"  unrealised {o.get('unrealised_usd_at_last_close'):+.2f} USD"
+        f" · worst so far {o.get('mae'):+.2f}R · best so far {o.get('mfe'):+.2f}R"
+    )
+
+
+def parse_hold(text: str) -> dict:
+    """HOLD or CLOSE. Anything unreadable is HOLD — the conservative reading,
+    and the one that matches what the desk will do anyway."""
+    start, end = text.find("{"), text.rfind("}")
+    if start < 0 or end <= start:
+        return {"action": "HOLD", "reason": f"unreadable reply: {text[:100]!r}"}
+    try:
+        obj = json.loads(text[start : end + 1])
+    except (ValueError, TypeError) as e:
+        return {"action": "HOLD", "reason": f"unreadable reply: {e}"}
+    action = str(obj.get("action", "HOLD")).upper()
+    return {
+        "action": "CLOSE" if action == "CLOSE" else "HOLD",
+        "reason": str(obj.get("reason", ""))[:200],
+    }
 
 
 def post_json(url: str, payload: dict, timeout: float = 20.0) -> dict:
@@ -463,19 +591,51 @@ def main() -> int:
         # has no unexplained gap. It is not posted to the desk, because nothing
         # was decided and a bar the model never saw must not be counted as a
         # stand-aside — the same rule that keeps a failed call from being one.
+        # A held book is asked a DIFFERENT question, not the same one again.
+        #
+        # It used to be asked for an entry it could not have — the desk allows
+        # one position at a time and the prompt said so, so the model was paid
+        # to read its own constraint back, on a third to two thirds of every
+        # book's calls. Then it was skipped entirely. Neither is right: the
+        # owner's point is that a model watching a position might see the
+        # reason for it break before the stop does.
+        #
+        # So it is asked whether to close early, and the answer is RECORDED AND
+        # NOT ACTED ON. Granting the power would break the control — the coin
+        # has no reasoning and cannot close early, so the difference between
+        # the books would stop measuring direction and start measuring
+        # direction and exit skill mixed together, inseparably. Measuring the
+        # opinion first is what tells us whether the power is worth a campaign
+        # of its own.
         held = (detail.get("run") or {}).get("open")
         if held:
+            hold_prompt = HOLD_PROMPT.format(
+                market=args.market, tf=args.tf, n=len(shown), bars=rows,
+                position_detail=describe_open(detail, atr_now),
+                context=context_block(bars),
+            )
+            usage = {}
+            try:
+                text, ms = ask(hold_prompt, args.model, provider, key, args.timeout, usage)
+                verdict = parse_hold(text)
+            except Exception as e:  # noqa: BLE001
+                text, ms, usage = f"ERROR: {type(e).__name__}: {e}", 0, {}
+                verdict = {"action": "HOLD", "reason": f"the model was unreachable; NOT an opinion: {type(e).__name__}"}
+
             decided_on = last_time
             remember(last_time)
-            reason = (f"not asked: already {held['side']} from {held['entry_price']}, "
-                      "and the desk allows one position at a time")
-            print(f"{dt.datetime.now(dt.timezone.utc):%H:%M:%SZ} bar "
-                  f"{dt.datetime.utcfromtimestamp(last_time/1000):%H:%MZ}  SKIP  {reason[:70]}", flush=True)
+            from advisor import cost_of
+            stamp = dt.datetime.now(dt.timezone.utc).strftime("%H:%M:%SZ")
+            print(f"{stamp} bar {dt.datetime.utcfromtimestamp(last_time/1000):%H:%MZ}  "
+                  f"{verdict['action']:5s} (advisory)  {verdict['reason'][:64]}", flush=True)
             log(args.run, {
                 "at": int(time.time() * 1000), "bar_time": last_time, "model": args.model,
-                "prompt": "", "response": "", "latency_ms": 0,
-                "usage": {}, "cost_usd": None, "skipped": True,
-                "decision": {"side": "NONE", "reason": reason},
+                "prompt": hold_prompt, "response": text, "latency_ms": ms,
+                "usage": usage, "cost_usd": cost_of(args.model, usage) if usage else None,
+                # Marked so nothing downstream mistakes an opinion about an
+                # open trade for a decision about a new one.
+                "kind": "hold_check", "verdict": verdict,
+                "decision": {"side": "NONE", "reason": f"[{verdict['action']}] {verdict['reason']}"},
                 "posted": False, "refused_locally": "", "dry_run": bool(args.dry_run),
             })
             if args.once:
