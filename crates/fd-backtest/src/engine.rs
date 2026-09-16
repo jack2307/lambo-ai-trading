@@ -53,6 +53,10 @@ pub struct TradingRules {
     /// nothing, so zero reproduces it.
     pub swap_long_per_lot: f64,
     pub swap_short_per_lot: f64,
+    /// Display only — see `TradingConfig::account_currency`. The engine never
+    /// reads these for arithmetic and must not start.
+    pub account_currency: String,
+    pub units_per_usd: f64,
     /// Calendar currencies whose releases the market's `news:` filters and
     /// news guard react to (`[markets.<id>.trading] news_currencies`). Empty
     /// = every currency, which is what the default rules and every receipt
@@ -77,6 +81,8 @@ impl Default for TradingRules {
             commission_per_lot: 0.0,
             starting_equity_usd: 10_000.0,
             risk_per_trade_pct: 0.01,
+            account_currency: "USD".to_string(),
+            units_per_usd: 1.0,
             stop_atr: 1.2,
             reward_risk: 1.8,
             max_hold_ms: 14_400_000,
@@ -245,9 +251,15 @@ pub fn trading_rules_for(config: &Config, market: &str) -> Result<TradingRules, 
         swap_short_per_lot: spec.trading.swap_short_per_lot,
         news_currencies: spec.trading.news_currencies.clone(),
         price_decimals: spec.trading.price_decimals,
+        // The account a market is held in is a property of the VENUE, not of
+        // policy: the live Vantage books are a cent account and the research
+        // markets are not, and one global number cannot be both. Absent, the
+        // market inherits the shared figure.
+        starting_equity_usd: spec.trading.starting_equity_usd.unwrap_or(config.trading.starting_equity_usd),
+        account_currency: spec.trading.account_currency.clone(),
+        units_per_usd: spec.trading.units_per_usd,
         // The rest is policy rather than venue convention, and is shared.
         commission_per_lot: config.trading.commission_per_lot,
-        starting_equity_usd: config.trading.starting_equity_usd,
         risk_per_trade_pct: config.trading.risk_per_trade_pct,
         stop_atr: config.trading.stop_atr,
         reward_risk: config.trading.reward_risk,

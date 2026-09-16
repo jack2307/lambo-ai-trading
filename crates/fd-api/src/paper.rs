@@ -682,6 +682,12 @@ pub struct RunStatus {
     /// up or down since the bot last decided anything.
     pub last_bar_close: Option<f64>,
     pub equity: f64,
+    /// What this book's account is denominated in, and how many of those units
+    /// make a dollar. Every money field above and below is in USD; these two
+    /// let the client show the number the account holder actually sees, without
+    /// the conversion ever touching the arithmetic.
+    pub account_currency: String,
+    pub units_per_usd: f64,
     pub open: Option<OpenDto>,
     /// An entry decided at the last close and waiting for the next open. Never
     /// set at the same time as a fill on the same bar: the book takes one
@@ -892,6 +898,8 @@ fn status_of(data: &Path, run: &PaperRun, rules: &TradingRules, guards: Option<&
         last_bar_time: run.bars.last().map(|b| b.time),
         last_bar_close: run.bars.last().map(|b| b.close),
         equity: fd_core::js_round_to(book.equity, 2),
+        account_currency: rules.account_currency.clone(),
+        units_per_usd: rules.units_per_usd,
         open,
         pending,
         trades: book.trades.len(),

@@ -256,6 +256,14 @@ export interface PaperRun {
   /** The close of that bar — what the live price is read up or down against. */
   last_bar_close: number | null
   equity: number
+  /**
+   * What this book's account is denominated in, and how many of those units
+   * make a dollar (100 on a cent account). EVERY money field on this object is
+   * in USD; these two exist so the client can show the number the account
+   * holder actually sees, without the conversion ever touching the arithmetic.
+   */
+  account_currency: string
+  units_per_usd: number
   open: null | {
     side: 'LONG' | 'SHORT'
     entry_time: number

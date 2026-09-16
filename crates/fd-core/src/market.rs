@@ -96,6 +96,30 @@ pub struct TradingSpec {
     /// instead of reading them (2026-09-14). Five for FX, three for silver.
     #[serde(default = "default_price_decimals")]
     pub price_decimals: u32,
+    /// What the ACCOUNT holding this market is denominated in — display only.
+    /// The engine computes in USD throughout; a cent account holds the same
+    /// money counted in hundredths, and that conversion belongs at the edge a
+    /// human reads, never in the arithmetic.
+    /// Per-market starting equity, when this market's account differs from the
+    /// global one. `None` keeps `[trading] starting_equity_usd`.
+    ///
+    /// Per-market because the live Vantage books run a real cent account while
+    /// the research markets must keep the $10,000 every receipt in
+    /// `docs/decisions/` was measured at. One global number cannot be both.
+    #[serde(default)]
+    pub starting_equity_usd: Option<f64>,
+    #[serde(default = "default_account_currency")]
+    pub account_currency: String,
+    /// Account units per US dollar. 100 on a cent account.
+    #[serde(default = "default_units_per_usd")]
+    pub units_per_usd: f64,
+}
+
+fn default_account_currency() -> String {
+    "USD".to_string()
+}
+fn default_units_per_usd() -> f64 {
+    1.0
 }
 
 /// One market's conventions.
@@ -183,7 +207,7 @@ mod tests {
             premium_in_underlying: false,
             multiplier: 100.0,
             underlying: "GC".into(),
-            trading: TradingSpec { symbol: "XAUUSD".into(), contract_size: 100.0, spread: 0.3, lot_step: 0.01, min_lot: 0.01, swap_long_per_lot: 0.0, swap_short_per_lot: 0.0, news_currencies: Vec::new(), price_decimals: 2 },
+            trading: TradingSpec { symbol: "XAUUSD".into(), contract_size: 100.0, spread: 0.3, lot_step: 0.01, min_lot: 0.01, swap_long_per_lot: 0.0, swap_short_per_lot: 0.0, news_currencies: Vec::new(), starting_equity_usd: None, account_currency: "USD".into(), units_per_usd: 1.0, price_decimals: 2 },
             big_trade_min_premium_usd: 100_000.0,
             cluster_floor: 5.0,
             cluster_atr_fraction: 0.15,
@@ -201,7 +225,7 @@ mod tests {
             premium_in_underlying: true,
             multiplier: 1.0,
             underlying: "BTC".into(),
-            trading: TradingSpec { symbol: "BTCUSD".into(), contract_size: 1.0, spread: 5.0, lot_step: 0.001, min_lot: 0.001, swap_long_per_lot: 0.0, swap_short_per_lot: 0.0, news_currencies: Vec::new(), price_decimals: 2 },
+            trading: TradingSpec { symbol: "BTCUSD".into(), contract_size: 1.0, spread: 5.0, lot_step: 0.001, min_lot: 0.001, swap_long_per_lot: 0.0, swap_short_per_lot: 0.0, news_currencies: Vec::new(), starting_equity_usd: None, account_currency: "USD".into(), units_per_usd: 1.0, price_decimals: 2 },
             big_trade_min_premium_usd: 25_000.0,
             cluster_floor: 100.0,
             cluster_atr_fraction: 0.15,

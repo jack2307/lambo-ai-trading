@@ -283,6 +283,18 @@ underlying = "GC"
 [markets.xauusd.trading]
 symbol = "XAUUSD.sc"
 contract_size = 1.0
+# The live Vantage account is a CENT account: 10,000 USC = $100. Every number
+# the engine computes is USD — `lots x contract_size x price` is USD and
+# nothing else — so the account unit is carried for DISPLAY only and the
+# conversion happens where a human reads it. Putting it in the arithmetic would
+# multiply through every cost, every guard and every receipt.
+#
+# Owner's instruction, 2026-09-16: 10,000 cent per strategy, and that is what
+# the live test will use too.
+starting_equity_usd = 100.0        # = 10,000 USC
+account_currency = "USC"
+units_per_usd = 100.0
+
 spread = 0.28
 lot_step = 0.01
 min_lot = 0.01
@@ -418,6 +430,18 @@ underlying = "6E"
 [markets.eurusd.trading]
 symbol = "EURUSD.sc"
 # EURUSD quotes to five decimals.
+# The live Vantage account is a CENT account: 10,000 USC = $100. Every number
+# the engine computes is USD — `lots x contract_size x price` is USD and
+# nothing else — so the account unit is carried for DISPLAY only and the
+# conversion happens where a human reads it. Putting it in the arithmetic would
+# multiply through every cost, every guard and every receipt.
+#
+# Owner's instruction, 2026-09-16: 10,000 cent per strategy, and that is what
+# the live test will use too.
+starting_equity_usd = 100.0        # = 10,000 USC
+account_currency = "USC"
+units_per_usd = 100.0
+
 price_decimals = 5
 contract_size = 1.0
 spread = 0.00014
@@ -451,6 +475,18 @@ underlying = "BTC"
 [markets.btcusd.trading]
 symbol = "BTCUSD.sc"
 contract_size = 0.01
+# The live Vantage account is a CENT account: 10,000 USC = $100. Every number
+# the engine computes is USD — `lots x contract_size x price` is USD and
+# nothing else — so the account unit is carried for DISPLAY only and the
+# conversion happens where a human reads it. Putting it in the arithmetic would
+# multiply through every cost, every guard and every receipt.
+#
+# Owner's instruction, 2026-09-16: 10,000 cent per strategy, and that is what
+# the live test will use too.
+starting_equity_usd = 100.0        # = 10,000 USC
+account_currency = "USC"
+units_per_usd = 100.0
+
 spread = 17.05                      # MEASURED: 3.4x the 5.00 assumed for the Binance market
 lot_step = 0.01
 min_lot = 0.01

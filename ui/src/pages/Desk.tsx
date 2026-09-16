@@ -104,6 +104,26 @@ const writeSelected = (id: string) => {
 
 const MINUS = '−'
 
+/**
+ * A money figure in the ACCOUNT's own unit.
+ *
+ * The wire is USD everywhere, because `lots x contract_size x price` is USD
+ * and nothing else. The live Vantage books are a cent account: the same money,
+ * counted in hundredths. Converting here and nowhere else is deliberate — a
+ * factor of a hundred loose in the arithmetic would multiply through every
+ * cost, every guard and every receipt.
+ */
+function accountMoney(usd: number | null | undefined, run: { account_currency?: string; units_per_usd?: number } | null | undefined, signed = true): string {
+  if (usd == null || !Number.isFinite(usd)) return '—'
+  const per = run?.units_per_usd && run.units_per_usd > 0 ? run.units_per_usd : 1
+  const cur = run?.account_currency || 'USD'
+  const v = usd * per
+  const digits = Math.abs(v) >= 1000 || per > 1 ? 0 : 0
+  const body = Math.abs(v).toLocaleString('en-US', { maximumFractionDigits: digits })
+  const sign = signed ? (v < 0 ? MINUS : '+') : v < 0 ? MINUS : ''
+  return cur === 'USD' ? `${sign}$${body}` : `${sign}${body} ${cur}`
+}
+
 /** A signed dollar figure. The sign is the point, so it is never dropped. */
 const signedUsd = (v: number | null | undefined): string => {
   if (v == null || !Number.isFinite(v)) return '—'
@@ -618,7 +638,7 @@ function RunsList({
                   run.net_usd === 0 && 'text-muted-foreground',
                 )}
               >
-                {signedUsd(run.net_usd)}
+                {accountMoney(run.net_usd, run)}
               </span>
             </span>
             <span className="mt-0.5 flex items-end gap-2 text-[10px] leading-tight">
@@ -1127,7 +1147,7 @@ function OpenBadge({ run, tick }: { run: PaperRun; tick?: LiveBar }) {
     >
       <span aria-hidden>{long ? '\u25b2' : '\u25bc'}</span>
       {open.side.toLowerCase()}
-      <span className={usd >= 0 ? 'text-lc' : 'text-lp'}>{signedUsd(usd)}</span>
+      <span className={usd >= 0 ? 'text-lc' : 'text-lp'}>{accountMoney(usd, run)}</span>
     </span>
   )
 }
@@ -1253,7 +1273,7 @@ function PositionBar({ run, live }: { run: PaperRun; live: LiveBar | null | unde
         <span className="num text-[13px]">{quote(open.entry_price)}</span>
         <span className="text-muted-foreground num text-[10px]">{num(open.lots, open.lots >= 100 ? 0 : 2)} lots</span>
         <span className={cn('num ml-auto text-[15px] font-semibold', usd >= 0 ? 'text-lc' : 'text-lp')}>
-          {signedUsd(usd)}
+          {accountMoney(usd, run)}
         </span>
         {r != null && (
           <span className={cn('num text-[11px]', r >= 0 ? 'text-lc' : 'text-lp')}>{signedR(r)}</span>

@@ -150,6 +150,19 @@ pub struct TradingConfig {
     pub max_hold_ms: i64,
     pub lot_step: f64,
     pub min_lot: f64,
+    /// What the ACCOUNT is denominated in, for display only.
+    ///
+    /// Every number in this engine is computed in USD, because
+    /// `lots x contract_size x price` is USD and nothing else. A cent account
+    /// holds the same money counted in hundredths, so the conversion belongs at
+    /// the edge where a human reads it — never in the arithmetic, where it
+    /// would multiply through every cost, every guard and every receipt in
+    /// `docs/decisions/`.
+    #[serde(default = "default_currency")]
+    pub account_currency: String,
+    /// How many account units are one US dollar. 100 for a cent account.
+    #[serde(default = "default_units_per_usd")]
+    pub units_per_usd: f64,
     // `max_stop_atr`, `cluster_pad_atr`, `min_reward_risk` and `require_basis`
     // were here and read by nothing (risk review, 2026-09-13). They belong to
     // the live planner the prototype had and this port does not yet; they
@@ -157,6 +170,13 @@ pub struct TradingConfig {
     pub guards: GuardsConfig,
     #[serde(default)]
     pub trail: TrailConfig,
+}
+
+fn default_currency() -> String {
+    "USD".to_string()
+}
+fn default_units_per_usd() -> f64 {
+    1.0
 }
 
 /// A stop that follows the trade, in the unit the engine already sizes with.
@@ -332,8 +352,19 @@ pub struct MarketTradingOverride {
     #[serde(default)]
     pub news_currencies: Vec<String>,
     /// See [`fd_core::market::TradingSpec::price_decimals`]; absent keeps two.
+    #[serde(default = "default_currency")]
+    pub account_currency: String,
+    #[serde(default = "default_units_per_usd")]
+    pub units_per_usd: f64,
     #[serde(default)]
     pub price_decimals: Option<u32>,
+    /// Per-market starting equity. Absent keeps the global `[trading]` value.
+    ///
+    /// Per-market because the live Vantage books run a real cent account and
+    /// the research markets must keep the $10,000 every receipt in
+    /// `docs/decisions/` was measured at. One global number cannot be both.
+    #[serde(default)]
+    pub starting_equity_usd: Option<f64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -424,6 +455,9 @@ impl Config {
                 swap_short_per_lot: m.trading.swap_short_per_lot,
                 news_currencies: m.trading.news_currencies.clone(),
                 price_decimals: m.trading.price_decimals.unwrap_or(2),
+                starting_equity_usd: m.trading.starting_equity_usd,
+                account_currency: m.trading.account_currency.clone(),
+                units_per_usd: m.trading.units_per_usd,
             },
             big_trade_min_premium_usd: m.big_trades.min_premium_usd,
             cluster_floor: m.levels.cluster.floor,
@@ -437,6 +471,11 @@ impl Config {
         let mut trading = self.trading.clone();
         trading.symbol = market.trading.symbol.clone();
         trading.contract_size = market.trading.contract_size;
+        if let Some(equity) = market.trading.starting_equity_usd {
+            trading.starting_equity_usd = equity;
+        }
+        trading.account_currency = market.trading.account_currency.clone();
+        trading.units_per_usd = market.trading.units_per_usd;
         trading.spread = market.trading.spread;
         trading.lot_step = market.trading.lot_step;
         trading.min_lot = market.trading.min_lot;

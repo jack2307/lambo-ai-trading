@@ -122,6 +122,10 @@ pub fn rules_from_manifest(market: &str) -> Option<TradingRules> {
         // The golden files were produced by the JS oracle, which has no trail;
         // parity would be meaningless with one switched on here.
         trail: fd_core::config::TrailConfig::default(),
+        // Display only; the oracle had no notion of an account currency and
+        // parity is arithmetic, which these never touch.
+        account_currency: "USD".to_string(),
+        units_per_usd: 1.0,
         contract_size: num(&trading["contractSize"]),
         spread: num(&trading["spread"]),
         commission_per_lot: num(&trading["commissionPerLot"]),
