@@ -1,0 +1,21 @@
+# What the live side needs on a fresh Windows machine, pinned to what this
+# desk is actually running today (measured 2026-09-17, not recalled).
+#
+# Pinned rather than floating on purpose. The desk's numbers only mean
+# something under a stated set of rules, and the library versions are part of
+# those rules: `MetaTrader5` in particular changes what `order_send` accepts
+# between builds, and a mirror that silently started refusing orders after an
+# unattended upgrade would look exactly like a broker problem.
+#
+# Python 3.9.13 specifically. Not 3.10+: `zoneinfo` behaviour and the
+# MetaTrader5 wheel are what this has been tested against, and the desk's
+# launchers hard-code C:\Python39.
+
+MetaTrader5==5.0.6180
+numpy==2.0.2
+pyarrow
+requests
+tomli
+# Windows ships no IANA database, so zoneinfo has nothing to read without this.
+# Every timestamp the desk converts to Vietnam time goes through it.
+tzdata

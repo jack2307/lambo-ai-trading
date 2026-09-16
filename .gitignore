@@ -34,3 +34,6 @@ config/local.toml
 # the file a person edits and a commit records; this is the layer the desk
 # took over, and committing it would make two files claim the same authority.
 /config/guards.toml
+
+# Deploy kit output - the zip is a build artefact, not source.
+/deploy/flowdesk-*.zip
