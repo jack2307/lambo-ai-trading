@@ -671,7 +671,10 @@ function RunsList({
                 <span className="text-muted-foreground/60"> · {run.market}:{run.tf}</span>
                 <span className="text-muted-foreground/60">
                   {' '}
-                  · {run.trades} fill{run.trades === 1 ? '' : 's'}
+                  {/* "closed", not "fills". A book holding an open position read
+                      "0 fills" beside a badge saying it was long two USC down —
+                      both true, and together they say nothing happened. */}
+                  · {run.trades} closed
                   {run.profit_factor != null && ` · PF ${num(run.profit_factor)}`}
                 </span>
                 {run.open && <OpenBadge run={run} tick={ticks[`${run.market}:${run.tf}`]} />}
@@ -1477,11 +1480,11 @@ function Drilldown({
         <Heading>Equity</Heading>
         <EquityCurve points={detail.equity_curve} />
         <p className="text-muted-foreground num mt-1 text-[10px]">
-          {run.trades} fill{run.trades === 1 ? '' : 's'} · net {signedUsd(run.net_usd)} ·{' '}
+          {run.trades} closed{run.open ? ' · 1 open' : ''} · net {accountMoney(run.net_usd, run)} ·{' '}
           {run.profit_factor == null ? 'no PF yet' : `PF ${num(run.profit_factor)}`} ·{' '}
           {run.bars_seen} bars seen{run.gaps > 0 ? ` · ${run.gaps} gap${run.gaps === 1 ? '' : 's'}` : ''}
           {run.trades > 0 && run.trades < 30 && (
-            <span className="text-caution"> · {run.trades} fills is too few to read as a result</span>
+            <span className="text-caution"> · {run.trades} closed is too few to read as a result</span>
           )}
         </p>
       </section>
@@ -1720,9 +1723,10 @@ function RunChart({
         {/* Keyed by run: a new run brings a different set of panes, and
             remounting is cheaper to reason about than reconciling them. */}
         <PriceChart
-        pending={detail.run.pending}
-        pendingFill={detail.run.pending ? pendingFill(detail.run.pending, live, detail.run.tf) : null}
           key={detail.run.id}
+          open={detail.run.open}
+          pending={detail.run.pending}
+          pendingFill={detail.run.pending ? pendingFill(detail.run.pending, live, detail.run.tf) : null}
           bars={bars}
           indicators={indicators}
           series={detail.series ?? {}}
@@ -1938,7 +1942,7 @@ function FillsTable({
               FILL_COLS,
             )}
           >
-            <span>exit time</span>
+            <span>exit time (+07)</span>
             <span>side</span>
             <span className="text-right">lots</span>
             <span className="text-right">entry → exit</span>
@@ -1965,7 +1969,9 @@ function FillsTable({
                   isOpen && 'bg-primary/10 shadow-[inset_2px_0_0_var(--primary)]',
                 )}
               >
-                <span className="num text-muted-foreground">{shortStamp(fill.exitTime)}</span>
+                <span className="num text-muted-foreground" title={`exit ${utcStamp(fill.exitTime)} · entry ${utcStamp(fill.entryTime)}`}>
+                  {vnStamp(fill.exitTime)}
+                </span>
                 <span className={cn('num', fill.direction === 'LONG' ? 'text-lc' : 'text-lp')}>
                   {fill.direction.toLowerCase()}
                 </span>
@@ -2147,7 +2153,7 @@ function FillAccount({ fill, run }: { fill: BacktestTrade; run: PaperRun }) {
 
       {run.trades < 30 && (
         <p className="text-caution border-border border-t pt-1.5 text-[11px]">
-          This is one trade out of {run.trades} this run has closed. Fewer than 30 fills cannot be read as a result —
+          This is one trade out of {run.trades} this run has closed. Fewer than 30 closed trades cannot be read as a result —
           neither this fill nor the run&rsquo;s total says whether the strategy works.
         </p>
       )}

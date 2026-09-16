@@ -62,6 +62,15 @@ interface Props {
    */
   pendingFill?: number | null
   /**
+   * The position the book is holding right now.
+   *
+   * Drawn SOLID, where a pending entry is dotted: one is money already at
+   * risk and the other is a plan. The chart drew closed fills and pending
+   * entries and not this — the live trade, the only line on the page that can
+   * still cost anything, was the one thing it did not show.
+   */
+  open?: { side: string; entry_price: number; stop: number | null; target: number | null } | null
+  /**
    * The one trade the reader picked in the fills table, if any.
    *
    * Everything else stays drawn and fades; this one keeps its bands, its
@@ -95,6 +104,7 @@ export function PriceChart({
   liveBar,
   pending,
   pendingFill,
+  open,
   focus = null,
 }: Props) {
   const container = useRef<HTMLDivElement>(null)
@@ -296,32 +306,45 @@ export function PriceChart({
     if (!series) return
     for (const line of pendingLines.current) series.removePriceLine(line)
     pendingLines.current = []
-    if (!pending) return
 
-    const long = pending.side === 'LONG'
-    const rows: [string, number | null, string][] = [
-      [`pending ${pending.side.toLowerCase()} · stop`, pending.stop, token('--lp', '#e05d6a')],
-      [`pending ${pending.side.toLowerCase()} · target`, pending.target, token('--lc', '#46c98a')],
-      // Drawn only once the forming bar exists, when its open IS the fill.
-      ['fills here', pendingFill ?? null, token('--primary', '#8dff08')],
-    ]
+    // An open position and a pending entry are mutually exclusive — the desk
+    // allows one position at a time — so they share these handles. Solid for
+    // the one that is real, dotted for the one that is still a plan.
+    const live = open ?? pending
+    if (!live) return
+    const held = open != null
+    const side = live.side
+    const long = side === 'LONG'
+    const mark = long ? '\u25b2' : '\u25bc'
+    const rows: [string, number | null, string][] = held
+      ? [
+          [`${side.toLowerCase()} from`, open!.entry_price, token('--primary', '#8dff08')],
+          ['stop', open!.stop, token('--lp', '#e05d6a')],
+          ['target', open!.target, token('--lc', '#46c98a')],
+        ]
+      : [
+          [`pending ${side.toLowerCase()} · stop`, pending!.stop, token('--lp', '#e05d6a')],
+          [`pending ${side.toLowerCase()} · target`, pending!.target, token('--lc', '#46c98a')],
+          // Drawn only once the forming bar exists, when its open IS the fill.
+          ['fills here', pendingFill ?? null, token('--primary', '#8dff08')],
+        ]
     for (const [title, price, color] of rows) {
       if (price == null || !Number.isFinite(price)) continue
       pendingLines.current.push(
         series.createPriceLine({
           price,
           color,
-          lineWidth: 1,
-          // Dotted, not dashed: the fill bands of a trade that HAPPENED are
-          // dashed already, and a level that may still never exist must not
-          // look like one that did.
-          lineStyle: 1,
+          lineWidth: held ? 2 : 1,
+          // Solid for a position that exists; dotted for one that may never.
+          // The fill bands of a trade that HAPPENED are dashed already, so a
+          // level that is only a plan must not borrow that look.
+          lineStyle: held ? 0 : 1,
           axisLabelVisible: true,
-          title: `${long ? '\u25b2' : '\u25bc'} ${title}`,
+          title: `${mark} ${title}`,
         }),
       )
     }
-  }, [pending, pendingFill])
+  }, [pending, pendingFill, open])
 
   // Options-derived levels, drawn as price lines on the candles.
   useEffect(() => {
