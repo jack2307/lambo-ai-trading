@@ -337,6 +337,10 @@ export interface PaperRun {
    * poll and the API serves back; when the executor stops, the file stays. Read
    * `at` before believing any number in it.
    */
+  /** Turned off by hand: no new entries. An open position is still managed
+   *  to its stop and target — pausing is not abandoning. Deliberate, and not
+   *  the same as a driver that died. */
+  paused: boolean
   brokers: PaperBroker[]
   /**
    * The process driving this book, as it last reported — written every poll,
@@ -638,6 +642,9 @@ export const api = {
   paperStatus: () => request<{ runs: PaperRun[] }>('/api/paper/status'),
 
   paperAccounts: () => request<{ accounts: BrokerAccount[] }>('/api/paper/accounts'),
+
+  paperPause: (run: string, paused: boolean) =>
+    post<{ id: string; paused: boolean; holding: boolean }>('/api/paper/pause', { run, paused }),
 
   /** One run in full. `bars` is how many recent bars to send back with it. */
   paperRun: (id: string, bars = 120) =>

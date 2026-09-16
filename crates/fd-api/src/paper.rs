@@ -46,7 +46,7 @@ use fd_backtest::engine::{ensure_fallback_atr, sizing_atr_key};
 use fd_backtest::paper::Advice;
 use fd_backtest::{Guards, PaperBook, StepReport, Trade, TradingRules};
 use fd_core::types::Bar;
-use fd_indicators::compute_indicators;
+use fd_indicators::{IndicatorSpec, compute_indicators};
 use fd_store::timeframe_ms;
 use fd_strategy::filter::{Filter, Filtered};
 use fd_strategy::registry::{BarContext, Exits, Intent, Params, Registry, Strategy, Side};
@@ -223,6 +223,70 @@ pub struct PaperRun {
     pub warmup_bars: usize,
     /// Holes wider than two bar intervals between accepted bars.
     pub gaps: usize,
+    /// Turned off by hand: the book takes no new position.
+    ///
+    /// It keeps being fed - bars arrive, the chart stays live, the gap counter
+    /// stays honest - and an OPEN position is still managed to its stop, its
+    /// target and its maximum hold. Pausing is not abandoning: dropping a live
+    /// position the moment someone flicks a switch would leave real risk on a
+    /// book nobody is watching, and on the mirror side it would leave a real
+    /// position on a broker.
+    ///
+    /// Distinct from a driver that has died. This is deliberate and says so.
+    #[serde(default)]
+    pub paused: bool,
+}
+
+/// A strategy with its entries taken away.
+///
+/// Used for a paused run, and preferred to a flag threaded through the engine
+/// because it needs no cooperation from anything: the book is stepped exactly
+/// as before, so its exits, guards, gap counting and shadow all behave
+/// identically, and the single thing that cannot happen is a new position.
+///
+/// An Exit the strategy wanted is passed through untouched. A paused book that
+/// is holding must still be able to get out.
+struct Halted<'a> {
+    inner: &'a dyn Strategy,
+}
+
+impl Strategy for Halted<'_> {
+    fn id(&self) -> &'static str {
+        self.inner.id()
+    }
+    fn name(&self) -> &'static str {
+        self.inner.name()
+    }
+    fn description(&self) -> &'static str {
+        self.inner.description()
+    }
+    fn default_params(&self) -> Params {
+        self.inner.default_params()
+    }
+    fn grid(&self) -> BTreeMap<String, Vec<f64>> {
+        self.inner.grid()
+    }
+    fn series(&self, p: &Params) -> Vec<String> {
+        self.inner.series(p)
+    }
+    fn needs_options(&self) -> bool {
+        self.inner.needs_options()
+    }
+    fn exits(&self) -> Exits {
+        self.inner.exits()
+    }
+    fn indicators(&self, p: &Params) -> Vec<IndicatorSpec> {
+        self.inner.indicators(p)
+    }
+    fn warmup(&self, p: &Params) -> usize {
+        self.inner.warmup(p)
+    }
+    fn on_bar(&self, ctx: &BarContext) -> Intent {
+        match self.inner.on_bar(ctx) {
+            Intent::Enter { .. } => Intent::None,
+            other => other,
+        }
+    }
 }
 
 /// What a posted bar did.
@@ -888,6 +952,10 @@ pub struct RunStatus {
     /// has ever written one, which is not the same as stopped - see
     /// [`DriverDto`].
     pub driver: Option<DriverDto>,
+    /// Turned off by hand. An open position is still being managed; what has
+    /// stopped is new entries. Deliberate, and not to be confused with a
+    /// driver that died.
+    pub paused: bool,
     /// The broker accounts this book is mirrored into - empty when no
     /// executor has ever run it, and more than one when it runs on several
     /// accounts at once. See [`BrokerDto`]: a present entry is not a connected
@@ -1209,6 +1277,7 @@ fn status_of(data: &Path, run: &PaperRun, rules: &TradingRules, guards: Option<&
         events: events_of(data, &run.config.id()).len(),
         brokers: brokers_of(data, &run.config.id()),
         driver: driver_of(data, &run.config.id()),
+        paused: run.paused,
     }
 }
 
@@ -1371,6 +1440,10 @@ pub async fn start(State(state): State<Arc<AppState>>, Json(request): Json<Start
         return Err(ApiError::Conflict(format!("paper run `{id}` exists; stop it first or start under another id")));
     }
     let run = PaperRun {
+        // A new book starts running. Switching it off is a deliberate act and
+        // has to be one; a desk where runs arrive dormant would quietly grow a
+        // population of books nobody notices are doing nothing.
+        paused: false,
         book: PaperBook::new(&rules, strategy.exits() == Exits::Strategy),
         // Cloned from the book on its first bar; see the field's own note.
         shadow: None,
@@ -1410,7 +1483,14 @@ fn feed_run(state: &AppState, run: &mut PaperRun, bar: Bar) -> Result<RunBarResp
     let (strategy, params) = resolve(&state.registry, &run.config, &rules.news_currencies)?;
     let bar_ms = timeframe_ms(&run.config.tf).unwrap_or(0);
 
-    let (report, gap, applied, shadow_closed) = match run.accept(bar, &strategy, &params, &rules, guards.as_ref(), bar_ms)? {
+    // A paused run is stepped through a strategy that cannot enter. Everything
+    // else about the step is unchanged, which is the point: a paused book's
+    // chart, gaps, guards and open position all behave exactly as they would
+    // have, and only the entries are gone.
+    let halted = Halted { inner: &strategy };
+    let driver: &dyn Strategy = if run.paused { &halted } else { &strategy };
+
+    let (report, gap, applied, shadow_closed) = match run.accept(bar, driver, &params, &rules, guards.as_ref(), bar_ms)? {
         Accepted::Seen => {
             return Ok(RunBarResponse {
                 id,
@@ -1912,6 +1992,59 @@ pub struct AccountsResponse {
     pub accounts: Vec<AccountDto>,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct PauseRequest {
+    pub run: String,
+    pub paused: bool,
+}
+
+#[derive(Debug, Serialize)]
+pub struct PauseResponse {
+    pub id: String,
+    pub paused: bool,
+    /// True when the book is holding a position at the moment it was paused.
+    ///
+    /// Worth answering in the response rather than leaving to be discovered:
+    /// pausing does NOT close it, and somebody flicking the switch to stop
+    /// trading should be told immediately that a trade is still live.
+    pub holding: bool,
+}
+
+/// `POST /api/paper/pause` - turn one book off, or back on.
+///
+/// Persisted, so it survives a restart of this process. A book that was
+/// switched off on Friday is still off on Monday, which is the only behaviour
+/// that makes the switch trustworthy.
+pub async fn pause(
+    State(state): State<Arc<AppState>>,
+    Json(body): Json<PauseRequest>,
+) -> Result<Json<PauseResponse>, ApiError> {
+    let mut runs = state.paper.lock().expect("paper runs");
+    let run = runs
+        .get_mut(&body.run)
+        .ok_or_else(|| ApiError::NotFound(format!("no paper run `{}`", body.run)))?;
+    let changed = run.paused != body.paused;
+    run.paused = body.paused;
+    let holding = run.book.position.is_some();
+    let id = run.config.id();
+    persist(&state.data, run)?;
+    if changed {
+        record(
+            &state.data,
+            &id,
+            &json!({
+                "kind": if body.paused { "paused" } else { "resumed" },
+                "time": now_ms(),
+                // Recorded because it changes how the book's next lines read:
+                // a pause taken while holding is followed by an exit that the
+                // strategy chose under a switch that was already off.
+                "holding": holding,
+            }),
+        )?;
+    }
+    Ok(Json(PauseResponse { id, paused: body.paused, holding }))
+}
+
 /// `GET /api/paper/status`
 pub async fn status(State(state): State<Arc<AppState>>) -> Result<Json<StatusResponse>, ApiError> {
     let runs = state.paper.lock().expect("paper runs");
@@ -2237,6 +2370,22 @@ pub async fn intent(
     let run = runs
         .get_mut(&body.run)
         .ok_or_else(|| ApiError::NotFound(format!("no paper run `{}`", body.run)))?;
+
+    // A paused book refuses entries from outside as well as from its own
+    // strategy. Without this the switch would only hold for rule-driven runs,
+    // and an AI book would go on trading while the desk showed it off - the
+    // worst of the two states, because the display would be wrong rather than
+    // merely unhelpful.
+    //
+    // NONE is still accepted: a decider that looked and wanted nothing has
+    // driven this bar, and recording that is how the desk tells standing aside
+    // from not running. Pausing stops trades, not bookkeeping.
+    if run.paused && side.is_some() {
+        return Ok(Json(IntentResponse {
+            accepted: false,
+            reason: "run is paused".to_string(),
+        }));
+    }
 
     // Only a run that has declared itself externally driven. A rule-based book
     // must never be steerable from outside: its trades are its own or the

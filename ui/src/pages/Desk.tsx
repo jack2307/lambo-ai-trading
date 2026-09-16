@@ -41,6 +41,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import type { Book } from '@/App'
 import { api, type BacktestTrade, type Bar, type LiveBar, type PaperBroker, type PaperEvent, type PaperRun, type PaperRunDetail } from '@/lib/api'
 import { clock, num } from '@/lib/format'
+import { toast } from 'sonner'
 import { useTicks } from '@/lib/ticks'
 import { ClaudeMark, DeepSeekMark, OpenAIMark } from '@/components/BrandMarks'
 import type { Consultation, Decision, Reasoning } from '@/lib/api'
@@ -501,6 +502,30 @@ export function Desk({ book }: { book: Book }) {
   // without spending a render correcting itself.
   const activeId = selected && sorted.some((r) => r.id === selected) ? selected : (sorted[0]?.id ?? null)
 
+  // Flipped locally first so the switch answers the click, then confirmed by
+  // the server's own reply rather than assumed: if the call fails the row goes
+  // back to what it was, because a switch that shows "off" over a book that is
+  // still trading is worse than one that feels slow.
+  const togglePause = useCallback((id: string, paused: boolean) => {
+    setRuns((prev) => prev?.map((r) => (r.id === id ? { ...r, paused } : r)) ?? prev)
+    api
+      .paperPause(id, paused)
+      .then((res) => {
+        setRuns((prev) => prev?.map((r) => (r.id === id ? { ...r, paused: res.paused } : r)) ?? prev)
+        if (res.paused && res.holding) {
+          toast.warning(`${id} stopped — its open position stays live`, {
+            description: 'No new entries. The trade it is holding still runs to its stop or target.',
+          })
+        } else {
+          toast.success(`${id} ${res.paused ? 'stopped' : 'started'}`)
+        }
+      })
+      .catch((err: Error) => {
+        setRuns((prev) => prev?.map((r) => (r.id === id ? { ...r, paused: !paused } : r)) ?? prev)
+        toast.error(`Could not ${paused ? 'stop' : 'start'} ${id}`, { description: err.message })
+      })
+  }, [])
+
   // The selected account's record of the run being drilled into, or null while
   // the desk is on the paper book. Everything under the chart reads this and
   // not `detail`, which is always the paper book: the panel used to show
@@ -634,7 +659,15 @@ export function Desk({ book }: { book: Book }) {
                 carried that is not per-run configuration, and the rest moved
                 into the drill-down under it where it belongs to one run. */}
             <div className="border-border shrink-0 border-b xl:max-h-[46%] xl:overflow-y-auto">
-              <RunsList runs={sorted} now={now} selected={activeId} onPick={pick} ticks={ticks} account={account} />
+              <RunsList
+                runs={sorted}
+                now={now}
+                selected={activeId}
+                onPick={pick}
+                ticks={ticks}
+                account={account}
+                onToggle={togglePause}
+              />
             </div>
             <div className="min-h-0 xl:flex-1 xl:overflow-y-auto">
               <Drilldown
@@ -862,6 +895,7 @@ function RunsList({
   onPick,
   ticks,
   account,
+  onToggle,
 }: {
   runs: PaperRun[]
   now: number
@@ -869,6 +903,8 @@ function RunsList({
   onPick: (id: string) => void
   /** Streamed forming bars by `market:tf`; newer than the row's own. */
   ticks: Record<string, LiveBar>
+  /** Turn one book off or back on. */
+  onToggle: (id: string, paused: boolean) => void
   /** The account the rows describe, or null for the paper book. Never merged
    *  into one row - the gap between what the rule decided and what an account
    *  did with it is the measurement, and a merged row hides exactly that. */
@@ -912,23 +948,39 @@ function RunsList({
         // measurement nobody made.
         const unmirrored = account != null && !broker
         return (
-          <button
+          <div
             key={run.id}
-            type="button"
-            ref={(el) => {
-              rowRefs.current[index] = el
-            }}
-            onClick={() => onPick(run.id)}
-            onKeyDown={(e) => onKeyDown(e, index)}
-            aria-pressed={isOn}
             className={cn(
-              'hover:bg-accent/60 focus-visible:ring-ring w-full border-b px-3 py-[6px] text-left transition-colors last:border-0 focus-visible:ring-2 focus-visible:ring-inset focus-visible:outline-none',
+              'hover:bg-accent/60 flex items-start gap-1 border-b pr-3 pl-2 transition-colors last:border-0',
               isOn && 'bg-primary/10 shadow-[inset_2px_0_0_var(--primary)]',
               unmirrored && 'opacity-45',
+              // A book that is switched off is dimmed as a whole. The badge
+              // says which state it is in; this says it at a glance, down the
+              // length of a list, without reading anything.
+              run.paused && 'opacity-55',
             )}
           >
+            <PowerSwitch run={run} onToggle={onToggle} />
+            <button
+              type="button"
+              ref={(el) => {
+                rowRefs.current[index] = el
+              }}
+              onClick={() => onPick(run.id)}
+              onKeyDown={(e) => onKeyDown(e, index)}
+              aria-pressed={isOn}
+              className="focus-visible:ring-ring min-w-0 flex-1 py-[6px] text-left focus-visible:ring-2 focus-visible:ring-inset focus-visible:outline-none"
+            >
             <span className="flex items-center gap-2 text-xs">
               <StatusPill stale={stale} />
+              {/* Said, not only implied by the dimming. `fed` beside it is
+                  still true and still useful - the feed is fine; what is off
+                  is the book - and the two facts are left as two. */}
+              {run.paused && (
+                <span className="border-border text-muted-foreground shrink-0 rounded-sm border px-1 text-[9px] tracking-wide uppercase">
+                  off
+                </span>
+              )}
               <span className="num min-w-0 flex-1 truncate">{run.id}</span>
               {account != null ? (
                 <span
@@ -983,10 +1035,55 @@ function RunsList({
                 <LiveCell run={streamed(run) ?? run} now={now} />
               </span>
             </span>
-          </button>
+            </button>
+          </div>
         )
       })}
     </div>
+  )
+}
+
+/**
+ * Turn one book off, or back on.
+ *
+ * Off means no NEW position. An open one is still managed to its stop and its
+ * target, which is why the switch says so in its tooltip while a trade is
+ * live: someone flicking it to stop trading has not stopped the trade they
+ * already have, and finding that out later would be the worst way to learn it.
+ *
+ * Deliberately not a confirm dialog. Pausing is reversible, costs nothing and
+ * takes effect on the next bar; a dialog in front of it would only teach
+ * people to click through dialogs.
+ */
+function PowerSwitch({ run, onToggle }: { run: PaperRun; onToggle: (id: string, paused: boolean) => void }) {
+  const off = run.paused
+  const holding = !!run.open
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={!off}
+      aria-label={`${off ? 'Start' : 'Stop'} ${run.id}`}
+      title={
+        off
+          ? `${run.id} is off — it takes no new position. Click to start it.`
+          : holding
+            ? `${run.id} is running. Stopping it blocks new entries; the position it is holding stays open and is still managed to its stop and target.`
+            : `${run.id} is running. Click to stop it taking new positions.`
+      }
+      onClick={() => onToggle(run.id, !off)}
+      className={cn(
+        'focus-visible:ring-ring mt-[9px] inline-flex h-[14px] w-[24px] shrink-0 items-center rounded-full border px-[2px] transition-colors focus-visible:ring-2 focus-visible:outline-none',
+        off ? 'border-border bg-muted-foreground/15' : 'border-lc/50 bg-lc/25',
+      )}
+    >
+      <span
+        className={cn(
+          'block size-[8px] rounded-full transition-transform',
+          off ? 'bg-muted-foreground/70' : 'bg-lc translate-x-[10px]',
+        )}
+      />
+    </button>
   )
 }
 
