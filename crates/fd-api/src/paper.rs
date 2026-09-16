@@ -489,6 +489,23 @@ fn restore_history(data: &Path, run: &mut PaperRun) {
     }
 
     let Ok(text) = std::fs::read_to_string(&path) else { return };
+
+    // `trades.jsonl` is the record; drop anything the state file still carries.
+    //
+    // Without this the two sources ADD. A book written by an older binary keeps
+    // its trades in `state.json`, the migration above copies them into the
+    // history, and the next load then read both — every trade counted twice,
+    // every net doubled, and profit factor unchanged because it is a ratio, so
+    // the one number that would have looked wrong looked right. Caught by
+    // comparing fourteen live books across a restart, not by the unit test,
+    // which starts from a book that never had a legacy state file.
+    run.book.trades.clear();
+    run.book.equity_curve.clear();
+    if let Some(shadow) = run.shadow.as_mut() {
+        shadow.trades.clear();
+        shadow.equity_curve.clear();
+    }
+
     for line in text.lines().filter(|l| !l.trim().is_empty()) {
         let Ok(entry) = serde_json::from_str::<HistoryLine>(line) else { continue };
         let book = if entry.book == "shadow" { run.shadow.as_mut() } else { Some(&mut run.book) };

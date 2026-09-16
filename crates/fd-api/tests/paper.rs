@@ -280,6 +280,47 @@ async fn a_books_history_survives_a_restart_without_living_in_its_state_file() {
 }
 
 #[tokio::test]
+async fn a_legacy_state_file_and_the_history_file_do_not_both_count() {
+    // The bug this exists for: a book written before the history moved out
+    // keeps its trades in `state.json`. The migration copies them into
+    // `trades.jsonl`, and a loader that then read BOTH counted every trade
+    // twice and doubled every net — while profit factor, being a ratio, stayed
+    // exactly right, so the one number a reader would have checked looked fine.
+    let dir = tempfile::tempdir().expect("temp dir");
+    let state = state_over(dir.path(), 300);
+    start_run(&state, json!({ "market": "btc", "tf": "15m", "strategy": "ema-cross", "id": "b", "window": 200 }))
+        .await
+        .expect("start");
+    for i in 300..380 {
+        post_bar(&state, "btc", "15m", wave(i)).await.expect("bar");
+    }
+    let live = run_named(&read_status(&state).await, "b").clone();
+    let trades = live["trades"].as_u64().expect("trades");
+    assert!(trades > 0);
+
+    // Forge the legacy shape: put the history back INTO the state file, beside
+    // the `trades.jsonl` the run already wrote.
+    let path = dir.path().join("paper").join("b").join("state.json");
+    let mut parsed: Value = serde_json::from_str(&std::fs::read_to_string(&path).expect("state")).expect("json");
+    let history: Vec<Value> = std::fs::read_to_string(dir.path().join("paper").join("b").join("trades.jsonl"))
+        .expect("history")
+        .lines()
+        .filter(|l| !l.trim().is_empty())
+        .map(|l| serde_json::from_str::<Value>(l).expect("line"))
+        .filter(|v| v["book"] == "main")
+        .map(|v| v["trade"].clone())
+        .collect();
+    parsed["book"]["trades"] = Value::Array(history);
+    std::fs::write(&path, serde_json::to_string(&parsed).expect("write")).expect("write");
+
+    // Loading must report the same book, not twice the book.
+    let reborn = Arc::new(AppState::new(config(), dir.path().to_path_buf()));
+    let after = run_named(&read_status(&reborn).await, "b").clone();
+    assert_eq!(after["trades"], live["trades"], "trades counted once: {after}");
+    assert_eq!(after["net_usd"], live["net_usd"], "net not doubled");
+}
+
+#[tokio::test]
 async fn a_rule_based_book_cannot_be_claimed_by_a_decider() {
     // The badge is only meaningful because the route refuses rule-based runs
     // outright. Without this, anything could post a gpt-5 badge onto a book
