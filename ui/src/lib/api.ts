@@ -264,6 +264,9 @@ export interface PaperRun {
    */
   account_currency: string
   units_per_usd: number
+  /** Account leverage (2000 = 1:2000) and units of underlying per lot. */
+  leverage: number
+  contract_size: number
   open: null | {
     side: 'LONG' | 'SHORT'
     entry_time: number

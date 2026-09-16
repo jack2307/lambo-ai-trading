@@ -57,6 +57,8 @@ pub struct TradingRules {
     /// reads these for arithmetic and must not start.
     pub account_currency: String,
     pub units_per_usd: f64,
+    /// Account leverage; display only, like the two above.
+    pub leverage: f64,
     /// Calendar currencies whose releases the market's `news:` filters and
     /// news guard react to (`[markets.<id>.trading] news_currencies`). Empty
     /// = every currency, which is what the default rules and every receipt
@@ -83,6 +85,7 @@ impl Default for TradingRules {
             risk_per_trade_pct: 0.01,
             account_currency: "USD".to_string(),
             units_per_usd: 1.0,
+            leverage: 1.0,
             stop_atr: 1.2,
             reward_risk: 1.8,
             max_hold_ms: 14_400_000,
@@ -258,6 +261,7 @@ pub fn trading_rules_for(config: &Config, market: &str) -> Result<TradingRules, 
         starting_equity_usd: spec.trading.starting_equity_usd.unwrap_or(config.trading.starting_equity_usd),
         account_currency: spec.trading.account_currency.clone(),
         units_per_usd: spec.trading.units_per_usd,
+        leverage: spec.trading.leverage,
         // The rest is policy rather than venue convention, and is shared.
         commission_per_lot: config.trading.commission_per_lot,
         risk_per_trade_pct: config.trading.risk_per_trade_pct,

@@ -294,6 +294,7 @@ contract_size = 1.0
 starting_equity_usd = 100.0        # = 10,000 USC
 account_currency = "USC"
 units_per_usd = 100.0
+leverage = 2000.0                  # MEASURED: account_info().leverage, 2026-09-16
 
 spread = 0.28
 lot_step = 0.01
@@ -441,6 +442,7 @@ symbol = "EURUSD.sc"
 starting_equity_usd = 100.0        # = 10,000 USC
 account_currency = "USC"
 units_per_usd = 100.0
+leverage = 2000.0                  # MEASURED: account_info().leverage, 2026-09-16
 
 price_decimals = 5
 contract_size = 1.0
@@ -486,6 +488,7 @@ contract_size = 0.01
 starting_equity_usd = 100.0        # = 10,000 USC
 account_currency = "USC"
 units_per_usd = 100.0
+leverage = 2000.0                  # MEASURED: account_info().leverage, 2026-09-16
 
 spread = 17.05                      # MEASURED: 3.4x the 5.00 assumed for the Binance market
 lot_step = 0.01

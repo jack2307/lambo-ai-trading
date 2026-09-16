@@ -178,6 +178,9 @@ fn default_currency() -> String {
 fn default_units_per_usd() -> f64 {
     1.0
 }
+fn default_leverage_cfg() -> f64 {
+    1.0
+}
 
 /// A stop that follows the trade, in the unit the engine already sizes with.
 ///
@@ -356,6 +359,8 @@ pub struct MarketTradingOverride {
     pub account_currency: String,
     #[serde(default = "default_units_per_usd")]
     pub units_per_usd: f64,
+    #[serde(default = "default_leverage_cfg")]
+    pub leverage: f64,
     #[serde(default)]
     pub price_decimals: Option<u32>,
     /// Per-market starting equity. Absent keeps the global `[trading]` value.
@@ -458,6 +463,7 @@ impl Config {
                 starting_equity_usd: m.trading.starting_equity_usd,
                 account_currency: m.trading.account_currency.clone(),
                 units_per_usd: m.trading.units_per_usd,
+                leverage: m.trading.leverage,
             },
             big_trade_min_premium_usd: m.big_trades.min_premium_usd,
             cluster_floor: m.levels.cluster.floor,

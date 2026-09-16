@@ -790,6 +790,10 @@ pub struct RunStatus {
     /// the conversion ever touching the arithmetic.
     pub account_currency: String,
     pub units_per_usd: f64,
+    /// Account leverage and units per lot, so the client can say what margin a
+    /// position ties up without re-deriving either from a price.
+    pub leverage: f64,
+    pub contract_size: f64,
     pub open: Option<OpenDto>,
     /// An entry decided at the last close and waiting for the next open. Never
     /// set at the same time as a fill on the same bar: the book takes one
@@ -1002,6 +1006,8 @@ fn status_of(data: &Path, run: &PaperRun, rules: &TradingRules, guards: Option<&
         equity: fd_core::js_round_to(book.equity, 2),
         account_currency: rules.account_currency.clone(),
         units_per_usd: rules.units_per_usd,
+        leverage: rules.leverage,
+        contract_size: rules.contract_size,
         open,
         pending,
         trades: book.trades.len(),

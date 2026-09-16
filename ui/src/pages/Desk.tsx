@@ -105,6 +105,28 @@ const writeSelected = (id: string) => {
 const MINUS = '−'
 
 /**
+ * What a position of this size ties up, and how far the account is from a
+ * margin call.
+ *
+ * Margin is `lots x contract_size x price / leverage`, which is what the
+ * terminal returns for `order_calc_margin` — checked against it on 2026-09-16:
+ * 0.10 lots of XAUUSD.sc came back 21.63 USC and this gives 21.63.
+ *
+ * The desk never SIZES on margin, it sizes on risk. This is here because "we
+ * are nowhere near a margin call" is itself a number worth being able to see,
+ * and because at 1:2000 it is very easy to assume otherwise.
+ */
+function marginOf(lots: number, price: number, run: PaperRun): { used: number; pct: number; level: number } | null {
+  if (!run.leverage || !run.contract_size || !Number.isFinite(price) || price <= 0) return null
+  const used = (lots * run.contract_size * price) / run.leverage
+  return {
+    used,
+    pct: run.equity > 0 ? (100 * used) / run.equity : 0,
+    level: used > 0 ? (100 * run.equity) / used : Infinity,
+  }
+}
+
+/**
  * A money figure in the ACCOUNT's own unit.
  *
  * The wire is USD everywhere, because `lots x contract_size x price` is USD
@@ -1297,6 +1319,17 @@ function PositionBar({ run, live }: { run: PaperRun; live: LiveBar | null | unde
               target {quote(p.target)}
               {fill != null && p.target != null && ` (${quote(Math.abs(p.target - fill))} away)`}
             </span>
+            {fill != null && (() => {
+              const risk = Math.abs(fill - (p.stop ?? fill))
+              if (!(risk > 0) || !run.contract_size) return null
+              const lots = (run.equity * 0.01) / (risk * run.contract_size)
+              const m = marginOf(lots, fill, run)
+              return (
+                <span className="num" title="one percent of equity against the distance to the stop, before the notional cap">
+                  ≈{num(lots, 2)} lots{m ? ` · margin ${accountMoney(m.used, run, false)}` : ''}
+                </span>
+              )
+            })()}
             {fill != null && p.stop != null && p.target != null && (
               <span className="num">
                 R:R {num(Math.abs(p.target - fill) / Math.max(1e-9, Math.abs(fill - p.stop)), 2)}
@@ -1344,6 +1377,19 @@ function PositionBar({ run, live }: { run: PaperRun; live: LiveBar | null | unde
         </span>
         <span className="num text-[13px]">{quote(open.entry_price)}</span>
         <span className="text-muted-foreground num text-[10px]">{num(open.lots, open.lots >= 100 ? 0 : 2)} lots</span>
+        {(() => {
+          const m = marginOf(open.lots, price, run)
+          if (!m) return null
+          return (
+            <span
+              className="text-muted-foreground/70 num text-[10px]"
+              title={`margin used ${m.used.toFixed(2)} of ${run.account_currency}; a margin call comes at a level of 30%`}
+            >
+              margin {accountMoney(m.used, run, false)} ({m.pct.toFixed(2)}% · level{' '}
+              {m.level > 9999 ? '>9999' : m.level.toFixed(0)}%)
+            </span>
+          )
+        })()}
         <span className={cn('num ml-auto text-[15px] font-semibold', usd >= 0 ? 'text-lc' : 'text-lp')}>
           {accountMoney(usd, run)}
         </span>

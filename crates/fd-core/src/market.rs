@@ -113,6 +113,18 @@ pub struct TradingSpec {
     /// Account units per US dollar. 100 on a cent account.
     #[serde(default = "default_units_per_usd")]
     pub units_per_usd: f64,
+    /// Account leverage, as the broker sets it: 2000 means 1:2000.
+    ///
+    /// Read from the terminal (`account_info().leverage`), never assumed. The
+    /// engine does not size on margin — it sizes on risk — but the desk cannot
+    /// say how close a position is to a margin call without it, and "we are
+    /// nowhere near one" is itself a number worth showing.
+    #[serde(default = "default_leverage")]
+    pub leverage: f64,
+}
+
+fn default_leverage() -> f64 {
+    1.0
 }
 
 fn default_account_currency() -> String {
@@ -207,7 +219,7 @@ mod tests {
             premium_in_underlying: false,
             multiplier: 100.0,
             underlying: "GC".into(),
-            trading: TradingSpec { symbol: "XAUUSD".into(), contract_size: 100.0, spread: 0.3, lot_step: 0.01, min_lot: 0.01, swap_long_per_lot: 0.0, swap_short_per_lot: 0.0, news_currencies: Vec::new(), starting_equity_usd: None, account_currency: "USD".into(), units_per_usd: 1.0, price_decimals: 2 },
+            trading: TradingSpec { symbol: "XAUUSD".into(), contract_size: 100.0, spread: 0.3, lot_step: 0.01, min_lot: 0.01, swap_long_per_lot: 0.0, swap_short_per_lot: 0.0, news_currencies: Vec::new(), starting_equity_usd: None, account_currency: "USD".into(), units_per_usd: 1.0, leverage: 1.0, price_decimals: 2 },
             big_trade_min_premium_usd: 100_000.0,
             cluster_floor: 5.0,
             cluster_atr_fraction: 0.15,
@@ -225,7 +237,7 @@ mod tests {
             premium_in_underlying: true,
             multiplier: 1.0,
             underlying: "BTC".into(),
-            trading: TradingSpec { symbol: "BTCUSD".into(), contract_size: 1.0, spread: 5.0, lot_step: 0.001, min_lot: 0.001, swap_long_per_lot: 0.0, swap_short_per_lot: 0.0, news_currencies: Vec::new(), starting_equity_usd: None, account_currency: "USD".into(), units_per_usd: 1.0, price_decimals: 2 },
+            trading: TradingSpec { symbol: "BTCUSD".into(), contract_size: 1.0, spread: 5.0, lot_step: 0.001, min_lot: 0.001, swap_long_per_lot: 0.0, swap_short_per_lot: 0.0, news_currencies: Vec::new(), starting_equity_usd: None, account_currency: "USD".into(), units_per_usd: 1.0, leverage: 1.0, price_decimals: 2 },
             big_trade_min_premium_usd: 25_000.0,
             cluster_floor: 100.0,
             cluster_atr_fraction: 0.15,
