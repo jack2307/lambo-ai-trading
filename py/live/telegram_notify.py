@@ -49,6 +49,16 @@ API = "https://api.telegram.org"
 STALE_BARS = 6
 TF_MS = {"1m": 60_000, "5m": 300_000, "15m": 900_000, "1h": 3_600_000}
 
+# How many closed bars an AI book's decider may miss before it counts as gone.
+#
+# Tighter than the feed's six because the signal is cleaner: a model that
+# DECLINES still posts, so `last_at` moves on every bar it sees. Silence means
+# the call failed, not that the market was quiet. Three bars is 45 minutes on
+# a 15m book — long enough to ride out one slow answer, short enough that
+# 2026-09-16's 45-minute Codex token expiry would have been caught while it was
+# still happening instead of afterwards.
+DECIDER_STALE_BARS = 3
+
 
 # --------------------------------------------------------------- the secret
 
@@ -154,13 +164,16 @@ def snapshot(runs: list) -> str:
         f"{len(runs)} books · net <b>{money(net)}</b>",
         f"feeds dead: {len(stale)}" if stale else "feeds: all fed",
     ]
-    ai = [r for r in runs if r.get("decider")]
+    ai = [r for r in runs if r.get("decider") and (r["decider"].get("last") != "coin")]
     for r in ai:
         d = r["decider"]
         trades = sum(d.get("decisions", {}).values())
+        quiet = (now - (d.get("last_at") or now)) / 60000
+        flag = " \U0001f507" if decider_gone(r, now) else ""
         lines.append(
-            f"· <code>{esc(r['id'])}</code> {esc(d.get('last'))} — "
+            f"· <code>{esc(r['id'])}</code> {esc(d.get('last'))}{flag} — "
             f"{trades} trades, {d.get('stood_aside', 0)} stood aside, {money(r.get('net_usd') or 0.0)}"
+            f", last spoke {quiet:.0f} min ago"
         )
     return "\n".join(lines)
 
@@ -171,6 +184,28 @@ def is_dead(run: dict, now_ms: float) -> bool:
         return True
     limit = TF_MS.get(run.get("tf", ""), 900_000) * STALE_BARS
     return (now_ms - last) > limit and market_open(run.get("market", ""), int(now_ms))
+
+
+def decider_gone(run: dict, now_ms: float) -> bool:
+    """Whether this book's model has stopped answering.
+
+    Only for books a MODEL drives. A coin book's `last_at` moves only when its
+    model takes a trade, so silence there is ordinary and alerting on it would
+    cry wolf on every quiet hour.
+
+    Suppressed while the feed itself is dead: a book with no bars has nothing to
+    decide on, and two alarms for one outage is how an alert channel gets muted.
+    """
+    d = run.get("decider") or None
+    if not d or d.get("last") == "coin":
+        return False
+    last = d.get("last_at")
+    if not last:
+        return False
+    if is_dead(run, now_ms):
+        return False
+    step = TF_MS.get(run.get("tf", ""), 900_000)
+    return (now_ms - last) > step * DECIDER_STALE_BARS and market_open(run.get("market", ""), int(now_ms))
 
 
 # --------------------------------------------------------------- the watch
@@ -188,6 +223,7 @@ def changes(runs: list, state: dict, now_ms: float) -> list[str]:
         trades = r.get("trades") or 0
         open_pos = r.get("open") or None
         dead = is_dead(r, now_ms)
+        mute = decider_gone(r, now_ms)
 
         if not first_run:
             # A trade closed: the only line here that is about money.
@@ -213,6 +249,21 @@ def changes(runs: list, state: dict, now_ms: float) -> list[str]:
             if fired > was.get("guards", 0):
                 names = ", ".join((r.get("closed_by_guard") or {}).keys())
                 out.append(f"<b>{esc(rid)}</b> guard closed a position ({esc(names)})")
+            # The model stopped answering, or started again. A separate
+            # outage from a dead feed and it needs its own line: on
+            # 2026-09-16 Codex's token expired for 45 minutes while the bars
+            # kept arriving, so every feed was healthy and four decisions were
+            # simply never made.
+            if mute and not was.get("mute"):
+                d = r.get("decider") or {}
+                quiet = (now_ms - (d.get("last_at") or now_ms)) / 60000
+                out.append(
+                    f"\U0001f507 <b>{esc(rid)}</b> — <code>{esc(d.get('last'))}</code> has not answered "
+                    f"for {quiet:.0f} min. Bars are still arriving; the model is not."
+                )
+            elif was.get("mute") and not mute:
+                d = r.get("decider") or {}
+                out.append(f"\u2705 <b>{esc(rid)}</b> — <code>{esc(d.get('last'))}</code> is answering again.")
             # The feed died, or came back. Only on the transition.
             if dead and not was.get("dead"):
                 behind = (now_ms - (r.get("last_bar_time") or now_ms)) / 60000
@@ -223,6 +274,7 @@ def changes(runs: list, state: dict, now_ms: float) -> list[str]:
         seen[rid] = {
             "trades": trades, "net": net, "open": bool(open_pos),
             "guards": sum((r.get("closed_by_guard") or {}).values()), "dead": dead,
+            "mute": mute,
         }
 
     for gone in set(seen) - {r["id"] for r in runs}:
