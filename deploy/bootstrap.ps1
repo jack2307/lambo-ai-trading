@@ -11,7 +11,16 @@
 param(
     [string]$Root = '',
     [string]$PythonVersion = '3.9.13',
-    [switch]$SkipPython
+    [switch]$SkipPython,
+    # Install Rust and Node so the server can build what it pulls.
+    #
+    # Needed when the desk arrives by `git clone` rather than as a packed zip,
+    # because `target\` and `ui\dist\` are gitignored - a pull brings source
+    # and nothing runnable. About 5.7 GB all in, measured: 3.2 GB of rustup and
+    # cargo, 2.1 GB of release build output, 0.3 GB of node_modules. The 29 GB
+    # `target\debug` that makes the home tree enormous is test and dev output
+    # a server never produces.
+    [switch]$WithToolchain
 )
 
 $ErrorActionPreference = 'Stop'
@@ -76,6 +85,29 @@ if (Test-Path $py) {
     }
     $check = & $py -c "import MetaTrader5, tomli, numpy, pyarrow, requests, zoneinfo; print(MetaTrader5.__version__)"
     Ok "MetaTrader5 $check, and the rest import"
+}
+
+# ----------------------------------------------------------- 2b. toolchain
+if ($WithToolchain) {
+    Step '2b' 'Rust and Node'
+    if (Get-Command cargo -ErrorAction SilentlyContinue) {
+        Ok "cargo already installed"
+    } else {
+        $rustup = Join-Path $env:TEMP 'rustup-init.exe'
+        Note 'downloading rustup'
+        Invoke-WebRequest -Uri 'https://win.rustup.rs/x86_64' -OutFile $rustup -UseBasicParsing
+        & $rustup -y --default-toolchain stable --profile minimal
+        if ($LASTEXITCODE -ne 0) { throw 'rustup failed' }
+        $env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"
+        Ok 'rust installed'
+    }
+    if (Get-Command node -ErrorAction SilentlyContinue) {
+        Ok ("node " + (node --version))
+    } else {
+        Todo 'Node.js missing - install the LTS MSI from nodejs.org, then re-run'
+        Note 'Not scripted: the installer has no reliable silent switch across'
+        Note 'versions, and a half-installed Node is worse than none.'
+    }
 }
 
 # ----------------------------------------------------------- 3. directories
@@ -159,6 +191,10 @@ Write-Host @'
   4. Log in the Claude and Codex CLIs - they authenticate against your PLAN
      through a browser, so they need a session on this machine.
   5. Copy config\local.toml across by hand.
+
+  If the desk arrived by git clone, run this once with -WithToolchain, then
+  use deploy\update.ps1 from then on - it pulls, rebuilds and restarts in the
+  right order.
 
   Then, with the HOME desk stopped so two machines never mirror one account:
      copy data\paper across, start the pollers, start fd-api, and run the
