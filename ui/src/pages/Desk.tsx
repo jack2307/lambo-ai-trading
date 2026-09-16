@@ -194,6 +194,29 @@ const quote = (v: number | null | undefined): string => {
   return v.toFixed(5)
 }
 
+/** Vietnam is UTC+7 all year — no daylight saving, so one constant is correct. */
+const VN_OFFSET_MS = 7 * 60 * 60 * 1000
+
+/**
+ * `MM-DD HH:MM:SS` in Vietnam time, for a moment on a wall clock.
+ *
+ * Used for when something HAPPENED — a model answered, a trade closed. Bar
+ * stamps keep their UTC `Z` deliberately: the prompt shows the model UTC bars
+ * and its own sentences quote them back ("the 02:30 breakout"), so relabelling
+ * a bar would put the desk and the model's own words in different hours.
+ */
+const vnStamp = (ms: number | null | undefined): string => {
+  if (ms == null || !Number.isFinite(ms)) return '—'
+  const iso = new Date(ms + VN_OFFSET_MS).toISOString()
+  return `${iso.slice(5, 10)} ${iso.slice(11, 19)}`
+}
+
+/** The same moment in UTC, for a tooltip beside the local one. */
+const utcStamp = (ms: number | null | undefined): string => {
+  if (ms == null || !Number.isFinite(ms)) return '—'
+  return `${new Date(ms).toISOString().slice(5, 19).replace('T', ' ')}Z`
+}
+
 /** `MM-DD HH:MMZ`, short enough for an axis label and a fills column. */
 const shortStamp = (ms: number | null | undefined): string => {
   if (ms == null || !Number.isFinite(ms)) return '—'
@@ -402,7 +425,7 @@ export function Desk() {
                 {bottomTab === 'fills' ? (
                   <FillsSection detail={live} openFill={pickedFill} onOpenFill={openFill} />
                 ) : (
-                  <ReasoningSection runId={activeId} />
+                  <ReasoningSection runId={activeId} detail={live} />
                 )}
               </div>
             </div>
@@ -820,7 +843,7 @@ function BottomTabs({ tab, onTab }: { tab: 'fills' | 'log'; onTab: (t: 'fills' |
  * at one entry per closed bar; a socket for something that moves every fifteen
  * minutes would be machinery for its own sake.
  */
-function ReasoningSection({ runId }: { runId: string | null }) {
+function ReasoningSection({ runId, detail }: { runId: string | null; detail: PaperRunDetail | null }) {
   const [data, setData] = useState<Reasoning | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -875,11 +898,15 @@ function ReasoningSection({ runId }: { runId: string | null }) {
       {data.decisions.length > 0 && (
         <>
           <SectionHead>
-            decisions <span className="text-muted-foreground/70 normal-case">— the book&rsquo;s own decider, one per closed bar</span>
+            decisions{' '}
+            <span className="text-muted-foreground/70 normal-case">
+              &mdash; one per closed bar, times in Vietnam (UTC+7). The model&rsquo;s own sentences quote UTC bar
+              stamps, because that is what its prompt shows it.
+            </span>
           </SectionHead>
           <ul className="mt-1 space-y-1">
             {data.decisions.map((d) => (
-              <DecisionRow key={`${d.bar_time}-${d.at}`} d={d} />
+              <DecisionRow key={`${d.bar_time}-${d.at}`} d={d} outcome={outcomeOf(d, detail)} />
             ))}
           </ul>
         </>
@@ -924,7 +951,22 @@ function SidePill({ side }: { side: string }) {
   )
 }
 
-function DecisionRow({ d }: { d: Decision }) {
+/**
+ * The trade a decision became, if it became one.
+ *
+ * A posted entry fills at the OPEN of the bar after the one it was decided on,
+ * so the trade's entry time is the decision's bar time plus one timeframe.
+ * Matched on that rather than on order, because the fills list is reversed for
+ * display and a refused or stood-aside bar leaves no trade at all.
+ */
+function outcomeOf(d: Decision, detail: PaperRunDetail | null): BacktestTrade | null {
+  if (!detail || d.side === 'NONE') return null
+  const step = TF_MS[detail.run.tf]
+  if (!step) return null
+  return (detail.fills ?? []).find((f) => f.entryTime === d.bar_time + step) ?? null
+}
+
+function DecisionRow({ d, outcome }: { d: Decision; outcome: BacktestTrade | null }) {
   const [open, setOpen] = useState(false)
   return (
     <li className="border-border/60 rounded-sm border">
@@ -934,17 +976,44 @@ function DecisionRow({ d }: { d: Decision }) {
         aria-expanded={open}
         className="hover:bg-accent/40 focus-visible:ring-ring flex w-full items-start gap-2 px-2 py-1 text-left focus-visible:ring-2 focus-visible:ring-inset focus-visible:outline-none"
       >
-        <span className="num text-muted-foreground shrink-0 text-[11px]">{shortStamp(d.bar_time)}</span>
+        <span
+          className="num text-muted-foreground shrink-0 text-[11px]"
+          title={`bar ${utcStamp(d.bar_time)} · answered ${utcStamp(d.at)}`}
+        >
+          {vnStamp(d.at)}
+        </span>
         <SidePill side={d.side} />
         <span className="min-w-0 flex-1 text-[12px] leading-snug">{d.reason || <span className="text-muted-foreground">(no reason given)</span>}</span>
+        {outcome && (
+          <span
+            className={cn('num shrink-0 rounded-sm px-1 text-[10px]', outcome.pnlUsd >= 0 ? 'bg-lc/15 text-lc' : 'bg-lp/15 text-lp')}
+            title={`closed ${utcStamp(outcome.exitTime)} at ${outcome.exitPrice} — ${outcome.exitReason}`}
+          >
+            {signedR(outcome.r)}
+          </span>
+        )}
         <span className="num text-muted-foreground/70 shrink-0 text-[10px]">
           {(d.latency_ms / 1000).toFixed(1)}s
         </span>
       </button>
       {open && (
         <div className="border-border/60 space-y-1 border-t px-2 py-1.5 text-[11px]">
+          {outcome && (
+            <p className="text-[11px]">
+              <span className="text-muted-foreground">became: </span>
+              <span className="num">{quote(outcome.entryPrice)}</span>
+              <span className="text-muted-foreground"> → </span>
+              <span className="num">{quote(outcome.exitPrice)}</span>
+              <span className="text-muted-foreground"> at {vnStamp(outcome.exitTime)} · </span>
+              <span className="text-muted-foreground">{outcome.exitReason.toLowerCase().replace(/_/g, ' ')} · </span>
+              <span className={cn('num', outcome.pnlUsd >= 0 ? 'text-lc' : 'text-lp')}>
+                {signedR(outcome.r)}
+              </span>
+              <span className="text-muted-foreground/60"> · held {Math.round(outcome.holdMs / 60000)} min</span>
+            </p>
+          )}
           <p className="text-muted-foreground">
-            <span className="num">{d.model}</span> · decided {shortStamp(d.at)} ·{' '}
+            <span className="num">{d.model}</span> · decided {vnStamp(d.at)} ·{' '}
             {/* The state that matters is whether this reached a book, and why not. */}
             {d.dry_run
               ? 'dry run — nothing was posted'
@@ -978,7 +1047,7 @@ function ConsultationRow({ c }: { c: Consultation }) {
         aria-expanded={open}
         className="hover:bg-accent/40 focus-visible:ring-ring flex w-full items-start gap-2 px-2 py-1 text-left focus-visible:ring-2 focus-visible:ring-inset focus-visible:outline-none"
       >
-        <span className="num text-muted-foreground shrink-0 text-[11px]">{shortStamp(c.at)}</span>
+        <span className="num text-muted-foreground shrink-0 text-[11px]" title={utcStamp(c.at)}>{vnStamp(c.at)}</span>
         <span
           className={cn(
             'num shrink-0 rounded-sm border px-1 text-[10px]',
