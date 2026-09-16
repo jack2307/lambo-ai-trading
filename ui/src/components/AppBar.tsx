@@ -276,6 +276,15 @@ function BrokerCaption({
       {a.server && <span className="text-muted-foreground/60"> &middot; {a.server}</span>}
       {money && <span className="num"> &middot; {money}</span>}
       {a.dry_run && <span className="text-muted-foreground/60"> &middot; dry run, nothing is sent</span>}
+      {/* An account trading without an entry in config/accounts.toml is the
+          exact thing the registry exists to make visible, so it is said on the
+          bar rather than left to be noticed. */}
+      {!a.configured && (
+        <span className="text-caution" title="No [[account]] block claims this login. Add one to config/accounts.toml.">
+          {' '}
+          &middot; not in the registry
+        </span>
+      )}
       {!chosen && live.length > 1 && (
         <span className="text-muted-foreground/60"> &middot; +{live.length - 1} more</span>
       )}

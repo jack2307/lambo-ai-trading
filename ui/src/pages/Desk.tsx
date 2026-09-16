@@ -39,7 +39,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { PriceChart, type ActiveIndicator } from '@/components/PriceChart'
 import { Skeleton } from '@/components/ui/skeleton'
 import type { Book } from '@/App'
-import { api, type Bar, type BacktestTrade, type LiveBar, type PaperEvent, type PaperRun, type PaperRunDetail } from '@/lib/api'
+import { api, type BacktestTrade, type Bar, type LiveBar, type PaperBroker, type PaperEvent, type PaperRun, type PaperRunDetail } from '@/lib/api'
 import { clock, num } from '@/lib/format'
 import { useTicks } from '@/lib/ticks'
 import { ClaudeMark, DeepSeekMark, OpenAIMark } from '@/components/BrandMarks'
@@ -285,9 +285,18 @@ const isStale = (run: PaperRun, now: number) =>
  */
 const BROKER_STALE_MS = 45_000
 
-/** This run's mirror into the SELECTED account, if it is still reporting. */
-const brokerLive = (run: PaperRun, now: number, login: number | null): PaperRun['broker'] =>
-  run.broker && run.broker.login === login && now - run.broker.at < BROKER_STALE_MS ? run.broker : null
+/**
+ * This run's mirror into the SELECTED account, if it is still reporting.
+ *
+ * Picked by login out of however many accounts carry this book. A book can run
+ * on several at once, and each keeps its own record - the whole point of
+ * showing one account at a time is that their fills differ.
+ */
+const brokerLive = (run: PaperRun, now: number, login: number | null): PaperBroker | null => {
+  if (login == null) return null
+  const b = run.brokers?.find((x) => x.login === login)
+  return b && now - b.at < BROKER_STALE_MS ? b : null
+}
 
 /** Money in the BROKER's currency, which is not the paper book's. */
 function brokerMoney(v: number | null | undefined, currency: string | null | undefined): string {
@@ -1443,7 +1452,7 @@ function markToLive(
  * this badge - 100 lots against a $10k account - was a book bug, and a reader
  * who sees only "blocked" has to go and read a log to find that out.
  */
-function BrokerBadge({ broker }: { broker: PaperRun['broker'] }) {
+function BrokerBadge({ broker }: { broker: PaperBroker | null }) {
   if (!broker) return null
   const pos = broker.position
   if (pos) {

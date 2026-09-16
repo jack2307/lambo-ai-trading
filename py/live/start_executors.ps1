@@ -144,8 +144,6 @@ try {
         exit 1
     }
 
-    $logs = Join-Path $Root 'data\paper\logs'
-    New-Item -ItemType Directory -Force -Path $logs | Out-Null
     $started = 0
     $wanted = 0
 
@@ -179,7 +177,7 @@ try {
             # The kill switch the executor itself watches. Left in place here
             # rather than cleared: a book stopped by hand stays stopped until
             # someone deletes the file on purpose.
-            $stop = Join-Path $Root "data\paper\$run\STOP"
+            $stop = Join-Path $Root "data\live\$($acct.id)\$run\STOP"
             if (Test-Path $stop) {
                 Write-Host "  skipping $run - a STOP file is present; delete it to run this book live"
                 continue
@@ -195,12 +193,19 @@ try {
             }
 
             $wanted++
+            # Everything one account writes about one book lives together,
+            # stdout included. Two accounts mirroring the same book used to
+            # share exec_<run>.out and overwrite each other's record.
+            $here = Join-Path $Root "data\live\$($acct.id)\$run"
+            New-Item -ItemType Directory -Force -Path $here | Out-Null
+
             $args = @('py/live/mt5_executor.py', "--run=$run", "--terminal=$($acct.terminal)",
-                      "--login=$($acct.login)", "--symbol=$sym", "--lot-scale=$($acct.lot_scale)")
+                      "--login=$($acct.login)", "--account=$($acct.id)", "--symbol=$sym",
+                      "--lot-scale=$($acct.lot_scale)")
             if ($dry) { $args += '--dry-run' }
             Start-Process -FilePath $Python -ArgumentList $args -WorkingDirectory $Root -WindowStyle Hidden `
-                -RedirectStandardOutput (Join-Path $logs "exec_$run.out") `
-                -RedirectStandardError (Join-Path $logs "exec_$run.err")
+                -RedirectStandardOutput (Join-Path $here 'exec.out') `
+                -RedirectStandardError (Join-Path $here 'exec.err')
             Write-Host "  mirroring $run -> $sym at x$($acct.lot_scale)"
             $started++
         }
@@ -211,7 +216,7 @@ try {
         Where-Object { $_.CommandLine -like '*mt5_executor.py*' })
     Write-Host "executors now running: $($running.Count) (launched $started of $wanted)"
     if ($running.Count -lt $wanted) {
-        Write-Host "one or more exited immediately - read data\paper\logs\exec_*.err; the usual cause is"
+        Write-Host "one or more exited immediately - read data\live\<account>\<book>\exec.err; the usual cause is"
         Write-Host "the terminal not being logged into the account the registry names, which the"
         Write-Host "executor refuses by design."
     }

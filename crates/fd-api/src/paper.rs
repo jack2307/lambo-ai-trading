@@ -380,14 +380,32 @@ fn resolve<'a>(registry: &'a Registry, config: &PaperConfig, news_currencies: &[
 
 /* ---------------- persistence ---------------- */
 
-/// The executor's last look at the broker, if one has ever run this book.
+/// Every account that has mirrored this book, newest snapshot first.
 ///
-/// Absent, unreadable and malformed are all the same answer - `None` - on
-/// purpose: this is a view of somebody else's file, and no state of it should
-/// be able to fail a status request for every other book.
-fn broker_of(data: &Path, id: &str) -> Option<BrokerDto> {
-    let text = std::fs::read_to_string(run_dir(data, id).join("broker.json")).ok()?;
-    serde_json::from_str(&text).ok()
+/// A list and not an option, because one book can legitimately run on several
+/// accounts at once - a demo and a small real one side by side is the
+/// comparison most worth making - and the single `broker.json` this replaced
+/// let the second executor overwrite the first's record.
+///
+/// Absent, unreadable and malformed are all the same answer - skipped - on
+/// purpose: this is a view of somebody else's files, and no state of them
+/// should be able to fail a status request for every other book.
+fn brokers_of(data: &Path, id: &str) -> Vec<BrokerDto> {
+    let Ok(entries) = std::fs::read_dir(data.join("live")) else { return Vec::new() };
+    let mut out: Vec<BrokerDto> = entries
+        .flatten()
+        .filter_map(|e| {
+            let text = std::fs::read_to_string(e.path().join(id).join("broker.json")).ok()?;
+            let mut dto: BrokerDto = serde_json::from_str(&text).ok()?;
+            // The directory is the authority on whose record this is. The file
+            // names its account too, but a file that has been moved or copied
+            // would then claim to belong somewhere it does not.
+            dto.account = e.file_name().to_string_lossy().into_owned();
+            Some(dto)
+        })
+        .collect();
+    out.sort_by(|a, b| b.at.cmp(&a.at));
+    out
 }
 
 fn run_dir(data: &Path, id: &str) -> PathBuf {
@@ -834,10 +852,11 @@ pub struct RunStatus {
     /// gaps, refusals, guard closes, stopped). The lines themselves are on
     /// `GET /api/paper/run/{id}`.
     pub events: usize,
-    /// The broker account this book is mirrored into, or `null` when no
-    /// executor has ever run it. See [`BrokerDto`] - in particular that a
-    /// present `broker` is not a connected one; read its `at`.
-    pub broker: Option<BrokerDto>,
+    /// The broker accounts this book is mirrored into - empty when no
+    /// executor has ever run it, and more than one when it runs on several
+    /// accounts at once. See [`BrokerDto`]: a present entry is not a connected
+    /// one, so read its `at`.
+    pub brokers: Vec<BrokerDto>,
 }
 
 /// What the broker's account looks like for one book, as the executor last saw it.
@@ -855,6 +874,9 @@ pub struct RunStatus {
 #[derive(Debug, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct BrokerDto {
+    /// The account id this record belongs to - the directory it was read from,
+    /// and `login-<n>` for an executor started outside the registry.
+    pub account: String,
     /// When the executor last looked, epoch ms.
     pub at: i64,
     pub login: Option<i64>,
@@ -1110,7 +1132,7 @@ fn status_of(data: &Path, run: &PaperRun, rules: &TradingRules, guards: Option<&
         last_fills: book.trades[skip..].iter().map(TradeDto::from).collect(),
         equity_curve: book.equity_curve.len(),
         events: events_of(data, &run.config.id()).len(),
-        broker: broker_of(data, &run.config.id()),
+        brokers: brokers_of(data, &run.config.id()),
     }
 }
 
@@ -1717,11 +1739,11 @@ pub async fn accounts(State(state): State<Arc<AppState>>) -> Result<Json<Account
     let mut seen_live: BTreeMap<i64, bool> = BTreeMap::new();
     for run in runs.values() {
         let id = run.config.id();
-        let Some(b) = broker_of(&state.data, &id) else { continue };
+        for b in brokers_of(&state.data, &id) {
         let Some(login) = b.login else { continue };
         let entry = by_login.entry(login).or_insert_with(|| AccountDto {
-            id: format!("login-{login}"),
-            label: format!("login {login}"),
+            id: b.account.clone(),
+            label: b.account.clone(),
             login,
             server: b.server.clone(),
             configured: false,
@@ -1765,7 +1787,8 @@ pub async fn accounts(State(state): State<Arc<AppState>>) -> Result<Json<Account
         if b.position.is_some() {
             entry.positions += 1;
         }
-        entry.mirroring.push(id);
+        entry.mirroring.push(id.clone());
+        }
     }
     Ok(Json(AccountsResponse { accounts: by_login.into_values().collect() }))
 }

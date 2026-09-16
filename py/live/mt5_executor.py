@@ -164,6 +164,15 @@ def main() -> int:
     ap.add_argument("--terminal", required=True, help="path to the DEMO terminal64.exe")
     ap.add_argument("--login", type=int, required=True, help="the demo account number the terminal must be logged into")
     ap.add_argument("--symbol", required=True)
+    # Which account's record this is. Everything this program writes lives
+    # under it, because two accounts may mirror the SAME book - a demo and a
+    # small real one, running one strategy side by side, is the comparison most
+    # worth making - and a single file per book would have the second executor
+    # silently overwrite the first's fills, slippage and account snapshot.
+    #
+    # Defaulted from the login rather than required, so an executor started by
+    # hand still lands somewhere sane and distinct.
+    ap.add_argument("--account", default="", help="account id from config/accounts.toml")
     ap.add_argument("--api", default="http://127.0.0.1:8138")
     ap.add_argument("--poll", type=float, default=15.0)
     ap.add_argument("--lot-scale", type=float, default=1.0, help="terminal volume = book lots x this")
@@ -183,8 +192,25 @@ def main() -> int:
     ap.add_argument("--dry-run", action="store_true", help="reconcile and log, send nothing")
     args = ap.parse_args()
 
-    out = ROOT / "data" / "paper" / args.run / "executor.jsonl"
-    stop_file = ROOT / "data" / "paper" / args.run / "STOP"
+    # data/live/<account>/<run>/ - the live side, kept out of data/paper
+    # entirely. The paper book is one thing that happened; what each account
+    # did with it is a separate record per account, and the directory layout
+    # says so rather than a naming convention inside one folder.
+    account = args.account or f"login-{args.login}"
+    here = ROOT / "data" / "live" / account / args.run
+    here.mkdir(parents=True, exist_ok=True)
+    out = here / "executor.jsonl"
+
+    # Two kill switches, and both are honoured.
+    #
+    #   data/live/<account>/<run>/STOP  stops this book on THIS account
+    #   data/paper/<run>/STOP           stops this book on EVERY account
+    #
+    # The second is the one to reach for when a book itself is wrong; the first
+    # when one account should sit out. Neither is cleared by the launcher: a
+    # book stopped by hand stays stopped until someone deletes the file.
+    stop_file = here / "STOP"
+    stop_all = ROOT / "data" / "paper" / args.run / "STOP"
 
     try:
         import MetaTrader5 as mt5  # type: ignore
@@ -280,7 +306,7 @@ def main() -> int:
                 req["tp"] = float(book_open["target"])
             return send(req, f"open {book_open['side'].lower()} {vol}")
 
-        snap_path = ROOT / "data" / "paper" / args.run / "broker.json"
+        snap_path = here / "broker.json"
         blocked = None  # why the last open was refused, if it was
 
         def snapshot(held, book_open) -> None:
@@ -290,6 +316,7 @@ def main() -> int:
             pos = held[0] if held else None
             payload = {
                 "at": int(time.time() * 1000),
+                "account": account,
                 "login": getattr(acc, "login", None),
                 "server": getattr(acc, "server", None),
                 "demo": getattr(acc, "trade_mode", None) == mt5.ACCOUNT_TRADE_MODE_DEMO,
@@ -331,10 +358,11 @@ def main() -> int:
             write_snapshot(snap_path, payload)
 
         while True:
-            if stop_file.exists():
+            if stop_file.exists() or stop_all.exists():
+                which = "STOP file" if stop_file.exists() else "desk-wide STOP file"
                 for p in positions():
-                    close(p, "STOP file")
-                log(out, "stopped", reason="STOP file present")
+                    close(p, which)
+                log(out, "stopped", reason=f"{which} present")
                 return 0
             try:
                 run = read_status(args.api, args.run)

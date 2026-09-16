@@ -328,19 +328,23 @@ export interface PaperRun {
   equity_curve?: number
   events?: number
   /**
-   * The broker account this book is mirrored into, as the executor last saw
-   * it — `null` when no executor has ever run this book.
+   * The broker accounts this book is mirrored into, newest snapshot first —
+   * empty when no executor has ever run it, and longer than one when the book
+   * runs on several accounts at once.
    *
-   * A present `broker` is NOT a connected one. The API is Rust and cannot ask
-   * a MetaTrader terminal anything, so this is a file the executor writes each
+   * A present entry is NOT a connected one. The API is Rust and cannot ask a
+   * MetaTrader terminal anything, so each is a file the executor writes every
    * poll and the API serves back; when the executor stops, the file stays. Read
-   * `at` before believing any number here.
+   * `at` before believing any number in it.
    */
-  broker: null | PaperBroker
+  brokers: PaperBroker[]
 }
 
 /** What the broker's account holds for one book, as the executor last saw it. */
 export interface PaperBroker {
+  /** Which account's record this is — the registry id, or `login-<n>` for an
+   *  executor started outside the registry. */
+  account: string
   /** When the executor last looked, epoch ms. The freshness of everything else. */
   at: number
   login: number | null

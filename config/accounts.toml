@@ -24,6 +24,17 @@
 #   3. Add an `[[account]]` block here.
 #   4. `powershell -File py\live\start_executors.ps1 -Account <id>`
 #
+# Each account keeps its OWN record of every book it mirrors, under
+# data/live/<id>/<book>/ - the fills, the slippage, the account snapshot, the
+# executor's own output, and a STOP file that pauses that book on that account
+# alone. This matters because one book may run on several accounts at once,
+# which is the comparison most worth making: the same rule, a demo and a small
+# real account, and the difference is the fill. A shared file per book would
+# have let the second account overwrite the first's record.
+#
+# data/paper/<book>/STOP still stops a book on EVERY account - reach for it
+# when the book itself is wrong rather than one account's execution.
+#
 # No password belongs in this file. The terminal holds its own credentials;
 # the executor only ever attaches to a terminal that is ALREADY logged in, and
 # refuses outright if the account it finds is not the `login` named here.
