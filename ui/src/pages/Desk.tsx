@@ -292,6 +292,54 @@ const BROKER_STALE_MS = 45_000
  * on several at once, and each keeps its own record - the whole point of
  * showing one account at a time is that their fills differ.
  */
+/**
+ * How many closed bars a model may miss before its book reads as stopped.
+ *
+ * Lower than the Telegram watch's three, on purpose. The two have different
+ * costs of being wrong: an alert that fires early trains someone to ignore the
+ * channel, while a row that says "stopped" one bar early costs nothing and is
+ * corrected the moment the model answers again. A display can afford to be
+ * quicker than an alarm.
+ *
+ * A model that DECLINES still posts, so its badge moves on every bar it sees.
+ * Missing two closes is not a slow answer.
+ */
+const DECIDER_STALE_BARS = 1.5
+
+/**
+ * The books whose decider has gone quiet.
+ *
+ * The status pill says `fed`, and `fed` is about the FEED - bars are arriving.
+ * A book can be fed perfectly while the model driving it is dead, and until
+ * this existed the two looked identical on the desk: the AI books sat there
+ * wearing their model badges for an hour after the processes were stopped.
+ *
+ * A coin book is judged by its model rather than by itself. Its own badge only
+ * moves when it trades, so its silence means nothing on its own - but it is
+ * driven by the same process as the model it controls, so when that model
+ * stops, so has the coin. The `<model>-coin` naming is this repo's own
+ * convention and the `--control` flag that creates the pair uses it; a coin
+ * whose sibling is not found is left unjudged rather than guessed at.
+ */
+function silentBooks(runs: PaperRun[]): Set<string> {
+  const out = new Set<string>()
+  for (const r of runs) {
+    const d = r.decider
+    if (!d || d.last === 'coin' || !d.last_at || !r.last_bar_time) continue
+    const step = TF_MS[r.tf] ?? 900_000
+    // Measured against the book's own last CLOSED BAR rather than the wall
+    // clock. A model answers at every close, so the gap between the last close
+    // and its last word is the number of closes it missed — and over a weekend
+    // or a dead feed no bar closes, so nothing is called stopped merely because
+    // time passed.
+    if (r.last_bar_time - d.last_at <= step * DECIDER_STALE_BARS) continue
+    out.add(r.id)
+    const coin = `${r.id}-coin`
+    if (runs.some((x) => x.id === coin)) out.add(coin)
+  }
+  return out
+}
+
 const brokerLive = (run: PaperRun, now: number, login: number | null): PaperBroker | null => {
   if (login == null) return null
   const b = run.brokers?.find((x) => x.login === login)
@@ -803,6 +851,8 @@ function RunsList({
     return { ...run, live: tick }
   }
 
+  const silent = useMemo(() => silentBooks(runs), [runs])
+
   const rowRefs = useRef<(HTMLButtonElement | null)[]>([])
 
   // The same walk the fills table has: ↑/↓ move the cursor, Enter opens.
@@ -876,7 +926,7 @@ function RunsList({
             </span>
             <span className="mt-0.5 flex items-end gap-2 text-[10px] leading-tight">
               <span className="text-muted-foreground min-w-0 flex-1 truncate">
-                <DeciderTag run={run} />
+                <DeciderTag run={run} silent={silent.has(run.id)} />
                 <span className="num">{run.strategy}</span>
                 <span className="text-muted-foreground/60"> · {run.market}:{run.tf}</span>
                 <span className="text-muted-foreground/60">
@@ -958,7 +1008,7 @@ function houseOf(name: string | undefined): 'openai' | 'claude' | 'deepseek' | n
  * the control, the campaign is the difference between it and the model, and a
  * badge that made them look alike would hide the one comparison that matters.
  */
-function DeciderTag({ run }: { run: PaperRun }) {
+function DeciderTag({ run, silent = false }: { run: PaperRun; silent?: boolean }) {
   if (run.strategy !== 'external' && !run.decider) return null
 
   const names = Object.keys(run.decider?.decisions ?? {})
@@ -971,11 +1021,14 @@ function DeciderTag({ run }: { run: PaperRun }) {
   const text = last ? (coin ? 'coin' : last) : 'idle'
   const aside = run.decider?.stood_aside ?? 0
   const spoke = last ? `${total} trade${total === 1 ? '' : 's'}, ${aside} stood aside` : ''
-  const title = mixed
-    ? `driven by ${names.length} deciders (${names.map((n) => `${n} ${run.decider?.decisions[n]}`).join(', ')}) — this book's net is not any one of their records`
-    : last
-      ? `${last}: ${spoke}. Standing aside is a real answer; it keeps the badge alive without a trade.`
-      : 'externally driven; nothing has posted to it yet'
+  const quiet = run.decider?.last_at ? Math.round((Date.now() - run.decider.last_at) / 60000) : null
+  const title = silent
+    ? `${last} has not answered for ${quiet} min. The feed is fine and the book is still being fed bars — what has stopped is the thing that decides. Nothing will be traded on this book until it comes back.`
+    : mixed
+      ? `driven by ${names.length} deciders (${names.map((n) => `${n} ${run.decider?.decisions[n]}`).join(', ')}) — this book's net is not any one of their records`
+      : last
+        ? `${last}: ${spoke}. Standing aside is a real answer; it keeps the badge alive without a trade.`
+        : 'externally driven; nothing has posted to it yet'
 
   // Gradients are inline rather than Tailwind classes because the stops are
   // brand values, not theme tokens — putting #CC785C in the token set would
@@ -992,7 +1045,10 @@ function DeciderTag({ run }: { run: PaperRun }) {
     // wears.
     openai: { rgb: '255,255,255', text: '#F3F5F7' },
   } as const
-  const tone = house ? SKINS[house] : null
+  // A stopped model loses its house colour entirely. Dimming the brand tint
+  // would still read as "this is the DeepSeek book, slightly faded"; dropping
+  // it reads as "this book is not being driven", which is the true statement.
+  const tone = silent ? null : house ? SKINS[house] : null
   const skin = tone
     ? {
         backgroundImage: `linear-gradient(100deg, rgba(${tone.rgb},0.32), rgba(${tone.rgb},0.06))`,
@@ -1007,7 +1063,9 @@ function DeciderTag({ run }: { run: PaperRun }) {
       style={skin}
       className={cn(
         'mr-1 inline-flex items-center gap-1 rounded-sm border px-1 py-px align-middle text-[9px] tracking-wide uppercase',
-        !skin &&
+        silent && 'border-caution/40 bg-caution/10 text-caution',
+        !silent &&
+          !skin &&
           (mixed
             ? 'border-caution/40 bg-caution/10 text-caution'
             : coin
@@ -1017,11 +1075,19 @@ function DeciderTag({ run }: { run: PaperRun }) {
                 : 'border-muted-foreground/25 bg-muted-foreground/5 text-muted-foreground/70'),
       )}
     >
-      {house === 'openai' && <OpenAIMark className="size-[10px] shrink-0" />}
-      {house === 'claude' && <ClaudeMark className="size-[10px] shrink-0" />}
-      {house === 'deepseek' && <DeepSeekMark className="size-[10px] shrink-0" />}
-      {!house && !coin && <span aria-hidden>{mixed ? '\u26a0' : '\u25c6'}</span>}
+      {/* The house mark goes with the house colour when the model has
+          stopped: a book nothing is driving should not still be wearing a
+          vendor's logo. */}
+      {!silent && house === 'openai' && <OpenAIMark className="size-[10px] shrink-0" />}
+      {!silent && house === 'claude' && <ClaudeMark className="size-[10px] shrink-0" />}
+      {!silent && house === 'deepseek' && <DeepSeekMark className="size-[10px] shrink-0" />}
+      {silent && <span aria-hidden>{'\u23f8'}</span>}
+      {!silent && !house && !coin && <span aria-hidden>{mixed ? '\u26a0' : '\u25c6'}</span>}
       <span className="num normal-case">{text}</span>
+      {/* Named, not implied. "stopped" beside the model is the one word
+          that stops a reader taking the row's numbers as something still
+          being added to. */}
+      {silent && <span className="normal-case">stopped</span>}
     </span>
   )
 }
