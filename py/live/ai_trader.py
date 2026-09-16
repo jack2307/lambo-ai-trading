@@ -230,7 +230,14 @@ def main() -> int:
             decision = parse(text)
         except Exception as e:  # noqa: BLE001
             text, ms = f"ERROR: {type(e).__name__}: {e}", 0
-            decision = {"side": "NONE", "reason": "the model was unreachable; stood aside"}
+            # `unreachable` is NOT a stand-aside. It is marked so the poster
+            # below refuses to tell the desk this book was consulted: a model
+            # that is down did not decline, and recording it as a decline is
+            # the one lie this campaign cannot survive. `last_at` going quiet
+            # is the true signal that a process has died, and posting on
+            # failure destroyed exactly that signal for eight hours.
+            decision = {"side": "NONE", "unreachable": True,
+                        "reason": f"the model was unreachable; NOT a decision: {type(e).__name__}"}
 
         decided_on = last_time
         posted = False
@@ -247,7 +254,7 @@ def main() -> int:
             # book, but it is the only thing separating a model that is
             # thinking and declining from a model that stopped running an hour
             # ago — from the outside both show zero trades.
-            if not args.dry_run:
+            if not args.dry_run and not decision.get("unreachable"):
                 try:
                     post_json(f"{args.api}/api/paper/intent", dict(
                         run=args.run, side="NONE", bar_time=last_time,

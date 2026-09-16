@@ -366,7 +366,15 @@ def ask_cli(prompt: str, model: str, timeout: float) -> str:
     except subprocess.TimeoutExpired as e:
         raise RuntimeError(f"{model} did not answer within {timeout:.0f}s") from e
     if done.returncode != 0:
-        raise RuntimeError(f"claude exited {done.returncode}: {done.stderr.decode('utf-8', 'replace')[:300]}")
+        # BOTH streams. This branch reported stderr alone, and when the CLI
+        # started failing it failed with an EMPTY stderr — thirty-two dead
+        # calls in a row and not one word anywhere saying why. An error path
+        # that can throw away the only evidence is not an error path.
+        blob = (done.stdout.decode("utf-8", "replace") + chr(10)
+                + done.stderr.decode("utf-8", "replace")).strip()
+        raise RuntimeError(
+            f"claude exited {done.returncode} [{exe}]: {blob[:400] if blob else 'both streams empty'}"
+        )
     try:
         out = json.loads(done.stdout.decode("utf-8", "replace"))
     except ValueError as e:
