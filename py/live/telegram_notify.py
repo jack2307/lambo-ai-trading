@@ -59,6 +59,14 @@ TF_MS = {"1m": 60_000, "5m": 300_000, "15m": 900_000, "1h": 3_600_000}
 # still happening instead of afterwards.
 DECIDER_STALE_BARS = 3
 
+# How long a mirror may go quiet before it counts as stopped.
+#
+# An executor writes its snapshot every poll (15 s), so three missed writes is a
+# dead process rather than a slow one. Absolute rather than relative to other
+# books, unlike the API's own `mirroring` count: here the question is "has this
+# stopped", and if the whole set died at once every one of them should say so.
+MIRROR_STALE_MS = 60_000
+
 
 # --------------------------------------------------------------- the secret
 
@@ -216,6 +224,24 @@ def decider_gone(run: dict, now_ms: float) -> bool:
 
 # --------------------------------------------------------------- the watch
 
+def mirrors(run: dict, now_ms: float) -> list:
+    """This book's mirrors that are still reporting, freshest first."""
+    return [b for b in (run.get("brokers") or [])
+            if b.get("at") and (now_ms - b["at"]) < MIRROR_STALE_MS]
+
+
+def mirror_state(run: dict, now_ms: float) -> tuple:
+    """(how many mirrors are reporting, the first refusal among them).
+
+    A refusal is carried up verbatim. "The mirror is blocked" sends someone to
+    a log; "broker refused: 10027 AutoTrading disabled by client" sends them to
+    the button that fixes it.
+    """
+    live = mirrors(run, now_ms)
+    blocked = next((b["blocked"] for b in live if b.get("blocked")), None)
+    return len(live), blocked
+
+
 def changes(runs: list, state: dict, now_ms: float) -> list[str]:
     """What is worth waking someone for, and nothing else."""
     out: list[str] = []
@@ -230,6 +256,11 @@ def changes(runs: list, state: dict, now_ms: float) -> list[str]:
         open_pos = r.get("open") or None
         dead = is_dead(r, now_ms)
         mute = decider_gone(r, now_ms)
+        # How many accounts are mirroring this book right now, and whether any
+        # of them is being refused. `configured` is what the desk last saw, so
+        # a mirror that was there and is gone reads as a drop rather than as a
+        # book nobody ever mirrored.
+        live_mirrors, refused = mirror_state(r, now_ms)
 
         if not first_run:
             # A trade closed: the only line here that is about money.
@@ -270,6 +301,28 @@ def changes(runs: list, state: dict, now_ms: float) -> list[str]:
             elif was.get("mute") and not mute:
                 d = r.get("decider") or {}
                 out.append(f"\u2705 <b>{esc(rid)}</b> — <code>{esc(d.get('last'))}</code> is answering again.")
+            # The mirror stopped writing. Its own outage, separate from a
+            # dead feed and from a silent model: bars arrive, the model decides,
+            # the paper book moves, and the account does nothing. The book's
+            # positions are still protected by the stop and target the broker
+            # holds - what is lost is every trade from here on.
+            if was.get("mirrors", 0) > 0 and live_mirrors == 0:
+                out.append(
+                    f"\U0001f50c <b>{esc(rid)}</b> — the mirror has stopped reporting. "
+                    f"The book goes on deciding; the account will not follow it."
+                )
+            elif live_mirrors > was.get("mirrors", 0) and was.get("mirrors", -1) == 0:
+                out.append(f"\u2705 <b>{esc(rid)}</b> — the mirror is reporting again.")
+
+            # The broker refused an order. Said once per distinct reason, not
+            # once per poll: 10027 repeats every fifteen seconds for as long as
+            # a button stays off, and an alert channel that repeats itself is
+            # one nobody reads.
+            if refused and refused != was.get("refused"):
+                out.append(f"\u26d4 <b>{esc(rid)}</b> — {esc(refused)}")
+            elif was.get("refused") and not refused:
+                out.append(f"\u2705 <b>{esc(rid)}</b> — orders are going through again.")
+
             # The feed died, or came back. Only on the transition.
             if dead and not was.get("dead"):
                 behind = (now_ms - (r.get("last_bar_time") or now_ms)) / 60000
@@ -280,7 +333,7 @@ def changes(runs: list, state: dict, now_ms: float) -> list[str]:
         seen[rid] = {
             "trades": trades, "net": net, "open": bool(open_pos),
             "guards": sum((r.get("closed_by_guard") or {}).values()), "dead": dead,
-            "mute": mute,
+            "mute": mute, "mirrors": live_mirrors, "refused": refused,
         }
 
     for gone in set(seen) - {r["id"] for r in runs}:

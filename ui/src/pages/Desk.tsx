@@ -1535,6 +1535,19 @@ function BrokerBadge({ broker }: { broker: PaperBroker | null }) {
       </span>
     )
   }
+  // Sitting a trade out is the guard working, not a fault, so it is stated
+  // quietly and in the muted palette. Showing it in the same red as a broker
+  // refusal would teach the reader to ignore both.
+  if (broker.standing_out) {
+    return (
+      <span
+        className="num text-muted-foreground border-border mr-1 inline-flex shrink-0 items-center rounded-sm border px-1 py-px text-[10px]"
+        title={`The mirror is not copying this trade: ${broker.standing_out}`}
+      >
+        sitting out
+      </span>
+    )
+  }
   if (broker.book_side) {
     return (
       <span

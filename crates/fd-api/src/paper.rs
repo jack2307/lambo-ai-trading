@@ -919,8 +919,14 @@ pub struct BrokerDto {
     #[serde(default)]
     pub fills: Vec<BrokerFillDto>,
     pub position: Option<BrokerPositionDto>,
-    /// Why the last open was refused, if it was.
+    /// Something is wrong and a person has to act: the broker refused the
+    /// order, or a desk guard stopped one that was wrong by a factor.
     pub blocked: Option<String>,
+    /// The mirror is deliberately sitting this trade out - the book opened it
+    /// too long ago, or too far from here, to be worth copying. Working as
+    /// designed, and kept apart from `blocked` so that an alert on one is not
+    /// an alert on the other.
+    pub standing_out: Option<String>,
 }
 
 /// One trade the account actually completed.

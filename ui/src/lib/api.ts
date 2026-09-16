@@ -393,8 +393,13 @@ export interface PaperBroker {
     swap: number | null
     opened_at: number | null
   }
-  /** Why the last open was refused, if it was. */
+  /** Something is wrong and a person has to act — the broker refused the
+   *  order, or a desk guard stopped one that was wrong by a factor. */
   blocked: string | null
+  /** The mirror is deliberately sitting this trade out. Working as designed,
+   *  and kept apart from `blocked` so an alert on one is not an alert on the
+   *  other. */
+  standing_out: string | null
 }
 
 /**

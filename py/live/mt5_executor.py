@@ -261,6 +261,27 @@ def main() -> int:
     # stamp and the executor polls every 15 seconds inside it.
     ap.add_argument("--max-adopt-bars", type=float, default=1.0,
                     help="do not open a mirror for a book position older than this many bars")
+    # How far from the book's own entry this may fill, as a fraction of the
+    # trade's RISK.
+    #
+    # The bar limit above bounds time, and time is not what ruins the
+    # comparison - price is. On 2026-09-16 a book went short at 4356.33 and
+    # gold fell nineteen points inside two bars while every order came back
+    # 10027; each retry was priced afresh, all of them inside the bar limit, and
+    # the fill that eventually landed was at 4344.46. The book took 18.25 points
+    # and the account took 6.52 out of the same trade.
+    #
+    # Expressed in R rather than points because R is the unit the whole desk
+    # measures in, and because it scales itself: a quarter of the stop distance
+    # is the same distortion on gold as on EURUSD, and on a wide-stop trade as
+    # on a tight one.
+    #
+    # Symmetric on purpose. Refusing only the joins that went AGAINST the mirror
+    # would leave a sample of only the favourable ones, and the mirror would
+    # then beat the book by construction - the same bias as late joins, pointed
+    # the other way.
+    ap.add_argument("--max-join-r", type=float, default=0.25,
+                    help="do not open if the price has moved this far from the book's entry, in R")
     ap.add_argument("--dry-run", action="store_true", help="reconcile and log, send nothing")
     args = ap.parse_args()
 
@@ -327,6 +348,20 @@ def main() -> int:
             log(out, "order" if ok else "order-failed", action=what, retcode=getattr(result, "retcode", None),
                 comment=getattr(result, "comment", None), ticket=getattr(result, "order", None), deal=getattr(result, "deal", None),
                 price=getattr(result, "price", None), volume=request.get("volume"), requested=request.get("price"))
+            # Carried into the snapshot so it leaves this machine. A refusal
+            # that only ever reaches a log file is a book that quietly stopped
+            # trading: the desk goes on deciding, the paper P&L goes on moving,
+            # and the account does nothing. The one that prompted this was
+            # 10027 "AutoTrading disabled by client" - a button in the terminal,
+            # off by default, that refused thirty-six orders in a row while
+            # every other part of the system reported itself healthy.
+            if ok:
+                nonlocal_blocked(None)
+                nonlocal_standing_out(None)
+            else:
+                nonlocal_blocked(
+                    f"broker refused: {getattr(result, 'retcode', '?')} "
+                    f"{(getattr(result, 'comment', '') or mt5.last_error())}"[:160])
             return ok
 
         def close(pos, why: str) -> bool:
@@ -343,6 +378,15 @@ def main() -> int:
         def nonlocal_blocked(why) -> None:
             nonlocal blocked
             blocked = why
+
+        def nonlocal_standing_out(why) -> None:
+            # Kept apart from `blocked` on purpose. The mirror sitting out a
+            # trade the book opened too long ago is the guard working, it
+            # happens for the whole life of that position, and an alert channel
+            # that fires every fifteen seconds on correct behaviour is one
+            # nobody reads by morning.
+            nonlocal standing_out
+            standing_out = why
 
         TF_MS = {"1m": 60_000, "5m": 300_000, "15m": 900_000, "1h": 3_600_000}
 
@@ -361,10 +405,28 @@ def main() -> int:
             bars = (last - entry) / step
             return bars if bars > args.max_adopt_bars else None
 
+        def drifted(book_open: dict, price: float) -> float | None:
+            """How far this fill would be from the book's entry, in R, or None.
+
+            Signed so the record says WHICH WAY it drifted: positive is worse
+            for the mirror than the book got, negative is better. Both are
+            refused - see `--max-join-r` - but only one of them is the failure
+            people expect, and a log that collapsed them would hide the other.
+            """
+            entry, stop = book_open.get("entry_price"), book_open.get("stop")
+            if not entry or not stop:
+                return None
+            risk = abs(entry - stop)
+            if risk <= 0:
+                return None
+            adverse = (price - entry) if book_open.get("side") == "LONG" else (entry - price)
+            r = adverse / risk
+            return r if abs(r) > args.max_join_r else None
+
         def open_like(book_open: dict, run: dict) -> bool:
             late = too_old(book_open, run)
             if late is not None:
-                nonlocal_blocked(f"not joined: the book opened this {late:.0f} bars ago")
+                nonlocal_standing_out(f"the book opened this {late:.0f} bars ago")
                 log(out, "not-adopted", side=book_open.get("side"), lots=book_open.get("lots"),
                     book_entry=book_open.get("entry_price"), bars_old=round(late, 1),
                     limit=args.max_adopt_bars,
@@ -377,6 +439,17 @@ def main() -> int:
                 log(out, "clipped", asked=float(book_open["lots"]) * args.lot_scale, sending=vol,
                     volume_min=info.volume_min, volume_max=info.volume_max)
             price = tick.ask if is_long else tick.bid
+
+            off = drifted(book_open, price)
+            if off is not None:
+                nonlocal_standing_out(
+                    f"{price} is {off:+.2f}R from the book's entry {book_open.get('entry_price')}")
+                log(out, "not-adopted", side=book_open.get("side"), lots=book_open.get("lots"),
+                    book_entry=book_open.get("entry_price"), would_fill=price,
+                    drift_r=round(off, 2), limit=args.max_join_r,
+                    reason="the price has moved too far from the book's entry to mirror the same trade")
+                return False
+
             equity = getattr(mt5.account_info(), "equity", 0.0) or 0.0
             notional = notional_of(info, vol, price)
             if equity > 0 and notional > args.max_notional_ratio * equity:
@@ -423,13 +496,11 @@ def main() -> int:
                 req["sl"] = float(book_open["stop"])
             if book_open.get("target") is not None:
                 req["tp"] = float(book_open["target"])
-            ok = send(req, f"open {book_open['side'].lower()} {vol}")
-            if ok:
-                nonlocal_blocked(None)
-            return ok
+            return send(req, f"open {book_open['side'].lower()} {vol}")
 
         snap_path = here / "broker.json"
-        blocked = None  # why the last open was refused, if it was
+        blocked = None   # something is wrong and a person has to act
+        standing_out = None  # working as designed: this trade is being sat out
 
         def snapshot(held, book_open) -> None:
             acc = mt5.account_info()
@@ -479,6 +550,7 @@ def main() -> int:
                     "opened_at": int(pos.time) * 1000,
                 },
                 "blocked": blocked,
+                "standing_out": standing_out,
             }
             write_snapshot(snap_path, payload)
 
