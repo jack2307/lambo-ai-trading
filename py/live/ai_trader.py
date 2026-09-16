@@ -454,10 +454,11 @@ def main() -> int:
         )
 
         try:
-            text, ms = ask(prompt, args.model, provider, key, args.timeout)
+            usage = {}
+            text, ms = ask(prompt, args.model, provider, key, args.timeout, usage)
             decision = parse(text)
         except Exception as e:  # noqa: BLE001
-            text, ms = f"ERROR: {type(e).__name__}: {e}", 0
+            text, ms, usage = f"ERROR: {type(e).__name__}: {e}", 0, {}
             # `unreachable` is NOT a stand-aside. It is marked so the poster
             # below refuses to tell the desk this book was consulted: a model
             # that is down did not decline, and recording it as a decline is
@@ -527,9 +528,15 @@ def main() -> int:
         else:
             print(f"{stamp} would post {decision['side']} (dry run)  {decision['reason'][:70]}", flush=True)
 
+        from advisor import cost_of
+        cost = cost_of(args.model, usage) if usage else None
         log(args.run, {
             "at": int(time.time() * 1000), "bar_time": last_time, "model": args.model,
             "prompt": prompt, "response": text, "latency_ms": ms,
+            # What the call actually spent. `cost_usd` is null for a plan: that
+            # call is not free, it draws on a quota, and printing $0.00 beside
+            # it would claim something untrue.
+            "usage": usage, "cost_usd": cost,
             "decision": decision, "posted": posted, "refused_locally": refused,
             "dry_run": bool(args.dry_run),
         })

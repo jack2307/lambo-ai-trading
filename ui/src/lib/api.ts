@@ -517,6 +517,20 @@ export interface Decision {
    * `data/paper/<run>/decisions.jsonl`, which is the replayable record.
    */
   prompt_chars: number
+  /**
+   * What the call spent, as the provider reported it. `tokens_total` alone
+   * where a provider gives only one number; the split where it exists; null
+   * where it reported nothing, rather than a zero nobody measured.
+   */
+  tokens_in: number | null
+  tokens_cached: number | null
+  tokens_out: number | null
+  tokens_total: number | null
+  /**
+   * Dollars, for a model billed per token. **Null for a subscription** — a plan
+   * call is not free, it draws on a quota, and $0.00 beside it would be a lie.
+   */
+  cost_usd: number | null
 }
 
 /** One agent's turn in an advisor consultation. */

@@ -927,7 +927,7 @@ function ReasoningSection({ runId, detail }: { runId: string | null; detail: Pap
       {data.decisions.length > 0 && (
         <>
           <SectionHead>
-            decisions{' '}
+            decisions <TokenTotal decisions={data.decisions} />{' '}
             <span className="text-muted-foreground/70 normal-case">
               &mdash; one per closed bar, times in Vietnam (UTC+7). The model&rsquo;s own sentences quote UTC bar
               stamps, because that is what its prompt shows it.
@@ -953,6 +953,33 @@ function ReasoningSection({ runId, detail }: { runId: string | null; detail: Pap
         </>
       )}
     </div>
+  )
+}
+
+/** What the decisions on screen have cost between them. */
+function TokenTotal({ decisions }: { decisions: Decision[] }) {
+  let tokens = 0
+  let cost = 0
+  let billed = 0
+  for (const d of decisions) {
+    tokens += d.tokens_total ?? (d.tokens_in ?? 0) + (d.tokens_out ?? 0)
+    if (d.cost_usd != null) {
+      cost += d.cost_usd
+      billed += 1
+    }
+  }
+  if (!tokens) return null
+  return (
+    <span
+      className="num text-muted-foreground/70 normal-case"
+      title={
+        billed
+          ? `${billed} of these ${decisions.length} are billed per token; the rest run on a subscription and have no per-call price`
+          : 'all of these run on a subscription — tokens are quota, not dollars'
+      }
+    >
+      ({tokens.toLocaleString()}t{billed ? ` · $${cost.toFixed(4)}` : ' · on a plan'})
+    </span>
   )
 }
 
@@ -995,6 +1022,41 @@ function outcomeOf(d: Decision, detail: PaperRunDetail | null): BacktestTrade | 
   return (detail.fills ?? []).find((f) => f.entryTime === d.bar_time + step) ?? null
 }
 
+/**
+ * What one decision spent.
+ *
+ * A metered model gets tokens AND the dollars it cost. A subscription gets
+ * tokens only — deliberately, because a plan call is not free, it draws on a
+ * quota, and showing $0.00 beside it would claim something untrue. The owner
+ * asked for exactly that split.
+ *
+ * `tokens_total` is the fallback for a provider that reports one number and no
+ * breakdown: Codex prints a banner total and nothing else, and inventing an
+ * input/output split it never gave would be worse than showing less.
+ */
+function TokenChip({ d }: { d: Decision }) {
+  const total = d.tokens_total ?? ((d.tokens_in ?? 0) + (d.tokens_out ?? 0) || null)
+  if (!total) return null
+  const cached = d.tokens_cached ?? 0
+  const parts = [
+    d.tokens_in != null ? `${d.tokens_in.toLocaleString()} in` : null,
+    cached ? `${cached.toLocaleString()} of them cached` : null,
+    d.tokens_out != null ? `${d.tokens_out.toLocaleString()} out` : null,
+  ].filter(Boolean)
+  return (
+    <span
+      className="num text-muted-foreground/70 shrink-0 text-[10px]"
+      title={
+        (parts.length ? parts.join(' · ') : `${total.toLocaleString()} tokens, no split reported`) +
+        (d.cost_usd != null ? '' : ' — on a subscription, so no per-call price')
+      }
+    >
+      {total.toLocaleString()}t
+      {d.cost_usd != null && <span className="text-caution"> ${d.cost_usd.toFixed(4)}</span>}
+    </span>
+  )
+}
+
 function DecisionRow({ d, outcome }: { d: Decision; outcome: BacktestTrade | null }) {
   const [open, setOpen] = useState(false)
   return (
@@ -1021,6 +1083,7 @@ function DecisionRow({ d, outcome }: { d: Decision; outcome: BacktestTrade | nul
             {signedR(outcome.r)}
           </span>
         )}
+        <TokenChip d={d} />
         <span className="num text-muted-foreground/70 shrink-0 text-[10px]">
           {(d.latency_ms / 1000).toFixed(1)}s
         </span>

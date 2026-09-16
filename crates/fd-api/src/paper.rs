@@ -1936,6 +1936,20 @@ pub struct DecisionDto {
     pub refused_locally: String,
     pub dry_run: bool,
     pub prompt_chars: usize,
+    /// What the call spent, exactly as the provider reported it.
+    ///
+    /// `total` alone for a provider that gives only one number (Codex prints a
+    /// banner total and no split); `input`/`output` where the split exists.
+    /// Absent where the provider reported nothing, rather than a zero nobody
+    /// measured.
+    pub tokens_in: Option<i64>,
+    pub tokens_cached: Option<i64>,
+    pub tokens_out: Option<i64>,
+    pub tokens_total: Option<i64>,
+    /// Dollars, for a model billed per token. **Null for a subscription** — a
+    /// plan call is not free, it draws on a quota, and printing $0.00 beside it
+    /// would claim something untrue.
+    pub cost_usd: Option<f64>,
 }
 
 /// One agent's turn in an advisor consultation.
@@ -2036,6 +2050,11 @@ pub async fn reasoning(
                 refused_locally: s_of(v, "refused_locally"),
                 dry_run: b_of(v, "dry_run"),
                 prompt_chars: v.get("prompt").and_then(|p| p.as_str()).map_or(0, str::len),
+                tokens_in: v.pointer("/usage/input").and_then(serde_json::Value::as_i64),
+                tokens_cached: v.pointer("/usage/cached_input").and_then(serde_json::Value::as_i64),
+                tokens_out: v.pointer("/usage/output").and_then(serde_json::Value::as_i64),
+                tokens_total: v.pointer("/usage/total").and_then(serde_json::Value::as_i64),
+                cost_usd: v.get("cost_usd").and_then(serde_json::Value::as_f64),
             }
         })
         .collect();

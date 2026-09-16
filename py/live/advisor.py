@@ -224,6 +224,46 @@ PROVIDERS = {
 }
 
 
+# What a metered provider charges, per MILLION tokens.
+#
+# Read from the provider's own pricing page on 2026-09-16, not recalled. A
+# price that drifts is better wrong-and-dated than confidently stale, so the
+# date is here and `cost_of` returns None for anything not listed rather than
+# guessing.
+#
+# DeepSeek bills peak and off-peak: peak is 01:00-04:00 and 06:00-10:00 UTC,
+# Monday to Friday, and off-peak is exactly half.
+PRICES = {
+    "deepseek-flash": {"in": 0.30, "cached_in": 0.006, "out": 1.20, "peaked": True},
+    "deepseek-v4-pro": {"in": 1.32, "cached_in": 0.044, "out": 3.96, "peaked": True},
+}
+
+
+def is_peak(when: float | None = None) -> bool:
+    """DeepSeek's peak window, in UTC."""
+    t = dt.datetime.utcfromtimestamp(when if when is not None else time.time())
+    if t.weekday() >= 5:
+        return False
+    return 1 <= t.hour < 4 or 6 <= t.hour < 10
+
+
+def cost_of(model: str, usage: dict) -> float | None:
+    """Dollars for one call, or None when the model is not billed per token.
+
+    A subscription returns None on purpose rather than zero: a plan call is not
+    free, it draws on a quota, and showing $0.00 beside it would claim
+    something untrue. Tokens are still counted for those — see `ask`.
+    """
+    p = PRICES.get(model.split("/", 1)[-1])
+    if not p or not usage:
+        return None
+    scale = 1.0 if (p.get("peaked") and is_peak()) else (0.5 if p.get("peaked") else 1.0)
+    cached = usage.get("cached_input") or 0
+    fresh = max(0, (usage.get("input") or 0) - cached)
+    out = usage.get("output") or 0
+    return (fresh * p["in"] + cached * p["cached_in"] + out * p["out"]) * scale / 1_000_000.0
+
+
 def key_for(provider: str) -> str:
     """The provider's key, from the environment or from `config/local.toml`.
 
@@ -375,7 +415,7 @@ LAST {len(tail)} BARS, oldest first
 """
 
 
-def ask_cli(prompt: str, model: str, timeout: float) -> str:
+def ask_cli(prompt: str, model: str, timeout: float, usage: dict | None = None) -> str:
     """One decision through the Claude Code CLI, on the account's own plan.
 
     Runs from a scratch directory on purpose. Started inside the repository it
@@ -422,13 +462,24 @@ def ask_cli(prompt: str, model: str, timeout: float) -> str:
         raise RuntimeError(f"claude returned unreadable JSON: {done.stdout[:200]!r}") from e
     if out.get("is_error"):
         raise RuntimeError(f"claude reported an error: {str(out.get('result'))[:300]}")
+    if usage is not None:
+        u = out.get("usage") or {}
+        # Cache READS are the bulk of a Claude CLI call and are counted here as
+        # input, because they are input — the point of showing this at all is
+        # that a CLI call spends twenty times what the question is worth.
+        cached = int(u.get("cache_read_input_tokens") or 0)
+        usage.update({
+            "input": int(u.get("input_tokens") or 0) + cached + int(u.get("cache_creation_input_tokens") or 0),
+            "cached_input": cached,
+            "output": int(u.get("output_tokens") or 0),
+        })
     text = str(out.get("result") or "")
     if not text.strip():
         raise RuntimeError(f"{model} returned no text through the CLI")
     return text
 
 
-def ask_codex(prompt: str, model: str, timeout: float) -> str:
+def ask_codex(prompt: str, model: str, timeout: float, usage: dict | None = None) -> str:
     """One decision through the Codex CLI, on the account's ChatGPT plan.
 
     UNVERIFIED as of 2026-09-15: `codex login status` says "Not logged in" on
@@ -497,26 +548,43 @@ def ask_codex(prompt: str, model: str, timeout: float) -> str:
                 )
             tail = chr(10).join(line for line in blob.splitlines() if line.strip())[-400:]
             raise RuntimeError(f"codex exited {done.returncode}: ...{tail}")
+        blob_out = done.stdout.decode("utf-8", "replace") + chr(10) + done.stderr.decode("utf-8", "replace")
         try:
             with io.open(out_file, encoding="utf-8") as fh:
                 text = fh.read()
         except OSError as e:
             raise RuntimeError(f"codex wrote no final message: {e}") from e
+    if usage is not None:
+        # Codex prints one total on its banner and no split, so that is all
+        # there is to report. Claiming an input/output breakdown it never gave
+        # would be inventing numbers.
+        m = re.search(r"tokens used[:\s]+([\d,]+)", blob_out, re.I)
+        if m:
+            usage["total"] = int(m.group(1).replace(",", ""))
     if not text.strip():
         raise RuntimeError(f"{model} returned no text through the Codex CLI")
     return text
 
 
-def ask(prompt: str, model: str, provider: str, api_key: str, timeout: float) -> tuple[str, int]:
-    """One model call, either provider. Returns (text, latency_ms); raises on failure."""
+def ask(prompt: str, model: str, provider: str, api_key: str, timeout: float,
+        usage: dict | None = None) -> tuple[str, int]:
+    """One model call, any provider. Returns (text, latency_ms); raises on failure.
+
+    `usage`, when given, is filled in place with whatever the provider actually
+    reported — `input`, `cached_input`, `output`, or a bare `total` for a
+    provider that only gives one. Filled in place rather than returned so that
+    every existing caller keeps working unchanged, and so a provider that
+    reports nothing leaves it empty instead of reporting a zero it did not
+    measure.
+    """
     started = time.monotonic()
     spec = PROVIDERS[provider]
     url = spec["url"]
 
     if spec.get("cli") == "claude":
-        text = ask_cli(prompt, model, timeout)
+        text = ask_cli(prompt, model, timeout, usage)
     elif spec.get("cli") == "codex":
-        text = ask_codex(prompt, model, timeout)
+        text = ask_codex(prompt, model, timeout, usage)
     elif provider == "anthropic":
         out = post_json(
             url,
@@ -555,6 +623,13 @@ def ask(prompt: str, model: str, provider: str, api_key: str, timeout: float) ->
                     body["max_tokens"] = body.pop("max_completion_tokens")
                 else:
                     raise RuntimeError(f"400: {detail[:300]}") from e
+        if usage is not None:
+            u = (out or {}).get("usage") or {}
+            usage.update({
+                "input": int(u.get("prompt_tokens") or 0),
+                "cached_input": int(u.get("prompt_cache_hit_tokens") or 0),
+                "output": int(u.get("completion_tokens") or 0),
+            })
         choices = (out or {}).get("choices") or []
         text = (choices[0].get("message", {}).get("content") or "") if choices else ""
         if not text.strip():
