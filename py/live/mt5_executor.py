@@ -1347,6 +1347,22 @@ def main() -> int:
                 # What the book wants versus what the account holds. Kept as two
                 # fields rather than one "in sync" flag: the interesting state is
                 # WHICH of them is ahead, and a boolean throws that away.
+                #
+                # THE TWO ARE NOT IN THE SAME UNIT, and a reader comparing them
+                # directly will be wrong on every real-money book. `book_lots`
+                # is the BOOK's size; `position.lots` below is the TERMINAL's
+                # volume, which is the book's size times `lot_scale` - 0.2 on
+                # the funded cent account, so the account correctly holds a
+                # fifth of what the book says. `lot_scale` is published in this
+                # same object for exactly that reason: it is the conversion,
+                # and it travels with the numbers it converts rather than being
+                # something a reader is assumed to know. See
+                # docs/decisions/2026-09-17-unit-carrying.md.
+                #
+                # A consumer that renders these two side by side without
+                # applying `lot_scale` shows a mirror that looks under-filled,
+                # and there is now a `drift` field that means exactly that - so
+                # the wrong reading has a plausible name waiting for it.
                 "book_side": (book_open or {}).get("side"),
                 "book_lots": (book_open or {}).get("lots"),
                 "realised": realised, "closed": closed, "fills": fills,
