@@ -1977,6 +1977,161 @@ function PositionBar({ run, live, broker }: {
   broker?: PaperBroker | null
 }) {
   const open = run.open
+
+  // ---- ACCOUNT MODE: his money leads, the book is the footnote ----
+  //
+  // Until 2026-09-18 this card led with the PAPER trade whenever a book was
+  // selected, account or not, and put the account's position underneath as a
+  // small line. The owner's answer to that was one sentence - "the problem is
+  // I am on real money" - and it is the whole argument. He read a big "+11
+  // USC" that was the book's, saw "+6.83 USC" on the chart that was his, and
+  // asked why the desk was out of sync. Nothing was out of sync. The card was
+  // answering a question he was not asking.
+  //
+  // So when an account is selected, the account's position is the card and the
+  // book's is one line under it. Paper mode is untouched: there, the book IS
+  // the subject.
+  //
+  // Nothing converts, in either direction. Account money is `brokerMoney` in
+  // the account's currency with its ASCII minus; the book's line is
+  // `paperMoney` in dollars with U+2212 and the word `book`.
+  if (broker) {
+    const held = broker.position
+    const bookLine = (() => {
+      if (open) {
+        const bLong = open.side === 'LONG'
+        const bPrice = live?.close ?? run.last_bar_close ?? open.entry_price
+        const bUsd = markToLive(open, bPrice).usd
+        const bR = open.risk > 0 ? ((bPrice - open.entry_price) * (bLong ? 1 : -1)) / open.risk : null
+        return (
+          <>
+            <span className={cn('num', bLong ? 'text-lc' : 'text-lp')}>{open.side.toLowerCase()}</span>
+            <span className="num">{num(open.lots, 2)} lots</span>
+            <span className="num">from {quote(open.entry_price)}</span>
+            <span className={cn('num', bUsd >= 0 ? 'text-lc' : 'text-lp')}>{paperMoney(bUsd)}</span>
+            {bR != null && (
+              <span className={cn('num', bR >= 0 ? 'text-lc' : 'text-lp')}>{signedR(bR)}</span>
+            )}
+            <span className="text-muted-foreground/70">the decision this trade mirrors</span>
+          </>
+        )
+      }
+      if (run.pending) {
+        return <span className="text-muted-foreground">decided {run.pending.side.toLowerCase()} — fills at the next bar&rsquo;s open</span>
+      }
+      return <span className="text-muted-foreground">flat</span>
+    })()
+
+    // The state that costs money and had no words on this card: the book is in
+    // a trade and the account is not. A refused join, a stop file, a mirror
+    // that died. Silence here reads as agreement.
+    const missedIt = !held && open != null
+
+    const aLong = (held?.side ?? '') === 'LONG'
+    const aPrice = held?.price_now ?? null
+    const aRisk =
+      held?.entry_price != null && held?.sl != null ? Math.abs(held.entry_price - held.sl) : null
+    // The account's OWN R: its own entry against its own stop. Not the book's
+    // risk borrowed - that would be the same mistake in a different unit.
+    const aR =
+      aRisk != null && aRisk > 0 && held?.entry_price != null && aPrice != null
+        ? ((aPrice - held.entry_price) * (aLong ? 1 : -1)) / aRisk
+        : null
+    const aSpan = held?.sl != null && held?.tp != null ? held.tp - held.sl : null
+    const at = (v: number | null | undefined) =>
+      aSpan && aSpan !== 0 && v != null && held?.sl != null
+        ? Math.min(100, Math.max(0, ((v - held.sl) / aSpan) * 100))
+        : null
+
+    return (
+      <div
+        className={cn(
+          'mt-2 rounded-sm border px-2.5 py-2',
+          held ? (aLong ? 'border-lc/35 bg-lc/[0.06]' : 'border-lp/35 bg-lp/[0.06]') : 'border-border',
+        )}
+      >
+        <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
+          <span className="text-muted-foreground/70 text-[10px] tracking-wide uppercase">
+            {broker.account}
+          </span>
+          {held ? (
+            <>
+              <span className={cn('num rounded-sm px-1 text-[11px] font-medium', aLong ? 'bg-lc/20 text-lc' : 'bg-lp/20 text-lp')}>
+                {(held.side ?? '').toUpperCase()}
+              </span>
+              <span className="num text-[13px]">{quote(held.entry_price)}</span>
+              <span className="text-muted-foreground num text-[10px]">{num(held.lots ?? 0, 2)} lots</span>
+              <span
+                className={cn('num ml-auto text-[15px] font-semibold', (held.profit ?? 0) >= 0 ? 'text-lc' : 'text-lp')}
+              >
+                {brokerMoney(held.profit, broker.currency)}
+              </span>
+              {aR != null && (
+                <span className={cn('num text-[11px]', aR >= 0 ? 'text-lc' : 'text-lp')}>{signedR(aR)}</span>
+              )}
+            </>
+          ) : (
+            <span className={cn('text-[11px]', missedIt ? 'text-lp font-medium' : 'text-muted-foreground')}>
+              {missedIt
+                ? 'flat — and the book is in a trade. This account is not mirroring it.'
+                : 'flat'}
+            </span>
+          )}
+        </div>
+
+        {held && aSpan ? (
+          <>
+            {/* The ACCOUNT's own stop and target, not the book's. They are the
+                same prices today - the executor sends the book's verbatim -
+                and reading them off the broker is what keeps this true if that
+                ever stops being so. */}
+            <div className="relative mt-2 h-1.5 rounded-full bg-black/40">
+              <span
+                className="bg-muted-foreground/70 absolute top-1/2 h-3 w-px -translate-y-1/2"
+                style={{ left: `${at(held.entry_price) ?? 0}%` }}
+                aria-hidden
+              />
+              {at(aPrice) != null && (
+                <span
+                  className={cn('absolute top-1/2 size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full ring-2 ring-black/50', (held.profit ?? 0) >= 0 ? 'bg-lc' : 'bg-lp')}
+                  style={{ left: `${at(aPrice)}%` }}
+                  aria-hidden
+                />
+              )}
+            </div>
+            <div className="text-muted-foreground mt-1 flex justify-between text-[10px]">
+              <span className="num text-lp">stop {quote(held.sl)}</span>
+              <span className="num">now {quote(aPrice)}</span>
+              <span className="num text-lc">target {quote(held.tp)}</span>
+            </div>
+          </>
+        ) : held ? (
+          <div className="text-muted-foreground mt-1.5 text-[10px]">
+            {held.sl == null && held.tp == null
+              ? 'no stop or target on the account'
+              : `stop ${quote(held.sl)} · target ${quote(held.tp)}`}
+          </div>
+        ) : null}
+
+        {/* No worst/best here. The wire carries `mae`/`mfe` for the BOOK and
+            not for the account, and borrowing the book's excursions onto the
+            account's row would be the same error this card was just fixed
+            for - a number belonging to one trade shown against another. */}
+        {held?.opened_at != null && (
+          <div className="text-muted-foreground/70 mt-1 text-[10px]">
+            filled {shortStamp(held.opened_at)}
+            {broker.lot_scale != null ? ` · ×${broker.lot_scale} of the book's size` : ''}
+          </div>
+        )}
+
+        <div className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-1 border-t pt-1.5 text-[10px]">
+          <span className="text-muted-foreground tracking-wide uppercase">book</span>
+          {bookLine}
+        </div>
+      </div>
+    )
+  }
+
   if (!open) {
     // Flat and committed are different states and must not look alike. The
     // pending one carries no P&L on purpose: there is no entry price yet, so
@@ -2101,44 +2256,10 @@ function PositionBar({ run, live, broker }: {
         )}
       </div>
 
-      {/* The ACCOUNT's own trade on this book, beside the book's, in the
-          account's currency and never converted into it.
-          
-          Both are shown because the difference between them IS the slippage
-          this mirror exists to measure - and because showing only one of them
-          while the other exists is what let a paper figure be read as the
-          account's. They differ by design: a different entry, and `lot_scale`
-          of the size. The line says so rather than leaving a reader to
-          reconcile two numbers that were never meant to agree. */}
-      {broker && (
-        <div className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-1 border-t pt-1.5 text-[10px]">
-          <span className="text-muted-foreground tracking-wide uppercase">account</span>
-          {broker.position ? (
-            <>
-              <span className={cn('num', (broker.position.side ?? '') === 'LONG' ? 'text-lc' : 'text-lp')}>
-                {(broker.position.side ?? '').toLowerCase()}
-              </span>
-              <span className="num">{num(broker.position.lots ?? 0, 2)} lots</span>
-              <span className="num">from {quote(broker.position.entry_price)}</span>
-              <span
-                className={cn('num font-medium', (broker.position.profit ?? 0) >= 0 ? 'text-lc' : 'text-lp')}
-              >
-                {brokerMoney(broker.position.profit, broker.currency)}
-              </span>
-              <span className="text-muted-foreground/70">
-                a different trade: its own entry
-                {broker.lot_scale != null ? `, ×${broker.lot_scale} of the book's size` : ''}
-              </span>
-            </>
-          ) : (
-            /* Said, not omitted. A missing line would read as "the same as
-               above" on a panel whose whole point is that the two differ. */
-            <span className="text-muted-foreground">
-              flat — this account holds nothing on this book
-            </span>
-          )}
-        </div>
-      )}
+      {/* No account line here. This branch is PAPER MODE - no account is
+          selected, so the book is the subject and there is no second trade to
+          show. When an account IS selected the card returns above, led by the
+          account's own position with the book as its footnote. */}
 
       {span ? (
         <>
