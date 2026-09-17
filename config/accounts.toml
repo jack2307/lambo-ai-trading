@@ -21,8 +21,29 @@
 #      `%APPDATA%\MetaQuotes\Terminal\<hash>\config\servers.dat` into the new
 #      terminal's `config\` and it will log in. This cost an afternoon once.
 #   2. Log that terminal into the account, by hand or with a start config.
-#   3. Add an `[[account]]` block here.
-#   4. `powershell -File py\live\start_executors.ps1 -Account <id>`
+#   3. TURN AUTOTRADING ON, AND DO IT AFTER STEP 2, NOT BEFORE.
+#
+#      MetaTrader switches automated trading OFF whenever the account
+#      changes - deliberately, and it says so in its own log:
+#
+#        Experts  automated trading is disabled because the account
+#                 has been changed
+#
+#      So a start config carrying `[Experts] AllowLiveTrading=1` sets it at
+#      launch and then LOSES it the moment someone logs in. Measured
+#      2026-09-17 on the cent account: config applied at 13:59, account
+#      changed at 14:00, AutoTrading off ever since, and `terminal_info()
+#      .trade_allowed` was the only place saying so.
+#
+#      With it off, every order comes back retcode 10027 "AutoTrading
+#      disabled by client" and the executor looks exactly like a strategy
+#      that never fires. That cost 36 refused orders on the demo.
+#
+#      Click Algo Trading in the toolbar, or restart the terminal from its
+#      shortcut now that it remembers the account - with no account change
+#      to follow, the start config's setting survives.
+#   4. Add an `[[account]]` block here.
+#   5. `powershell -File py\live\start_executors.ps1 -Account <id>`
 #
 # Each account keeps its OWN record of every book it mirrors, under
 # data/live/<id>/<book>/ - the fills, the slippage, the account snapshot, the

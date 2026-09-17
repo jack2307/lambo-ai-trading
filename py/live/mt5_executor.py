@@ -488,6 +488,34 @@ def main() -> int:
         if not mt5.symbol_select(args.symbol, True):
             log(out, "refused", reason="symbol not available", symbol=args.symbol)
             return 3
+        # AutoTrading, checked here rather than discovered at the first order.
+        #
+        # With it off the terminal answers every order with retcode 10027,
+        # "AutoTrading disabled by client", and an executor whose every order
+        # is refused is indistinguishable on the screen from a strategy that
+        # never fires. It cost 36 refused orders on the demo before anyone read
+        # the code.
+        #
+        # And it turns itself off: MetaTrader disables automated trading
+        # whenever the ACCOUNT CHANGES, which is exactly what logging a fresh
+        # terminal in does. A start config that sets it at launch therefore
+        # loses it a minute later - measured 2026-09-17 on the cent account.
+        # So this is not a one-time setup question, it is a per-start check.
+        term = mt5.terminal_info()
+        if term is not None and not term.trade_allowed:
+            if args.dry_run:
+                # A dry run sends nothing, so this is not fatal - but it IS
+                # the reason the live run would fail, and saying it now is
+                # worth more than saying it after the switch is thrown.
+                log(out, "autotrading-off", note="dry run continues; a live run would be refused")
+                print("NOTE: AutoTrading is OFF in this terminal. Nothing is sent in a dry run "
+                      "anyway, but a live run would have every order refused (10027).", flush=True)
+            else:
+                log(out, "refused", reason="AutoTrading is disabled in the terminal",
+                    login=acc.login, server=acc.server)
+                print("REFUSED: AutoTrading is OFF in this terminal - every order would come back "
+                      "10027. Click Algo Trading in its toolbar. Nothing was sent.", flush=True)
+                return 3
         info = mt5.symbol_info(args.symbol)
         magic = magic_for(args.run)
         log(out, "started", login=acc.login, server=acc.server, balance=acc.balance, symbol=args.symbol, magic=magic,
