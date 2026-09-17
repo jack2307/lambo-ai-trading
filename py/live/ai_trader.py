@@ -93,13 +93,43 @@ Answer with JSON and nothing else:
 losing side of the last close and the target on the winning side, or it will be refused."""
 
 
-def read_limits() -> dict:
-    """The guard numbers, from the config the engine actually reads.
+def read_limits(api: str = "") -> dict:
+    """The guard numbers, as the engine will actually apply them.
 
     Parsed rather than hard-coded: a limit quoted to the model that does not
     match the one enforced would be worse than saying nothing, because the
     model would plan around a rule that is not the rule.
+
+    That is exactly what happened on 2026-09-17. This read only
+    `config/default.toml` and ran once at startup, so it knew nothing about
+    `config/guards.toml` - the file the desk writes when a guard is changed
+    from the Settings screen. The owner raised the daily trade cap from 4 to
+    10, the engine honoured it immediately, and the model went on declining
+    every setup because its prompt still said four and said the four were
+    spent. The guard was never reached: the model refused first.
+
+    So the API is asked, because the API is the thing that enforces. Its
+    `effective` block is the file's values with the desk's edits on top -
+    the same numbers the book is checked against. The file stays as the
+    fallback for a desk that is not answering, since a slightly stale limit
+    beats no limit at all in the prompt.
     """
+    if api:
+        try:
+            with urllib.request.urlopen(f"{api}/api/paper/guards", timeout=10) as r:
+                view = json.loads(r.read().decode("utf-8", "replace"))
+            eff = view.get("effective") or {}
+            if eff:
+                # Milliseconds are what the prompt builder reads for the two
+                # duration limits; the API reports minutes, as a person types
+                # them.
+                out = {k: float(v) for k, v in eff.items() if isinstance(v, (int, float))}
+                if "cooldown_min" in out:
+                    out["cooldown_ms"] = out["cooldown_min"] * 60_000.0
+                return out
+        except Exception:  # noqa: BLE001 - any failure falls through to the file
+            pass
+
     path = os.path.join(ROOT, "config", "default.toml")
     out = {}
     try:
@@ -537,7 +567,12 @@ def main() -> int:
     if env and not key:
         sys.exit(f"no {env} in the environment or config/local.toml for {args.model}")
 
-    limits = read_limits()
+    # Read once here only to fail loudly at startup if neither the desk nor
+    # the file can be read; the prompt takes a fresh copy on every decision.
+    limits = read_limits(args.api)
+    if not limits:
+        print("warning: no guard limits from the desk or config/default.toml; "
+              "the prompt will not quote any", flush=True)
     coin = random.Random(args.seed)
     # Which bar was last decided, on disk. A restart used to forget, re-ask the
     # current bar, spend another model call on it and post a SECOND intent for
@@ -646,6 +681,12 @@ def main() -> int:
             if v is not None and v == v:
                 atr_now = float(v)
                 break
+        # Re-read per decision, not once at startup. A guard changed from the
+        # Settings screen has to reach the very next bar, or the model spends
+        # the rest of the session planning around a rule that has been lifted -
+        # which it did on 2026-09-17, refusing setups for a daily cap the desk
+        # had already raised from 4 to 10. One local HTTP call per decided bar.
+        limits = read_limits(args.api)
         prompt = PROMPT.format(
             market=args.market, tf=args.tf, n=len(shown), bars=rows,
             position=describe_position(detail),
