@@ -211,6 +211,16 @@ function sharedUnit(runs: PaperRun[]): { account_currency?: string; units_per_us
  * leave the rounding for someone to reach for again.
  */
 
+/**
+ * The heading over a group of fill rows.
+ *
+ * The panel used to be one list with the open position as a tinted first row,
+ * and its heading counted CLOSED fills only - so it read "6" over seven rows.
+ * Splitting the list is what makes each number agree with what is under it.
+ */
+const GROUP_LABEL =
+  'text-muted-foreground border-b py-1 text-[10px] font-medium tracking-wide uppercase'
+
 const signedR = (v: number | null | undefined): string =>
   v == null || !Number.isFinite(v) ? '—' : `${v < 0 ? MINUS : '+'}${Math.abs(v).toFixed(2)}R`
 
@@ -2343,10 +2353,11 @@ function FillsSection({
   return (
     <section className="px-3 py-2">
       <Heading>
-        Fills <span className="text-muted-foreground/70 num">{detail.run.id}</span>{' '}
-        <span className="text-muted-foreground/70 num">
-          {broker ? (broker.fills?.length ?? 0) : detail.fills.length}
-        </span>
+        {/* No count here any more. It counted closed fills only and sat above a
+            list that also held the open one, so it read "6" over seven rows.
+            Each group below carries its own, which is the number a reader can
+            check against the rows they can see. */}
+        Fills <span className="text-muted-foreground/70 num">{detail.run.id}</span>
         {broker && <span className="text-muted-foreground/60 normal-case"> · on {broker.account}</span>}
       </Heading>
       {broker ? (
@@ -2732,10 +2743,12 @@ function BrokerFillsTable({ broker }: { broker: PaperBroker }) {
       <table className="w-full text-[11px]">
         <thead className="text-muted-foreground text-[10px] tracking-wide uppercase">
           <tr className="border-b">
-            {/* "exit time" for the closed rows; the open row says `since` and
-                its own open time instead, because it has no exit and printing
-                one would be inventing the thing the reader came to check. */}
-            <th className="py-1 pr-2 text-left font-medium">exit time (+07)</th>
+            {/* One header over two groups now, so it cannot say "exit": the
+                closed rows show an exit stamp and the open row says `filled`
+                and its own fill time, because it has no exit and printing one
+                would invent the thing the reader came to check. Each cell
+                labels its own clock. */}
+            <th className="py-1 pr-2 text-left font-medium">time (+07)</th>
             <th className="py-1 pr-2 text-left font-medium">side</th>
             <th className="py-1 pr-2 text-right font-medium">lots</th>
             <th className="py-1 pr-2 text-right font-medium">entry &rarr; exit</th>
@@ -2744,6 +2757,19 @@ function BrokerFillsTable({ broker }: { broker: PaperBroker }) {
           </tr>
         </thead>
         <tbody>
+          <tr>
+            <td colSpan={6} className={GROUP_LABEL}>Open · {held ? 1 : 0}</td>
+          </tr>
+          {!held && (
+            /* Said out loud rather than left blank. On a desk that has twice
+               mistaken an absent record for an empty one, a missing section
+               must not be the way "flat" is expressed. */
+            <tr className="border-b">
+              <td colSpan={6} className="text-muted-foreground py-1 text-[11px]">
+                flat — this account holds nothing on this book right now
+              </td>
+            </tr>
+          )}
           {held && (
             <tr className="border-primary/30 bg-primary/10 border-b shadow-[inset_2px_0_0_var(--primary)]">
               <td
@@ -2775,6 +2801,9 @@ function BrokerFillsTable({ broker }: { broker: PaperBroker }) {
               </td>
             </tr>
           )}
+          <tr>
+            <td colSpan={6} className={GROUP_LABEL}>Closed · {fills.length}</td>
+          </tr>
           {fills.map((f, i) => (
             <tr key={`${f.entryTime}-${f.exitTime}-${i}`} className="border-b last:border-0">
               <td className="num py-1 pr-2">{vnStamp(f.exitTime)}</td>
@@ -2981,14 +3010,17 @@ function FillsTable({
   return (
     <>
       <div className="overflow-x-auto">
-        <div className="min-w-[600px]" role="group" aria-label="Fills, with any open position first">
+        <div className="min-w-[600px]" role="group" aria-label="Fills, grouped: open first, then closed">
           <div
             className={cn(
               'text-muted-foreground grid items-center gap-2 border-b pb-1 text-[10px] tracking-wide uppercase',
               FILL_COLS,
             )}
           >
-            <span>exit time (+07)</span>
+            {/* The closed group's column. The open group's first cell says
+                `bar <t>` or `since <t>` and labels itself, because it is a
+                different clock — see docs/decisions/2026-09-17-entry-lag.md. */}
+            <span>time (+07)</span>
             <span>side</span>
             <span className="text-right">lots</span>
             <span className="text-right">entry → exit</span>
@@ -2996,6 +3028,14 @@ function FillsTable({
             <span className="text-right">P&amp;L</span>
             <span className="text-right">R</span>
           </div>
+          <div className={GROUP_LABEL}>Open · {held ? 1 : 0}</div>
+          {!held && (
+            /* Said out loud rather than left blank — absence must not be how
+               "flat" is expressed on this desk. */
+            <div className="text-muted-foreground border-b py-1 text-[11px]">
+              flat — this book holds no position right now
+            </div>
+          )}
           {held && (
             <div
               className={cn(
@@ -3053,6 +3093,7 @@ function FillsTable({
               </span>
             </div>
           )}
+          <div className={GROUP_LABEL}>Closed · {rows.length}</div>
           {rows.map(({ fill, key }, index) => {
             const isOpen = key === openFill
             return (
