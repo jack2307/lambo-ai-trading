@@ -15,11 +15,18 @@ cannot reach a broker. `py/live/mt5_executor.py` remains the only code in this
 repository that can send an order, and it refuses any account that is not a
 demo.
 
-**The coin is not decoration and is not optional.** Every decision drives two
-books: the model's side into `--run`, and a seeded coin flip into
-`--control`. If the control is unreachable the model's trade is NOT posted
-either — a campaign that quietly loses its control is a campaign that can only
-produce a number nobody can read.
+**The coin is not decoration.** By default every decision drives two books:
+the model's side into `--run`, and a seeded coin flip into `--control`. If the
+control is unreachable the model's trade is NOT posted either — a campaign
+that quietly loses its control is a campaign that can only produce a number
+nobody can read.
+
+`--no-control` turns that off, and the owner asked for it on 2026-09-17. It
+is a real loss, stated here rather than softened: without the coin there is
+nothing to read the P&L against. Every long-gold book made money in a week
+gold rose, and the coin is what separates "the model was right" from "the
+market went that way". A campaign run this way can say what it earned; it
+cannot say whether the model earned it.
 """
 
 from __future__ import annotations
@@ -487,6 +494,20 @@ def main() -> int:
     ap.add_argument("--api", default="http://127.0.0.1:8138")
     ap.add_argument("--run", default="ai-xau", help="the run that takes the model's side")
     ap.add_argument("--control", default="ai-xau-coin", help="the run that takes a coin's side")
+    # Run the model's book with no coin beside it.
+    #
+    # The owner asked for this on 2026-09-17, having decided the control was
+    # not earning its place. It is a real loss and the docstring above says so
+    # rather than being quietly softened: without the coin, a campaign's P&L
+    # cannot be separated from what the market did anyway - every long-gold
+    # book made money in a week gold rose, and the coin is what says whether
+    # the model beat that.
+    #
+    # It is a flag and not an empty --control because "no control" is a
+    # decision that should be visible in the command line and in the log, not
+    # an argument someone forgot to pass.
+    ap.add_argument("--no-control", action="store_true",
+                    help="drive only the model's book; no coin, and no comparison")
     ap.add_argument("--model", default="gpt-5")
     ap.add_argument("--provider", choices=sorted(PROVIDERS), default=None)
     ap.add_argument("--market", default="xauusd")
@@ -559,7 +580,8 @@ def main() -> int:
         naming convention works, but only the process actually knows.
         """
         now = int(time.time() * 1000)
-        for run in (args.run, args.control):
+        beats = (args.run,) if args.no_control else (args.run, args.control)
+        for run in beats:
             if not run:
                 continue
             path = os.path.join(ROOT, "data", "paper", run, "driver.json")
@@ -574,9 +596,10 @@ def main() -> int:
                 # A missed beat costs a book being called stopped for one poll.
                 # It must never cost a decision.
                 pass
+    coin_says = "NO COIN (no control book)" if args.no_control else f"coin -> {args.control}"
     print(
         f"ai trader: {args.model} on {args.market}:{args.tf} -> {args.run}, "
-        f"coin -> {args.control}{' (dry run)' if args.dry_run else ''}",
+        f"{coin_says}{' (dry run)' if args.dry_run else ''}",
         flush=True,
     )
 
@@ -736,6 +759,11 @@ def main() -> int:
             # The coin is flipped for EVERY trade the model takes, and both
             # posts must succeed. A campaign that loses its control silently
             # produces a number nobody can read.
+            # The coin is still FLIPPED when there is no control book, and the
+            # flip is still consumed from the same seeded stream. Skipping the
+            # draw would make the sequence depend on whether a control existed,
+            # so a campaign restarted with the coin switched back on would not
+            # replay - and the seed exists precisely so that it does.
             flip = "LONG" if coin.random() < 0.5 else "SHORT"
             # Each book says who drove it. The desk reads this back as a
             # badge, so the model's book and the coin's are never mistaken
@@ -746,20 +774,24 @@ def main() -> int:
             try:
                 a = post_json(f"{args.api}/api/paper/intent",
                               dict(run=args.run, side=decision["side"], decider=args.model, **body))
-                # The control's stop must be the same DISTANCE on its own side,
-                # or the two books are not sized alike and the comparison dies.
-                d = abs(float(decision["stop"]) - last_close)
-                c_stop = last_close - d if flip == "LONG" else last_close + d
-                c_target = None
-                if decision.get("target") is not None:
-                    td = abs(float(decision["target"]) - last_close)
-                    c_target = last_close + td if flip == "LONG" else last_close - td
-                b = post_json(f"{args.api}/api/paper/intent", dict(
-                    run=args.control, side=flip, bar_time=last_time, stop=c_stop,
-                    target=c_target, reason=f"coin: {flip}", decider="coin"))
+                b = {"accepted": True}
+                if not args.no_control:
+                    # The control's stop must be the same DISTANCE on its own
+                    # side, or the two books are not sized alike and the
+                    # comparison dies.
+                    d = abs(float(decision["stop"]) - last_close)
+                    c_stop = last_close - d if flip == "LONG" else last_close + d
+                    c_target = None
+                    if decision.get("target") is not None:
+                        td = abs(float(decision["target"]) - last_close)
+                        c_target = last_close + td if flip == "LONG" else last_close - td
+                    b = post_json(f"{args.api}/api/paper/intent", dict(
+                        run=args.control, side=flip, bar_time=last_time, stop=c_stop,
+                        target=c_target, reason=f"coin: {flip}", decider="coin"))
                 posted = bool(a.get("accepted")) and bool(b.get("accepted"))
+                against = "no coin" if args.no_control else f"vs coin {flip:5s}"
                 print(f"{stamp} bar {dt.datetime.utcfromtimestamp(last_time/1000):%H:%MZ}  "
-                      f"{decision['side']:5s} vs coin {flip:5s}  "
+                      f"{decision['side']:5s} {against}  "
                       f"{'posted' if posted else 'REFUSED: ' + str(a.get('reason')) + ' / ' + str(b.get('reason'))}"
                       f"  {decision['reason'][:60]}", flush=True)
             except Exception as e:  # noqa: BLE001

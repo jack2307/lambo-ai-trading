@@ -15,7 +15,22 @@
 param(
     [switch]$DryRun,
     [string]$Python = 'C:\Python39\python.exe',
-    [string]$Root = (Split-Path -Parent (Split-Path -Parent $PSScriptRoot))
+    [string]$Root = (Split-Path -Parent (Split-Path -Parent $PSScriptRoot)),
+
+    # Run only these campaigns, by run id (e.g. -Only ai-xau-ds-ctx,ai-xau-sol-ctx).
+    # Empty means all of them. A campaign left out is not started - and since
+    # this script stops every ai_trader first, leaving one out STOPS it.
+    [string[]]$Only = @(),
+
+    # Drive the model's book with no coin beside it.
+    #
+    # The owner asked for this on 2026-09-17, having decided the control was
+    # not earning its place. What it costs is stated in ai_trader.py's
+    # docstring and repeated once here because this is where someone turns it
+    # on: without the coin, a campaign can say what it earned but not whether
+    # the model earned it, because every long-gold book made money in a week
+    # gold rose.
+    [switch]$NoControl
 )
 
 $campaigns = @(
@@ -40,6 +55,25 @@ $campaigns = @(
     # quality matters for this task at all; see the amendment in AI-TRADER.md.
     @{ model = 'deepseek-flash'; run = 'ai-xau-ds-ctx'; control = 'ai-xau-ds-ctx-coin'; seed = 23; log = 'ai_trader_ds' }
 )
+
+# `powershell -File script.ps1 -Only a,b` hands the parameter over as the
+# single string "a,b"; only a dot-sourced call binds it as an array. Same trap
+# and same fix as -Runs in start_executors.ps1, which learned it the same way.
+$Only = @($Only | ForEach-Object { $_ -split ',' } | Where-Object { $_ })
+
+if ($Only.Count) {
+    $known = $campaigns | ForEach-Object { $_.run }
+    $unknown = $Only | Where-Object { $known -notcontains $_ }
+    if ($unknown) {
+        # Refused rather than ignored. A typo that silently selects nothing
+        # would stop every campaign and start none, and report success.
+        Write-Error ("no such campaign: " + ($unknown -join ', ') + "; known: " + ($known -join ', '))
+        exit 1
+    }
+    $campaigns = $campaigns | Where-Object { $Only -contains $_.run }
+}
+Write-Host ("campaigns: " + (($campaigns | ForEach-Object { $_.run }) -join ', '))
+if ($NoControl) { Write-Host 'no coin: these books have nothing to be read against' -ForegroundColor Yellow }
 
 # Two copies of this script running at once is not a nuisance, it is a
 # corrupted campaign: each model would answer every bar twice, post twice, and
@@ -111,6 +145,10 @@ foreach ($c in $campaigns) {
     $args = @('py/live/ai_trader.py', "--model=$($c.model)", '--market=xauusd', '--tf=15m',
               "--run=$($c.run)", "--control=$($c.control)", "--seed=$($c.seed)")
     if ($DryRun) { $args += '--dry-run' }
+    # --control is still passed: the coin is still flipped off the same seed
+    # so the sequence does not depend on whether a control book exists, and
+    # switching the coin back on replays instead of diverging.
+    if ($NoControl) { $args += '--no-control' }
     Start-Process -FilePath $Python -ArgumentList $args -WorkingDirectory $Root -WindowStyle Hidden `
         -RedirectStandardOutput (Join-Path $logs "$($c.log).out") -RedirectStandardError (Join-Path $logs "$($c.log).err")
     $mode = if ($DryRun) { 'DRY RUN' } else { 'LIVE' }
