@@ -225,6 +225,28 @@ pub struct PaperRun {
     /// this API.
     #[serde(default)]
     pub opened_learned_at: Option<i64>,
+    /// Wall clock at which a DECIDER posted the pending intent, when one did.
+    ///
+    /// `None` on every rule-based book, and correctly so: a rule decides at
+    /// the close of the bar it read, instantly, and the fill is priced at the
+    /// next open. There is no gap to record.
+    ///
+    /// A model is different and the difference is measurable. Measured
+    /// 2026-09-17 over 321 decisions in `decisions.jsonl`, a decision is
+    /// posted 24.2 s after its bar closed at the median and 199 s at p90,
+    /// against a model latency of 8.5 s p50 and 21.6 s p90. The intent then
+    /// fills at the open of the bar stamped at that close - a price that
+    /// already existed while the model was still thinking. It is look-ahead,
+    /// small, and biased in the book's favour: if the model has any skill, the
+    /// price before it spoke is better in the direction it chose.
+    ///
+    /// Recorded rather than corrected. Correcting it means filling at the tick
+    /// the decision arrived on, which is a different fill model and a
+    /// different hypothesis; see `docs/decisions/2026-09-17-entry-lag.md`.
+    /// What this field buys is that the bias is visible in the record from
+    /// now on instead of being invisible in it.
+    #[serde(default)]
+    pub pending_decided_at: Option<i64>,
     /// Who has been posting this book's entries, if anyone has. `None` on
     /// every rule-based run and on an `external` run nobody has driven yet.
     #[serde(default)]
@@ -1682,6 +1704,7 @@ pub async fn start(State(state): State<Arc<AppState>>, Json(request): Json<Start
         advice: None,
         // A new book holds nothing, so there is no fill to have learned about.
         opened_learned_at: None,
+        pending_decided_at: None,
         // Claimed by whoever posts the first accepted intent, never at start.
         decider: None,
         started_at: now_ms(),
@@ -1750,6 +1773,10 @@ fn feed_run(state: &AppState, run: &mut PaperRun, bar: Bar) -> Result<RunBarResp
     } else if run.book.position.is_none() {
         run.opened_learned_at = None;
     }
+    // Taken, not read: `accept` above has already consumed the pending intent,
+    // whether it filled or a guard refused it, so the stamp must not survive
+    // into the next bar and describe a decision that is no longer waiting.
+    let decided_at = run.pending_decided_at.take();
 
     persist(&state.data, run)?;
     if let Some(missing) = gap {
@@ -1773,6 +1800,10 @@ fn feed_run(state: &AppState, run: &mut PaperRun, bar: Bar) -> Result<RunBarResp
                     "side": p.side.as_str(),
                     "entry_price": p.entry_price,
                     "lots": p.lots,
+                    // Absent on a rule book, which decides instantly. On a
+                    // model book this is AFTER `time`, and the difference is
+                    // how much of the fill price the model had not yet earned.
+                    "decided_at": decided_at,
                 }),
             )?;
         }
@@ -2838,6 +2869,12 @@ pub async fn intent(
         }));
     }
 
+    // Stamped before the badge and before any log line, so that whatever else
+    // happens the number belongs to the intent that was just stored.
+    let decided_at = now_ms();
+    if side.is_some() {
+        run.pending_decided_at = Some(decided_at);
+    }
     if let Some(side) = side {
         run.book.decide(Intent::Enter {
             side,
@@ -2877,6 +2914,11 @@ pub async fn intent(
         &json!({
             "kind": "intent",
             "time": body.bar_time,
+            // When the decider actually spoke, as against the bar it read.
+            // The fill this intent receives is priced at the open of the bar
+            // stamped `time`, which on a slow model is a price that existed
+            // before the decision did.
+            "decided_at": decided_at,
             "side": body.side.to_ascii_uppercase(),
             "stop": body.stop,
             "target": body.target,

@@ -994,3 +994,80 @@ async fn a_flat_book_reports_no_learned_at_and_a_reload_keeps_the_one_it_has() {
         assert!(live["open"]["learned_at"].is_null(), "a flat book has nothing to have learned");
     }
 }
+
+#[tokio::test]
+async fn a_decided_intent_records_when_the_decider_spoke_against_the_price_it_got() {
+    // The look-ahead this makes visible: a model reads the bar that closed at
+    // `t`, answers some seconds later, and the intent it posts fills at the
+    // open of the bar stamped `t` - a price that already existed while the
+    // model was still thinking. Measured 2026-09-17 over 321 real decisions,
+    // that is 24.2 s at the median and 199 s at p90, and it is biased in the
+    // book's favour: if the model has skill, the price before it spoke is the
+    // better one in the direction it chose.
+    //
+    // Not corrected here. Filling at the tick the decision arrived on is a
+    // different fill model and a different hypothesis. What is pinned is that
+    // the record now carries both numbers so the bias can be measured rather
+    // than argued about.
+    let dir = tempfile::tempdir().expect("temp dir");
+    let state = state_over(dir.path(), 300);
+    start_run(&state, json!({ "market": "btc", "tf": "15m", "strategy": "external", "id": "b", "window": 200 }))
+        .await
+        .expect("start");
+    post_bar(&state, "btc", "15m", wave(300)).await.expect("bar");
+
+    let before = wall_ms();
+    let reply = post_intent(
+        &state,
+        json!({ "run": "b", "bar_time": wave(300).time, "side": "LONG", "reason": "a model said so", "decider": "gpt-5" }),
+    )
+    .await
+    .expect("intent");
+    assert_eq!(reply["accepted"], true, "{reply}");
+    let after = wall_ms();
+
+    // The intent line stamps the decider's own clock beside the bar it read.
+    let path = dir.path().join("paper").join("b").join("fills.jsonl");
+    let intents: Vec<Value> = std::fs::read_to_string(&path)
+        .expect("fills")
+        .lines()
+        .filter_map(|l| serde_json::from_str::<Value>(l).ok())
+        .filter(|e| e["kind"] == "intent")
+        .collect();
+    let decided = intents.last().expect("an intent line")["decided_at"].as_i64().expect("decided_at");
+    assert!(decided >= before && decided <= after, "a wall clock, not a bar time: {decided}");
+
+    // And the fill it receives carries it, so the two can be compared without
+    // joining two files on a guess.
+    post_bar(&state, "btc", "15m", wave(301)).await.expect("bar");
+    let opened: Vec<Value> = std::fs::read_to_string(&path)
+        .expect("fills")
+        .lines()
+        .filter_map(|l| serde_json::from_str::<Value>(l).ok())
+        .filter(|e| e["kind"] == "opened")
+        .collect();
+    let line = opened.last().expect("the entry opened");
+    assert_eq!(line["decided_at"].as_i64(), Some(decided), "the fill names the decision that caused it: {line}");
+    assert!(line["learned_at"].as_i64().expect("learned_at") >= decided, "learned after decided: {line}");
+
+    // Taken with the pending it belongs to: the next entry must not inherit
+    // this decision's stamp. A rule book never sets one at all.
+    let state2 = state_over(dir.path(), 300);
+    start_run(&state2, json!({ "market": "btc", "tf": "15m", "strategy": "ema-cross", "id": "r", "window": 200 }))
+        .await
+        .expect("start");
+    for i in 300..380 {
+        let _ = post_bar(&state2, "btc", "15m", wave(i)).await;
+    }
+    let rule_opens: Vec<Value> = std::fs::read_to_string(dir.path().join("paper").join("r").join("fills.jsonl"))
+        .expect("fills")
+        .lines()
+        .filter_map(|l| serde_json::from_str::<Value>(l).ok())
+        .filter(|e| e["kind"] == "opened")
+        .collect();
+    assert!(!rule_opens.is_empty(), "the wave must open something");
+    assert!(
+        rule_opens.iter().all(|e| e["decided_at"].is_null()),
+        "a rule decides instantly, so it has no gap to record: {rule_opens:?}"
+    );
+}
