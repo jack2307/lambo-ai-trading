@@ -533,20 +533,94 @@ fn record(data: &Path, id: &str, event: &serde_json::Value) -> Result<(), ApiErr
     writeln!(file, "{event}").map_err(|e| ApiError::Internal(format!("paper: {}: {e}", path.display())))
 }
 
-/// The run's `fills.jsonl` less its `trade` lines, oldest first: the
-/// `started`, `gap`, `refused`, `guard_close` and `stopped` events. Read
-/// line by line; a line that is not a JSON object (a write cut short by a
-/// crash) is skipped, not fatal — the book in `state.json` is the record,
-/// this file is its narration. No file (a run that never wrote one) is no
-/// events.
-fn events_of(data: &Path, id: &str) -> Vec<serde_json::Value> {
-    let Ok(file) = std::fs::File::open(run_dir(data, id).join("fills.jsonl")) else { return Vec::new() };
-    std::io::BufReader::new(file)
-        .lines()
-        .map_while(Result::ok)
-        .filter_map(|line| serde_json::from_str::<serde_json::Value>(&line).ok())
-        .filter(|event| event.is_object() && event["kind"] != "trade")
-        .collect()
+/// Just the `kind` of a line, so a caller that only wants to know whether a
+/// line is a trade does not build the whole event to find out.
+///
+/// `kind` is a `Value` and not a `String` on purpose: a line whose `kind` is
+/// not a string, or which has none, must be counted exactly as it was when
+/// this read every line into a `serde_json::Value` — anything else would
+/// quietly change a number on the Desk.
+#[derive(Deserialize)]
+struct KindOnly {
+    #[serde(default)]
+    kind: serde_json::Value,
+}
+
+/// Is this line one of the run's events rather than one of its trades?
+///
+/// The same test the full read used — an object, whose `kind` is not `trade`
+/// — with the rest of the line skipped instead of allocated.
+fn is_event(line: &str) -> bool {
+    serde_json::from_str::<KindOnly>(line).is_ok_and(|k| k.kind != "trade")
+}
+
+/// The last `limit` of the run's `fills.jsonl` lines that are not trades,
+/// oldest first: the `started`, `gap`, `refused`, `guard_close` and `stopped`
+/// events. A line that is not a JSON object (a write cut short by a crash) is
+/// skipped, not fatal — the book in `state.json` is the record, this file is
+/// its narration. No file (a run that never wrote one) is no events.
+///
+/// Read from the end since 2026-09-17. It read the file whole and then threw
+/// away all but the last [`MAX_DETAIL_EVENTS`], which is affordable at the
+/// size these files are — the largest `fills.jsonl` on this desk is 8.5 KB —
+/// and stops being affordable on a schedule nobody is watching, because
+/// nothing rotates it. Measured 2026-09-17 on a 2 MB file: 8.7 ms whole
+/// against 350 us for the last two hundred events. See [`event_count`] for
+/// why rotation is not the answer here and what the growth actually is.
+///
+/// The window has to grow on the count of EVENTS, not of lines, because
+/// trades are interleaved with them and are a third of the file. Growing on
+/// lines would be the cheaper loop and would quietly return fewer than
+/// `limit` events on a book that trades a lot.
+fn events_of(data: &Path, id: &str, limit: usize) -> Vec<serde_json::Value> {
+    let path = run_dir(data, id).join("fills.jsonl");
+    let Some((window, from_start)) =
+        tail_window(&path, |lines| lines.iter().filter(|l| is_event(l)).count() >= limit)
+    else {
+        return Vec::new();
+    };
+    let mut out: Vec<serde_json::Value> = complete_lines(&window, from_start)
+        .iter()
+        .filter(|l| is_event(l))
+        .filter_map(|l| serde_json::from_str(l).ok())
+        .collect();
+    let skip = out.len().saturating_sub(limit);
+    out.drain(..skip);
+    out
+}
+
+/// How many event lines the run's `fills.jsonl` holds. Counting needs all of
+/// them, so this one reads the whole file and there is no version of it that
+/// does not.
+///
+/// What it no longer does is build a `serde_json::Value` per line to look at
+/// one field of it. Measured 2026-09-17 on a 2 MB file of 9,867 lines — six
+/// months of the busiest book, or four years of a typical one — that is 8.7 ms
+/// against 3.7 ms. It runs once per book on every poll of
+/// `/api/paper/status`, the most frequently served route on the desk.
+///
+/// 2.5x and not more, because the line is still scanned end to end either way;
+/// what goes is the map and the strings built out of it and dropped. At the
+/// size these files are TODAY - 8.5 KB - the whole thing is 40 us and this
+/// saves 25 of them, which is not a reason to have done it. The reason is that
+/// the cost grows with the file and the file never stops growing.
+///
+/// Worth knowing before optimising this further: NOTHING READS THE NUMBER.
+/// `events` is declared on the status DTO and in `ui/src/lib/api.ts`, and no
+/// component, script or test reads it — the Desk's event count comes from
+/// `detail.events.length` on the other route. Deleting the field would remove
+/// this read entirely, and that is a change to the API's shape and to a UI
+/// file, so it is written down here rather than taken quietly.
+///
+/// Rotation is not the fix for this file and the arithmetic says so. Measured
+/// 2026-09-17 across all twenty books: `fills.jsonl` grows at 60 to 470 bytes
+/// an hour, because it is written per trade and per event and not per bar —
+/// 0.5 to 4 MB a year, so twenty-five years to the 32 MiB the per-bar logs
+/// roll at. It is not the same disease as `decisions.jsonl`; it is only read
+/// wastefully.
+fn event_count(data: &Path, id: &str) -> usize {
+    let Ok(file) = std::fs::File::open(run_dir(data, id).join("fills.jsonl")) else { return 0 };
+    std::io::BufReader::new(file).lines().map_while(Result::ok).filter(|line| is_event(line)).count()
 }
 
 /// One closed trade as `trades.jsonl` carries it: the trade itself, whole, and
@@ -1274,7 +1348,7 @@ fn status_of(data: &Path, run: &PaperRun, rules: &TradingRules, guards: Option<&
         live,
         last_fills: book.trades[skip..].iter().map(TradeDto::from).collect(),
         equity_curve: book.equity_curve.len(),
-        events: events_of(data, &run.config.id()).len(),
+        events: event_count(data, &run.config.id()),
         brokers: brokers_of(data, &run.config.id()),
         driver: driver_of(data, &run.config.id()),
         paused: run.paused,
@@ -2345,9 +2419,7 @@ pub async fn detail(
     let skip = book.trades.len().saturating_sub(MAX_DETAIL_FILLS);
     let fills = book.trades[skip..].iter().map(TradeDto::from).collect();
 
-    let mut events = events_of(&state.data, &id);
-    let skip = events.len().saturating_sub(MAX_DETAIL_EVENTS);
-    events.drain(..skip);
+    let events = events_of(&state.data, &id, MAX_DETAIL_EVENTS);
 
     let wanted = query.bars.unwrap_or(DEFAULT_DETAIL_BARS).min(run.config.window.max(1));
     let skip = run.bars.len().saturating_sub(wanted);
@@ -2878,6 +2950,54 @@ fn b_of(v: &serde_json::Value, key: &str) -> bool {
 /// both; doubling is what makes the difference not matter.
 const TAIL_CHUNK: u64 = 64 * 1024;
 
+/// Bytes from the end of a file, enough of them to answer `enough`.
+///
+/// Reads backwards in a window that doubles each round until `enough` is
+/// satisfied by the whole lines inside it, or the window reaches byte 0 and
+/// there is no more file to have. Returns the window and whether it starts at
+/// byte 0, which is what [`complete_lines`] needs to know whether its first
+/// line is a line or the tail of one.
+///
+/// `enough` is given the lines rather than a count because the two callers ask
+/// different questions of them: [`tail_jsonl`] wants `limit` lines, and
+/// [`events_of`] wants `limit` lines that are not trades, out of a file where
+/// a third of them are.
+///
+/// Re-splitting the whole window each round rather than counting the new
+/// chunk's newlines and adding them up. The counting version was written first
+/// and measured slower — `bytes.iter().filter(|b| **b == b'\n').count()` walks
+/// a byte at a time, where the `lines()` inside `complete_lines` uses the same
+/// memchr the standard library uses everywhere else. Doubling keeps the number
+/// of rounds at three or four, so the re-splitting is bounded and the faster
+/// scan wins.
+fn tail_window(path: &Path, enough: impl Fn(&[&str]) -> bool) -> Option<(Vec<u8>, bool)> {
+    let mut file = std::fs::File::open(path).ok()?;
+    // The length is taken once. Whatever is appended after this point is not
+    // read at all, which is the cheapest way to be sure a line is never read
+    // half-written.
+    let end = file.seek(SeekFrom::End(0)).ok()?;
+
+    let mut pos = end;
+    let mut window: Vec<u8> = Vec::new();
+    let mut step = TAIL_CHUNK;
+    loop {
+        let back = step.min(pos);
+        pos -= back;
+        let mut chunk = vec![0u8; back as usize];
+        file.seek(SeekFrom::Start(pos)).ok()?;
+        // Short of the bytes the length promised: the file was replaced under
+        // us. An empty panel for one poll, not a wrong one.
+        file.read_exact(&mut chunk).ok()?;
+        chunk.extend_from_slice(&window);
+        window = chunk;
+        if pos == 0 || enough(&complete_lines(&window, pos == 0)) {
+            break;
+        }
+        step *= 2;
+    }
+    Some((window, pos == 0))
+}
+
 /// The last `limit` lines of a JSONL file, oldest first, skipping unreadable
 /// ones rather than failing: a half-written last line (the writer was killed
 /// mid-append) must not take the whole panel down.
@@ -2936,43 +3056,10 @@ const TAIL_CHUNK: u64 = 64 * 1024;
 /// follows the file it was opened on, so a rotation mid-read returns the tail
 /// of the rolled file and the next poll opens the new one.
 fn tail_jsonl(path: &Path, limit: usize) -> Vec<serde_json::Value> {
-    let Ok(mut file) = std::fs::File::open(path) else { return Vec::new() };
-    // The length is taken once. Whatever is appended after this point is not
-    // read at all, which is the cheapest way to be sure a line is never read
-    // half-written.
-    let Ok(end) = file.seek(SeekFrom::End(0)) else { return Vec::new() };
-
-    let mut pos = end;
-    let mut window: Vec<u8> = Vec::new();
-    let mut step = TAIL_CHUNK;
-    loop {
-        let back = step.min(pos);
-        pos -= back;
-        let mut chunk = vec![0u8; back as usize];
-        if file.seek(SeekFrom::Start(pos)).is_err() {
-            return Vec::new();
-        }
-        if file.read_exact(&mut chunk).is_err() {
-            // Short of the bytes the length promised: the file was replaced
-            // under us. An empty panel for one poll, not a wrong one.
-            return Vec::new();
-        }
-        chunk.extend_from_slice(&window);
-        window = chunk;
-        // Re-splitting the whole window each round rather than counting the
-        // new chunk's newlines and adding them up. The counting version was
-        // written first and measured slower - `bytes.iter().filter(|b| **b ==
-        // b'\n').count()` walks a byte at a time, where the `lines()` inside
-        // `complete_lines` uses the same memchr the standard library uses
-        // everywhere else. Doubling keeps the number of rounds at three or
-        // four, so the re-splitting is bounded and the faster scan wins.
-        if pos == 0 || complete_lines(&window, pos == 0).len() >= limit {
-            break;
-        }
-        step *= 2;
-    }
-
-    let lines = complete_lines(&window, pos == 0);
+    let Some((window, from_start)) = tail_window(path, |lines| lines.len() >= limit) else {
+        return Vec::new();
+    };
+    let lines = complete_lines(&window, from_start);
     lines
         .iter()
         .skip(lines.len().saturating_sub(limit))
@@ -3244,6 +3331,127 @@ mod tail_tests {
     }
 }
 
+/// [`events_of`] and [`event_count`] over a `fills.jsonl` with trades
+/// interleaved through it, which is the only shape it ever has.
+#[cfg(test)]
+mod event_tests {
+    use super::*;
+
+    /// `<data>/paper/<id>/fills.jsonl` holding `body`, and the data root.
+    fn run_with(dir: &tempfile::TempDir, id: &str, body: &str) -> PathBuf {
+        let data = dir.path().to_path_buf();
+        let run = run_dir(&data, id);
+        std::fs::create_dir_all(&run).expect("mkdir");
+        std::fs::write(run.join("fills.jsonl"), body).expect("write");
+        data
+    }
+
+    /// `n` lines, every third one a trade, each numbered so the newest are
+    /// identifiable. Deliberately more trades than a real book takes: the
+    /// point is that the window has to look past them.
+    fn mixed(n: usize) -> String {
+        (0..n)
+            .map(|i| {
+                if i % 3 == 0 {
+                    format!("{{\"kind\":\"trade\",\"at\":{i}}}\n")
+                } else {
+                    format!("{{\"kind\":\"gap\",\"at\":{i}}}\n")
+                }
+            })
+            .collect()
+    }
+
+    /// What the whole-file read did, kept here to compare against rather than
+    /// alive in the crate where it could be called by accident.
+    fn every_line(data: &Path, id: &str) -> Vec<serde_json::Value> {
+        let Ok(text) = std::fs::read_to_string(run_dir(data, id).join("fills.jsonl")) else {
+            return Vec::new();
+        };
+        text.lines()
+            .filter_map(|l| serde_json::from_str::<serde_json::Value>(l).ok())
+            .filter(|e| e.is_object() && e["kind"] != "trade")
+            .collect()
+    }
+
+    #[test]
+    fn the_tail_returns_events_and_never_trades() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        let data = run_with(&dir, "book", &mixed(300));
+        let got = events_of(&data, "book", 20);
+        assert_eq!(got.len(), 20, "twenty events, not twenty lines");
+        assert!(got.iter().all(|e| e["kind"] != "trade"), "{got:?}");
+        // The newest twenty non-trade lines of 300, oldest first. 299 and 298
+        // are events, 297 is a trade.
+        assert_eq!(got.last().expect("last")["at"], 299);
+        assert!(got[0]["at"].as_i64() < got[19]["at"].as_i64(), "oldest first");
+    }
+
+    #[test]
+    fn the_tail_agrees_with_reading_every_line() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        let data = run_with(&dir, "book", &mixed(300));
+        let whole = every_line(&data, "book");
+        let tail = events_of(&data, "book", MAX_DETAIL_EVENTS);
+        let cut = whole.len().saturating_sub(MAX_DETAIL_EVENTS);
+        assert_eq!(tail, whole[cut..], "the tail is the end of what the full read returned");
+        assert_eq!(event_count(&data, "book"), whole.len());
+    }
+
+    #[test]
+    fn fewer_events_than_asked_for_is_all_of_them() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        let data = run_with(&dir, "book", &mixed(10));
+        // Six of ten are not trades (0, 3, 6 and 9 are), and the window walks
+        // to byte 0 to find that out rather than stopping when it runs out of
+        // chunks.
+        assert_eq!(events_of(&data, "book", MAX_DETAIL_EVENTS).len(), 6);
+        assert_eq!(event_count(&data, "book"), 6);
+    }
+
+    #[test]
+    fn a_run_with_no_file_has_no_events_and_counts_zero() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        let data = dir.path().to_path_buf();
+        assert!(events_of(&data, "never-ran", 50).is_empty());
+        assert_eq!(event_count(&data, "never-ran"), 0);
+    }
+
+    #[test]
+    fn the_odd_lines_are_classified_exactly_as_the_full_read_classified_them() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        // Each of these was decided by `event.is_object() && event["kind"] !=
+        // "trade"` before, and `is_event` has to keep deciding them the same
+        // way or a number on the Desk changes for no reason anybody can see.
+        let body = concat!(
+            "{\"kind\":\"gap\",\"at\":1}\n",       // an event
+            "{\"kind\":\"trade\",\"at\":2}\n",     // not
+            "{\"at\":3}\n",                        // no kind at all: an event
+            "{\"kind\":7,\"at\":4}\n",             // kind that is not a string: an event
+            "12345\n",                             // valid JSON, not an object: not
+            "{\"kind\":\"gap\",\"at\":6\n",        // torn: not
+            "\n",                                  // blank: not
+            "{\"kind\":\"stopped\",\"at\":8}\n",   // an event
+        );
+        let data = run_with(&dir, "book", body);
+        let whole = every_line(&data, "book");
+        assert_eq!(whole.iter().map(|e| i_of(e, "at")).collect::<Vec<_>>(), vec![1, 3, 4, 8]);
+        assert_eq!(events_of(&data, "book", 50), whole);
+        assert_eq!(event_count(&data, "book"), 4);
+    }
+
+    #[test]
+    fn a_file_of_nothing_but_trades_costs_the_whole_file_and_returns_nothing() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        let body: String = (0..500).map(|i| format!("{{\"kind\":\"trade\",\"at\":{i}}}\n")).collect();
+        let data = run_with(&dir, "book", &body);
+        // The window can never satisfy the count, so it grows to byte 0. That
+        // is the honest worst case of growing on events rather than lines, and
+        // it is the same cost the full read always paid.
+        assert!(events_of(&data, "book", 50).is_empty());
+        assert_eq!(event_count(&data, "book"), 0);
+    }
+}
+
 /// The receipt for the table in [`tail_jsonl`]'s comment.
 ///
 /// `#[ignore]`d: it writes 64 MB of temporary files and a timing is not a
@@ -3300,6 +3508,62 @@ mod tail_bench {
             }
             println!("{name} {} bytes {rows} lines | limit {limit}: tail {tail:?} whole {whole:?}", body.len());
         }
+    }
+
+    /// The receipt for the numbers in [`event_count`] and [`events_of`].
+    ///
+    /// `fills.jsonl` shaped as the real ones are - a third trades, the rest
+    /// events, about 210 bytes a line - at 2 MB, which is six months of the
+    /// busiest book on the desk or four years of a typical one.
+    #[test]
+    #[ignore]
+    fn counting_and_tailing_events_against_reading_every_line() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        let data = dir.path().to_path_buf();
+        let run = run_dir(&data, "book");
+        std::fs::create_dir_all(&run).expect("mkdir");
+        let pad = "y".repeat(180);
+        let mut body = String::new();
+        let mut rows = 0;
+        while body.len() < 2 * 1024 * 1024 {
+            let kind = if rows % 3 == 0 { "trade" } else { "gap" };
+            body.push_str(&format!("{{\"kind\":\"{kind}\",\"at\":{rows},\"p\":\"{pad}\"}}
+"));
+            rows += 1;
+        }
+        std::fs::write(run.join("fills.jsonl"), &body).expect("write");
+
+        // What both did before: every line into a Value, then filter.
+        let whole = || -> Vec<serde_json::Value> {
+            std::fs::read_to_string(run.join("fills.jsonl"))
+                .expect("read")
+                .lines()
+                .filter_map(|l| serde_json::from_str::<serde_json::Value>(l).ok())
+                .filter(|e| e.is_object() && e["kind"] != "trade")
+                .collect()
+        };
+
+        let mut old = std::time::Duration::MAX;
+        let mut new = std::time::Duration::MAX;
+        let mut tail = std::time::Duration::MAX;
+        for _ in 0..5 {
+            let t = std::time::Instant::now();
+            let n = whole().len();
+            old = old.min(t.elapsed());
+
+            let t = std::time::Instant::now();
+            let m = event_count(&data, "book");
+            new = new.min(t.elapsed());
+            assert_eq!(n, m, "the count changed");
+
+            let t = std::time::Instant::now();
+            let k = events_of(&data, "book", MAX_DETAIL_EVENTS).len();
+            tail = tail.min(t.elapsed());
+            assert_eq!(k, MAX_DETAIL_EVENTS);
+        }
+        println!("fills.jsonl {} bytes {rows} lines", body.len());
+        println!("  count: every line into a Value {old:?} -> kind only {new:?}");
+        println!("  detail: whole file {old:?} -> tail of {MAX_DETAIL_EVENTS} events {tail:?}");
     }
 
     #[test]
