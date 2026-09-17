@@ -3167,17 +3167,82 @@ pub async fn reasoning(
     Ok(Json(ReasoningResponse { run: id, decisions, consultations }))
 }
 
+/// How large a log grows before it is rolled aside — the same 32 MiB the
+/// Python writers use (`ROTATE_BYTES` in `py/live/ai_trader.py`).
+///
+/// The arithmetic for THIS file, measured 2026-09-17: the busiest advisor book
+/// wrote 105,119 bytes of `advice.jsonl` in 9.7 hours — 10.8 KB an hour, 253
+/// KB a day, because a panel transcript is about 12 KB and a busy book takes
+/// twenty a day. That is 130 days to 32 MiB.
+///
+/// Worth saying because it was nearly skipped: this file was reported, by me,
+/// as being years from mattering. That came from counting lines on a quiet
+/// book — six a day — without measuring a busy one. It is the same disease as
+/// `decisions.jsonl` at two and a half times the doubling time, not a
+/// different kind of file.
+const ROTATE_BYTES: u64 = 32 * 1024 * 1024;
+
+/// Move a log that has reached `limit` aside, under a name that sorts by when.
+///
+/// Renaming, and nothing else. Nothing here or anywhere else in this repo
+/// removes a rolled file, and there is deliberately no keep-the-last-N: the
+/// owner's standing requirement is that the record reads as one unbroken thing
+/// from the first day, and a rotation that is able to delete is one that
+/// eventually will. If disk is ever short the answer is to move old files by
+/// hand, which is a decision a person makes once.
+///
+/// Named with `now_ms()` rather than a calendar stamp, unlike the Python side
+/// which writes `decisions-20260917T143005Z.jsonl`. Nothing in this workspace
+/// depends on a date library and every time in it is epoch milliseconds, so
+/// pulling one in to format a filename would be the more expensive of the two
+/// inconsistencies. Thirteen digits sort chronologically until the year 2286.
+///
+/// The name is RESERVED with `create_new` before the rename, and that is the
+/// load-bearing line. `std::fs::rename` REPLACES an existing destination on
+/// both platforms — unlike Python's `os.rename`, which refuses on Windows —
+/// and this is an axum handler, so two consultations on one run can be in here
+/// at the same time. Exactly one can create the name; the loser leaves the
+/// file alone instead of renaming over the winner's record. A failed rename
+/// leaves an empty rolled file behind, which is untidy and harmless, and the
+/// next millisecond gets a different name.
+///
+/// Failing to roll is acceptable; losing a line is not. It runs before the
+/// append, never touches content, and every failure is discarded: a
+/// consultation must not fail because a log could not be tidied.
+fn roll_aside(path: &Path, limit: u64) {
+    let Ok(meta) = std::fs::metadata(path) else { return };
+    if meta.len() < limit {
+        return;
+    }
+    let Some(stem) = path.file_stem().and_then(std::ffi::OsStr::to_str) else { return };
+    let ext = path.extension().and_then(std::ffi::OsStr::to_str).unwrap_or("jsonl");
+    let rolled = path.with_file_name(format!("{stem}-{}.{ext}", now_ms()));
+    if std::fs::OpenOptions::new().create_new(true).write(true).open(&rolled).is_err() {
+        return;
+    }
+    let _ = std::fs::rename(path, &rolled);
+}
+
 /// The conversation log: its own file, never `fills.jsonl`.
 ///
 /// Kept apart because the two have different lifetimes and different readers.
-/// `fills.jsonl` is what the book did and is replayed on restart; this is what
-/// was said about it, is never replayed, and will be orders of magnitude
-/// larger once whole prompts are in it. Mixing them would make the book's own
-/// reload scan megabytes of transcript to find its trades.
+/// `fills.jsonl` is what the book did; this is what was said about it, and it
+/// is orders of magnitude larger now that whole prompts are in it — 12 KB a
+/// line against 250 bytes. Mixing them would make the book's own reload scan
+/// megabytes of transcript to find its trades.
+///
+/// That last sentence used to say `fills.jsonl` was the file "replayed on
+/// restart", and it has not been since the history moved out:
+/// [`restore_history`] reads `trades.jsonl`, which carries the engine's own
+/// `Trade` where `fills.jsonl` drops `exit_kind` and `swap_usd`. The argument
+/// for keeping the two files apart survives the correction - it is about size
+/// and readers, not about the reload - but the sentence was telling the next
+/// reader the wrong thing about which file is the record.
 fn log_consultation(data: &Path, id: &str, event: &serde_json::Value) -> Result<(), ApiError> {
     let dir = run_dir(data, id);
     std::fs::create_dir_all(&dir).map_err(|e| ApiError::Internal(format!("paper: {}: {e}", dir.display())))?;
     let path = dir.join("advice.jsonl");
+    roll_aside(&path, ROTATE_BYTES);
     let mut file = std::fs::OpenOptions::new()
         .create(true)
         .append(true)
@@ -3449,6 +3514,129 @@ mod event_tests {
         // it is the same cost the full read always paid.
         assert!(events_of(&data, "book", 50).is_empty());
         assert_eq!(event_count(&data, "book"), 0);
+    }
+}
+
+/// [`roll_aside`], which is the Rust half of the rotation the Python writers
+/// got in `bee91a1`. The threshold is a parameter rather than the constant so
+/// that a test does not have to write 32 MiB to reach it.
+#[cfg(test)]
+mod roll_tests {
+    use super::*;
+
+    fn file_of(dir: &tempfile::TempDir, name: &str, body: &str) -> PathBuf {
+        let path = dir.path().join(name);
+        std::fs::write(&path, body).expect("write");
+        path
+    }
+
+    fn rolled_beside(path: &Path) -> Vec<PathBuf> {
+        let stem = path.file_stem().and_then(std::ffi::OsStr::to_str).expect("stem");
+        let mut out: Vec<PathBuf> = std::fs::read_dir(path.parent().expect("parent"))
+            .expect("read_dir")
+            .flatten()
+            .map(|e| e.path())
+            .filter(|p| {
+                p.file_name()
+                    .and_then(std::ffi::OsStr::to_str)
+                    .is_some_and(|n| n.starts_with(&format!("{stem}-")))
+            })
+            .collect();
+        out.sort();
+        out
+    }
+
+    #[test]
+    fn a_log_under_the_threshold_is_left_alone() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        let path = file_of(&dir, "advice.jsonl", "{\"at\":1}\n");
+        roll_aside(&path, 1024);
+        assert!(rolled_beside(&path).is_empty(), "nothing to roll yet");
+        assert_eq!(std::fs::read_to_string(&path).expect("read"), "{\"at\":1}\n");
+    }
+
+    #[test]
+    fn a_full_log_is_moved_aside_whole_and_the_name_is_free_again() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        let body = "{\"at\":1}\n{\"at\":2}\n";
+        let path = file_of(&dir, "advice.jsonl", body);
+        roll_aside(&path, 8);
+
+        let rolled = rolled_beside(&path);
+        assert_eq!(rolled.len(), 1, "exactly one roll");
+        assert_eq!(std::fs::read_to_string(&rolled[0]).expect("read"), body, "content is untouched");
+        assert!(!path.exists(), "the live name is free for the next append");
+        assert_eq!(rolled[0].extension().and_then(std::ffi::OsStr::to_str), Some("jsonl"));
+    }
+
+    #[test]
+    fn a_second_roll_never_overwrites_the_first() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        let path = file_of(&dir, "advice.jsonl", "the first day\n");
+        roll_aside(&path, 1);
+        let first = rolled_beside(&path);
+        assert_eq!(first.len(), 1);
+
+        // Same millisecond, near enough: the reserved name is taken, so the
+        // second roll declines rather than renaming over a day of record.
+        // `std::fs::rename` would REPLACE it, which is what the reservation is
+        // there to prevent.
+        std::fs::write(&path, "the second day\n").expect("write");
+        roll_aside(&path, 1);
+        assert_eq!(
+            std::fs::read_to_string(&first[0]).expect("read"),
+            "the first day\n",
+            "the first rolled file still holds the first day"
+        );
+        let now = rolled_beside(&path);
+        assert!(now.len() <= 2, "at most one more name was taken");
+        // Whichever way the clock fell, no day was destroyed: the second day
+        // is either still live or in a rolled file of its own.
+        let mut seen: Vec<String> =
+            now.iter().map(|p| std::fs::read_to_string(p).expect("read")).collect();
+        if path.exists() {
+            seen.push(std::fs::read_to_string(&path).expect("read"));
+        }
+        assert!(seen.iter().any(|s| s == "the first day\n"), "{seen:?}");
+        assert!(seen.iter().any(|s| s == "the second day\n"), "{seen:?}");
+    }
+
+    #[test]
+    fn a_log_that_does_not_exist_is_not_an_error() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        // The first consultation on a new run: the file is created by the
+        // append that follows, and asking to roll it first must be silent.
+        roll_aside(&dir.path().join("advice.jsonl"), 1);
+    }
+
+    #[test]
+    fn the_consultation_after_a_roll_starts_a_fresh_file_and_loses_nothing() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        let data = dir.path().to_path_buf();
+        let run = run_dir(&data, "book");
+        std::fs::create_dir_all(&run).expect("mkdir");
+        let path = run.join("advice.jsonl");
+
+        for at in 1..=3 {
+            log_consultation(&data, "book", &json!({ "kind": "consultation", "at": at }))
+                .expect("logged");
+        }
+        assert_eq!(tail_jsonl(&path, 50).len(), 3);
+
+        // Past the threshold now, so the next one rolls it first. Exercised
+        // through log_consultation rather than roll_aside, because the order -
+        // roll, THEN append - is the part that must not regress: the other way
+        // round moves the new line into the rolled file.
+        roll_aside(&path, 8);
+        log_consultation(&data, "book", &json!({ "kind": "consultation", "at": 4 }))
+            .expect("logged");
+
+        let rolled = rolled_beside(&path);
+        assert_eq!(rolled.len(), 1);
+        let kept: Vec<i64> = tail_jsonl(&rolled[0], 50).iter().map(|v| i_of(v, "at")).collect();
+        let live: Vec<i64> = tail_jsonl(&path, 50).iter().map(|v| i_of(v, "at")).collect();
+        assert_eq!(kept, vec![1, 2, 3], "the history is in the rolled file");
+        assert_eq!(live, vec![4], "and the new line is in the live one");
     }
 }
 
