@@ -2,17 +2,25 @@
 
     python py/live/mt5_bars.py --symbol=XAUUSD.sc --market=xauusd --tf=M15 --api=http://127.0.0.1:8138
 
-This sends **two** things every `--poll` seconds, and only one of them is
-ever decided on:
+This sends **three** things, and only two of them are ever decided on:
 
 1. The newest CLOSED bar, when it is one this process has not sent yet, to
-   `<api>/api/paper/bar`. That is the bot's whole input: a paper run steps
-   on closed bars and on nothing else.
+   `<api>/api/paper/bar`. Every decision the book makes is made here: the
+   strategy is asked on closed bars and on nothing else.
 2. The bar still FORMING, plus the current bid/ask, to
    `<api>/api/paper/tick`. That is for the screen alone. The API keeps it
    outside every book and drops it after ninety seconds; no strategy, guard
    or fill can read it. It exists because a desk whose newest number is
    fifteen minutes old reads as a feed that has died.
+3. The OPEN of each bar as it starts, to `<api>/api/paper/open` — only with
+   `--fill-on-open`, which is off by default. This decides nothing; it fills
+   an entry the previous closed bar already decided on, at the price that
+   entry was always going to get. Without it the fill waits for the bar to
+   close, which is a whole bar after the price it is recorded at:
+   `docs/decisions/2026-09-17-entry-lag.md`.
+
+   Sent as a bar's `time` and `open` and nothing else. The forming bar's
+   high, low and close are not fixed and the fill has never read them.
 
 MT5 calls used: `initialize`, `symbol_select`, `symbol_info`,
 `symbol_info_tick`, `copy_rates_from_pos`, `shutdown` — nothing that places,
@@ -118,6 +126,21 @@ def main() -> int:
     ap.add_argument("--warm", type=int, default=400, help="closed bars to send on startup")
     ap.add_argument("--once", action="store_true", help="send the warm-up bars and exit")
     ap.add_argument("--no-tick", action="store_true", help="closed bars only: do not send the forming bar")
+    # OFF by default, and that is the deliberate half of this feature.
+    #
+    # With it, a book fills its pending entry the moment the bar OPENS instead
+    # of when that bar closes fifteen minutes later - see
+    # docs/decisions/2026-09-17-entry-lag.md and `POST /api/paper/open`. The
+    # price is identical either way; what moves is when the book, and so the
+    # mirror, finds out.
+    #
+    # Default off so that deploying this code changes nothing on a live desk
+    # until somebody passes the flag. The engine change is reversible, a real
+    # account entering its trades a bar earlier is not, and the two decisions
+    # should not arrive together by accident.
+    ap.add_argument("--fill-on-open", action="store_true",
+                    help="post each bar's open as it happens, so a pending entry fills there "
+                         "instead of a bar later (see docs/decisions/2026-09-17-entry-lag.md)")
     # Which terminal the prices come from.
     #
     # Optional, because a machine with one terminal has nothing to choose
@@ -205,6 +228,65 @@ def main() -> int:
                 tick_logged_at = now
             tick_ok = ok
 
+        # The bar stamp whose open has already been posted. One post per bar:
+        # the API refuses an open at or before the last bar it advanced over,
+        # so a repeat is harmless, but a post every two seconds for fifteen
+        # minutes is a log nobody can read.
+        opened_for = {"time": None}
+
+        def send_open() -> None:
+            """The open of the bar that has just started, the moment it starts.
+
+            Read from the forming bar, whose `time` is the new bar's own stamp
+            and whose `open` is fixed for the life of the bar - unlike its
+            high, low and close, none of which are sent here and none of which
+            the fill uses.
+            """
+            rates = mt5.copy_rates_from_pos(args.symbol, tf, 0, 1)
+            if rates is None or len(rates) == 0:
+                return
+            row = rates[-1]
+            stamp = to_utc_ms(row["time"])
+            if stamp == opened_for["time"]:
+                return
+            payload = {
+                "market": args.market,
+                "tf": api_tf(args.tf),
+                "time": stamp,
+                "open": float(row["open"]),
+            }
+            status, text = post(args.api, "/api/paper/open", payload, timeout=5.0)
+            if status == 404:
+                # No run on this stream. Not an error and not worth a line an
+                # hour; the closed-bar loop says the same thing already.
+                opened_for["time"] = stamp
+                return
+            if status != 200:
+                note(False, f"open {status} {text}"[:200])
+                return
+            opened_for["time"] = stamp
+            filled = [r["id"] for r in (json.loads(text).get("runs") or []) if r.get("opened")]
+            if filled:
+                # Printed only when it actually filled something, which is four
+                # or five times a day at most. An open that fills nothing is
+                # the ordinary case and says nothing worth reading.
+                print(f"{dt.datetime.now(tz=dt.timezone.utc):%H:%M:%SZ} open {payload['open']:.2f} "
+                      f"filled {', '.join(filled)}", flush=True)
+
+        def fill_on_open() -> None:
+            """Never let this stop the loop that feeds the book.
+
+            The same rule as `tick`, and it matters more here: this one can
+            open a position, so a traceback out of it would stop the closed-bar
+            loop as well and the book would go blind rather than merely late.
+            """
+            if not args.fill_on_open:
+                return
+            try:
+                send_open()
+            except Exception as e:  # noqa: BLE001
+                note(False, f"open failed: {type(e).__name__}: {e}"[:200])
+
         def send_tick() -> None:
             rates = mt5.copy_rates_from_pos(args.symbol, tf, 0, 1)
             if rates is None or len(rates) == 0:
@@ -248,6 +330,7 @@ def main() -> int:
 
         for row in closed_bars(args.warm):
             send(row)
+        fill_on_open()
         tick()
         if args.once:
             return 0
@@ -263,6 +346,10 @@ def main() -> int:
                 next_bars = now + max(args.poll, args.tick_poll)
                 for row in closed_bars(3):
                     send(row)
+            # Before the tick, and on the fast clock rather than the slow one:
+            # the whole value of this is the seconds between a bar opening and
+            # the book knowing it. A tick is a number on a screen.
+            fill_on_open()
             tick()
     except KeyboardInterrupt:
         return 0
