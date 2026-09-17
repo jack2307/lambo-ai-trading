@@ -181,6 +181,62 @@ def main() -> int:
     check("a desk that never had accounts says nothing",
           T.blind_spots([], {}), [])
 
+    print("\n9. a STOP that did not get flat")
+    st7: dict = {}
+    clean = [{"at": now - 30_000, "kind": "stopped", "reason": "STOP file present"}]
+    out7 = T.stop_report("xau-ema", "vantage-cent", clean, st7, now)
+    check("a clean stop is announced, because the gap line alone is ambiguous",
+          len(out7) == 1 and "closed flat" in out7[0], True)
+    check("and not repeated", T.stop_report("xau-ema", "vantage-cent", clean, st7, now), [])
+    st8: dict = {}
+    dirty = [
+        {"at": now - 31_000, "kind": "order-failed", "action": "close",
+         "retcode": 10027, "comment": "AutoTrading disabled by client"},
+        {"at": now - 30_000, "kind": "stopped", "reason": "STOP file present"},
+    ]
+    out8 = T.stop_report("xau-ema", "vantage-cent", dirty, st8, now)
+    check("a stop whose close was refused is announced as a failure", len(out8), 1)
+    check("and says the position may still be open",
+          "REFUSED" in out8[0] and "still be open" in out8[0], True)
+    check("and carries the retcode that decides what to do",
+          "10027" in out8[0], True)
+    far = [
+        {"at": now - 10 * 60_000, "kind": "order-failed", "action": "open", "retcode": 10019},
+        {"at": now - 30_000, "kind": "stopped", "reason": "STOP file present"},
+    ]
+    out9 = T.stop_report("b", "acc", far, {}, now)
+    check("an unrelated older failure is not blamed on the stop",
+          len(out9) == 1 and "closed flat" in out9[0], True)
+    check("an old stop on first sight is learned, not replayed",
+          T.stop_report("b", "acc",
+                        [{"at": now - 3 * 24 * 3_600_000, "kind": "stopped"}], {}, now), [])
+
+    print("\n10. order-failed is alarming on its own")
+    outA = T.broker_alarms("b", "acc", [{"at": now, "kind": "order-failed",
+                                         "action": "open", "retcode": 10027,
+                                         "comment": "AutoTrading disabled by client"}], {}, now)
+    check("it is announced", len(outA), 1)
+    check("with the retcode and the comment, not just the word failed",
+          "10027" in outA[0] and "AutoTrading" in outA[0], True)
+
+    print("\n11. the broker resizing a healthy book")
+    st9: dict = {}
+    few = [{"at": now, "kind": "clipped", "asked": 0.004, "sending": 0.01}]
+    check("one clip is not a condition", T.clipping("b", "acc", few, st9, now), [])
+    many = [{"at": now - i * 60_000, "kind": "clipped", "asked": 0.004, "sending": 0.01}
+            for i in range(4)]
+    outB = T.clipping("b", "acc", many, st9, now)
+    check("a sustained clip is announced once", len(outB), 1)
+    check("and says which way it was resized", "resized UP" in outB[0], True)
+    check("and gives both sizes", "0.004" in outB[0] and "0.01" in outB[0], True)
+    check("the same condition next check is silent", T.clipping("b", "acc", many, st9, now), [])
+    backC = T.clipping("b", "acc", [], st9, now)
+    check("the recovery is announced", len(backC) == 1 and "no longer" in backC[0], True)
+    down = [{"at": now - i * 60_000, "kind": "clipped", "asked": 90.0, "sending": 50.0}
+            for i in range(4)]
+    outD = T.clipping("c", "acc", down, {}, now)
+    check("a maximum clamp reads as resized down", "resized down" in outD[0], True)
+
     print(f"\n{'all checks passed' if not FAIL else str(FAIL) + ' CHECK(S) FAILED'}")
     return 1 if FAIL else 0
 

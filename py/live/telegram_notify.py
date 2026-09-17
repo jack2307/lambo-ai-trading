@@ -133,7 +133,27 @@ BROKER_EVENT_FRESH_MS = 15 * 60_000
 # nothing a person has to act on. `clipped`, `not-adopted` and `standing-out`
 # are the same — the mirror declining a trade on purpose. What is here is the
 # executor refusing to run at all.
-ALARMING_KINDS = frozenset({"autotrading-off", "refused"})
+ALARMING_KINDS = frozenset({"autotrading-off", "refused", "order-failed"})
+
+# How long before a `stopped` event a failed close still belongs to it.
+#
+# The STOP path closes every position and then logs `stopped` in the same pass
+# of the loop, so a refused close is written milliseconds earlier. A minute is
+# far more than that needs and far less than the fifteen-second poll could put
+# between two unrelated failures.
+STOP_CLOSE_WINDOW_MS = 60_000
+
+# How often a HEALTHY funded book is checked for the broker resizing it, and
+# how many of its recent events must be clipped before that is worth saying.
+#
+# Clipping is a standing condition, not an event: it happens on a mirror that
+# is working perfectly, so the gap-triggered fetch can never see it, and a
+# per-trade alert would be noise on every trade of a book that is too small.
+# Half an hour keeps a healthy desk at a handful of extra GETs an hour, and
+# three occurrences is enough to separate "the minimum moved one odd trade"
+# from "this book is sized wrong and has been for a while".
+CLIP_CHECK_MS = 30 * 60_000
+CLIP_MIN_EVENTS = 3
 
 
 # --------------------------------------------------------------- the secret
@@ -493,8 +513,130 @@ def broker_alarms(run_id: str, account_id: str, events: list,
     seen[key] = at
     if last == 0 and (now_ms - at) > BROKER_EVENT_FRESH_MS:
         return []
-    why = str(newest.get("reason") or newest.get("kind") or "refused")
-    return [f"⛔ <b>{esc(run_id)}</b> on <b>{esc(account_id)}</b> — {esc(why)}"]
+    return [f"⛔ <b>{esc(run_id)}</b> on <b>{esc(account_id)}</b> — {esc(describe(newest))}"]
+
+
+def describe(event: dict) -> str:
+    """One readable line out of an executor event.
+
+    `order-failed` carries `retcode` and `comment` and no `reason`, and the
+    retcode is the whole message: 10027 is AutoTrading off and is fixed by a
+    button, while 10019 is no money and is not. A line that said only "an order
+    failed" would send the reader to a log to find the one number that decides
+    what they do next.
+    """
+    kind = str(event.get("kind") or "event")
+    if kind == "order-failed":
+        bits = [b for b in (
+            str(event.get("action") or "an order"),
+            f"retcode {event['retcode']}" if event.get("retcode") is not None else "",
+            str(event.get("comment") or ""),
+        ) if b]
+        return "order failed: " + ", ".join(bits)
+    return str(event.get("reason") or kind)
+
+
+def stop_report(run_id: str, account_id: str, events: list,
+                state: dict, now_ms: float) -> list[str]:
+    """A STOP that was honoured, and whether it actually got flat.
+
+    This exists because a kill switch that failed is currently announced as a
+    success. `mt5_executor` closes every position on the STOP path, DISCARDS
+    the boolean each close returns, logs `stopped` and exits 0, and writes no
+    snapshot on the way out. With AutoTrading off every close comes back 10027,
+    so the process reports a clean stop while a REAL position stays open with
+    nothing reconciling it - and the launcher then refuses to restart, because
+    the STOP file it is reacting to is still there.
+
+    The only other signal is the mirror gap, and that says "not mirroring",
+    which is exactly what an operator who dropped the STOP file expects to see.
+    That is the trap: the failure and the intention look identical.
+
+    "Stopped" is therefore the wrong thing to say - the operator meant to stop
+    it. The question they cannot answer from anywhere else is whether it got
+    flat, and the events answer it: the closes are attempted immediately before
+    the `stopped` line, so a failed close sits within a second of it. A book
+    that held nothing attempts no close and can produce no failure, which is
+    why silence on that side is evidence rather than an absence of it.
+
+    Both outcomes are announced. A clean stop gets a line on purpose: the
+    mirror gap is about to say "not mirroring" and leave the reader guessing,
+    and one line saying it closed flat is what stops that guess.
+    """
+    key = f"{account_id}/{run_id}"
+    seen: dict = state.setdefault("stops", {})
+    last = int(seen.get(key) or 0)
+    stops = [e for e in (events or []) if e.get("kind") == "stopped" and e.get("at")]
+    if not stops:
+        return []
+    newest = max(stops, key=lambda e: int(e.get("at") or 0))
+    at = int(newest.get("at") or 0)
+    if at <= last:
+        return []
+    seen[key] = at
+    if last == 0 and (now_ms - at) > BROKER_EVENT_FRESH_MS:
+        return []
+    failed = [e for e in (events or [])
+              if e.get("kind") == "order-failed" and e.get("at")
+              and 0 <= at - int(e["at"]) <= STOP_CLOSE_WINDOW_MS]
+    why = str(newest.get("reason") or "a STOP file")
+    if failed:
+        worst = max(failed, key=lambda e: int(e.get("at") or 0))
+        return [
+            f"\U0001f6a8 <b>{esc(run_id)}</b> on <b>{esc(account_id)}</b> — stopped on "
+            f"{esc(why)}, but the close was REFUSED ({esc(describe(worst))}). "
+            f"A position may still be open on the account with nothing reconciling it."
+        ]
+    return [
+        f"✅ <b>{esc(run_id)}</b> on <b>{esc(account_id)}</b> — stopped on "
+        f"{esc(why)} and closed flat."
+    ]
+
+
+def clipping(run_id: str, account_id: str, events: list,
+             state: dict, now_ms: float) -> list[str]:
+    """The broker resizing a book's orders, as a standing condition.
+
+    `clamp_volume` returns whether the broker's minimum or maximum MOVED the
+    size rather than merely rounding it, and the executor logs `clipped` with
+    what it asked for and what it sent. On the funded account at lot_scale 0.2
+    a book asking for less than 0.05 lots is pushed UP to the 0.01 minimum -
+    bigger than the book intended, on every trade, and nowhere on any screen.
+    Oversized is the direction that matters: undersized costs a book its edge,
+    oversized costs the account more than the sizing rules agreed to risk.
+
+    Announced as a condition, once, with a recovery - not per trade. A book too
+    small for the account is too small on every trade it takes, and an alert
+    that repeats on each one is an alert that gets muted by the end of the day.
+
+    This belongs on a screen more than in a channel: it is a fact about how an
+    account is configured, not an event someone must act on this minute. It is
+    here because there is no screen for it and the account is funded. If one is
+    built, delete this.
+    """
+    clips = [e for e in (events or []) if e.get("kind") == "clipped" and e.get("at")]
+    seen: dict = state.setdefault("clipped", {})
+    key = f"{account_id}/{run_id}"
+    was = bool(seen.get(key))
+    if len(clips) < CLIP_MIN_EVENTS:
+        if was:
+            seen[key] = False
+            return [f"✅ <b>{esc(run_id)}</b> on <b>{esc(account_id)}</b> — "
+                    f"the broker is no longer resizing it."]
+        return []
+    seen[key] = True
+    if was:
+        return []
+    newest = max(clips, key=lambda e: int(e.get("at") or 0))
+    asked, sending = newest.get("asked"), newest.get("sending")
+    how = ""
+    if isinstance(asked, (int, float)) and isinstance(sending, (int, float)) and asked > 0:
+        way = "UP" if sending > asked else "down"
+        how = f": it asked {asked:.4g} and the broker sent {sending:.4g}, resized {way}"
+    return [
+        f"⚠️ <b>{esc(run_id)}</b> on <b>{esc(account_id)}</b> — the broker's "
+        f"size limits are moving this book's orders on {len(clips)} of its recent trades{esc(how)}."
+    ]
 
 
 def changes(runs: list, state: dict, now_ms: float, funded: set | None = None) -> list[str]:
@@ -762,18 +904,44 @@ def main() -> int:
             # visible anywhere else is the executor that refused to start and
             # exited, and that book is by definition missing from `mirroring`.
             # Reading only the gap keeps this bounded - no gap, no extra GETs.
+            def events_for(book: str, acct: str):
+                got = desk(
+                    f"/api/paper/broker-events/{urllib.parse.quote(book)}"
+                    f"?account={urllib.parse.quote(acct)}&limit={BROKER_EVENT_LIMIT}"
+                )
+                return got.get("events") or []
+
+            due: dict = state.setdefault("clip_checked", {})
             for a in accounts:
                 aid = str(a.get("id") or "")
                 have = {str(b) for b in (a.get("mirroring") or [])}
                 for book in [str(b) for b in (a.get("runs") or []) if str(b) not in have]:
                     try:
-                        got = desk(
-                            f"/api/paper/broker-events/{urllib.parse.quote(book)}"
-                            f"?account={urllib.parse.quote(aid)}&limit={BROKER_EVENT_LIMIT}"
-                        )
+                        evs = events_for(book, aid)
                     except Exception:  # noqa: BLE001
                         continue      # one unreadable book must not stop the rest
-                    lines += broker_alarms(book, aid, got.get("events") or [], state, now_ms)
+                    # Both read the same fetch. `stop_report` is the one that
+                    # matters on a funded account: it is the only place a STOP
+                    # that failed to get flat can be told apart from a STOP
+                    # that worked, and from here they look identical.
+                    lines += stop_report(book, aid, evs, state, now_ms)
+                    lines += broker_alarms(book, aid, evs, state, now_ms)
+
+                # A HEALTHY funded mirror, checked rarely. Clipping happens on a
+                # book that is working, so the gap fetch above can never see it,
+                # and polling every book every 30 seconds to find a condition
+                # that changes weekly would be paying continuously for news that
+                # almost never arrives.
+                if not a.get("real_money"):
+                    continue
+                for book in sorted(have):
+                    if now_ms - float(due.get(f"{aid}/{book}") or 0) < CLIP_CHECK_MS:
+                        continue
+                    due[f"{aid}/{book}"] = now_ms
+                    try:
+                        lines += clipping(book, aid, events_for(book, aid), state, now_ms)
+                    except Exception:  # noqa: BLE001
+                        continue
 
             if state.get("api_down"):
                 state["api_down"] = False
