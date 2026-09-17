@@ -237,6 +237,67 @@ def main() -> int:
     outD = T.clipping("c", "acc", down, {}, now)
     check("a maximum clamp reads as resized down", "resized down" in outD[0], True)
 
+    print("\n12. a model that lost its session, and a book nobody drives")
+    live = now - 10 * 60_000          # bars arriving: 10 min behind on a 15m book
+    silent = book("ai-xau-opus-ctx", last=live, strategy="external",
+                  decider={"last": "claude-opus-5", "last_at": now - 50 * 60_000,
+                           "decisions": {}, "stood_aside": 4})
+    check("a decider quiet for 50 min on a live feed is gone (3 bars = 45)",
+          T.decider_gone(silent, now), True)
+    check("a coin decider is never alarmed on",
+          T.decider_gone(book("c", last=live, decider={"last": "coin", "last_at": 0}), now), False)
+    dead_feed = book("x", last=now - 10 * 3_600_000, strategy="external",
+                     decider={"last": "m", "last_at": now - 10 * 3_600_000})
+    check("a dead FEED suppresses it - one outage, one alarm",
+          T.decider_gone(dead_feed, now), False)
+    check("and the suppression uses the SAME threshold the caller did",
+          T.decider_gone(book("x", tf="15m", last=now - 55 * 60_000, strategy="external",
+                              decider={"last": "m", "last_at": now - 55 * 60_000}),
+                         now, T.STALE_BARS_REAL), False)
+    holding = book("h", last=live, strategy="external", open={"side": "LONG"},
+                   decider={"last": "m", "last_at": now - 3 * 3_600_000})
+    check("a book holding a position is not asked, so it is not alarmed on",
+          T.decider_gone(holding, now), False)
+
+    check("the cause is read out of the trader's own log",
+          T.cause_of([{"at": now, "response": "ERROR: RuntimeError: claude exited 1"}]),
+          "RuntimeError: claude exited 1")
+    check("and out of the decision reason when there is no response",
+          T.cause_of([{"at": now, "reason": "the model was unreachable; NOT a decision: TimeoutError"}]),
+          "TimeoutError")
+    check("a healthy decision yields no cause",
+          T.cause_of([{"at": now, "response": '{"side":"NONE"}', "reason": "chop"}]), "")
+    check("the NEWEST entry wins, not the first",
+          T.cause_of([{"at": now - 9_999, "response": "ERROR: OldError: x"},
+                      {"at": now, "response": "ERROR: NewError: y"}]), "NewError: y")
+
+    never = book("ai-xau-terra-ctx", last=live, strategy="external",
+                 started_at=now - 3 * 3_600_000, decider=None)
+    check("an external book nobody has ever posted to is announced",
+          T.undriven(never, now), True)
+    check("decider_gone CANNOT see that case - which is why undriven exists",
+          T.decider_gone(never, now), False)
+    check("a rule-based book with no decider is normal, not undriven",
+          T.undriven(book("xau-ema", last=live, strategy="ema-cross",
+                          started_at=now - 3 * 3_600_000), now), False)
+    check("a book created a minute ago is waiting, not undriven",
+          T.undriven(book("new", last=live, strategy="external",
+                          started_at=now - 60_000), now), False)
+    check("a driven book is not undriven",
+          T.undriven(book("d", last=live, strategy="external", started_at=now - 3 * 3_600_000,
+                          decider={"last": "m", "last_at": now}), now), False)
+
+    # The first pass must see a HEALTHY decider, or it records mute=True while
+    # learning and the second pass is no longer a transition — which is what
+    # the first version of this check got wrong, not the code.
+    st10: dict = {}
+    healthy = book("ai-xau-opus-ctx", last=live, strategy="external",
+                   decider={"last": "claude-opus-5", "last_at": now, "decisions": {}, "stood_aside": 4})
+    T.changes([healthy], st10, now)                  # learns, announces nothing
+    out12 = T.changes([silent], st10, now, set(), {"ai-xau-opus-ctx": "RuntimeError: claude exited 1"})
+    check("the alert carries the cause when one was fetched",
+          any("RuntimeError" in l for l in out12), True)
+
     print(f"\n{'all checks passed' if not FAIL else str(FAIL) + ' CHECK(S) FAILED'}")
     return 1 if FAIL else 0
 

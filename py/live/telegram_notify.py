@@ -313,7 +313,68 @@ def funded_books(accounts: list) -> set:
     return out
 
 
-def decider_gone(run: dict, now_ms: float) -> bool:
+def cause_of(decisions: list) -> str:
+    """Why a decider stopped answering, in its own words, short enough to send.
+
+    `ai_trader` does not post to the desk when a model is unreachable - that is
+    deliberate and load-bearing, because posting on failure once destroyed the
+    very silence `decider_gone` reads. But it DOES write the attempt to
+    `decisions.jsonl` with `response` set to "ERROR: <Type>: <detail>", and
+    `/api/paper/reasoning` serves that file. So the desk knows the cause even
+    though nothing was posted, and an alert that did not quote it would be
+    sending someone to find a line the desk was already holding.
+
+    The exception TYPE is the part that decides what happens next -
+    RuntimeError from a signed-out CLI is a `claude setup-token`, a timeout is
+    a slow model worth ignoring - so it is kept whole and the detail is cut.
+    """
+    newest = None
+    for d in (decisions or []):
+        if newest is None or int(d.get("at") or 0) >= int(newest.get("at") or 0):
+            newest = d
+    if not newest:
+        return ""
+    resp = str(newest.get("response") or "")
+    reason = str(newest.get("reason") or "")
+    if resp.startswith("ERROR:"):
+        return resp[len("ERROR:"):].strip()[:120]
+    if "unreachable" in reason:
+        tail = reason.rsplit(":", 1)[-1].strip()
+        return tail[:120] or reason[:120]
+    return ""
+
+
+def undriven(run: dict, now_ms: float, bars: int = DECIDER_STALE_BARS) -> bool:
+    """An `external` book with bars arriving and NOBODY driving it.
+
+    `decider_gone` cannot see this case and never will: it returns False when
+    `decider` is None, and the API writes that object only when an intent is
+    accepted. So a book whose trader never started - a campaign left out of the
+    launcher, a CLI that is not signed in, a process that died before its first
+    post - is silent for ever, while a book whose trader started and then broke
+    alerts in three bars. The desk could tell "this is broken" and could not
+    tell "nobody is running this", which is the worse of the two to miss
+    because nothing about it looks wrong.
+
+    Measured 2026-09-17: the Opus campaign was not started on the VPS at all,
+    because `claude auth status` reported loggedIn false, and no alert exists
+    today that would say so.
+
+    Only for `external` books. Every rule-based run has `decider` None by
+    design - the strategy drives it - and alarming on those would fire on most
+    of the desk for ever.
+    """
+    if run.get("strategy") != "external" or run.get("decider"):
+        return False
+    started = run.get("started_at") or 0
+    step = TF_MS.get(run.get("tf", ""), 900_000)
+    # Measured from the book's own start, not from now: a book created a minute
+    # ago has not failed to be driven, it is waiting for its first bar.
+    return (now_ms - started) > step * bars and not is_dead(run, now_ms) \
+        and market_open(run.get("market", ""), int(now_ms))
+
+
+def decider_gone(run: dict, now_ms: float, bars: int = STALE_BARS) -> bool:
     """Whether this book's model has stopped answering.
 
     Only for books a MODEL drives. A coin book's `last_at` moves only when its
@@ -329,7 +390,12 @@ def decider_gone(run: dict, now_ms: float) -> bool:
     last = d.get("last_at")
     if not last:
         return False
-    if is_dead(run, now_ms):
+    # The SAME threshold `changes` used to decide the feed was dead. Passing
+    # the default here while the caller used the funded one gave a funded book
+    # a window - feed stale by three bars and a half - where the feed alarm
+    # fired AND the decider alarm was not suppressed, which is the two-alarms-
+    # for-one-outage this guard exists to prevent.
+    if is_dead(run, now_ms, bars):
         return False
     # A book holding a position is not asked at all — the desk allows one at a
     # time, so there is nothing to decide and the trader skips the call. Its
@@ -639,7 +705,8 @@ def clipping(run_id: str, account_id: str, events: list,
     ]
 
 
-def changes(runs: list, state: dict, now_ms: float, funded: set | None = None) -> list[str]:
+def changes(runs: list, state: dict, now_ms: float, funded: set | None = None,
+            reasons: dict | None = None) -> list[str]:
     """What is worth waking someone for, and nothing else.
 
     `funded` is the set of book ids configured on a real-money account, from
@@ -659,7 +726,8 @@ def changes(runs: list, state: dict, now_ms: float, funded: set | None = None) -
         trades = r.get("trades") or 0
         open_pos = r.get("open") or None
         dead = is_dead(r, now_ms, STALE_BARS_REAL if rid in funded else STALE_BARS)
-        mute = decider_gone(r, now_ms)
+        mute = decider_gone(r, now_ms, STALE_BARS_REAL if rid in funded else STALE_BARS)
+        idle = undriven(r, now_ms)
         # How many accounts are mirroring this book right now, and whether any
         # of them is being refused. `configured` is what the desk last saw, so
         # a mirror that was there and is gone reads as a drop rather than as a
@@ -698,10 +766,29 @@ def changes(runs: list, state: dict, now_ms: float, funded: set | None = None) -
             if mute and not was.get("mute"):
                 d = r.get("decider") or {}
                 quiet = (now_ms - (d.get("last_at") or now_ms)) / 60000
+                # The cause, when the caller could fetch it. The trader writes
+                # its exception into decisions.jsonl even on the path where it
+                # posts nothing (ai_trader.py: response = "ERROR: <Type>: ..."),
+                # and /api/paper/reasoning serves that file — so the desk DOES
+                # know why. An alert saying only "has not answered" would send
+                # someone to find a line the desk could have quoted, and the
+                # difference between "the model is slow" and "the CLI is signed
+                # out" is the whole of what they do next.
+                cause = (reasons or {}).get(rid) or ""
                 out.append(
                     f"\U0001f507 <b>{esc(rid)}</b> — <code>{esc(d.get('last'))}</code> has not answered "
                     f"for {quiet:.0f} min. Bars are still arriving; the model is not."
+                    + (f" Last error: {esc(cause)}." if cause else "")
                 )
+            # Nobody is driving it AT ALL — a different failure from a driver
+            # that broke, and the one that looks like nothing is wrong.
+            if idle and not was.get("idle"):
+                out.append(
+                    f"\U0001f6ab <b>{esc(rid)}</b> — no decider has ever posted to this book, "
+                    f"and bars are arriving. Nothing is driving it."
+                )
+            elif was.get("idle") and not idle:
+                out.append(f"✅ <b>{esc(rid)}</b> — something is driving it now.")
             elif was.get("mute") and not mute:
                 d = r.get("decider") or {}
                 out.append(f"\u2705 <b>{esc(rid)}</b> — <code>{esc(d.get('last'))}</code> is answering again.")
@@ -737,7 +824,7 @@ def changes(runs: list, state: dict, now_ms: float, funded: set | None = None) -
         seen[rid] = {
             "trades": trades, "net": net, "open": bool(open_pos),
             "guards": sum((r.get("closed_by_guard") or {}).values()), "dead": dead,
-            "mute": mute, "mirrors": live_mirrors, "refused": refused,
+            "mute": mute, "idle": idle, "mirrors": live_mirrors, "refused": refused,
         }
 
     for gone in set(seen) - {r["id"] for r in runs}:
@@ -889,7 +976,27 @@ def main() -> int:
 
             funded = funded_books(accounts)
             markets = {str(r.get("id")): str(r.get("market") or "") for r in runs}
-            lines = changes(runs, state, now_ms, funded)
+
+            # Why, for the books that are about to be reported silent — and
+            # only those. `decider_gone` is pure and cheap, so asking it first
+            # costs nothing and keeps this fetch at zero on a desk where every
+            # model is answering. Already-reported books are skipped too: the
+            # alert fires on the transition, so the cause is only ever needed
+            # once.
+            reasons: dict = {}
+            known: dict = state.get("runs") or {}
+            for r in runs:
+                rid = str(r.get("id"))
+                bars = STALE_BARS_REAL if rid in funded else STALE_BARS
+                if not decider_gone(r, now_ms, bars) or (known.get(rid) or {}).get("mute"):
+                    continue
+                try:
+                    got = desk(f"/api/paper/reasoning/{urllib.parse.quote(rid)}?limit=3")
+                    reasons[rid] = cause_of(got.get("decisions") or [])
+                except Exception:  # noqa: BLE001
+                    pass          # the alert still fires; it just cannot say why
+
+            lines = changes(runs, state, now_ms, funded, reasons)
             # Before the account alerts, whether they can see at all. Only when
             # the route answered: a route that is down is already reported by
             # `accounts_down` above, and saying both would be two alarms for
