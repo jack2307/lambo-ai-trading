@@ -146,6 +146,34 @@ logged with the offset that was used to compare them.
   receipt in `docs/` is affected — every one of the five was in live plumbing,
   not in the engine.
 
+## A gap this does not close, found the same evening
+
+Every rule above binds where a number is DEFINED or CONVERTED. Late on
+2026-09-17 a defect of the same family turned up that none of them reaches.
+
+`OpenDto::entry_time` is a correct field with an accurate name: the bar whose
+open the fill is priced at. Nothing about it is wrong at the API. The desk then
+rendered it as `since 21:00` — and "since" made it a lie. The book did not hold
+the position at that time, and for a whole bar afterwards did not know it held
+it at all, so a reader watching that column saw a position age fifteen minutes
+before it existed. Worse, the row beside it used the same word for a genuinely
+different clock, the moment the ACCOUNT filled.
+
+The field did not carry a wrong unit. It acquired a false meaning downstream,
+from a word its own author never wrote, on a surface the author could not see.
+Rule 1 does not catch it, because the name was right. Rule 4 does not catch it,
+because a test at the boundary would have passed — the boundary was correct.
+
+Stated as a gap and not as a rule, because the obvious repair — "every label
+must name which quantity it shows" — is either too vague to test or a rename
+sweep of every string in the UI, and this document already argues against
+sweeps without tests behind them. What can be said with confidence is narrower:
+where several fields describe the same THING at different times or in different
+units, the surface that renders one of them is where the confusion lands, and
+that surface is not the one that knows the fields are several. Somebody has to
+look from the screen back to the wire. Tonight that happened because a person
+looked at a screenshot.
+
 ## What would reopen this
 
 A second instance appearing in code written AFTER this date, with a test at the
