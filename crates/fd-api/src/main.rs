@@ -52,6 +52,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Bound to loopback on purpose. This process reads a research store and
     // runs backtests on request; nothing about it is ready to face a network.
     let listener = tokio::net::TcpListener::bind(("127.0.0.1", port)).await?;
+    // Said at startup as well as served, because the log is what survives a
+    // process that has already gone away - and "which build was running when
+    // that happened" is the question nobody can answer afterwards.
+    println!("fd-api {}", fd_api::version::summary());
     println!("fd-api on http://127.0.0.1:{port}  data={}", data.display());
     // The advisor credentials panel, and whether it is switched on at all.
     //
