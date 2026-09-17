@@ -1034,9 +1034,11 @@ pub struct RunStatus {
 /// deployed ahead of the API, and `broker_snapshot_tests` pins both halves.
 /// It does mean that surfacing something new the executor reports takes a
 /// field here, a field in `ui/src/lib/api.ts`, and somewhere on the account
-/// view to show it. `server_offset_ms` and `drift`, added to the executor's
-/// snapshot on 2026-09-17, are currently dropped here for exactly this
-/// reason.
+/// view to show it. `server_offset_ms` and `drift` were dropped here for
+/// exactly that reason until the third part found an owner; both are declared
+/// below now. Anything the executor writes and this does not declare still
+/// stops at this boundary, which is the state to check before assuming a
+/// reader can see a new field.
 ///
 /// `at` is the part that matters. A stale file is a stopped executor, not a
 /// live account, and the client decides what counts as stale rather than
@@ -1064,6 +1066,21 @@ pub struct BrokerDto {
     pub margin_level: Option<f64>,
     pub symbol: Option<String>,
     pub contract_size: Option<f64>,
+    /// How far the terminal's clock runs ahead of UTC, in milliseconds,
+    /// measured from the terminal on the poll that wrote this - not derived
+    /// from a timezone.
+    ///
+    /// Here because the book's times are UTC and the deal history's are the
+    /// server's, and a reader comparing the two without knowing the offset is
+    /// making the mistake that kept `already_taken` inert until 2026-09-17: a
+    /// position the account already held read as absent, and the mirror bought
+    /// it again. It reads 10,800,000 while Vantage is on +3h, measured on all
+    /// five live books after that fix deployed.
+    ///
+    /// `null` means it could not be measured - no tick, or a tick too stale to
+    /// be an offset - and that is also when the mirror refuses to open, so
+    /// this field is the reason a book is sitting out rather than a detail.
+    pub server_offset_ms: Option<i64>,
     pub magic: Option<i64>,
     pub lot_scale: Option<f64>,
     /// True while the executor is reconciling but sending nothing.
@@ -1097,6 +1114,27 @@ pub struct BrokerDto {
     /// designed, and kept apart from `blocked` so that an alert on one is not
     /// an alert on the other.
     pub standing_out: Option<String>,
+    /// The account holds the book's SIDE but not its shape: more than one
+    /// position on the book, or a volume that is not the book's size times
+    /// `lot_scale`. Human-readable, because every one of them names which.
+    ///
+    /// Reported and deliberately never corrected - the executor's own comment
+    /// is the authority on why, and the short version is that a part-close or
+    /// a close-and-reopen crystallises a result the book never took at a price
+    /// it never saw, which destroys the one measurement this mirror exists to
+    /// produce. It clears itself when the book next goes flat.
+    ///
+    /// A third string beside `blocked` and `standing_out` rather than a
+    /// boolean, and a third one rather than folding into either: `blocked` is
+    /// somebody must act now, `standing_out` is the guard working as designed,
+    /// and this is neither - the account is wrong in a way nothing will fix on
+    /// its own, and it is not an emergency. An alert that could not tell the
+    /// three apart would be muted within a day.
+    ///
+    /// Recomputed every poll and cleared the moment it stops being true, which
+    /// is why it lives in the snapshot and not in `executor.jsonl`: that file
+    /// records that it happened, this field says whether it is happening.
+    pub drift: Option<String>,
 }
 
 /// One trade the account actually completed.
@@ -3717,11 +3755,15 @@ mod broker_snapshot_tests {
             "position": null,
             "blocked": null,
             "standing_out": null,
-            // The two this binary has never heard of. 10800000 is the broker
-            // on +3h, which is what it should read while Vantage is on New
-            // York summer time.
+            // Declared here since the desk gained readers for them. 10800000
+            // is the broker on +3h, which is what all five live books
+            // reported once the clock fix deployed on 2026-09-17.
             "server_offset_ms": 10_800_000_i64,
             "drift": "1 position holding 0.05 where the book wants 0.10",
+            // And one this binary still has never heard of, standing in for
+            // the next thing the executor learns to report. The boundary has
+            // to stay tested after the two above crossed it.
+            "something_the_executor_learned_later": 42,
         })
         .to_string()
     }
@@ -3752,27 +3794,56 @@ mod broker_snapshot_tests {
         assert_eq!(brokers[0].balance, Some(10_000.0));
         assert_eq!(brokers[0].book_lots, Some(0.05));
         assert_eq!(brokers[0].closed, Some(3));
+        assert_eq!(brokers[0].server_offset_ms, Some(10_800_000));
+        assert!(brokers[0].drift.as_deref().is_some_and(|d| d.contains("0.10")));
     }
 
     #[test]
-    fn but_the_api_drops_the_fields_it_does_not_declare() {
+    fn what_is_declared_is_served_and_what_is_not_stops_here() {
         let dir = tempfile::tempdir().expect("temp dir");
         let data = account_with(&dir, "vantage-cent", "xau-ema", &snapshot_from_a_newer_executor());
 
         // `brokers_of` parses into `BrokerDto` and the status route serialises
         // the DTO, so what reaches the browser is the struct and not the file
-        // - whatever the module comment's "serves the file back unchanged"
-        // suggests. So these two are not merely unrendered, they never leave
-        // the process, and adding them to `PaperBroker` in `ui/src/lib/api.ts`
-        // alone would declare a field that never arrives.
+        // - whatever the module comment's old "serves the file back unchanged"
+        // suggested. The consequence is a rule with two halves, and this test
+        // is both: a field this struct declares crosses, a field it does not
+        // never leaves the process however faithfully the executor writes it.
         //
-        // Surfacing them is a real job and a deliberate one: a DTO field, a
-        // TS field and something on the account view that shows them.
-        // Recorded here so that the next person finds the state was chosen.
+        // `server_offset_ms` and `drift` spent an afternoon on the wrong side
+        // of that line - tolerated, parsed, and then dropped - which is why
+        // the undeclared one below is kept in the fixture. The next field the
+        // executor invents will be in the same position, and adding it to
+        // `PaperBroker` in `ui/src/lib/api.ts` alone would declare something
+        // that never arrives.
         let served = serde_json::to_value(&brokers_of(&data, "xau-ema")[0]).expect("serialise");
-        assert!(served.get("server_offset_ms").is_none(), "not carried: {served}");
-        assert!(served.get("drift").is_none(), "not carried: {served}");
-        assert_eq!(served["login"], 33_705_331, "and everything declared still is");
+        assert_eq!(served["server_offset_ms"], 10_800_000, "declared, so carried: {served}");
+        assert_eq!(served["drift"], "1 position holding 0.05 where the book wants 0.10");
+        assert!(
+            served.get("something_the_executor_learned_later").is_none(),
+            "undeclared, so it stops here: {served}"
+        );
+        assert_eq!(served["login"], 33_705_331);
+    }
+
+    #[test]
+    fn a_book_with_nothing_wrong_reports_neither_drift_nor_a_refusal() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        // The ordinary case, and the one an alert must stay silent on. All
+        // three of these are `null` far more often than not, and a reader that
+        // cannot tell absent from empty would fire on every healthy book.
+        let quiet = json!({
+            "at": 1_789_650_000_000_i64,
+            "login": 33_705_331,
+            "server_offset_ms": 10_800_000_i64,
+        })
+        .to_string();
+        let data = account_with(&dir, "vantage-cent", "xau-ema", &quiet);
+        let brokers = brokers_of(&data, "xau-ema");
+        assert_eq!(brokers[0].drift, None);
+        assert_eq!(brokers[0].blocked, None);
+        assert_eq!(brokers[0].standing_out, None);
+        assert_eq!(brokers[0].server_offset_ms, Some(10_800_000));
     }
 
     #[test]
@@ -3788,6 +3859,8 @@ mod broker_snapshot_tests {
         assert_eq!(brokers.len(), 1);
         assert_eq!(brokers[0].balance, None, "absent is not zero");
         assert_eq!(brokers[0].closed, None);
+        assert_eq!(brokers[0].server_offset_ms, None, "an older executor measured no clock");
+        assert_eq!(brokers[0].drift, None);
     }
 
     #[test]

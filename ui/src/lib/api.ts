@@ -384,6 +384,14 @@ export interface PaperBroker {
   symbol: string | null
   /** The STANDARD symbol's contract size, which is 100x the cent book's. */
   contract_size: number | null
+  /** How far the terminal's clock runs ahead of UTC, in ms, MEASURED from the
+   *  terminal on the poll that wrote this rather than derived from a timezone.
+   *  10_800_000 while Vantage is on +3h.
+   *
+   *  `null` means it could not be measured — no tick, or one too stale to be
+   *  an offset — and that is also when the mirror refuses to open, so a null
+   *  here is the reason a book is sitting out and not a missing detail. */
+  server_offset_ms: number | null
   magic: number | null
   lot_scale: number | null
   /** True while the executor reconciles but sends nothing. */
@@ -423,6 +431,23 @@ export interface PaperBroker {
    *  and kept apart from `blocked` so an alert on one is not an alert on the
    *  other. */
   standing_out: string | null
+  /** The account holds the book's SIDE but not its shape — more than one
+   *  position on the book, or a volume that is not `book_lots * lot_scale`.
+   *  Human-readable, because each one names which.
+   *
+   *  Reported and deliberately never corrected: trading the account back into
+   *  shape would crystallise a result the book never took at a price it never
+   *  saw. It clears itself when the book next goes flat.
+   *
+   *  A third string beside `blocked` and `standing_out`, not a fold into
+   *  either: `blocked` is somebody must act now, `standing_out` is the guard
+   *  working, and this is neither — wrong in a way nothing will fix on its
+   *  own, and not an emergency.
+   *
+   *  Note before reading `book_lots` against `position.lots`: those two differ
+   *  by `lot_scale` BY DESIGN (0.2 on the funded cent account), so they are
+   *  not a drift check. This field is the drift check. */
+  drift: string | null
 }
 
 /**
