@@ -35,6 +35,42 @@ export type Book = 'paper' | number
 
 const VIEWS: View[] = ['desk', 'analytics', 'workbench', 'tape', 'research', 'floor', 'settings']
 
+/**
+ * The book on screen, remembered per viewer.
+ *
+ * A reload used to come back on paper however the desk was left, which on a
+ * funded account means the first frame after every refresh is the wrong book -
+ * the owner reloads, sees the paper figures, and has to re-pick his own
+ * account to find out what his money is doing.
+ *
+ * Stored as `paper` or the account's LOGIN, which is the identifier the
+ * registry, the snapshot and the broker's own screen all agree on. A remembered
+ * login that no longer answers is NOT restored - see `AppBar`, where an account
+ * that has stopped reporting drops back to paper on purpose, because a frozen
+ * account view goes on looking current.
+ */
+const BOOK_KEY = 'fd.desk.book'
+
+const readBook = (): Book | null => {
+  try {
+    const raw = localStorage.getItem(BOOK_KEY)
+    if (!raw) return null
+    if (raw === 'paper') return 'paper'
+    const login = Number(raw)
+    return Number.isFinite(login) && login > 0 ? login : null
+  } catch {
+    return null
+  }
+}
+
+const writeBook = (book: Book) => {
+  try {
+    localStorage.setItem(BOOK_KEY, String(book))
+  } catch {
+    /* private mode: the choice lasts the page */
+  }
+}
+
 function viewFromHash(): View {
   const hash = window.location.hash.replace('#', '') as View
   return VIEWS.includes(hash) ? hash : 'desk'
@@ -44,7 +80,15 @@ export default function App() {
   const [view, setView] = useState<View>(viewFromHash)
   const [catalog, setCatalog] = useState<Catalog | null>(null)
   const [market, setMarket] = useState<string>('')
-  const [book, setBook] = useState<Book>('paper')
+  const [book, setBook] = useState<Book>(() => readBook() ?? 'paper')
+  // Whether the viewer has ever chosen. Read once, before the first render can
+  // change it: if nothing is remembered, the desk picks the real-money account
+  // for them (see `AppBar`), and that must not fight a choice they already made.
+  const [autoPick] = useState(() => readBook() === null)
+  const chooseBook = useCallback((next: Book) => {
+    setBook(next)
+    writeBook(next)
+  }, [])
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -82,7 +126,8 @@ export default function App() {
         market={market}
         onMarketChange={setMarket}
         book={book}
-        onBookChange={setBook}
+        onBookChange={chooseBook}
+        autoPick={autoPick}
       />
 
       {error && <ErrorBanner message={error} onDismiss={() => setError(null)} />}

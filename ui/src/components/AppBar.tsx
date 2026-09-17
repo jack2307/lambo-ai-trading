@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import type { Book, View } from '@/App'
 import { Button } from '@/components/ui/button'
@@ -16,6 +16,9 @@ interface Props {
   onMarketChange: (market: string) => void
   book: Book
   onBookChange: (book: Book) => void
+  /** Nothing is remembered for this viewer, so the desk may choose the first
+   *  book itself. False the moment they have ever picked one. */
+  autoPick?: boolean
 }
 
 /**
@@ -48,9 +51,15 @@ const VIEWS: { id: View; label: string }[] = [
 /** The two screens that read one market at a time; the rest ignore the picker. */
 const MARKET_VIEWS: View[] = ['workbench', 'tape']
 
-export function AppBar({ view, onViewChange, markets, market, onMarketChange, book, onBookChange }: Props) {
+export function AppBar({ view, onViewChange, markets, market, onMarketChange, book, onBookChange, autoPick = false }: Props) {
   const needsMarket = MARKET_VIEWS.includes(view)
   const [accounts, setAccounts] = useState<BrokerAccount[]>([])
+  // Whether the registry has answered at all. An empty list BEFORE the first
+  // response is not an empty registry, and the fallback below must not read it
+  // as one - doing so would drop a remembered account to paper on every load,
+  // before anything had a chance to say the account exists.
+  const [loaded, setLoaded] = useState(false)
+  const picked = useRef(false)
   const [now, setNow] = useState(() => Date.now())
 
   // Its own poll rather than a share of the Desk's: this control is on every
@@ -62,10 +71,18 @@ export function AppBar({ view, onViewChange, markets, market, onMarketChange, bo
       setNow(Date.now())
       api
         .paperAccounts()
-        .then((res) => alive && setAccounts(res.accounts))
+        .then((res) => {
+          if (!alive) return
+          setAccounts(res.accounts)
+          setLoaded(true)
+        })
         // A failure here means no broker, which is exactly what an empty list
         // says. Nothing is thrown at the user for it.
-        .catch(() => alive && setAccounts([]))
+        .catch(() => {
+          if (!alive) return
+          setAccounts([])
+          setLoaded(true)
+        })
     }
     tick()
     const timer = window.setInterval(tick, 5000)
@@ -85,10 +102,38 @@ export function AppBar({ view, onViewChange, markets, market, onMarketChange, bo
   // true without anyone watching. The same applies to an account that vanishes
   // from the registry while it is selected.
   useEffect(() => {
+    if (!loaded) return
     if (typeof book !== 'number') return
     const still = accounts.find((a) => a.login === book)
     if (!still || !(still.at > 0 && Date.now() - still.at < BROKER_STALE_MS)) onBookChange('paper')
-  }, [book, accounts, onBookChange])
+  }, [book, accounts, loaded, onBookChange])
+
+  // THE DEFAULT FOLLOWS THE MONEY. With nothing remembered, the desk opens on
+  // the real-money account rather than on paper.
+  //
+  // Do not "simplify" this back to paper-first. This desk exists because of
+  // that account: opening on the paper book means the first frame after every
+  // fresh visit answers a question nobody asked, and the owner has to find his
+  // own money by hand. Paper remains the default when there is no real-money
+  // account to open on, and remains the fallback whenever one stops reporting.
+  //
+  // Only when there is EXACTLY ONE enabled real-money account. Two would be a
+  // guess about which one matters, and guessing which account a person meant is
+  // not a thing this desk should do. It also waits for that account to be
+  // reporting: picking a stale one would be immediately undone by the fallback
+  // above, and a view that flickers from account to paper on load reads as a
+  // bug. Once, ever - `picked` makes sure a later poll cannot override a choice
+  // the viewer has since made.
+  useEffect(() => {
+    if (!autoPick || picked.current || !loaded) return
+    if (book !== 'paper') return
+    const real = accounts.filter(
+      (a) => a.real_money && a.enabled && a.at > 0 && Date.now() - a.at < BROKER_STALE_MS,
+    )
+    if (real.length !== 1) return
+    picked.current = true
+    onBookChange(real[0].login)
+  }, [autoPick, loaded, accounts, book, onBookChange])
   return (
     <header className="bg-card/80 sticky top-0 z-20 flex flex-wrap items-center gap-4 border-b px-4 py-2 backdrop-blur">
       <div className="flex items-baseline gap-2 text-[15px] font-semibold tracking-tight">
