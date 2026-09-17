@@ -1831,7 +1831,7 @@ function BrokerBadge({ broker }: { broker: PaperBroker | null }) {
           'num mr-1 inline-flex shrink-0 items-center gap-1 rounded-sm border px-1 py-px text-[10px]',
           long ? 'border-lc/45 bg-lc/10 text-lc' : 'border-lp/45 bg-lp/10 text-lp',
         )}
-        title={`account holds ${pos.side} ${pos.lots} lots from ${pos.entry_price}, ticket ${pos.ticket}`}
+        title={`account holds ${pos.side} ${pos.lots} lots from ${pos.entry_price}, ticket ${pos.ticket}. This is the TERMINAL's volume — the book's size times lot_scale${broker.lot_scale != null ? ` (x${broker.lot_scale})` : ''} — so it is not meant to equal the book's lots beside it.`}
       >
         <span aria-hidden>{long ? '▲' : '▼'}</span>
         {(pos.side ?? '').toLowerCase()} {pos.lots}
@@ -1868,7 +1868,7 @@ function BrokerBadge({ broker }: { broker: PaperBroker | null }) {
     return (
       <span
         className="num text-muted-foreground border-border mr-1 inline-flex shrink-0 items-center rounded-sm border px-1 py-px text-[10px]"
-        title={`the book is ${broker.book_side} ${broker.book_lots} lots; the account is flat`}
+        title={`the book is ${broker.book_side} ${broker.book_lots} lots (the BOOK's size, before lot_scale${broker.lot_scale != null ? ` x${broker.lot_scale}` : ''}); the account is flat`}
       >
         {broker.dry_run ? 'dry run' : 'not filled'} &middot; book wants {broker.book_side.toLowerCase()}{' '}
         {broker.book_lots}
@@ -2035,9 +2035,13 @@ function PositionBar({ run, live }: { run: PaperRun; live: LiveBar | null | unde
           const m = marginOf(open.lots, price, run)
           if (!m) return null
           return (
+            /* `m.used` is USD — `marginOf` divides a USD notional by leverage.
+               The title said `${m.used} of ${account_currency}`, so the badge
+               read "margin 22 USC" while its own tooltip read "margin used
+               0.22 of USC". Both numbers are named now. */
             <span
               className="text-muted-foreground/70 num text-[10px]"
-              title={`margin used ${m.used.toFixed(2)} of ${run.account_currency}; a margin call comes at a level of 30%`}
+              title={`margin used ${accountMoney(m.used, run, false)} (${m.used.toFixed(2)} USD); a margin call comes at a level of 30%`}
             >
               margin {accountMoney(m.used, run, false)} ({m.pct.toFixed(2)}% · level{' '}
               {m.level > 9999 ? '>9999' : m.level.toFixed(0)}%)
@@ -2187,7 +2191,12 @@ function Drilldown({
       ) : (
         <section className="px-3 py-2">
           <Heading>Equity</Heading>
-          <EquityCurve points={detail.equity_curve} />
+          {/* The paper book's curve is USD — `lots x contract_size x price`
+              and nothing else — so it says so. */}
+          <EquityCurve
+            points={detail.equity_curve}
+            money={(v) => `$${Math.round(v).toLocaleString('en-US')}`}
+          />
           <p className="text-muted-foreground num mt-1 text-[10px]">
             {run.trades} closed{run.open ? ' · 1 open' : ''} · net {accountMoney(run.net_usd, run)} ·{' '}
             {run.profit_factor == null ? 'no PF yet' : `PF ${num(run.profit_factor)}`} ·{' '}
@@ -2644,7 +2653,14 @@ function AccountEquity({ broker }: { broker: PaperBroker }) {
           No curve yet — this account has closed no trade on this book.
         </p>
       ) : (
-        <EquityCurve points={points} />
+        /* The ACCOUNT's own units, which is USC on the funded cent account. No
+           conversion: `balance` and `pnl` arrive in the account's currency
+           already, and passing them through `accountMoney` would multiply by
+           `units_per_usd` a second time. */
+        <EquityCurve
+          points={points}
+          money={(v) => `${Math.round(v).toLocaleString('en-US')} ${broker.currency ?? ''}`.trim()}
+        />
       )}
       <p className="text-muted-foreground num mt-1 text-[10px]">
         {broker.closed ?? 0} closed{broker.position ? ' · 1 open' : ''} · banked{' '}
@@ -2763,7 +2779,20 @@ function BrokerFillsTable({ broker }: { broker: PaperBroker }) {
   )
 }
 
-function EquityCurve({ points }: { points: [number, number][] }) {
+/**
+ * `points` are [ms, money] — and WHICH money depends on who is calling, which
+ * is why the formatter is a prop and not a `$` in here.
+ *
+ * Until 2026-09-17 this hardcoded `$`. The paper book's curve is USD and that
+ * was right; `AccountEquity` feeds it the ACCOUNT's balance and realised P&L,
+ * which on the funded cent account are USC. So the axis of the real-money
+ * curve read `$9,982` for an account holding 9,982 USC — ninety-nine dollars,
+ * labelled as ten thousand. Same shape as `pnlUsd` carrying USC before 35b42c3
+ * and as `notional_of` comparing dollars to cents: a component that formats
+ * money it was not told the unit of. See
+ * docs/decisions/2026-09-17-unit-carrying.md.
+ */
+function EquityCurve({ points, money }: { points: [number, number][]; money: (v: number) => string }) {
   if (!points || points.length === 0) {
     return (
       <p className="text-muted-foreground px-1 py-6 text-center text-[11px]">
@@ -2806,14 +2835,13 @@ function EquityCurve({ points }: { points: [number, number][] }) {
   const area = `${line} L ${x(last[0]).toFixed(1)} ${bottom} L ${x(first[0]).toFixed(1)} ${bottom} Z`
 
   const up = last[1] >= start
-  const dollars = (v: number) => `$${Math.round(v).toLocaleString('en-US')}`
 
   return (
     <svg
       viewBox={`0 0 ${boxW} ${boxH}`}
       className={cn('w-full', up ? 'text-lc' : 'text-lp')}
       role="img"
-      aria-label={`Equity from ${dollars(start)} to ${dollars(last[1])} over ${sorted.length} point${sorted.length === 1 ? '' : 's'}`}
+      aria-label={`Equity from ${money(start)} to ${money(last[1])} over ${sorted.length} point${sorted.length === 1 ? '' : 's'}`}
     >
       {/* The plot's floor and left edge: a frame, not a grid. */}
       <path
@@ -2841,15 +2869,15 @@ function EquityCurve({ points }: { points: [number, number][] }) {
           book actually reached them. */}
       {!flat && (
         <text x={l - 6} y={t + 4} textAnchor="end" className="fill-muted-foreground" fontSize={10}>
-          {dollars(vMax)}
+          {money(vMax)}
         </text>
       )}
       <text x={l - 6} y={y(start) + 3.5} textAnchor="end" className="fill-muted-foreground" fontSize={10}>
-        {dollars(start)}
+        {money(start)}
       </text>
       {!flat && (
         <text x={l - 6} y={bottom} textAnchor="end" className="fill-muted-foreground" fontSize={10}>
-          {dollars(vMin)}
+          {money(vMin)}
         </text>
       )}
 

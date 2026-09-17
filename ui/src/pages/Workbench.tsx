@@ -811,7 +811,7 @@ function TradesTable({ result }: { result: BacktestResult | null }) {
           TRADE_COLS,
         )}
       >
-        <span>entry</span>
+        <span>entry (UTC)</span>
         <span>side</span>
         <Th>entry px</Th>
         <Th>exit px</Th>
@@ -892,8 +892,21 @@ function Td({ children, className }: { children: React.ReactNode; className?: st
   return <span className={cn('num text-right', className)}>{children}</span>
 }
 
+/**
+ * A bar stamp, in UTC, and it says so.
+ *
+ * It printed no zone at all until 2026-09-17, on a desk where the Desk page
+ * labels the same class of column `(+07)` — so the same instant read seven
+ * hours apart on two screens with nothing to say which was which. `Z` is one
+ * character and removes the question. See
+ * docs/decisions/2026-09-17-unit-carrying.md.
+ *
+ * This is the bar the fill is PRICED at, not when anything learned of it: the
+ * three clocks an entry has are named in `OpenDto` and on the Desk page, and a
+ * backtest has only this one.
+ */
 function stampShort(ms: number): string {
-  return new Date(ms).toISOString().slice(5, 16).replace('T', ' ')
+  return `${new Date(ms).toISOString().slice(5, 16).replace('T', ' ')}Z`
 }
 
 function holdLabel(ms: number): string {
