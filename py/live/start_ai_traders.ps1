@@ -152,7 +152,11 @@ foreach ($c in $campaigns) {
     Start-Process -FilePath $Python -ArgumentList $args -WorkingDirectory $Root -WindowStyle Hidden `
         -RedirectStandardOutput (Join-Path $logs "$($c.log).out") -RedirectStandardError (Join-Path $logs "$($c.log).err")
     $mode = if ($DryRun) { 'DRY RUN' } else { 'LIVE' }
-    Write-Host "started $($c.model) -> $($c.run) vs $($c.control) (seed $($c.seed)) [$mode]"
+    # Do not name a control that is not being written. The line read
+    # "-> ai-xau-sol-ctx vs ai-xau-sol-ctx-coin" on a run started with
+    # -NoControl, which is the log claiming a comparison that does not exist.
+    $against = if ($NoControl) { 'no coin' } else { "vs $($c.control)" }
+    Write-Host "started $($c.model) -> $($c.run) $against (seed $($c.seed)) [$mode]"
 }
 
 Start-Sleep -Seconds 2
