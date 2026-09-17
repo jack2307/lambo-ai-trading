@@ -715,12 +715,41 @@ def main() -> int:
     # MEASURED, replaying this rule over the 55 live paper entries with a stop:
     #
     # THE ARGUMENT THAT DOES NOT DEPEND ON THE SAMPLE, first because it is the
-    # one that survives more data. Over the same 55 entries the one-sided rule
-    # selects a set of trades the BOOK lost 4.17R on and makes +0.84R on them:
-    # a +5.01R divergence, against +0.60R for the symmetric bound. That is
-    # arithmetic ON the entries, not an inference FROM them. The mirror beats
-    # the book by construction - which is exactly the bias the symmetric bound
-    # was written to prevent, arriving through the other door.
+    # one that survives more data. It is an IDENTITY and not a measurement:
+    #
+    #   A mirror that exits where the book exits earns `book_r - drift` on
+    #   every entry. So over ANY set of entries the divergence between the two
+    #   is exactly minus the sum of the drifts taken:
+    #
+    #       sum(mirror) - sum(book) = -sum(drift)
+    #
+    #   The one-sided rule admits entries with NEGATIVE drift and only those,
+    #   so it can only widen that gap - by at least `--max-join-r` for every
+    #   entry it admits. 0.25R each, guaranteed, before any market fact is
+    #   consulted. The mirror beats the book by construction, which is
+    #   precisely the bias the symmetric bound was written to prevent,
+    #   arriving through the other door.
+    #
+    #   Checked algebraically on both sides rather than asserted: for a LONG
+    #   the mirror earns (X-P)/risk against the book's (X-E)/risk and the
+    #   difference is -(P-E)/risk = -r; for a SHORT the same with the signs
+    #   swapped. Same quantity written twice.
+    #
+    #   AND THE IDENTITY RESTS ON THE STOP AND TARGET GOING OUT VERBATIM - see
+    #   `join_check`, where that was decided for a different reason. It is what
+    #   makes the mirror exit where the book exits. Rescale them to the better
+    #   entry "to preserve risk" and the mirror exits somewhere else, the
+    #   identity breaks, and this argument loses its footing along with the
+    #   slippage measurement. Two decisions leaning on one support; move it and
+    #   both fall.
+    #
+    # MEASURED, and this number WILL go stale while the identity above will
+    # not: on the 55 entries available 2026-09-17 the one-sided rule diverges
+    # +5.0118R against the symmetric bound's +0.6033R, each matching
+    # -sum(drift) to four decimals because it is the same quantity computed
+    # twice. The 8 entries it added carried 4.4085R of drift, against the 2.00R
+    # floor the bound alone guarantees. If a future replay reports a different
+    # figure, the figure is what changed.
     #
     # THE CORROBORATING RESULT, which is suggestive and sample-limited:
     #
