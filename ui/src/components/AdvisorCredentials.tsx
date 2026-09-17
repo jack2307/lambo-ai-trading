@@ -176,13 +176,22 @@ function Row({
 
 export function AdvisorCredentials() {
   const [view, setView] = useState<CredentialsView | null>(null)
+  const [off, setOff] = useState<string | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
 
   const load = useCallback(() => {
     api
       .advisorCredentials()
-      .then(setView)
-      .catch((e: Error) => toast.error(e.message))
+      .then((v) => {
+        setView(v)
+        setOff(null)
+      })
+      // A failure here is shown IN the panel and not only as a toast. The
+      // route group is off by default on a live desk, and a panel that
+      // answered that with a toast and then an endless skeleton would be the
+      // same half-working shape this feature was switched off for: the reader
+      // sees a loading state for a thing that is never going to load.
+      .catch((e: Error) => setOff(e.message))
   }, [])
 
   useEffect(load, [load])
@@ -245,7 +254,11 @@ export function AdvisorCredentials() {
         }
       />
 
-      {!view ? (
+      {off ? (
+        <p className="text-muted-foreground border-border mt-1 rounded-sm border px-2 py-1.5 text-[11px] leading-snug">
+          {off}
+        </p>
+      ) : !view ? (
         <Skeleton className="h-24 w-full" />
       ) : (
         <>

@@ -20,8 +20,16 @@
 //! rule intact — a riskier change costs a word typed by someone who is awake —
 //! while still letting the change be made from the screen.
 //!
-//! Removing a key needs no code. It can only ever reduce capability, which is
-//! the safe direction the page already moves in freely.
+//! Removing a key needs no code, and that was wrong. The argument was that it
+//! can only reduce capability, which is the safe direction this page already
+//! moves in — true on a laptop, false on a desk where `config/local.toml` holds
+//! the key a live campaign runs on. There, clearing it stops a campaign, and
+//! the symptom is a model going quiet, which reads as an outage rather than as
+//! a deletion.
+//!
+//! **So the whole group is OFF unless [`PANEL_ENV`] is set on the machine.**
+//! See [`panel_on`] for what changed and why the cheap answer to a footgun is a
+//! switch rather than a better guard.
 //!
 //! # Why it shells out to Python
 //!
@@ -52,6 +60,57 @@ use crate::error::ApiError;
 use crate::state::AppState;
 
 static SETUP_CODE: OnceLock<String> = OnceLock::new();
+
+/// The variable that turns this route group on. Absent means every route here
+/// refuses.
+pub const PANEL_ENV: &str = "FD_ADVISOR_PANEL";
+
+/// Whether a value read from [`PANEL_ENV`] counts as on.
+///
+/// Split out from the guard so it can be tested without an environment
+/// variable: Rust runs tests in one process and in parallel, so a test that set
+/// a variable would decide the answer for whatever else happened to be reading
+/// it at that moment.
+fn enabled(value: Option<&str>) -> bool {
+    matches!(value.map(str::trim), Some(v) if !v.is_empty() && v != "0" && v != "false")
+}
+
+/// Refuse unless the machine has switched this group on.
+///
+/// OFF BY DEFAULT, and this is a change of mind rather than an original
+/// design. These routes were written with one guard: storing a key costs a
+/// setup code printed on the console, while clearing one costs nothing,
+/// because removing a credential "can only reduce capability, which is the safe
+/// direction". That argument holds on a developer's laptop and broke the moment
+/// this shipped to a desk trading a funded account on 2026-09-17.
+///
+/// Two things broke it. `config/local.toml` on that machine holds the key a
+/// live campaign runs on, so clearing it does not reduce capability, it stops a
+/// campaign — and the symptom is a model going quiet, which reads as an outage
+/// rather than as a deletion. And `fd-api` runs there as a SYSTEM task with no
+/// console anyone reads, so the setup code cannot be seen and the STORE half is
+/// unusable. What was left was a credentials panel serving only its destructive
+/// half, which is worse than one that is off.
+///
+/// The bound, stated so nobody has to guess at it later: the API binds
+/// 127.0.0.1, so the reach is a process already on the machine or somebody
+/// already in over RDP or SSH. This is a footgun on a live desk, not an open
+/// door. Off by default is the cheap answer to a footgun; one variable turns it
+/// back on where a console can be read.
+fn panel_on() -> Result<(), ApiError> {
+    if enabled(std::env::var(PANEL_ENV).ok().as_deref()) {
+        return Ok(());
+    }
+    // A 400 rather than a 403 only because `ApiError` has no Forbidden and
+    // adding one would touch a file three other sessions are working in today.
+    // The message is what the reader acts on either way.
+    Err(ApiError::BadRequest(format!(
+        "the advisor credentials panel is off on this machine. Set {PANEL_ENV}=1 in the \
+         environment fd-api runs under and restart it. It is off by default because these \
+         routes are served on an unauthenticated loopback port and one of them deletes a \
+         credential a live campaign may depend on."
+    )))
+}
 
 /// The six digits that buy one credential write, fixed for the life of the
 /// process and printed where only the operator can read it.
@@ -181,6 +240,7 @@ fn run(state: &AppState, args: &[&str], stdin: Option<&str>) -> Result<Value, Ap
 ///
 /// Masks only. No branch of this ever reads a stored key out to the browser.
 pub async fn credentials(State(state): State<Arc<AppState>>) -> Result<Json<Value>, ApiError> {
+    panel_on()?;
     let mut view = run(&state, &["status"], None)?;
     // The code is NOT sent. Only whether one is needed, so the screen can say
     // where to find it instead of pretending the field is optional.
@@ -206,6 +266,7 @@ pub async fn test(
     State(state): State<Arc<AppState>>,
     Json(body): Json<TestBody>,
 ) -> Result<Json<Value>, ApiError> {
+    panel_on()?;
     let mut args = vec!["test", body.provider.as_str()];
     if let Some(m) = body.model.as_deref() {
         args.push("--model");
@@ -230,6 +291,7 @@ pub async fn store(
     State(state): State<Arc<AppState>>,
     Json(body): Json<StoreBody>,
 ) -> Result<Json<Value>, ApiError> {
+    panel_on()?;
     if body.setup_code.trim() != setup_code() {
         // Deliberately the same message whether the code is wrong or missing:
         // a form that says which is closer is a form that can be searched.
@@ -260,12 +322,27 @@ pub async fn clear(
     State(state): State<Arc<AppState>>,
     Json(body): Json<ClearBody>,
 ) -> Result<Json<Value>, ApiError> {
+    panel_on()?;
     Ok(Json(run(&state, &["clear", body.provider.as_str()], None)?))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_group_is_off_unless_the_machine_says_otherwise() {
+        // Off is the DEFAULT, and that is the half worth pinning: a future
+        // refactor that made an unset variable mean "on" would put the panel
+        // back on every machine that never asked for it.
+        assert!(!enabled(None), "unset must mean off");
+        assert!(!enabled(Some("")), "empty must mean off");
+        assert!(!enabled(Some("   ")), "whitespace must mean off");
+        assert!(!enabled(Some("0")), "0 must mean off");
+        assert!(!enabled(Some("false")), "false must mean off");
+        assert!(enabled(Some("1")));
+        assert!(enabled(Some("yes")));
+    }
 
     #[test]
     fn the_setup_code_is_six_digits_and_does_not_change_within_a_process() {

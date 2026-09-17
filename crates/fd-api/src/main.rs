@@ -53,13 +53,27 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // runs backtests on request; nothing about it is ready to face a network.
     let listener = tokio::net::TcpListener::bind(("127.0.0.1", port)).await?;
     println!("fd-api on http://127.0.0.1:{port}  data={}", data.display());
-    // The one control on the desk that can create spending power asks for this.
-    // Printed here and nowhere else: reading it means standing where the server
-    // runs, which is the whole of what it checks. See `advisor.rs`.
-    println!(
-        "advisor setup code: {}  (needed once, to store an API key from Settings)",
-        fd_api::advisor::setup_code()
-    );
+    // The advisor credentials panel, and whether it is switched on at all.
+    //
+    // Printing the setup code while the group is OFF would be the worst of both
+    // readings: it says a control exists that every route refuses. So the line
+    // reports the state first, and the code only when it can be used.
+    if std::env::var(fd_api::advisor::PANEL_ENV)
+        .map(|v| !v.trim().is_empty() && v.trim() != "0" && v.trim() != "false")
+        .unwrap_or(false)
+    {
+        println!(
+            "advisor credentials panel: ON. Setup code {} (needed once, to store an API key)",
+            fd_api::advisor::setup_code()
+        );
+    } else {
+        println!(
+            "advisor credentials panel: off. Set {}=1 and restart to enable it — off by \
+             default because these routes are unauthenticated on loopback and one of them \
+             deletes a credential a live campaign may depend on.",
+            fd_api::advisor::PANEL_ENV
+        );
+    }
     println!(
         "{}",
         if serving_ui {
