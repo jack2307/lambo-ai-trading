@@ -234,15 +234,71 @@ terminal = 'C:\MT5-cent\terminal64.exe'
 # `xauusd` is the same gold on both - only the name differs.
 symbol_suffix = ".sc"
 
-# Each paper book has its own 10,000 USC. Five of them share this one account,
-# and each still sizes as though it owned the whole thing - so at 1.0 the five
-# together would risk five times what any one of them was designed to risk.
-# The account is funded with 10,000 USC (USD 100), so the fifth is the honest
-# scale and the owner chose it on 2026-09-17.
+# 1% AT 10,000 USC, TO BE RE-SET WHEN THE BALANCE MOVES BY A FIFTH.
+#
+# That is the honest name for this number and the heading is the caveat: a
+# fixed scale does not track the balance. At 12,000 USC it is 0.83% of the
+# account, at 8,000 USC it is 1.25%. Re-set it, do not let it drift.
+#
+# THE ARITHMETIC. Each paper book runs on 10,000 USC = USD 100 and risks 1% -
+# one dollar - per trade, sized against the stop at contract 1. The cent
+# account is also 10,000 USC, so 1% of it is 100 USC, the same dollar. One
+# book's lots therefore map to this account 1:1 and the scale is 1.0.
+#
+# WHY IT WAS 0.2 UNTIL 2026-09-18, AND WHAT THAT ACTUALLY DID. The fifth was
+# chosen on the reasoning that five books each sizing as though they owned the
+# whole account would risk five times one book's risk. True of the aggregate.
+# What it did per trade was worse than small: a fifth of 0.05-0.07 lots is
+# 0.01, the broker's minimum, so almost every trade landed on the floor -
+# and a floor is a FLAT size, which inverts risk-based sizing. Measured over
+# the 74 stops these books have actually taken:
+#
+#     at 0.2   stop  5.5 pts -> 0.01 lot ->  6 USC risked = 0.06%
+#              stop 11.7 pts -> 0.01 lot -> 12 USC        = 0.12%
+#              stop 92.0 pts -> 0.01 lot -> 92 USC        = 0.92%
+#
+# The widest stop risked fifteen times what the tightest did. Risk-based
+# sizing exists to make those equal, and the floor reversed it.
+#
+#     at 1.0   stop  5.5 pts -> 0.07 lot -> 39 USC        = 0.39%
+#              stop 11.7 pts -> 0.07 lot -> 82 USC        = 0.82%
+#              stop 21.0 pts -> 0.05 lot -> 105 USC       = 1.05%
+#              stop 92.0 pts -> 0.01 lot -> 92 USC        = 0.92%
+#
+# NOT A FLAT 1%, AND THE COMMENT SAYS SO RATHER THAN CLAIMING IT. Two other
+# constraints bite before the risk rule does:
+#
+#   * the ENGINE's own cap of 300% of book equity in notional binds on every
+#     stop below about 13.6 points at a 4400 price - and the median stop these
+#     books take is 12.0, with a quarter below 9.5. So on more than half of
+#     trades the size is set by the notional cap, not by the 1% rule, and the
+#     trade risks less than 1%.
+#   * the broker's 0.01 lot grid rounds the rest.
+#
+# The delivered range is 0.4% to 1.05%, median about 0.82%. Under 1% far more
+# often than over it, which is the direction to be wrong in.
+#
+# THE EXECUTOR'S GUARDS WERE CHECKED AGAINST THIS BEFORE IT WAS CHANGED, at a
+# 4400 price on 10,019 USC of equity:
+#
+#   --max-notional-ratio 10.0   the largest order this can produce is 0.07
+#                               lot = 30,800 USC = 3.07x equity. The ceiling
+#                               binds at 0.23 lot, so there is 3x of headroom.
+#                               Note it is a PER-ORDER check, not an aggregate.
+#   --min-margin-level 500      five books at maximum size is 0.35 lot, 352
+#                               USC of margin at 1:500, a margin level of
+#                               2,846%. The floor binds at 2.28 lots total,
+#                               6x what five books can ask for. This is the
+#                               account-wide guard and it is the one that
+#                               would catch the aggregate.
+#
+# Neither refuses this size. If a later change moves the scale again, run the
+# same two numbers first: the ceiling and the floor are the only things
+# between a sizing mistake and the balance.
 #
 # This is the number that decides how much money an idea costs to be wrong
 # about. Nothing else in this file is closer to the money.
-lot_scale = 0.2
+lot_scale = 1.0
 
 # THE KEY THAT LIVES IN A FILE. Without it the executor exits 3 on a REAL
 # account however the command line reads. The executor makes three checks in
