@@ -43,6 +43,17 @@ them coming back. Each section names the failure it pins.
      the trading history reads as one unbroken record; this function is the
      only thing enforcing it.
 
+  4  THE KILL SWITCH MUST LEAVE A TRUE RECORD. The STOP path returned before
+     writing a snapshot, so `broker.json` went on claiming a closed position
+     was open for as long as the directory existed - and nothing downstream
+     could tell a clean stop from a close the broker refused.
+
+  5  THE TWO CLOCKS MUST BE RECONCILED. The book's times are UTC and the deal
+     history's are the terminal's server time. `already_taken` compared one
+     against the other inside a fifteen-minute window, across a three-hour
+     offset, so it could not match - and on this desk it never once has. These
+     checks are the only place it has ever fired.
+
 The provenance of every symbol number is marked. MEASURED means read from a
 terminal on the date given; DERIVED means computed from a measured value and
 said so. Nothing here is a guess presented as a measurement.
@@ -55,6 +66,7 @@ import os
 import shutil
 import sys
 import tempfile
+import time
 import types
 from pathlib import Path
 
@@ -103,6 +115,10 @@ def make_mt5():
     m.info = None
     m.margin = 5.0       # order_calc_margin's answer; None means it declines
     m.price = 4311.85
+    # How far the fake terminal's clock runs ahead of UTC. +3h is what the
+    # real Vantage server was measured at on 2026-09-16 and 2026-09-17.
+    m.server_offset_s = 3 * 3600
+    m.deals = []
 
     m.initialize = lambda **kw: True
     m.shutdown = lambda: None
@@ -111,9 +127,12 @@ def make_mt5():
     m.symbol_select = lambda s, on: True
     m.terminal_info = lambda: Obj(trade_allowed=True)
     m.symbol_info = lambda s: m.info
-    m.symbol_info_tick = lambda s: Obj(ask=m.price, bid=m.price - 0.2)
+    # `time` is SERVER epoch seconds, which is what a real tick carries and
+    # what the executor measures the clock offset from.
+    m.symbol_info_tick = lambda s: Obj(ask=m.price, bid=m.price - 0.2,
+                                       time=int(time.time()) + m.server_offset_s)
     m.positions_get = lambda **kw: []
-    m.history_deals_get = lambda a, b: []
+    m.history_deals_get = lambda a, b: m.deals
     m.order_calc_margin = lambda t, s, v, p: m.margin
 
     def order_send(req):
@@ -549,11 +568,156 @@ def stop_leaves_a_true_record() -> None:
           f"{(bad['snapshot'] or {}).get('blocked')}")
 
 
+# ---------------------------------------------------------------------------
+# 5 - the two clocks, and the trade that was already taken
+# ---------------------------------------------------------------------------
+
+MAGIC = X.magic_for("t")
+
+
+def deal(pos_id: int, entry_in: bool, server_ms: int, price: float, lots: float,
+         is_buy: bool, profit: float = 0.0, comment: str = "") -> Obj:
+    """One MT5 deal. `time_msc` is SERVER time, as the terminal reports it."""
+    return Obj(magic=MAGIC, position_id=pos_id, entry=0 if entry_in else 1,
+               type=0 if is_buy else 1, time_msc=server_ms, price=price,
+               volume=lots, profit=profit, swap=0.0, commission=0.0, comment=comment)
+
+
+def closed_trade(entry_utc_ms: int, held_ms: int, is_buy: bool = True,
+                 price: float = 4311.85, lots: float = 0.05,
+                 comment: str = "sl") -> list:
+    """A round trip, given when it was entered in UTC.
+
+    The deals carry SERVER time, because that is what the terminal hands over
+    and what the executor now has to correct for.
+    """
+    off = MT5.server_offset_s * 1000
+    return [deal(77, True, entry_utc_ms + off, price, lots, is_buy),
+            deal(77, False, entry_utc_ms + held_ms + off, price - 5, lots, is_buy,
+                 profit=-5.0, comment=comment)]
+
+
+def the_two_clocks() -> None:
+    """`already_taken` compared a UTC stamp against a server stamp.
+
+    The book's `entry_time` is UTC - `mt5_bars.py` converts every bar stamp
+    with `to_utc_ms` before posting it - while `history_of` reports `d.time_msc`
+    raw, which is SERVER time. A fifteen-minute window across a three-hour
+    offset cannot match, and the auditor's note is the evidence: "already-taken"
+    has never appeared in any log on this desk. That reads as never happened
+    and means never worked.
+
+    MEASURED 2026-09-16, the one trade that appears on both sides of this
+    repo's own records: executor.jsonl logs the fill for SHORT 0.06 at 4344.46
+    at 13:46:29 UTC, and the same trade's `entryTime` in broker.json is
+    16:46:27. Three hours, to the second.
+    """
+    section("the book's clock against the terminal's")
+
+    book_entry = BOOK["entry_time"]
+
+    # Nothing in the history: the mirror opens, as it always did.
+    MT5.deals = []
+    try:
+        _, sent, rows = drive(CENT)
+        check("no history for this book: the order goes out", len(sent) == 1,
+              f"sent {len(sent)}; {[r['kind'] for r in rows]}")
+
+        # The state this guard exists for: the broker stopped the trade out
+        # before the book's bar closed, so the book still says LONG and the
+        # account is flat. Re-opening would take the same trade twice.
+        MT5.deals = closed_trade(book_entry, held_ms=5 * 60_000)
+        _, sent, rows = drive(CENT)
+        check("the broker already closed this book position: NOTHING is re-opened",
+              len(sent) == 0, f"sent {sent}")
+        check("...and it is logged as already-taken, which had never once fired",
+              any(r["kind"] == "already-taken" for r in rows),
+              f"{[r['kind'] for r in rows]}")
+        taken = next((r for r in rows if r["kind"] == "already-taken"), {})
+        check("...and the log carries the measured offset, so the clocks are answerable",
+              taken.get("server_offset_ms") == MT5.server_offset_s * 1000,
+              f"{taken.get('server_offset_ms')}")
+
+        # The regression that pins the bug itself. Under the OLD test -
+        # `entry <= got < entry + step` against a RAW server stamp - this fill
+        # sits three hours past the window and is missed, so the mirror
+        # re-enters. Asserted here so that reverting the correction fails.
+        raw = book_entry + MT5.server_offset_s * 1000
+        step = 900_000
+        check("the old test would have missed this fill (this is the bug)",
+              not (book_entry <= raw < book_entry + step),
+              f"raw {raw} vs window [{book_entry}, {book_entry + step})")
+
+        # The retry storm, measured 2026-09-16: the terminal answered 10027 for
+        # sixteen minutes, so the fill landed TWO bars after the book's entry
+        # stamp. Any window keyed to one bar would miss it.
+        MT5.deals = closed_trade(book_entry + 2 * step, held_ms=60_000)
+        _, sent, _ = drive(CENT)
+        check("a fill two bars late is still recognised, not re-opened",
+              len(sent) == 0, f"sent {sent}")
+
+        # A trade from BEFORE the book entered this position belongs to the
+        # previous one and must not stand the mirror down.
+        MT5.deals = closed_trade(book_entry - 4 * step, held_ms=60_000)
+        _, sent, _ = drive(CENT)
+        check("an older trade of this book does not block the current one",
+              len(sent) == 1, f"sent {len(sent)}")
+
+        # A closed trade on the other side, entered after the book's stamp.
+        # Not treated as this position's fill, and said out loud rather than
+        # silently skipped.
+        MT5.deals = closed_trade(book_entry, held_ms=60_000, is_buy=False)
+        _, sent, rows = drive(CENT)
+        check("a closed trade on the WRONG side is not read as this fill",
+              len(sent) == 1, f"sent {len(sent)}")
+        check("...and the anomaly is recorded",
+              any(r["kind"] == "history-anomaly" for r in rows),
+              f"{[r['kind'] for r in rows]}")
+
+        # Fail closed, both ways the clock can go unreadable.
+        MT5.deals = []
+        real_tick = MT5.symbol_info_tick
+        try:
+            MT5.symbol_info_tick = lambda s: Obj(ask=MT5.price, bid=MT5.price - 0.2)
+            _, sent, rows = drive(CENT)
+            check("no server clock on the tick: nothing is sent",
+                  len(sent) == 0, f"sent {sent}")
+            check("...and the refusal says the history is unknown",
+                  any(r["kind"] == "refused-unknown-history" for r in rows),
+                  f"{[r['kind'] for r in rows]}")
+
+            # A tick two days stale - a Friday close read on a Monday - would
+            # otherwise be measured as a two-day clock offset.
+            MT5.symbol_info_tick = lambda s: Obj(
+                ask=MT5.price, bid=MT5.price - 0.2, time=int(time.time()) - 2 * 86400)
+            _, sent, rows = drive(CENT)
+            check("a stale tick is rejected, not read as a huge offset",
+                  len(sent) == 0 and any(r["kind"] == "refused-unknown-history" for r in rows),
+                  f"sent {sent}; {[r['kind'] for r in rows]}")
+        finally:
+            MT5.symbol_info_tick = real_tick
+
+        # The terminal declining to hand over deal history is "cannot tell",
+        # not "nothing has happened".
+        real_deals_get = MT5.history_deals_get
+        try:
+            MT5.history_deals_get = lambda a, b: None
+            _, sent, rows = drive(CENT)
+            check("no deal history: nothing is sent",
+                  len(sent) == 0 and any(r["kind"] == "refused-unknown-history" for r in rows),
+                  f"sent {sent}; {[r['kind'] for r in rows]}")
+        finally:
+            MT5.history_deals_get = real_deals_get
+    finally:
+        MT5.deals = []
+
+
 def main() -> int:
     the_ceiling_measures_one_currency()
     both_size_guards_fail_closed()
     the_stamp_knows_whose_directory_it_is()
     stop_leaves_a_true_record()
+    the_two_clocks()
     print(f"\n{'all checks passed' if not FAIL else str(FAIL) + ' CHECK(S) FAILED'}")
     return 1 if FAIL else 0
 

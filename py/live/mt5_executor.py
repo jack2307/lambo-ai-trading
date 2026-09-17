@@ -797,6 +797,47 @@ def main() -> int:
 
         TF_MS = {"1m": 60_000, "5m": 300_000, "15m": 900_000, "1h": 3_600_000}
 
+        def server_offset_ms():
+            """How far the terminal's clock runs ahead of UTC, in ms, or None.
+
+            MEASURED from the terminal each time it is asked, not assumed from
+            a timezone. `mt5_bars.py` derives the same offset by anchoring the
+            server to New York DST, and that derivation is right today - but it
+            is a belief about which zone this broker keeps, and this function
+            is the one standing between a real account and a duplicated trade.
+            Asking the terminal what time it thinks it is costs one call and
+            needs no belief at all.
+
+            The check against reality, 2026-09-16, from this repo's own files:
+            `executor.jsonl` stamps a fill at 13:46:29 UTC and the deal history
+            reports the same trade at 16:46:27. +3h, which is what the New York
+            derivation gives for that date too. The two agree; this one keeps
+            agreeing if the broker moves.
+
+            Returns None rather than a guess in two cases, and the caller
+            refuses on it:
+
+            * no tick to read. The terminal is not answering, or the symbol has
+              never ticked in this session.
+            * a drift too large to be an offset. `tick.time` is the LAST tick,
+              which over a weekend or a halt can be days old, and a stale tick
+              would otherwise be read as an enormous offset. No broker keeps a
+              clock more than fourteen hours from UTC, so anything beyond that
+              is a stale tick and not a timezone.
+
+            Snapped to the nearest quarter hour because server offsets are
+            whole or half hours everywhere, and because the tick that measures
+            it is seconds old rather than simultaneous.
+            """
+            tick = mt5.symbol_info_tick(args.symbol)
+            server_s = getattr(tick, "time", None)
+            if not server_s:
+                return None
+            drift_s = float(server_s) - time.time()
+            if abs(drift_s) > 14 * 3600:
+                return None
+            return int(round(drift_s / 900.0) * 900.0 * 1000)
+
         def too_old(book_open: dict, run: dict) -> float | None:
             """Bars between the book's entry and its latest bar, or None if fresh.
 
@@ -830,8 +871,13 @@ def main() -> int:
             r = adverse / risk
             return r if abs(r) > args.max_join_r else None
 
-        def already_taken(book_open: dict, run: dict) -> dict | None:
-            """The account's own fill for the book position it is holding, if any.
+        def already_taken(book_open: dict, run: dict) -> tuple:
+            """Has this account already traded the position the book is holding?
+
+            Returns `(verdict, fill)` where verdict is "taken", "not-taken" or
+            "unknown". Three states and not two, because the two clocks this
+            has to reconcile can fail to be readable, and a mirror that reads
+            "cannot tell" as "no" re-enters a trade it already took.
 
             This closes a hole that only opens on a LIVE account, and only
             between two bars.
@@ -850,24 +896,100 @@ def main() -> int:
             history across a restart would make the same mistake at the worst
             possible moment.
 
-            Matched by the bar the book entered on. The broker's fill is a few
-            seconds after the book's bar stamp, never before it and never into
-            the next bar, so one bar's width identifies it without needing the
-            two clocks to agree exactly.
+            THE TWO CLOCKS, and why this never once fired before 2026-09-17.
+
+            The book's `entry_time` is UTC: `mt5_bars.py` converts every bar
+            stamp with `to_utc_ms`, which subtracts the server offset before
+            posting. `history_of` above reports `d.time_msc` exactly as MT5
+            gives it, which is SERVER time - the same distinction this module's
+            own `history_of` docstring warns about for history bounds, and
+            which was then ignored twenty lines later.
+
+            So the old test, `entry <= got < entry + step`, compared a UTC
+            stamp against a server stamp inside a fifteen-minute window, across
+            an offset of two or three HOURS. It could not match, and the
+            auditor's note is the part that matters: "already-taken" has never
+            appeared in any log on this desk. That reads as "never happened".
+            It means "never worked".
+
+            Measured from this repo's own records, 2026-09-16, the one trade
+            that appears on both sides: `executor.jsonl` logs the fill for
+            SHORT 0.06 at 4344.46 at 13:46:29 UTC (`log()` stamps wall-clock
+            UTC), and `broker.json` carries the same trade's `entryTime` as
+            16:46:27. Three hours, to the second.
+
+            HOW THE WINDOW IS DRAWN NOW. Not one bar wide. The same trade shows
+            why: the terminal answered 10027 for sixteen minutes before it
+            filled, so the fill landed TWO bars after the book's entry stamp,
+            and any window keyed to a fixed bar would have missed it.
+
+            Instead: the book is holding a position it opened at `entry_time`
+            and has not left. `history_of` returns only CLOSED trades. So any
+            closed trade of this magic that was ENTERED at or after the book's
+            entry stamp was necessarily opened while the book was already in
+            this position - there is no other trade it could be. That is the
+            whole test, and it needs no assumption about how long a retry storm
+            lasts. A previous book position closed before this one opened, so
+            its entry stamp is strictly earlier and cannot be caught by it.
+
+            The direction is required to match as a cross-check. It should
+            always match by the argument above; if it ever does not, the
+            mismatch is logged rather than quietly treated as a match.
             """
             entry = book_open.get("entry_time")
             if not entry:
-                return None
-            step = TF_MS.get(run.get("tf") or "", 900_000)
-            _, _, fills = history_of(mt5, magic)
+                return "not-taken", None
+            offset = server_offset_ms()
+            if offset is None:
+                return "unknown", None
+            # `history_of` reports a failed `history_deals_get` by returning
+            # None for the realised total. That is "the terminal would not say
+            # what this book has done", not "it has done nothing", and the two
+            # must not collapse here.
+            realised, _, fills = history_of(mt5, magic)
+            if realised is None:
+                return "unknown", None
+            side = book_open.get("side")
+            # A minute of slack under the book's stamp. The broker fills after
+            # the bar the book entered on, never before it, so this is only
+            # absorbing the seconds of jitter in snapping the offset - not
+            # widening the test in any direction that matters.
+            floor_ms = entry - 60_000
             for f in fills:
                 got = f.get("entryTime")
-                if got is not None and entry <= got < entry + step:
-                    return f
-            return None
+                if got is None:
+                    continue
+                got_utc = got - offset
+                if got_utc < floor_ms:
+                    continue
+                if f.get("direction") != side:
+                    log(out, "history-anomaly", book_side=side, fill=f,
+                        fill_entry_utc=got_utc, book_entry=entry,
+                        reason="a closed trade of this magic was entered after the book's "
+                               "current position opened, but on the other side; not treated "
+                               "as this position's fill")
+                    continue
+                return "taken", f
+            return "not-taken", None
 
         def open_like(book_open: dict, run: dict) -> bool:
-            taken = already_taken(book_open, run)
+            verdict, taken = already_taken(book_open, run)
+            if verdict == "unknown":
+                # Fail closed, for the same reason as the size guards: the
+                # question "has this account already taken this trade?" has no
+                # safe default. Answering "no" when the answer is unknown is
+                # what re-enters a position that has already been stopped out.
+                # This clears itself on the next poll as soon as a tick or the
+                # deal history comes back, so the cost is a delayed entry and
+                # not a dead mirror.
+                log(out, "refused-unknown-history", side=book_open.get("side"),
+                    book_entry=book_open.get("entry_time"),
+                    reason="cannot read the server's clock offset or this book's deal "
+                           "history, so whether this account already traded the book's "
+                           "current position is unknown; nothing sent")
+                nonlocal_blocked("cannot tell whether this trade was already taken "
+                                 "(no server clock or no deal history)")
+                return False
             if taken is not None:
                 nonlocal_standing_out(
                     f"this account already traded the book's current position "
@@ -875,6 +997,9 @@ def main() -> int:
                     f"closed {taken.get('exitReason') or 'out'} for {taken.get('pnl')})")
                 log(out, "already-taken", side=book_open.get("side"),
                     book_entry=book_open.get("entry_price"), fill=taken,
+                    book_entry_time=book_open.get("entry_time"),
+                    fill_entry_utc=(taken.get("entryTime") or 0) - (server_offset_ms() or 0),
+                    server_offset_ms=server_offset_ms(),
                     reason="the broker closed this trade before the book's bar did; "
                            "re-opening would take the same trade twice")
                 return False
@@ -1072,6 +1197,14 @@ def main() -> int:
                 "margin_level": (getattr(acc, "margin_level", 0.0) or None),
                 "symbol": args.symbol,
                 "contract_size": info.trade_contract_size,
+                # How far the terminal's clock runs ahead of UTC, measured this
+                # poll. Here because the book's times are UTC and the deal
+                # history's are the server's, and a reader comparing the two
+                # without knowing the offset is making the mistake that kept
+                # `already_taken` inert until 2026-09-17. `null` means it could
+                # not be measured, which is also when the mirror refuses to
+                # open - so this field says why a book is sitting out.
+                "server_offset_ms": server_offset_ms(),
                 "magic": magic,
                 "lot_scale": args.lot_scale,
                 "dry_run": bool(args.dry_run),
