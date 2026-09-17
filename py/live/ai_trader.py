@@ -813,7 +813,13 @@ def main() -> int:
             log(args.run, {
                 "at": int(time.time() * 1000), "bar_time": last_time, "model": args.model,
                 "prompt": hold_prompt, "response": text, "latency_ms": ms,
-                "usage": usage, "cost_usd": cost_of(args.model, usage) if usage else None,
+                # The RESOLVED provider, not the one derived from the model
+                # name. `--provider anthropic` forces a CLI-named model onto
+                # the metered API, and the name cannot know that: without this
+                # argument a run that is spending real money logs
+                # `cost_usd: null` and the campaign looks free. See
+                # `advisor.cost_of`.
+                "usage": usage, "cost_usd": cost_of(args.model, usage, provider) if usage else None,
                 # Marked so nothing downstream mistakes an opinion about an
                 # open trade for a decision about a new one.
                 "kind": "hold_check", "verdict": verdict,
@@ -910,7 +916,8 @@ def main() -> int:
             print(f"{stamp} would post {decision['side']} (dry run)  {decision['reason'][:70]}", flush=True)
 
         from advisor import cost_of
-        cost = cost_of(args.model, usage) if usage else None
+        # The resolved provider, for the reason given at the hold-check above.
+        cost = cost_of(args.model, usage, provider) if usage else None
         log(args.run, {
             "at": int(time.time() * 1000), "bar_time": last_time, "model": args.model,
             "prompt": prompt, "response": text, "latency_ms": ms,
