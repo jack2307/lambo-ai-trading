@@ -45,10 +45,9 @@ import { toast } from 'sonner'
 import { useTicks } from '@/lib/ticks'
 import { ClaudeMark, DeepSeekMark, OpenAIMark } from '@/components/BrandMarks'
 import type { Consultation, Decision, Reasoning } from '@/lib/api'
+import { APP_BAR_H } from '@/components/AppBar'
 import { cn } from '@/lib/utils'
 
-/** Height of the sticky app bar, which this page fills the rest of the viewport under. */
-const APP_BAR = 45
 
 /**
  * Bars the drill-down asks for.
@@ -763,7 +762,7 @@ export function Desk({ book }: { book: Book }) {
   return (
     <div
       className="flex min-h-0 flex-col overflow-hidden"
-      style={{ height: `calc(100dvh - ${APP_BAR}px)` }}
+      style={{ height: `calc(100dvh - ${APP_BAR_H}px)` }}
     >
       <SummaryStrip runs={sorted} now={now} loading={runs === null} error={statusError} streaming={streaming} account={account} />
 

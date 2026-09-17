@@ -16,6 +16,7 @@ import {
 } from '@/lib/api'
 import { day, money, num, pct, price, signClass } from '@/lib/format'
 import { useLiveBar, type LiveStatus } from '@/lib/useLiveBar'
+import { APP_BAR_H } from '@/components/AppBar'
 import { cn } from '@/lib/utils'
 
 /**
@@ -39,8 +40,6 @@ import { cn } from '@/lib/utils'
 /** One accent plus the data colours; indicator lines cycle through these. */
 const LINE_COLORS = ['#7d94e8', '#d99446', '#3fbcc0', '#e05d6a', '#46c98a', '#b48ae0', '#c9d1de']
 
-/** Height of the sticky app bar, which the page fills the rest of the viewport under. */
-const APP_BAR = 45
 
 interface Props {
   catalog: Catalog
@@ -206,7 +205,7 @@ export function Workbench({ catalog, market, onError }: Props) {
   return (
     <div
       className="grid grid-cols-[272px_minmax(0,1fr)] overflow-hidden"
-      style={{ height: `calc(100dvh - ${APP_BAR}px)` }}
+      style={{ height: `calc(100dvh - ${APP_BAR_H}px)` }}
     >
       {/* ---------------------------------------------------------- rail */}
       <aside className="flex min-h-0 flex-col overflow-y-auto border-r">

@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
-import { AppBar } from '@/components/AppBar'
+import { AppBar, BROKER_STALE_MS } from '@/components/AppBar'
+import { Sidebar, readRail } from '@/components/Sidebar'
 import { ErrorBanner } from '@/components/ErrorBanner'
 import { Analytics } from '@/pages/Analytics'
 import { Desk } from '@/pages/Desk'
@@ -11,7 +12,7 @@ import { Tape } from '@/pages/Tape'
 import { Workbench } from '@/pages/Workbench'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Toaster } from '@/components/ui/sonner'
-import { api, type Catalog } from '@/lib/api'
+import { api, type BrokerAccount, type Catalog } from '@/lib/api'
 
 export type View = 'desk' | 'analytics' | 'workbench' | 'tape' | 'research' | 'floor' | 'settings'
 
@@ -90,6 +91,77 @@ export default function App() {
     writeBook(next)
   }, [])
   const [error, setError] = useState<string | null>(null)
+  const [railed, setRailed] = useState<boolean>(readRail)
+  const [drawerOpen, setDrawerOpen] = useState(false)
+
+  // The registry, polled here rather than in the AppBar, because two chrome
+  // components now read it: the sidebar's book card and the strip's equity
+  // readout. One poll, one answer; two would be two answers a second apart.
+  const [accounts, setAccounts] = useState<BrokerAccount[]>([])
+  // Whether it has answered at ALL. An empty list before the first response is
+  // not an empty registry, and both effects below would read it as one.
+  const [accountsLoaded, setAccountsLoaded] = useState(false)
+  const picked = useRef(false)
+
+  useEffect(() => {
+    let alive = true
+    const tick = () => {
+      api
+        .paperAccounts()
+        .then((res) => {
+          if (!alive) return
+          setAccounts(res.accounts)
+          setAccountsLoaded(true)
+        })
+        // A failure here means no broker, which is what an empty list says.
+        .catch(() => {
+          if (!alive) return
+          setAccounts([])
+          setAccountsLoaded(true)
+        })
+    }
+    tick()
+    const timer = window.setInterval(tick, 5000)
+    return () => {
+      alive = false
+      window.clearInterval(timer)
+    }
+  }, [])
+
+  const isLive = useCallback(
+    (a: BrokerAccount) => a.at > 0 && Date.now() - a.at < BROKER_STALE_MS,
+    [],
+  )
+
+  // Falling back is not cosmetic. If the executors stop while the desk shows an
+  // account, every figure freezes at its last value and goes on looking
+  // current; dropping to paper is the only reading that stays true unwatched.
+  useEffect(() => {
+    if (!accountsLoaded || typeof book !== 'number') return
+    const still = accounts.find((a) => a.login === book)
+    if (!still || !isLive(still)) setBook('paper')
+  }, [book, accounts, accountsLoaded, isLive])
+
+  // THE DEFAULT FOLLOWS THE MONEY. See the note on `autoPick`: with nothing
+  // remembered the desk opens on the real-money account, and only when there
+  // is exactly one enabled and reporting. Once, ever.
+  useEffect(() => {
+    if (!autoPick || picked.current || !accountsLoaded || book !== 'paper') return
+    const real = accounts.filter((a) => a.real_money && a.enabled && isLive(a))
+    if (real.length !== 1) return
+    picked.current = true
+    chooseBook(real[0].login)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoPick, accountsLoaded, accounts, book, isLive])
+
+  const railTo = useCallback((next: boolean) => {
+    setRailed(next)
+    try {
+      localStorage.setItem('fd.desk.sidebar', next ? '1' : '0')
+    } catch {
+      /* private mode: the choice lasts the page */
+    }
+  }, [])
 
   useEffect(() => {
     const onHashChange = () => setView(viewFromHash())
@@ -118,16 +190,30 @@ export default function App() {
   }, [])
 
   return (
-    <div className="min-h-dvh">
-      <AppBar
+    <div className="flex min-h-dvh">
+      <Sidebar
         view={view}
         onViewChange={changeView}
+        book={book}
+        onBookChange={chooseBook}
+        accounts={accounts}
+        railed={railed}
+        onRailedChange={railTo}
+        drawerOpen={drawerOpen}
+        onDrawerOpenChange={setDrawerOpen}
+        isLive={isLive}
+      />
+
+      <div className="flex min-w-0 flex-1 flex-col">
+      <AppBar
+        view={view}
         markets={catalog?.markets ?? []}
         market={market}
         onMarketChange={setMarket}
         book={book}
-        onBookChange={chooseBook}
-        autoPick={autoPick}
+        accounts={accounts}
+        isLive={isLive}
+        onOpenMenu={() => setDrawerOpen(true)}
       />
 
       {error && <ErrorBanner message={error} onDismiss={() => setError(null)} />}
@@ -157,6 +243,7 @@ export default function App() {
       )}
 
       <Toaster position="bottom-right" />
+      </div>
     </div>
   )
 }

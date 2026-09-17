@@ -126,9 +126,11 @@
     --sidebar-foreground: #0a0a0a;
     --sidebar-primary: #5c9e06;
     --sidebar-primary-foreground: #071400;
-    --sidebar-accent: #e6eae2;
+    /* Light already sat on the brand accent (#5c9e06); only the neutrals
+     * needed taking off blue-grey, for the same reason as dark. */
+    --sidebar-accent: #eceee9;
     --sidebar-accent-foreground: #0a0a0a;
-    --sidebar-border: #d6dbd2;
+    --sidebar-border: #d8dcd4;
     --sidebar-ring: #5c9e06;
 }
 
@@ -170,14 +172,32 @@
     --chart-4: #46c98a;
     --chart-5: #e05d6a;
 
-    --sidebar: #10141c;
-    --sidebar-foreground: #e3e8f0;
-    --sidebar-primary: #7d94e8;
-    --sidebar-primary-foreground: #0a0d13;
-    --sidebar-accent: #1a202b;
-    --sidebar-accent-foreground: #e3e8f0;
-    --sidebar-border: #232a38;
-    --sidebar-ring: #7d94e8;
+    /* The chrome the navigation is built from, on the brand ground.
+     *
+     * These were stock shadcn on a BLUE hue - #10141c ground, #7d94e8
+     * periwinkle accent, #232a38 borders - inside a desk whose card is
+     * #131413 and whose accent is lime. Nothing read them, because no
+     * sidebar existed, so they sat as a trap: the first person to install
+     * one would have got a blue admin panel bolted to a lime terminal.
+     *
+     * Retuned 2026-09-18 against the rules this file's own DESIGN.md
+     * already states - "Neutral, not blue-black - a blue ground tints lime
+     * toward teal" (the ground), and "One chrome accent, and it is lime.
+     * Everything a person can press, focus or navigate with is --primary.
+     * Nothing else is" (the accent). So the accent here IS --primary, and
+     * mint stays out of it: DESIGN.md gives mint to gradients and glows and
+     * says "Never a control", which also keeps it off the tape's teal.
+     *
+     * The ground is one step darker than --card so the rail reads as behind
+     * the page rather than as another panel on it. */
+    --sidebar: #0e100e;
+    --sidebar-foreground: #e8ece8;
+    --sidebar-primary: #8dff08;
+    --sidebar-primary-foreground: #071400;
+    --sidebar-accent: #1a1d1a;
+    --sidebar-accent-foreground: #ffffff;
+    --sidebar-border: #242724;
+    --sidebar-ring: #8dff08;
 }
 
 @layer base {

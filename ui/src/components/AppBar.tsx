@@ -1,179 +1,99 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
+import { Menu } from 'lucide-react'
 
 import type { Book, View } from '@/App'
-import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { GuardsPanel } from '@/components/GuardsPanel'
-import { api, type BrokerAccount, type MarketInfo } from '@/lib/api'
-import { PRODUCT } from '@/lib/brand'
+import type { BrokerAccount, MarketInfo } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
 interface Props {
   view: View
-  onViewChange: (view: View) => void
   markets: MarketInfo[]
   market: string
   onMarketChange: (market: string) => void
   book: Book
-  onBookChange: (book: Book) => void
-  /** Nothing is remembered for this viewer, so the desk may choose the first
-   *  book itself. False the moment they have ever picked one. */
-  autoPick?: boolean
+  accounts: BrokerAccount[]
+  isLive: (a: BrokerAccount) => boolean
+  /** Narrow screens only: the sidebar is an overlay there and needs opening. */
+  onOpenMenu: () => void
 }
 
 /**
  * How long an executor's snapshot stays believable.
  *
- * The executor polls every 15 s, so three missed looks is a stopped process
- * rather than a slow one. This matters more than it sounds: the snapshot is a
- * FILE, and a file does not disappear when the program that wrote it dies. An
- * account that is simply remembered must never be allowed to look connected,
- * because every number it carries would then be a past number presented as a
- * present one.
+ * Exported because `App` owns the accounts poll now and applies the same rule:
+ * an account whose mirror has stopped must not stay selected, and two
+ * components disagreeing about what "stopped" means would be worse than
+ * either answer.
  */
-const BROKER_STALE_MS = 45_000
+export const BROKER_STALE_MS = 45_000
 
 /**
- * The order is the working day: the book first, then what the book has added
- * up to, then the bench you change it on, then the tape, then what the loop is
- * proving, then the floor it happens on. Desk is the default.
+ * The strip's height, in pixels, exported so the pages that size themselves
+ * against it cannot drift from it.
+ *
+ * `py-1.5` either side of a 24px control, plus the bottom border. It was 45
+ * for the taller bar this replaced, written as a literal in BOTH Desk.tsx and
+ * Workbench.tsx - two copies of a number describing a third file, which is the
+ * arrangement that goes stale the first time anyone changes the padding. It
+ * now lives beside the markup that decides it.
  */
-const VIEWS: { id: View; label: string }[] = [
-  { id: 'desk', label: 'Desk' },
-  { id: 'analytics', label: 'Analytics' },
-  { id: 'workbench', label: 'Workbench' },
-  { id: 'tape', label: 'Tape' },
-  { id: 'research', label: 'Research' },
-  { id: 'floor', label: 'Floor' },
-  { id: 'settings', label: 'Settings' },
-]
+export const APP_BAR_H = 37
 
 /** The two screens that read one market at a time; the rest ignore the picker. */
 const MARKET_VIEWS: View[] = ['workbench', 'tape']
 
-export function AppBar({ view, onViewChange, markets, market, onMarketChange, book, onBookChange, autoPick = false }: Props) {
+/**
+ * The status strip. What the desk IS, not what to look at next.
+ *
+ * Navigation and the book switcher moved into the sidebar on 2026-09-18: a row
+ * of seven pills said nothing about what any of them was for, and the book
+ * switcher is the first decision of a visit rather than a control to reach for
+ * afterwards. What is left here is state a reader wants visible on every
+ * screen and never clicks: which market, what the broker side is doing, and
+ * what the selected account is worth.
+ */
+export function AppBar({ view, markets, market, onMarketChange, book, accounts, isLive, onOpenMenu }: Props) {
   const needsMarket = MARKET_VIEWS.includes(view)
-  const [accounts, setAccounts] = useState<BrokerAccount[]>([])
-  // Whether the registry has answered at all. An empty list BEFORE the first
-  // response is not an empty registry, and the fallback below must not read it
-  // as one - doing so would drop a remembered account to paper on every load,
-  // before anything had a chance to say the account exists.
-  const [loaded, setLoaded] = useState(false)
-  const picked = useRef(false)
   const [now, setNow] = useState(() => Date.now())
 
-  // Its own poll rather than a share of the Desk's: this control is on every
-  // screen, including the ones that never load a book, and an account summary
-  // is a few hundred bytes.
+  // A second hand for the caption's "quiet for N s". Nothing is fetched here;
+  // `App` owns the poll.
   useEffect(() => {
-    let alive = true
-    const tick = () => {
-      setNow(Date.now())
-      api
-        .paperAccounts()
-        .then((res) => {
-          if (!alive) return
-          setAccounts(res.accounts)
-          setLoaded(true)
-        })
-        // A failure here means no broker, which is exactly what an empty list
-        // says. Nothing is thrown at the user for it.
-        .catch(() => {
-          if (!alive) return
-          setAccounts([])
-          setLoaded(true)
-        })
-    }
-    tick()
-    const timer = window.setInterval(tick, 5000)
-    return () => {
-      alive = false
-      window.clearInterval(timer)
-    }
+    const timer = window.setInterval(() => setNow(Date.now()), 1000)
+    return () => window.clearInterval(timer)
   }, [])
 
-  const isLive = (a: BrokerAccount) => a.at > 0 && now - a.at < BROKER_STALE_MS
   const live = accounts.filter(isLive)
   const chosen = typeof book === 'number' ? (accounts.find((a) => a.login === book) ?? null) : null
 
-  // Falling back is not cosmetic. If the executors stop while the desk is
-  // showing an account, every figure on screen freezes at its last value and
-  // goes on looking current; dropping to paper is the only reading that stays
-  // true without anyone watching. The same applies to an account that vanishes
-  // from the registry while it is selected.
-  useEffect(() => {
-    if (!loaded) return
-    if (typeof book !== 'number') return
-    const still = accounts.find((a) => a.login === book)
-    if (!still || !(still.at > 0 && Date.now() - still.at < BROKER_STALE_MS)) onBookChange('paper')
-  }, [book, accounts, loaded, onBookChange])
-
-  // THE DEFAULT FOLLOWS THE MONEY. With nothing remembered, the desk opens on
-  // the real-money account rather than on paper.
-  //
-  // Do not "simplify" this back to paper-first. This desk exists because of
-  // that account: opening on the paper book means the first frame after every
-  // fresh visit answers a question nobody asked, and the owner has to find his
-  // own money by hand. Paper remains the default when there is no real-money
-  // account to open on, and remains the fallback whenever one stops reporting.
-  //
-  // Only when there is EXACTLY ONE enabled real-money account. Two would be a
-  // guess about which one matters, and guessing which account a person meant is
-  // not a thing this desk should do. It also waits for that account to be
-  // reporting: picking a stale one would be immediately undone by the fallback
-  // above, and a view that flickers from account to paper on load reads as a
-  // bug. Once, ever - `picked` makes sure a later poll cannot override a choice
-  // the viewer has since made.
-  useEffect(() => {
-    if (!autoPick || picked.current || !loaded) return
-    if (book !== 'paper') return
-    const real = accounts.filter(
-      (a) => a.real_money && a.enabled && a.at > 0 && Date.now() - a.at < BROKER_STALE_MS,
-    )
-    if (real.length !== 1) return
-    picked.current = true
-    onBookChange(real[0].login)
-  }, [autoPick, loaded, accounts, book, onBookChange])
   return (
-    <header className="bg-card/80 sticky top-0 z-20 flex flex-wrap items-center gap-4 border-b px-4 py-2 backdrop-blur">
-      <div className="flex items-baseline gap-2 text-[15px] font-semibold tracking-tight">
-        <span className="bg-primary size-[7px] rounded-[2px]" aria-hidden />
-        {PRODUCT}
-      </div>
+    <header className="bg-card/80 sticky top-0 z-20 flex flex-wrap items-center gap-3 border-b px-3 py-1.5 backdrop-blur">
+      {/* Only where the sidebar is an overlay. Above lg it is in the flow and
+          has its own collapse control, so a second one here would be two
+          buttons for one thing. */}
+      <button
+        type="button"
+        onClick={onOpenMenu}
+        aria-label="Open menu"
+        className="text-muted-foreground hover:bg-accent hover:text-foreground flex size-6 items-center justify-center rounded-sm transition-colors duration-100 motion-reduce:transition-none lg:hidden"
+      >
+        <Menu className="size-4" />
+      </button>
 
-      <nav className="bg-background flex gap-1 rounded-full border p-[3px]" aria-label="Views">
-        {VIEWS.map((entry) => (
-          <Button
-            key={entry.id}
-            variant="ghost"
-            size="sm"
-            aria-current={view === entry.id ? 'page' : undefined}
-            onClick={() => onViewChange(entry.id)}
-            className={cn(
-              'h-6 rounded-full px-3 text-xs font-medium transition-colors',
-              view === entry.id ? 'bg-accent text-foreground' : 'text-muted-foreground hover:text-foreground',
-            )}
-          >
-            {entry.label}
-          </Button>
-        ))}
-      </nav>
-
-      {/* Hidden rather than disabled on the screens that read every market at
-          once: a control that cannot change anything is noise, and the Desk's
-          own rows already say which market each run trades. */}
       {needsMarket && (
-        <label className="text-muted-foreground flex items-center gap-2 text-xs">
+        <label className="text-muted-foreground flex items-center gap-2 text-[11px]">
           market
           <Select value={market} onValueChange={onMarketChange}>
-            <SelectTrigger size="sm" className="h-7 w-[150px] text-xs">
+            <SelectTrigger size="sm" className="h-6 w-[140px] text-[11px]">
               <SelectValue placeholder="loading…" />
             </SelectTrigger>
             <SelectContent>
               {markets.map((entry) => (
                 <SelectItem key={entry.id} value={entry.id} disabled={!entry.hasData}>
                   {entry.id}
-                  {entry.hasData ? '' : ' — no data'}
+                  {!entry.hasData && ' — no tape'}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -181,68 +101,23 @@ export function AppBar({ view, onViewChange, markets, market, onMarketChange, bo
         </label>
       )}
 
-      <div className="ml-auto flex items-center gap-2">
-        <GuardsPanel />
-        <div className="bg-background flex items-center gap-1 rounded-full border p-[3px]" role="group" aria-label="Book">
-          <Button
-            variant="ghost"
-            size="sm"
-            aria-pressed={book === 'paper'}
-            onClick={() => onBookChange('paper')}
-            className={cn(
-              'h-6 rounded-full px-3 text-xs font-medium transition-colors',
-              book === 'paper' ? 'bg-accent text-foreground' : 'text-muted-foreground hover:text-foreground',
-            )}
+      <div className="ml-auto flex items-center gap-3">
+        {/* The selected account's equity, in ITS unit and never converted.
+            Here because it is the number a person glances at from any screen,
+            and the one they would otherwise leave the page to find. */}
+        {chosen && (
+          <span
+            className="num text-[12px] tabular-nums"
+            title={`${chosen.label} equity${chosen.real_money ? ' — REAL MONEY' : ''}`}
           >
-            paper
-          </Button>
-
-          {/* One account is a button; several is a picker. The common case
-              stays a two-way switch you can hit without reading, and the list
-              only appears once there is something to choose between. */}
-          {accounts.length <= 1 ? (
-            <Button
-              variant="ghost"
-              size="sm"
-              aria-pressed={typeof book === 'number'}
-              disabled={accounts.length === 0 || !isLive(accounts[0])}
-              title={accountHint(accounts[0])}
-              onClick={() => accounts[0] && onBookChange(accounts[0].login)}
-              className={cn(
-                'h-6 rounded-full px-3 text-xs font-medium transition-colors',
-                typeof book === 'number' ? 'bg-accent text-foreground' : 'text-muted-foreground hover:text-foreground',
-              )}
-            >
-              {accounts[0]?.label ?? 'account'}
-            </Button>
-          ) : (
-            <Select
-              value={typeof book === 'number' ? String(book) : ''}
-              onValueChange={(v) => onBookChange(Number(v))}
-            >
-              <SelectTrigger
-                size="sm"
-                className={cn(
-                  'h-6 rounded-full border-0 px-3 text-xs font-medium',
-                  typeof book === 'number' ? 'bg-accent text-foreground' : 'text-muted-foreground',
-                )}
-              >
-                <SelectValue placeholder="account" />
-              </SelectTrigger>
-              <SelectContent>
-                {accounts.map((a) => (
-                  // An account that is defined but not reporting is listed and
-                  // not selectable: hiding it would make a mirror that died
-                  // look like an account nobody ever set up.
-                  <SelectItem key={a.login} value={String(a.login)} disabled={!isLive(a)}>
-                    {a.label}
-                    {!isLive(a) && ' \u2014 not running'}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-        </div>
+            <span className={cn(chosen.real_money ? 'text-primary' : 'text-muted-foreground')}>
+              {chosen.equity != null
+                ? `${Math.round(chosen.equity).toLocaleString('en-US')} ${chosen.currency ?? ''}`.trim()
+                : '—'}
+            </span>
+          </span>
+        )}
+        <GuardsPanel />
         <BrokerCaption accounts={accounts} live={live} chosen={chosen} now={now} />
       </div>
     </header>
@@ -259,13 +134,6 @@ export function AppBar({ view, onViewChange, markets, market, onMarketChange, bo
  * position nobody is now reconciling. The second one names how long it has
  * been quiet, because that is the number you act on.
  */
-/** Why the account button is unavailable, said where the reader's hand is. */
-function accountHint(a: BrokerAccount | undefined): string | undefined {
-  if (!a) return 'no account is defined - add an [[account]] block to config/accounts.toml'
-  if (a.at === 0) return 'this account has never reported - start its mirror with py/live/start_executors.ps1'
-  return undefined
-}
-
 function BrokerCaption({
   accounts,
   live,
