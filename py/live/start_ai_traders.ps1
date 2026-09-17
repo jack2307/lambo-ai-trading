@@ -38,13 +38,42 @@ $campaigns = @(
     # No OPENAI_API_KEY is involved. The `codex/` prefix is what routes it to
     # the plan — a bare `gpt-*` would still mean the metered API.
     #
-    # The model is `gpt-5.6-sol` and NOT `gpt-5`: a ChatGPT account refuses
-    # `gpt-5`, `gpt-5-codex` and `codex-mini-latest` outright ("not supported
-    # when using Codex with a ChatGPT account"). This is the name Codex itself
-    # defaults to on this plan, read from its own banner. That makes it a
-    # DIFFERENT model from the one the API campaign ran, which is why that
-    # campaign's books were closed rather than repointed.
-    @{ model = 'codex/gpt-5.6-sol'; run = 'ai-xau-sol-ctx'; control = 'ai-xau-sol-ctx-coin'; seed = 7;  log = 'ai_trader_sol_ctx' },
+    # The model name is one of the plan's own and NOT `gpt-5`: a ChatGPT
+    # account refuses `gpt-5`, `gpt-5-codex` and `codex-mini-latest` outright
+    # ("not supported when using Codex with a ChatGPT account"). That made the
+    # plan campaign a DIFFERENT model from the one the API campaign ran, which
+    # is why that campaign's books were closed rather than repointed - the same
+    # rule that retires the entry below.
+    #
+    # RETIRED 2026-09-17, left here rather than deleted so the file still says
+    # what ran:
+    #   @{ model = 'codex/gpt-5.6-sol'; run = 'ai-xau-sol-ctx'; control = 'ai-xau-sol-ctx-coin'; seed = 7; log = 'ai_trader_sol_ctx' },
+    #
+    # On the VPS every call comes back 400, "The 'gpt-5.6-sol' model is not
+    # supported when using Codex with a ChatGPT account" - on the SAME account
+    # and the SAME CLI version (0.148.0-alpha.15) that answers on the desktop.
+    # What differs is the binary and the credential: the desktop goes through
+    # the Codex desktop app with an auth.json predating today, the VPS logged
+    # in fresh through the npm CLI. The campaign has no model on the machine it
+    # runs on, and 99 decisions is where it stops.
+    #
+    # STOPPED rather than repointed, for the reason the API campaign was:
+    # `ai-xau-sol-ctx` carries an equity curve, a trade list and 99 decisions
+    # that mean "this is what gpt-5.6-sol did". Another model under that id
+    # makes every number in it a blend of two models under one name - intact
+    # and meaningless.
+    #
+    # And they ARE two models, which was checked rather than assumed. The
+    # account's own list, %USERPROFILE%\.codex\models_cache.json, fetched
+    # 2026-09-17T05:00Z by client 0.148.0, holds six models and carries BOTH
+    # `gpt-5.6-sol` (GPT-5.6-Sol, priority 4) and `gpt-5.6-terra`
+    # (GPT-5.6-Terra, priority 7) as separate live entries, beside
+    # `gpt-5.6-luna`. A rename cannot put two names in one list at one moment.
+    #
+    # Read the new campaign's results knowing this: by the vendor's own
+    # ordering terra ranks BELOW sol. It is a substitution, not an upgrade, and
+    # the two books are not comparable to each other.
+    @{ model = 'codex/gpt-5.6-terra'; run = 'ai-xau-terra-ctx'; control = 'ai-xau-terra-ctx-coin'; seed = 31; log = 'ai_trader_terra_ctx' },
     # claude-opus-5 goes through the account's PLAN, via the Claude Code CLI.
     # No API key is involved; see the `claude-cli` provider in advisor.py.
     @{ model = 'claude-opus-5'; run = 'ai-xau-opus-ctx'; control = 'ai-xau-opus-ctx-coin'; seed = 11; log = 'ai_trader_opus_ctx' },

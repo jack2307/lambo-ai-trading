@@ -33,14 +33,33 @@ Books run on the same stream in **matched pairs**, one pair per model:
 
 | model | reached through | its book | its coin |
 |---|---|---|---|
-| `gpt-5.6-sol` | the **ChatGPT plan**, via the Codex CLI | `ai-xau-sol-ctx` | `ai-xau-sol-ctx-coin` |
+| `gpt-5.6-terra` | the **ChatGPT plan**, via the Codex CLI | `ai-xau-terra-ctx` | `ai-xau-terra-ctx-coin` |
 | `claude-opus-5` | the **Claude plan**, via the Claude Code CLI | `ai-xau-opus-ctx` | `ai-xau-opus-ctx-coin` |
 | `deepseek-flash` | the DeepSeek API, metered and cheap | `ai-xau-ds-ctx` | `ai-xau-ds-ctx-coin` |
 
 No metered API key is involved in either. Owner's instruction, 2026-09-15:
 *"cho dùng gói đừng dùng API nữa"*.
 
-**The OpenAI model is `gpt-5.6-sol`, and that is not a renaming of `gpt-5`.**
+**`gpt-5.6-sol` was retired on 2026-09-17 and `ai-xau-sol-ctx` was stopped, not
+repointed.** On the VPS every call came back *"The 'gpt-5.6-sol' model is not
+supported when using Codex with a ChatGPT account"* — the same account and the
+same CLI version that still answers on the desktop, which differs only in its
+binary and in an `auth.json` predating that day. The campaign had no model on
+the machine it ran on, and 99 decisions is where it stops. Its book keeps
+everything: `/api/paper/stop` writes `final.json` and removes only `state.json`.
+
+**Terra is a different model, not a rename, and this was checked.** The
+account's own list — `%USERPROFILE%\.codex\models_cache.json`, fetched
+2026-09-17T05:00Z by client 0.148.0 — holds six models and carries **both**
+`gpt-5.6-sol` (priority 4) and `gpt-5.6-terra` (priority 7) as separate live
+entries, beside `gpt-5.6-luna`. A rename cannot put two names in one list at
+one moment. **Read the two books accordingly: by the vendor's own ordering
+terra ranks BELOW sol, so this is a substitution rather than an upgrade and the
+curves are not continuous with each other.** It runs **paper-only** to begin
+with — a campaign with no decisions has nothing anyone has read, and mirroring
+one into the funded account on day one is a question, not a default.
+
+**The OpenAI model is one of the plan's own, and that is not a renaming of `gpt-5`.**
 A ChatGPT account refuses `gpt-5`, `gpt-5-codex` and `codex-mini-latest`
 outright — *"not supported when using Codex with a ChatGPT account"* — and
 `gpt-5.6-sol` is what Codex itself defaults to on this plan, read from its own
@@ -280,8 +299,8 @@ run twice. Individually:
 # OpenAI's model on the ChatGPT plan. The `codex/` prefix is what routes it
 # there; a bare `gpt-*` still means the metered API, deliberately, so nothing
 # falls back to a paid key by accident.
-python py/live/ai_trader.py --model=codex/gpt-5.6-sol --market=xauusd --tf=15m \
-    --run=ai-xau-sol --control=ai-xau-sol-coin --seed=7
+python py/live/ai_trader.py --model=codex/gpt-5.6-terra --market=xauusd --tf=15m \
+    --run=ai-xau-terra-ctx --control=ai-xau-terra-ctx-coin --seed=31
 
 # Anthropic's model on the Claude plan. `provider_of` sends every Claude model
 # to the CLI by default; `--provider anthropic` forces the metered API.

@@ -42,8 +42,17 @@ for _stream in (sys.stdout, sys.stderr):
 BOOKS = [
     ("ai-xau-ds-ctx", "ai-xau-ds-ctx-coin",
      "AI trader - deepseek-flash (API, ~$1-2/thang), prompt co desk state + market context"),
-    ("ai-xau-sol-ctx", "ai-xau-sol-ctx-coin",
-     "AI trader - gpt-5.6-sol, prompt co desk state + market context"),
+    # `ai-xau-sol-ctx` is deliberately NOT in this list. It was retired
+    # 2026-09-17 when gpt-5.6-sol stopped being reachable from the VPS, and its
+    # book was stopped rather than repointed - see start_ai_traders.ps1.
+    #
+    # Leaving it here would be worse than untidy. Stopping writes final.json
+    # and removes state.json, so a later run of this idempotent script would
+    # NOT come back 409 - it would create a second, empty book under the same
+    # id, and that id would then name two campaigns by two models. Keeping the
+    # id meaning one thing is the entire reason the campaign was retired.
+    ("ai-xau-terra-ctx", "ai-xau-terra-ctx-coin",
+     "AI trader - gpt-5.6-terra (plan, Codex CLI), prompt co desk state + market context"),
     ("ai-xau-opus-ctx", "ai-xau-opus-ctx-coin",
      "AI trader - claude-opus-5, prompt co desk state + market context"),
 ]
