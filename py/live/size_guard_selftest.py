@@ -712,12 +712,114 @@ def the_two_clocks() -> None:
         MT5.deals = []
 
 
+# ---------------------------------------------------------------------------
+# 6 - the account's shape, not just its side
+# ---------------------------------------------------------------------------
+
+def position(ticket: int, is_buy: bool = True, lots: float = 0.05) -> Obj:
+    return Obj(ticket=ticket, type=0 if is_buy else 1, volume=lots,
+               price_open=4311.85, price_current=4311.85, sl=4301.85, tp=4331.85,
+               profit=0.0, swap=0.0, time=1_000_000, magic=MAGIC, symbol="XAUUSD.sc")
+
+
+def drive_holding(held: list, lots: float = 0.05) -> dict:
+    """One poll with the book LONG and the terminal already holding `held`."""
+    tmp = Path(tempfile.mkdtemp(prefix="sgst-drift-"))
+    real_root, real_status, real_sleep = X.ROOT, X.read_status, X.time.sleep
+    argv = sys.argv
+    try:
+        MT5.sent = []
+        MT5.account = CENT
+        MT5.info = info_for("XAUUSD.sc")
+        MT5.margin = 5.0
+        MT5.price = SYMBOLS["XAUUSD.sc"][4]
+        MT5.positions_get = lambda **kw: list(held)
+        X.ROOT = tmp
+        X.read_status = lambda api, run: dict(RUN, open=dict(BOOK, lots=lots))
+
+        def stop_after_one_poll(_):
+            raise KeyboardInterrupt
+
+        X.time.sleep = stop_after_one_poll
+        sys.argv = ["mt5_executor.py", "--run=t", "--terminal=x", "--login=33705331",
+                    "--symbol=XAUUSD.sc", "--account=acct"]
+        X.main()
+        here = tmp / "data" / "live" / "acct" / "t"
+        snap = here / "broker.json"
+        out = here / "executor.jsonl"
+        rows = [json.loads(line) for line in out.read_text(encoding="utf-8").splitlines()
+                if line.strip()] if out.exists() else []
+        return {"sent": list(MT5.sent), "rows": rows,
+                "snapshot": json.loads(snap.read_text(encoding="utf-8"))
+                if snap.exists() else None}
+    finally:
+        X.ROOT, X.read_status, X.time.sleep = real_root, real_status, real_sleep
+        sys.argv = argv
+        MT5.positions_get = lambda **kw: []
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+def the_account_has_a_shape() -> None:
+    """The reconciler corrected SIDE and nothing else.
+
+    Two positions on one book, or a volume that no longer matches, were left
+    exactly as they were for as long as the book stayed open. A mirror that
+    doubled never healed and the desk went on showing a healthy account.
+
+    What these pin is the DECISION as much as the detection: the drift is
+    reported and deliberately not corrected. See `drift_from_book` - two
+    auto-correcting executors on one run id would close each other's positions
+    and re-open them at the poll interval, paying the spread twice a cycle,
+    which is a worse failure than the one being fixed.
+    """
+    section("the account's shape against the book's")
+
+    clean = drive_holding([position(1)])
+    check("one position of the right side and size: no drift",
+          (clean["snapshot"] or {}).get("drift") is None,
+          f"{(clean['snapshot'] or {}).get('drift')}")
+    check("...and nothing is sent", len(clean["sent"]) == 0, f"{clean['sent']}")
+
+    # The doubled mirror.
+    two = drive_holding([position(1), position(2)])
+    check("two positions on one book: reported as drift",
+          "2 positions" in str((two["snapshot"] or {}).get("drift")),
+          f"{(two['snapshot'] or {}).get('drift')}")
+    check("...and written to the log once",
+          any(r["kind"] == "drift" for r in two["rows"]),
+          f"{[r['kind'] for r in two['rows']]}")
+    check("...and NOTHING is closed or opened to correct it",
+          len(two["sent"]) == 0, f"{two['sent']}")
+
+    # A size that no longer matches the book.
+    small = drive_holding([position(1, lots=0.01)])
+    check("a volume that does not match the book: reported as drift",
+          "lots" in str((small["snapshot"] or {}).get("drift")),
+          f"{(small['snapshot'] or {}).get('drift')}")
+    check("...and still nothing is traded to correct it",
+          len(small["sent"]) == 0, f"{small['sent']}")
+
+    # The side correction, which DOES act - and the bug in how it acted. With
+    # two wrong-side positions the old code closed the first and immediately
+    # opened, leaving one wrong and one right.
+    both_wrong = drive_holding([position(1, is_buy=False), position(2, is_buy=False)])
+    closes = [r for r in both_wrong["rows"]
+              if r["kind"] == "order" and "close" in str(r.get("action"))]
+    opens = [r for r in both_wrong["rows"]
+             if r["kind"] == "order" and "open" in str(r.get("action"))]
+    check("two wrong-side positions: BOTH are closed, not just the first",
+          len(closes) == 2, f"closes {len(closes)}")
+    check("...and no new position is opened while any is still held",
+          len(opens) == 0, f"opens {len(opens)}")
+
+
 def main() -> int:
     the_ceiling_measures_one_currency()
     both_size_guards_fail_closed()
     the_stamp_knows_whose_directory_it_is()
     stop_leaves_a_true_record()
     the_two_clocks()
+    the_account_has_a_shape()
     print(f"\n{'all checks passed' if not FAIL else str(FAIL) + ' CHECK(S) FAILED'}")
     return 1 if FAIL else 0
 

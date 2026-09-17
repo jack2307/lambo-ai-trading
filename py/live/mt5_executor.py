@@ -1156,6 +1156,79 @@ def main() -> int:
         snap_path = here / "broker.json"
         blocked = None   # something is wrong and a person has to act
         standing_out = None  # working as designed: this trade is being sat out
+        drift = None     # the account holds the right SIDE but not the right shape
+
+        def drift_from_book(book_open: dict, held: list):
+            """The account agrees with the book on side, but not on count or size.
+
+            Returns a description, or None when the account matches. Recomputed
+            every poll from what is actually held, so it can never be stale -
+            unlike `blocked`, which remembers the last thing that went wrong.
+
+            The reconciler used to correct SIDE and nothing else. Two positions
+            on one book, or a volume that no longer matches, were left exactly
+            as they were for as long as the book stayed open - so a mirror that
+            doubled (two machines, two executors on one run id) never healed,
+            and the desk went on showing a healthy account.
+
+            THIS REPORTS AND DOES NOT CORRECT, which is a decision and not an
+            oversight. Closing the extra position automatically is right in
+            principle and wrong as a first version, for three reasons, and the
+            first is the one that settles it:
+
+            * Auto-correction makes the condition it is fixing WORSE in the
+              case that causes it. The way a book ends up with two positions is
+              two executors on one run id - and two auto-correcting executors
+              see the same two positions, both close one, and the account goes
+              flat; both then read "book open, terminal flat" and both open, so
+              it is two again. That is an oscillation at the poll interval,
+              paying the spread twice a cycle, forever. Reporting has no such
+              mode: two reporting executors both write the same line and
+              neither spends anything.
+            * The failure directions are not comparable. Every other guard on
+              this path can only stop the mirror from sending; correcting count
+              or size is the first thing here that would CLOSE a live position
+              or open an extra one on its own. If the detection is wrong, a
+              report costs a false line on a screen and a correction costs a
+              trade that a person did not authorise.
+            * Correcting SIZE cannot be done without damage. A part-close or a
+              close-and-reopen crystallises a result the book never took and
+              re-enters at a price the book never saw, which destroys the one
+              measurement this mirror exists to produce. The likeliest cause of
+              a size mismatch is a partial fill, and that is answered where it
+              happens rather than by trading the account back into shape.
+
+            It is also not left forever. The drift clears itself the next time
+            the book goes flat, because that path closes every position this
+            magic holds - so the bound on how long a doubled account can
+            persist is one trade, not indefinitely.
+
+            Logged on CHANGE rather than every poll. A line every fifteen
+            seconds for a condition that lasts hours is a log nobody reads by
+            morning - the same reason `standing_out` is kept apart from
+            `blocked`.
+            """
+            want, _ = clamp_volume(info, float(book_open["lots"]) * args.lot_scale)
+            have = round(sum(p.volume for p in held), 8)
+            step = info.volume_step or 0.01
+            reasons = []
+            if len(held) > 1:
+                reasons.append(f"{len(held)} positions open on one book "
+                               f"(tickets {', '.join(str(p.ticket) for p in held)})")
+            if abs(have - want) > step / 2:
+                reasons.append(f"holding {have} lots where the book asks for {want}")
+            if not reasons:
+                return None
+            why = "; ".join(reasons)
+            if why != drift:
+                log(out, "drift", positions=len(held), lots_held=have, lots_wanted=want,
+                    tickets=[p.ticket for p in held], detail=why,
+                    reason="the account matches the book's side but not its shape; reported "
+                           "and deliberately not corrected - a person decides, and it clears "
+                           "itself when the book next goes flat")
+                print(f"DRIFT: {why}. Nothing was changed; see the comment on "
+                      f"drift_from_book.", flush=True)
+            return why
 
         def snapshot(held, book_open) -> None:
             acc = mt5.account_info()
@@ -1233,6 +1306,12 @@ def main() -> int:
                 },
                 "blocked": blocked,
                 "standing_out": standing_out,
+                # Recomputed from what the account actually holds, every poll,
+                # so unlike `blocked` it can never describe a state that has
+                # since resolved. `null` means the account matches the book in
+                # side, count and size. See `drift_from_book` for why a drift
+                # is reported here and not corrected.
+                "drift": drift,
             }
             write_snapshot(snap_path, payload)
 
@@ -1288,11 +1367,27 @@ def main() -> int:
                 open_like(book_open, run)
             elif book_open is not None and held:
                 want_long = book_open["side"] == "LONG"
-                for p in held:
-                    if (p.type == mt5.POSITION_TYPE_BUY) != want_long:
+                wrong_side = [p for p in held
+                              if (p.type == mt5.POSITION_TYPE_BUY) != want_long]
+                if wrong_side:
+                    # ALL of them, then open once - and only if the close left
+                    # the account flat.
+                    #
+                    # This was `for p in held: if wrong: close; open; break`,
+                    # which closed the FIRST wrong-side position and
+                    # immediately opened a new one. With two wrong-side
+                    # positions held that leaves one wrong and one right, so
+                    # the correction made the account less like the book than
+                    # it found it and the next poll would do it again. Closing
+                    # every position that contradicts the book is what "the
+                    # side changed" means; opening is the separate question,
+                    # and it is only safe to answer once nothing is left.
+                    for p in wrong_side:
                         close(p, "side changed")
+                    if not positions():
                         open_like(book_open, run)
-                        break
+                else:
+                    drift = drift_from_book(book_open, held)
             snapshot(positions(), book_open)
             time.sleep(args.poll)
     except KeyboardInterrupt:
