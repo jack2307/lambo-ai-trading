@@ -94,14 +94,16 @@ Note 'answering on 127.0.0.1:8138'
 
 # ------------------------------------------------------------ the rest
 Step 'pollers, traders, watch'
+# Their output is shown, not swallowed. Measured 2026-09-17: start_pollers.ps1
+# was silently starting nothing - the output that said so went to Out-Null, and
+# the desk ran for an hour with three traders and no prices reaching them.
 foreach ($s in 'start_pollers.ps1', 'start_ai_traders.ps1', 'start_telegram.ps1') {
     $p = Join-Path $Root "py\live\$s"
-    if (Test-Path $p) {
-        Note $s
-        powershell -NoProfile -ExecutionPolicy Bypass -File $p | Out-Null
-    } else {
-        Warn "missing: $s"
-    }
+    if (-not (Test-Path $p)) { Warn "missing: $s"; continue }
+    Note $s
+    powershell -NoProfile -ExecutionPolicy Bypass -File $p 2>&1 |
+        ForEach-Object { Write-Host "     $_" -ForegroundColor DarkGray }
+    if ($LASTEXITCODE) { Warn "$s exited $LASTEXITCODE" }
 }
 
 # --------------------------------------------------------------- mirrors

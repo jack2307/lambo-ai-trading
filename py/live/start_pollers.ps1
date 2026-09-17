@@ -10,13 +10,21 @@
 param(
     [int]$Warm = 120,
     [string]$Python = 'C:\Python39\python.exe',
-    [string]$Root = (Split-Path -Parent (Split-Path -Parent $PSScriptRoot,
+    [string]$Root = (Split-Path -Parent (Split-Path -Parent $PSScriptRoot)),
     # Which terminal the prices come from. Empty lets the MetaTrader5 package
     # pick, which is fine on a machine with one terminal and a coin flip on a
     # machine with two.
     [string]$Terminal = ''
-))
 )
+
+# $Root is computed, not given, and a wrong one does not announce itself: the
+# pollers would start with the wrong working directory, fail to find
+# py/live/mt5_bars.py, and leave four empty log files. Measured 2026-09-17,
+# when a bad edit to the param block above turned $Root into an array and this
+# script started nothing at all while reporting four successful starts.
+if (-not (Test-Path (Join-Path $Root 'py\live\mt5_bars.py'))) {
+    throw "Root does not look like the flowdesk repo: '$Root' (no py\live\mt5_bars.py)"
+}
 
 $streams = @(
     @{ symbol = 'XAUUSD.sc'; market = 'xauusd'; tf = 'M15'; log = 'mt5_bars_xau_m15'; warm = $Warm },
