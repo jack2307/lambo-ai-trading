@@ -1,21 +1,36 @@
-# What the live side needs on a fresh Windows machine, pinned to what this
-# desk is actually running today (measured 2026-09-17, not recalled).
+# What the LIVE side needs on a fresh Windows machine, pinned to what this desk
+# is actually running (measured 2026-09-17, not recalled).
 #
-# Pinned rather than floating on purpose. The desk's numbers only mean
-# something under a stated set of rules, and the library versions are part of
-# those rules: `MetaTrader5` in particular changes what `order_send` accepts
-# between builds, and a mirror that silently started refusing orders after an
-# unattended upgrade would look exactly like a broker problem.
+# Pinned rather than floating on purpose. The desk's numbers only mean something
+# under a stated set of rules, and library versions are part of those rules:
+# `MetaTrader5` in particular changes what `order_send` accepts between builds,
+# and a mirror that silently started refusing orders after an unattended upgrade
+# would look exactly like a broker problem.
 #
 # Python 3.9.13 specifically. Not 3.10+: `zoneinfo` behaviour and the
-# MetaTrader5 wheel are what this has been tested against, and the desk's
-# launchers hard-code C:\Python39.
+# MetaTrader5 wheel are what this has been tested against, and the launchers
+# hard-code C:\Python39.
 
 MetaTrader5==5.0.6180
 numpy==2.0.2
-pyarrow
 requests
 tomli
 # Windows ships no IANA database, so zoneinfo has nothing to read without this.
 # Every timestamp the desk converts to Vietnam time goes through it.
 tzdata
+
+# pyarrow is NOT here, deliberately.
+#
+# Only `py/ingest/*` imports it - the Parquet writers that build the historical
+# store and the news calendar. Nothing on the live side touches it: fd-api is
+# Rust and reads Parquet itself, and no script under `py/live/` imports it at
+# all.
+#
+# Which is fortunate, because pyarrow 21 does not load on Windows Server 2012
+# R2: `DLL load failed while importing lib: The specified procedure could not
+# be found`, because its binary wants a newer Windows API than that build has.
+# Installing it there gets you a package that imports on nothing.
+#
+# The consequence to know about: a server without pyarrow cannot regenerate
+# `data/news/events.parquet`. Build it at home and copy the file across - the
+# news guard reads it through fd-api, which does not need Python for it.

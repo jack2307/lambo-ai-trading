@@ -107,8 +107,21 @@ if (Test-Path $py) {
     if ($LASTEXITCODE -ne 0) {
         throw "pip install failed (exit $LASTEXITCODE). Elevated? Packages are written into C:\Python39."
     }
-    $check = & $py -c "import MetaTrader5, tomli, numpy, pyarrow, requests, zoneinfo; print(MetaTrader5.__version__)"
-    Ok "MetaTrader5 $check, and the rest import"
+    # Imported one at a time, and the exit code is read. The first version of
+    # this ran them in a single -c, ignored $LASTEXITCODE, and printed
+    # "MetaTrader5 , and the rest import" while pyarrow's DLL was failing to
+    # load - an empty version string being the only sign anything was wrong.
+    $failed = @()
+    foreach ($mod in 'MetaTrader5', 'tomli', 'numpy', 'requests', 'zoneinfo') {
+        & $py -c "import $mod" 2>&1 | Out-Null
+        if ($LASTEXITCODE -ne 0) { $failed += $mod }
+    }
+    if ($failed.Count -gt 0) {
+        throw "these do not import: $($failed -join ', '). Nothing below will work until they do."
+    }
+    $ver = & $py -c "import MetaTrader5; print(MetaTrader5.__version__)"
+    if (-not $ver) { throw 'MetaTrader5 imported but reports no version' }
+    Ok "MetaTrader5 $ver, and the rest import"
 }
 
 # ----------------------------------------------------------- 2b. toolchain
@@ -167,15 +180,22 @@ if (Test-Path $demo) {
     # a real broker list is hundreds of kilobytes, an empty one is about 44 KB.
     $srv = 'C:\MT5-demo\config\servers.dat'
     if (Test-Path $srv) {
+        # Size is a weak signal and is treated as one. The empty default a
+        # copied terminal starts with is about 44 KB; a broker's own build
+        # carries only that broker's servers and comes to around 146 KB; a
+        # terminal left running long enough to download the whole MetaQuotes
+        # directory reaches 900 KB and more. All three above the floor are
+        # fine. The only real test is whether a login resolves.
         $kb = (Get-Item $srv).Length / 1KB
-        if ($kb -lt 200) {
-            Todo ("servers.dat is only {0:N0} KB - almost certainly the empty default." -f $kb)
-            Note 'Copy the live terminal''s own list over it, or the demo login will'
-            Note 'silently do nothing and write no log line at all:'
+        if ($kb -lt 60) {
+            Todo ("servers.dat is {0:N0} KB, about the size of the empty default." -f $kb)
+            Note 'A terminal that cannot resolve the broker''s server name does not'
+            Note 'report it: the login does nothing, with no error and no log line.'
+            Note 'Copy a populated list over it:'
             Note '  %APPDATA%\MetaQuotes\Terminal\<hash>\config\servers.dat'
             Note '  -> C:\MT5-demo\config\servers.dat'
         } else {
-            Ok ("servers.dat looks like a real broker list ({0:N0} KB)" -f $kb)
+            Ok ("servers.dat is {0:N0} KB - a populated list" -f $kb)
         }
     } else {
         Todo 'C:\MT5-demo\config\servers.dat missing'
