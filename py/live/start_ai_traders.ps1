@@ -104,7 +104,32 @@ $campaigns = @(
     # because a direct call spends 2,853 tokens on the question where the CLI
     # route spends 26,509 on the same one. It is here to answer whether model
     # quality matters for this task at all; see the amendment in AI-TRADER.md.
-    @{ model = 'deepseek-flash'; run = 'ai-xau-ds-ctx'; control = 'ai-xau-ds-ctx-coin'; seed = 23; log = 'ai_trader_ds' }
+    @{ model = 'deepseek-flash'; run = 'ai-xau-ds-ctx'; control = 'ai-xau-ds-ctx-coin'; seed = 23; log = 'ai_trader_ds' },
+    # THE SAME MODEL ON THE SAME BARS WITH ONE BLOCK ADDED: options-flow
+    # positioning from the COMEX tape, inside the market-context section and
+    # under its framing - context, not a signal. `ai-xau-ds-ctx` above keeps
+    # running unchanged and is the control.
+    #
+    # deepseek-flash and not Opus, deliberately. This asks whether the context
+    # changes decisions, so it needs a model that already makes some: ds
+    # entered 7 of 77 on the base prompt where Opus entered none. Running it
+    # on a model that never trades would measure nothing twice.
+    #
+    # It is a different claim from the twenty-five registrations that tested
+    # levels of this kind as mechanical rules and found nothing out of sample.
+    # Those asked whether the levels predict price. This asks whether they
+    # change what a model decides - which can be true whether or not they
+    # predict anything, and is cheap to measure as a disagreement rate.
+    # Registered at docs/hypotheses/2026-09-17-otl-context.md.
+    #
+    # THE FEED CAN FAIL AND THAT IS RECORDED, NOT PAPERED OVER. When it is
+    # unreachable or stale the block says so in the prompt and the row carries
+    # `otl`, so the book's bars can be split into context-present and
+    # context-absent. Falling back to the base prompt would mix base decisions
+    # into this book's numbers with nothing able to separate them.
+    #
+    # Seed 29: distinct from 23, or the two ds campaigns share one coin.
+    @{ model = 'deepseek-flash'; run = 'ai-xau-ds-ctx-otl'; control = 'ai-xau-ds-ctx-otl-coin'; seed = 29; log = 'ai_trader_ds_otl'; promptVariant = 'otl-context' }
 )
 
 # `powershell -File script.ps1 -Only a,b` hands the parameter over as the

@@ -37,14 +37,15 @@ def check(ok: bool, what: str) -> None:
         fails.append(what)
 
 
-def render(variant: str) -> str:
-    return A.PROMPT.format(coin_clause=A.COIN_CLAUSE[variant], **FIELDS)
+def render(variant: str, otl_block: str = "") -> str:
+    return A.PROMPT.format(coin_clause=A.COIN_CLAUSE[A.VARIANTS[variant]["coin"]],
+                           otl_block=otl_block, **FIELDS)
 
 
 base, nocoin = render("base"), render("no-coin-penalty")
 
-check(tuple(A.PROMPT_VARIANTS) == ("base", "no-coin-penalty"),
-      "the two variants are the two the registration names")
+check(tuple(A.PROMPT_VARIANTS) == ("base", "no-coin-penalty", "otl-context"),
+      "the variants are the three the registrations name")
 check(PENALTY in base, "base still carries the penalty clause")
 check(PENALTY not in nocoin, "no-coin-penalty does not carry it")
 check("measured against a" in nocoin and "random side" in nocoin,
@@ -70,6 +71,65 @@ ap = argparse.ArgumentParser()
 ap.add_argument("--prompt-variant", default="base", choices=A.PROMPT_VARIANTS)
 check(ap.parse_args([]).prompt_variant == "base",
       "a campaign that names no variant gets base")
+
+
+# ---- otl-context: base PLUS a block, and nothing else ----
+#
+# The second experiment's whole content is an ADDITION, so the assertion is
+# the mirror of the one above: strip the block back out and base must return.
+# If a later edit moves a word while adding the block, the -otl book would be
+# measuring the block and the word together with nothing saying so.
+MARK = "\n\nBLOCK-LINE-ONE\nBLOCK-LINE-TWO"
+otl = render("otl-context", MARK)
+check(A.VARIANTS["otl-context"]["coin"] == "base",
+      "otl-context runs the BASE coin clause, so it changes one thing and not two")
+check(otl.replace(MARK, "") == base,
+      "otl-context IS base plus the block - remove the block and base returns exactly")
+check(A.VARIANTS["otl-context"]["otl"] and not A.VARIANTS["base"]["otl"]
+      and not A.VARIANTS["no-coin-penalty"]["otl"],
+      "only otl-context fetches the feed")
+check(render("otl-context", "") == base,
+      "with an empty block the otl variant renders as base, so a missing feed cannot reshape the prompt")
+
+# ---- every number the block prints carries a unit ----
+#
+# A model reading "gamma wall: 4400" cannot know whether that is a price, a
+# strike index or a contract count. The desk has paid for unit-less numbers
+# three times this week - pnlUsd in cents, an equity axis in dollars over a
+# cent account, `since` on the wrong clock - and a block written for a model
+# to read is the last place to repeat it.
+import otl_context as O  # noqa: E402
+
+FAKE = {
+    "state": "ok", "as_of_ms": 1_789_000_000_000, "age_ms": 5 * 60_000,
+    "fields": {
+        "max_gex_strike": 4400, "alldte_poc": 4360, "alldte_vah": 4500, "alldte_val": 4280,
+        "whale_sup": 4200, "whale_res": 5000, "whale_symbol": "OGV6",
+        "atm_price": 4356.3, "exp_move": 55.34, "avg_iv": 0.29,
+        "0dte_bull": 1, "0dte_bear": 2, "weekly_bull": 3, "weekly_bear": 4,
+        "big_prints": [{"t": 1_789_000_000_000, "strike": 4500, "class": "C",
+                        "side": "LONG", "premium": 1250000}],
+    },
+}
+text = O.block(FAKE)
+for label, unit in (("gamma wall", "USD/oz"), ("all-DTE POC", "USD/oz"),
+                    ("whale support", "USD/oz"), ("expected move", "USD/oz"),
+                    ("0DTE bull premium", "USD"), ("weekly bear premium", "USD")):
+    line = next((l for l in text.splitlines() if l.strip().startswith(label)), "")
+    check(unit in line, f"the block gives '{label}' a unit ({unit})")
+check("positioning, not direction" in text.lower().replace("\n", " ")
+      or ("POSITIONING, not direction" in text),
+      "the block says these describe positioning and not direction")
+check("third party" in text.lower(), "the block says a third party computed them")
+check("Z" in text.splitlines()[3], "the block stamps its age in UTC")
+
+# The three states must be distinguishable, because a silent fallback would
+# put context-absent decisions in a context-present book.
+check("UNAVAILABLE" in O.block({"state": "unavailable"}),
+      "an unreachable feed says so in the prompt")
+stale = O.block(dict(FAKE, state="stale", age_ms=42 * 60_000))
+check("STALE" in stale and "42" in stale,
+      "a stale feed says so, with its age")
 
 print()
 print(f"{'all checks passed' if not fails else str(len(fails)) + ' FAILED'}")

@@ -45,6 +45,10 @@ import urllib.request
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 # One model adapter, one panel, one place where a provider's quirks live.
 from advisor import PROVIDERS, ask, provider_of  # noqa: E402
+# Options-flow positioning, used by the `otl-context` variant only. Imported
+# unconditionally so a broken import fails at start rather than at the first
+# bar of a campaign that has already been launched.
+import otl_context  # noqa: E402
 
 # Output is UTF-8, and undisplayable characters are replaced rather than fatal.
 #
@@ -101,7 +105,24 @@ COIN_CLAUSE = {
 # the rule this desk already applies to models and accounts. The comparison
 # between the two books IS the experiment; it is registered at
 # docs/hypotheses/2026-09-17-prompt-coin-penalty.md.
-PROMPT_VARIANTS = tuple(COIN_CLAUSE)
+
+# The variants, and the two axes a variant can move on.
+#
+# `coin` picks which form of the opening sentence it runs. `otl` adds the
+# options-positioning block to MARKET CONTEXT and adds nothing else - it keeps
+# the BASE coin clause on purpose, because a variant that changed two things
+# would produce a result that could not say which one did the work.
+#
+# `otl-context` is registered at docs/hypotheses/2026-09-17-otl-context.md. It
+# is a different claim from the twenty-five registrations that tested levels of
+# this kind as mechanical rules and found nothing: those asked whether the
+# levels predict price, this asks whether they change what a model decides.
+VARIANTS = {
+    "base":            {"coin": "base",            "otl": False},
+    "no-coin-penalty": {"coin": "no-coin-penalty", "otl": False},
+    "otl-context":     {"coin": "base",            "otl": True},
+}
+PROMPT_VARIANTS = tuple(VARIANTS)
 
 PROMPT = """You are trading one paper book on {market} {tf} bars. {coin_clause}
 
@@ -118,7 +139,7 @@ THE DESK'S STATE — these are the rules you are already playing under, not advi
 {desk}
 
 MARKET CONTEXT — computed from the same bars, for convenience; none of it is a signal
-{context}
+{context}{otl_block}
 
 LAST {n} BARS of {market}:{tf}, oldest first, times UTC
 {bars}
@@ -803,9 +824,28 @@ def main() -> int:
         # which it did on 2026-09-17, refusing setups for a daily cap the desk
         # had already raised from 4 to 10. One local HTTP call per decided bar.
         limits = read_limits(args.api)
+        # The options block, fetched per decision and never cached across
+        # bars: positioning that is one bar old is a different market, and
+        # `otl_context` reports its own age so the model is told which it is.
+        #
+        # An unreachable or stale feed does NOT fall back to the base prompt.
+        # That would put context-absent decisions into a context-present
+        # book's numbers, and the experiment would be measuring a mixture with
+        # nothing in the record to separate it. The block says it is missing
+        # and `otl` below records which bars those were.
+        otl_state, otl_block = "n/a", ""
+        if VARIANTS[args.prompt_variant]["otl"]:
+            ctx_otl = otl_context.gather()
+            otl_block = "\n\n" + otl_context.block(ctx_otl)
+            age = ctx_otl.get("age_ms")
+            otl_state = ctx_otl["state"]
+            if otl_state == "stale" and age is not None:
+                otl_state = f"stale {int(age / 60000)}m"
+
         prompt = PROMPT.format(
             market=args.market, tf=args.tf, n=len(shown), bars=rows,
-            coin_clause=COIN_CLAUSE[args.prompt_variant],
+            otl_block=otl_block,
+            coin_clause=COIN_CLAUSE[VARIANTS[args.prompt_variant]["coin"]],
             position=describe_position(detail),
             desk=desk_block(detail, limits, atr_now, args.run),
             context=context_block(bars),
@@ -982,6 +1022,10 @@ def main() -> int:
             # a key - two campaigns are compared by variant name, and
             # rows written before this existed are `base` by the default.
             "prompt_variant": args.prompt_variant,
+            # Which bars had the options context and which did not, so the
+            # two can be separated when the book is read. "n/a" for the
+            # variants that never ask for it.
+            "otl": otl_state,
             "prompt": prompt, "response": text, "latency_ms": ms,
             # What the call actually spent. `cost_usd` is null for a plan: that
             # call is not free, it draws on a quota, and printing $0.00 beside

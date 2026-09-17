@@ -71,6 +71,21 @@ BOOKS = [
     # docs/hypotheses/2026-09-17-prompt-coin-penalty.md.
     ("ai-xau-opus-ctx-b", "ai-xau-opus-ctx-b-coin",
      "AI trader - claude-opus-5, prompt no-coin-penalty (coin named, penalty clause removed)"),
+    # deepseek-flash again, with one block ADDED to the prompt's market
+    # context: options-flow positioning from the COMEX tape. `ai-xau-ds-ctx`
+    # keeps running unchanged and is the control.
+    #
+    # The same second-book rule as the pair above, and for a second reason
+    # here: this book's bars divide into ones where the feed answered and
+    # ones where it did not, and only a book of its own can carry that
+    # distinction in its record.
+    #
+    # Registered before its first bar at
+    # docs/hypotheses/2026-09-17-otl-context.md, which also states why this is
+    # not a re-run of the twenty-five registrations that found nothing in
+    # levels of this kind.
+    ("ai-xau-ds-ctx-otl", "ai-xau-ds-ctx-otl-coin",
+     "AI trader - deepseek-flash, prompt otl-context (base + COMEX options positioning block)"),
 ]
 
 # Read from the books the hand-made campaigns are still running on.
