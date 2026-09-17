@@ -213,6 +213,18 @@ pub struct PaperRun {
     /// the intent it was about.
     #[serde(default)]
     pub advice: Option<Advice>,
+    /// Wall clock at which the open position was first seen by this process -
+    /// `OpenDto::learned_at`, kept here because it is a fact about the RECORD
+    /// and not about the book.
+    ///
+    /// Deliberately not on `fd_backtest::Live`. The engine's position struct
+    /// is replayed by the parity goldens and a backtest has no wall clock at
+    /// all, so putting it there would mean either a field the backtest has to
+    /// invent or a struct that no longer round-trips. The lag being measured
+    /// is a property of how this API learns about a fill, so it belongs to
+    /// this API.
+    #[serde(default)]
+    pub opened_learned_at: Option<i64>,
     /// Who has been posting this book's entries, if anyone has. `None` on
     /// every rule-based run and on an `external` run nobody has driven yet.
     #[serde(default)]
@@ -878,6 +890,27 @@ pub struct OpenDto {
     pub mfe: f64,
     /// One R, in price.
     pub risk: f64,
+    /// Wall clock, epoch ms, at which this desk LEARNED the position was open
+    /// - as against `entry_time`, which is the bar the fill is PRICED at.
+    ///
+    /// They are not the same instant and the gap is structural, not jitter.
+    /// An intent decided on the bar closing at `t` fills at the open of the
+    /// bar stamped `t`, but that bar is only posted once it CLOSES at `t+1`,
+    /// so the book first holds the position a whole bar after the price it
+    /// holds it at. Measured on the VPS 2026-09-17, six positions out of six
+    /// surfaced to the executor exactly one bar after the book's stamp.
+    ///
+    /// Published because a mirror, a slippage comparison and a drift alert all
+    /// read `entry_time` and none of them could previously tell how old it was
+    /// by the time anyone saw it. `null` on a position that was open before
+    /// this field existed, or reloaded from a state file written without it -
+    /// which is absent, not zero.
+    ///
+    /// See `docs/decisions/2026-09-17-entry-lag.md`. The lag is NOT a
+    /// systematic cost: measured over 30 live entries it is +0.01 R at the
+    /// median and -0.08 R at the mean with a standard error of 0.08. What it
+    /// is, is 0.42 R of dispersion per entry that the record does not show.
+    pub learned_at: Option<i64>,
     /// Marked at the last close less exit costs, before commission and swap.
     pub unrealised_usd_at_last_close: f64,
     /// Dollars per one unit of price movement: `lots x contract_size`.
@@ -1266,6 +1299,7 @@ fn status_of(data: &Path, run: &PaperRun, rules: &TradingRules, guards: Option<&
         mae: fd_core::js_round_to(p.mae / p.risk, 4),
         mfe: fd_core::js_round_to(p.mfe / p.risk, 4),
         risk: p.risk,
+        learned_at: run.opened_learned_at,
         unrealised_usd_at_last_close: book.unrealised_usd(rules).unwrap_or(0.0),
         usd_per_point: p.lots * rules.contract_size,
     });
@@ -1646,6 +1680,8 @@ pub async fn start(State(state): State<Arc<AppState>>, Json(request): Json<Start
         // Cloned from the book on its first bar; see the field's own note.
         shadow: None,
         advice: None,
+        // A new book holds nothing, so there is no fill to have learned about.
+        opened_learned_at: None,
         // Claimed by whoever posts the first accepted intent, never at start.
         decider: None,
         started_at: now_ms(),
@@ -1704,9 +1740,42 @@ fn feed_run(state: &AppState, run: &mut PaperRun, bar: Bar) -> Result<RunBarResp
         Accepted::Stepped { report, gap, advice, shadow_closed } => (report, gap, advice, shadow_closed),
     };
 
+    // When this process learned the book holds a position, as against the bar
+    // the fill is priced at. Set before `persist` so a restart keeps it, and
+    // cleared the moment the book is flat so it can never describe the
+    // position after the one it belongs to. See `OpenDto::learned_at`.
+    let learned_at = now_ms();
+    if report.opened {
+        run.opened_learned_at = Some(learned_at);
+    } else if run.book.position.is_none() {
+        run.opened_learned_at = None;
+    }
+
     persist(&state.data, run)?;
     if let Some(missing) = gap {
         record(&state.data, &id, &json!({ "kind": "gap", "time": bar.time, "missing_bars": missing }))?;
+    }
+    // An entry gets its own line. Until 2026-09-17 a fill appeared in
+    // `fills.jsonl` only when it CLOSED, inside the trade record, so the one
+    // moment worth timestamping - the desk learning it was in - was the one
+    // moment the file did not record. `time` is the bar the fill is priced at
+    // and `learned_at` is when this process found out; on a 15m book they are
+    // a bar apart, every time.
+    if report.opened {
+        if let Some(p) = run.book.position.as_ref() {
+            record(
+                &state.data,
+                &id,
+                &json!({
+                    "kind": "opened",
+                    "time": p.entry_time,
+                    "learned_at": learned_at,
+                    "side": p.side.as_str(),
+                    "entry_price": p.entry_price,
+                    "lots": p.lots,
+                }),
+            )?;
+        }
     }
     if let Some(why) = &report.refused {
         record(&state.data, &id, &json!({ "kind": "refused", "time": bar.time, "reason": why }))?;

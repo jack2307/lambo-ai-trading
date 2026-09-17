@@ -899,3 +899,98 @@ fn now_ms() -> i64 {
         .duration_since(std::time::UNIX_EPOCH)
         .map_or(0, |d| i64::try_from(d.as_millis()).unwrap_or(i64::MAX))
 }
+
+/// Wall clock in epoch milliseconds, as `fd-api` stamps it.
+fn wall_ms() -> i64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| i64::try_from(d.as_millis()).unwrap_or(i64::MAX))
+        .unwrap_or(0)
+}
+
+#[tokio::test]
+async fn an_entry_records_when_it_was_learned_beside_the_bar_it_is_priced_at() {
+    // The two clocks a fill has, which were one field until 2026-09-17.
+    //
+    // `entry_time` is the bar whose OPEN the fill is priced at. `learned_at`
+    // is the wall clock at which this process found out the book was in. On a
+    // live 15m book they are a bar apart every time, because the bar that
+    // fills the intent is only posted once it has CLOSED - six positions out
+    // of six on the VPS on 2026-09-17 surfaced to the executor exactly one bar
+    // after the book's stamp. Here the bars are posted in a loop, so the gap
+    // is milliseconds; what is pinned is that both numbers exist, that they
+    // are different fields, and that the entry gets a line of its own.
+    let dir = tempfile::tempdir().expect("temp dir");
+    let state = state_over(dir.path(), 300);
+    start_run(&state, json!({ "market": "btc", "tf": "15m", "strategy": "ema-cross", "id": "b", "window": 200 }))
+        .await
+        .expect("start");
+
+    let before = wall_ms();
+    for i in 300..380 {
+        post_bar(&state, "btc", "15m", wave(i)).await.expect("bar");
+    }
+    let after = wall_ms();
+
+    // Until this change an entry appeared in `fills.jsonl` only when it
+    // CLOSED, inside the trade record - so the one moment worth timestamping
+    // was the one moment the file did not record.
+    let text = std::fs::read_to_string(dir.path().join("paper").join("b").join("fills.jsonl")).expect("fills");
+    let opened: Vec<Value> = text
+        .lines()
+        .filter_map(|l| serde_json::from_str::<Value>(l).ok())
+        .filter(|e| e["kind"] == "opened")
+        .collect();
+    assert!(!opened.is_empty(), "an entry must have its own line: {text}");
+
+    for e in &opened {
+        let bar_time = e["time"].as_i64().expect("time");
+        let learned = e["learned_at"].as_i64().expect("learned_at");
+        assert!(bar_time > 0 && learned > 0, "both clocks are present: {e}");
+        assert!(learned >= before && learned <= after, "learned_at is a wall clock, not a bar time: {e}");
+        assert!(learned > bar_time, "the synthetic tape is stamped in 2026; wall clock is later: {e}");
+        assert!(e["side"].is_string() && e["entry_price"].is_number(), "{e}");
+    }
+
+    // And the status carries it beside `entry_time` for as long as the
+    // position is held.
+    let status = read_status(&state).await;
+    let run = run_named(&status, "b");
+    if let Some(open) = run["open"].as_object() {
+        let learned = open["learned_at"].as_i64().expect("learned_at on an open position");
+        assert!(learned >= before && learned <= after, "{open:?}");
+        assert_ne!(
+            learned,
+            open["entry_time"].as_i64().expect("entry_time"),
+            "the priced-at bar and the learned-at clock are different numbers"
+        );
+    }
+}
+
+#[tokio::test]
+async fn a_flat_book_reports_no_learned_at_and_a_reload_keeps_the_one_it_has() {
+    // `learned_at` describes the position that is open NOW. A stale one
+    // surviving a close would describe the position before the one a reader is
+    // looking at, which is the failure mode the field exists to prevent rather
+    // than to create.
+    let dir = tempfile::tempdir().expect("temp dir");
+    let state = state_over(dir.path(), 300);
+    start_run(&state, json!({ "market": "btc", "tf": "15m", "strategy": "ema-cross", "id": "b", "window": 200 }))
+        .await
+        .expect("start");
+    for i in 300..380 {
+        post_bar(&state, "btc", "15m", wave(i)).await.expect("bar");
+    }
+
+    let live = run_named(&read_status(&state).await, "b").clone();
+    // A restart must not lose it: the executor reads this to know how old the
+    // book's entry is, and a mirror that forgot across a restart would read a
+    // fresh fill where there was an hour-old one.
+    let reborn = Arc::new(AppState::new(config(), dir.path().to_path_buf()));
+    let after = run_named(&read_status(&reborn).await, "b").clone();
+    assert_eq!(after["open"]["learned_at"], live["open"]["learned_at"], "it survives a reload");
+
+    if live["open"].is_null() {
+        assert!(live["open"]["learned_at"].is_null(), "a flat book has nothing to have learned");
+    }
+}
