@@ -216,6 +216,12 @@ PROVIDERS = {
     "anthropic": {
         "url": "https://api.anthropic.com/v1/messages",
         "env": "ANTHROPIC_API_KEY",
+        # Without a `config_section` a key saved to `config/local.toml` is
+        # written, reported as stored, and then never read — `key_for` only
+        # consults the file for a provider that names a section. DeepSeek had
+        # one and these two did not, so the file worked for one provider of
+        # three and the other two failed silently back to the environment.
+        "config_section": "ai.anthropic",
         "prefixes": ("claude",),
     },
     # DeepSeek speaks the OpenAI chat API, so it needs no branch in `ask` —
@@ -233,6 +239,7 @@ PROVIDERS = {
     "openai": {
         "url": "https://api.openai.com/v1/chat/completions",
         "env": "OPENAI_API_KEY",
+        "config_section": "ai.openai",
         "prefixes": ("gpt", "o1", "o3", "o4", "chatgpt"),
     },
 }
@@ -819,7 +826,14 @@ def main() -> int:
             env = PROVIDERS[provider]["env"]
             # A keyless provider (the plan, through the CLI) has nothing to
             # look up; only a metered one can be missing its key.
-            key = os.environ.get(env) if env else ""
+            #
+            # Through `key_for`, NOT `os.environ` directly. This line read the
+            # environment alone, so a key saved into `config/local.toml` by
+            # `advisor_setup.py` was found by `key_for` everywhere else and
+            # ignored here — the one place that decides whether an agent runs.
+            # A configuration surface whose consumer does not use the resolver
+            # is decoration.
+            key = key_for(provider) if env else ""
             # `env` None means the provider needs no key at all (a plan, through
             # a CLI). Only a METERED provider can be missing one — testing the
             # empty key alone dropped every plan-backed agent and silently fell
@@ -828,7 +842,9 @@ def main() -> int:
                 # Named, not guessed at: a panel silently one agent short is a
                 # panel whose verdicts mean something different from what the
                 # log will say they mean.
-                print(f"  {name}: no {env} for {model} — this agent will not run", flush=True)
+                print(f"  {name}: no key for {model} — set one with "
+                      f"`python py/live/advisor_setup.py` (env {env} or config/local.toml); "
+                      f"this agent will not run", flush=True)
                 continue
             panel.append({"name": name, "role": role, "model": model, "provider": provider, "key": key})
 
