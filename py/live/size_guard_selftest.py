@@ -65,6 +65,12 @@ them coming back. Each section names the failure it pins.
      same tuple as DONE and was called success, which cleared the refusal
      channel and left the account permanently smaller than the book.
 
+  9  A BETTER PRICE IS NOT A REASON TO SIT OUT. `--max-join-r` bounded the
+     ABSOLUTE drift, so four of six real entries on 2026-09-17 were refused at
+     least once for being too good - and a refusal is a retry, so the mirror
+     then waited for the price to come back to it. The favourable half is now
+     bounded structurally instead: a full R better IS the book's stop.
+
   8  EVERY TIME THAT LEAVES THIS PROCESS IS ON THE BOOK'S CLOCK. `history_of`
      published `d.time_msc` raw - server time - into `broker.json` beside an
      `at` field that is true UTC, and `opened_at` did the same. Two clocks,
@@ -136,6 +142,12 @@ def make_mt5():
     # real Vantage server was measured at on 2026-09-16 and 2026-09-17.
     m.server_offset_s = 3 * 3600
     m.deals = []
+    # The broker's minimum distance between a price and a stop, in points, and
+    # the point size. 0 means "no minimum", which is what every other check
+    # here wants; the join tests raise it to prove an order that would be
+    # rejected is refused before it is sent.
+    m.stops_level = 0
+    m.point = 0.01
 
     m.initialize = lambda **kw: True
     m.shutdown = lambda: None
@@ -212,6 +224,7 @@ def info_for(sym: str) -> Obj:
     contract, tick_size, tick_value, _, _ = SYMBOLS[sym]
     return Obj(trade_contract_size=contract, trade_tick_size=tick_size,
                trade_tick_value=tick_value,
+               trade_stops_level=MT5.stops_level, point=MT5.point,
                volume_min=0.01, volume_step=0.01, volume_max=100.0)
 
 
@@ -326,7 +339,7 @@ class Flaky:
         return self.acc if self.n <= self.answers else None
 
 
-def drive(account, symbol: str = "XAUUSD.sc", margin=5.0, lots: float = 0.05) -> tuple:
+def drive(account, symbol: str = "XAUUSD.sc", margin=5.0, lots: float = 0.05, book=None) -> tuple:
     """One poll of `main()` against a temporary ROOT.
 
     Returns `(rc, requests that reached order_send, rows written to
@@ -343,9 +356,9 @@ def drive(account, symbol: str = "XAUUSD.sc", margin=5.0, lots: float = 0.05) ->
         MT5.margin = margin
         MT5.price = SYMBOLS[symbol][4]
 
-        book = dict(BOOK, lots=lots)
+        held = dict(book or BOOK, lots=lots)
         X.ROOT = tmp
-        X.read_status = lambda api, run: dict(RUN, open=book)
+        X.read_status = lambda api, run: dict(RUN, open=held)
 
         def stop_after_one_poll(_):
             raise KeyboardInterrupt
@@ -945,6 +958,131 @@ def the_published_times_are_utc() -> None:
         MT5.deals = []
 
 
+def drive_at(book_open: dict, price: float) -> tuple:
+    """One poll with a given book position and a given market price.
+
+    The spread is ZEROED for these - bid and ask both sit at `price` - because
+    what is under test is the join rule and a half-point of spread would shift
+    every drift by a fraction of an R and make the expected numbers arguments
+    about the fake rather than about the rule.
+    """
+    real_tick = MT5.symbol_info_tick
+    real_status = X.read_status
+    try:
+        MT5.symbol_info_tick = lambda sym: Obj(
+            ask=price, bid=price, time=int(time.time()) + MT5.server_offset_s)
+        MT5.price = price
+        return drive(CENT, lots=book_open.get("lots", 0.05), book=book_open)
+    finally:
+        MT5.symbol_info_tick = real_tick
+        X.read_status = real_status
+
+
+# ---------------------------------------------------------------------------
+# 9 - a better price is not a reason to sit out
+# ---------------------------------------------------------------------------
+
+def a_better_price_is_not_a_reason_to_sit_out() -> None:
+    """`--max-join-r` bounded |drift| and now bounds adverse drift only.
+
+    The six real entries of 2026-09-17 are replayed below from their measured
+    drifts. Four of six were refused at least once for being too GOOD, and
+    because a refusal is a retry rather than a skip, the mirror then waited for
+    the price to come back to it: one book sat eighteen minutes and filled 3.5
+    points worse, another was never joined while the book booked +1.32R.
+
+    The favourable half of the bound is replaced by two STRUCTURAL limits,
+    which is the part worth pinning: a favourable drift of a full R means the
+    price has reached the book's own stop, and a join too close to that stop is
+    rejected by the broker rather than filled.
+    """
+    section("joining at a better price than the book got")
+
+    # Reconstructed from the drifts measured on the funded account, 2026-09-17.
+    # terra SHORT's stop comes back as 4317.31 here and the fill that later
+    # stopped out reported sl 4317.30 — so these reconstructions are the real
+    # trades, not invented ones.
+    # (name, side, book entry, risk, price seen, drift r, should it join?)
+    REPLAY = [
+        ('terra SHORT', 'SHORT', 4306.38, 10.93, 4309.33, -0.27, True),
+        ('ds LONG', 'LONG', 4332.12, 11.40, 4328.13, -0.35, True),
+        ('ds SHORT', 'SHORT', 4360.41, 19.98, 4373.00, -0.63, True),
+        ('terra LONG', 'LONG', 4350.05, 10.00, 4353.40, +0.34, False),
+    ]
+
+    def book(side: str, entry: float, risk: float) -> dict:
+        stop = entry - risk if side == 'LONG' else entry + risk
+        target = entry + 2 * risk if side == 'LONG' else entry - 2 * risk
+        return dict(BOOK, side=side, entry_price=entry, stop=stop, target=target)
+
+    for name, side, entry, risk, price, drift, should_join in REPLAY:
+        held = book(side, entry, risk)
+        MT5.deals = []
+        _, sent, rows = drive_at(held, price)
+        joined = len(sent) == 1
+        check(f"{name}: drift {drift:+.2f}R -> {'joins' if should_join else 'sits out'}",
+              joined == should_join,
+              f"sent {len(sent)}; {[r['kind'] for r in rows]}")
+        if should_join:
+            # The book's stop and target, verbatim. Identical exits are what
+            # make the per-trade difference exactly the entry slippage; a
+            # rescaled stop would put the mirror beyond the book's and leave it
+            # holding a position the book had closed.
+            req = sent[0]
+            check(f"{name}: the book's stop and target go out unchanged",
+                  req.get('sl') == held['stop'] and req.get('tp') == held['target'],
+                  f"sl {req.get('sl')} vs {held['stop']}, tp {req.get('tp')} vs {held['target']}")
+            join = next((r for r in rows if r['kind'] == 'joining'), {})
+            check(f"{name}: the accepted join records its drift and direction",
+                  abs((join.get('drift_r') or 0) - drift) < 0.02 and join.get('favourable') is True,
+                  f"{join}")
+
+    # Adverse is unchanged: still bounded at 0.25R, and the one the guard was
+    # built for is still refused.
+    held = book('LONG', 4350.05, 10.0)
+    _, sent, rows = drive_at(held, 4350.05 + 2.45 * 10.0)
+    check("adverse +2.45R: still refused", len(sent) == 0, f"{sent}")
+    check("...for a reason naming the adverse direction",
+          any('against the book' in str(r.get('reason', '')) for r in rows if r['kind'] == 'not-adopted'),
+          f"{[r.get('reason') for r in rows if r['kind'] == 'not-adopted']}")
+
+    # THE STRUCTURAL LIMIT. A full R better means the price is AT the book's
+    # own stop, so the book is about to exit and the trade is already lost.
+    # Reachable, not impossible - which is the half of this that is easy to
+    # get backwards.
+    held = book('LONG', 4350.05, 10.0)
+    _, sent, rows = drive_at(held, held['stop'] - 0.5)
+    check("a full R better puts the price past the book's STOP: refused",
+          len(sent) == 0, f"{sent}")
+    check("...and says the book is about to exit, not that the price is too far",
+          any("already lost" in str(r.get('reason', '')) for r in rows if r['kind'] == 'not-adopted'),
+          f"{[r.get('reason') for r in rows if r['kind'] == 'not-adopted']}")
+
+    # Just inside it still joins: the bound is the stop, not a round number.
+    _, sent, _ = drive_at(held, held['stop'] + 1.5)
+    check("just short of the stop still joins", len(sent) == 1, f"sent {len(sent)}")
+
+    # The broker's own minimum stop distance. An order whose sl sits inside it
+    # comes back rejected, and a mirror that retried would refuse every poll.
+    try:
+        MT5.stops_level = 200  # points, x 0.01 = 2.00 in price
+        _, sent, rows = drive_at(held, held['stop'] + 1.5)
+        check("a join inside the broker's minimum stop distance: refused, not sent",
+              len(sent) == 0, f"{sent}")
+        check("...and names the broker's limit rather than the desk's",
+              any('minimum stop distance' in str(r.get('reason', ''))
+                  for r in rows if r['kind'] == 'not-adopted'),
+              f"{[r.get('reason') for r in rows if r['kind'] == 'not-adopted']}")
+    finally:
+        MT5.stops_level = 0
+
+    # A book with no stop cannot be measured in R at all; that path is
+    # unchanged and still joins.
+    held = dict(BOOK, side='LONG', entry_price=4350.0, stop=None, target=None)
+    _, sent, _ = drive_at(held, 4340.0)
+    check("a book with no stop still joins, as before", len(sent) == 1, f"sent {len(sent)}")
+
+
 def main() -> int:
     the_ceiling_measures_one_currency()
     both_size_guards_fail_closed()
@@ -954,6 +1092,7 @@ def main() -> int:
     the_account_has_a_shape()
     a_partial_fill_is_not_a_fill()
     the_published_times_are_utc()
+    a_better_price_is_not_a_reason_to_sit_out()
     print(f"\n{'all checks passed' if not FAIL else str(FAIL) + ' CHECK(S) FAILED'}")
     return 1 if FAIL else 0
 

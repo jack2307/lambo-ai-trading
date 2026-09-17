@@ -618,12 +618,63 @@ def main() -> int:
     # is the same distortion on gold as on EURUSD, and on a wide-stop trade as
     # on a tight one.
     #
-    # Symmetric on purpose. Refusing only the joins that went AGAINST the mirror
-    # would leave a sample of only the favourable ones, and the mirror would
-    # then beat the book by construction - the same bias as late joins, pointed
-    # the other way.
+    # ONE-SIDED since 2026-09-17. This bounds ADVERSE drift only.
+    #
+    # It was symmetric, on the argument that taking only the favourable joins
+    # would let the mirror beat the book by construction. The first day on a
+    # funded account measured what the symmetry actually did: four of six
+    # entries were refused at least once for being too GOOD, and because a
+    # refusal is a retry rather than a skip, the mirror then waited for the
+    # price to come back - entering on the retracement, or not at all. One book
+    # sat eighteen minutes and filled 3.5 points worse; another was never
+    # joined while the book booked +1.32R.
+    #
+    # So the symmetric bound did not buy an unbiased sample. It bought an
+    # adversely selected one, which is the same bias it was written to prevent,
+    # pointed the other way. Favourable drift is now taken; see `join_check`
+    # for the full argument, for what this costs the account's equity curve as
+    # a fair test of the book, and for the two structural limits that replace
+    # the favourable half of this bound.
+    # THE ADVERSE HALF IS HELD AT 0.25R, AND IT IS UNDER QUESTION. Measured by
+    # another session over all 55 live paper entries carrying a stop, nine
+    # days to 2026-09-17:
+    #
+    #   refused 19 of 55 (35%). The REFUSED trades went on to earn +5.55R on
+    #   paper (mean +0.29R); the ones it let through earned +1.44R (mean
+    #   +0.04R). Mirroring everything would have made +5.53R; the guard as it
+    #   stands made +2.04R. The guard cost 3.49R over nine days.
+    #
+    #   Drift and outcome correlate at +0.54, and eight of the ten best refused
+    #   trades were refused for ADVERSE drift - the price moved the book's way
+    #   in the bar after its entry, which is what a book that is RIGHT looks
+    #   like. So the bound selects against immediate winners.
+    #
+    # That reads as a straightforward case for loosening it, and it is not
+    # settled, for a reason worth keeping next to the number: the window was
+    # 37 longs against 18 shorts in a nine-day uptrend. On the SHORT side the
+    # guard did the opposite of what the headline says - it cut -3.03R of
+    # losers and kept +2.21R. So "adverse drift predicts a win" may be nothing
+    # more than "momentum continued, in a trend, on the long side". Nine days
+    # cannot tell those apart, and a bound moved on nine days of one direction
+    # is a bound fitted to a fortnight.
+    #
+    # The same question is being run over the four-year 15m series, every bar,
+    # both regimes. Until that lands the bound does not move, and the two
+    # outcomes are already known:
+    #
+    #   mechanism holds generally -> the adverse bound should be looser, or
+    #     should become a pure "is this trade already over" check like the
+    #     favourable side below; and the real repair is closing the one-bar
+    #     entry lag at the source, with this guard as the stopgap it was.
+    #   it was the trend -> 0.25R stays, and the nine-day number is an artefact
+    #     of a directional window.
+    #
+    # Recorded here rather than in a commit message because the next person to
+    # look at this number should find the measurement beside it, and should
+    # know it was CHOSEN against evidence rather than picked. What it was not
+    # chosen against is the four-year series, and that is the gap.
     ap.add_argument("--max-join-r", type=float, default=0.25,
-                    help="do not open if the price has moved this far from the book's entry, in R")
+                    help="do not open if the price has moved this far AGAINST the book's entry, in R")
     ap.add_argument("--dry-run", action="store_true", help="reconcile and log, send nothing")
     # One of the three keys to a real account. On its own it does nothing:
     # the registry must also say `real_money = true` for --account, and the
@@ -911,23 +962,118 @@ def main() -> int:
             bars = (last - entry) / step
             return bars if bars > args.max_adopt_bars else None
 
-        def drifted(book_open: dict, price: float) -> float | None:
-            """How far this fill would be from the book's entry, in R, or None.
+        def join_check(book_open: dict, price: float) -> tuple:
+            """May this fill join the book's trade, and how far off the book is it?
 
-            Signed so the record says WHICH WAY it drifted: positive is worse
-            for the mirror than the book got, negative is better. Both are
-            refused - see `--max-join-r` - but only one of them is the failure
-            people expect, and a log that collapsed them would hide the other.
+            Returns `(r, reason)`. `r` is the drift in R, signed the way the
+            rest of this file signs it: POSITIVE is adverse - a worse price
+            than the book got - and negative is better. `reason` is None when
+            the join is allowed, and the sentence to log when it is not.
+
+            ONE-SIDED FROM 2026-09-17, AND THIS IS THE ARGUMENT.
+
+            It used to refuse `abs(r) > max_join_r`, both ways. The stated
+            reason was that taking only the favourable joins would let the
+            mirror beat the book by construction, which is a real worry about a
+            measuring instrument. It is not what the symmetric bound actually
+            bought, and the first day on a funded account showed why.
+
+            Measured 2026-09-17, six entries, all real:
+
+              terra SHORT book 4306.38, first seen -0.27R at 4309.33 - a BETTER
+                price to sell at - refused; sent 46s later at 4308.28.
+              ds LONG book 4332.12, first seen -0.35R at 4328.13 - better -
+                refused, sat EIGHTEEN MINUTES, filled at 4331.68. Waiting for
+                the price to get worse cost 3.5 points.
+              ds SHORT book 4360.41, -0.32R to -0.63R for five minutes, all
+                better, all refused; sent at 4365.56.
+              terra LONG book 4350.05, +0.34R rising to +2.45R, adverse
+                throughout, never taken. The book booked +1.32R and the account
+                got none of it.
+
+            Four of six were refused at least once for being too GOOD. And the
+            refusal is not a skip, it is a retry: the mirror waits until the
+            price comes back inside the band, which means it systematically
+            enters on the retracement, at a worse price, or misses the trade
+            entirely. So the symmetric bound did not produce an unbiased
+            sample. It produced an adversely selected one - the account gets
+            worse fills than the book and misses the book's best trades - which
+            is the same bias the bound was written to prevent, pointed the
+            other way.
+
+            Adverse drift stays refused at `--max-join-r`, unchanged, and for
+            the reason it was written: joining late and worse means paying for
+            a trade the book did not pay for, and the difference is not the
+            book's edge, it is the mirror's cost.
+
+            Favourable drift is now taken. A better entry carrying the book's
+            own stop and target is the book's trade at a better price - the
+            same trade, the same exits, less paid to get in.
+
+            WHAT THIS COSTS, said plainly: the account's equity curve is no
+            longer a fair test of the book, because adverse joins are skipped
+            while favourable ones are taken. It was not a fair test before
+            either - adverse joins were already skipped - but the bias now
+            points the account's way instead of against it. The per-trade
+            record is still honest: every join logs its drift in R with its
+            sign and every refusal logs its reason, so the censoring is visible
+            rather than hidden. Do not read the account curve as "the book,
+            live". Read the per-trade drift.
+
+            THE BOUND ON THE FAVOURABLE SIDE IS STRUCTURAL, NOT A JUDGEMENT.
+            0.25R is a number someone chose; the limit below is a fact about
+            the trade. A favourable drift of a full R means, exactly, that the
+            price has reached the book's own STOP - for a LONG, `price <= entry
+            - risk` is `price <= stop` - so the book is about to be stopped out
+            and joining would open a position the book has already lost. That
+            case is reachable, not impossible: it is simply `abs(r) >= 1`.
+
+            The mirror image, "favourable drift past the TARGET", cannot
+            happen. Moving toward the target is moving AGAINST a joiner - you
+            would be buying higher or selling lower - so a price beyond the
+            target is adverse by definition and the `max_join_r` bound above
+            catches it long before the target does.
+
+            The stop and target are sent VERBATIM on a favourable join, not
+            rescaled to the better entry. The mirror mirrors; but the sharper
+            reason is that identical exits are what make the per-trade
+            difference exactly the entry slippage and nothing else. Rescaling
+            would put the mirror's stop beyond the book's, so the mirror would
+            survive a move that stopped the book out and would then be holding
+            a position the book has closed - the very state `already_taken` and
+            the reconciler exist to prevent.
             """
             entry, stop = book_open.get("entry_price"), book_open.get("stop")
             if not entry or not stop:
-                return None
+                return None, None
             risk = abs(entry - stop)
             if risk <= 0:
-                return None
-            adverse = (price - entry) if book_open.get("side") == "LONG" else (entry - price)
+                return None, None
+            long = book_open.get("side") == "LONG"
+            adverse = (price - entry) if long else (entry - price)
             r = adverse / risk
-            return r if abs(r) > args.max_join_r else None
+            if r > args.max_join_r:
+                return r, (f"the price is {r:+.2f}R against the book's entry, past the "
+                           f"{args.max_join_r}R this will join at; the mirror would be paying "
+                           f"for a trade the book did not pay for")
+            if r >= 0:
+                return r, None
+            if -r >= 1.0:
+                return r, (f"the price is {r:+.2f}R better, which puts it at or beyond the book's "
+                           f"own stop {stop}; the book is about to exit this trade, so joining "
+                           f"would open a position it has already lost")
+            # The broker's own minimum distance between a price and a stop. A
+            # favourable join close to the stop leaves very little of it, and
+            # an order whose sl is inside this comes back rejected - which this
+            # desk has already paid for once, as thirty-six refused orders in a
+            # row that every other part of the system reported as healthy.
+            gap = abs(price - stop)
+            least = (getattr(info, "trade_stops_level", 0) or 0) * (getattr(info, "point", 0.0) or 0.0)
+            if least > 0 and gap < least:
+                return r, (f"the price is {r:+.2f}R better, leaving {gap:.5f} to the book's stop - "
+                           f"inside the broker's minimum stop distance of {least:.5f}, so the order "
+                           f"would be rejected rather than filled")
+            return r, None
 
         def already_taken(book_open: dict, run: dict) -> tuple:
             """Has this account already traded the position the book is holding?
@@ -1080,14 +1226,13 @@ def main() -> int:
                     volume_min=info.volume_min, volume_max=info.volume_max)
             price = tick.ask if is_long else tick.bid
 
-            off = drifted(book_open, price)
-            if off is not None:
+            off, why_not = join_check(book_open, price)
+            if why_not is not None:
                 nonlocal_standing_out(
                     f"{price} is {off:+.2f}R from the book's entry {book_open.get('entry_price')}")
                 log(out, "not-adopted", side=book_open.get("side"), lots=book_open.get("lots"),
                     book_entry=book_open.get("entry_price"), would_fill=price,
-                    drift_r=round(off, 2), limit=args.max_join_r,
-                    reason="the price has moved too far from the book's entry to mirror the same trade")
+                    drift_r=round(off, 2), limit=args.max_join_r, reason=why_not)
                 return False
 
             # ---- the two size guards, and the reading they both depend on ----
@@ -1211,6 +1356,19 @@ def main() -> int:
                 req["sl"] = float(book_open["stop"])
             if book_open.get("target") is not None:
                 req["tp"] = float(book_open["target"])
+            # Every join's drift, on the way IN and not only when refused.
+            # Favourable drift is now taken rather than waited out, so the
+            # record has to carry what was accepted as well as what was not: a
+            # rule that censors entries and logs only its refusals cannot be
+            # audited afterwards, and the honesty of the per-trade slippage
+            # measurement rests on this line. `sl` and `tp` are here too
+            # because they are the book's verbatim - the proof that a better
+            # entry did not quietly become a different trade.
+            log(out, "joining", side=book_open.get("side"), lots=vol,
+                book_entry=book_open.get("entry_price"), filling_at=price,
+                drift_r=None if off is None else round(off, 2),
+                favourable=None if off is None else off < 0,
+                sl=req.get("sl"), tp=req.get("tp"))
             return send(req, f"open {book_open['side'].lower()} {vol}")
 
         snap_path = here / "broker.json"
