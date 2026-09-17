@@ -1,9 +1,31 @@
-# flowdesk
+# LamboAITrading
 
-Options-flow analytics and strategy research for COMEX gold and BTC, ported to
-Rust from the JavaScript prototype in `E:\nodejs\gold-options-flow`.
+Options-flow analytics, strategy research and a live paper desk for COMEX gold
+and BTC, in Rust, ported from the JavaScript prototype in
+`E:\nodejs\gold-options-flow`.
 
-Paper only. Nothing here connects to a broker.
+## This connects to a broker
+
+It did not always, and the sentence that used to be here said so. It does now,
+so the change is stated rather than quietly dropped:
+
+- The paper desk decides. Every book, rule-driven or model-driven, runs against
+  bars and holds positions that exist only in `data/paper/`.
+- `py/live/mt5_executor.py` **mirrors one paper book into one MetaTrader
+  account**, and it is the only file in this repository that can place an
+  order. It refuses any account whose `trade_mode` is not DEMO, refuses a
+  login other than the one named on its command line, refuses an order whose
+  notional exceeds ten times account equity, refuses one that would take the
+  account's margin level under 500%, and refuses to join a trade the book
+  opened more than a bar ago or more than a quarter of its stop distance away.
+- No strategy logic lives on the live side. A mirrored book can never disagree
+  with the paper book it came from about what the rule said - only about what
+  the fill was, and measuring that difference is the whole point of running it.
+
+`config/local.toml` holds the keys and is not in the repository. Neither is
+`config/guards.toml`, which is a machine's runtime override of the risk rules.
+
+See `deploy/README.md` for running this on a server.
 
 ## Why this exists
 
