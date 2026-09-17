@@ -89,38 +89,52 @@ enabled = true
 # matches positions and history by magic, never by symbol alone. Checked for
 # collisions across these eight on 2026-09-16: none.
 #
-# The three AI books are here with their COIN CONTROLS, which is not optional.
-# The campaign asks whether a model's direction beats a coin, and the coin is
-# how that question is answered. Mirroring the models alone would produce a
-# live P&L with nothing to read it against - "the AI made +X on the demo" is
-# unreadable without knowing what a coin made on the same bars through the same
-# spread. Drop the `-coin` entries only if the campaign itself is dropped.
+# THE COIN CONTROLS ARE NOT HERE, AND THE CAMPAIGN STILL HAS THEM.
+#
+# They were listed here until 2026-09-17. The owner's objection was not that
+# the coin measures nothing - it was that a coin taking real positions is
+# money spent to learn something a paper book already knows. He is right, and
+# the text this replaces had the two things welded together.
+#
+# Measuring and mirroring are separate. Every `-coin` book still runs, still
+# takes its seeded flip, still records its own trades. What it no longer does
+# is spend margin on this account. The comparison the campaign exists to make
+# - does the model's direction beat a coin's, over the same bars, under the
+# same guards - is a PAPER comparison, and it is untouched.
+#
+# What IS lost, stated rather than glossed: the coin no longer pays a real
+# spread or takes real slippage, so "the model beat the coin" can be checked
+# in the book but no longer at the broker. That would matter if execution cost
+# turned out to differ by direction. It has not in the record so far, and it
+# is a smaller thing than paying for random trades to find out.
+#
+# Removed while all three were FLAT on this account - the condition the note
+# below insists on, checked before the edit and not after. Realised up to that
+# point: ds-coin -116.35, opus-coin 0.00, sol-coin +77.04.
 #
 # What this account CANNOT reproduce is that each paper book has its own 10,000
-# USC while all eight share this one account. Each still sizes as though it
-# owned the whole thing, so their risk adds up here and does not there: eight
-# books at the desk's 300% notional cap is 24x this account's equity in
-# notional at once, about 8% of it at risk. Safe at 1:500 - margin level near
-# 2000% against a 30% stop-out - but safe by arithmetic, which is why the
+# USC while all five share this one account. Each still sizes as though it
+# owned the whole thing, so their risk adds up here and does not there: five
+# books at the desk's 300% notional cap is 15x this account's equity in
+# notional at once, about 5% of it at risk. Safe at 1:500 - margin level near
+# 3000% against a 30% stop-out - but safe by arithmetic, which is why the
 # executor now also refuses any open that would take the ACCOUNT below a 500%
 # margin level.
 runs = [
     "xau-ema",
     "xau-macd-asia",
     "ai-xau-ds-ctx",
-    "ai-xau-ds-ctx-coin",
     "ai-xau-opus-ctx",
-    "ai-xau-opus-ctx-coin",
     "ai-xau-sol-ctx",
-    "ai-xau-sol-ctx-coin",
 ]
 
 # Opus came out on 2026-09-16 and went back in the same day, both on the
-# owner's word. Its coin went with it each time, which is the rule and not
-# tidiness: a `-coin` book exists to answer one question about one model, so a
-# coin mirroring alone would put a random-direction position on the account
-# every few bars with nothing to compare it against - cost and margin spent to
-# measure nothing. A model and its coin enter and leave this list together.
+# owner's word. Its coin went with it each time, under a rule that no longer
+# applies: while coins were mirrored, a coin here without its model would have
+# put random-direction positions on the account with nothing to compare them
+# against. No coin is mirrored now, so that pairing rule is spent - a model
+# enters and leaves this list on its own, and its coin keeps running on paper
+# either way.
 #
 # Being listed here does nothing on its own. The mirror can only copy decisions
 # that exist, so a book whose `ai_trader` is not running is simply flat here.
