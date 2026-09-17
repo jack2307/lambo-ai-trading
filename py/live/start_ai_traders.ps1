@@ -54,6 +54,35 @@ if (-not $mutex.WaitOne(0)) {
 
 try {
 
+# --------------------------------------------------- before anything is killed
+#
+# PATH is the OPENAI_API_KEY problem wearing different clothes, and unlike that
+# one it did not go away with the key. Start-Process hands the child THIS
+# process's environment, so a shell opened before Node was installed launches
+# traders that cannot see `node` - and `codex.CMD` is a batch file whose first
+# act is to run `node`. Measured 2026-09-17 on the server: `codex --version`
+# exited 1 with '"node"' is not recognized, from a session whose PATH predated
+# the install, and succeeded a line later once PATH was re-read. So re-read it
+# from the registry, which is where the truth is.
+$env:Path = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' +
+            [Environment]::GetEnvironmentVariable('Path', 'User')
+
+# Then check that each model can be reached, HERE, above the kill. A campaign
+# that cannot reach its model should leave the running one alone rather than
+# replace it with nothing: the failure is otherwise invisible until a model is
+# asked a question on a live bar, and by then this script has already reported
+# that everything started.
+#
+# check_clis.py and not Get-Command, because the two machines resolve Codex
+# differently and a PATH test gets one of them wrong; see its docstring.
+Write-Host 'checking each model can be reached'
+& $Python (@((Join-Path $Root 'py\live\check_clis.py')) + ($campaigns | ForEach-Object { $_.model })) |
+    ForEach-Object { Write-Host "   $_" }
+if ($LASTEXITCODE -ne 0) {
+    Write-Error 'not starting; nothing was stopped'
+    exit 1
+}
+
 Get-CimInstance Win32_Process -Filter "name='python.exe'" |
     Where-Object { $_.CommandLine -like '*ai_trader.py*' } |
     ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
