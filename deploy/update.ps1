@@ -16,6 +16,17 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+
+# TLS 1.2, explicitly.
+#
+# Windows Server 2012 R2 and 2016 default .NET to TLS 1.0, which GitHub and
+# python.org have both refused for years. Without this line every download
+# below fails with "the underlying connection was closed" - a message that says
+# nothing about protocols and sends people looking at firewalls.
+try {
+    [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+} catch { }
+
 if (-not $Root) {
     $here = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Path }
     $Root = Split-Path -Parent $here

@@ -25,6 +25,30 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+# TLS 1.2, explicitly.
+#
+# Windows Server 2012 R2 and 2016 default .NET to TLS 1.0, which GitHub and
+# python.org have both refused for years. Without this line every download
+# below fails with "the underlying connection was closed" - a message that says
+# nothing about protocols and sends people looking at firewalls.
+try {
+    [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+} catch { }
+
+# The scripts below assume PowerShell 5.0 or later in a couple of places
+# (Compress-Archive, and -File on Get-ChildItem). Said once, here, rather than
+# failing later with a message about a missing cmdlet.
+if ($PSVersionTable.PSVersion.Major -lt 5) {
+    Write-Host ''
+    Write-Host "PowerShell $($PSVersionTable.PSVersion) - this is Windows Server 2012 R2 or older." -ForegroundColor Yellow
+    Write-Host 'That build left extended support in October 2023. It will run the desk,' -ForegroundColor Yellow
+    Write-Host 'but expect friction: old .NET, old TLS defaults, and no security updates' -ForegroundColor Yellow
+    Write-Host 'on a machine that holds broker credentials. Worth asking the provider for' -ForegroundColor Yellow
+    Write-Host 'a 2019 or 2022 image instead.' -ForegroundColor Yellow
+    Write-Host ''
+}
+
+
 # Installing Python for all users into C:\Python39, and writing into it
 # afterwards, both need an elevated session. Checked up front rather than
 # discovered halfway through: a run that installs Python and then cannot

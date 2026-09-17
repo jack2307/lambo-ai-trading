@@ -18,6 +18,30 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+# TLS 1.2, explicitly.
+#
+# Windows Server 2012 R2 and 2016 default .NET to TLS 1.0, which GitHub and
+# python.org have both refused for years. Without this line every download
+# below fails with "the underlying connection was closed" - a message that says
+# nothing about protocols and sends people looking at firewalls.
+try {
+    [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+} catch { }
+
+# The scripts below assume PowerShell 5.0 or later in a couple of places
+# (Compress-Archive, and -File on Get-ChildItem). Said once, here, rather than
+# failing later with a message about a missing cmdlet.
+if ($PSVersionTable.PSVersion.Major -lt 5) {
+    Write-Host ''
+    Write-Host "PowerShell $($PSVersionTable.PSVersion) - this is Windows Server 2012 R2 or older." -ForegroundColor Yellow
+    Write-Host 'That build left extended support in October 2023. It will run the desk,' -ForegroundColor Yellow
+    Write-Host 'but expect friction: old .NET, old TLS defaults, and no security updates' -ForegroundColor Yellow
+    Write-Host 'on a machine that holds broker credentials. Worth asking the provider for' -ForegroundColor Yellow
+    Write-Host 'a 2019 or 2022 image instead.' -ForegroundColor Yellow
+    Write-Host ''
+}
+
+
 $admin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()
          ).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 if (-not $admin) { Write-Error 'Run this from an elevated PowerShell.'; exit 1 }
@@ -31,7 +55,9 @@ if (-not $SkipGit -and -not (Get-Command git -ErrorAction SilentlyContinue)) {
     # URL is a link that rots, and the failure would be a 404 on a machine
     # nobody is watching. Windows Server has no winget by default, so this does
     # not use it.
-    $rel = Invoke-RestMethod 'https://api.github.com/repos/git-for-windows/git/releases/latest' -UseBasicParsing
+    # No -UseBasicParsing here: it is an Invoke-WebRequest parameter, and
+    # Invoke-RestMethod rejects it outright on Windows PowerShell.
+    $rel = Invoke-RestMethod 'https://api.github.com/repos/git-for-windows/git/releases/latest'
     $asset = $rel.assets | Where-Object { $_.name -match '^Git-.*-64-bit\.exe$' } | Select-Object -First 1
     if (-not $asset) { throw 'could not find a 64-bit Git for Windows installer in the latest release' }
     $exe = Join-Path $env:TEMP $asset.name
