@@ -319,12 +319,13 @@ def cost_of(model: str, usage: dict, provider: str | None = None) -> float | Non
     metered API. Left out, the provider is derived from the name, which is
     correct for every route this desk runs today and errs towards None.
 
-    ONE LINE ELSEWHERE COMPLETES THIS. `ai_trader.py` calls
-    `cost_of(args.model, usage)` and has the resolved provider in hand;
-    passing it as the third argument is what makes a metered Claude run report
-    its bill. That file belongs to another change in flight, so it is named
-    here rather than edited: without it, forcing `--provider anthropic` bills
-    real money and logs `cost_usd: null`.
+    `ai_trader.py` passes it at both call sites as of 1aa12ed, so a metered
+    Claude run reports its bill. `advisor_setup.probe` does not, and it has
+    the provider in its own signature: a probe forced onto `--provider
+    anthropic` makes a real metered call and then prints "billed to a plan,
+    not per token" at it, which is the wrong answer from the one tool whose
+    whole job is to say what a route costs. One argument closes it; it is
+    named here rather than reached for, because that file is not this one.
     """
     p = PRICES.get(model.split("/", 1)[-1])
     if not p or not usage:
