@@ -453,6 +453,56 @@ function accountTrades(broker: PaperBroker | null): ChartTrade[] {
 }
 
 /**
+ * The price an open position is marked against: the live tick when there is
+ * one, else the last closed bar.
+ *
+ * One function, called by the chart heading and by both fills tables, so that
+ * one position can never be marked at two different prices on one screen.
+ * `livePrice` in the page above prefers a STREAMED tick over the polled
+ * `run.live`, so a caller reaching for `run.live` directly would quietly show
+ * a staler number than the chart beside it.
+ */
+function markPrice(
+  live: LiveBar | null | undefined,
+  run: { last_bar_close?: number | null } | null | undefined,
+): number | null {
+  const at = live?.close ?? run?.last_bar_close ?? null
+  return at != null && Number.isFinite(at) ? at : null
+}
+
+/**
+ * The live result of the open position on screen, formatted WITH ITS UNIT.
+ *
+ * A string and not a number, deliberately: this is the only place that decides
+ * which currency an open result is in, so no caller can render one without it.
+ *
+ * The account's is the broker's own `profit` — already in the account's units
+ * and already live. The paper book's is marked here through `usd_per_point`,
+ * which is what that field exists for; `unrealised_usd_at_last_close` can be a
+ * full bar old, and a result that lags the candle beside it is worse than none.
+ *
+ * The two never blend. An account is shown its own trade at its own price and
+ * the paper book its own — that difference IS the slippage, which is the thing
+ * the account switch exists to show.
+ */
+function openResult(
+  broker: PaperBroker | null,
+  run: PaperRun | null | undefined,
+  mark: number | null,
+): { label: string; positive: boolean } | null {
+  if (broker) {
+    const held = broker.position
+    if (!held || held.profit == null || !Number.isFinite(held.profit)) return null
+    return { label: brokerMoney(held.profit, broker.currency), positive: held.profit >= 0 }
+  }
+  const held = run?.open
+  if (!held || mark == null) return null
+  const usd = (mark - held.entry_price) * held.usd_per_point * (held.side === 'LONG' ? 1 : -1)
+  if (!Number.isFinite(usd)) return null
+  return { label: accountMoney(usd, run), positive: usd >= 0 }
+}
+
+/**
  * Money in the BROKER's currency, which is not the paper book's.
  *
  * No conversion, on purpose: `profit`, `pnl`, `balance` and `equity` on a
@@ -696,7 +746,7 @@ export function Desk({ book }: { book: Book }) {
               <BottomTabs tab={bottomTab} onTab={setBottomTab} />
               <div className="min-h-0 flex-1 overflow-y-auto">
                 {bottomTab === 'fills' ? (
-                  <FillsSection detail={live} openFill={pickedFill} onOpenFill={openFill} broker={activeBroker} />
+                  <FillsSection detail={live} live={livePrice} openFill={pickedFill} onOpenFill={openFill} broker={activeBroker} />
                 ) : (
                   <ReasoningSection runId={activeId} detail={live} />
                 )}
@@ -724,6 +774,7 @@ export function Desk({ book }: { book: Book }) {
                 detail={live}
                 summary={activeRun}
                 broker={activeBroker}
+                live={livePrice}
                 error={detailError && detailError.id === activeId ? detailError.message : null}
                 now={now}
                 openFill={pickedFill}
@@ -2047,6 +2098,7 @@ function Drilldown({
   detail,
   summary,
   broker,
+  live,
   error,
   now,
   openFill,
@@ -2056,6 +2108,8 @@ function Drilldown({
   summary: PaperRun | null
   /** The selected account's record of this book, or null on the paper book. */
   broker: PaperBroker | null
+  /** The forming bar, so an open row marks at the same price as the chart. */
+  live: LiveBar | null
   error: string | null
   now: number
   openFill: string | null
@@ -2133,7 +2187,7 @@ function Drilldown({
         {broker ? (
           <BrokerFillsTable broker={broker} />
         ) : (
-          <FillsTable detail={detail} openFill={openFill} onOpenFill={onOpenFill} />
+          <FillsTable detail={detail} live={live} openFill={openFill} onOpenFill={onOpenFill} />
         )}
       </section>
 
@@ -2210,11 +2264,14 @@ function LivePrice({ live, lastClose, now }: { live: LiveBar | null; lastClose: 
 
 function FillsSection({
   detail,
+  live,
   openFill,
   onOpenFill,
   broker,
 }: {
   detail: PaperRunDetail | null
+  /** The forming bar, so an open row marks at the same price as the chart. */
+  live: LiveBar | null
   openFill: string | null
   onOpenFill: (key: string | null) => void
   /** The selected account's record of this book, or null on the paper book. */
@@ -2240,7 +2297,7 @@ function FillsSection({
       {broker ? (
         <BrokerFillsTable broker={broker} />
       ) : (
-        <FillsTable detail={detail} openFill={openFill} onOpenFill={onOpenFill} />
+        <FillsTable detail={detail} live={live} openFill={openFill} onOpenFill={onOpenFill} />
       )}
     </section>
   )
@@ -2390,20 +2447,10 @@ function RunChart({
    * Neither number reaches the chart bare. See
    * `docs/decisions/2026-09-17-unit-carrying.md`.
    */
-  const openPnl = useMemo(() => {
-    if (broker) {
-      const held = broker.position
-      if (!held || held.profit == null || !Number.isFinite(held.profit)) return null
-      return { label: brokerMoney(held.profit, broker.currency), positive: held.profit >= 0 }
-    }
-    const held = detail?.run.open
-    if (!held) return null
-    const mark = forming?.close ?? detail?.run.last_bar_close ?? null
-    if (mark == null || !Number.isFinite(mark)) return null
-    const usd = (mark - held.entry_price) * held.usd_per_point * (held.side === 'LONG' ? 1 : -1)
-    if (!Number.isFinite(usd)) return null
-    return { label: accountMoney(usd, detail?.run), positive: usd >= 0 }
-  }, [broker, detail, forming])
+  const openPnl = useMemo(
+    () => openResult(broker, detail?.run, markPrice(live, detail?.run)),
+    [broker, detail, live],
+  )
 
   if (!detail) {
     return (
@@ -2453,11 +2500,11 @@ function RunChart({
           )}
           title={
             showOpen
-              ? 'Hide the open position, its stop and target, and its live result'
-              : 'Draw the open position with its live result'
+              ? 'Hide the open position from the CHART. The fills list below still shows it.'
+              : 'Draw the open position on the chart, with its stop, target and live result'
           }
         >
-          open position {showOpen ? 'on' : 'off'}
+          on chart {showOpen ? 'on' : 'off'}
         </button>
         {showOpen && openPnl && (
           <span className={cn('num ml-2 normal-case', openPnl.positive ? 'text-lc' : 'text-lp')}>
@@ -2604,7 +2651,13 @@ function AccountEquity({ broker }: { broker: PaperBroker }) {
  */
 function BrokerFillsTable({ broker }: { broker: PaperBroker }) {
   const fills = [...(broker.fills ?? [])].reverse()
-  if (fills.length === 0) {
+  // The position the account is holding RIGHT NOW, which is not a fill and is
+  // the reason this table exists at all. It led the list from 2026-09-17: the
+  // chart drew it and the table did not, so the panel a reader actually scans
+  // for positions was the one place the live one could not be seen.
+  const held = broker.position
+  const result = openResult(broker, null, null)
+  if (fills.length === 0 && !held) {
     return (
       <p className="text-muted-foreground px-1 py-4 text-[11px]">
         This account has filled nothing on this book yet.
@@ -2617,6 +2670,9 @@ function BrokerFillsTable({ broker }: { broker: PaperBroker }) {
       <table className="w-full text-[11px]">
         <thead className="text-muted-foreground text-[10px] tracking-wide uppercase">
           <tr className="border-b">
+            {/* "exit time" for the closed rows; the open row says `since` and
+                its own open time instead, because it has no exit and printing
+                one would be inventing the thing the reader came to check. */}
             <th className="py-1 pr-2 text-left font-medium">exit time (+07)</th>
             <th className="py-1 pr-2 text-left font-medium">side</th>
             <th className="py-1 pr-2 text-right font-medium">lots</th>
@@ -2626,6 +2682,37 @@ function BrokerFillsTable({ broker }: { broker: PaperBroker }) {
           </tr>
         </thead>
         <tbody>
+          {held && (
+            <tr className="border-primary/30 bg-primary/10 border-b shadow-[inset_2px_0_0_var(--primary)]">
+              <td
+                className="num text-muted-foreground py-1 pr-2 pl-1"
+                title={
+                  held.opened_at != null
+                    ? `opened ${utcStamp(held.opened_at)} — still open`
+                    : 'the executor could not read the broker clock, so the open time is unknown'
+                }
+              >
+                since {vnStamp(held.opened_at)}
+              </td>
+              <td className={cn('num py-1 pr-2', (held.side ?? '') === 'LONG' ? 'text-lc' : 'text-lp')}>
+                {(held.side ?? '').toLowerCase()}
+              </td>
+              <td className="num py-1 pr-2 text-right">{held.lots ?? '—'}</td>
+              <td className="num py-1 pr-2 text-right">
+                {quote(held.entry_price)} &rarr; {quote(held.price_now)}
+              </td>
+              <td className="py-1 pr-2">
+                <span className="text-primary">open</span>
+                <span className="text-muted-foreground">
+                  {held.sl != null && ` · sl ${quote(held.sl)}`}
+                  {held.tp != null && ` · tp ${quote(held.tp)}`}
+                </span>
+              </td>
+              <td className={cn('num py-1 text-right', result?.positive ? 'text-lc' : 'text-lp')}>
+                {result ? result.label : '—'}
+              </td>
+            </tr>
+          )}
           {fills.map((f, i) => (
             <tr key={`${f.entryTime}-${f.exitTime}-${i}`} className="border-b last:border-0">
               <td className="num py-1 pr-2">{vnStamp(f.exitTime)}</td>
@@ -2771,10 +2858,13 @@ const fillId = (fill: BacktestTrade, index: number) => `${fill.entryTime}-${fill
  */
 function FillsTable({
   detail,
+  live,
   openFill,
   onOpenFill,
 }: {
   detail: PaperRunDetail
+  /** The forming bar, so the open row marks at the same price as the chart. */
+  live: LiveBar | null
   openFill: string | null
   onOpenFill: (key: string | null) => void
 }) {
@@ -2787,6 +2877,18 @@ function FillsTable({
   )
   const open = rows.find((row) => row.key === openFill) ?? null
 
+  // The position the book is holding right now. Not a fill, and the reason
+  // this list was incomplete: a reader scanning fills for what is running
+  // found only what had finished.
+  const held = detail.run.open
+  const mark = markPrice(live, detail.run)
+  const result = openResult(null, detail.run, mark)
+  // Signed the way the book measures: positive is in the trade's favour.
+  const runningR =
+    held && mark != null && held.risk > 0
+      ? ((mark - held.entry_price) * (held.side === 'LONG' ? 1 : -1)) / held.risk
+      : null
+
   const onKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>, index: number) => {
     if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return
     event.preventDefault()
@@ -2794,7 +2896,7 @@ function FillsTable({
     rowRefs.current[next]?.focus()
   }
 
-  if (rows.length === 0) {
+  if (rows.length === 0 && !held) {
     return (
       <p className="text-muted-foreground py-2 text-[11px]">
         None yet — the first live bar decides; the warm-up bars do not.
@@ -2805,7 +2907,7 @@ function FillsTable({
   return (
     <>
       <div className="overflow-x-auto">
-        <div className="min-w-[600px]" role="group" aria-label="Closed fills">
+        <div className="min-w-[600px]" role="group" aria-label="Fills, with any open position first">
           <div
             className={cn(
               'text-muted-foreground grid items-center gap-2 border-b pb-1 text-[10px] tracking-wide uppercase',
@@ -2820,6 +2922,49 @@ function FillsTable({
             <span className="text-right">P&amp;L</span>
             <span className="text-right">R</span>
           </div>
+          {held && (
+            <div
+              className={cn(
+                'border-primary/30 bg-primary/10 grid items-center gap-2 border-b py-[3px] text-[11px] shadow-[inset_2px_0_0_var(--primary)]',
+                FILL_COLS,
+              )}
+            >
+              {/* Not a button: every other row opens a detail panel about a
+                  trade that is finished, and this one has no result to open.
+                  It is also why it is not keyboard-navigable with the rest —
+                  arrow keys walk the closed fills, which is the list they
+                  were built for. */}
+              <span
+                className="num text-muted-foreground"
+                title={`opened ${utcStamp(held.entry_time)} — still open`}
+              >
+                since {vnStamp(held.entry_time)}
+              </span>
+              <span className={cn('num', held.side === 'LONG' ? 'text-lc' : 'text-lp')}>
+                {held.side.toLowerCase()}
+              </span>
+              <span className="num text-right">{num(held.lots, held.lots >= 100 ? 0 : 2)}</span>
+              <span className="num text-right">
+                {quote(held.entry_price)} <span className="text-muted-foreground">→</span> {quote(mark)}
+              </span>
+              <span className="truncate">
+                <span className="text-primary">open</span>
+                <span className="text-muted-foreground">
+                  {held.stop != null && ` · stop ${quote(held.stop)}`}
+                  {held.target != null && ` · target ${quote(held.target)}`}
+                </span>
+              </span>
+              <span className={cn('num text-right', result?.positive ? 'text-lc' : 'text-lp')}>
+                {result ? result.label : '—'}
+              </span>
+              {/* The book's own unit, and it costs nothing to say: `risk` is
+                  one R in price, so the running R is the move so far over it.
+                  A dash here would read as "not measurable" when it is. */}
+              <span className={cn('num text-right', (runningR ?? 0) >= 0 ? 'text-lc' : 'text-lp')}>
+                {signedR(runningR)}
+              </span>
+            </div>
+          )}
           {rows.map(({ fill, key }, index) => {
             const isOpen = key === openFill
             return (
