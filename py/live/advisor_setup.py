@@ -494,6 +494,14 @@ def main() -> int:
 
     s = sub.add_parser("status", help="what is configured, and from where")
     s.add_argument("--test", action="store_true", help="also make one real call per credential")
+    # The same both-positions treatment as the subcommands below, and for the
+    # same reason. `status` is built outside that loop, so leaving it out here
+    # is exactly how `status --json` kept failing after the others were fixed.
+    s.add_argument("--json", action="store_true",
+                   default=argparse.SUPPRESS, help=argparse.SUPPRESS)
+    s.add_argument("--model", default=argparse.SUPPRESS, help=argparse.SUPPRESS)
+    s.add_argument("--timeout", type=float,
+                   default=argparse.SUPPRESS, help=argparse.SUPPRESS)
     s.set_defaults(fn=cmd_status)
 
     for name, fn, helptext in (
@@ -504,6 +512,22 @@ def main() -> int:
         ("test", cmd_test, "one real call, to prove a credential"),
     ):
         p = sub.add_parser(name, help=helptext)
+        # `--json` is accepted BOTH before and after the subcommand. argparse
+        # will not take a parent's flag after the subcommand, and a caller that
+        # writes `status --json` gets "unrecognized arguments: --json" — a
+        # failure whose message points at the flag rather than at its position,
+        # which cost an afternoon to read correctly. Declaring it on both
+        # parsers makes the order stop mattering.
+        # `default=SUPPRESS` is the load-bearing half: without it the subparser
+        # writes its OWN default into the same namespace and silently erases a
+        # value the parent already parsed, so `--json status` would stop
+        # working the moment `status --json` started. With it, the attribute is
+        # set only when the flag is actually present.
+        p.add_argument("--json", action="store_true",
+                       default=argparse.SUPPRESS, help=argparse.SUPPRESS)
+        p.add_argument("--model", default=argparse.SUPPRESS, help=argparse.SUPPRESS)
+        p.add_argument("--timeout", type=float,
+                       default=argparse.SUPPRESS, help=argparse.SUPPRESS)
         p.add_argument("provider", choices=sorted(advisor.PROVIDERS))
         if name == "key":
             p.add_argument("--stdin", action="store_true", help="read the key from stdin, not a prompt")
