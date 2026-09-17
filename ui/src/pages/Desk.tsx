@@ -149,56 +149,54 @@ function marginOf(lots: number, price: number, run: PaperRun): { used: number; p
 }
 
 /**
- * A money figure in the ACCOUNT's own unit.
+ * The paper book's money, which is US DOLLARS and stays that way.
  *
- * The wire is USD everywhere, because `lots x contract_size x price` is USD
- * and nothing else. The live Vantage books are a cent account: the same money,
- * counted in hundredths. Converting here and nowhere else is deliberate — a
- * factor of a hundred loose in the arithmetic would multiply through every
- * cost, every guard and every receipt.
+ * This was `accountMoney` and it CONVERTED paper USD into the account's units,
+ * so a reader would see "the number the account holder actually sees". On a
+ * desk that shows a paper book beside the real position mirroring it, that is
+ * the wrong kindness. The owner's card rendered a 0.04-lot paper short as
+ * "−12 USC" while the ACCOUNT's own position on the same book read "+2.72
+ * USC" — one quantity appearing to disagree with itself, read as a broken
+ * deploy by the person whose money it is. They are two different trades:
+ * different entry, different size, one mirrored at `lot_scale`. Giving them a
+ * common unit is what made them look comparable.
  *
- * THE MINUS SIGN HERE IS LOAD-BEARING. This writes U+2212; `brokerMoney`
- * below writes the ASCII hyphen `toLocaleString` produces. That difference is
- * not a tidiness bug to be unified away - it is a free check on the only
- * mistake either function can make. This one MULTIPLIES by `units_per_usd`;
- * `brokerMoney` takes money that is already in the account's currency and must
- * not. So a typographic minus appearing on an ACCOUNT number means account
- * money was routed through this function and multiplied by a hundred, and it
- * says so in one character, on screen, before anyone reconciles a total.
+ * So the conversion is DELETED rather than discouraged. A function that turns
+ * paper into account units cannot be misapplied if it does not exist, and
+ * `PaperRun.account_currency` / `units_per_usd` are carried on the wire and
+ * now deliberately unused by this client.
+ *
+ * TWO DECIMALS, which is the half of 9d80cc6 that was right: the `signedUsd`
+ * it replaced rounded to whole dollars, so a book risking 1% of USD 100
+ * rendered every result as "−$0" or "+$1". That diagnosis stands; only its
+ * remedy is reversed.
+ *
+ * THE MINUS SIGN HERE IS LOAD-BEARING, AND WHAT IT NOW MEANS HAS CHANGED.
+ * This writes U+2212; `brokerMoney` below writes the ASCII hyphen
+ * `toLocaleString` produces. While the old `accountMoney` converted, the tell
+ * caught a multiplication by `units_per_usd`. Nothing converts any more, so it
+ * marks something simpler and more useful: U+2212 is PAPER money in dollars,
+ * ASCII is ACCOUNT money in the account's currency. On the position card the
+ * two sit inches apart and are different trades, so which is which has to be
+ * readable without reading the code.
  *
  * Whoever unifies these two - and it is a reasonable thing to want - has to
  * replace that check with something, not merely delete it.
  */
-function accountMoney(usd: number | null | undefined, run: { account_currency?: string; units_per_usd?: number } | null | undefined, signed = true): string {
+function paperMoney(usd: number | null | undefined, signed = true): string {
   if (usd == null || !Number.isFinite(usd)) return '—'
-  const per = run?.units_per_usd && run.units_per_usd > 0 ? run.units_per_usd : 1
-  const cur = run?.account_currency || 'USD'
-  const v = usd * per
-  const digits = Math.abs(v) >= 1000 || per > 1 ? 0 : 0
-  const body = Math.abs(v).toLocaleString('en-US', { maximumFractionDigits: digits })
-  const sign = signed ? (v < 0 ? MINUS : '+') : v < 0 ? MINUS : ''
-  return cur === 'USD' ? `${sign}$${body}` : `${sign}${body} ${cur}`
+  const body = Math.abs(usd).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  const sign = signed ? (usd < 0 ? MINUS : '+') : usd < 0 ? MINUS : ''
+  return `${sign}$${body}`
 }
 
 /** A signed dollar figure. The sign is the point, so it is never dropped. */
-/**
- * The account unit shared by every run on screen, or null when they disagree.
- *
- * `accountMoney` converts one book's USD into that book's account units. A
- * total folded across several books can only be shown in those units if the
- * books agree on them — they all do today, every market block in
- * `config/default.toml` saying USC and 100 — but "they all do today" is the
- * kind of assumption this desk gets caught by. Disagreement falls back to USD,
- * which is what the numbers already are.
+/*
+ * `sharedUnit` stood here and went with the conversion it served. It decided
+ * whether every run on screen agreed on an account unit, so a folded total
+ * could be shown in it. Nothing converts any more, so there is nothing to
+ * agree about: a total of paper money is paper money.
  */
-function sharedUnit(runs: PaperRun[]): { account_currency?: string; units_per_usd?: number } | null {
-  const first = runs[0]
-  if (!first) return null
-  for (const r of runs) {
-    if (r.account_currency !== first.account_currency || r.units_per_usd !== first.units_per_usd) return null
-  }
-  return first
-}
 
 /*
  * `signedUsd` stood here and is deliberately gone rather than left unused.
@@ -555,18 +553,20 @@ function openResult(
   if (!held || mark == null) return null
   const usd = (mark - held.entry_price) * held.usd_per_point * (held.side === 'LONG' ? 1 : -1)
   if (!Number.isFinite(usd)) return null
-  return { label: accountMoney(usd, run), positive: usd >= 0 }
+  return { label: paperMoney(usd), positive: usd >= 0 }
 }
 
 /**
  * Money in the BROKER's currency, which is not the paper book's.
  *
- * No conversion, on purpose: `profit`, `pnl`, `balance` and `equity` on a
- * `PaperBroker` are already in the account's own units, and passing one of
- * them through `accountMoney` would multiply it by `units_per_usd` a second
- * time. The sign comes from `toLocaleString`, so it is an ASCII hyphen where
- * `accountMoney` writes U+2212 - see the note there; the two glyphs are how a
- * misrouted number announces itself on screen.
+ * No conversion, and nothing in this file converts any more. `profit`, `pnl`,
+ * `balance` and `equity` on a `PaperBroker` are already in the account's own
+ * units; `paperMoney` is for the BOOK's dollars and these are not those.
+ *
+ * The sign comes from `toLocaleString`, so it is an ASCII hyphen where
+ * `paperMoney` writes U+2212 - see the note there. The two glyphs are now how
+ * a reader tells ACCOUNT money from PAPER money where the position card puts
+ * them inches apart.
  */
 function brokerMoney(v: number | null | undefined, currency: string | null | undefined): string {
   if (v == null || !Number.isFinite(v)) return '--'
@@ -921,7 +921,7 @@ function SummaryStrip({
           <span className="num">
             net{' '}
             <span className={stats.net > 0 ? 'text-lc' : stats.net < 0 ? 'text-lp' : 'text-foreground'}>
-              {accountMoney(stats.net, sharedUnit(runs))}
+              {paperMoney(stats.net)}
             </span>
           </span>
           <span className="num" title="Closed since 00:00 UTC, counted from the last ten fills each run reports.">
@@ -1159,7 +1159,7 @@ function RunsList({
                     run.net_usd === 0 && 'text-muted-foreground',
                   )}
                 >
-                  {accountMoney(run.net_usd, run)}
+                  {paperMoney(run.net_usd)}
                 </span>
               )}
             </span>
@@ -1929,7 +1929,7 @@ function OpenBadge({ run, tick }: { run: PaperRun; tick?: LiveBar }) {
     >
       <span aria-hidden>{long ? '\u25b2' : '\u25bc'}</span>
       {open.side.toLowerCase()}
-      <span className={usd >= 0 ? 'text-lc' : 'text-lp'}>{accountMoney(usd, run)}</span>
+      <span className={usd >= 0 ? 'text-lc' : 'text-lp'}>{paperMoney(usd)}</span>
     </span>
   )
 }
@@ -1968,7 +1968,14 @@ function pendingFill(
   return live.time === pending.decided_on + step && Number.isFinite(live.open) ? live.open : null
 }
 
-function PositionBar({ run, live }: { run: PaperRun; live: LiveBar | null | undefined }) {
+function PositionBar({ run, live, broker }: {
+  run: PaperRun
+  live: LiveBar | null | undefined
+  /** The account mirroring this book, when one is selected. Its position is a
+   *  DIFFERENT trade from the book's - own entry, `lot_scale` size - and the
+   *  difference between them is the measurement the mirror exists for. */
+  broker?: PaperBroker | null
+}) {
   const open = run.open
   if (!open) {
     // Flat and committed are different states and must not look alike. The
@@ -2014,7 +2021,7 @@ function PositionBar({ run, live }: { run: PaperRun; live: LiveBar | null | unde
               const m = marginOf(lots, fill, run)
               return (
                 <span className="num" title="one percent of equity against the distance to the stop, before the notional cap">
-                  ≈{num(lots, 2)} lots{m ? ` · margin ${accountMoney(m.used, run, false)}` : ''}
+                  ≈{num(lots, 2)} lots{m ? ` · margin ${paperMoney(m.used, false)}` : ''}
                 </span>
               )
             })()}
@@ -2070,25 +2077,68 @@ function PositionBar({ run, live }: { run: PaperRun; live: LiveBar | null | unde
           if (!m) return null
           return (
             /* `m.used` is USD — `marginOf` divides a USD notional by leverage.
-               The title said `${m.used} of ${account_currency}`, so the badge
+               The title said `${m.used} of <account currency>`, so the badge
                read "margin 22 USC" while its own tooltip read "margin used
                0.22 of USC". Both numbers are named now. */
             <span
               className="text-muted-foreground/70 num text-[10px]"
-              title={`margin used ${accountMoney(m.used, run, false)} (${m.used.toFixed(2)} USD); a margin call comes at a level of 30%`}
+              title={`margin used ${paperMoney(m.used, false)} (${m.used.toFixed(2)} USD); a margin call comes at a level of 30%`}
             >
-              margin {accountMoney(m.used, run, false)} ({m.pct.toFixed(2)}% · level{' '}
+              paper margin {paperMoney(m.used, false)} ({m.pct.toFixed(2)}% · level{' '}
               {m.level > 9999 ? '>9999' : m.level.toFixed(0)}%)
             </span>
           )
         })()}
         <span className={cn('num ml-auto text-[15px] font-semibold', usd >= 0 ? 'text-lc' : 'text-lp')}>
-          {accountMoney(usd, run)}
+          {paperMoney(usd)}
         </span>
+        {/* Named, because an account's own number may sit inches below it and
+            the two are different trades. A bare figure here was read as the
+            account's and as a contradiction. */}
+        <span className="text-muted-foreground/70 text-[10px] tracking-wide uppercase">paper</span>
         {r != null && (
           <span className={cn('num text-[11px]', r >= 0 ? 'text-lc' : 'text-lp')}>{signedR(r)}</span>
         )}
       </div>
+
+      {/* The ACCOUNT's own trade on this book, beside the book's, in the
+          account's currency and never converted into it.
+          
+          Both are shown because the difference between them IS the slippage
+          this mirror exists to measure - and because showing only one of them
+          while the other exists is what let a paper figure be read as the
+          account's. They differ by design: a different entry, and `lot_scale`
+          of the size. The line says so rather than leaving a reader to
+          reconcile two numbers that were never meant to agree. */}
+      {broker && (
+        <div className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-1 border-t pt-1.5 text-[10px]">
+          <span className="text-muted-foreground tracking-wide uppercase">account</span>
+          {broker.position ? (
+            <>
+              <span className={cn('num', (broker.position.side ?? '') === 'LONG' ? 'text-lc' : 'text-lp')}>
+                {(broker.position.side ?? '').toLowerCase()}
+              </span>
+              <span className="num">{num(broker.position.lots ?? 0, 2)} lots</span>
+              <span className="num">from {quote(broker.position.entry_price)}</span>
+              <span
+                className={cn('num font-medium', (broker.position.profit ?? 0) >= 0 ? 'text-lc' : 'text-lp')}
+              >
+                {brokerMoney(broker.position.profit, broker.currency)}
+              </span>
+              <span className="text-muted-foreground/70">
+                a different trade: its own entry
+                {broker.lot_scale != null ? `, ×${broker.lot_scale} of the book's size` : ''}
+              </span>
+            </>
+          ) : (
+            /* Said, not omitted. A missing line would read as "the same as
+               above" on a panel whose whole point is that the two differ. */
+            <span className="text-muted-foreground">
+              flat — this account holds nothing on this book
+            </span>
+          )}
+        </div>
+      )}
 
       {span ? (
         <>
@@ -2212,7 +2262,7 @@ function Drilldown({
         {/* The two columns that left the runs table when it became a rail
             picker: both describe this one run rather than compare it to the
             others, so this is where they belonged all along. */}
-        <PositionBar run={run} live={summary?.live ?? detail.live} />
+        <PositionBar run={run} live={summary?.live ?? detail.live} broker={broker} />
         <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
           <span className="text-muted-foreground text-[10px] tracking-wide uppercase">guards</span>
           <GuardChips run={run} />
@@ -2232,7 +2282,7 @@ function Drilldown({
             money={(v) => `$${Math.round(v).toLocaleString('en-US')}`}
           />
           <p className="text-muted-foreground num mt-1 text-[10px]">
-            {run.trades} closed{run.open ? ' · 1 open' : ''} · net {accountMoney(run.net_usd, run)} ·{' '}
+            {run.trades} closed{run.open ? ' · 1 open' : ''} · net {paperMoney(run.net_usd)} ·{' '}
             {run.profit_factor == null ? 'no PF yet' : `PF ${num(run.profit_factor)}`} ·{' '}
             {run.bars_seen} bars seen{run.gaps > 0 ? ` · ${run.gaps} gap${run.gaps === 1 ? '' : 's'}` : ''}
             {run.trades > 0 && run.trades < 30 && (
@@ -2688,10 +2738,10 @@ function AccountEquity({ broker }: { broker: PaperBroker }) {
           No curve yet — this account has closed no trade on this book.
         </p>
       ) : (
-        /* The ACCOUNT's own units, which is USC on the funded cent account. No
-           conversion: `balance` and `pnl` arrive in the account's currency
-           already, and passing them through `accountMoney` would multiply by
-           `units_per_usd` a second time. */
+        /* The ACCOUNT's own units, which is USC on the funded cent account.
+           No conversion: `balance` and `pnl` arrive in the account's currency
+           already. `paperMoney` is for the BOOK's dollars and would be the
+           wrong formatter here, not merely the wrong scale. */
         <EquityCurve
           points={points}
           money={(v) => `${Math.round(v).toLocaleString('en-US')} ${broker.currency ?? ''}`.trim()}
@@ -3130,7 +3180,7 @@ function FillsTable({
                   {fill.exitReason.toLowerCase().replace(/_/g, ' ')}
                 </span>
                 <span className={cn('num text-right', fill.pnlUsd >= 0 ? 'text-lc' : 'text-lp')}>
-                  {accountMoney(fill.pnlUsd, detail.run)}
+                  {paperMoney(fill.pnlUsd)}
                 </span>
                 <span className={cn('num text-right', fill.r >= 0 ? 'text-lc' : 'text-lp')}>{signedR(fill.r)}</span>
               </button>
@@ -3288,7 +3338,7 @@ function FillAccount({ fill, run }: { fill: BacktestTrade; run: PaperRun }) {
         <span className="num text-foreground">{quote(fill.exitPrice)}</span> on{' '}
         <span className="num">{shortStamp(fill.exitTime)}</span>, held{' '}
         <span className="num">{heldFor(fill.holdMs)}</span>, for{' '}
-        <span className={cn('num', fill.pnlUsd >= 0 ? 'text-lc' : 'text-lp')}>{accountMoney(fill.pnlUsd, run)}</span> —{' '}
+        <span className={cn('num', fill.pnlUsd >= 0 ? 'text-lc' : 'text-lp')}>{paperMoney(fill.pnlUsd)}</span> —{' '}
         <span className={cn('num', fill.r >= 0 ? 'text-lc' : 'text-lp')}>{signedR(fill.r)}</span>.
       </p>
 
