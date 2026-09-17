@@ -247,16 +247,46 @@ PROVIDERS = {
 
 # What a metered provider charges, per MILLION tokens.
 #
-# Read from the provider's own pricing page on 2026-09-16, not recalled. A
-# price that drifts is better wrong-and-dated than confidently stale, so the
-# date is here and `cost_of` returns None for anything not listed rather than
-# guessing.
+# Read from the provider's own pricing page, not recalled. A price that drifts
+# is better wrong-and-dated than confidently stale, so each line carries the
+# date it was read and `cost_of` returns None for anything not listed rather
+# than guessing.
+#
+# BEING LISTED HERE IS NOT WHAT MAKES A CALL BILLED. The ROUTE is: the same
+# `claude-opus-5` costs dollars through the Anthropic API and costs quota
+# through the Claude Code CLI, and `cost_of` asks which one before it prices
+# anything. See the note there - getting this backwards would put a dollar
+# figure beside a plan call, which is the one error that makes a campaign look
+# cheaper than it is.
 #
 # DeepSeek bills peak and off-peak: peak is 01:00-04:00 and 06:00-10:00 UTC,
 # Monday to Friday, and off-peak is exactly half.
 PRICES = {
+    # 2026-09-16, deepseek's pricing page.
     "deepseek-flash": {"in": 0.30, "cached_in": 0.006, "out": 1.20, "peaked": True},
     "deepseek-v4-pro": {"in": 1.32, "cached_in": 0.044, "out": 3.96, "peaked": True},
+    # 2026-09-17, platform.claude.com/docs/en/about-claude/pricing, model table.
+    # List prices; no batch or volume discount is applied here. The Batch API
+    # is half price and is NOT usable by this desk - a 15-minute decision
+    # cannot wait on an asynchronous queue - so it is deliberately absent
+    # rather than available to be reached for by mistake.
+    #
+    # `cache_write` is the 5-MINUTE write rate. The 1-hour TTL writes at
+    # $10.00 and would be the right column if a caller ever asks for it; at a
+    # 15-minute cadence the 5-minute TTL expires between every call, so today
+    # every write here is a cold one.
+    #
+    # Opus 4.1 and Opus 4 were $15/$75 and are retired. If a number in this
+    # block looks implausibly low against that memory, it is the generation
+    # that changed, not the table.
+    "claude-opus-5": {"in": 5.00, "cached_in": 0.50, "cache_write": 6.25, "out": 25.00},
+    # OpenAI is deliberately absent. Its prices were not sourced the way these
+    # two were - from the page, on a dated day - and a guessed price in a table
+    # whose whole point is that it is not guessed would be worse than the None
+    # that an unlisted model already returns. There is a second reason it would
+    # not work yet even if the numbers were here: `ask_codex` can only report a
+    # bare `total`, with no input/output split (see there), and `cost_of` needs
+    # the split to price anything.
 }
 
 
@@ -268,21 +298,59 @@ def is_peak(when: float | None = None) -> bool:
     return 1 <= t.hour < 4 or 6 <= t.hour < 10
 
 
-def cost_of(model: str, usage: dict) -> float | None:
-    """Dollars for one call, or None when the model is not billed per token.
+def cost_of(model: str, usage: dict, provider: str | None = None) -> float | None:
+    """Dollars for one call, or None when the call was not billed per token.
 
     A subscription returns None on purpose rather than zero: a plan call is not
     free, it draws on a quota, and showing $0.00 beside it would claim
     something untrue. Tokens are still counted for those — see `ask`.
+
+    THE ROUTE DECIDES, NOT THE MODEL NAME. `claude-opus-5` is in `PRICES` and
+    is still unpriced here, because this desk reaches it through the Claude
+    Code CLI on the owner's plan. The price is listed so that the day a
+    campaign is pointed at the metered API the bill appears immediately rather
+    than being discovered a month later; until that day it must not appear,
+    because a dollar figure beside a plan call understates what the campaign
+    actually costs and makes the plan look free. It is not free. It is paid
+    for somewhere this function cannot see.
+
+    `provider` is what the caller resolved, and it is the only thing that
+    knows about `--provider anthropic` forcing a CLI-named model onto the
+    metered API. Left out, the provider is derived from the name, which is
+    correct for every route this desk runs today and errs towards None.
+
+    ONE LINE ELSEWHERE COMPLETES THIS. `ai_trader.py` calls
+    `cost_of(args.model, usage)` and has the resolved provider in hand;
+    passing it as the third argument is what makes a metered Claude run report
+    its bill. That file belongs to another change in flight, so it is named
+    here rather than edited: without it, forcing `--provider anthropic` bills
+    real money and logs `cost_usd: null`.
     """
     p = PRICES.get(model.split("/", 1)[-1])
     if not p or not usage:
         return None
+    if provider is None:
+        try:
+            provider = provider_of(model)
+        except ValueError:
+            return None
+    # A CLI provider is a subscription by construction: there is no key, the
+    # account's own credentials go in, and the tokens come off a quota.
+    if PROVIDERS.get(provider, {}).get("cli"):
+        return None
     scale = 1.0 if (p.get("peaked") and is_peak()) else (0.5 if p.get("peaked") else 1.0)
     cached = usage.get("cached_input") or 0
-    fresh = max(0, (usage.get("input") or 0) - cached)
+    # Cache WRITES bill above base input — $6.25 against $5.00 on Opus 5 — and
+    # are reported separately only where the provider separates them. Absent,
+    # they fall back to the base rate, which is what DeepSeek charges for a
+    # miss and is what every caller got before this key existed.
+    written = usage.get("cache_write") or 0
+    fresh = max(0, (usage.get("input") or 0) - cached - written)
     out = usage.get("output") or 0
-    return (fresh * p["in"] + cached * p["cached_in"] + out * p["out"]) * scale / 1_000_000.0
+    return (fresh * p["in"]
+            + cached * p["cached_in"]
+            + written * p.get("cache_write", p["in"])
+            + out * p["out"]) * scale / 1_000_000.0
 
 
 def key_for(provider: str) -> str:
@@ -489,9 +557,18 @@ def ask_cli(prompt: str, model: str, timeout: float, usage: dict | None = None) 
         # input, because they are input — the point of showing this at all is
         # that a CLI call spends twenty times what the question is worth.
         cached = int(u.get("cache_read_input_tokens") or 0)
+        # Cache WRITES are kept apart from fresh input, which they were not
+        # until 2026-09-17: both were folded into `input` and nothing could
+        # tell them apart afterwards. They do not cost the same - a 5-minute
+        # write is $6.25 against $5.00 base on Opus 5 - so a log that merges
+        # them can only ever produce a lower bound for the bill. `input` still
+        # carries the total, unchanged, so every reader of the old shape reads
+        # the same number it always did.
+        written = int(u.get("cache_creation_input_tokens") or 0)
         usage.update({
-            "input": int(u.get("input_tokens") or 0) + cached + int(u.get("cache_creation_input_tokens") or 0),
+            "input": int(u.get("input_tokens") or 0) + cached + written,
             "cached_input": cached,
+            "cache_write": written,
             "output": int(u.get("output_tokens") or 0),
         })
     text = str(out.get("result") or "")
