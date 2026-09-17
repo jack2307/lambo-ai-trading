@@ -298,6 +298,35 @@ def main() -> int:
     check("the alert carries the cause when one was fetched",
           any("RuntimeError" in l for l in out12), True)
 
+    print("\n13. the account holding a different shape from the book")
+    st11: dict = {}
+    def with_broker(**kw):
+        return book("xau-ema", last=live, brokers=[dict({"account": "vantage-cent",
+                                                         "at": now - 5_000}, **kw)])
+    check("no drift field at all is inert - it is not on the wire yet",
+          T.drifts(with_broker(), st11, now), [])
+    check("and an explicit null is inert too",
+          T.drifts(with_broker(drift=None), st11, now), [])
+    d1 = T.drifts(with_broker(drift="2 positions open on one book (tickets 51, 52)"), st11, now)
+    check("a drift is announced once", len(d1), 1)
+    check("quoting the executor's own sentence, tickets and all",
+          "tickets 51, 52" in d1[0], True)
+    check("and carrying the bound rather than an alarm",
+          "clears when the book next goes flat" in d1[0], True)
+    check("and the thing the bound implies",
+          "running twice" in d1[0], True)
+    check("the same drift next poll is silent",
+          T.drifts(with_broker(drift="2 positions open on one book (tickets 51, 52)"), st11, now), [])
+    d2 = T.drifts(with_broker(drift="3 positions open on one book (tickets 51, 52, 53)"), st11, now)
+    check("a drift that CHANGES shape is announced again", len(d2), 1)
+    back3 = T.drifts(with_broker(), st11, now)
+    check("and the recovery is announced when it clears",
+          len(back3) == 1 and "matches the book again" in back3[0], True)
+    stale_only = book("x", last=live, brokers=[{"account": "a", "at": now - 10 * 60_000,
+                                                "drift": "holding 0.03 lots"}])
+    check("a mirror that stopped reporting is not read for drift",
+          T.drifts(stale_only, {}, now), [])
+
     print(f"\n{'all checks passed' if not FAIL else str(FAIL) + ' CHECK(S) FAILED'}")
     return 1 if FAIL else 0
 

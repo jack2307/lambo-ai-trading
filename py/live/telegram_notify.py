@@ -313,6 +313,61 @@ def funded_books(accounts: list) -> set:
     return out
 
 
+def drifts(run: dict, state: dict, now_ms: float) -> list[str]:
+    """The account holding a different shape from the book, per account.
+
+    `drift` is recomputed by the executor every poll from what is actually
+    held, so unlike `blocked` it can never be stale - and unlike `blocked` it
+    is NOT set by this path, so an alert hung on `blocked` would never see it.
+    It arrives as the executor's own sentence, already naming tickets and lots,
+    so it is quoted rather than summarised: "2 positions open on one book
+    (tickets 51, 52)" sends someone to the right place and a count does not.
+
+    WHAT THE MESSAGE HAS TO SAY, and it is not "go and fix this". The executor
+    reports and deliberately does not correct, because two auto-correcting
+    executors on one run id both close one position, see the account flat, and
+    both open - an oscillation at the poll interval paying the spread twice a
+    cycle. The drift also clears itself the next time the book goes flat, since
+    that path closes everything of its magic. So the bound is ONE TRADE, and
+    that bound is what stops this reading like an emergency. What is worth
+    saying instead is the thing the bound implies: if it does NOT clear when
+    the book next goes flat, something is running twice.
+
+    Deduplicated on the sentence, not on a flag, so a drift that CHANGES shape
+    - one extra position becoming two - is announced again while a steady one
+    stays quiet.
+
+    Tolerant of the field being absent: it is written to broker.json today but
+    is not on the wire until `drift` is added to `BrokerDto`. Until then every
+    broker reads None and this says nothing, which is the correct inert
+    behaviour for an alert whose input has not arrived.
+    """
+    out: list[str] = []
+    seen: dict = state.setdefault("drift", {})
+    fresh = mirrors(run, now_ms)
+    for b in fresh:
+        acct = str(b.get("account") or "?")
+        key = f"{acct}/{run.get('id')}"
+        why = b.get("drift")
+        why = str(why).strip() if why else ""
+        before = seen.get(key) or ""
+        if why == before:
+            continue
+        seen[key] = why
+        if why:
+            out.append(
+                f"⚖️ <b>{esc(str(run.get('id')))}</b> on <b>{esc(acct)}</b> — "
+                f"{esc(why)}. Reported, not corrected: it clears when the book next goes "
+                f"flat. If it does not clear then, something is running twice."
+            )
+        elif before:
+            out.append(
+                f"✅ <b>{esc(str(run.get('id')))}</b> on <b>{esc(acct)}</b> — "
+                f"the account matches the book again."
+            )
+    return out
+
+
 def cause_of(decisions: list) -> str:
     """Why a decider stopped answering, in its own words, short enough to send.
 
@@ -809,6 +864,12 @@ def changes(runs: list, state: dict, now_ms: float, funded: set | None = None,
             # once per poll: 10027 repeats every fifteen seconds for as long as
             # a button stays off, and an alert channel that repeats itself is
             # one nobody reads.
+            # The account holding a different shape from the book. Read from
+            # the snapshot rather than the event stream: it is recomputed every
+            # poll and clears itself, and a self-clearing condition is awkward
+            # to state correctly from a log of changes.
+            out += drifts(r, state, now_ms)
+
             if refused and refused != was.get("refused"):
                 out.append(f"\u26d4 <b>{esc(rid)}</b> — {esc(refused)}")
             elif was.get("refused") and not refused:
