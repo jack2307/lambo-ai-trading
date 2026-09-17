@@ -36,7 +36,7 @@
 //! (`fd-backtest/tests/paper_parity.rs`).
 
 use std::collections::BTreeMap;
-use std::io::{BufRead, Read, Seek, SeekFrom, Write};
+use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -565,8 +565,20 @@ fn is_event(line: &str) -> bool {
 /// size these files are — the largest `fills.jsonl` on this desk is 8.5 KB —
 /// and stops being affordable on a schedule nobody is watching, because
 /// nothing rotates it. Measured 2026-09-17 on a 2 MB file: 8.7 ms whole
-/// against 350 us for the last two hundred events. See [`event_count`] for
-/// why rotation is not the answer here and what the growth actually is.
+/// against 350 us for the last two hundred events.
+///
+/// This is now the ONLY reader of `fills.jsonl` on a served route. There was a
+/// second, `event_count`, which read the whole file on every poll of
+/// `/api/paper/status` to produce a number no component, script or test ever
+/// read; it went with the `events` field it fed. The Desk's event count comes
+/// from `detail.events.length`, which is this function.
+///
+/// Rotation is not the fix for this file and the arithmetic says so. Measured
+/// 2026-09-17 across all twenty books: `fills.jsonl` grows at 60 to 470 bytes
+/// an hour, because it is written per trade and per event and not per bar —
+/// 0.5 to 4 MB a year, so twenty-five years to the 32 MiB the per-bar logs
+/// roll at. It is not the same disease as `decisions.jsonl`; it was only read
+/// wastefully, twice.
 ///
 /// The window has to grow on the count of EVENTS, not of lines, because
 /// trades are interleaved with them and are a third of the file. Growing on
@@ -587,40 +599,6 @@ fn events_of(data: &Path, id: &str, limit: usize) -> Vec<serde_json::Value> {
     let skip = out.len().saturating_sub(limit);
     out.drain(..skip);
     out
-}
-
-/// How many event lines the run's `fills.jsonl` holds. Counting needs all of
-/// them, so this one reads the whole file and there is no version of it that
-/// does not.
-///
-/// What it no longer does is build a `serde_json::Value` per line to look at
-/// one field of it. Measured 2026-09-17 on a 2 MB file of 9,867 lines — six
-/// months of the busiest book, or four years of a typical one — that is 8.7 ms
-/// against 3.7 ms. It runs once per book on every poll of
-/// `/api/paper/status`, the most frequently served route on the desk.
-///
-/// 2.5x and not more, because the line is still scanned end to end either way;
-/// what goes is the map and the strings built out of it and dropped. At the
-/// size these files are TODAY - 8.5 KB - the whole thing is 40 us and this
-/// saves 25 of them, which is not a reason to have done it. The reason is that
-/// the cost grows with the file and the file never stops growing.
-///
-/// Worth knowing before optimising this further: NOTHING READS THE NUMBER.
-/// `events` is declared on the status DTO and in `ui/src/lib/api.ts`, and no
-/// component, script or test reads it — the Desk's event count comes from
-/// `detail.events.length` on the other route. Deleting the field would remove
-/// this read entirely, and that is a change to the API's shape and to a UI
-/// file, so it is written down here rather than taken quietly.
-///
-/// Rotation is not the fix for this file and the arithmetic says so. Measured
-/// 2026-09-17 across all twenty books: `fills.jsonl` grows at 60 to 470 bytes
-/// an hour, because it is written per trade and per event and not per bar —
-/// 0.5 to 4 MB a year, so twenty-five years to the 32 MiB the per-bar logs
-/// roll at. It is not the same disease as `decisions.jsonl`; it is only read
-/// wastefully.
-fn event_count(data: &Path, id: &str) -> usize {
-    let Ok(file) = std::fs::File::open(run_dir(data, id).join("fills.jsonl")) else { return 0 };
-    std::io::BufReader::new(file).lines().map_while(Result::ok).filter(|line| is_event(line)).count()
 }
 
 /// One closed trade as `trades.jsonl` carries it: the trade itself, whole, and
@@ -1018,10 +996,6 @@ pub struct RunStatus {
     /// Points on the book's equity curve (one per closed trade). The curve
     /// itself is on `GET /api/paper/run/{id}`; the status stays light.
     pub equity_curve: usize,
-    /// Event lines in the run's `fills.jsonl` other than trades (started,
-    /// gaps, refusals, guard closes, stopped). The lines themselves are on
-    /// `GET /api/paper/run/{id}`.
-    pub events: usize,
     /// The process driving this book, as it last reported. `null` when none
     /// has ever written one, which is not the same as stopped - see
     /// [`DriverDto`].
@@ -1041,10 +1015,28 @@ pub struct RunStatus {
 ///
 /// This API is Rust and cannot ask a MetaTrader terminal anything: the only
 /// process that can see the account is the executor mirroring the book, so it
-/// writes what it sees to `data/paper/<run>/broker.json` each poll and this
-/// serves the file back unchanged. Every field is optional because the file is
+/// writes what it sees to `data/live/<account>/<run>/broker.json` each poll
+/// and this serves it back. Every field is optional because the file is
 /// written by another program - a shape that drifts should cost a field, not
 /// the whole account.
+///
+/// Two corrections to that sentence, both made 2026-09-17 after it was read
+/// as a promise it does not keep.
+///
+/// The path was `data/paper/<run>/broker.json` and has not been since the
+/// live side moved out into its own directory per account.
+///
+/// And it said "serves the file back unchanged", which it does not: the file
+/// is parsed INTO this struct and the struct is what is serialised, so a
+/// field the executor writes and this does not declare never reaches the
+/// browser. That is not a bug - unknown fields are ignored rather than
+/// refused, which is what keeps the account view alive when the executor is
+/// deployed ahead of the API, and `broker_snapshot_tests` pins both halves.
+/// It does mean that surfacing something new the executor reports takes a
+/// field here, a field in `ui/src/lib/api.ts`, and somewhere on the account
+/// view to show it. `server_offset_ms` and `drift`, added to the executor's
+/// snapshot on 2026-09-17, are currently dropped here for exactly this
+/// reason.
 ///
 /// `at` is the part that matters. A stale file is a stopped executor, not a
 /// live account, and the client decides what counts as stale rather than
@@ -1348,7 +1340,6 @@ fn status_of(data: &Path, run: &PaperRun, rules: &TradingRules, guards: Option<&
         live,
         last_fills: book.trades[skip..].iter().map(TradeDto::from).collect(),
         equity_curve: book.equity_curve.len(),
-        events: event_count(data, &run.config.id()),
         brokers: brokers_of(data, &run.config.id()),
         driver: driver_of(data, &run.config.id()),
         paused: run.paused,
@@ -3396,7 +3387,7 @@ mod tail_tests {
     }
 }
 
-/// [`events_of`] and [`event_count`] over a `fills.jsonl` with trades
+/// [`events_of`] over a `fills.jsonl` with trades
 /// interleaved through it, which is the only shape it ever has.
 #[cfg(test)]
 mod event_tests {
@@ -3459,7 +3450,6 @@ mod event_tests {
         let tail = events_of(&data, "book", MAX_DETAIL_EVENTS);
         let cut = whole.len().saturating_sub(MAX_DETAIL_EVENTS);
         assert_eq!(tail, whole[cut..], "the tail is the end of what the full read returned");
-        assert_eq!(event_count(&data, "book"), whole.len());
     }
 
     #[test]
@@ -3470,7 +3460,6 @@ mod event_tests {
         // to byte 0 to find that out rather than stopping when it runs out of
         // chunks.
         assert_eq!(events_of(&data, "book", MAX_DETAIL_EVENTS).len(), 6);
-        assert_eq!(event_count(&data, "book"), 6);
     }
 
     #[test]
@@ -3478,7 +3467,6 @@ mod event_tests {
         let dir = tempfile::tempdir().expect("temp dir");
         let data = dir.path().to_path_buf();
         assert!(events_of(&data, "never-ran", 50).is_empty());
-        assert_eq!(event_count(&data, "never-ran"), 0);
     }
 
     #[test]
@@ -3501,7 +3489,6 @@ mod event_tests {
         let whole = every_line(&data, "book");
         assert_eq!(whole.iter().map(|e| i_of(e, "at")).collect::<Vec<_>>(), vec![1, 3, 4, 8]);
         assert_eq!(events_of(&data, "book", 50), whole);
-        assert_eq!(event_count(&data, "book"), 4);
     }
 
     #[test]
@@ -3513,7 +3500,6 @@ mod event_tests {
         // is the honest worst case of growing on events rather than lines, and
         // it is the same cost the full read always paid.
         assert!(events_of(&data, "book", 50).is_empty());
-        assert_eq!(event_count(&data, "book"), 0);
     }
 }
 
@@ -3698,14 +3684,135 @@ mod tail_bench {
         }
     }
 
-    /// The receipt for the numbers in [`event_count`] and [`events_of`].
+    /// What happens to a `broker.json` carrying fields this binary has never heard
+/// of.
+///
+/// Written 2026-09-17, the day the executor started writing `server_offset_ms`
+/// and `drift` into every snapshot. The API and the executor are separate
+/// programs that deploy separately, so one of them is always ahead: the
+/// interesting question is not what happens when they agree, it is what
+/// happens in the hours when they do not.
+#[cfg(test)]
+mod broker_snapshot_tests {
+    use super::*;
+
+    /// A snapshot as the executor writes it TODAY, including the two fields
+    /// added in 786a2e5 that this DTO does not declare.
+    fn snapshot_from_a_newer_executor() -> String {
+        json!({
+            "account": "vantage-cent",
+            "at": 1_789_650_000_000_i64,
+            "login": 33_705_331,
+            "server": "VantageMarkets-Live 21",
+            "demo": false,
+            "currency": "USC",
+            "balance": 10_000.0,
+            "equity": 9_980.0,
+            "symbol": "XAUUSD.sc",
+            "book_side": "LONG",
+            "book_lots": 0.05,
+            "realised": -20.0,
+            "closed": 3,
+            "fills": [],
+            "position": null,
+            "blocked": null,
+            "standing_out": null,
+            // The two this binary has never heard of. 10800000 is the broker
+            // on +3h, which is what it should read while Vantage is on New
+            // York summer time.
+            "server_offset_ms": 10_800_000_i64,
+            "drift": "1 position holding 0.05 where the book wants 0.10",
+        })
+        .to_string()
+    }
+
+    fn account_with(dir: &tempfile::TempDir, account: &str, run: &str, body: &str) -> PathBuf {
+        let data = dir.path().to_path_buf();
+        let here = data.join("live").join(account).join(run);
+        std::fs::create_dir_all(&here).expect("mkdir");
+        std::fs::write(here.join("broker.json"), body).expect("write");
+        data
+    }
+
+    #[test]
+    fn a_snapshot_from_a_newer_executor_still_parses() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        let data = account_with(&dir, "vantage-cent", "xau-ema", &snapshot_from_a_newer_executor());
+
+        // The failure this guards against is the whole account view going
+        // blank on a desk that is mirroring real money, because the executor
+        // was deployed before the API. `serde` ignores unknown fields unless
+        // a container asks it not to, and nothing in this workspace uses
+        // `deny_unknown_fields` - this test is what makes that a decision
+        // rather than a default nobody checked.
+        let brokers = brokers_of(&data, "xau-ema");
+        assert_eq!(brokers.len(), 1, "the account must still appear");
+        assert_eq!(brokers[0].account, "vantage-cent");
+        assert_eq!(brokers[0].login, Some(33_705_331));
+        assert_eq!(brokers[0].balance, Some(10_000.0));
+        assert_eq!(brokers[0].book_lots, Some(0.05));
+        assert_eq!(brokers[0].closed, Some(3));
+    }
+
+    #[test]
+    fn but_the_api_drops_the_fields_it_does_not_declare() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        let data = account_with(&dir, "vantage-cent", "xau-ema", &snapshot_from_a_newer_executor());
+
+        // `brokers_of` parses into `BrokerDto` and the status route serialises
+        // the DTO, so what reaches the browser is the struct and not the file
+        // - whatever the module comment's "serves the file back unchanged"
+        // suggests. So these two are not merely unrendered, they never leave
+        // the process, and adding them to `PaperBroker` in `ui/src/lib/api.ts`
+        // alone would declare a field that never arrives.
+        //
+        // Surfacing them is a real job and a deliberate one: a DTO field, a
+        // TS field and something on the account view that shows them.
+        // Recorded here so that the next person finds the state was chosen.
+        let served = serde_json::to_value(&brokers_of(&data, "xau-ema")[0]).expect("serialise");
+        assert!(served.get("server_offset_ms").is_none(), "not carried: {served}");
+        assert!(served.get("drift").is_none(), "not carried: {served}");
+        assert_eq!(served["login"], 33_705_331, "and everything declared still is");
+    }
+
+    #[test]
+    fn a_snapshot_from_an_older_executor_still_parses_too() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        // The other direction, which is the state the desk is in right now:
+        // the API deployed ahead of the executors, so the fields the DTO
+        // declares are simply absent. `#[serde(default)]` is what makes this
+        // a missing reading rather than a refused file.
+        let thin = json!({ "at": 1_789_650_000_000_i64, "login": 26_108_386 }).to_string();
+        let data = account_with(&dir, "vantage-demo", "xau-ema", &thin);
+        let brokers = brokers_of(&data, "xau-ema");
+        assert_eq!(brokers.len(), 1);
+        assert_eq!(brokers[0].balance, None, "absent is not zero");
+        assert_eq!(brokers[0].closed, None);
+    }
+
+    #[test]
+    fn a_snapshot_that_is_not_json_costs_its_own_account_and_no_other() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        let data = account_with(&dir, "vantage-cent", "xau-ema", &snapshot_from_a_newer_executor());
+        let torn = data.join("live").join("vantage-demo").join("xau-ema");
+        std::fs::create_dir_all(&torn).expect("mkdir");
+        std::fs::write(torn.join("broker.json"), "{\"at\": 178965000").expect("write");
+
+        // A half-written snapshot is one account missing, not an empty desk.
+        let brokers = brokers_of(&data, "xau-ema");
+        assert_eq!(brokers.len(), 1);
+        assert_eq!(brokers[0].account, "vantage-cent");
+    }
+}
+
+/// The receipt for the numbers in [`events_of`].
     ///
     /// `fills.jsonl` shaped as the real ones are - a third trades, the rest
     /// events, about 210 bytes a line - at 2 MB, which is six months of the
     /// busiest book on the desk or four years of a typical one.
     #[test]
     #[ignore]
-    fn counting_and_tailing_events_against_reading_every_line() {
+    fn tailing_events_against_reading_every_line() {
         let dir = tempfile::tempdir().expect("temp dir");
         let data = dir.path().to_path_buf();
         let run = run_dir(&data, "book");
@@ -3732,7 +3839,6 @@ mod tail_bench {
         };
 
         let mut old = std::time::Duration::MAX;
-        let mut new = std::time::Duration::MAX;
         let mut tail = std::time::Duration::MAX;
         for _ in 0..5 {
             let t = std::time::Instant::now();
@@ -3740,17 +3846,13 @@ mod tail_bench {
             old = old.min(t.elapsed());
 
             let t = std::time::Instant::now();
-            let m = event_count(&data, "book");
-            new = new.min(t.elapsed());
-            assert_eq!(n, m, "the count changed");
-
-            let t = std::time::Instant::now();
             let k = events_of(&data, "book", MAX_DETAIL_EVENTS).len();
             tail = tail.min(t.elapsed());
+
+            assert!(n >= k, "the tail cannot hold more than the file does");
             assert_eq!(k, MAX_DETAIL_EVENTS);
         }
         println!("fills.jsonl {} bytes {rows} lines", body.len());
-        println!("  count: every line into a Value {old:?} -> kind only {new:?}");
         println!("  detail: whole file {old:?} -> tail of {MAX_DETAIL_EVENTS} events {tail:?}");
     }
 

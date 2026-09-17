@@ -324,9 +324,8 @@ export interface PaperRun {
   live: LiveBar | null
   /** The last ten closed trades. The whole book is on `/api/paper/run/{id}`. */
   last_fills: BacktestTrade[]
-  /** On `/status` these two are *counts*, kept light; the detail route carries the rows. */
+  /** On `/status` this is a *count*, kept light; the detail route carries the rows. */
   equity_curve?: number
-  events?: number
   /**
    * The broker accounts this book is mirrored into, newest snapshot first —
    * empty when no executor has ever run it, and longer than one when the book
