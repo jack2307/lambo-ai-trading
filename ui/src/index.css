@@ -224,6 +224,49 @@
     }
 }
 
+/*
+ * THE DESK'S TYPE SCALE. Four steps and no fifth.
+ *
+ * Desk.tsx had seven - 9, 10, 11, 12, 13, 15 and 22 px, each chosen where it
+ * was written - so the run rows, the fills panel, the position card and the
+ * guards strip each set their own size for the same KIND of thing and the page
+ * read as four panels built separately. These are the four kinds:
+ *
+ *   fd-display  the one number a panel is ABOUT - the live price, a position's
+ *               live result. One size, so a card's subject and the chart's
+ *               subject carry the same weight.
+ *   fd-body     values a person reads off: prices, run ids, row text.
+ *   fd-label    the secondary half of a row - what a value is, beside it.
+ *   fd-caption  units, stamps, badges, the things read only when looked for.
+ *
+ * 12/11/10 is a tight ladder on purpose: this is a dense terminal and the
+ * information hierarchy is real, so collapsing it further would flatten
+ * distinctions a reader uses. The gap to 18 is where the eye lands first.
+ *
+ * Sizes live here rather than in the page so there is one place to change the
+ * scale, and so a fifth step has to be added deliberately instead of by
+ * writing another bracket.
+ */
+@utility fd-display {
+    font-size: 18px;
+    line-height: 1.1;
+}
+
+@utility fd-body {
+    font-size: 12px;
+    line-height: 1.35;
+}
+
+@utility fd-label {
+    font-size: 11px;
+    line-height: 1.35;
+}
+
+@utility fd-caption {
+    font-size: 10px;
+    line-height: 1.4;
+}
+
 @utility num {
     font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;

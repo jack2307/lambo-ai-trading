@@ -216,7 +216,7 @@ function paperMoney(usd: number | null | undefined, signed = true): string {
  * Splitting the list is what makes each number agree with what is under it.
  */
 const GROUP_LABEL =
-  'text-muted-foreground border-b py-1 text-[10px] font-medium tracking-wide uppercase'
+  'text-muted-foreground border-b py-1 fd-caption font-medium tracking-wide uppercase'
 
 const signedR = (v: number | null | undefined): string =>
   v == null || !Number.isFinite(v) ? '—' : `${v < 0 ? MINUS : '+'}${Math.abs(v).toFixed(2)}R`
@@ -767,7 +767,7 @@ export function Desk({ book }: { book: Book }) {
       <SummaryStrip runs={sorted} now={now} loading={runs === null} error={statusError} streaming={streaming} account={account} />
 
       {statusError && runs === null ? (
-        <p className="text-destructive px-3 py-4 text-[13px]">
+        <p className="text-destructive px-3 py-4 fd-body">
           Could not read the paper status: {statusError}
         </p>
       ) : runs === null ? (
@@ -904,7 +904,7 @@ function SummaryStrip({
   }
 
   return (
-    <div className="text-muted-foreground flex h-8 shrink-0 flex-wrap items-center gap-x-4 gap-y-1 border-b px-3 text-[11px]">
+    <div className="text-muted-foreground flex h-8 shrink-0 flex-wrap items-center gap-x-4 gap-y-1 border-b px-3 fd-label">
       <span className="num text-foreground">
         {runs.length} <span className="text-muted-foreground">run{runs.length === 1 ? '' : 's'}</span>
       </span>
@@ -1016,13 +1016,13 @@ function AccountTotals({ runs, now, account }: { runs: PaperRun[]; now: number; 
 
 function NoRuns() {
   return (
-    <div className="text-muted-foreground min-h-0 flex-1 px-4 py-8 text-[13px]">
+    <div className="text-muted-foreground min-h-0 flex-1 px-3 py-8 fd-body">
       <p className="text-foreground">No paper run is registered.</p>
       <p className="mt-1">Start the ten registered runs, then start the pollers that feed them closed bars:</p>
-      <pre className="border-border bg-card text-foreground mt-3 w-fit rounded-md border px-3 py-2 font-mono text-[11px] leading-relaxed">
+      <pre className="border-border bg-card text-foreground mt-3 w-fit rounded-md border px-3 py-2 font-mono fd-label leading-relaxed">
         <code>{'python py/live/start_runs.py\npowershell -File py\\live\\start_pollers.ps1'}</code>
       </pre>
-      <p className="mt-2 text-[11px]">
+      <p className="mt-2 fd-label">
         Nothing here reaches a broker: a run steps on closed bars and writes a book to disk.
       </p>
     </div>
@@ -1087,7 +1087,7 @@ function RunsList({
 
   return (
     <div role="group" aria-label="Paper runs">
-      <div className="text-muted-foreground bg-background sticky top-0 z-10 flex items-baseline gap-2 border-b px-3 py-1 text-[10px] tracking-wide uppercase">
+      <div className="text-muted-foreground bg-background sticky top-0 z-10 flex items-baseline gap-2 border-b px-3 py-1 fd-caption tracking-wide uppercase">
         <span>{account != null ? 'books on the account' : 'books'}</span>
         <span className="num text-muted-foreground/70 normal-case">
           {account != null ? runs.filter((r) => brokerLive(r, now, account)).length : runs.length}
@@ -1107,7 +1107,7 @@ function RunsList({
           <div
             key={run.id}
             className={cn(
-              'hover:bg-accent/60 flex items-start gap-1 border-b pr-3 pl-2 transition-colors last:border-0',
+              'hover:bg-accent/60 flex items-start gap-1 border-b pr-3 pl-2 transition-colors duration-100 last:border-0 motion-reduce:transition-none',
               isOn && 'bg-primary/10 shadow-[inset_2px_0_0_var(--primary)]',
               unmirrored && 'opacity-45',
               // A book that is switched off is dimmed as a whole. The badge
@@ -1133,7 +1133,7 @@ function RunsList({
                   still true and still useful - the feed is fine; what is off
                   is the book - and the two facts are left as two. */}
               {run.paused && (
-                <span className="border-border text-muted-foreground shrink-0 rounded-sm border px-1 text-[9px] tracking-wide uppercase">
+                <span className="border-border text-muted-foreground shrink-0 rounded-sm border px-1 fd-caption tracking-wide uppercase">
                   off
                 </span>
               )}
@@ -1162,7 +1162,7 @@ function RunsList({
                 </span>
               )}
             </span>
-            <span className="mt-0.5 flex items-end gap-2 text-[10px] leading-tight">
+            <span className="mt-0.5 flex items-end gap-2 fd-caption leading-tight">
               <span className="text-muted-foreground min-w-0 flex-1 truncate">
                 <DeciderTag run={run} silent={silent.has(run.id)} />
                 <span className="num">{run.strategy}</span>
@@ -1345,7 +1345,7 @@ function DeciderTag({ run, silent = false }: { run: PaperRun; silent?: boolean }
       title={title}
       style={skin}
       className={cn(
-        'mr-1 inline-flex items-center gap-1 rounded-sm border px-1 py-px align-middle text-[9px] tracking-wide uppercase',
+        'mr-1 inline-flex items-center gap-1 rounded-sm border px-1 py-px align-middle fd-caption tracking-wide uppercase',
         silent && 'border-caution/40 bg-caution/10 text-caution',
         !silent &&
           !skin &&
@@ -1390,7 +1390,7 @@ function BottomTabs({ tab, onTab }: { tab: 'fills' | 'log'; onTab: (t: 'fills' |
           onClick={() => onTab(it.id)}
           aria-pressed={tab === it.id}
           className={cn(
-            'focus-visible:ring-ring rounded-sm px-2 py-0.5 text-[10px] tracking-wide uppercase transition-colors focus-visible:ring-2 focus-visible:outline-none',
+            'focus-visible:ring-ring rounded-sm px-2 py-0.5 fd-caption tracking-wide uppercase transition-colors focus-visible:ring-2 focus-visible:outline-none',
             tab === it.id
               ? 'bg-primary/15 text-primary'
               : 'text-muted-foreground hover:text-foreground',
@@ -1452,13 +1452,13 @@ function ReasoningSection({ runId, detail }: { runId: string | null; detail: Pap
   }, [runId])
 
   if (!runId) return null
-  if (error) return <p className="text-destructive px-3 py-3 text-[12px]">Could not read the log: {error}</p>
+  if (error) return <p className="text-destructive px-3 py-3 fd-body">Could not read the log: {error}</p>
   if (!data) return <div className="px-3 py-3"><Skeleton className="h-4 w-64" /></div>
 
   const empty = data.decisions.length === 0 && data.consultations.length === 0
   if (empty) {
     return (
-      <p className="text-muted-foreground px-3 py-3 text-[12px]">
+      <p className="text-muted-foreground px-3 py-3 fd-body">
         No model has spoken about this book. Rule-based books carry an advisor
         transcript only once the panel has seen a pending trade; an AI book
         carries one from its first bar.
@@ -1529,7 +1529,7 @@ function TokenTotal({ decisions }: { decisions: Decision[] }) {
 
 function SectionHead({ children }: { children: React.ReactNode }) {
   return (
-    <h3 className="text-muted-foreground mt-2 text-[10px] tracking-wide uppercase first:mt-0">{children}</h3>
+    <h3 className="text-muted-foreground mt-2 fd-caption font-medium tracking-wide uppercase first:mt-0">{children}</h3>
   )
 }
 
@@ -1540,7 +1540,7 @@ function SidePill({ side }: { side: string }) {
   return (
     <span
       className={cn(
-        'num shrink-0 rounded-sm border px-1 text-[10px]',
+        'num shrink-0 rounded-sm border px-1 fd-caption',
         up && 'border-lc/40 bg-lc/10 text-lc',
         down && 'border-lp/40 bg-lp/10 text-lp',
         !up && !down && 'border-muted-foreground/30 text-muted-foreground',
@@ -1589,7 +1589,7 @@ function TokenChip({ d }: { d: Decision }) {
   ].filter(Boolean)
   return (
     <span
-      className="num text-muted-foreground/70 shrink-0 text-[10px]"
+      className="num text-muted-foreground/70 shrink-0 fd-caption"
       title={
         (parts.length ? parts.join(' · ') : `${total.toLocaleString()} tokens, no split reported`) +
         (d.cost_usd != null ? '' : ' — on a subscription, so no per-call price')
@@ -1609,33 +1609,33 @@ function DecisionRow({ d, outcome }: { d: Decision; outcome: BacktestTrade | nul
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        className="hover:bg-accent/40 focus-visible:ring-ring flex w-full items-start gap-2 px-2 py-1 text-left focus-visible:ring-2 focus-visible:ring-inset focus-visible:outline-none"
+        className="hover:bg-accent/60 focus-visible:ring-ring flex w-full items-start gap-2 px-2 py-1 text-left transition-colors duration-100 focus-visible:ring-2 focus-visible:ring-inset focus-visible:outline-none motion-reduce:transition-none"
       >
         <span
-          className="num text-muted-foreground shrink-0 text-[11px]"
+          className="num text-muted-foreground shrink-0 fd-label"
           title={`bar ${utcStamp(d.bar_time)} · answered ${utcStamp(d.at)}`}
         >
           {vnStamp(d.at)}
         </span>
         <SidePill side={d.side} />
-        <span className="min-w-0 flex-1 text-[12px] leading-snug">{d.reason || <span className="text-muted-foreground">(no reason given)</span>}</span>
+        <span className="min-w-0 flex-1 fd-body leading-snug">{d.reason || <span className="text-muted-foreground">(no reason given)</span>}</span>
         {outcome && (
           <span
-            className={cn('num shrink-0 rounded-sm px-1 text-[10px]', outcome.pnlUsd >= 0 ? 'bg-lc/15 text-lc' : 'bg-lp/15 text-lp')}
+            className={cn('num shrink-0 rounded-sm px-1 fd-caption', outcome.pnlUsd >= 0 ? 'bg-lc/15 text-lc' : 'bg-lp/15 text-lp')}
             title={`closed ${utcStamp(outcome.exitTime)} at ${outcome.exitPrice} — ${outcome.exitReason}`}
           >
             {signedR(outcome.r)}
           </span>
         )}
         <TokenChip d={d} />
-        <span className="num text-muted-foreground/70 shrink-0 text-[10px]">
+        <span className="num text-muted-foreground/70 shrink-0 fd-caption">
           {(d.latency_ms / 1000).toFixed(1)}s
         </span>
       </button>
       {open && (
-        <div className="border-border/60 space-y-1 border-t px-2 py-1.5 text-[11px]">
+        <div className="border-border/60 space-y-1 border-t px-2 py-1.5 fd-label">
           {outcome && (
-            <p className="text-[11px]">
+            <p className="fd-label">
               <span className="text-muted-foreground">became: </span>
               <span className="num">{quote(outcome.entryPrice)}</span>
               <span className="text-muted-foreground"> → </span>
@@ -1659,10 +1659,10 @@ function DecisionRow({ d, outcome }: { d: Decision; outcome: BacktestTrade | nul
                   ? 'posted; fills at the next bar\u2019s open'
                   : 'not posted'}
           </p>
-          <pre className="text-muted-foreground/90 overflow-x-auto rounded-sm bg-black/30 p-1.5 text-[10px] whitespace-pre-wrap">
+          <pre className="text-muted-foreground/90 overflow-x-auto rounded-sm bg-black/30 p-1.5 fd-caption whitespace-pre-wrap">
             {d.response || '(empty reply)'}
           </pre>
-          <p className="text-muted-foreground/60 text-[10px]">
+          <p className="text-muted-foreground/60 fd-caption">
             prompt kept whole: {d.prompt_chars.toLocaleString()} characters, in
             data/paper/{'{'}run{'}'}/decisions.jsonl — a summary cannot be replayed against a changed prompt.
           </p>
@@ -1681,12 +1681,12 @@ function ConsultationRow({ c }: { c: Consultation }) {
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        className="hover:bg-accent/40 focus-visible:ring-ring flex w-full items-start gap-2 px-2 py-1 text-left focus-visible:ring-2 focus-visible:ring-inset focus-visible:outline-none"
+        className="hover:bg-accent/60 focus-visible:ring-ring flex w-full items-start gap-2 px-2 py-1 text-left transition-colors duration-100 focus-visible:ring-2 focus-visible:ring-inset focus-visible:outline-none motion-reduce:transition-none"
       >
-        <span className="num text-muted-foreground shrink-0 text-[11px]" title={utcStamp(c.at)}>{vnStamp(c.at)}</span>
+        <span className="num text-muted-foreground shrink-0 fd-label" title={utcStamp(c.at)}>{vnStamp(c.at)}</span>
         <span
           className={cn(
-            'num shrink-0 rounded-sm border px-1 text-[10px]',
+            'num shrink-0 rounded-sm border px-1 fd-caption',
             c.size_factor === 0
               ? 'border-lp/40 bg-lp/10 text-lp'
               : cut
@@ -1696,18 +1696,18 @@ function ConsultationRow({ c }: { c: Consultation }) {
         >
           {c.size_factor === 0 ? 'veto' : cut ? `\u00d7${c.size_factor?.toFixed(2)}` : 'allow'}
         </span>
-        <span className="min-w-0 flex-1 text-[12px] leading-snug">{c.reason}</span>
-        <span className="num text-muted-foreground/70 shrink-0 text-[10px]">{c.turns.length} agents</span>
+        <span className="min-w-0 flex-1 fd-body leading-snug">{c.reason}</span>
+        <span className="num text-muted-foreground/70 shrink-0 fd-caption">{c.turns.length} agents</span>
       </button>
       {open && (
         <div className="border-border/60 space-y-1.5 border-t px-2 py-1.5">
-          <p className="text-muted-foreground text-[11px]">
+          <p className="text-muted-foreground fd-label">
             {c.dry_run ? 'dry run — the verdict was not applied' : c.applied ? 'applied to the book' : 'not applied'} ·{' '}
             <span className="num">{c.intent_id}</span>
           </p>
           {c.turns.map((t) => (
             <div key={t.agent} className="border-border/40 border-l-2 pl-2">
-              <p className="text-[11px]">
+              <p className="fd-label">
                 <span className="num text-primary">{t.agent}</span>{' '}
                 <span className="num text-muted-foreground/70">{t.model}</span>{' '}
                 <span className="text-muted-foreground/60 num">
@@ -1715,10 +1715,10 @@ function ConsultationRow({ c }: { c: Consultation }) {
                   {t.size_factor != null && ` \u00b7 \u00d7${t.size_factor.toFixed(2)}`}
                 </span>
               </p>
-              <p className="text-muted-foreground text-[11px] leading-snug">{t.reason}</p>
+              <p className="text-muted-foreground fd-label leading-snug">{t.reason}</p>
             </div>
           ))}
-          <p className="text-muted-foreground/60 text-[10px]">
+          <p className="text-muted-foreground/60 fd-caption">
             The verdict is the MIN of the panel, so one agent can refuse alone.
           </p>
         </div>
@@ -1735,7 +1735,7 @@ function StatusPill({ stale }: { stale: boolean }) {
   return (
     <span
       className={cn(
-        'inline-flex w-fit items-center gap-1 rounded-sm border px-1.5 py-px text-[10px]',
+        'inline-flex w-fit items-center gap-1 rounded-sm border px-1.5 py-px fd-caption',
         stale ? 'border-caution/30 bg-caution/10 text-caution' : 'border-lc/30 bg-lc/10 text-lc',
       )}
     >
@@ -1783,7 +1783,7 @@ function LiveCell({ run, now }: { run: PaperRun; now: number }) {
       >
         <span aria-hidden>{DIRECTION_MARK[direction + 1]}</span> {quote(live.close)}
       </span>
-      <span className="num text-muted-foreground/80 text-[10px] whitespace-nowrap" title={spread ? `spread ${spread}` : undefined}>
+      <span className="num text-muted-foreground/80 fd-caption whitespace-nowrap" title={spread ? `spread ${spread}` : undefined}>
         {liveAge(live.at, now)}
       </span>
     </span>
@@ -1803,7 +1803,7 @@ function PendingBadge({ pending }: { pending: NonNullable<PaperRun['pending']> }
   return (
     <span
       className={cn(
-        'num mr-1 inline-flex shrink-0 items-center gap-1 rounded-sm border border-dashed px-1 py-px text-[10px]',
+        'num mr-1 inline-flex shrink-0 items-center gap-1 rounded-sm border border-dashed px-1 py-px fd-caption',
         long ? 'border-lc/50 text-lc/90' : 'border-lp/50 text-lp/90',
       )}
       title={`${pending.side} decided, fills at the next bar's open — ${pending.reason}`}
@@ -1861,7 +1861,7 @@ function BrokerBadge({ broker }: { broker: PaperBroker | null }) {
     return (
       <span
         className={cn(
-          'num mr-1 inline-flex shrink-0 items-center gap-1 rounded-sm border px-1 py-px text-[10px]',
+          'num mr-1 inline-flex shrink-0 items-center gap-1 rounded-sm border px-1 py-px fd-caption',
           long ? 'border-lc/45 bg-lc/10 text-lc' : 'border-lp/45 bg-lp/10 text-lp',
         )}
         title={`account holds ${pos.side} ${pos.lots} lots from ${pos.entry_price}, ticket ${pos.ticket}. This is the TERMINAL's volume — the book's size times lot_scale${broker.lot_scale != null ? ` (x${broker.lot_scale})` : ''} — so it is not meant to equal the book's lots beside it.`}
@@ -1877,7 +1877,7 @@ function BrokerBadge({ broker }: { broker: PaperBroker | null }) {
   if (broker.blocked) {
     return (
       <span
-        className="num border-lp/45 bg-lp/10 text-lp mr-1 inline-flex shrink-0 items-center rounded-sm border px-1 py-px text-[10px]"
+        className="num border-lp/45 bg-lp/10 text-lp mr-1 inline-flex shrink-0 items-center rounded-sm border px-1 py-px fd-caption"
         title={broker.blocked}
       >
         refused: {broker.blocked}
@@ -1890,7 +1890,7 @@ function BrokerBadge({ broker }: { broker: PaperBroker | null }) {
   if (broker.standing_out) {
     return (
       <span
-        className="num text-muted-foreground border-border mr-1 inline-flex shrink-0 items-center rounded-sm border px-1 py-px text-[10px]"
+        className="num text-muted-foreground border-border mr-1 inline-flex shrink-0 items-center rounded-sm border px-1 py-px fd-caption"
         title={`The mirror is not copying this trade: ${broker.standing_out}`}
       >
         sitting out
@@ -1900,7 +1900,7 @@ function BrokerBadge({ broker }: { broker: PaperBroker | null }) {
   if (broker.book_side) {
     return (
       <span
-        className="num text-muted-foreground border-border mr-1 inline-flex shrink-0 items-center rounded-sm border px-1 py-px text-[10px]"
+        className="num text-muted-foreground border-border mr-1 inline-flex shrink-0 items-center rounded-sm border px-1 py-px fd-caption"
         title={`the book is ${broker.book_side} ${broker.book_lots} lots (the BOOK's size, before lot_scale${broker.lot_scale != null ? ` x${broker.lot_scale}` : ''}); the account is flat`}
       >
         {broker.dry_run ? 'dry run' : 'not filled'} &middot; book wants {broker.book_side.toLowerCase()}{' '}
@@ -1908,7 +1908,7 @@ function BrokerBadge({ broker }: { broker: PaperBroker | null }) {
       </span>
     )
   }
-  return <span className="text-muted-foreground/60 mr-1 text-[10px]"> &middot; flat</span>
+  return <span className="text-muted-foreground/60 mr-1 fd-caption"> &middot; flat</span>
 }
 
 /** A compact open-position badge for a row in the books list. */
@@ -1921,7 +1921,7 @@ function OpenBadge({ run, tick }: { run: PaperRun; tick?: LiveBar }) {
   return (
     <span
       className={cn(
-        'num mr-1 inline-flex shrink-0 items-center gap-1 rounded-sm border px-1 py-px text-[10px]',
+        'num mr-1 inline-flex shrink-0 items-center gap-1 rounded-sm border px-1 py-px fd-caption',
         long ? 'border-lc/45 bg-lc/10 text-lc' : 'border-lp/45 bg-lp/10 text-lp',
       )}
       title={`open ${open.side} ${open.lots} lots from ${open.entry_price}`}
@@ -2045,32 +2045,32 @@ function PositionBar({ run, live, broker }: {
     return (
       <div
         className={cn(
-          'mt-2 rounded-sm border px-2.5 py-2',
+          'mt-2 rounded-sm border px-3 py-2',
           held ? (aLong ? 'border-lc/35 bg-lc/[0.06]' : 'border-lp/35 bg-lp/[0.06]') : 'border-border',
         )}
       >
         <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
-          <span className="text-muted-foreground/70 text-[10px] tracking-wide uppercase">
+          <span className="text-muted-foreground fd-caption font-medium tracking-wide uppercase">
             {broker.account}
           </span>
           {held ? (
             <>
-              <span className={cn('num rounded-sm px-1 text-[11px] font-medium', aLong ? 'bg-lc/20 text-lc' : 'bg-lp/20 text-lp')}>
+              <span className={cn('num rounded-sm px-1 fd-label font-medium', aLong ? 'bg-lc/20 text-lc' : 'bg-lp/20 text-lp')}>
                 {(held.side ?? '').toUpperCase()}
               </span>
-              <span className="num text-[13px]">{quote(held.entry_price)}</span>
-              <span className="text-muted-foreground num text-[10px]">{num(held.lots ?? 0, 2)} lots</span>
+              <span className="num fd-body">{quote(held.entry_price)}</span>
+              <span className="text-muted-foreground num fd-caption">{num(held.lots ?? 0, 2)} lots</span>
               <span
-                className={cn('num ml-auto text-[15px] font-semibold', (held.profit ?? 0) >= 0 ? 'text-lc' : 'text-lp')}
+                className={cn('num ml-auto fd-display font-semibold', (held.profit ?? 0) >= 0 ? 'text-lc' : 'text-lp')}
               >
                 {brokerMoney(held.profit, broker.currency)}
               </span>
               {aR != null && (
-                <span className={cn('num text-[11px]', aR >= 0 ? 'text-lc' : 'text-lp')}>{signedR(aR)}</span>
+                <span className={cn('num fd-label', aR >= 0 ? 'text-lc' : 'text-lp')}>{signedR(aR)}</span>
               )}
             </>
           ) : (
-            <span className={cn('text-[11px]', missedIt ? 'text-lp font-medium' : 'text-muted-foreground')}>
+            <span className={cn('fd-label', missedIt ? 'text-lp font-medium' : 'text-muted-foreground')}>
               {missedIt
                 ? 'flat — and the book is in a trade. This account is not mirroring it.'
                 : 'flat'}
@@ -2098,14 +2098,14 @@ function PositionBar({ run, live, broker }: {
                 />
               )}
             </div>
-            <div className="text-muted-foreground mt-1 flex justify-between text-[10px]">
+            <div className="text-muted-foreground mt-1 flex justify-between fd-caption">
               <span className="num text-lp">stop {quote(held.sl)}</span>
               <span className="num">now {quote(aPrice)}</span>
               <span className="num text-lc">target {quote(held.tp)}</span>
             </div>
           </>
         ) : held ? (
-          <div className="text-muted-foreground mt-1.5 text-[10px]">
+          <div className="text-muted-foreground mt-1.5 fd-caption">
             {held.sl == null && held.tp == null
               ? 'no stop or target on the account'
               : `stop ${quote(held.sl)} · target ${quote(held.tp)}`}
@@ -2117,14 +2117,14 @@ function PositionBar({ run, live, broker }: {
             account's row would be the same error this card was just fixed
             for - a number belonging to one trade shown against another. */}
         {held?.opened_at != null && (
-          <div className="text-muted-foreground/70 mt-1 text-[10px]">
+          <div className="text-muted-foreground/70 mt-1 fd-caption">
             filled {shortStamp(held.opened_at)}
             {broker.lot_scale != null ? ` · ×${broker.lot_scale} of the book's size` : ''}
           </div>
         )}
 
-        <div className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-1 border-t pt-1.5 text-[10px]">
-          <span className="text-muted-foreground tracking-wide uppercase">book</span>
+        <div className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-1 border-t pt-1.5 fd-caption">
+          <span className="text-muted-foreground fd-caption font-medium tracking-wide uppercase">book</span>
           {bookLine}
         </div>
       </div>
@@ -2141,25 +2141,25 @@ function PositionBar({ run, live, broker }: {
       const long = p.side === 'LONG'
       const fill = pendingFill(p, live, run.tf)
       return (
-        <div className={cn('mt-2 rounded-sm border border-dashed px-2.5 py-2', long ? 'border-lc/40' : 'border-lp/40')}>
+        <div className={cn('mt-2 rounded-sm border border-dashed px-3 py-2', long ? 'border-lc/40' : 'border-lp/40')}>
           <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
-            <span className={cn('num rounded-sm border border-dashed px-1 text-[11px] font-medium', long ? 'border-lc/50 text-lc' : 'border-lp/50 text-lp')}>
+            <span className={cn('num rounded-sm border border-dashed px-1 fd-label font-medium', long ? 'border-lc/50 text-lc' : 'border-lp/50 text-lp')}>
               {p.side}
             </span>
             {fill != null ? (
-              <span className="text-[11px]">
+              <span className="fd-label">
                 <span className="text-muted-foreground">fills at </span>
-                <span className="num text-[13px]">{quote(fill)}</span>
+                <span className="num fd-body">{quote(fill)}</span>
                 <span className="text-muted-foreground/70"> — this bar&rsquo;s open, already set</span>
               </span>
             ) : (
-              <span className="text-muted-foreground text-[11px]">decided — fills at the next bar&rsquo;s open, which has not started</span>
+              <span className="text-muted-foreground fd-label">decided — fills at the next bar&rsquo;s open, which has not started</span>
             )}
-            <span className="num text-muted-foreground/70 ml-auto text-[10px]">
+            <span className="num text-muted-foreground/70 ml-auto fd-caption">
               on the {shortStamp(p.decided_on)} bar
             </span>
           </div>
-          <div className="text-muted-foreground mt-1.5 flex flex-wrap gap-x-4 text-[10px]">
+          <div className="text-muted-foreground mt-1.5 flex flex-wrap gap-x-4 fd-caption">
             <span className="num text-lp">
               stop {quote(p.stop)}
               {fill != null && p.stop != null && ` (${quote(Math.abs(fill - p.stop))} away)`}
@@ -2185,13 +2185,13 @@ function PositionBar({ run, live, broker }: {
               </span>
             )}
           </div>
-          {p.reason && <p className="text-muted-foreground/80 mt-1.5 text-[11px] leading-snug">{p.reason}</p>}
+          {p.reason && <p className="text-muted-foreground/80 mt-1.5 fd-label leading-snug">{p.reason}</p>}
         </div>
       )
     }
     return (
-      <div className="mt-1.5 flex items-center gap-3 text-[11px]">
-        <span className="text-muted-foreground text-[10px] tracking-wide uppercase">position</span>
+      <div className="mt-1.5 flex items-center gap-3 fd-label">
+        <span className="text-muted-foreground fd-caption font-medium tracking-wide uppercase">position</span>
         <span className="text-muted-foreground">flat</span>
       </div>
     )
@@ -2219,13 +2219,13 @@ function PositionBar({ run, live, broker }: {
   const atEntry = span ? pos(open.entry_price) : null
 
   return (
-    <div className={cn('mt-2 rounded-sm border px-2.5 py-2', long ? 'border-lc/35 bg-lc/[0.06]' : 'border-lp/35 bg-lp/[0.06]')}>
+    <div className={cn('mt-2 rounded-sm border px-3 py-2', long ? 'border-lc/35 bg-lc/[0.06]' : 'border-lp/35 bg-lp/[0.06]')}>
       <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
-        <span className={cn('num rounded-sm px-1 text-[11px] font-medium', long ? 'bg-lc/20 text-lc' : 'bg-lp/20 text-lp')}>
+        <span className={cn('num rounded-sm px-1 fd-label font-medium', long ? 'bg-lc/20 text-lc' : 'bg-lp/20 text-lp')}>
           {open.side}
         </span>
-        <span className="num text-[13px]">{quote(open.entry_price)}</span>
-        <span className="text-muted-foreground num text-[10px]">{num(open.lots, open.lots >= 100 ? 0 : 2)} lots</span>
+        <span className="num fd-body">{quote(open.entry_price)}</span>
+        <span className="text-muted-foreground num fd-caption">{num(open.lots, open.lots >= 100 ? 0 : 2)} lots</span>
         {(() => {
           const m = marginOf(open.lots, price, run)
           if (!m) return null
@@ -2235,7 +2235,7 @@ function PositionBar({ run, live, broker }: {
                read "margin 22 USC" while its own tooltip read "margin used
                0.22 of USC". Both numbers are named now. */
             <span
-              className="text-muted-foreground/70 num text-[10px]"
+              className="text-muted-foreground/70 num fd-caption"
               title={`margin used ${paperMoney(m.used, false)} (${m.used.toFixed(2)} USD); a margin call comes at a level of 30%`}
             >
               paper margin {paperMoney(m.used, false)} ({m.pct.toFixed(2)}% · level{' '}
@@ -2243,15 +2243,15 @@ function PositionBar({ run, live, broker }: {
             </span>
           )
         })()}
-        <span className={cn('num ml-auto text-[15px] font-semibold', usd >= 0 ? 'text-lc' : 'text-lp')}>
+        <span className={cn('num ml-auto fd-display font-semibold', usd >= 0 ? 'text-lc' : 'text-lp')}>
           {paperMoney(usd)}
         </span>
         {/* Named, because an account's own number may sit inches below it and
             the two are different trades. A bare figure here was read as the
             account's and as a contradiction. */}
-        <span className="text-muted-foreground/70 text-[10px] tracking-wide uppercase">paper</span>
+        <span className="text-muted-foreground fd-caption font-medium tracking-wide uppercase">paper</span>
         {r != null && (
-          <span className={cn('num text-[11px]', r >= 0 ? 'text-lc' : 'text-lp')}>{signedR(r)}</span>
+          <span className={cn('num fd-label', r >= 0 ? 'text-lc' : 'text-lp')}>{signedR(r)}</span>
         )}
       </div>
 
@@ -2280,21 +2280,21 @@ function PositionBar({ run, live, broker }: {
               />
             )}
           </div>
-          <div className="text-muted-foreground mt-1 flex justify-between text-[10px]">
+          <div className="text-muted-foreground mt-1 flex justify-between fd-caption">
             <span className="num text-lp">stop {quote(open.stop)}</span>
             <span className="num">{marked ? 'live' : 'at last close'} {quote(price)}</span>
             <span className="num text-lc">target {quote(open.target)}</span>
           </div>
         </>
       ) : (
-        <div className="text-muted-foreground mt-1.5 text-[10px]">
+        <div className="text-muted-foreground mt-1.5 fd-caption">
           {open.stop == null && open.target == null
             ? 'self-managed: the strategy owns the exit, so there is no stop or target to sit between'
             : `stop ${quote(open.stop)} · target ${quote(open.target)} · the desk closes it at the maximum hold if neither is hit`}
         </div>
       )}
 
-      <div className="text-muted-foreground/70 mt-1 text-[10px]">
+      <div className="text-muted-foreground/70 mt-1 fd-caption">
         worst {signedR(open.mae)} · best {signedR(open.mfe)} · opened {shortStamp(open.entry_time)}
       </div>
     </div>
@@ -2309,12 +2309,12 @@ function GuardChips({ run }: { run: PaperRun }) {
   if (refused > 0) chips.push(`refused ×${refused}`)
   if (run.sized_down > 0) chips.push(`sized down ×${run.sized_down}`)
   if (chips.length === 0) {
-    return <span className="text-muted-foreground/60 truncate text-[10px]">{run.guards ? 'none fired' : 'guards off'}</span>
+    return <span className="text-muted-foreground/60 truncate fd-caption">{run.guards ? 'none fired' : 'guards off'}</span>
   }
   return (
     <span className="flex min-w-0 flex-wrap gap-1">
       {chips.map((chip) => (
-        <span key={chip} className="border-border text-muted-foreground num rounded-sm border px-1 py-px text-[10px]">
+        <span key={chip} className="border-border text-muted-foreground num rounded-sm border px-1 py-px fd-caption">
           {chip}
         </span>
       ))}
@@ -2349,7 +2349,7 @@ function Drilldown({
     return (
       <div className="p-3">
         <Heading>Drill-down</Heading>
-        <p className="text-destructive mt-1 text-[12px]">{error}</p>
+        <p className="text-destructive mt-1 fd-body">{error}</p>
       </div>
     )
   }
@@ -2371,20 +2371,20 @@ function Drilldown({
     <div className="divide-border divide-y">
       <section className="px-3 py-2">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="num text-[13px] font-medium">{run.id}</span>
+          <span className="num fd-body font-medium">{run.id}</span>
           <StatusPill stale={stale} />
-          <span className="text-muted-foreground num ml-auto text-[10px]">
+          <span className="text-muted-foreground num ml-auto fd-caption">
             {run.market}:{run.tf} · last bar {run.last_bar_time ? `${ago(run.last_bar_time, now)} ago` : 'none'}
           </span>
         </div>
         <LivePrice live={summary?.live ?? detail.live} lastClose={(summary ?? run).last_bar_close} now={now} />
-        {run.label && <p className="text-muted-foreground mt-1 text-[11px] leading-snug">{run.label}</p>}
+        {run.label && <p className="text-muted-foreground mt-1 fd-label leading-snug">{run.label}</p>}
         {/* The two columns that left the runs table when it became a rail
             picker: both describe this one run rather than compare it to the
             others, so this is where they belonged all along. */}
         <PositionBar run={run} live={summary?.live ?? detail.live} broker={broker} />
-        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
-          <span className="text-muted-foreground text-[10px] tracking-wide uppercase">guards</span>
+        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 fd-label">
+          <span className="text-muted-foreground fd-caption font-medium tracking-wide uppercase">guards</span>
           <GuardChips run={run} />
         </div>
         <ConfigLine run={run} />
@@ -2401,7 +2401,7 @@ function Drilldown({
             points={detail.equity_curve}
             money={(v) => `$${Math.round(v).toLocaleString('en-US')}`}
           />
-          <p className="text-muted-foreground num mt-1 text-[10px]">
+          <p className="text-muted-foreground num mt-1 fd-caption">
             {run.trades} closed{run.open ? ' · 1 open' : ''} · net {paperMoney(run.net_usd)} ·{' '}
             {run.profit_factor == null ? 'no PF yet' : `PF ${num(run.profit_factor)}`} ·{' '}
             {run.bars_seen} bars seen{run.gaps > 0 ? ` · ${run.gaps} gap${run.gaps === 1 ? '' : 's'}` : ''}
@@ -2468,7 +2468,7 @@ function Drilldown({
 function LivePrice({ live, lastClose, now }: { live: LiveBar | null; lastClose: number | null; now: number }) {
   if (!live) {
     return (
-      <p className="text-muted-foreground mt-2 text-[11px]">
+      <p className="text-muted-foreground mt-2 fd-label">
         No live price — nothing has posted a forming bar in the last 90 seconds.
       </p>
     )
@@ -2479,20 +2479,20 @@ function LivePrice({ live, lastClose, now }: { live: LiveBar | null; lastClose: 
     <div className="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
       <span
         className={cn(
-          'num text-[22px] leading-none transition-colors duration-300 motion-reduce:transition-none',
+          'num fd-display leading-none transition-colors duration-300 motion-reduce:transition-none',
           DIRECTION_CLASS[direction + 1],
         )}
       >
         <span aria-hidden>{DIRECTION_MARK[direction + 1]}</span> {quote(live.close)}
       </span>
-      <span className="text-muted-foreground num text-[10px]">
+      <span className="text-muted-foreground num fd-caption">
         {live.bid != null && live.ask != null
           ? `bid ${quote(live.bid)} / ask ${quote(live.ask)}${spread ? ` · spread ${spread}` : ''}`
           : 'no quote'}
         {' · '}
         {liveAge(live.at, now)}
       </span>
-      <span className="text-muted-foreground/70 text-[10px]">forming bar — not traded on</span>
+      <span className="text-muted-foreground/70 fd-caption">forming bar — not traded on</span>
     </div>
   )
 }
@@ -2540,7 +2540,7 @@ function FillsSection({
 }
 
 function Heading({ children }: { children: React.ReactNode }) {
-  return <h2 className="text-muted-foreground mb-1 text-[10px] font-semibold tracking-wide uppercase">{children}</h2>
+  return <h2 className="text-muted-foreground mb-1 fd-caption font-medium tracking-wide uppercase">{children}</h2>
 }
 
 /** Strategy, parameters, filters and whether the guards are enforced — one line. */
@@ -2549,7 +2549,7 @@ function ConfigLine({ run }: { run: PaperRun }) {
     .map(([k, v]) => `${k}=${Number.isInteger(v) ? v : num(v, 2)}`)
     .join(' ')
   return (
-    <p className="text-muted-foreground num mt-1.5 text-[10px] leading-relaxed break-words">
+    <p className="text-muted-foreground num mt-1.5 fd-caption leading-relaxed break-words">
       <span className="text-foreground/80">{run.strategy}</span>
       {params && <> · {params}</>}
       {run.filters.length > 0 && <> · {run.filters.join(', ')}</>}
@@ -2701,7 +2701,7 @@ function RunChart({
     return (
       <section className="px-3 py-2">
         <Heading>Chart</Heading>
-        <p className="text-muted-foreground py-8 text-center text-[11px]">
+        <p className="text-muted-foreground py-8 text-center fd-label">
           No bars to draw — the poller has fed this run nothing yet.
         </p>
       </section>
@@ -2731,7 +2731,7 @@ function RunChart({
           }}
           aria-pressed={showOpen}
           className={cn(
-            'hover:bg-accent focus-visible:ring-ring ml-2 rounded-sm border px-1.5 py-px text-[10px] normal-case transition-colors focus-visible:ring-2 focus-visible:outline-none motion-reduce:transition-none',
+            'hover:bg-accent focus-visible:ring-ring ml-2 rounded-sm border px-1.5 py-px fd-caption normal-case transition-colors focus-visible:ring-2 focus-visible:outline-none motion-reduce:transition-none',
             showOpen ? 'border-primary/40 text-primary' : 'border-border text-muted-foreground',
           )}
           title={
@@ -2775,7 +2775,7 @@ function RunChart({
           liveBar={forming}
         />
       </div>
-      <p className="text-muted-foreground mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px]">
+      <p className="text-muted-foreground mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 fd-caption">
         {indicators.length === 0 ? (
           <span>This strategy reads no indicator — it trades the clock or the bar itself.</span>
         ) : (
@@ -2854,7 +2854,7 @@ function AccountEquity({ broker }: { broker: PaperBroker }) {
         Equity <span className="text-muted-foreground/70 num normal-case">on {broker.account}</span>
       </Heading>
       {points.length === 0 ? (
-        <p className="text-muted-foreground px-1 py-6 text-center text-[11px]">
+        <p className="text-muted-foreground px-1 py-6 text-center fd-label">
           No curve yet — this account has closed no trade on this book.
         </p>
       ) : (
@@ -2867,7 +2867,7 @@ function AccountEquity({ broker }: { broker: PaperBroker }) {
           money={(v) => `${Math.round(v).toLocaleString('en-US')} ${broker.currency ?? ''}`.trim()}
         />
       )}
-      <p className="text-muted-foreground num mt-1 text-[10px]">
+      <p className="text-muted-foreground num mt-1 fd-caption">
         {broker.closed ?? 0} closed{broker.position ? ' · 1 open' : ''} · banked{' '}
         <span className={(broker.realised ?? 0) >= 0 ? 'text-lc' : 'text-lp'}>
           {brokerMoney(broker.realised, broker.currency)}
@@ -2902,7 +2902,7 @@ function BrokerFillsTable({ broker }: { broker: PaperBroker }) {
   const result = openResult(broker, null, null)
   if (fills.length === 0 && !held) {
     return (
-      <p className="text-muted-foreground px-1 py-4 text-[11px]">
+      <p className="text-muted-foreground px-1 py-4 fd-label">
         This account has filled nothing on this book yet.
         {broker.dry_run && ' It is in dry run, so it never will until that is turned off.'}
       </p>
@@ -2910,8 +2910,8 @@ function BrokerFillsTable({ broker }: { broker: PaperBroker }) {
   }
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-[11px]">
-        <thead className="text-muted-foreground text-[10px] tracking-wide uppercase">
+      <table className="w-full fd-label">
+        <thead className="text-muted-foreground fd-caption tracking-wide uppercase">
           <tr className="border-b">
             {/* One header over two groups now, so it cannot say "exit": the
                 closed rows show an exit stamp and the open row says `filled`
@@ -2935,7 +2935,7 @@ function BrokerFillsTable({ broker }: { broker: PaperBroker }) {
                mistaken an absent record for an empty one, a missing section
                must not be the way "flat" is expressed. */
             <tr className="border-b">
-              <td colSpan={6} className="text-muted-foreground py-1 text-[11px]">
+              <td colSpan={6} className="text-muted-foreground py-1 fd-label">
                 flat — this account holds nothing on this book right now
               </td>
             </tr>
@@ -3018,7 +3018,7 @@ function BrokerFillsTable({ broker }: { broker: PaperBroker }) {
 function EquityCurve({ points, money }: { points: [number, number][]; money: (v: number) => string }) {
   if (!points || points.length === 0) {
     return (
-      <p className="text-muted-foreground px-1 py-6 text-center text-[11px]">
+      <p className="text-muted-foreground px-1 py-6 text-center fd-label">
         No curve yet — the run has closed no trade.
       </p>
     )
@@ -3171,7 +3171,7 @@ function FillsTable({
 
   if (rows.length === 0 && !held) {
     return (
-      <p className="text-muted-foreground py-2 text-[11px]">
+      <p className="text-muted-foreground py-2 fd-label">
         None yet — the first live bar decides; the warm-up bars do not.
       </p>
     )
@@ -3183,7 +3183,7 @@ function FillsTable({
         <div className="min-w-[600px]" role="group" aria-label="Fills, grouped: open first, then closed">
           <div
             className={cn(
-              'text-muted-foreground grid items-center gap-2 border-b pb-1 text-[10px] tracking-wide uppercase',
+              'text-muted-foreground grid items-center gap-2 border-b pb-1 fd-caption tracking-wide uppercase',
               FILL_COLS,
             )}
           >
@@ -3202,14 +3202,14 @@ function FillsTable({
           {!held && (
             /* Said out loud rather than left blank — absence must not be how
                "flat" is expressed on this desk. */
-            <div className="text-muted-foreground border-b py-1 text-[11px]">
+            <div className="text-muted-foreground border-b py-1 fd-label">
               flat — this book holds no position right now
             </div>
           )}
           {held && (
             <div
               className={cn(
-                'border-primary/30 bg-primary/10 grid items-center gap-2 border-b py-[3px] text-[11px] shadow-[inset_2px_0_0_var(--primary)]',
+                'border-primary/30 bg-primary/10 grid items-center gap-2 border-b py-1 fd-label shadow-[inset_2px_0_0_var(--primary)]',
                 FILL_COLS,
               )}
             >
@@ -3278,7 +3278,7 @@ function FillsTable({
                 aria-expanded={isOpen}
                 aria-controls={`fill-account-${detail.run.id}`}
                 className={cn(
-                  'hover:bg-accent/60 focus-visible:ring-ring grid w-full items-center gap-2 border-b py-[3px] text-left text-[11px] transition-colors last:border-0 focus-visible:ring-2 focus-visible:ring-inset focus-visible:outline-none motion-reduce:transition-none',
+                  'hover:bg-accent/60 focus-visible:ring-ring grid w-full items-center gap-2 border-b py-1 text-left fd-label transition-colors last:border-0 focus-visible:ring-2 focus-visible:ring-inset focus-visible:outline-none motion-reduce:transition-none',
                   FILL_COLS,
                   isOpen && 'bg-primary/10 shadow-[inset_2px_0_0_var(--primary)]',
                 )}
@@ -3312,7 +3312,7 @@ function FillsTable({
         {open ? (
           <FillAccount fill={open.fill} run={detail.run} />
         ) : (
-          <p className="text-muted-foreground/70 mt-1.5 text-[10px]">
+          <p className="text-muted-foreground/70 mt-1.5 fd-caption">
             Pick a fill to read what the strategy saw, where its stop and target sat, and how it ended.
           </p>
         )}
@@ -3386,7 +3386,7 @@ function FillAccount({ fill, run }: { fill: BacktestTrade; run: PaperRun }) {
   const targetR = targetAway != null && stopKnown ? targetAway / stopAway : null
 
   return (
-    <div className="border-border bg-card/50 mt-2 space-y-1.5 rounded-sm border px-3 py-2 text-[12px] leading-relaxed">
+    <div className="border-border bg-card/50 mt-2 space-y-1.5 rounded-sm border px-3 py-2 fd-body leading-relaxed">
       <p className="text-muted-foreground">
         {fill.reason ? (
           <>
@@ -3469,7 +3469,7 @@ function FillAccount({ fill, run }: { fill: BacktestTrade; run: PaperRun }) {
       </p>
 
       {run.trades < 30 && (
-        <p className="text-caution border-border border-t pt-1.5 text-[11px]">
+        <p className="text-caution border-border border-t pt-1.5 fd-label">
           This is one trade out of {run.trades} this run has closed. Fewer than 30 closed trades cannot be read as a result —
           neither this fill nor the run&rsquo;s total says whether the strategy works.
         </p>
@@ -3546,11 +3546,11 @@ function BrokerEventsSection({ run, account }: { run: string; account: string })
         <span className="text-muted-foreground/60 num normal-case"> · on {account}</span>
       </Heading>
       {error ? (
-        <p className="text-destructive py-2 text-[11px]">{error}</p>
+        <p className="text-destructive py-2 fd-label">{error}</p>
       ) : !events ? (
         <Skeleton className="h-16 w-full" />
       ) : events.length === 0 ? (
-        <p className="text-muted-foreground py-2 text-[11px]">
+        <p className="text-muted-foreground py-2 fd-label">
           This account has no record of {run} — nothing has mirrored it here.
         </p>
       ) : (
@@ -3558,7 +3558,7 @@ function BrokerEventsSection({ run, account }: { run: string; account: string })
           {[...events].reverse().map((event, index) => (
             <li
               key={`${event.kind}-${event.at}-${index}`}
-              className="grid grid-cols-[96px_110px_1fr] items-start gap-2 text-[11px]"
+              className="grid grid-cols-[96px_110px_1fr] items-start gap-2 fd-label"
             >
               <span className="num text-muted-foreground">{shortStamp(event.at)}</span>
               <span className={cn('num truncate', BROKER_EVENT_TONE[event.kind] ?? 'text-muted-foreground')}>
@@ -3619,12 +3619,12 @@ function brokerEventLine(event: BrokerEvent): string {
 
 function EventsList({ events }: { events: PaperEvent[] }) {
   if (events.length === 0) {
-    return <p className="text-muted-foreground py-2 text-[11px]">Nothing but fills — no gap, no refusal.</p>
+    return <p className="text-muted-foreground py-2 fd-label">Nothing but fills — no gap, no refusal.</p>
   }
   return (
     <ul className="space-y-0.5">
       {[...events].reverse().map((event, index) => (
-        <li key={`${event.kind}-${event.time}-${index}`} className="grid grid-cols-[96px_78px_1fr] items-start gap-2 text-[11px]">
+        <li key={`${event.kind}-${event.time}-${index}`} className="grid grid-cols-[96px_78px_1fr] items-start gap-2 fd-label">
           <span className="num text-muted-foreground">{shortStamp(event.time)}</span>
           <span className={cn('num truncate', EVENT_TONE[event.kind] ?? 'text-muted-foreground')}>{event.kind}</span>
           <span className="text-muted-foreground leading-snug break-words">{eventLine(event)}</span>
