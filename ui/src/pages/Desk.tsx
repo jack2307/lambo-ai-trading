@@ -2688,11 +2688,11 @@ function BrokerFillsTable({ broker }: { broker: PaperBroker }) {
                 className="num text-muted-foreground py-1 pr-2 pl-1"
                 title={
                   held.opened_at != null
-                    ? `opened ${utcStamp(held.opened_at)} — still open`
-                    : 'the executor could not read the broker clock, so the open time is unknown'
+                    ? `the ACCOUNT filled here, ${utcStamp(held.opened_at)} — still open. Not the bar the book priced its entry at, which is a bar earlier.`
+                    : 'the executor could not read the broker clock, so the fill time is unknown'
                 }
               >
-                since {vnStamp(held.opened_at)}
+                filled {vnStamp(held.opened_at)}
               </td>
               <td className={cn('num py-1 pr-2', (held.side ?? '') === 'LONG' ? 'text-lc' : 'text-lp')}>
                 {(held.side ?? '').toLowerCase()}
@@ -2934,11 +2934,17 @@ function FillsTable({
                   It is also why it is not keyboard-navigable with the rest —
                   arrow keys walk the closed fills, which is the list they
                   were built for. */}
+              {/* Three different clocks can describe one entry and they are a
+                  BAR apart by construction, not by jitter: the bar the fill is
+                  priced at, the wall clock the book learned it at, and the
+                  moment the account actually filled. This cell is the first.
+                  It said `since`, which reads as the third and is the one word
+                  that cannot be right for all of them. */}
               <span
                 className="num text-muted-foreground"
-                title={`opened ${utcStamp(held.entry_time)} — still open`}
+                title={`the book's fill is priced at the OPEN of the bar stamped ${utcStamp(held.entry_time)}. The book only learns it holds this when that bar CLOSES, a bar later, and the account fills after that.`}
               >
-                since {vnStamp(held.entry_time)}
+                bar {vnStamp(held.entry_time)}
               </span>
               <span className={cn('num', held.side === 'LONG' ? 'text-lc' : 'text-lp')}>
                 {held.side.toLowerCase()}
@@ -2984,7 +2990,10 @@ function FillsTable({
                   isOpen && 'bg-primary/10 shadow-[inset_2px_0_0_var(--primary)]',
                 )}
               >
-                <span className="num text-muted-foreground" title={`exit ${utcStamp(fill.exitTime)} · entry ${utcStamp(fill.entryTime)}`}>
+                <span
+                  className="num text-muted-foreground"
+                  title={`exit ${utcStamp(fill.exitTime)} · entry priced at the bar stamped ${utcStamp(fill.entryTime)}`}
+                >
                   {vnStamp(fill.exitTime)}
                 </span>
                 <span className={cn('num', fill.direction === 'LONG' ? 'text-lc' : 'text-lp')}>
