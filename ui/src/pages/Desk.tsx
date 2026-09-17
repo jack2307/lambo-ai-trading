@@ -39,7 +39,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { PriceChart, type ActiveIndicator } from '@/components/PriceChart'
 import { Skeleton } from '@/components/ui/skeleton'
 import type { Book } from '@/App'
-import { api, type BacktestTrade, type Bar, type LiveBar, type PaperBroker, type PaperEvent, type PaperRun, type PaperRunDetail } from '@/lib/api'
+import { api, type BacktestTrade, type Bar, type BrokerEvent, type LiveBar, type PaperBroker, type PaperEvent, type PaperRun, type PaperRunDetail } from '@/lib/api'
 import { clock, num } from '@/lib/format'
 import { toast } from 'sonner'
 import { useTicks } from '@/lib/ticks'
@@ -2087,16 +2087,28 @@ function Drilldown({
         )}
       </section>
 
-      <section className="px-3 py-2">
-        <Heading>
-          Events <span className="text-muted-foreground/70 num">{detail.events.length}</span>
-          {/* Said out loud while an account is on screen: these are the BOOK's
-              events - gaps in its feed, guards that fired, the run starting -
-              and not the account's. */}
-          {broker && <span className="text-muted-foreground/60 normal-case"> · paper book</span>}
-        </Heading>
-        <EventsList events={detail.events} />
-      </section>
+      {/* Two logs, and the account picker chooses between them rather than
+          relabelling one of them.
+
+          The book's events are about the RULE - a gap in its feed, a guard
+          firing, the run starting. The account's are about the EXECUTION - a
+          position not adopted because the price had run, a size clipped to the
+          broker's minimum, an order refused, AutoTrading off. None of the
+          second list can happen on the paper side.
+
+          Showing the first under an account's name, with a label saying so,
+          was read as the two sides not being separate at all. That reading was
+          right: a label is not a separation. */}
+      {broker ? (
+        <BrokerEventsSection run={detail.run.id} account={broker.account} />
+      ) : (
+        <section className="px-3 py-2">
+          <Heading>
+            Events <span className="text-muted-foreground/70 num">{detail.events.length}</span>
+          </Heading>
+          <EventsList events={detail.events} />
+        </section>
+      )}
     </div>
   )
 }
@@ -2921,6 +2933,112 @@ const EVENT_TONE: Record<string, string> = {
   refused: 'text-caution',
   guard_close: 'text-lp',
   stopped: 'text-lp',
+}
+
+/**
+ * One account's record of one book: `data/live/<account>/<run>/executor.jsonl`.
+ *
+ * Fetched rather than carried on the run detail, because the detail does not
+ * know which account is on screen and would otherwise have to send every
+ * account's log to answer a question about one.
+ */
+function BrokerEventsSection({ run, account }: { run: string; account: string }) {
+  const [events, setEvents] = useState<BrokerEvent[] | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let live = true
+    setEvents(null)
+    setError(null)
+    const load = () =>
+      api
+        .brokerEvents(run, account, 60)
+        .then((r) => live && setEvents(r.events))
+        .catch((e: Error) => live && setError(e.message))
+    load()
+    const t = setInterval(load, 15_000)
+    return () => {
+      live = false
+      clearInterval(t)
+    }
+  }, [run, account])
+
+  return (
+    <section className="px-3 py-2">
+      <Heading>
+        Events <span className="text-muted-foreground/70 num">{events?.length ?? 0}</span>
+        <span className="text-muted-foreground/60 num normal-case"> · on {account}</span>
+      </Heading>
+      {error ? (
+        <p className="text-destructive py-2 text-[11px]">{error}</p>
+      ) : !events ? (
+        <Skeleton className="h-16 w-full" />
+      ) : events.length === 0 ? (
+        <p className="text-muted-foreground py-2 text-[11px]">
+          This account has no record of {run} — nothing has mirrored it here.
+        </p>
+      ) : (
+        <ul className="space-y-0.5">
+          {[...events].reverse().map((event, index) => (
+            <li
+              key={`${event.kind}-${event.at}-${index}`}
+              className="grid grid-cols-[96px_110px_1fr] items-start gap-2 text-[11px]"
+            >
+              <span className="num text-muted-foreground">{shortStamp(event.at)}</span>
+              <span className={cn('num truncate', BROKER_EVENT_TONE[event.kind] ?? 'text-muted-foreground')}>
+                {event.kind}
+              </span>
+              <span className="text-muted-foreground leading-snug break-words">{brokerEventLine(event)}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  )
+}
+
+/** Only the kinds worth colouring. Everything else stays quiet. */
+const BROKER_EVENT_TONE: Record<string, string> = {
+  'real-money': 'text-lp',
+  refused: 'text-lp',
+  blocked: 'text-lp',
+  'autotrading-off': 'text-caution',
+  'no-account': 'text-caution',
+  'not-adopted': 'text-caution',
+  clipped: 'text-caution',
+  opened: 'text-lc',
+  closed: 'text-lc',
+}
+
+/**
+ * The line beside the kind.
+ *
+ * The executor writes whatever a kind needs, so the few kinds worth a sentence
+ * get one and the rest fall back to their own fields. A fallback that prints
+ * the JSON is better than one that prints nothing: a kind added to the
+ * executor tomorrow still says something today.
+ */
+function brokerEventLine(event: BrokerEvent): string {
+  const n = (k: string) => (typeof event[k] === 'number' ? (event[k] as number) : undefined)
+  const s = (k: string) => (typeof event[k] === 'string' ? (event[k] as string) : undefined)
+  switch (event.kind) {
+    case 'not-adopted':
+      return `${s('side') ?? ''} ${n('lots') ?? ''} — price ${n('drift_r')}R from the book's entry ${n('book_entry')}, limit ${n('limit')}R`.trim()
+    case 'clipped':
+      return `wanted ${n('wanted')}, sent ${n('sent')} — the broker's own volume grid`
+    case 'refused':
+      return s('reason') ?? s('error') ?? ''
+    case 'real-money':
+      return `account ${n('login')} on ${s('server') ?? '?'} — ${n('balance')} ${s('currency') ?? ''}, lot scale ${n('lot_scale')}`
+    case 'started':
+      return `${s('symbol') ?? ''} magic ${n('magic')} · lot scale ${n('lot_scale')}${event.dry_run ? ' · dry run' : ''}`
+    case 'autotrading-off':
+      return s('note') ?? 'AutoTrading is off in the terminal'
+    default: {
+      const rest = Object.entries(event).filter(([k]) => k !== 'at' && k !== 'kind')
+      return rest.map(([k, v]) => `${k}=${typeof v === 'object' ? JSON.stringify(v) : String(v)}`).join(' ')
+    }
+  }
 }
 
 function EventsList({ events }: { events: PaperEvent[] }) {

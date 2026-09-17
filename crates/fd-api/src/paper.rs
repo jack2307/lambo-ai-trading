@@ -2806,6 +2806,53 @@ pub struct ReasoningQuery {
     pub limit: Option<usize>,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct BrokerEventsQuery {
+    pub account: String,
+    pub limit: Option<usize>,
+}
+
+/// `GET /api/paper/broker-events/{id}?account=<id>` — what ONE account did
+/// with one book.
+///
+/// The desk has always been able to show a book's own events, and in account
+/// mode it showed the same ones with a label saying they were the book's. The
+/// owner read that as the two sides not being separate, which is fair: the
+/// account has its own record and nothing served it.
+///
+/// It is a different log answering a different question. The book's events are
+/// about the rule - a gap in the feed, a guard firing, the run starting. These
+/// are about the execution: a position not adopted because the price had run,
+/// a size clipped to the broker's minimum, an order refused, AutoTrading off,
+/// and the line that says this account is real. None of that exists on the
+/// paper side, because none of it can happen there.
+pub async fn broker_events(
+    State(state): State<Arc<AppState>>,
+    PathParam(id): PathParam<String>,
+    Query(query): Query<BrokerEventsQuery>,
+) -> Result<Json<serde_json::Value>, ApiError> {
+    check_id(&id)?;
+    // The account id becomes a directory name, so it is checked the same way a
+    // run id is rather than trusted from a query string.
+    check_id(&query.account)?;
+    let limit = query.limit.unwrap_or(DEFAULT_REASONING).clamp(1, MAX_REASONING);
+    let path = state
+        .data
+        .join("live")
+        .join(&query.account)
+        .join(&id)
+        .join("executor.jsonl");
+    // An absent file is not an error. A book this account does not mirror, or
+    // one whose executor has never run, has nothing to say - and an empty list
+    // says that more usefully than a 404, which the client would have to
+    // special-case on every switch of the account picker.
+    Ok(Json(json!({
+        "run": id,
+        "account": query.account,
+        "events": tail_jsonl(&path, limit),
+    })))
+}
+
 /// Default and ceiling for how many entries come back.
 pub const DEFAULT_REASONING: usize = 50;
 pub const MAX_REASONING: usize = 500;

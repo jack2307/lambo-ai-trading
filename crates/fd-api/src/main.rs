@@ -53,6 +53,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // runs backtests on request; nothing about it is ready to face a network.
     let listener = tokio::net::TcpListener::bind(("127.0.0.1", port)).await?;
     println!("fd-api on http://127.0.0.1:{port}  data={}", data.display());
+    // The one control on the desk that can create spending power asks for this.
+    // Printed here and nowhere else: reading it means standing where the server
+    // runs, which is the whole of what it checks. See `advisor.rs`.
+    println!(
+        "advisor setup code: {}  (needed once, to store an API key from Settings)",
+        fd_api::advisor::setup_code()
+    );
     println!(
         "{}",
         if serving_ui {

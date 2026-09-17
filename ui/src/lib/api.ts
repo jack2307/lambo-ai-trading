@@ -491,6 +491,21 @@ export interface GuardsView {
   guarded_runs: number
 }
 
+/**
+ * One line of an account's `executor.jsonl`.
+ *
+ * Deliberately loose. The executor writes a `kind` and whatever that kind
+ * needs — `not-adopted` carries a drift and a limit, `clipped` carries two
+ * volumes, `refused` carries a retcode — and a type that enumerated every
+ * shape would have to be edited before the desk could show a new one. The
+ * screen renders `kind` plus whatever fields came with it.
+ */
+export interface BrokerEvent {
+  at: number
+  kind: string
+  [field: string]: unknown
+}
+
 export interface BrokerAccount {
   /** The registry id, or `login-<n>` for an executor started outside it. */
   id: string
@@ -705,9 +720,79 @@ export const api = {
   paperRun: (id: string, bars = 120) =>
     request<PaperRunDetail>(`/api/paper/run/${encodeURIComponent(id)}?bars=${bars}`),
 
+  /**
+   * What ONE account did with one book — a different log from what the book
+   * did, and the reason account mode used to show the paper book's events
+   * with a label instead of the account's own.
+   *
+   * The book's events are about the rule: a gap in its feed, a guard firing.
+   * These are about the execution: a position not adopted because the price
+   * had run, a size clipped to the broker's minimum, an order refused,
+   * AutoTrading off. None of it can happen on the paper side.
+   */
+  brokerEvents: (run: string, account: string, limit = 50) =>
+    request<{ run: string; account: string; events: BrokerEvent[] }>(
+      `/api/paper/broker-events/${encodeURIComponent(run)}?account=${encodeURIComponent(account)}&limit=${limit}`,
+    ),
+
   /** What the models said about one book. Newest first. */
   paperReasoning: (id: string, limit = 50) =>
     request<Reasoning>(`/api/paper/reasoning/${encodeURIComponent(id)}?limit=${limit}`),
+
+  /**
+   * How the advisor pays for a verdict. Masks only — no call here ever returns
+   * key material, and the one that creates spending power costs the setup code
+   * printed on the fd-api console at startup.
+   */
+  advisorCredentials: () => request<CredentialsView>('/api/advisor/credentials'),
+
+  /** One real call, to prove a credential. Spends a little, on purpose. */
+  advisorTest: (provider: string, model?: string) =>
+    post<CredentialProbe>('/api/advisor/credentials/test', { provider, model }),
+
+  advisorStoreKey: (provider: string, key: string, setupCode: string) =>
+    post<CredentialWrite>('/api/advisor/credentials', { provider, key, setup_code: setupCode }),
+
+  advisorClearKey: (provider: string) =>
+    post<CredentialWrite>('/api/advisor/credentials/clear', { provider }),
+}
+
+/** One provider's row. `masked` is the most a credential store may ever say. */
+export interface CredentialRow {
+  provider: string
+  /** `metered` bills per token against a key; `plan` spends a subscription. */
+  kind: 'metered' | 'plan'
+  source: string
+  ready: boolean
+  detail: string
+  masked: string
+  /** False for a plan, and for a provider that declares no config section. */
+  can_store: boolean
+  /** The command to run in a terminal. A browser cannot complete a sign-in. */
+  login_command: string
+  env?: string
+  env_overrides?: boolean
+  verified?: boolean
+}
+
+export interface CredentialsView {
+  file: string
+  gitignored: boolean
+  providers: CredentialRow[]
+  setup_code_required: boolean
+}
+
+export interface CredentialProbe {
+  provider: string
+  ok: boolean
+  detail: string
+}
+
+export interface CredentialWrite {
+  provider: string
+  stored?: boolean
+  removed?: boolean
+  detail: string
 }
 
 /** One decision an outside decider made, as its own log recorded it. */

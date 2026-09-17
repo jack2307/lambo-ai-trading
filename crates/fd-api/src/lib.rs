@@ -4,6 +4,7 @@
 //! built SPA beside it. That is the whole deployment: no process manager, no
 //! reverse proxy, nothing to keep in sync.
 
+pub mod advisor;
 pub mod dto;
 pub mod error;
 pub mod live;
@@ -39,6 +40,13 @@ pub fn router(state: Arc<AppState>, ui: Option<PathBuf>) -> Router {
         .route("/api/live", get(live::stream))
         .route("/api/live/status", get(live::status))
         .route("/api/research", get(research::research))
+        // The advisor's credentials. `store` is the only control on this desk
+        // that can create spending power, so it alone costs the setup code
+        // printed on this process's console; `clear` takes capability away and
+        // costs nothing.
+        .route("/api/advisor/credentials", get(advisor::credentials).post(advisor::store))
+        .route("/api/advisor/credentials/test", post(advisor::test))
+        .route("/api/advisor/credentials/clear", post(advisor::clear))
         .route("/api/paper/start", post(paper::start))
         .route("/api/paper/bar", post(paper::bar))
         .route("/api/paper/tick", post(paper::tick))
@@ -52,6 +60,9 @@ pub fn router(state: Arc<AppState>, ui: Option<PathBuf>) -> Router {
         // the advisor panel's consultations, kept apart because they are two
         // different powers over a trade.
         .route("/api/paper/reasoning/{id}", get(paper::reasoning))
+        // What ONE account did with one book, which is a different log from
+        // what the book did - see the handler.
+        .route("/api/paper/broker-events/{id}", get(paper::broker_events))
         // The advisor lives outside this process and speaks only through
         // these two: it reads what is about to happen and may ask for less.
         .route("/api/paper/pending", get(paper::pending))
