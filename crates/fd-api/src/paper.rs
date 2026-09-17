@@ -36,7 +36,7 @@
 //! (`fd-backtest/tests/paper_parity.rs`).
 
 use std::collections::BTreeMap;
-use std::io::{BufRead, Write};
+use std::io::{BufRead, Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -2867,17 +2867,141 @@ fn b_of(v: &serde_json::Value, key: &str) -> bool {
     v.get(key).and_then(serde_json::Value::as_bool).unwrap_or(false)
 }
 
+/// How far back the first read of a tail reaches. It doubles each round, so a
+/// file whose lines are large is reached in a few seeks rather than a hundred.
+///
+/// Measured 2026-09-17: `data/paper/ai-xau-opus-ctx/decisions.jsonl` is
+/// 632,258 bytes over 99 lines, 6,386 a line — the whole prompt is in the
+/// line, which is the point of the file — so 64 KiB is ten of them.
+/// `data/live/vantage-demo/ai-xau-ds-ctx/executor.jsonl` is 73,862 over 334,
+/// 221 a line, so 64 KiB is nearly three hundred. One constant cannot suit
+/// both; doubling is what makes the difference not matter.
+const TAIL_CHUNK: u64 = 64 * 1024;
+
 /// The last `limit` lines of a JSONL file, oldest first, skipping unreadable
 /// ones rather than failing: a half-written last line (the writer was killed
 /// mid-append) must not take the whole panel down.
+///
+/// Read backwards from the end. Until 2026-09-17 this read the whole file with
+/// `read_to_string` and kept the last fifty lines, on every poll of the Desk,
+/// for every book. That was affordable while the desk was a demo on a
+/// workstation that got switched off at night. It is not now: the desk runs 24
+/// hours on a 2-vCPU VPS, `decisions.jsonl` gains a 6 KB line every fifteen
+/// minutes and nothing has ever truncated it, so the cost of one poll grew
+/// with the age of the campaign and would go on growing.
+///
+/// Be clear about when the change pays, because today it does not. Measured
+/// 2026-09-17 on this machine, release build, fifty lines out of a file shaped
+/// like the real one:
+///
+/// | file | whole | tail |
+/// |---|---|---|
+/// | `decisions.jsonl`, 638 KB — today | 253 us | 575 us |
+/// | `decisions.jsonl`, 32 MiB — at the roll | 17.4 ms | 660 us |
+/// | `executor.jsonl`, 74 KB — today | 95 us | 104 us |
+/// | `executor.jsonl`, 32 MiB — at the roll | 20.0 ms | 180 us |
+///
+/// So this is a 2.3x LOSS on `decisions.jsonl` as it stands, and that is the
+/// honest cost of the change: fifty of its lines are 320 KB, half the file, so
+/// there is not much tail to save yet, and the window costs three reads and a
+/// re-split where one `read_to_string` would do. It is taken because the
+/// column that matters is the second row and not the first. The tail's cost
+/// barely moves between 638 KB and 32 MiB - it is set by `limit` and the
+/// length of a line, not by the age of the campaign - while the whole-file
+/// read grows with the file and never stops. Half a millisecond now, against
+/// seventeen milliseconds a book in 55 days (`ROTATE_BYTES` in
+/// `py/live/ai_trader.py`) and more after that.
+///
+/// Four things the file can do to a reader, and what is done about each:
+///
+/// - The window opens in the middle of a line. That head fragment is not a
+///   line and is discarded, unless the window reached byte 0, where the first
+///   byte does begin a line.
+/// - The file does not end in a newline. The tail fragment is discarded, and
+///   this is the one that matters: a Python process is appending to this file
+///   while the handler reads it, and a torn line that happened to parse would
+///   put a number nobody wrote into a trading record. Both writers terminate
+///   every line, so the only cost is that a line being written right now shows
+///   up on the next poll instead of this one.
+/// - A line is longer than the window. The window keeps doubling to byte 0, so
+///   a long line is found rather than lost; a file with no newline in it at
+///   all therefore still costs its whole length, exactly as before.
+/// - UTF-8. Both ends of the window are cut at a newline, which is ASCII and
+///   so always a character boundary; the middle is untouched. Nothing is ever
+///   sliced through a multi-byte character. Invalid UTF-8 inside the window
+///   still empties the response, as reading the file whole did — but invalid
+///   UTF-8 in a line old enough to be outside the window no longer can.
+///
+/// A rename under the reader is safe on both platforms: the open handle
+/// follows the file it was opened on, so a rotation mid-read returns the tail
+/// of the rolled file and the next poll opens the new one.
 fn tail_jsonl(path: &Path, limit: usize) -> Vec<serde_json::Value> {
-    let Ok(text) = std::fs::read_to_string(path) else { return Vec::new() };
-    let lines: Vec<&str> = text.lines().filter(|l| !l.trim().is_empty()).collect();
+    let Ok(mut file) = std::fs::File::open(path) else { return Vec::new() };
+    // The length is taken once. Whatever is appended after this point is not
+    // read at all, which is the cheapest way to be sure a line is never read
+    // half-written.
+    let Ok(end) = file.seek(SeekFrom::End(0)) else { return Vec::new() };
+
+    let mut pos = end;
+    let mut window: Vec<u8> = Vec::new();
+    let mut step = TAIL_CHUNK;
+    loop {
+        let back = step.min(pos);
+        pos -= back;
+        let mut chunk = vec![0u8; back as usize];
+        if file.seek(SeekFrom::Start(pos)).is_err() {
+            return Vec::new();
+        }
+        if file.read_exact(&mut chunk).is_err() {
+            // Short of the bytes the length promised: the file was replaced
+            // under us. An empty panel for one poll, not a wrong one.
+            return Vec::new();
+        }
+        chunk.extend_from_slice(&window);
+        window = chunk;
+        // Re-splitting the whole window each round rather than counting the
+        // new chunk's newlines and adding them up. The counting version was
+        // written first and measured slower - `bytes.iter().filter(|b| **b ==
+        // b'\n').count()` walks a byte at a time, where the `lines()` inside
+        // `complete_lines` uses the same memchr the standard library uses
+        // everywhere else. Doubling keeps the number of rounds at three or
+        // four, so the re-splitting is bounded and the faster scan wins.
+        if pos == 0 || complete_lines(&window, pos == 0).len() >= limit {
+            break;
+        }
+        step *= 2;
+    }
+
+    let lines = complete_lines(&window, pos == 0);
     lines
         .iter()
         .skip(lines.len().saturating_sub(limit))
         .filter_map(|l| serde_json::from_str(l).ok())
         .collect()
+}
+
+/// The whole, non-empty lines inside a window that ends at the end of a file.
+/// `from_start` says the window begins at byte 0, where the first line is not
+/// a fragment.
+///
+/// Blank lines are dropped before `limit` is applied, and lines that are not
+/// JSON are dropped after it, which is what reading the file whole did. The
+/// order is deliberate and is not an oversight to tidy up: a torn line must
+/// cost the response one entry, never the response.
+fn complete_lines(window: &[u8], from_start: bool) -> Vec<&str> {
+    let mut bytes = window;
+    if !from_start {
+        match bytes.iter().position(|b| *b == b'\n') {
+            Some(i) => bytes = &bytes[i + 1..],
+            None => return Vec::new(),
+        }
+    }
+    match bytes.iter().rposition(|b| *b == b'\n') {
+        Some(i) => bytes = &bytes[..=i],
+        None => return Vec::new(),
+    }
+    let Ok(text) = std::str::from_utf8(bytes) else { return Vec::new() };
+    text.lines().filter(|l| !l.trim().is_empty()).collect()
 }
 
 /// `GET /api/paper/reasoning/{id}` — what the models said about this book.
@@ -2975,4 +3099,217 @@ fn log_consultation(data: &Path, id: &str, event: &serde_json::Value) -> Result<
     use std::io::Write as _;
     writeln!(file, "{event}").map_err(|e| ApiError::Internal(format!("paper: {}: {e}", path.display())))?;
     Ok(())
+}
+
+/// [`tail_jsonl`] against the shapes a JSONL file on this desk actually takes:
+/// being appended to, killed mid-line, and old enough that reading it whole is
+/// the thing being avoided.
+#[cfg(test)]
+mod tail_tests {
+    use super::*;
+
+    /// A file with `body` in it, in a directory the caller keeps alive.
+    fn file_of(dir: &tempfile::TempDir, body: &str) -> PathBuf {
+        let path = dir.path().join("decisions.jsonl");
+        std::fs::write(&path, body).expect("write");
+        path
+    }
+
+    fn ats(rows: &[serde_json::Value]) -> Vec<i64> {
+        rows.iter().map(|v| i_of(v, "at")).collect()
+    }
+
+    #[test]
+    fn a_file_that_is_not_there_is_no_lines() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        assert!(tail_jsonl(&dir.path().join("never-written.jsonl"), 50).is_empty());
+    }
+
+    #[test]
+    fn an_empty_file_is_no_lines() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        // The book that started this minute and has not decided yet. It must
+        // read as nothing to say, not as a failure.
+        assert!(tail_jsonl(&file_of(&dir, ""), 50).is_empty());
+    }
+
+    #[test]
+    fn fewer_lines_than_the_limit_gives_what_there_is() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        let body = "{\"at\":1}\n{\"at\":2}\n{\"at\":3}\n";
+        assert_eq!(ats(&tail_jsonl(&file_of(&dir, body), 50)), vec![1, 2, 3]);
+    }
+
+    #[test]
+    fn the_limit_takes_the_newest_and_keeps_them_oldest_first() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        let body: String = (1..=200).map(|i| format!("{{\"at\":{i}}}\n")).collect();
+        assert_eq!(ats(&tail_jsonl(&file_of(&dir, &body), 3)), vec![198, 199, 200]);
+    }
+
+    #[test]
+    fn an_unterminated_last_line_is_dropped() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        // The Python writer is mid-append, or was killed there. `{"at":9` is
+        // not JSON and would have been dropped anyway; the point of the test
+        // is that the decision is made by the missing newline and not by
+        // whether the fragment happens to parse.
+        let body = "{\"at\":1}\n{\"at\":2}\n{\"at\":9";
+        assert_eq!(ats(&tail_jsonl(&file_of(&dir, body), 50)), vec![1, 2]);
+    }
+
+    #[test]
+    fn a_torn_line_that_would_parse_is_still_dropped() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        // `12345` is valid JSON and `at` then reads as 0, so a reader that
+        // trusted the last line would put a record nobody wrote into the
+        // panel. This is the case the newline rule exists for.
+        let body = "{\"at\":1}\n12345";
+        assert_eq!(ats(&tail_jsonl(&file_of(&dir, body), 50)), vec![1]);
+    }
+
+    #[test]
+    fn blank_lines_are_not_lines() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        let body = "{\"at\":1}\n\n{\"at\":2}\n   \n{\"at\":3}\n\n";
+        assert_eq!(ats(&tail_jsonl(&file_of(&dir, body), 50)), vec![1, 2, 3]);
+        // And they do not eat into the limit: two lines back is 2, not a gap.
+        assert_eq!(ats(&tail_jsonl(&file_of(&dir, body), 2)), vec![2, 3]);
+    }
+
+    #[test]
+    fn a_line_that_is_not_json_costs_one_entry_not_the_response() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        let body = "{\"at\":1}\n{\"at\":2\n{\"at\":3}\n";
+        assert_eq!(ats(&tail_jsonl(&file_of(&dir, body), 50)), vec![1, 3]);
+        // The limit counts lines, then the unreadable one drops: asking for
+        // two here gives one. That is what reading the file whole did, and the
+        // alternative — search backwards until `limit` PARSE — would make a
+        // run of torn lines walk the whole file, which is what this change is
+        // for.
+        assert_eq!(ats(&tail_jsonl(&file_of(&dir, body), 2)), vec![3]);
+    }
+
+    #[test]
+    fn a_line_longer_than_the_window_is_found() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        // Two lines of 100 KB against a 64 KiB first read, so the window has
+        // to grow twice to reach them. `advice.jsonl` averages 12 KB a line
+        // (measured 2026-09-17) and a panel transcript is not bounded, so this
+        // is a real shape and not a contrived one.
+        let fat = "x".repeat(100_000);
+        let body = format!("{{\"at\":1,\"pad\":\"{fat}\"}}\n{{\"at\":2,\"pad\":\"{fat}\"}}\n");
+        assert_eq!(ats(&tail_jsonl(&file_of(&dir, &body), 2)), vec![1, 2]);
+    }
+
+    #[test]
+    fn one_line_with_no_newline_at_all_is_nothing() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        // The window grows to byte 0 and still finds no line terminator, so
+        // there is no line that is known to be whole. Deliberate, and it is
+        // not free: a writer that did not terminate its lines would read as an
+        // empty log here. Both writers on this desk terminate every line.
+        assert!(tail_jsonl(&file_of(&dir, "{\"at\":1}"), 50).is_empty());
+    }
+
+    #[test]
+    fn the_head_of_a_large_file_is_never_read() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        // 2 MB of bytes that are not UTF-8, then the lines. Decoding the file
+        // whole fails on them, so a pass means the read genuinely stayed in
+        // the tail — a claim about cost that a stopwatch cannot make on a
+        // shared machine.
+        let mut body: Vec<u8> = vec![0xFF; 2 * 1024 * 1024];
+        body.push(b'\n');
+        for i in 1..=60 {
+            body.extend_from_slice(format!("{{\"at\":{i}}}\n").as_bytes());
+        }
+        let path = dir.path().join("decisions.jsonl");
+        std::fs::write(&path, &body).expect("write");
+        assert!(std::fs::read_to_string(&path).is_err(), "the whole file does not decode");
+        assert_eq!(ats(&tail_jsonl(&path, 50)).len(), 50);
+        assert_eq!(*ats(&tail_jsonl(&path, 50)).last().expect("last"), 60);
+    }
+
+    #[test]
+    fn a_growing_file_is_read_at_the_length_it_had() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        let path = file_of(&dir, "{\"at\":1}\n{\"at\":2}\n");
+        // Appending between two calls is the normal case, not an error: the
+        // second call sees the new line and neither call sees a half of one.
+        let mut f = std::fs::OpenOptions::new().append(true).open(&path).expect("append");
+        f.write_all(b"{\"at\":3}\n").expect("write");
+        drop(f);
+        assert_eq!(ats(&tail_jsonl(&path, 50)), vec![1, 2, 3]);
+    }
+}
+
+/// The receipt for the table in [`tail_jsonl`]'s comment.
+///
+/// `#[ignore]`d: it writes 64 MB of temporary files and a timing is not a
+/// thing to assert on a machine that is also running sixteen books and a
+/// terminal. Run it by hand when the shape of a log changes, or when someone
+/// wants to know whether reading the tail still pays:
+///
+/// ```text
+/// cargo test -p fd-api --lib --release tail_bench -- --ignored --nocapture
+/// ```
+///
+/// The comparison is against the code this replaced - `read_to_string`, split,
+/// keep the last `limit` - spelled out again here rather than kept alive in
+/// the crate, so the old shape cannot be called by accident.
+#[cfg(test)]
+mod tail_bench {
+    use super::*;
+
+    /// A file of `line_bytes`-long records, up to `target` bytes, timed both
+    /// ways at both limits the handlers use. Best of five: the worst of five
+    /// on a busy Windows box measures the scheduler, not the code.
+    fn bench(name: &str, line_bytes: usize, target: usize) {
+        let dir = tempfile::tempdir().expect("temp dir");
+        let path = dir.path().join("x.jsonl");
+        let pad = "y".repeat(line_bytes.saturating_sub(24));
+        let mut body = String::new();
+        let mut rows = 0;
+        while body.len() < target {
+            rows += 1;
+            body.push_str(&format!("{{\"at\":{rows},\"p\":\"{pad}\"}}\n"));
+        }
+        std::fs::write(&path, &body).expect("write");
+        for limit in [DEFAULT_REASONING, MAX_REASONING] {
+            let mut tail = std::time::Duration::MAX;
+            let mut whole = std::time::Duration::MAX;
+            for _ in 0..5 {
+                let t = std::time::Instant::now();
+                let n = tail_jsonl(&path, limit).len();
+                tail = tail.min(t.elapsed());
+
+                let t = std::time::Instant::now();
+                let text = std::fs::read_to_string(&path).expect("read");
+                let lines: Vec<&str> = text.lines().filter(|l| !l.trim().is_empty()).collect();
+                let m: Vec<serde_json::Value> = lines
+                    .iter()
+                    .skip(lines.len().saturating_sub(limit))
+                    .filter_map(|l| serde_json::from_str(l).ok())
+                    .collect();
+                whole = whole.min(t.elapsed());
+
+                // The point of running both is that they agree. A tail that is
+                // fast and returns something else is not an improvement.
+                assert_eq!(n, m.len(), "{name}: the tail and the whole file disagree");
+            }
+            println!("{name} {} bytes {rows} lines | limit {limit}: tail {tail:?} whole {whole:?}", body.len());
+        }
+    }
+
+    #[test]
+    #[ignore]
+    fn reading_the_tail_against_reading_the_file() {
+        // Both shapes, at the size they are today and at the size the writers
+        // roll them at. Line lengths measured 2026-09-17 from the real files.
+        bench("decisions-today", 6386, 632_258);
+        bench("decisions-at-roll", 6386, 32 * 1024 * 1024);
+        bench("executor-today", 221, 73_862);
+        bench("executor-at-roll", 221, 32 * 1024 * 1024);
+    }
 }

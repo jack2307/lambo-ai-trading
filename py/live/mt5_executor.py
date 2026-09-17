@@ -82,8 +82,72 @@ ROOT = Path(__file__).resolve().parents[2]
 UTC = dt.timezone.utc
 
 
+# Roll `executor.jsonl` aside once it passes 32 MiB.
+#
+# The arithmetic, measured 2026-09-17: the busiest of them,
+# `data/live/vantage-demo/ai-xau-ds-ctx/executor.jsonl`, is 73,862 bytes over
+# 334 lines — 221 bytes a line — written across 18.4 hours, so 3.9 KB an hour,
+# 94 KB a day. `xau-ema` manages 1.0 KB an hour. 32 MiB is therefore about 350
+# days of the busiest account's busiest book, and years of a quiet one.
+#
+# Which is to say: here this is a guard and not housekeeping. It should never
+# fire, and the number is deliberately the same 32 MiB as
+# `ai_trader.ROTATE_BYTES` rather than scaled down to make it fire — a
+# threshold picked so that rotation HAPPENS would be rolling a file nobody has
+# any trouble reading. What it is for is the day something starts logging per
+# tick instead of per poll, which is a bug that has happened elsewhere in this
+# repo and would otherwise fill the VPS disk quietly overnight.
+#
+# Duplicated from `ai_trader.py` rather than shared. The executor imports
+# nothing from the AI side on purpose — it is the process that sends orders to
+# a real account, and its import list is short so that it is auditable. Twenty
+# lines of duplication is the cheaper of the two prices.
+ROTATE_BYTES = 32 * 1024 * 1024
+
+
+def roll_aside(path: Path) -> None:
+    """Move a full log out of the way, under a name that sorts by when.
+
+    Not truncation and not pruning, and there is deliberately NO option to
+    keep only the last N files. The owner's standing requirement is that this
+    account's record reads as one unbroken thing from the first day — the same
+    requirement the identity check further down enforces against mixing — and
+    a rotation able to delete is one that eventually will. If disk is ever
+    genuinely short, moving old files elsewhere is a decision a person makes
+    once; it is not a flag that runs every day without being watched.
+
+    `os.rename`, never `os.replace`. Rename refuses to overwrite on Windows;
+    replace overwrites everywhere and would silently destroy an existing
+    rolled file. The explicit `exists` check is there because POSIX `rename`
+    DOES overwrite, so without it the guarantee would hold on this VPS and not
+    on Linux.
+
+    Failing to roll is acceptable; losing a line is not. It runs BEFORE the
+    append and never touches content: the new line lands in the fresh file,
+    and fd-api holding the old one open keeps reading it under its new name —
+    Rust opens with FILE_SHARE_DELETE, so its reading does not block the
+    rename, and if some other reader does, the file just keeps growing and the
+    next line tries again.
+    """
+    try:
+        if path.stat().st_size < ROTATE_BYTES:
+            return
+        stamp = dt.datetime.now(tz=UTC).strftime("%Y%m%dT%H%M%SZ")
+        rolled = path.with_name(f"{path.stem}-{stamp}{path.suffix}")
+        if rolled.exists():
+            return
+        os.rename(path, rolled)
+    except OSError:
+        # Narrow on purpose, the same way write_snapshot() below is narrow:
+        # these are the ways a rename can fail, and a mirror that stopped
+        # sending orders because it could not tidy a log would be a far worse
+        # bug than a log that grew too big.
+        pass
+
+
 def log(path: Path, kind: str, **fields) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
+    roll_aside(path)
     row = {"kind": kind, "time": int(time.time() * 1000), **fields}
     with path.open("a", encoding="utf-8") as f:
         f.write(json.dumps(row, ensure_ascii=False) + "\n")

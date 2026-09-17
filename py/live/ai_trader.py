@@ -506,6 +506,74 @@ def sane(decision: dict, last_close: float) -> tuple[bool, str]:
     return True, ""
 
 
+# Roll `decisions.jsonl` aside once it passes 32 MiB.
+#
+# The arithmetic, measured 2026-09-17:
+# `data/paper/ai-xau-opus-ctx/decisions.jsonl` is 632,258 bytes over 99 lines
+# — 6,386 bytes a line, because the whole prompt is in the line and that is
+# the point of the file — written over 25.8 hours, so 24.5 KB an hour, 588 KB
+# a day for one book at 15-minute bars. 32 MiB is therefore about 57 days.
+#
+# The threshold is not finely tuned and cannot be, because rolling saves no
+# disk at all: nothing is ever removed, so the total on the VPS grows exactly
+# as fast either way. What it bounds is the size of any ONE file — one that
+# can be copied off the box in a single go, opened in an editor, or read whole
+# by something that legitimately wants all of it. Anywhere between a month and
+# a quarter would do; 57 days was picked because it makes the cost below
+# something that happens twice a season rather than twice a month.
+#
+# That cost, plainly: right after a roll the Desk's reasoning panel is empty,
+# because fd-api reads the tail of the live file and does not look at its
+# predecessors. The first decision appears at the next bar, the default fifty
+# take about half a day to come back, and for that half day the panel
+# understates a campaign that has been running for months. Worth fixing on the
+# Rust side if it ever annoys anyone; not worth blocking this on.
+ROTATE_BYTES = 32 * 1024 * 1024
+
+
+def roll_aside(path: str) -> None:
+    """Move a full log out of the way, under a name that sorts by when.
+
+    Not truncation and not pruning, and there is deliberately NO option to
+    keep only the last N files. The owner's standing requirement is that the
+    trading record reads as one unbroken thing from the first day, and a
+    rotation that is able to delete is one that eventually will — on the night
+    somebody wants the first week back. If more disk is ever genuinely needed,
+    the answer is to move old files somewhere else by hand, which is a
+    decision a person makes once, not a flag that quietly runs every day.
+
+    `os.rename`, never `os.replace`. Rename refuses to overwrite on Windows;
+    replace overwrites everywhere and would silently destroy an existing
+    rolled file, which is the one outcome this function exists to prevent. The
+    explicit `exists` check is there because POSIX `rename` DOES overwrite, so
+    without it the guarantee would hold on the VPS and not on Linux, and the
+    guarantee is the whole point.
+
+    Failing to roll is acceptable; losing a line is not. So this runs BEFORE
+    the append and never touches a byte of content: the new line lands in the
+    fresh file, and a reader holding the old one open keeps reading it under
+    its new name. If the rename is refused the file simply keeps growing and
+    the next line tries again.
+    """
+    try:
+        if os.path.getsize(path) < ROTATE_BYTES:
+            return
+        stamp = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+        stem, ext = os.path.splitext(path)
+        rolled = f"{stem}-{stamp}{ext}"
+        if os.path.exists(rolled):
+            return
+        os.rename(path, rolled)
+    except OSError:
+        # Every way this fails leaves the log exactly as it was: no file yet,
+        # or a reader holding it open on Windows without FILE_SHARE_DELETE and
+        # the rename refused. Swallowed as narrowly as `remember()` swallows
+        # its own, and for the same reason — a decision must never depend on
+        # housekeeping. Only OSError: a TypeError here would be a bug in this
+        # function and should be loud.
+        pass
+
+
 def log(run: str, record: dict) -> None:
     """Prompt and reply, whole, beside the book they drove.
 
@@ -515,6 +583,7 @@ def log(run: str, record: dict) -> None:
     """
     path = os.path.join(ROOT, "data", "paper", run, "decisions.jsonl")
     os.makedirs(os.path.dirname(path), exist_ok=True)
+    roll_aside(path)
     with open(path, "a", encoding="utf-8") as f:
         f.write(json.dumps(record) + chr(10))
 
