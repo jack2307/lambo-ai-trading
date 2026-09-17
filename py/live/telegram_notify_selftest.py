@@ -164,6 +164,23 @@ def main() -> int:
     check("and having been learned, it stays quiet",
           T.broker_alarms("b", "acc", old, st5, now), [])
 
+    print("\n8. the watch noticing it has gone blind")
+    st6: dict = {"had_accounts": True}
+    full = [{"id": "a", "runs": [], "mirroring": [], "real_money": False}]
+    check("a complete payload says nothing", T.blind_spots(full, st6), [])
+    thin = [{"id": "a", "runs": [], "mirroring": []}]          # real_money dropped
+    out6 = T.blind_spots(thin, st6)
+    check("a dropped field is announced once", len(out6), 1)
+    check("and names the field", "real_money" in out6[0], True)
+    check("the same payload next poll is silent", T.blind_spots(thin, st6), [])
+    back2 = T.blind_spots(full, st6)
+    check("the recovery is announced", len(back2) == 1 and "complete again" in back2[0], True)
+    check("an empty registry where there were accounts is announced",
+          len(T.blind_spots([], st6)) == 1, True)
+    check("and not repeated", T.blind_spots([], st6), [])
+    check("a desk that never had accounts says nothing",
+          T.blind_spots([], {}), [])
+
     print(f"\n{'all checks passed' if not FAIL else str(FAIL) + ' CHECK(S) FAILED'}")
     return 1 if FAIL else 0
 

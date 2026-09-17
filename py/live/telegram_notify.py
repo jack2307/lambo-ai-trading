@@ -394,6 +394,74 @@ def mirror_gaps(accounts: list, state: dict, now_ms: float,
     return out
 
 
+#: The account fields every alert above is read from.
+#:
+#: None of them carries `skip_serializing_if` in `AccountDto`
+#: (crates/fd-api/src/paper.rs), so each is always present in the JSON and a
+#: missing one means the contract moved rather than that the value was empty.
+#: That is what makes the check below safe to make loud: no ordinary state of
+#: the desk can trigger it.
+ACCOUNT_FIELDS = ("runs", "mirroring", "real_money")
+
+
+def blind_spots(accounts: list, state: dict) -> list[str]:
+    """When this watch has stopped being able to see, say so.
+
+    `real_money`, `runs` and `mirroring` were added to the accounts route on
+    2026-09-17 and nothing else depends on them yet, so they are the newest and
+    least load-bearing part of the contract these alerts stand on. If any of
+    them disappears, every account alert goes QUIET - no gap is ever computed,
+    no book is ever named, and the channel looks exactly like a desk with
+    nothing wrong. A watchdog's worst failure is silence, and silence is this
+    one's default failure.
+
+    Two ways to go blind, not one:
+
+      * the payload arrives without the fields the alerts read
+      * the payload arrives with no accounts at all, where there were some
+
+    The second is not a contract change but it has the same effect: no rows,
+    no gaps, nothing said. It is worth one line because an executor registry
+    that empties itself is either a config that was edited or a desk that
+    reloaded without one, and both are things somebody chose without meaning
+    to.
+
+    Deliberately NOT a fallback that guesses. A watch that invented a missing
+    `real_money` would put every book on the tighter threshold or none of
+    them, and either way would report a state of the world it made up.
+    """
+    out: list[str] = []
+    was_blind = bool(state.get("blind"))
+    missing: set = set()
+    for a in accounts or []:
+        missing.update(f for f in ACCOUNT_FIELDS if f not in a)
+
+    if missing:
+        if not was_blind:
+            state["blind"] = True
+            out.append(
+                "⚠️ The accounts route no longer carries "
+                + ", ".join(f"<code>{esc(f)}</code>" for f in sorted(missing))
+                + " — mirror and executor alerts are blind until it does."
+            )
+        return out
+
+    if accounts:
+        if was_blind:
+            state["blind"] = False
+            out.append("✅ The accounts route is complete again.")
+        state["had_accounts"] = True
+    elif state.get("had_accounts") and not state.get("no_accounts"):
+        state["no_accounts"] = True
+        out.append(
+            "⚠️ The desk is reporting no broker accounts at all — "
+            "nothing is mirroring anything, and no account alert can fire."
+        )
+    if accounts:
+        state["no_accounts"] = False
+    return out
+
+
 def broker_alarms(run_id: str, account_id: str, events: list,
                   state: dict, now_ms: float) -> list[str]:
     """The executor refusing to run at all, said once.
@@ -680,6 +748,12 @@ def main() -> int:
             funded = funded_books(accounts)
             markets = {str(r.get("id")): str(r.get("market") or "") for r in runs}
             lines = changes(runs, state, now_ms, funded)
+            # Before the account alerts, whether they can see at all. Only when
+            # the route answered: a route that is down is already reported by
+            # `accounts_down` above, and saying both would be two alarms for
+            # one outage.
+            if not state.get("accounts_down"):
+                lines += blind_spots(accounts, state)
             lines += mirror_gaps(accounts, state, now_ms, markets)
 
             # Executor events, fetched ONLY for the books an account should be
