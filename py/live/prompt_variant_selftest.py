@@ -104,9 +104,11 @@ FAKE = {
     "state": "ok", "as_of_ms": 1_789_000_000_000, "age_ms": 5 * 60_000,
     "fields": {
         "max_gex_strike": 4400, "alldte_poc": 4360, "alldte_vah": 4500, "alldte_val": 4280,
-        "whale_sup": 4200, "whale_res": 5000, "whale_symbol": "OGV6",
+        "whale_sup": 4200, "whale_res": 5000,
         "atm_price": 4356.3, "exp_move": 55.34, "avg_iv": 0.29,
-        "0dte_bull": 1, "0dte_bear": 2, "weekly_bull": 3, "weekly_bear": 4,
+        "daily_bull": 12321257.0, "daily_bear": 19885617.0,
+        "weekly_bull": 11068826.0, "weekly_bear": 11912388.0,
+        "flow_window_h": 90.8, "flow_prints": 7915, "flow_unclassified": 0,
         "big_prints": [{"t": 1_789_000_000_000, "strike": 4500, "class": "C",
                         "side": "LONG", "premium": 1250000}],
     },
@@ -114,9 +116,22 @@ FAKE = {
 text = O.block(FAKE)
 for label, unit in (("gamma wall", "USD/oz"), ("all-DTE POC", "USD/oz"),
                     ("whale support", "USD/oz"), ("expected move", "USD/oz"),
-                    ("0DTE bull premium", "USD"), ("weekly bear premium", "USD")):
+                    ("daily-expiry contracts", "USD"), ("weekly-expiry contracts", "USD")):
     line = next((l for l in text.splitlines() if l.strip().startswith(label)), "")
     check(unit in line, f"the block gives '{label}' a unit ({unit})")
+
+# The premium lines must carry the window they cover. A total with no window
+# is a number nobody can compare to anything, and both lines are sums over a
+# span the feed chooses rather than one this desk fixed.
+for label in ("daily-expiry contracts", "weekly-expiry contracts"):
+    line = next((l for l in text.splitlines() if l.strip().startswith(label)), "")
+    check("over the last" in line and "h:" in line,
+          f"'{label}' states the window it covers")
+
+# Never the words 0DTE: the block reports the feed's contract CLASS and is not
+# measuring days to expiry. A daily-expiry contract is usually but not always
+# today's, and labelling it 0DTE would be a claim this does not check.
+check("0DTE" not in text, "the block does not claim 0DTE, which it does not measure")
 check("positioning, not direction" in text.lower().replace("\n", " ")
       or ("POSITIONING, not direction" in text),
       "the block says these describe positioning and not direction")

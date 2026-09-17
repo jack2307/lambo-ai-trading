@@ -178,41 +178,74 @@ def gather(now_ms: int | None = None) -> dict:
         for k in ("poc", "vah", "val"):
             f["alldte_" + k] = prof.get(k)
 
-    # Bull/bear premium by horizon. `alldte-data?tf=` is documented as the
-    # snapshot aggregate for one horizon; if it does not carry the two totals
-    # they stay absent and the block says so. They are NOT filled in from the
-    # all-expirations totals above - a number labelled "0DTE" that is actually
-    # every expiration is worse than a gap.
-    for tf, label in (("daily", "0dte"), ("weekly", "weekly")):
-        doc = _get(base, f"/api/options/alldte-data?tf={tf}", deadline)
-        row = doc
-        if isinstance(doc, dict) and isinstance(doc.get("snapshots"), list) and doc["snapshots"]:
-            row = doc["snapshots"][-1]
-        if isinstance(row, dict):
-            f[label + "_bull"] = row.get("bull_total")
-            f[label + "_bear"] = row.get("bear_total")
-
-    # Whale support and resistance, which live only in the trade tape's
-    # run-length-encoded level track and not in any summary endpoint.
+    # ONE fetch for three things: the bull/bear split, the whale levels and
+    # the window they cover.
     #
-    # Taken from the busiest contract rather than a fixed symbol: the front
-    # month rolls, and a hardcoded OGV6 would quietly describe a dead
-    # contract from October onwards. `hours=8` keeps the payload small - the
-    # levels are recomputed on every print, so the last pair is current
-    # whatever window it was computed over.
-    contracts = _get(base, "/api/options/active-contracts", deadline)
-    if isinstance(contracts, list) and contracts:
-        try:
-            front = max((c for c in contracts if isinstance(c, dict)),
-                        key=lambda c: c.get("total_premium") or 0)
-        except ValueError:
-            front = None
-        if front and front.get("symbol"):
-            f["whale_symbol"] = front["symbol"]
-            chart = _get(base, f"/api/options/chart-data/{front['symbol']}?hours=8&candles=1", deadline)
-            rle = (((chart or {}).get("data") or {}).get("trades") or {}).get("levels_rle") or {}
-            f["whale_sup"] = _last_rle(rle.get("whale_sup"))
-            f["whale_res"] = _last_rle(rle.get("whale_res"))
+    # `alldte-data?tf=` is NOT a snapshot aggregate, whatever the endpoint
+    # table suggests - measured against a real response on 2026-09-17. It is
+    # a LOOKBACK WINDOW over the whole tape: `tf=weekly` returned 7,915 prints
+    # spanning 3.8 days across 39 contracts of every type, each print carrying
+    # `symbol`, a `contracts` list mapping symbol to daily/weekly/monthly, and
+    # the level columns FLAT rather than run-length encoded.
+    #
+    # So this one call replaces the two it used to take - active-contracts
+    # plus a per-contract chart-data - and costs less than they did together.
+    # 1.2 MB, parsed in 17 ms; the cost is the download and it sits well
+    # inside the budget.
+    #
+    # `tf=weekly` and not something shorter BECAUSE one of the two lines is a
+    # WEEKLY figure, and a 24-hour window cannot produce one. Quoting a day's
+    # premium under a weekly label is the mislabelling this desk spent the
+    # week removing. `tf=daily` is also a bare `[]` at some hours, which is a
+    # second reason not to build on it.
+    alldte = _get(base, "/api/options/alldte-data?tf=weekly", deadline)
+    tape = (alldte or {}).get("trades") if isinstance(alldte, dict) else None
+    if isinstance(tape, dict) and isinstance(tape.get("x"), list) and tape["x"]:
+        kinds = {}
+        for c in (alldte.get("contracts") or []):
+            if isinstance(c, dict) and c.get("symbol"):
+                kinds[c["symbol"]] = c.get("type")
+        cls = tape.get("class") or []
+        side = tape.get("side") or []
+        prem = tape.get("premium") or []
+        sym = tape.get("symbol") or []
+        sums = {"daily": [0.0, 0.0], "weekly": [0.0, 0.0]}
+        unclassified = 0
+        for i in range(len(tape["x"])):
+            kind = kinds.get(sym[i]) if i < len(sym) else None
+            if kind is None:
+                unclassified += 1
+                continue
+            if kind not in sums:
+                continue
+            # The feed's own four buckets (methodology 2.2): bull is a call
+            # bought or a put sold, bear is a put bought or a call sold.
+            # `side` is the AGGRESSOR and not open/close.
+            #
+            # `premium` is used as the feed publishes it rather than
+            # recomputed as price x size x 100. The two agree on 173 of 200
+            # sampled prints, and where they differ the feed's own number is
+            # the one its other endpoints are consistent with.
+            bull = ((cls[i] == "C" and side[i] == "LONG")
+                    or (cls[i] == "P" and side[i] == "SHORT"))
+            sums[kind][0 if bull else 1] += (prem[i] or 0)
+        f["daily_bull"], f["daily_bear"] = sums["daily"]
+        f["weekly_bull"], f["weekly_bear"] = sums["weekly"]
+        f["flow_unclassified"] = unclassified
+        f["flow_prints"] = len(tape["x"])
+        a, b = _to_utc_ms(tape["x"][0], offset_ms), _to_utc_ms(tape["x"][-1], offset_ms)
+        if a is not None and b is not None:
+            f["flow_window_h"] = round(max(b - a, 0) / 3_600_000.0, 1)
+
+        # The whale levels come from the same payload as flat per-print
+        # columns, across every contract in the window rather than one
+        # symbol's tape. That is what a positioning block should show, and it
+        # removes the rolling-front-month problem instead of working around
+        # it.
+        for k in ("whale_sup", "whale_res"):
+            col = tape.get(k)
+            if isinstance(col, list) and col:
+                f[k] = col[-1]
 
     big = _get(base, "/api/options/big-trades?min_premium=250000&limit=40", deadline)
     prints = big.get("trades") if isinstance(big, dict) else big
@@ -265,10 +298,8 @@ def block(ctx: dict) -> str:
     add("all-DTE POC", f.get("alldte_poc"), " USD/oz")
     add("all-DTE value area high", f.get("alldte_vah"), " USD/oz")
     add("all-DTE value area low", f.get("alldte_val"), " USD/oz")
-    sym = f.get("whale_symbol")
-    tag = f" (from {sym})" if sym else ""
-    add("whale support" + tag, f.get("whale_sup"), " USD/oz")
-    add("whale resistance" + tag, f.get("whale_res"), " USD/oz")
+    add("whale support (all contracts)", f.get("whale_sup"), " USD/oz")
+    add("whale resistance (all contracts)", f.get("whale_res"), " USD/oz")
     add("ATM (futures)", f.get("atm_price"), " USD/oz")
     add("expected move, 1 day", f.get("exp_move"), " USD/oz")
     if f.get("iv_from") is not None:
@@ -277,10 +308,26 @@ def block(ctx: dict) -> str:
                  f"({d:+.4f})")
     else:
         add("average IV", f.get("avg_iv"))
-    add("0DTE bull premium", f.get("0dte_bull"), " USD")
-    add("0DTE bear premium", f.get("0dte_bear"), " USD")
-    add("weekly bull premium", f.get("weekly_bull"), " USD")
-    add("weekly bear premium", f.get("weekly_bear"), " USD")
+    # Labelled by the feed's OWN contract class - daily-expiry, weekly-expiry
+    # - and never "0DTE", which would be a claim about days to expiry that
+    # this is not measuring. A daily-expiry contract is usually but not always
+    # today's. The window is on the line because a premium total without one
+    # is a number nobody can compare to anything.
+    win = f.get("flow_window_h")
+    span = f" over the last {win}h" if win is not None else ""
+    if f.get("daily_bull") is None:
+        L.append("  daily-expiry premium: not reported")
+    else:
+        L.append(f"  daily-expiry contracts{span}: bull {f['daily_bull']:,.0f} USD, "
+                 f"bear {f['daily_bear']:,.0f} USD")
+    if f.get("weekly_bull") is None:
+        L.append("  weekly-expiry premium: not reported")
+    else:
+        L.append(f"  weekly-expiry contracts{span}: bull {f['weekly_bull']:,.0f} USD, "
+                 f"bear {f['weekly_bear']:,.0f} USD")
+    if f.get("flow_unclassified"):
+        L.append(f"    ({f['flow_unclassified']} of {f.get('flow_prints')} prints had no "
+                 f"contract class and are in neither total)")
     prints = f.get("big_prints") or []
     if prints:
         L.append("  largest prints, last 8h (strike USD/oz, C/P, aggressor side, premium USD):")

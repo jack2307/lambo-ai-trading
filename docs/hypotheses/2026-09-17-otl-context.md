@@ -41,11 +41,36 @@ describe **positioning, not direction**:
 
 - gamma wall (`summary.max_gex_strike`), USD/oz
 - all-DTE POC / VAH / VAL, USD/oz
-- whale support / resistance, USD/oz, with the contract they came from
+- whale support / resistance across every contract in the window, USD/oz
 - ATM futures price and the 1-day expected move, USD/oz
 - average IV now against N hours ago, as both numbers and the difference
-- 0DTE and weekly bull vs bear premium, USD
+- bull vs bear premium for daily-expiry and weekly-expiry contracts, USD,
+  each stating the window it covers
 - the largest prints of the last 8 hours: strike, C/P, aggressor side, premium
+
+**The premium lines say "daily-expiry" and "weekly-expiry" and never "0DTE",**
+and the difference is not pedantry. The feed's contract class is `daily`,
+`weekly` or `monthly`; days-to-expiry is a separate quantity this block does
+not compute. A daily-expiry contract is usually today's and is not always, so
+a line labelled 0DTE would be asserting something unchecked. The selftest
+fails if the string "0DTE" appears in the block.
+
+Bull and bear follow the feed's own four buckets, verified against a real
+response: bull is a call bought or a put sold, bear is a put bought or a call
+sold, with `side` read as the aggressor. The `premium` column is used as
+published rather than recomputed as price x size x 100 — the two agree on 173
+of 200 sampled prints and the feed's own number is the one its other
+endpoints are consistent with.
+
+**What the endpoint actually is**, since the methodology table is misleading
+and cost a round: `alldte-data?tf=` is not a snapshot aggregate. It is a
+lookback window over the whole tape. `tf=weekly` returned 7,915 prints across
+3.8 days and 39 contracts of every class, each print carrying its symbol, with
+a `contracts` list mapping symbol to class and the level columns flat rather
+than run-length encoded. `tf=daily` returns a bare `[]` at some hours. So the
+block takes `tf=weekly` — the only window that can produce a weekly figure —
+and one fetch yields the premium split, the whale levels and the window, which
+is fewer calls than the first draft made.
 
 **The clock.** The feed renders every time in UTC+7, including strings that
 carry a `+00:00` suffix which is not true — measured 2026-09-12, pinned by a
