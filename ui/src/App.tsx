@@ -6,13 +6,14 @@ import { Analytics } from '@/pages/Analytics'
 import { Desk } from '@/pages/Desk'
 import { Floor } from '@/pages/Floor'
 import { Research } from '@/pages/Research'
+import { Settings } from '@/pages/Settings'
 import { Tape } from '@/pages/Tape'
 import { Workbench } from '@/pages/Workbench'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Toaster } from '@/components/ui/sonner'
 import { api, type Catalog } from '@/lib/api'
 
-export type View = 'desk' | 'analytics' | 'workbench' | 'tape' | 'research' | 'floor'
+export type View = 'desk' | 'analytics' | 'workbench' | 'tape' | 'research' | 'floor' | 'settings'
 
 /**
  * Which side of the desk is on screen: what the strategies DECIDED, or what a
@@ -32,7 +33,7 @@ export type View = 'desk' | 'analytics' | 'workbench' | 'tape' | 'research' | 'f
  */
 export type Book = 'paper' | number
 
-const VIEWS: View[] = ['desk', 'analytics', 'workbench', 'tape', 'research', 'floor']
+const VIEWS: View[] = ['desk', 'analytics', 'workbench', 'tape', 'research', 'floor', 'settings']
 
 function viewFromHash(): View {
   const hash = window.location.hash.replace('#', '') as View
@@ -95,6 +96,8 @@ export default function App() {
         <Analytics />
       ) : view === 'floor' ? (
         <Floor />
+      ) : view === 'settings' ? (
+        <Settings />
       ) : !catalog ? (
         <div className="space-y-3 p-4">
           <Skeleton className="h-9 w-full" />

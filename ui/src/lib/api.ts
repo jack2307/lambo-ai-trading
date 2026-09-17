@@ -511,6 +511,21 @@ export interface BrokerAccount {
   margin_level: number | null
   /** True only when EVERY reporting book here is in dry run. */
   dry_run: boolean
+  /**
+   * What the registry PERMITS, not what is happening.
+   *
+   * An account can be `real_money` and flat, or `real_money` and dry. The flag
+   * says only that nothing in the configuration stands between this account
+   * and an order that costs money — worth saying plainly on a screen where a
+   * funded account and a practice one otherwise look identical.
+   *
+   * It is not the permission itself. `mt5_executor.py` reads the same file and
+   * additionally demands `--allow-real` on its own command line, so this
+   * cannot be granted from a browser and showing it here grants nothing.
+   */
+  real_money: boolean
+  /** Terminal volume = the book's lots × this, from the registry. */
+  lot_scale: number
   /** Newest snapshot across this account's books; 0 when none ever reported. */
   at: number
   /** Books whose executor is actually reporting into this account. */

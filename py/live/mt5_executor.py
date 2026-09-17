@@ -709,15 +709,34 @@ def main() -> int:
 
         def snapshot(held, book_open) -> None:
             acc = mt5.account_info()
+            # None means the terminal is not answering - it was closed, or
+            # restarted out from under this process. Everything below reads
+            # `acc` with getattr and would quietly write a snapshot full of
+            # nulls, which the desk cannot tell from a quiet account.
+            #
+            # Measured 2026-09-17: the demo terminal was restarted, five
+            # executors kept polling, and every one of them wrote
+            # `login: null, balance: null, demo: false` every fifteen seconds.
+            # `demo: false` is the one that bites - it is not "unknown", it is
+            # the assertion that this is NOT a practice account, produced by
+            # comparing None to a constant. On a desk that now has a funded
+            # account, a disconnected demo reading as real money is the wrong
+            # way round for that mistake to go.
+            if acc is None:
+                log(out, "no-account", error=str(mt5.last_error()))
+                return
             realised, closed, fills = history_of(mt5, magic)
             tick = mt5.symbol_info_tick(args.symbol)
             pos = held[0] if held else None
             payload = {
                 "at": int(time.time() * 1000),
                 "account": account,
-                "login": getattr(acc, "login", None),
-                "server": getattr(acc, "server", None),
-                "demo": getattr(acc, "trade_mode", None) == mt5.ACCOUNT_TRADE_MODE_DEMO,
+                "login": acc.login,
+                "server": acc.server,
+                # Three states, not two: a demo, a real account, and an
+                # answer nobody has. The guard above means `acc` is real here,
+                # so this is now only ever the first two.
+                "demo": acc.trade_mode == mt5.ACCOUNT_TRADE_MODE_DEMO,
                 "currency": getattr(acc, "currency", None),
                 "balance": getattr(acc, "balance", None),
                 "equity": getattr(acc, "equity", None),

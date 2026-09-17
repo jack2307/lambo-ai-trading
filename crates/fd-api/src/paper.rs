@@ -1885,6 +1885,20 @@ struct AccountSpec {
     /// its own business and is reported separately - see [`AccountDto`].
     #[serde(default = "yes")]
     dry_run: bool,
+    /// Whether this account is permitted to spend real money.
+    ///
+    /// Read here so the desk can SAY so, in as many words, on a screen that
+    /// otherwise looks identical to a demo. It is NOT the permission: that
+    /// lives in `mt5_executor.py`, which reads this same file for itself and
+    /// additionally demands `--allow-real` on its command line. A screen
+    /// showing a flag that something else enforced elsewhere would be a screen
+    /// worth distrusting, so both read the one file.
+    #[serde(default)]
+    real_money: bool,
+    /// Terminal volume = the book's lots x this. Shown because on a funded
+    /// account it is the number that decides what being wrong costs.
+    #[serde(default = "one")]
+    lot_scale: f64,
     #[serde(default)]
     runs: Vec<String>,
 }
@@ -1931,6 +1945,13 @@ pub struct AccountDto {
     /// connected and watching, but nothing it shows was ever sent. Falls back
     /// to the registry's intent when nothing is reporting.
     pub dry_run: bool,
+    /// What the registry permits, not what is happening. An account can be
+    /// `real_money` and flat, or `real_money` and dry - the flag says only
+    /// that nothing in the configuration stands between this account and a
+    /// real order. Shown on its own for that reason.
+    pub real_money: bool,
+    /// Terminal volume = the book's lots x this, from the registry.
+    pub lot_scale: f64,
     /// The newest snapshot across this account's books; 0 when none has ever
     /// reported. Whether that counts as connected is the client's call.
     pub at: i64,
@@ -2012,6 +2033,8 @@ pub async fn accounts(State(state): State<Arc<AppState>>) -> Result<Json<Account
             margin: None,
             margin_level: None,
             dry_run: spec.dry_run,
+            real_money: spec.real_money,
+            lot_scale: spec.lot_scale,
             at: 0,
             mirroring: Vec::new(),
             positions: 0,
@@ -2038,6 +2061,12 @@ pub async fn accounts(State(state): State<Arc<AppState>>) -> Result<Json<Account
             margin: b.margin,
             margin_level: b.margin_level,
             dry_run: true,
+            // An executor running outside the registry has no entry granting
+            // it anything, so nothing here claims it was permitted. What it
+            // IS - demo or real - comes from the snapshot's `demo` field
+            // above, which is the account itself talking.
+            real_money: false,
+            lot_scale: 1.0,
             at: 0,
             mirroring: Vec::new(),
             positions: 0,

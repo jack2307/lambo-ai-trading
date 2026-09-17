@@ -42,6 +42,7 @@ const VIEWS: { id: View; label: string }[] = [
   { id: 'tape', label: 'Tape' },
   { id: 'research', label: 'Research' },
   { id: 'floor', label: 'Floor' },
+  { id: 'settings', label: 'Settings' },
 ]
 
 /** The two screens that read one market at a time; the rest ignore the picker. */
