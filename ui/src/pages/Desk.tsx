@@ -453,6 +453,28 @@ function accountTrades(broker: PaperBroker | null): ChartTrade[] {
 }
 
 /**
+ * How long after the bar it is priced at the book LEARNED it holds a position,
+ * compactly. `null` when the book has not said — absent, not zero, and a "+0m"
+ * in that case would be a measurement nobody made.
+ *
+ * Rendered rather than left to the reader because the delay is STRUCTURAL and
+ * was invisible: a fill is priced at the open of the bar stamped `entry_time`,
+ * and that bar is only posted once it CLOSES, so the book cannot know before
+ * `entry_time + one bar`. It was one bar on all six positions the funded
+ * account took on 2026-09-17, every time. A number that is always the same for
+ * a structural reason is exactly the number nobody checks, so it goes on the
+ * screen instead of in a comment.
+ */
+function learnLag(entryTime: number, learnedAt: number | null | undefined): string | null {
+  if (learnedAt == null || !Number.isFinite(learnedAt)) return null
+  const ms = learnedAt - entryTime
+  if (!Number.isFinite(ms)) return null
+  const minutes = Math.round(ms / 60_000)
+  if (Math.abs(minutes) < 90) return `${minutes >= 0 ? '+' : MINUS}${Math.abs(minutes)}m`
+  return `${minutes >= 0 ? '+' : MINUS}${(Math.abs(minutes) / 60).toFixed(1)}h`
+}
+
+/**
  * The price an open position is marked against: the live tick when there is
  * one, else the last closed bar.
  *
@@ -2941,10 +2963,18 @@ function FillsTable({
                   It said `since`, which reads as the third and is the one word
                   that cannot be right for all of them. */}
               <span
-                className="num text-muted-foreground"
-                title={`the book's fill is priced at the OPEN of the bar stamped ${utcStamp(held.entry_time)}. The book only learns it holds this when that bar CLOSES, a bar later, and the account fills after that.`}
+                className="num text-muted-foreground whitespace-nowrap"
+                title={
+                  `the book's fill is priced at the OPEN of the bar stamped ${utcStamp(held.entry_time)}.` +
+                  (held.learned_at != null
+                    ? ` The book only learned it holds this at ${utcStamp(held.learned_at)}, when that bar closed.`
+                    : ' The book has not said when it learned this — the field is absent, which is not the same as no delay.')
+                }
               >
                 bar {vnStamp(held.entry_time)}
+                {learnLag(held.entry_time, held.learned_at) && (
+                  <span className="text-muted-foreground/60"> {learnLag(held.entry_time, held.learned_at)}</span>
+                )}
               </span>
               <span className={cn('num', held.side === 'LONG' ? 'text-lc' : 'text-lp')}>
                 {held.side.toLowerCase()}
