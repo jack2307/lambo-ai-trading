@@ -10,7 +10,12 @@
 param(
     [int]$Warm = 120,
     [string]$Python = 'C:\Python39\python.exe',
-    [string]$Root = (Split-Path -Parent (Split-Path -Parent $PSScriptRoot))
+    [string]$Root = (Split-Path -Parent (Split-Path -Parent $PSScriptRoot,
+    # Which terminal the prices come from. Empty lets the MetaTrader5 package
+    # pick, which is fine on a machine with one terminal and a coin flip on a
+    # machine with two.
+    [string]$Terminal = ''
+))
 )
 
 $streams = @(
@@ -29,6 +34,10 @@ $logs = Join-Path $Root 'data\paper\logs'
 New-Item -ItemType Directory -Force -Path $logs | Out-Null
 foreach ($s in $streams) {
     $args = @('py/live/mt5_bars.py', "--symbol=$($s.symbol)", "--market=$($s.market)", "--tf=$($s.tf)", "--warm=$($s.warm)", '--poll=5', '--tick-poll=1')
+    # Named only when given. A machine with one terminal has nothing to choose
+    # between; a machine with two does, and the cent symbols quoted here live
+    # on the live account only.
+    if ($Terminal) { $args += "--terminal=$Terminal" }
     Start-Process -FilePath $Python -ArgumentList $args -WorkingDirectory $Root -WindowStyle Hidden `
         -RedirectStandardOutput (Join-Path $logs "$($s.log).out") -RedirectStandardError (Join-Path $logs "$($s.log).err")
     Write-Host "started $($s.symbol) $($s.tf) -> $($s.market) (warm $($s.warm))"

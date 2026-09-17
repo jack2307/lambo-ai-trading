@@ -168,9 +168,12 @@ if (Test-Path $dist) { Ok 'ui\dist present' } else { Todo 'ui\dist missing - the
 
 # ------------------------------------------------------------ 5. MetaTrader
 Step 5 'MetaTrader terminals'
-$live = 'C:\Program Files\MetaTrader 5\terminal64.exe'
+# Portable, and outside Program Files: a portable terminal writes its data
+# next to its exe, and Program Files needs admin rights to write.
+$live = 'C:\MT5-live\terminal64.exe'
 $demo = 'C:\MT5-demo\terminal64.exe'
-if (Test-Path $live) { Ok "live terminal at $live" } else { Todo "install MT5 from VANTAGE's own download page to $live" }
+if (Test-Path $live) { Ok "live terminal at $live" } else { Todo "no live terminal at $live - copy a working MetaTrader install there, or
+            install from VANTAGE's own download page (not MetaQuotes')" }
 if (Test-Path $demo) {
     Ok "second terminal at $demo"
     # The trap that cost an afternoon on 2026-09-16, checked rather than

@@ -51,7 +51,7 @@ if (-not $env:SESSIONNAME) {
     Warn 'desktop. MetaTrader will not start here. Run this from RDP.'
 }
 $terminals = @(
-    @{ path = 'C:\Program Files\MetaTrader 5\terminal64.exe'; args = @(); what = 'live (prices)' },
+    @{ path = 'C:\MT5-live\terminal64.exe'; args = @('/portable'); what = 'live (prices)' },
     @{ path = 'C:\MT5-demo\terminal64.exe'; args = @('/portable', '/config:C:\MT5-demo\config\autologin.ini'); what = 'demo (execution)' }
 )
 foreach ($t in $terminals) {

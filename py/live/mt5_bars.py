@@ -116,14 +116,30 @@ def main() -> int:
     ap.add_argument("--warm", type=int, default=400, help="closed bars to send on startup")
     ap.add_argument("--once", action="store_true", help="send the warm-up bars and exit")
     ap.add_argument("--no-tick", action="store_true", help="closed bars only: do not send the forming bar")
+    # Which terminal the prices come from.
+    #
+    # Optional, because a machine with one terminal has nothing to choose
+    # between and every existing launcher omits it. Naming it is what makes a
+    # two-terminal machine deterministic: the cent symbols this desk quotes
+    # exist on the live account only, so a poller that attached to the demo
+    # terminal would find no symbol and quit.
+    ap.add_argument("--terminal", default="", help="path to the terminal64.exe to read prices from")
     args = ap.parse_args()
 
     try:
         import MetaTrader5 as mt5  # type: ignore
     except ImportError:
         sys.exit("MetaTrader5 package not installed")
-    if not mt5.initialize():
-        sys.exit(f"initialize failed: {mt5.last_error()}")
+    ok = mt5.initialize(path=args.terminal) if args.terminal else mt5.initialize()
+    if not ok:
+        sys.exit(f"initialize failed: {mt5.last_error()}"
+                 + (f" (terminal {args.terminal})" if args.terminal else ""))
+    # Said out loud, because attaching to the wrong terminal is the failure
+    # this argument exists to prevent and it is otherwise invisible.
+    term = mt5.terminal_info()
+    acct = mt5.account_info()
+    print(f"terminal {getattr(term, 'path', '?')}"
+          f" | account {getattr(acct, 'login', '?')} {getattr(acct, 'server', '?')}", flush=True)
     tf = getattr(mt5, f"TIMEFRAME_{args.tf}")
     try:
         info = mt5.symbol_info(args.symbol)
