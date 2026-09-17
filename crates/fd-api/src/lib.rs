@@ -12,6 +12,7 @@ pub mod paper;
 pub mod research;
 pub mod routes;
 pub mod state;
+pub mod version;
 
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -31,6 +32,12 @@ pub use state::AppState;
 /// client itself and proxies only `/api` here.
 pub fn router(state: Arc<AppState>, ui: Option<PathBuf>) -> Router {
     let api = Router::new()
+        // What this binary was built FROM, so a deploy can prove that what is
+        // answering is what was just shipped. The readiness probe used to
+        // accept any 200 from /api/paper/status, which a binary from any
+        // earlier build answers perfectly. See
+        // docs/decisions/2026-09-17-deploy-staleness.md.
+        .route("/api/version", get(version::version))
         .route("/api/chart/catalog", get(routes::catalog))
         .route("/api/chart/bars", get(routes::bars))
         .route("/api/chart/levels", get(routes::levels))
