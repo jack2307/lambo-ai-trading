@@ -33,32 +33,62 @@ function Note($m) { Write-Host "   $m" -ForegroundColor DarkGray }
 Step 'installing OpenSSH server'
 if (Get-Service sshd -ErrorAction SilentlyContinue) {
     Note 'sshd already present'
-} elseif ((Get-Command Add-WindowsCapability -ErrorAction SilentlyContinue) -and
-          (Get-WindowsCapability -Online -Name 'OpenSSH.Server*' -ErrorAction SilentlyContinue)) {
-    Note 'using the built-in capability (Server 2019+)'
-    Add-WindowsCapability -Online -Name 'OpenSSH.Server~~~~0.0.1.0' | Out-Null
 } else {
-    Note 'no built-in capability; fetching Win32-OpenSSH (Server 2012 R2 / 2016)'
-    $rel = Invoke-RestMethod 'https://api.github.com/repos/PowerShell/Win32-OpenSSH/releases/latest'
-    $asset = $rel.assets | Where-Object { $_.name -eq 'OpenSSH-Win64.zip' } | Select-Object -First 1
-    if (-not $asset) { throw 'no OpenSSH-Win64.zip in the latest Win32-OpenSSH release' }
-    $zip = Join-Path $env:TEMP $asset.name
-    Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $zip -UseBasicParsing
-    # Expand-Archive needs PowerShell 5; 2012 R2 ships 4, so use the shell COM
-    # object, which every Windows since XP has.
-    $dest = 'C:\Program Files\OpenSSH'
-    if (Test-Path $dest) { Remove-Item $dest -Recurse -Force }
-    New-Item -ItemType Directory -Force -Path $dest | Out-Null
-    $shell = New-Object -ComObject Shell.Application
-    $shell.NameSpace($dest).CopyHere($shell.NameSpace($zip).Items(), 0x14)
-    # The zip contains a top-level OpenSSH-Win64 folder; flatten it.
-    $inner = Join-Path $dest 'OpenSSH-Win64'
-    if (Test-Path $inner) {
-        Get-ChildItem $inner | Move-Item -Destination $dest -Force
-        Remove-Item $inner -Recurse -Force
+    $installed = $false
+
+    # Features on Demand come from Windows Update, and VPS images routinely
+    # ship with that service disabled. Without this, Add-WindowsCapability
+    # fails with a message about a service and some devices that names neither
+    # Windows Update nor OpenSSH.
+    $wu = Get-Service wuauserv -ErrorAction SilentlyContinue
+    if ($wu -and $wu.StartType -eq 'Disabled') {
+        Note 'Windows Update service is disabled; enabling it for the install'
+        Set-Service wuauserv -StartupType Manual
     }
-    & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $dest 'install-sshd.ps1')
-    Note 'Win32-OpenSSH installed'
+    if ($wu -and $wu.Status -ne 'Running') {
+        Start-Service wuauserv -ErrorAction SilentlyContinue
+    }
+
+    # Tried, not predicted. The capability is LISTED even on machines where it
+    # cannot be installed, so asking whether it exists tells you nothing.
+    if (Get-Command Add-WindowsCapability -ErrorAction SilentlyContinue) {
+        try {
+            Note 'trying the built-in capability'
+            Add-WindowsCapability -Online -Name 'OpenSSH.Server~~~~0.0.1.0' -ErrorAction Stop | Out-Null
+            $installed = $true
+            Note 'installed from Windows Update'
+        } catch {
+            Note ('built-in route failed: ' + $_.Exception.Message.Split([Environment]::NewLine)[0])
+        }
+    }
+
+    if (-not $installed) {
+        Note 'falling back to the Win32-OpenSSH release'
+        $rel = Invoke-RestMethod 'https://api.github.com/repos/PowerShell/Win32-OpenSSH/releases/latest'
+        $asset = $rel.assets | Where-Object { $_.name -eq 'OpenSSH-Win64.zip' } | Select-Object -First 1
+        if (-not $asset) { throw 'no OpenSSH-Win64.zip in the latest Win32-OpenSSH release' }
+        $zip = Join-Path $env:TEMP $asset.name
+        Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $zip -UseBasicParsing
+        $dest = 'C:\Program Files\OpenSSH'
+        if (Test-Path $dest) { Remove-Item $dest -Recurse -Force }
+        New-Item -ItemType Directory -Force -Path $dest | Out-Null
+        if (Get-Command Expand-Archive -ErrorAction SilentlyContinue) {
+            Expand-Archive -Path $zip -DestinationPath $dest -Force
+        } else {
+            # PowerShell 4 has no Expand-Archive; the Shell COM object is on
+            # every Windows since XP.
+            $shell = New-Object -ComObject Shell.Application
+            $shell.NameSpace($dest).CopyHere($shell.NameSpace($zip).Items(), 0x14)
+        }
+        $inner = Join-Path $dest 'OpenSSH-Win64'
+        if (Test-Path $inner) {
+            Get-ChildItem $inner | Move-Item -Destination $dest -Force
+            Remove-Item $inner -Recurse -Force
+        }
+        & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $dest 'install-sshd.ps1')
+        $env:PATH = "$dest;$env:PATH"
+        Note 'Win32-OpenSSH installed'
+    }
 }
 
 Step 'starting the service'
@@ -67,13 +97,15 @@ Start-Service sshd
 Note ((Get-Service sshd).Status)
 
 Step 'firewall'
-if (-not (Get-NetFirewallRule -Name 'flowdesk-sshd' -ErrorAction SilentlyContinue)) {
-    New-NetFirewallRule -Name 'flowdesk-sshd' -DisplayName 'OpenSSH Server (flowdesk)' `
-        -Enabled True -Direction Inbound -Protocol TCP -Action Allow -LocalPort $Port | Out-Null
-    Note "opened TCP $Port"
-} else {
-    Note 'rule already there'
-}
+# Removed and re-made rather than left alone if it exists. A rule created with
+# the wrong port is silent and looks exactly like a blocked one from outside.
+Get-NetFirewallRule -Name 'flowdesk-sshd' -ErrorAction SilentlyContinue | Remove-NetFirewallRule
+New-NetFirewallRule -Name 'flowdesk-sshd' -DisplayName 'OpenSSH Server (flowdesk)' `
+    -Enabled True -Direction Inbound -Protocol TCP -Action Allow -LocalPort $Port | Out-Null
+Note "opened TCP $Port"
+$other = Get-NetFirewallRule -ErrorAction SilentlyContinue |
+    Where-Object { $_.DisplayName -like '*SSH*' -and $_.Name -ne 'flowdesk-sshd' }
+if ($other) { $other | ForEach-Object { Note ('also present: ' + $_.DisplayName + ' [' + $_.Name + ']') } }
 
 Step 'authorising the key'
 # An ADMINISTRATOR logs in against this file and not against the one in their
