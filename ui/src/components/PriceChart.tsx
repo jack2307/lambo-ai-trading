@@ -16,6 +16,39 @@ import { useEffect, useRef } from 'react'
 import type { Bar, BacktestTrade, IndicatorPoint, OptionsFrame } from '@/lib/api'
 import { TradeZones, type TradeZone } from './tradeZones'
 
+/**
+ * A trade as the CHART needs it, which is not quite a `BacktestTrade`.
+ *
+ * `BacktestTrade.pnlUsd` means US dollars, and for the paper book it is. The
+ * ACCOUNT's trades are in the account's own currency - USC on the funded cent
+ * account - and until 2026-09-17 they were assigned straight into `pnlUsd` and
+ * carried across this boundary under a name that says dollars. Nothing broke,
+ * because the only consumer here reads the SIGN and a sign is unit-invariant;
+ * but `Analytics.tsx` already folds `BacktestTrade[]` with `net += t.pnlUsd`
+ * and prints the total with a dollar mark, so the first feature to route the
+ * account's trades through it would have stated a real-money P&L a hundred
+ * times too large.
+ *
+ * So account money travels in a field that says what it is, and `pnlUsd` is
+ * left NaN for those rows - the same idiom `accountTrades` already uses for
+ * the R and the stop a broker's fill cannot know, where a zero would read as
+ * a measurement. See docs/decisions/2026-09-17-unit-carrying.md.
+ */
+export type ChartTrade = BacktestTrade & {
+  /** P&L in the ACCOUNT's currency. Set only for the account's own trades. */
+  pnlAccount?: number
+}
+
+/**
+ * Did this trade make money? Read from whichever field actually carries the
+ * result, so the answer does not depend on which book it came from. The sign
+ * is all this is for, and the sign is the one thing both units agree on.
+ */
+function won(trade: ChartTrade): boolean {
+  const pnl = trade.pnlAccount ?? trade.pnlUsd
+  return Number.isFinite(pnl) && pnl > 0
+}
+
 export interface ActiveIndicator {
   /**
    * Instance key, e.g. `ema_21` or `macd_12_26_9`.
@@ -40,7 +73,7 @@ interface Props {
   series: Record<string, IndicatorPoint[]>
   frame: OptionsFrame | null
   showLevels: boolean
-  trades: BacktestTrade[]
+  trades: ChartTrade[]
   showMarkers: boolean
   /** Stop and target bands behind the candles. */
   showZones: boolean
@@ -71,6 +104,22 @@ interface Props {
    */
   open?: { side: string; entry_price: number; stop: number | null; target: number | null } | null
   /**
+   * The live result of that open position, ALREADY FORMATTED WITH ITS UNIT.
+   *
+   * A string and not a number, deliberately. The paper book marks in USD and
+   * the account marks in its own currency, and this chart draws both - so a
+   * bare number arriving here would be one the component could not label
+   * without knowing which book sent it, which is exactly the mistake
+   * `ChartTrade` above exists to stop. The caller owns the currency and does
+   * the formatting; this draws the text it is given.
+   */
+  openPnl?: { label: string; positive: boolean } | null
+  /**
+   * Draw the open position at all. Off hides the entry, stop, target and the
+   * result - the chart then shows only what has already happened.
+   */
+  showOpen?: boolean
+  /**
    * The one trade the reader picked in the fills table, if any.
    *
    * Everything else stays drawn and fades; this one keeps its bands, its
@@ -78,7 +127,7 @@ interface Props {
    * scrolls to it. Matched on the pair of stamps rather than on an index,
    * because the fills list is reversed for display and re-fetched every minute.
    */
-  focus?: BacktestTrade | null
+  focus?: ChartTrade | null
 }
 
 /** Reads a CSS custom property so the chart can never drift from the theme. */
@@ -105,6 +154,8 @@ export function PriceChart({
   pending,
   pendingFill,
   open,
+  openPnl = null,
+  showOpen = true,
   focus = null,
 }: Props) {
   const container = useRef<HTMLDivElement>(null)
@@ -310,6 +361,9 @@ export function PriceChart({
     // An open position and a pending entry are mutually exclusive — the desk
     // allows one position at a time — so they share these handles. Solid for
     // the one that is real, dotted for the one that is still a plan.
+    // Off means off: the handles are cleared above, so flipping the toggle
+    // removes the lines rather than leaving them behind the new state.
+    if (!showOpen) return
     const live = open ?? pending
     if (!live) return
     const held = open != null
@@ -318,7 +372,14 @@ export function PriceChart({
     const mark = long ? '\u25b2' : '\u25bc'
     const rows: [string, number | null, string][] = held
       ? [
-          [`${side.toLowerCase()} from`, open!.entry_price, token('--primary', '#8dff08')],
+          [
+            // The result rides on the ENTRY line because that is the level it
+            // is measured from; putting it on its own line would need a price
+            // to sit at, and there isn't one.
+            openPnl ? `${side.toLowerCase()} from · ${openPnl.label}` : `${side.toLowerCase()} from`,
+            open!.entry_price,
+            openPnl ? token(openPnl.positive ? '--lc' : '--lp', openPnl.positive ? '#46c98a' : '#e05d6a') : token('--primary', '#8dff08'),
+          ],
           ['stop', open!.stop, token('--lp', '#e05d6a')],
           ['target', open!.target, token('--lc', '#46c98a')],
         ]
@@ -344,7 +405,7 @@ export function PriceChart({
         }),
       )
     }
-  }, [pending, pendingFill, open])
+  }, [pending, pendingFill, open, openPnl, showOpen])
 
   // Options-derived levels, drawn as price lines on the candles.
   useEffect(() => {
@@ -422,7 +483,7 @@ export function PriceChart({
         time: seconds(trade.exitTime),
         position: long ? 'aboveBar' : 'belowBar',
         color: lit
-          ? trade.pnlUsd > 0
+          ? won(trade)
             ? token('--sp', '#3fbcc0')
             : token('--sc', '#d99446')
           : token('--muted-foreground', '#9aa39a'),

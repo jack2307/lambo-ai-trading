@@ -36,7 +36,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
-import { PriceChart, type ActiveIndicator } from '@/components/PriceChart'
+import { PriceChart, type ActiveIndicator, type ChartTrade } from '@/components/PriceChart'
 import { Skeleton } from '@/components/ui/skeleton'
 import type { Book } from '@/App'
 import { api, type BacktestTrade, type Bar, type BrokerEvent, type LiveBar, type PaperBroker, type PaperEvent, type PaperRun, type PaperRunDetail } from '@/lib/api'
@@ -86,6 +86,26 @@ const SELECTED_KEY = 'fd.desk.selected'
 
 /** `/status` sends the last ten fills per run; a count from them can only be a floor. */
 const LAST_FILLS_CAP = 10
+
+/** Whether the open position is drawn, remembered per browser. */
+const SHOW_OPEN_KEY = 'fd.desk.showOpen'
+
+const readShowOpen = (): boolean => {
+  try {
+    // Absent means ON: the live position is the only thing on the chart that
+    // can still cost anything, so it is drawn unless someone has said not to.
+    return localStorage.getItem(SHOW_OPEN_KEY) !== '0'
+  } catch {
+    return true
+  }
+}
+const writeShowOpen = (on: boolean) => {
+  try {
+    localStorage.setItem(SHOW_OPEN_KEY, on ? '1' : '0')
+  } catch {
+    /* private mode: the choice lasts the page */
+  }
+}
 
 const readSelected = (): string | null => {
   try {
@@ -388,7 +408,7 @@ const brokerLive = (run: PaperRun, now: number, login: number | null): PaperBrok
  * Drawn at the BROKER's prices on purpose. Against the same bars the book
  * decided on, the distance between the two entry markers is the slippage.
  */
-function accountTrades(broker: PaperBroker | null): BacktestTrade[] {
+function accountTrades(broker: PaperBroker | null): ChartTrade[] {
   if (!broker) return []
   return (broker.fills ?? [])
     .filter((f) => f.entryTime != null && f.exitTime != null && f.entryPrice != null && f.exitPrice != null)
@@ -402,7 +422,16 @@ function accountTrades(broker: PaperBroker | null): BacktestTrade[] {
       stop: Number.NaN,
       target: null,
       lots: f.lots ?? 0,
-      pnlUsd: f.pnl ?? 0,
+      // NOT `pnlUsd`. `BrokerFill.pnl` is the ACCOUNT's currency - USC on the
+      // funded cent account - and `pnlUsd` means dollars to every other
+      // producer and consumer of a `BacktestTrade`. Assigning one to the other
+      // is how a real-money P&L ends up rendered a hundred times too large
+      // under a dollar sign; `Analytics.tsx` already sums `pnlUsd` and prints
+      // it that way, so the first feature to route these rows through it would
+      // have done exactly that. NaN here for the same reason as `r` and `stop`
+      // below: a zero would read as a measurement.
+      pnlUsd: Number.NaN,
+      pnlAccount: f.pnl ?? 0,
       r: Number.NaN,
       mae: Number.NaN,
       mfe: Number.NaN,
@@ -2308,6 +2337,53 @@ function RunChart({
     return active
   }, [detail])
 
+  const [showOpen, setShowOpen] = useState(readShowOpen)
+
+  /**
+   * The open position to draw, taken from whichever book is on screen.
+   *
+   * The paper book's and the account's are different trades at different
+   * prices - that difference IS the slippage, and it is the thing the account
+   * switch exists to show - so the chart draws the one whose record it is
+   * showing and never a blend of the two.
+   */
+  const chartOpen = useMemo(() => {
+    if (broker) {
+      const held = broker.position
+      if (!held || held.entry_price == null || !Number.isFinite(held.entry_price)) return null
+      return { side: held.side ?? '', entry_price: held.entry_price, stop: held.sl, target: held.tp }
+    }
+    return detail?.run.open ?? null
+  }, [broker, detail])
+
+  /**
+   * That position's live result, formatted WITH ITS UNIT before it leaves here.
+   *
+   * Two books, two currencies, and this is the only place that knows which is
+   * on screen. The account's `profit` is the broker's own number in the
+   * account's currency; the paper book's is marked here against the forming
+   * bar, which is what `usd_per_point` exists for - the book's own
+   * `unrealised_usd_at_last_close` can be a full bar old, and a P&L that lags
+   * the candle it is drawn on is worse than none.
+   *
+   * Neither number reaches the chart bare. See
+   * `docs/decisions/2026-09-17-unit-carrying.md`.
+   */
+  const openPnl = useMemo(() => {
+    if (broker) {
+      const held = broker.position
+      if (!held || held.profit == null || !Number.isFinite(held.profit)) return null
+      return { label: brokerMoney(held.profit, broker.currency), positive: held.profit >= 0 }
+    }
+    const held = detail?.run.open
+    if (!held) return null
+    const mark = forming?.close ?? detail?.run.last_bar_close ?? null
+    if (mark == null || !Number.isFinite(mark)) return null
+    const usd = (mark - held.entry_price) * held.usd_per_point * (held.side === 'LONG' ? 1 : -1)
+    if (!Number.isFinite(usd)) return null
+    return { label: accountMoney(usd, detail?.run), positive: usd >= 0 }
+  }, [broker, detail, forming])
+
   if (!detail) {
     return (
       <div className="space-y-2 px-3 py-2">
@@ -2339,6 +2415,34 @@ function RunChart({
             release
           </span>
         )}
+        {/* Shown whether or not a position is open, so the control does not
+            appear and vanish under the pointer - and so that an empty chart
+            can be read as "flat" rather than "switched off". */}
+        <button
+          type="button"
+          onClick={() => {
+            const next = !showOpen
+            setShowOpen(next)
+            writeShowOpen(next)
+          }}
+          aria-pressed={showOpen}
+          className={cn(
+            'hover:bg-accent focus-visible:ring-ring ml-2 rounded-sm border px-1.5 py-px text-[10px] normal-case transition-colors focus-visible:ring-2 focus-visible:outline-none motion-reduce:transition-none',
+            showOpen ? 'border-primary/40 text-primary' : 'border-border text-muted-foreground',
+          )}
+          title={
+            showOpen
+              ? 'Hide the open position, its stop and target, and its live result'
+              : 'Draw the open position with its live result'
+          }
+        >
+          open position {showOpen ? 'on' : 'off'}
+        </button>
+        {showOpen && openPnl && (
+          <span className={cn('num ml-2 normal-case', openPnl.positive ? 'text-lc' : 'text-lp')}>
+            {broker ? 'account' : 'book'} P/L {openPnl.label}
+          </span>
+        )}
       </Heading>
       <div className="border-border min-h-0 w-full flex-1 overflow-hidden rounded-sm border" style={{ minHeight: CHART_H - 60 }}>
         {/* Keyed by run: a new run brings a different set of panes, and
@@ -2348,9 +2452,13 @@ function RunChart({
             the two records the switch exists to keep apart. */}
         <PriceChart
           key={detail.run.id}
-          open={detail.run.open}
-          pending={detail.run.pending}
-          pendingFill={detail.run.pending ? pendingFill(detail.run.pending, live, detail.run.tf) : null}
+          open={chartOpen}
+          openPnl={openPnl}
+          showOpen={showOpen}
+          // The account's record has no pending entry - a pending is a book
+          // decision, and the mirror only ever learns about it as an order.
+          pending={broker ? null : detail.run.pending}
+          pendingFill={!broker && detail.run.pending ? pendingFill(detail.run.pending, live, detail.run.tf) : null}
           bars={bars}
           indicators={indicators}
           series={detail.series ?? {}}
