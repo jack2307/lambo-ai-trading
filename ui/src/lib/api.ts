@@ -394,7 +394,26 @@ export interface PaperBroker {
   /** `null` on a flat account, rather than 0 — which would read as a stop-out. */
   margin_level: number | null
   symbol: string | null
-  /** The STANDARD symbol's contract size, which is 100x the cent book's. */
+  /**
+   * What the TERMINAL says one lot of `symbol` is, for the account this row
+   * describes. Not the same field as `PaperRun.contract_size`, which is what
+   * the BOOK's market config says — and whether the two agree depends on the
+   * account:
+   *
+   *   funded cent account, `XAUUSD.sc`  — both are 1.0. EQUAL. One lot is one
+   *     ounce on each side, so nothing needs scaling between them.
+   *   retired standard demo, `XAUUSD`   — the terminal said 100.0 against the
+   *     book's 1.0. That is where the 100x came from.
+   *
+   * This said "the STANDARD symbol's contract size, which is 100x the cent
+   * book's", which was true of the demo and is false of the account that holds
+   * money. Corrected 2026-09-17 against both accounts' own `broker.json`.
+   *
+   * Nothing in `ui/src` reads this today. It is documented rather than removed
+   * because the next reader to reach for it will be choosing between two
+   * fields with one name, which is the trap in
+   * `docs/decisions/2026-09-17-unit-carrying.md`.
+   */
   contract_size: number | null
   /** How far the terminal's clock runs ahead of UTC, in ms, MEASURED from the
    *  terminal on the poll that wrote this rather than derived from a timezone.
