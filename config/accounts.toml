@@ -177,8 +177,12 @@ runs = [
     "xau-macd-asia",
     "ai-xau-ds-ctx",
     "ai-xau-opus-ctx",
-    "ai-xau-sol-ctx",
+    "ai-xau-terra-ctx",
 ]
+
+# sol out, terra in, 2026-09-17. See the same swap on the cent account below
+# for the whole of it - this account is disabled and mirrors nothing today, so
+# the entry that costs money is that one and the reasoning is written there.
 
 # Opus came out on 2026-09-16 and went back in the same day, both on the
 # owner's word. Its coin went with it each time, under a rule that no longer
@@ -289,12 +293,56 @@ enabled = true
 
 # The same five books the demo mirrors. The coin controls are not here and are
 # not coming here - see the demo's note above.
+#
+# ---------------------------------------------------------------------------
+# sol OUT, terra IN. 2026-09-17, on the owner's explicit decision, AGAINST the
+# advice he was given. Both halves of that sentence are here on purpose.
+# ---------------------------------------------------------------------------
+#
+# WHY SOL CAME OUT. Its model became unreachable on the machine the desk runs
+# on. The book was STOPPED rather than repointed at a different model, for the
+# reason this file already gives for account ids and directories: an id has to
+# keep meaning one thing. `ai-xau-sol-ctx` is the record of what gpt-5.6-sol
+# decided; a different model writing into it would leave every number intact
+# and none of them comparable. Its 99 decisions stay exactly as they are.
+#
+# It was FLAT when this edit was made - the paper book's position was None and
+# its last line was a stand-aside at 05:00Z - which is the condition the note
+# further down insists on. Dropping a book that holds a position leaves that
+# position on the account with nobody reconciling it.
+#
+# WHY TERRA GOING IN WAS ADVISED AGAINST, and what the advice was:
+#
+#   1. It starts with ZERO decisions. Nothing anyone has read. Every other
+#      book on this list was mirrored after someone had looked at its paper
+#      record.
+#   2. Nothing transfers from sol. By the vendor's own ordering terra ranks
+#      BELOW sol - priority 7 against 4, from the account's own
+#      models_cache.json - so it is a substitution and not an upgrade, and
+#      sol's 99 decisions say nothing about how this one will behave.
+#   3. The cost of waiting was one line in this file. The cost of not waiting
+#      is real orders on a hundred-dollar account already carrying five books
+#      whose risk adds up in one place, which is the arithmetic the
+#      lot_scale note above exists for.
+#
+# The owner was given that recommendation, with support for it, and chose to
+# mirror terra anyway. It is his account and his call, and it is recorded as
+# his rather than smoothed into a tidy-up.
+#
+# WHAT THIS MEANS FOR ANYONE READING TERRA'S CURVE LATER, which is the only
+# reason this paragraph is as long as it is: it started COLD. Not merely new -
+# cold, with no paper history behind it and none inherited from the book it
+# replaced. Its magic number is its own (4,609,806, against sol's 208,709,589
+# - checked for collision across all five on 2026-09-17, none), so it cannot
+# adopt a single one of sol's positions at the broker either. Whatever that
+# curve shows after a month is the first thing anyone has ever known about
+# this model on this task. Do not read it as continuing anything.
 runs = [
     "xau-ema",
     "xau-macd-asia",
     "ai-xau-ds-ctx",
     "ai-xau-opus-ctx",
-    "ai-xau-sol-ctx",
+    "ai-xau-terra-ctx",
 ]
 
 # The directory data/live/vantage-cent/ is stamped with this login the first
