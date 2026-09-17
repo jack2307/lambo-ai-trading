@@ -270,10 +270,25 @@ def notional_of(info, vol: float, price: float) -> float | None:
 MAX_FILLS = 40
 
 
-def history_of(mt5, magic: int) -> tuple:
+def history_of(mt5, magic: int, offset_ms) -> tuple:
     """This book's closed trades ON THE ACCOUNT, and what they came to.
 
-    Returns `(realised, closed, fills)`. The paper book's fills are the rule
+    Returns `(realised, closed, fills)`. `offset_ms` is how far the terminal's
+    clock runs ahead of UTC, and every time in `fills` is converted by it - so
+    the times handed out here are UTC, the same clock the paper book's are on,
+    and they are comparable without anyone having to know that MT5's are not.
+    `None` means the offset could not be measured; the money is still reported
+    and the TIMES COME BACK None rather than being published on an unnamed
+    clock. See `docs/decisions/2026-09-17-unit-carrying.md`.
+
+    Until 2026-09-17 these were `d.time_msc` exactly as MT5 gives it, which is
+    SERVER time, published into `broker.json` beside an `at` field that is true
+    UTC. Two clocks, adjacent keys, neither labelled. That is what made
+    `already_taken` compare a UTC stamp against a server one for its whole
+    life, and it is the same defect this function's own paragraph about history
+    bounds warns about four lines further down.
+
+    The paper book's fills are the rule
     executed perfectly at the bar's price; these are what the broker actually
     did, and the desk shows one or the other rather than mixing them - the
     difference between the two entry prices IS the slippage, and it is only
@@ -330,9 +345,13 @@ def history_of(mt5, magic: int) -> tuple:
 
     fills = [t for t in trades.values()
              if t["entryTime"] is not None and t["exitTime"] is not None]
+    # Sorted on the raw server stamps, BEFORE the conversion, so the ordering
+    # is right even when the offset is unknown and the times go out as None.
     fills.sort(key=lambda t: t["entryTime"])
     for t in fills:
         t["pnl"] = round(t["pnl"], 2)
+        t["entryTime"] = None if offset_ms is None else t["entryTime"] - offset_ms
+        t["exitTime"] = None if offset_ms is None else t["exitTime"] - offset_ms
     closed = len(fills)
     return round(total, 2), closed, fills[-MAX_FILLS:]
 
@@ -985,7 +1004,7 @@ def main() -> int:
             # None for the realised total. That is "the terminal would not say
             # what this book has done", not "it has done nothing", and the two
             # must not collapse here.
-            realised, _, fills = history_of(mt5, magic)
+            realised, _, fills = history_of(mt5, magic, offset)
             if realised is None:
                 return "unknown", None
             side = book_open.get("side")
@@ -998,7 +1017,9 @@ def main() -> int:
                 got = f.get("entryTime")
                 if got is None:
                     continue
-                got_utc = got - offset
+                # Already UTC: `history_of` converts at the boundary now, so
+                # subtracting the offset again here would double-count it.
+                got_utc = got
                 if got_utc < floor_ms:
                     continue
                 if f.get("direction") != side:
@@ -1037,7 +1058,7 @@ def main() -> int:
                 log(out, "already-taken", side=book_open.get("side"),
                     book_entry=book_open.get("entry_price"), fill=taken,
                     book_entry_time=book_open.get("entry_time"),
-                    fill_entry_utc=(taken.get("entryTime") or 0) - (server_offset_ms() or 0),
+                    fill_entry_utc=taken.get("entryTime"),
                     server_offset_ms=server_offset_ms(),
                     reason="the broker closed this trade before the book's bar did; "
                            "re-opening would take the same trade twice")
@@ -1287,7 +1308,8 @@ def main() -> int:
             if acc is None:
                 log(out, "no-account", error=str(mt5.last_error()))
                 return
-            realised, closed, fills = history_of(mt5, magic)
+            offset = server_offset_ms()
+            realised, closed, fills = history_of(mt5, magic, offset)
             tick = mt5.symbol_info_tick(args.symbol)
             pos = held[0] if held else None
             payload = {
@@ -1316,7 +1338,7 @@ def main() -> int:
                 # `already_taken` inert until 2026-09-17. `null` means it could
                 # not be measured, which is also when the mirror refuses to
                 # open - so this field says why a book is sitting out.
-                "server_offset_ms": server_offset_ms(),
+                "server_offset_ms": offset,
                 "magic": magic,
                 "lot_scale": args.lot_scale,
                 "dry_run": bool(args.dry_run),
@@ -1341,7 +1363,14 @@ def main() -> int:
                     "tp": pos.tp or None,
                     "profit": pos.profit,
                     "swap": pos.swap,
-                    "opened_at": int(pos.time) * 1000,
+                    # UTC, like `at` above and like the book's times - NOT the
+                    # server stamp MT5 hands over. `pos.time` is the broker's
+                    # clock; published raw it sat next to a true-UTC `at` in
+                    # this same object with nothing to tell them apart, which
+                    # is the defect docs/decisions/2026-09-17-unit-carrying.md
+                    # was written about. None when the offset is unmeasurable,
+                    # because a time on an unknown clock is worse than no time.
+                    "opened_at": None if offset is None else int(pos.time) * 1000 - offset,
                 },
                 "blocked": blocked,
                 "standing_out": standing_out,

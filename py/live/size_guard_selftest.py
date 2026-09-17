@@ -65,6 +65,12 @@ them coming back. Each section names the failure it pins.
      same tuple as DONE and was called success, which cleared the refusal
      channel and left the account permanently smaller than the book.
 
+  8  EVERY TIME THAT LEAVES THIS PROCESS IS ON THE BOOK'S CLOCK. `history_of`
+     published `d.time_msc` raw - server time - into `broker.json` beside an
+     `at` field that is true UTC, and `opened_at` did the same. Two clocks,
+     adjacent keys, neither labelled. Pinned here per rule 4 of
+     `docs/decisions/2026-09-17-unit-carrying.md`.
+
 The provenance of every symbol number is marked. MEASURED means read from a
 terminal on the date given; DERIVED means computed from a measured value and
 said so. Nothing here is a guess presented as a measurement.
@@ -880,6 +886,65 @@ def a_partial_fill_is_not_a_fill() -> None:
           f"sent {after['sent']}; drift {(after['snapshot'] or {}).get('drift')}")
 
 
+# ---------------------------------------------------------------------------
+# 8 - every time that leaves this process is on the book's clock
+# ---------------------------------------------------------------------------
+
+def the_published_times_are_utc() -> None:
+    """Every time this process publishes is on the book's clock, or is null.
+
+    Rule 4 of docs/decisions/2026-09-17-unit-carrying.md, applied to the code
+    that prompted the document: a conversion is pinned by a test AT THE
+    BOUNDARY. The boundary is `history_of`, which until 2026-09-17 handed out
+    `d.time_msc` raw - server time - straight into `broker.json`, beside an
+    `at` field that is true UTC. Two clocks, adjacent keys in one object,
+    neither labelled.
+    """
+    section("the times that leave this process")
+
+    book_entry = BOOK["entry_time"]
+    offset_ms = MT5.server_offset_s * 1000
+    MT5.deals = closed_trade(book_entry, held_ms=5 * 60_000)
+    try:
+        snap = drive_holding([position(1)])["snapshot"] or {}
+        fills = snap.get("fills") or []
+        check("the snapshot carries this book's closed trade", len(fills) == 1, f"{fills}")
+        got = (fills[0] if fills else {}).get("entryTime")
+        check("its entryTime is published in UTC, on the book's clock",
+              got == book_entry, f"got {got}, book {book_entry}")
+        check("...and not the server stamp MT5 handed over "
+              "(remove the conversion and this fails)",
+              got != book_entry + offset_ms, f"got {got}")
+
+        # `at` is true UTC from time.time(); `opened_at` was the broker's clock
+        # in the same object until today.
+        pos = snap.get("position") or {}
+        check("opened_at is on the same clock as `at`",
+              pos.get("opened_at") == 1_000_000 * 1000 - offset_ms,
+              f"opened_at {pos.get('opened_at')}")
+        check("the offset used is published beside the times it converted",
+              snap.get("server_offset_ms") == offset_ms, f"{snap.get('server_offset_ms')}")
+
+        # No clock, no times - but the money still reports. A time on an
+        # unknown clock is worse than no time; a P&L does not need a clock.
+        real_tick = MT5.symbol_info_tick
+        try:
+            MT5.symbol_info_tick = lambda s: Obj(ask=MT5.price, bid=MT5.price - 0.2)
+            snap = drive_holding([position(1)])["snapshot"] or {}
+            fills = snap.get("fills") or []
+            check("offset unmeasurable: fill times go out as null, not as a guess",
+                  bool(fills) and fills[0].get("entryTime") is None, f"{fills[:1]}")
+            check("...and the realised money is still reported",
+                  snap.get("realised") is not None, f"realised {snap.get('realised')}")
+            check("...and opened_at is null rather than a server stamp",
+                  (snap.get("position") or {}).get("opened_at") is None,
+                  f"{(snap.get('position') or {}).get('opened_at')}")
+        finally:
+            MT5.symbol_info_tick = real_tick
+    finally:
+        MT5.deals = []
+
+
 def main() -> int:
     the_ceiling_measures_one_currency()
     both_size_guards_fail_closed()
@@ -888,6 +953,7 @@ def main() -> int:
     the_two_clocks()
     the_account_has_a_shape()
     a_partial_fill_is_not_a_fill()
+    the_published_times_are_utc()
     print(f"\n{'all checks passed' if not FAIL else str(FAIL) + ' CHECK(S) FAILED'}")
     return 1 if FAIL else 0
 
