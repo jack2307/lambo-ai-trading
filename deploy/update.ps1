@@ -211,18 +211,104 @@ function Stop-Desk {
             Where-Object { $_.CommandLine -like $m } |
             ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
     }
-    Get-Process fd-api -ErrorAction SilentlyContinue | Stop-Process -Force
+    if (Get-DeskTask $API_TASK) { Stop-DeskTask $API_TASK 'fd-api' }
+    else { Get-Process fd-api -ErrorAction SilentlyContinue | Stop-Process -Force }
     Start-Sleep -Seconds 3
 }
 
+# ------------------------------------------------- scheduled tasks, not children
+#
+# On the VPS fd-api and the watch run as SYSTEM scheduled tasks, and they are
+# there BECAUSE a session-bound process did not survive: anything started from
+# a console or an SSH session died with it. So this script must drive the
+# tasks, not spawn children.
+#
+# It would have been a green failure, which is the worst kind. Starting fd-api
+# with Start-Process there passes the hash check, prints a clean deploy, and
+# leaves a process that dies at logoff while the scheduled task believes it is
+# not running. Nothing on the screen would have said so.
+#
+# There is a second reason and it is the advisor gate. FD_ADVISOR_PANEL is read
+# from the PROCESS's environment. A task running as SYSTEM reads machine scope,
+# which is what b68a4f6 was designed against; a child of the operator's session
+# inherits the OPERATOR's environment, so a stray variable in one shell would
+# switch the panel on for the desk.
+$API_TASK = 'flowdesk-api'
+$WATCH_TASK = 'flowdesk-watch'
+
+function Get-DeskTask([string]$name) {
+    # $null when the ScheduledTasks module is absent as well as when the task
+    # is: both mean "this machine does not run it as a task", which is the
+    # question the caller is asking.
+    if (-not (Get-Command Get-ScheduledTask -ErrorAction SilentlyContinue)) { return $null }
+    try { return Get-ScheduledTask -TaskName $name -ErrorAction Stop } catch { return $null }
+}
+
+function Stop-DeskTask([string]$name, [string]$procName, [string]$cmdLike = '') {
+    # Stop the task, then kill any survivor. Both, in that order: stopping the
+    # task asks Task Scheduler to end its instance, and a process that ignores
+    # that would still be holding the exe when the copy runs.
+    #
+    # `$cmdLike` IS NOT OPTIONAL IN PRACTICE FOR ANYTHING NAMED python.
+    # The first version of this took a bare process name and the watch call
+    # passed 'python'. On the server that resolves to every python.exe there
+    # is - the five executors, the AI traders, the pollers - and the survivor
+    # sweep would have killed all of them, in the mode whose entire promise is
+    # that it does not signal an executor. Caught by reading it back rather
+    # than by running it, which on that machine would have been five orphaned
+    # mirrors and an open real position.
+    try { Stop-ScheduledTask -TaskName $name -ErrorAction Stop } catch { }
+    Start-Sleep -Seconds 2
+    $alive = @(Get-CimInstance Win32_Process -Filter "name='$procName.exe'" -ErrorAction SilentlyContinue |
+               Where-Object { (-not $cmdLike) -or ($_.CommandLine -like $cmdLike) })
+    if ($alive.Count -gt 0) {
+        Note "$name left $($alive.Count) process(es) matching$(if ($cmdLike) { " $cmdLike" } else { " $procName.exe" }); stopping them"
+        $alive | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+        Start-Sleep -Seconds 2
+    }
+}
+
+function Test-Detached([string]$procName) {
+    # Is the thing that is answering OUTSIDE the operator's session?
+    #
+    # Returns a hashtable the caller reports verbatim. SessionId is the check
+    # that matters - a SYSTEM task runs in session 0 and an interactive logon
+    # does not - and the parent is named because "session 0" means nothing to
+    # someone reading a deploy log at three in the morning and "parent
+    # svchost.exe" does.
+    $me = (Get-CimInstance Win32_Process -Filter "ProcessId=$PID").SessionId
+    $p = @(Get-CimInstance Win32_Process -Filter "Name='$procName.exe'" -ErrorAction SilentlyContinue)
+    if ($p.Count -eq 0) { return @{ found = $false } }
+    $it = $p[0]
+    $parent = 'gone'
+    try {
+        $pp = Get-CimInstance Win32_Process -Filter "ProcessId=$($it.ParentProcessId)" -ErrorAction Stop
+        if ($pp) { $parent = $pp.Name }
+    } catch { }
+    $owner = '?'
+    try { $owner = (Invoke-CimMethod -InputObject $it -MethodName GetOwner).User } catch { }
+    return @{
+        found     = $true
+        pid       = $it.ProcessId
+        session   = $it.SessionId
+        mySession = $me
+        detached  = ($it.SessionId -ne $me)
+        parent    = $parent
+        owner     = $owner
+    }
+}
+
 function Stop-Server {
-    # -ServerOnly's stop: fd-api alone. The watch is not killed here because
-    # `start_telegram.ps1` stops whatever is running before it starts a fresh
-    # copy, so calling that at the end both replaces the watch's code AND
-    # leaves it alive across the window where fd-api is down - which is the
-    # window worth watching. Same reasoning as the full mode's list above.
-    Get-Process fd-api -ErrorAction SilentlyContinue | Stop-Process -Force
-    Start-Sleep -Seconds 3
+    # -ServerOnly's stop: fd-api alone. The watch is not stopped here because
+    # it is restarted at the end, which both replaces its code AND leaves it
+    # alive across the window where fd-api is down - the window worth
+    # watching. Same reasoning as the full mode's list above.
+    if (Get-DeskTask $API_TASK) {
+        Stop-DeskTask $API_TASK 'fd-api'
+    } else {
+        Get-Process fd-api -ErrorAction SilentlyContinue | Stop-Process -Force
+        Start-Sleep -Seconds 3
+    }
 }
 
 # ---------------------------------------------------------------- staleness
@@ -401,9 +487,16 @@ $artefact = if ($Binary -or $Client) {
     'NOTHING CAN - no cargo and no -Binary; this run will refuse at the build step'
 }
 
+# How each service will be driven, named per service because getting this
+# wrong is silent: a session-bound fd-api passes every check and dies at logoff.
+$apiHow = if (Get-DeskTask $API_TASK) { "scheduled task '$API_TASK'" } else { 'Start-Process (SESSION-BOUND: dies when this session ends)' }
+$watchHow = if (Get-DeskTask $WATCH_TASK) { "scheduled task '$WATCH_TASK'" } else { 'py\live\start_telegram.ps1 (SESSION-BOUND)' }
+
 if ($ServerOnly) {
     Note 'MODE: -ServerOnly'
     Note '  will stop and restart : fd-api, the telegram watch'
+    Note "    fd-api via          : $apiHow"
+    Note "    the watch via       : $watchHow"
     Note "  will NOT touch        : $($running.Count) executor(s), the AI traders, the pollers"
     Note "  artefacts             : $artefact"
     Note '  the executors keep the Python they were launched with; a change to'
@@ -416,6 +509,8 @@ if ($ServerOnly) {
     Note 'MODE: full desk'
     Note "  will STOP             : $($running.Count) executor(s), AI traders, pollers, fd-api"
     Note '  will restart          : fd-api, pollers, AI traders, the telegram watch'
+    Note "    fd-api via          : $apiHow"
+    Note "    the watch via       : $watchHow"
     Note '  will NOT restart      : the executors - that stays a decision, by hand'
     Note "  artefacts             : $artefact"
 }
@@ -697,9 +792,17 @@ if (-not $NoRestart) {
     $logs = Join-Path $Root 'data\paper\logs'
     New-Item -ItemType Directory -Force -Path $logs | Out-Null
 
-    Start-Process -FilePath (Join-Path $Root 'target\release\fd-api.exe') -WorkingDirectory $Root -WindowStyle Hidden `
-        -RedirectStandardOutput (Join-Path $logs 'fd-api.out') -RedirectStandardError (Join-Path $logs 'fd-api.err')
-    Note 'fd-api starting; waiting for it to report its version'
+    # The task, where there is one. See the block above Stop-Server for why
+    # this must not be a child process on the server.
+    $viaTask = [bool](Get-DeskTask $API_TASK)
+    if ($viaTask) {
+        Start-ScheduledTask -TaskName $API_TASK
+        Note "started scheduled task '$API_TASK'; waiting for it to report its version"
+    } else {
+        Start-Process -FilePath (Join-Path $Root 'target\release\fd-api.exe') -WorkingDirectory $Root -WindowStyle Hidden `
+            -RedirectStandardOutput (Join-Path $logs 'fd-api.out') -RedirectStandardError (Join-Path $logs 'fd-api.err')
+        Note 'fd-api started as a child of this session; waiting for it to report its version'
+    }
 
     # Readiness is the HASH, not a 200. See Wait-ForVersion.
     $v = Wait-ForVersion $after 30
@@ -747,6 +850,38 @@ if (-not $NoRestart) {
         Write-Host '  erase which of the two happened, and that is the thing worth knowing.' -ForegroundColor DarkGray
         exit 1
     }
+    # WHO is answering, not just what. A session-bound fd-api passes every
+    # check above - right hash, right build time, clean startup - and dies at
+    # logoff, which is the green failure this whole block exists to prevent.
+    $who = Test-Detached 'fd-api'
+    if (-not $who.found) {
+        Note 'answering, but no fd-api process is visible to report on (it may be running as another user)'
+    } else {
+        Note "answering process pid $($who.pid), session $($who.session), parent $($who.parent), owner $($who.owner)"
+        if ($viaTask) {
+            $st = (Get-DeskTask $API_TASK).State
+            if ("$st" -ne 'Running') {
+                Write-Error "scheduled task '$API_TASK' reports State=$st after being started. Something is answering on 8138 but the task is not running it."
+                exit 1
+            }
+            Note "scheduled task '$API_TASK' State=Running"
+            if (-not $who.detached) {
+                # The task path produced a process inside the operator's own
+                # session. That is the task misconfigured to run as the logged
+                # on user, and it will die at logoff exactly like the child
+                # process this path exists to avoid.
+                Write-Error ("'$API_TASK' started fd-api INSIDE this session (session $($who.session)), " +
+                             'so it will die at logoff like a child process would, and it reads this ' +
+                             "session's environment rather than machine scope - which decides the " +
+                             'advisor gate. Fix the task to run as SYSTEM. fd-api IS running.')
+                exit 1
+            }
+        } elseif (-not $who.detached) {
+            Write-Host '   NOTE: fd-api is a child of this session and will stop when it ends.' -ForegroundColor Yellow
+            Write-Host '   There is no flowdesk-api scheduled task on this machine; that is fine' -ForegroundColor DarkGray
+            Write-Host '   locally and is not how the server should run.' -ForegroundColor DarkGray
+        }
+    }
     if ($v.body.git_dirty) {
         # Named, never refused, and -48 is right about why: this is the state
         # most likely to be running during an incident, and a check that
@@ -761,7 +896,24 @@ if (-not $NoRestart) {
     # were never stopped, so starting them here would start a SECOND copy of
     # each - the mutex in start_pollers would refuse, noisily, which is a
     # failure invented by this script rather than found by it.
-    $toRun = if ($ServerOnly) { @('start_telegram.ps1') } else { @('start_pollers.ps1', 'start_ai_traders.ps1', 'start_telegram.ps1') }
+    # The watch goes through its task where one exists, for the same reason
+    # fd-api does: start_telegram.ps1 spawns a child of this session, and the
+    # watch is on a task precisely because that did not survive.
+    if (Get-DeskTask $WATCH_TASK) {
+        # Scoped by command line, NEVER by 'python' alone: the executors, the
+        # traders and the pollers are all python.exe on this machine.
+        Stop-DeskTask $WATCH_TASK 'python' '*telegram_notify*'
+        Start-ScheduledTask -TaskName $WATCH_TASK
+        Start-Sleep -Seconds 2
+        $wst = (Get-DeskTask $WATCH_TASK).State
+        Note "scheduled task '$WATCH_TASK' restarted, State=$wst"
+        if ("$wst" -ne 'Running') {
+            Write-Host "   WARNING: '$WATCH_TASK' is $wst, so nothing is watching the desk." -ForegroundColor Yellow
+        }
+        $toRun = if ($ServerOnly) { @() } else { @('start_pollers.ps1', 'start_ai_traders.ps1') }
+    } else {
+        $toRun = if ($ServerOnly) { @('start_telegram.ps1') } else { @('start_pollers.ps1', 'start_ai_traders.ps1', 'start_telegram.ps1') }
+    }
     foreach ($s in $toRun) {
         $p = Join-Path $Root "py\live\$s"
         if (Test-Path $p) {
