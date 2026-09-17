@@ -14,8 +14,29 @@ param(
     # Which terminal the prices come from. Empty lets the MetaTrader5 package
     # pick, which is fine on a machine with one terminal and a coin flip on a
     # machine with two.
-    [string]$Terminal = ''
+    [string]$Terminal = '',
+
+    # Which of the broker's two symbol sets to read.
+    #
+    #   cent     XAUUSD.sc etc - the cent account, what the live terminal
+    #            carries and what the books were built on
+    #   standard XAUUSD etc - what the demo account carries
+    #
+    # The two quote the SAME price. What differs is contract size - the
+    # standard contract is exactly 100x the cent one on every pair (measured
+    # 2026-09-16: XAUUSD 1 -> 100, BTCUSD 0.01 -> 1, EURUSD 1000 -> 100000) -
+    # and contract size lives in config\default.toml, not in the feed. So a
+    # book fed standard bars values its positions exactly as before.
+    #
+    # A named set rather than a suffix string, because the empty suffix cannot
+    # survive the trip: PowerShell 5.1 drops an empty string argument when it
+    # calls a native command, so `-Suffix ''` would leave -Suffix to swallow
+    # whatever came next.
+    [ValidateSet('cent', 'standard')]
+    [string]$Symbols = 'cent'
 )
+
+$suffix = if ($Symbols -eq 'cent') { '.sc' } else { '' }
 
 # $Root is computed, not given, and a wrong one does not announce itself: the
 # pollers would start with the wrong working directory, fail to find
@@ -27,10 +48,10 @@ if (-not (Test-Path (Join-Path $Root 'py\live\mt5_bars.py'))) {
 }
 
 $streams = @(
-    @{ symbol = 'XAUUSD.sc'; market = 'xauusd'; tf = 'M15'; log = 'mt5_bars_xau_m15'; warm = $Warm },
-    @{ symbol = 'XAUUSD.sc'; market = 'xauusd'; tf = 'M5';  log = 'mt5_bars_xau_m5';  warm = ($Warm * 3) },
-    @{ symbol = 'BTCUSD.sc'; market = 'btcusd'; tf = 'M15'; log = 'mt5_bars_btc_m15'; warm = $Warm },
-    @{ symbol = 'EURUSD.sc'; market = 'eurusd'; tf = 'M15'; log = 'mt5_bars_eur_m15'; warm = $Warm }
+    @{ symbol = "XAUUSD$suffix"; market = 'xauusd'; tf = 'M15'; log = 'mt5_bars_xau_m15'; warm = $Warm },
+    @{ symbol = "XAUUSD$suffix"; market = 'xauusd'; tf = 'M5';  log = 'mt5_bars_xau_m5';  warm = ($Warm * 3) },
+    @{ symbol = "BTCUSD$suffix"; market = 'btcusd'; tf = 'M15'; log = 'mt5_bars_btc_m15'; warm = $Warm },
+    @{ symbol = "EURUSD$suffix"; market = 'eurusd'; tf = 'M15'; log = 'mt5_bars_eur_m15'; warm = $Warm }
 )
 
 Get-CimInstance Win32_Process -Filter "name='python.exe'" |

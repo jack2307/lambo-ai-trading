@@ -30,7 +30,21 @@ param(
     # decision made while reading the output, not the tail end of a startup
     # script.
     [switch]$WithMirrors,
-    [switch]$MirrorsLive
+    [switch]$MirrorsLive,
+
+    # Also start the live terminal, and read prices from it.
+    #
+    # Off by default, which is a decision about this machine and not a
+    # preference: a rented server does not need the real account's
+    # credentials on it. The demo account quotes the same gold, the same
+    # bitcoin and the same euro - the standard symbol and the cent symbol
+    # differ in contract size, not in price - so prices come from the demo
+    # terminal and nothing about the books changes.
+    #
+    # Pass this once the live terminal here has actually been logged in.
+    # Until then it would start, sit unauthorised, and the pollers would ask
+    # it for XAUUSD.sc and be told there is no such symbol.
+    [switch]$WithLive
 )
 
 $ErrorActionPreference = 'Stop'
@@ -50,10 +64,23 @@ if (-not $env:SESSIONNAME) {
     Warn 'No session name: this looks like an SSH or service session, which has no'
     Warn 'desktop. MetaTrader will not start here. Run this from RDP.'
 }
+# Where the bars come from, decided here and passed to the poller, so the one
+# place that knows which terminal is logged in is also the place that names
+# the symbols that terminal carries.
+if ($WithLive) {
+    $priceTerminal = 'C:\MT5-live\terminal64.exe'
+    $priceSymbols = 'cent'
+} else {
+    $priceTerminal = 'C:\MT5-demo\terminal64.exe'
+    $priceSymbols = 'standard'
+}
+
 $terminals = @(
-    @{ path = 'C:\MT5-live\terminal64.exe'; args = @('/portable'); what = 'live (prices)' },
-    @{ path = 'C:\MT5-demo\terminal64.exe'; args = @('/portable', '/config:C:\MT5-demo\config\autologin.ini'); what = 'demo (execution)' }
+    @{ path = 'C:\MT5-demo\terminal64.exe'; args = @('/portable', '/config:C:\MT5-demo\config\autologin.ini'); what = 'demo (execution' + $(if ($WithLive) { '' } else { ' and prices' }) + ')' }
 )
+if ($WithLive) {
+    $terminals += @{ path = 'C:\MT5-live\terminal64.exe'; args = @('/portable'); what = 'live (prices)' }
+}
 foreach ($t in $terminals) {
     if (-not (Test-Path $t.path)) { Warn ("missing: " + $t.path); continue }
     $running = Get-Process terminal64 -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq $t.path }
@@ -97,13 +124,19 @@ Step 'pollers, traders, watch'
 # Their output is shown, not swallowed. Measured 2026-09-17: start_pollers.ps1
 # was silently starting nothing - the output that said so went to Out-Null, and
 # the desk ran for an hour with three traders and no prices reaching them.
-foreach ($s in 'start_pollers.ps1', 'start_ai_traders.ps1', 'start_telegram.ps1') {
-    $p = Join-Path $Root "py\live\$s"
-    if (-not (Test-Path $p)) { Warn "missing: $s"; continue }
-    Note $s
-    powershell -NoProfile -ExecutionPolicy Bypass -File $p 2>&1 |
+Note "prices: $priceTerminal, $priceSymbols symbols"
+$launchers = @(
+    @{ script = 'start_pollers.ps1'; args = @('-Terminal', $priceTerminal, '-Symbols', $priceSymbols) },
+    @{ script = 'start_ai_traders.ps1'; args = @() },
+    @{ script = 'start_telegram.ps1'; args = @() }
+)
+foreach ($l in $launchers) {
+    $p = Join-Path $Root ("py\live\" + $l.script)
+    if (-not (Test-Path $p)) { Warn ("missing: " + $l.script); continue }
+    Note $l.script
+    & powershell (@('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $p) + $l.args) 2>&1 |
         ForEach-Object { Write-Host "     $_" -ForegroundColor DarkGray }
-    if ($LASTEXITCODE) { Warn "$s exited $LASTEXITCODE" }
+    if ($LASTEXITCODE) { Warn ($l.script + " exited $LASTEXITCODE") }
 }
 
 # --------------------------------------------------------------- mirrors

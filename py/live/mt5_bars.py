@@ -14,10 +14,12 @@ ever decided on:
    or fill can read it. It exists because a desk whose newest number is
    fifteen minutes old reads as a feed that has died.
 
-MT5 calls used: `initialize`, `symbol_info`, `symbol_info_tick`,
-`copy_rates_from_pos`, `shutdown` — nothing that places, modifies or closes
-an order; the terminal on this machine is a live account and this script
-must stay a reader (see `mt5_export.py`).
+MT5 calls used: `initialize`, `symbol_select`, `symbol_info`,
+`symbol_info_tick`, `copy_rates_from_pos`, `shutdown` — nothing that places,
+modifies or closes an order; the terminal on this machine is a live account
+and this script must stay a reader (see `mt5_export.py`). `symbol_select`
+writes, but only to Market Watch: it is what makes the symbol quotable at
+all, and it cannot touch a position.
 
 Why the reader lives in Python: the MetaTrader5 package is the only feed for
 the broker's own gold bars, and it exists only for Python. The Rust side
@@ -145,6 +147,13 @@ def main() -> int:
         info = mt5.symbol_info(args.symbol)
         if info is None:
             sys.exit(f"no symbol {args.symbol}")
+        # Into Market Watch before asking for bars. symbol_info answers for
+        # every symbol the broker lists, selected or not, but
+        # copy_rates_from_pos returns nothing at all for one that is not - so
+        # the poller would run, print this line, and then post no bars, which
+        # on the screen is indistinguishable from a quiet market.
+        if not info.visible and not mt5.symbol_select(args.symbol, True):
+            sys.exit(f"could not put {args.symbol} in Market Watch: {mt5.last_error()}")
         print(f"{args.symbol} {args.tf}: digits {info.digits}, spread now {info.spread * info.point:.2f}; posting to {args.api} as market {args.market}", flush=True)
         sent_upto: int | None = None
 
