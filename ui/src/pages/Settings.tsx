@@ -27,6 +27,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
+import { AdvisorCredentials } from '@/components/AdvisorCredentials'
 import { GuardsPanel } from '@/components/GuardsPanel'
 import { Panel, SectionHeader } from '@/components/dashboard/primitives'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -156,6 +157,10 @@ export function Settings() {
       <section className="space-y-2">
         <SectionHeader title="Guards" subtitle="In force across every book that runs with guards on." />
         <GuardsPanel />
+      </section>
+
+      <section className="space-y-2">
+        <AdvisorCredentials />
       </section>
 
       <section className="space-y-2">

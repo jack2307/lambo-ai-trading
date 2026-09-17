@@ -70,12 +70,16 @@ pub fn setup_code() -> &'static str {
 }
 
 /// The repository root, from the config directory the state already knows.
+///
+/// `config_dir` is usually the relative `config`, whose parent is the EMPTY
+/// path — not `None`. Handing that to `current_dir` fails with a Windows error
+/// 123 that names no path at all, which is how this cost twenty minutes the
+/// first time. An empty parent means "where the process already is".
 fn root(state: &AppState) -> PathBuf {
-    state
-        .config_dir
-        .parent()
-        .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from("."))
+    match state.config_dir.parent() {
+        Some(p) if !p.as_os_str().is_empty() => p.to_path_buf(),
+        _ => PathBuf::from("."),
+    }
 }
 
 /// Which Python runs the setup tool.
@@ -89,7 +93,10 @@ fn python() -> String {
             return p;
         }
     }
-    for candidate in ["python3", "python"] {
+    // `py` is the Windows launcher and is the one that is actually present on
+    // a machine where `python` is the Store's stub; it is tried last so a real
+    // interpreter on PATH still wins.
+    for candidate in ["python3", "python", "py"] {
         if Command::new(candidate)
             .arg("--version")
             .stdout(Stdio::null())
@@ -125,9 +132,16 @@ fn run(state: &AppState, args: &[&str], stdin: Option<&str>) -> Result<Value, Ap
         .stderr(Stdio::piped())
         .stdin(if stdin.is_some() { Stdio::piped() } else { Stdio::null() });
 
-    let mut child = cmd
-        .spawn()
-        .map_err(|e| ApiError::Internal(format!("could not start {}: {e}", python())))?;
+    let mut child = cmd.spawn().map_err(|e| {
+        // Name the interpreter AND the directory. The first version said only
+        // "could not start python" and the real fault was an empty working
+        // directory, which that message could not have pointed at.
+        ApiError::Internal(format!(
+            "could not start `{}` in {}: {e} (set FD_PYTHON to an interpreter)",
+            python(),
+            dir.display()
+        ))
+    })?;
     if let Some(text) = stdin {
         child
             .stdin

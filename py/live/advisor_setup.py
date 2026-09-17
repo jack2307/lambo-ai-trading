@@ -266,30 +266,57 @@ def probe(provider: str, model: str | None, timeout: float, key: str | None = No
 # -------------------------------------------------------------- the commands
 
 
-def cmd_status(args) -> int:
-    print(f"advisor credentials   (file: {LOCAL})")
-    if not gitignored():
-        print("  WARNING: config/local.toml is not in .gitignore. Do not store a key until it is.")
-    print(f"  {'provider':<12s} {'kind':<8s} {'source':<14s} {'ready':<6s} detail")
+def survey() -> list[dict]:
+    """One row per provider: how it would authenticate right now.
+
+    No secret is ever in a row — only a mask. This is what the HTTP API serves
+    to a browser, and a credential store that can hand a credential back is not
+    a credential store.
+    """
+    rows = []
     for name in advisor.PROVIDERS:
         spec = advisor.PROVIDERS[name]
+        row = {"provider": name, "kind": kind(name), "masked": "",
+               "can_store": bool(spec.get("config_section"))}
         if kind(name) == "plan":
             ok, detail = cli_status(name)
-            src = CLI_TOOLS[name]["bin"]
+            tool = CLI_TOOLS[name]
+            row.update({"source": tool["bin"], "ready": ok, "detail": detail,
+                        "login_command": f"{tool['bin']} {' '.join(tool['login'])}",
+                        "verified": tool["verified"]})
         else:
             env = spec.get("env")
             from_env = os.environ.get(env or "") or ""
             stored = advisor.key_for(name)
-            ok = bool(stored)
+            detail = ""
             if from_env:
-                src, detail = f"env {env}", mask(from_env)
+                source, detail = f"env {env}", mask(from_env)
             elif stored:
-                src, detail = "local.toml", mask(stored)
+                source, detail = "local.toml", mask(stored)
             else:
-                src, detail = "-", f"no key (env {env} or config/local.toml)"
+                source, detail = "-", f"no key (env {env} or config/local.toml)"
             if from_env and stored and from_env != stored:
                 detail += "  [env wins over the stored key]"
-        print(f"  {name:<12s} {kind(name):<8s} {src:<14s} {'yes' if ok else 'NO':<6s} {detail}")
+            row.update({"source": source, "ready": bool(stored), "detail": detail,
+                        "masked": mask(stored) if stored else "", "env": env,
+                        "env_overrides": bool(from_env),
+                        "login_command": ""})
+        rows.append(row)
+    return rows
+
+
+def cmd_status(args) -> int:
+    rows = survey()
+    if getattr(args, "json", False):
+        print(json.dumps({"file": LOCAL, "gitignored": gitignored(), "providers": rows}))
+        return 0
+    print(f"advisor credentials   (file: {LOCAL})")
+    if not gitignored():
+        print("  WARNING: config/local.toml is not in .gitignore. Do not store a key until it is.")
+    print(f"  {'provider':<12s} {'kind':<8s} {'source':<14s} {'ready':<6s} detail")
+    for r in rows:
+        print(f"  {r['provider']:<12s} {r['kind']:<8s} {r['source']:<14s} "
+              f"{'yes' if r['ready'] else 'NO':<6s} {r['detail']}")
     if args.test:
         print("\n  proving each ready credential with one real call:")
         for name in advisor.PROVIDERS:
@@ -304,18 +331,24 @@ def cmd_status(args) -> int:
 
 def cmd_key(args) -> int:
     provider = args.provider
+    as_json = getattr(args, "json", False)
+
+    def done(code: int, stored: bool, detail: str) -> int:
+        if as_json:
+            print(json.dumps({"provider": provider, "stored": stored, "detail": detail}))
+            return 0 if stored else code
+        print(f"  {detail}")
+        return code
+
     if kind(provider) == "plan":
-        print(f"{provider} is a plan, reached through `{CLI_TOOLS[provider]['bin']}`. "
-              f"Use `login {provider}` instead — it takes no key.")
-        return 2
+        return done(2, False, f"{provider} is a plan, reached through "
+                              f"`{CLI_TOOLS[provider]['bin']}`. Sign in instead — it takes no key.")
     section = advisor.PROVIDERS[provider].get("config_section")
     if not section:
-        print(f"{provider} declares no config_section in advisor.PROVIDERS, so a stored key "
-              f"would never be read. Fix that first.")
-        return 2
+        return done(2, False, f"{provider} declares no config_section in advisor.PROVIDERS, "
+                              f"so a stored key would never be read. Fix that first.")
     if not gitignored():
-        print("refusing to store a key: config/local.toml is not in .gitignore.")
-        return 2
+        return done(2, False, "refusing to store a key: config/local.toml is not in .gitignore.")
 
     if args.stdin:
         key = sys.stdin.read().strip()
@@ -323,24 +356,21 @@ def cmd_key(args) -> int:
         print(f"paste the {provider} key (input is hidden; nothing is echoed):")
         key = getpass.getpass("  key: ").strip()
     if not key:
-        print("  nothing entered; unchanged.")
-        return 1
+        return done(1, False, "nothing entered; unchanged.")
 
-    print(f"  proving it with one call to {args.model or TEST_MODEL.get(provider)} before storing...")
+    if not as_json:
+        print(f"  proving it with one call to {args.model or TEST_MODEL.get(provider)} before storing...")
     ok, detail = probe(provider, args.model, args.timeout, key=key)
-    print(f"  {'ok  ' if ok else 'FAIL'} {detail}")
     if not ok and not args.force:
-        print("  NOT stored. A key that does not answer would drop this agent from the panel "
-              "with one line in a log. Re-run with --force to store it anyway.")
-        return 1
+        return done(1, False, f"NOT stored — {detail}. A key that does not answer would drop "
+                              f"this agent from the panel with one line in a log.")
 
     set_value(section, "api_key", key)
-    print(f"  stored under [{section}] in {LOCAL}  ({mask(key)})")
+    note = f"stored under [{section}] ({mask(key)}); {detail}"
     env = advisor.PROVIDERS[provider].get("env")
     if env and os.environ.get(env):
-        print(f"  note: {env} is also set in this environment and WINS over the file. "
-              f"Unset it if you want the stored key used.")
-    return 0
+        note += f". NOTE: {env} is also set in this environment and WINS over the file"
+    return done(0, True, note)
 
 
 def cmd_login(args) -> int:
@@ -374,19 +404,26 @@ def cmd_logout(args) -> int:
 
 def cmd_clear(args) -> int:
     section = advisor.PROVIDERS[args.provider].get("config_section")
-    if not section:
-        print(f"{args.provider} stores nothing in the file.")
-        return 1
-    gone = drop_value(section, "api_key")
-    print(f"  {'removed' if gone else 'nothing stored'} under [{section}] in {LOCAL}")
     env = advisor.PROVIDERS[args.provider].get("env")
-    if env and os.environ.get(env):
-        print(f"  note: {env} is still set in this environment, so this provider is still usable.")
-    return 0
+    if not section:
+        detail, gone = f"{args.provider} stores nothing in the file.", False
+    else:
+        gone = drop_value(section, "api_key")
+        detail = f"{'removed' if gone else 'nothing stored'} under [{section}] in {LOCAL}"
+        if env and os.environ.get(env):
+            detail += f". NOTE: {env} is still set in this environment, so this provider still works"
+    if getattr(args, "json", False):
+        print(json.dumps({"provider": args.provider, "removed": gone, "detail": detail}))
+        return 0
+    print(f"  {detail}")
+    return 0 if section else 1
 
 
 def cmd_test(args) -> int:
     ok, detail = probe(args.provider, args.model, args.timeout)
+    if getattr(args, "json", False):
+        print(json.dumps({"provider": args.provider, "ok": ok, "detail": detail}))
+        return 0
     print(f"  {args.provider}: {'ok  ' if ok else 'FAIL'} {detail}")
     return 0 if ok else 1
 
@@ -449,6 +486,10 @@ def main() -> int:
     ap = argparse.ArgumentParser(description="configure how the advisor authenticates")
     ap.add_argument("--model", default=None, help="model to prove the credential with")
     ap.add_argument("--timeout", type=float, default=60.0)
+    # The machine interface. `fd-api` shells out to this file rather than
+    # reimplementing five provider adapters in Rust, so that the rules about
+    # what a credential is and when it is proven live in exactly one place.
+    ap.add_argument("--json", action="store_true", help="emit one JSON object instead of a table")
     sub = ap.add_subparsers(dest="cmd")
 
     s = sub.add_parser("status", help="what is configured, and from where")
