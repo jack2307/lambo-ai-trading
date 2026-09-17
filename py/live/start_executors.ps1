@@ -39,6 +39,18 @@ param(
     # a week ago.
     [switch]$Live,
 
+    # Permit the accounts the registry marks `real_money = true`.
+    #
+    # Separate from -Live, and it has to be. -Live means "send orders", which
+    # has meant a demo for weeks and costs nothing when it is wrong. This one
+    # means "send orders that spend money". Folding it into -Live would carry
+    # every habit built on a demo straight onto a funded account, which is the
+    # habit most worth breaking.
+    #
+    # Without it a real-money account is SKIPPED, with a line saying so, and
+    # the demo accounts in the same registry start exactly as before.
+    [switch]$AllowReal,
+
     [string]$Python = 'C:\Python39\python.exe',
     [string]$Root = ''
 )
@@ -79,12 +91,20 @@ $SYMBOL_OF = @{
     'btc'     = 'BTCUSD'
 }
 
-function Resolve-Symbol([string]$run) {
+# The suffix is the ACCOUNT's, and comes from the registry. The demo has none
+# and gets the standard name; the real cent account sets '.sc' and gets the
+# cent book, which is the one the paper desk has quoted all along. Without
+# this the mirror would have named XAUUSD on an account that only lists
+# XAUUSD.sc - the executor would have refused, safely, and every book would
+# have sat flat for reasons nobody would have guessed at quickly.
+function Resolve-Symbol([string]$run, [string]$suffix) {
     $state = Join-Path $Root "data\paper\$run\state.json"
     if (-not (Test-Path $state)) { return $null }
     $market = (Get-Content $state -Raw | ConvertFrom-Json).config.market
     if (-not $market) { return $null }
-    return $SYMBOL_OF[[string]$market]
+    $base = $SYMBOL_OF[[string]$market]
+    if (-not $base) { return $null }
+    return "$base$suffix"
 }
 
 # ---- the registry ----
@@ -167,11 +187,22 @@ try {
             continue
         }
 
+        # A real-money account is skipped unless it was asked for by name on
+        # the command line. Skipped and not refused: the point is that starting
+        # the demo mirrors must stay a one-word operation that cannot pick up a
+        # funded account by accident.
+        $real = [bool]$acct.real_money
+        if ($real -and -not $AllowReal) {
+            Write-Host "skipping $($acct.id) - real money, and -AllowReal was not given" -ForegroundColor Yellow
+            continue
+        }
+
         # Dry unless the registry says otherwise AND -Live was passed. -DryRun
         # overrides both, in the safe direction only.
         $dry = $DryRun -or $acct.dry_run -or (-not $Live)
         $mode = if ($dry) { 'DRY RUN' } else { 'LIVE' }
-        Write-Host "$($acct.id): account $($acct.login) on $($acct.server) [$mode]"
+        if ($real) { $mode = "$mode - REAL MONEY" }
+        Write-Host "$($acct.id): account $($acct.login) on $($acct.server) [$mode]" -ForegroundColor $(if ($real -and -not $dry) { 'Red' } else { 'Gray' })
 
         foreach ($run in $books) {
             # The kill switch the executor itself watches. Left in place here
@@ -186,9 +217,9 @@ try {
             # A book whose market has no standard symbol is skipped rather than
             # guessed at. Sending an order on the wrong instrument is worse than
             # not sending one.
-            $sym = Resolve-Symbol $run
+            $sym = Resolve-Symbol $run $acct.symbol_suffix
             if (-not $sym) {
-                Write-Host "  skipping $run - no standard symbol known for its market; add it to SYMBOL_OF"
+                Write-Host "  skipping $run - no symbol known for its market; add it to SYMBOL_OF"
                 continue
             }
 
@@ -199,10 +230,21 @@ try {
             $here = Join-Path $Root "data\live\$($acct.id)\$run"
             New-Item -ItemType Directory -Force -Path $here | Out-Null
 
-            $args = @('py/live/mt5_executor.py', "--run=$run", "--terminal=$($acct.terminal)",
+            # The terminal path is QUOTED. Start-Process joins this array with
+            # spaces and quotes nothing, and the real account's terminal lives
+            # in `C:\Program Files\MetaTrader 5\` - unquoted it reaches argparse
+            # as two arguments and the executor exits on an unrecognised one.
+            # The pollers hit exactly this on 2026-09-17 and took the feed down
+            # with it; the demo path, C:\MT5-demo, has no space and never showed
+            # it.
+            $args = @('py/live/mt5_executor.py', "--run=$run", "--terminal=`"$($acct.terminal)`"",
                       "--login=$($acct.login)", "--account=$($acct.id)", "--symbol=$sym",
                       "--lot-scale=$($acct.lot_scale)")
             if ($dry) { $args += '--dry-run' }
+            # Passed only for an account the registry marks, and only when the
+            # command line asked. The executor checks the registry again for
+            # itself; this is not the permission, only one third of it.
+            if ($real) { $args += '--allow-real' }
             Start-Process -FilePath $Python -ArgumentList $args -WorkingDirectory $Root -WindowStyle Hidden `
                 -RedirectStandardOutput (Join-Path $here 'exec.out') `
                 -RedirectStandardError (Join-Path $here 'exec.err')

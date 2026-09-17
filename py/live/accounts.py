@@ -71,6 +71,16 @@ def load(path):
             # rather than every book.
             "dry_run": bool(a.get("dry_run", True)),
             "enabled": bool(a.get("enabled", True)),
+            # Real money is opt-in, and stays opt-in when the key is absent,
+            # misspelled, or the file predates this code.
+            "real_money": bool(a.get("real_money", False)),
+            # What this account calls its instruments.
+            #
+            # An account property, not a market property: `xauusd` is the same
+            # gold on both, but the demo lists it as XAUUSD and the cent
+            # account as XAUUSD.sc. '' keeps every account that existed before
+            # this field naming exactly what it named.
+            "symbol_suffix": str(a.get("symbol_suffix", "")),
             "runs": [str(r) for r in (a.get("runs") or [])],
         })
     return out

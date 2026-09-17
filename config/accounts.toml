@@ -146,6 +146,83 @@ runs = [
 # dropped while it holds a position leaves that position behind with nobody
 # reconciling it. Both Opus books were flat when this was done.
 
+
+# ---------------------------------------------------------------------------
+# REAL MONEY. Read this block before changing anything in it.
+# ---------------------------------------------------------------------------
+[[account]]
+id = "vantage-cent"
+label = "Vantage cent - REAL MONEY"
+
+# Standard STP Cent, on the same server the desk already reads prices from.
+# A cent account quotes the `.sc` book the paper desk has used since the
+# beginning - XAUUSD.sc contract 1, BTCUSD.sc 0.01, EURUSD.sc 1000, which is
+# exactly what config/default.toml already says. So this account needs no unit
+# conversion at all. That is the opposite of the demo below it, where a
+# standard account meant every contract was 100x the book's and the mapping
+# had to be worked out; here the paper books ARE cent books.
+login = 33705331
+server = "VantageMarkets-Live 21"
+
+# Its own terminal, and deliberately NOT the one in Program Files.
+#
+# A terminal holds one account at a time, and the Program Files install is
+# what the pollers read prices from. Pointing it at this account would work -
+# same broker, same symbols - but it would put the desk's whole price feed on
+# the same login that is carrying money, so a re-login here would blind the
+# desk. Separate installs keep the two failures separate.
+terminal = 'C:\MT5-cent\terminal64.exe'
+
+# This account lists XAUUSD.sc, not XAUUSD. The demo below lists the opposite
+# and sets no suffix. It belongs to the account and not to the market because
+# `xauusd` is the same gold on both - only the name differs.
+symbol_suffix = ".sc"
+
+# Each paper book has its own 10,000 USC. Five of them share this one account,
+# and each still sizes as though it owned the whole thing - so at 1.0 the five
+# together would risk five times what any one of them was designed to risk.
+# The account is funded with 10,000 USC (USD 100), so the fifth is the honest
+# scale and the owner chose it on 2026-09-17.
+#
+# This is the number that decides how much money an idea costs to be wrong
+# about. Nothing else in this file is closer to the money.
+lot_scale = 0.2
+
+# THE THIRD KEY. Without it the executor exits 3 on a REAL account however the
+# command line reads, and the other two keys are `--allow-real` on that command
+# line and `--login` matching the terminal. See mt5_executor.py's docstring for
+# why the permission is split across a file and a command line rather than kept
+# in one place: a config was edited once by someone who has gone to bed, a
+# command line is typed by someone who is awake.
+real_money = true
+
+# Recording only, until the first real fills have been read.
+#
+# The demo below spent a full day like this before it was turned off, and that
+# day is what caught the contract sizes being wrong by 1000x on two pairs. The
+# same caution is worth more here, not less: flip this to false once a dry run
+# has shown the volumes this account will actually send.
+dry_run = true
+
+enabled = true
+
+# The same five books the demo mirrors. The coin controls are not here and are
+# not coming here - see the demo's note above.
+runs = [
+    "xau-ema",
+    "xau-macd-asia",
+    "ai-xau-ds-ctx",
+    "ai-xau-opus-ctx",
+    "ai-xau-sol-ctx",
+]
+
+# The directory data/live/vantage-cent/ is stamped with this login the first
+# time an executor runs, and refuses to hold any other afterwards. That is the
+# guard on the owner's standing requirement that the record reads as one
+# unbroken history: deleting it was never the danger - `data/` is gitignored
+# and no deploy script touches it - but writing two accounts into one file
+# would leave every number intact and none of them meaningful.
+
 # A second account looks like this. Note the separate terminal directory - two
 # entries pointing at one terminal would be two executors fighting over one
 # account, and the launcher refuses that.

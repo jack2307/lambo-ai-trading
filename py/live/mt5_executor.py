@@ -23,18 +23,33 @@ What it does, every `--poll` seconds:
 
 What it refuses, in code, before any order:
 
-* `account_info().trade_mode != ACCOUNT_TRADE_MODE_DEMO` — the process
-  exits. There is no flag that disables this check.
-* `account_info().login != --login` — exits. A terminal that is not the
-  one you named is not the one you meant.
+* A REAL account, unless THREE independent things agree: `--allow-real` is
+  on the command line, `config/accounts.toml` says `real_money = true` for
+  the account named by `--account`, and `--login` matches the account the
+  terminal is actually holding. Any one missing and the process exits 3
+  having sent nothing.
+
+  Until 2026-09-17 this was simply "demo only, and no flag disables it".
+  The owner funded a real cent account and asked for it, so the wall became
+  a permission that has to be spent three times over. The shape is the one
+  `-Live` already uses: a file can only ever make a run SAFER by itself,
+  and making it riskier costs a word on the command line too. A forgotten
+  flag, a stale config, or the wrong terminal — each alone still stops it.
+* `account_info().login != --login` — exits, demo or real. A terminal that
+  is not the one you named is not the one you meant.
+* An account directory whose recorded login is not this one — exits. See
+  `check_identity`. This is what keeps a real account's trades from being
+  written into the demo's history.
 * A `STOP` file at `data/paper/<run>/STOP` — closes any open position and
   exits. The kill switch.
 * The terminal path is required (`--terminal`), so the executor never
   attaches to whichever terminal happens to be running.
 
-The lock is tested by pointing it at the live terminal on this machine: it
-must print the refusal and exit 3 without touching anything. That test is
-in `docs/paper/DESIGN.md` and is repeated at every review.
+The permission is tested by pointing it at the real account WITHOUT
+`--allow-real`, and again with the flag but with `real_money` absent from
+the registry: both must print the refusal and exit 3 without touching
+anything. That test is in `docs/paper/DESIGN.md` and is repeated at every
+review.
 """
 
 from __future__ import annotations
@@ -207,6 +222,92 @@ def write_snapshot(path, payload: dict) -> None:
         pass
 
 
+def real_money_refusal(args, acc) -> str:
+    """Why this REAL account may not be traded — empty string if it may.
+
+    A reason and not a boolean, because the log line is the only place anyone
+    will read about a refusal after the fact, and "refused" without a which-one
+    sends the reader to the source to guess.
+
+    Three keys, checked independently. Two of them live in different places on
+    purpose: a command line is typed by a person now, a config file was edited
+    by a person once. Requiring both means neither a stale file nor a typed
+    mistake is enough on its own.
+    """
+    if not args.allow_real:
+        return ("account is REAL and --allow-real was not given")
+    if not args.account:
+        # Without a named account there is no registry entry to consult, and
+        # the fallback id (`login-<n>`) is generated here rather than written
+        # by anyone - so nothing has actually granted permission.
+        return "account is REAL and --account was not given, so no registry entry grants it"
+    try:
+        import tomli
+    except ImportError:  # pragma: no cover - the desk installs it
+        return "account is REAL and tomli is missing, so the registry cannot be read"
+    path = ROOT / "config" / "accounts.toml"
+    try:
+        with open(path, "rb") as f:
+            registry = tomli.load(f)
+    except (OSError, ValueError) as e:
+        return f"account is REAL and {path.name} could not be read: {type(e).__name__}"
+    for entry in registry.get("account", []):
+        if entry.get("id") != args.account:
+            continue
+        if not entry.get("real_money", False):
+            return f"account is REAL and {path.name} does not set real_money for '{args.account}'"
+        # The registry names a login too. If it disagrees with the terminal,
+        # the permission that was granted was granted for a different account.
+        named = entry.get("login")
+        if named is not None and int(named) != int(acc.login):
+            return (f"account is REAL and {path.name} grants '{args.account}' to login "
+                    f"{named}, not {acc.login}")
+        return ""
+    return f"account is REAL and '{args.account}' is not in {path.name}"
+
+
+def check_identity(path: Path, acc, account: str) -> str:
+    """Bind an account directory to one login, for good.
+
+    Returns a refusal reason, or an empty string. Writes the record the first
+    time and compares every time after.
+
+    This exists because the owner's history has to read as one unbroken thing.
+    A directory that quietly changes which account it describes does not
+    destroy any data - it destroys the meaning of all of it, and leaves every
+    file looking perfectly fine.
+    """
+    now = {"account": account, "login": int(acc.login), "server": str(acc.server),
+           "currency": str(acc.currency),
+           "demo": int(acc.trade_mode) == 0}
+    try:
+        with open(path, encoding="utf-8") as f:
+            was = json.load(f)
+    except FileNotFoundError:
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            tmp = str(path) + ".tmp"
+            with open(tmp, "w", encoding="utf-8") as f:
+                json.dump({**now, "first_seen": int(time.time() * 1000)}, f, indent=2)
+            os.replace(tmp, str(path))
+        except OSError:
+            # Not fatal: the guard is a safety net, not the trade path. A
+            # directory that cannot be stamped is still the right directory.
+            pass
+        return ""
+    except (OSError, ValueError):
+        return ""  # unreadable stamp is not evidence of a mismatch
+    if int(was.get("login", now["login"])) != now["login"]:
+        return (f"data/live/{account}/ already holds the record of login "
+                f"{was.get('login')}; this terminal is {now['login']}. Use a new account id "
+                f"rather than writing two accounts into one history")
+    if bool(was.get("demo")) != now["demo"]:
+        kind = "a demo" if was.get("demo") else "a real"
+        return (f"data/live/{account}/ was started as {kind} account and this one is not; "
+                f"use a new account id")
+    return ""
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--run", required=True)
@@ -297,6 +398,11 @@ def main() -> int:
     ap.add_argument("--max-join-r", type=float, default=0.25,
                     help="do not open if the price has moved this far from the book's entry, in R")
     ap.add_argument("--dry-run", action="store_true", help="reconcile and log, send nothing")
+    # One of the three keys to a real account. On its own it does nothing:
+    # the registry must also say `real_money = true` for --account, and the
+    # terminal must hold exactly --login. See the module docstring.
+    ap.add_argument("--allow-real", action="store_true",
+                    help="permit a REAL account (registry must also allow it)")
     args = ap.parse_args()
 
     # data/live/<account>/<run>/ - the live side, kept out of data/paper
@@ -307,6 +413,24 @@ def main() -> int:
     here = ROOT / "data" / "live" / account / args.run
     here.mkdir(parents=True, exist_ok=True)
     out = here / "executor.jsonl"
+
+    # The record of WHOSE account this directory is, written once and checked
+    # every time after.
+    #
+    # The owner's standing requirement is that the trading history runs
+    # unbroken from the first day and survives any update. Deletion was never
+    # the real danger - `data/` is gitignored and no deploy script touches it.
+    # The danger is MIXING: point a real account at an id that a demo has been
+    # writing under, and both accounts' fills land in one executor.jsonl. The
+    # history is all still there and it no longer means anything, which is
+    # worse than losing it, because nothing looks wrong.
+    #
+    # So the directory remembers its login, and refuses to become a different
+    # one. Moving an account to a new login is then a deliberate act: use a
+    # new account id, which is a new directory, and the old record stays
+    # exactly as it was.
+    identity = ROOT / "data" / "live" / account / "identity.json"
+
 
     # Two kill switches, and both are honoured.
     #
@@ -333,14 +457,33 @@ def main() -> int:
         if acc is None:
             log(out, "refused", reason="no account_info", error=str(mt5.last_error()))
             return 3
-        # ---- the lock: demo only, and the demo you named ----
-        if acc.trade_mode != mt5.ACCOUNT_TRADE_MODE_DEMO:
-            log(out, "refused", reason="account is not a demo account", login=acc.login, server=acc.server, trade_mode=int(acc.trade_mode))
-            print("REFUSED: this terminal is not logged into a demo account. Nothing was sent.", flush=True)
-            return 3
+        # ---- the lock: the account you named, and a real one only on
+        #      three separate permissions ----
+        #
+        # The login check comes FIRST on purpose. Everything below reasons
+        # about "this account"; until the terminal is confirmed to be holding
+        # the account that was named, there is no such thing.
         if acc.login != args.login:
             log(out, "refused", reason="account login differs from --login", login=acc.login, expected=args.login, server=acc.server)
             print(f"REFUSED: terminal login {acc.login} is not {args.login}. Nothing was sent.", flush=True)
+            return 3
+        if acc.trade_mode != mt5.ACCOUNT_TRADE_MODE_DEMO:
+            why = real_money_refusal(args, acc)
+            if why:
+                log(out, "refused", reason=why, login=acc.login, server=acc.server,
+                    trade_mode=int(acc.trade_mode), account=account)
+                print(f"REFUSED: {why}. Nothing was sent.", flush=True)
+                return 3
+            # Said out loud, every start, because a line that scrolls past is
+            # the only moment anyone is told this is not practice.
+            print(f"REAL MONEY: account {acc.login} on {acc.server}, "
+                  f"{acc.balance:.2f} {acc.currency}, lot scale {args.lot_scale}.", flush=True)
+            log(out, "real-money", login=acc.login, server=acc.server,
+                balance=acc.balance, currency=acc.currency, lot_scale=args.lot_scale)
+        why = check_identity(identity, acc, account)
+        if why:
+            log(out, "refused", reason=why, login=acc.login, account=account)
+            print(f"REFUSED: {why}. Nothing was sent.", flush=True)
             return 3
         if not mt5.symbol_select(args.symbol, True):
             log(out, "refused", reason="symbol not available", symbol=args.symbol)
