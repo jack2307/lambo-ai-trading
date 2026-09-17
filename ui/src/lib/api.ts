@@ -269,7 +269,19 @@ export interface PaperRun {
   contract_size: number
   open: null | {
     side: 'LONG' | 'SHORT'
+    /** The bar whose OPEN this fill is PRICED at. Not when the desk knew about
+     *  it, and not when the account filled — see `learned_at` below and the
+     *  broker row's `opened_at`. Three clocks, three fields, because one of
+     *  them was standing for all three until 2026-09-17. */
     entry_time: number
+    /**
+     * The wall clock at which fd-api LEARNED the book holds this, which is a
+     * BAR after `entry_time` by construction: the fill is priced at the open
+     * of the bar stamped `entry_time`, and that bar is only posted once it
+     * CLOSES. Null on a position open before the field existed, or reloaded
+     * from an older state file — absent, not zero.
+     */
+    learned_at: number | null
     entry_price: number
     lots: number
     /**
