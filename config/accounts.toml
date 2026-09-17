@@ -100,7 +100,18 @@ dry_run = false
 
 # False hides the account from the launcher's `-All` without deleting what you
 # worked out to set it up.
-enabled = true
+#
+# Off since 2026-09-17, on the owner's word: the demo had done its job and a
+# real cent account took over. Everything that made it work is still written
+# down here, and every fill it ever took is still in data/live/vantage-demo/.
+#
+# There is a second reason to leave it off, and it is the stronger one. This
+# desk now runs on ONE machine, and the desktop it moved from still has a
+# terminal logged into this same demo. Two machines mirroring one account send
+# every order twice, and the launcher's mutex is system-wide, not world-wide -
+# it cannot see the other machine at all. An account that is off cannot be
+# started by accident on either.
+enabled = false
 
 # Which books this account mirrors. This IS the strategy selection: a book not
 # named here is paper only, on this account.
