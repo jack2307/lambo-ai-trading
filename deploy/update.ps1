@@ -183,8 +183,72 @@ if (-not $Root) {
 }
 Set-Location $Root
 
+# PATH, re-read from the registry, before anything needs a tool.
+#
+# Measured on the VPS 2026-09-17: the first real run of this script died at
+# `git pull` with "The term 'git' is not recognized". Over ssh the operator
+# inherits sshd's environment, and sshd's PATH predates the Git install, so
+# git is on the machine and not on the path of the process that needs it.
+# Same defect the AI-trader launcher hit with node and fixed the same way -
+# the registry is where the truth is, a session's copy is a snapshot.
+#
+# It failed at the safest point it could have, with the plan and the open
+# positions printed and nothing stopped, which is luck rather than design:
+# the same missing tool a few lines later is a desk that is down with no
+# binary installed.
+$env:Path = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' +
+            [Environment]::GetEnvironmentVariable('Path', 'User')
+if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
+    Write-Host 'git is not on PATH even after re-reading it from the registry.' -ForegroundColor Red
+    Write-Host '  Nothing has been stopped. Install git, or put it on the machine PATH.' -ForegroundColor Red
+    exit 2
+}
+
 function Step($what) { Write-Host "`n== $what" -ForegroundColor Cyan }
 function Note($what) { Write-Host "   $what" -ForegroundColor DarkGray }
+
+# Stages this run still owes, once it has done something it cannot undo.
+#
+# An exit after the stop leaves the desk mid-deploy, and the operator's first
+# question is not why it stopped - the error says that - but WHAT DID NOT
+# HAPPEN. On 2026-09-17 a refusal at the readiness check skipped the watch
+# restart and nothing said so; the watch was restarted by hand once someone
+# noticed. So every exit after the point of no return lists what it owed and
+# did not do.
+$script:Owed = @()
+function Owe([string[]]$what) { $script:Owed = $what }
+function Paid([string]$what) { $script:Owed = @($script:Owed | Where-Object { $_ -ne $what }) }
+function Show-Owed {
+    if ($script:Owed.Count -gt 0) {
+        Write-Host ''
+        Write-Host 'THIS RUN STOPPED PART WAY. It did NOT do the following, and they are' -ForegroundColor Yellow
+        Write-Host 'not going to happen on their own:' -ForegroundColor Yellow
+        foreach ($o in $script:Owed) { Write-Host "  - $o" -ForegroundColor Yellow }
+    }
+}
+function Stop-Here([string]$why, [int]$code = 1) {
+    Write-Host ''
+    Write-Host $why -ForegroundColor Red
+    Show-Owed
+    exit $code
+}
+
+# And the same for everything that stops this script WITHOUT going through
+# Stop-Here, which is most of it.
+#
+# `$ErrorActionPreference = 'Stop'` makes every `Write-Error` a TERMINATING
+# error, so the `exit 1` written after each one never executes and the script
+# dies where it stands. That was fine while the only question was whether it
+# stopped. It is not fine now that the answer to "what did it skip" has to be
+# on the screen, and a trap covers the failures nobody anticipated as well as
+# the ten that were written out - which is the point, since the refusal that
+# skipped the watch restart on 2026-09-17 was one nobody had anticipated.
+trap {
+    Write-Host ''
+    Write-Host "$($_.Exception.Message)" -ForegroundColor Red
+    Show-Owed
+    exit 1
+}
 
 function Stop-Desk {
     # Executors first. See the note at the top of this file.
@@ -269,13 +333,28 @@ function Stop-DeskTask([string]$name, [string]$procName, [string]$cmdLike = '') 
 }
 
 function Test-Detached([string]$procName) {
-    # Is the thing that is answering OUTSIDE the operator's session?
+    # Will the thing that is answering survive the operator logging off?
     #
-    # Returns a hashtable the caller reports verbatim. SessionId is the check
-    # that matters - a SYSTEM task runs in session 0 and an interactive logon
-    # does not - and the parent is named because "session 0" means nothing to
-    # someone reading a deploy log at three in the morning and "parent
-    # svchost.exe" does.
+    # THE FIRST VERSION ANSWERED THIS WITH "is its session different from
+    # mine", AND THAT WAS WRONG OVER SSH. sshd's children run in session 0, so
+    # a correctly task-started fd-api - parent svchost.exe, owner SYSTEM,
+    # session 0 - matched the caller's session exactly and was refused as
+    # session-bound. Measured on the VPS 2026-09-17: the evidence printed on
+    # the line above the refusal was right and the verdict was wrong, and
+    # because it exited there the watch restart never ran.
+    #
+    # So the verdict is now the two facts that actually decide it:
+    #
+    #   OURS      - the process is a descendant of this script, so it dies
+    #               with this script whatever its session says. Unambiguous,
+    #               and the only thing that hard-refuses.
+    #   SERVICE   - the owner is a service account. A task running as SYSTEM
+    #               survives a logoff; one running as the logged-on user does
+    #               not, and that is the misconfiguration worth warning about.
+    #
+    # Sessions are still REPORTED, because "session 0, parent svchost.exe" is
+    # what a person reads to confirm it by eye. They are just no longer the
+    # verdict.
     $me = (Get-CimInstance Win32_Process -Filter "ProcessId=$PID").SessionId
     $p = @(Get-CimInstance Win32_Process -Filter "Name='$procName.exe'" -ErrorAction SilentlyContinue)
     if ($p.Count -eq 0) { return @{ found = $false } }
@@ -287,12 +366,23 @@ function Test-Detached([string]$procName) {
     } catch { }
     $owner = '?'
     try { $owner = (Invoke-CimMethod -InputObject $it -MethodName GetOwner).User } catch { }
+
+    # Walk the parent chain looking for this script. Bounded, because a pid is
+    # reused and a cycle would otherwise hang a deploy.
+    $ours = $false
+    $cur = $it.ParentProcessId
+    for ($hop = 0; $hop -lt 8 -and $cur; $hop++) {
+        if ($cur -eq $PID) { $ours = $true; break }
+        try { $cur = (Get-CimInstance Win32_Process -Filter "ProcessId=$cur" -ErrorAction Stop).ParentProcessId }
+        catch { break }
+    }
     return @{
         found     = $true
         pid       = $it.ProcessId
         session   = $it.SessionId
         mySession = $me
-        detached  = ($it.SessionId -ne $me)
+        ours      = $ours
+        service   = ($owner -in @('SYSTEM', 'LOCAL SERVICE', 'NETWORK SERVICE'))
         parent    = $parent
         owner     = $owner
     }
@@ -634,11 +724,16 @@ $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
 $exeBefore = Hash-Of $exe
 
 if (-not $NoRestart) {
+    # The point of no return. From here an exit leaves the desk mid-deploy,
+    # so every exit below goes through Stop-Here and names what it owed.
     if ($ServerOnly) {
+        Owe @('install the staged artefacts', 'start fd-api', 'verify the running version', 'restart the telegram watch')
         Step 'stopping fd-api (and nothing else)'
         Stop-Server
         Note 'fd-api down; executors, traders and pollers untouched'
     } else {
+        Owe @('install or build the artefacts', 'start fd-api', 'verify the running version',
+              'restart the pollers', 'restart the AI traders', 'restart the telegram watch')
         Step 'stopping the desk'
         Stop-Desk
         Note 'executors, traders, pollers and fd-api down'
@@ -727,6 +822,8 @@ if ($Binary -or $Client) {
         }
         Note "client installed from $Client"
     }
+    Paid 'install the staged artefacts'
+    Paid 'install or build the artefacts'
 }
 
 # -------------------------------------------------------------------- build
@@ -896,31 +993,47 @@ if (-not $NoRestart) {
     if (-not $who.found) {
         Note 'answering, but no fd-api process is visible to report on (it may be running as another user)'
     } else {
-        Note "answering process pid $($who.pid), session $($who.session), parent $($who.parent), owner $($who.owner)"
+        Note ("answering process pid $($who.pid), session $($who.session) (this script: $($who.mySession)), " +
+              "parent $($who.parent), owner $($who.owner)")
         if ($viaTask) {
             $st = (Get-DeskTask $API_TASK).State
             if ("$st" -ne 'Running') {
-                Write-Error "scheduled task '$API_TASK' reports State=$st after being started. Something is answering on 8138 but the task is not running it."
-                exit 1
+                Stop-Here "scheduled task '$API_TASK' reports State=$st after being started. Something is answering on 8138 but the task is not running it."
             }
             Note "scheduled task '$API_TASK' State=Running"
-            if (-not $who.detached) {
-                # The task path produced a process inside the operator's own
-                # session. That is the task misconfigured to run as the logged
-                # on user, and it will die at logoff exactly like the child
-                # process this path exists to avoid.
-                Write-Error ("'$API_TASK' started fd-api INSIDE this session (session $($who.session)), " +
-                             'so it will die at logoff like a child process would, and it reads this ' +
-                             "session's environment rather than machine scope - which decides the " +
-                             'advisor gate. Fix the task to run as SYSTEM. fd-api IS running.')
-                exit 1
+            if ($who.ours) {
+                # Unambiguous: it is our own descendant, so it dies with this
+                # script whatever its session or owner says.
+                Stop-Here ("'$API_TASK' is reported Running but the answering fd-api is a DESCENDANT of " +
+                           'this script, so it will die when this session ends. Something started it ' +
+                           'outside the task. fd-api IS running.')
             }
-        } elseif (-not $who.detached) {
+            if ($who.owner -eq '?') {
+                # Three states, not two. GetOwner() can simply fail - measured
+                # on services.exe, which returns an empty user - and "could
+                # not read it" is not "it is a user account". Saying the
+                # second when the first is true is the mistake the snapshot
+                # made with `demo: false`.
+                Note 'could not read the process owner; the task principal is worth an eye'
+            } elseif (-not $who.service) {
+                # Warned, not refused, and the ssh case is why. sshd's
+                # children run in session 0, so a session comparison cannot
+                # separate a SYSTEM task from the caller there, and a refusal
+                # on weak evidence costs the stages below it - which is
+                # exactly what happened on the first real run.
+                Write-Host "   WARNING: fd-api is owned by '$($who.owner)', not a service account." -ForegroundColor Yellow
+                Write-Host '   A task running as the logged-on user dies at logoff and reads that' -ForegroundColor Yellow
+                Write-Host '   user''s environment rather than machine scope, which decides the' -ForegroundColor Yellow
+                Write-Host '   advisor gate. Check the task principal. Continuing.' -ForegroundColor Yellow
+            }
+        } elseif ($who.ours) {
             Write-Host '   NOTE: fd-api is a child of this session and will stop when it ends.' -ForegroundColor Yellow
             Write-Host '   There is no flowdesk-api scheduled task on this machine; that is fine' -ForegroundColor DarkGray
             Write-Host '   locally and is not how the server should run.' -ForegroundColor DarkGray
         }
     }
+    Paid 'start fd-api'
+    Paid 'verify the running version'
     if ($v.body.git_dirty) {
         # Named, never refused, and -48 is right about why: this is the state
         # most likely to be running during an incident, and a check that
@@ -949,6 +1062,7 @@ if (-not $NoRestart) {
         if ("$wst" -ne 'Running') {
             Write-Host "   WARNING: '$WATCH_TASK' is $wst, so nothing is watching the desk." -ForegroundColor Yellow
         }
+        Paid 'restart the telegram watch'
         $toRun = if ($ServerOnly) { @() } else { @('start_pollers.ps1', 'start_ai_traders.ps1') }
     } else {
         $toRun = if ($ServerOnly) { @('start_telegram.ps1') } else { @('start_pollers.ps1', 'start_ai_traders.ps1', 'start_telegram.ps1') }
@@ -958,6 +1072,11 @@ if (-not $NoRestart) {
         if (Test-Path $p) {
             Note "running $s"
             powershell -NoProfile -ExecutionPolicy Bypass -File $p | Out-Null
+        }
+        switch ($s) {
+            'start_pollers.ps1'    { Paid 'restart the pollers' }
+            'start_ai_traders.ps1' { Paid 'restart the AI traders' }
+            'start_telegram.ps1'   { Paid 'restart the telegram watch' }
         }
     }
 
