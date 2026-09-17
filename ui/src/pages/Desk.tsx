@@ -181,11 +181,35 @@ function accountMoney(usd: number | null | undefined, run: { account_currency?: 
 }
 
 /** A signed dollar figure. The sign is the point, so it is never dropped. */
-const signedUsd = (v: number | null | undefined): string => {
-  if (v == null || !Number.isFinite(v)) return '—'
-  const rounded = Math.abs(v) >= 1000 ? Math.abs(v).toLocaleString('en-US', { maximumFractionDigits: 0 }) : Math.abs(v).toFixed(0)
-  return `${v < 0 ? MINUS : '+'}$${rounded}`
+/**
+ * The account unit shared by every run on screen, or null when they disagree.
+ *
+ * `accountMoney` converts one book's USD into that book's account units. A
+ * total folded across several books can only be shown in those units if the
+ * books agree on them — they all do today, every market block in
+ * `config/default.toml` saying USC and 100 — but "they all do today" is the
+ * kind of assumption this desk gets caught by. Disagreement falls back to USD,
+ * which is what the numbers already are.
+ */
+function sharedUnit(runs: PaperRun[]): { account_currency?: string; units_per_usd?: number } | null {
+  const first = runs[0]
+  if (!first) return null
+  for (const r of runs) {
+    if (r.account_currency !== first.account_currency || r.units_per_usd !== first.units_per_usd) return null
+  }
+  return first
 }
+
+/*
+ * `signedUsd` stood here and is deliberately gone rather than left unused.
+ *
+ * It rendered whole dollars: `toFixed(0)`. On this desk a book risks 1% of a
+ * USD 100 equity, so a typical result is well under a dollar and every row it
+ * touched collapsed to "−$0" or "+$1". The open row shipped on 2026-09-17 used
+ * `accountMoney` instead and read "−37 USC" beside closed rows reading "−$1" —
+ * the same scale, a hundred apart, in one panel. Keeping the function would
+ * leave the rounding for someone to reach for again.
+ */
 
 const signedR = (v: number | null | undefined): string =>
   v == null || !Number.isFinite(v) ? '—' : `${v < 0 ? MINUS : '+'}${Math.abs(v).toFixed(2)}R`
@@ -887,7 +911,7 @@ function SummaryStrip({
           <span className="num">
             net{' '}
             <span className={stats.net > 0 ? 'text-lc' : stats.net < 0 ? 'text-lp' : 'text-foreground'}>
-              {signedUsd(stats.net)}
+              {accountMoney(stats.net, sharedUnit(runs))}
             </span>
           </span>
           <span className="num" title="Closed since 00:00 UTC, counted from the last ten fills each run reports.">
@@ -3065,7 +3089,7 @@ function FillsTable({
                   {fill.exitReason.toLowerCase().replace(/_/g, ' ')}
                 </span>
                 <span className={cn('num text-right', fill.pnlUsd >= 0 ? 'text-lc' : 'text-lp')}>
-                  {signedUsd(fill.pnlUsd)}
+                  {accountMoney(fill.pnlUsd, detail.run)}
                 </span>
                 <span className={cn('num text-right', fill.r >= 0 ? 'text-lc' : 'text-lp')}>{signedR(fill.r)}</span>
               </button>
@@ -3223,7 +3247,7 @@ function FillAccount({ fill, run }: { fill: BacktestTrade; run: PaperRun }) {
         <span className="num text-foreground">{quote(fill.exitPrice)}</span> on{' '}
         <span className="num">{shortStamp(fill.exitTime)}</span>, held{' '}
         <span className="num">{heldFor(fill.holdMs)}</span>, for{' '}
-        <span className={cn('num', fill.pnlUsd >= 0 ? 'text-lc' : 'text-lp')}>{signedUsd(fill.pnlUsd)}</span> —{' '}
+        <span className={cn('num', fill.pnlUsd >= 0 ? 'text-lc' : 'text-lp')}>{accountMoney(fill.pnlUsd, run)}</span> —{' '}
         <span className={cn('num', fill.r >= 0 ? 'text-lc' : 'text-lp')}>{signedR(fill.r)}</span>.
       </p>
 
