@@ -53,6 +53,20 @@ import time
 import urllib.error
 import urllib.request
 
+# Output is UTF-8, and undisplayable characters are replaced rather than fatal.
+#
+# Windows hands a redirected stdout the cp1252 codec, and the text below is not
+# ours - it is whatever a model wrote in its reasoning, or whatever a broker put
+# in a comment. On 2026-09-17 a single arrow in a DeepSeek stand-aside raised
+# UnicodeEncodeError out of the print, out of main(), and killed the trader for
+# five bars. `errors="replace"` is the important half: encoding can then never
+# be the thing that stops a process, whatever arrives.
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8", errors="replace")
+    except (AttributeError, ValueError):  # not a TextIOWrapper; nothing to do
+        pass
+
 #: Nothing in the request may be larger than this, whatever a model says.
 MAX_FACTOR = 1.0
 
