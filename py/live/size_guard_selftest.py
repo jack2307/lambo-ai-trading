@@ -54,6 +54,17 @@ them coming back. Each section names the failure it pins.
      offset, so it could not match - and on this desk it never once has. These
      checks are the only place it has ever fired.
 
+  6  THE ACCOUNT HAS A SHAPE, NOT JUST A SIDE. The reconciler corrected side
+     and nothing else, so two positions on one book, or a size that no longer
+     matched, stood for as long as the book stayed open. These pin the
+     DECISION as much as the detection: a drift is reported and deliberately
+     not corrected, because two auto-correcting executors on one run id would
+     close and re-open each other's positions at the poll interval.
+
+  7  A PARTIAL FILL IS NOT A FILL. `TRADE_RETCODE_DONE_PARTIAL` sat in the
+     same tuple as DONE and was called success, which cleared the refusal
+     channel and left the account permanently smaller than the book.
+
 The provenance of every symbol number is marked. MEASURED means read from a
 terminal on the date given; DERIVED means computed from a measured value and
 said so. Nothing here is a guess presented as a measurement.
@@ -138,7 +149,7 @@ def make_mt5():
     def order_send(req):
         m.sent.append(req)
         return Obj(retcode=m.TRADE_RETCODE_DONE, comment="ok", order=1, deal=1,
-                   price=req["price"])
+                   price=req["price"], volume=req["volume"])
 
     m.order_send = order_send
     return m
@@ -813,6 +824,62 @@ def the_account_has_a_shape() -> None:
           len(opens) == 0, f"opens {len(opens)}")
 
 
+# ---------------------------------------------------------------------------
+# 7 - a partial fill is not a fill
+# ---------------------------------------------------------------------------
+
+def a_partial_fill_is_not_a_fill() -> None:
+    """`TRADE_RETCODE_DONE_PARTIAL` sat in the same tuple as DONE.
+
+    So a broker that filled part of the volume was recorded as a clean
+    success, the refusal channel was CLEARED, and the account was left
+    permanently smaller than the book with the desk showing a healthy mirror.
+    Every trade measured afterwards is measured against a position the book
+    never took.
+    """
+    section("a partial fill")
+
+    real_send = MT5.order_send
+
+    def partial_send(req):
+        MT5.sent.append(req)
+        # The broker takes a fifth of what was asked for.
+        return Obj(retcode=MT5.TRADE_RETCODE_DONE_PARTIAL, comment="partial",
+                   order=9, deal=9, price=req["price"], volume=round(req["volume"] / 5, 8))
+
+    try:
+        MT5.order_send = partial_send
+        _, sent, rows = drive(CENT, lots=0.05)
+        orders = [r for r in rows if r["kind"].startswith("order")]
+        check("one order was sent", len(sent) == 1, f"{len(sent)}")
+        check("a partial fill is NOT logged as a clean order",
+              all(r["kind"] != "order" for r in orders), f"{[r['kind'] for r in orders]}")
+        check("it has its own kind, and is not called a failure either",
+              any(r["kind"] == "order-partial" for r in orders),
+              f"{[r['kind'] for r in orders]}")
+        rec = next((r for r in orders if r["kind"] == "order-partial"), {})
+        check("the record carries what was FILLED, not what was asked",
+              rec.get("volume") == 0.01, f"volume {rec.get('volume')}")
+        check("...and what was asked, beside it",
+              rec.get("asked") == 0.05, f"asked {rec.get('asked')}")
+        check("nothing is re-sent to make up the difference", len(sent) == 1, f"{sent}")
+    finally:
+        MT5.order_send = real_send
+
+    # A full fill records the filled volume too, so both lines read the same way.
+    _, _, rows = drive(CENT, lots=0.05)
+    done = next((r for r in rows if r["kind"] == "order"), {})
+    check("a full fill records volume and asked as the same number",
+          done.get("volume") == 0.05 and done.get("asked") == 0.05, f"{done}")
+
+    # The poll after a partial fill: the account holds the wrong size, and that
+    # is reported as drift rather than re-opened into a double position.
+    after = drive_holding([position(1, lots=0.01)], lots=0.05)
+    check("the poll after a partial fill reports drift, and does not re-open",
+          len(after["sent"]) == 0 and "lots" in str((after["snapshot"] or {}).get("drift")),
+          f"sent {after['sent']}; drift {(after['snapshot'] or {}).get('drift')}")
+
+
 def main() -> int:
     the_ceiling_measures_one_currency()
     both_size_guards_fail_closed()
@@ -820,6 +887,7 @@ def main() -> int:
     stop_leaves_a_true_record()
     the_two_clocks()
     the_account_has_a_shape()
+    a_partial_fill_is_not_a_fill()
     print(f"\n{'all checks passed' if not FAIL else str(FAIL) + ' CHECK(S) FAILED'}")
     return 1 if FAIL else 0
 

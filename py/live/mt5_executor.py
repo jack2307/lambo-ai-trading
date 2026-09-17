@@ -751,10 +751,44 @@ def main() -> int:
                 log(out, "dry-run", action=what, request={k: v for k, v in request.items() if k != "type_filling"})
                 return True
             result = mt5.order_send(request)
-            ok = result is not None and result.retcode in (mt5.TRADE_RETCODE_DONE, mt5.TRADE_RETCODE_DONE_PARTIAL, mt5.TRADE_RETCODE_PLACED)
-            log(out, "order" if ok else "order-failed", action=what, retcode=getattr(result, "retcode", None),
-                comment=getattr(result, "comment", None), ticket=getattr(result, "order", None), deal=getattr(result, "deal", None),
-                price=getattr(result, "price", None), volume=request.get("volume"), requested=request.get("price"))
+            retcode = getattr(result, "retcode", None)
+            asked = request.get("volume")
+            filled = getattr(result, "volume", None)
+            # Three outcomes, not two.
+            #
+            # `TRADE_RETCODE_DONE_PARTIAL` used to sit in the same tuple as
+            # DONE and be called success. It is not: it means the broker filled
+            # PART of the volume asked for, so the account is left permanently
+            # smaller than the book while the log says "order", the refusal
+            # channel is CLEARED, and the desk shows a healthy mirror. Every
+            # trade after it is measured against a position the book never
+            # took, which is the one measurement this process exists to
+            # produce.
+            #
+            # It is not an error either, and calling it one would be its own
+            # lie - an order did execute. So it gets its own kind, its own
+            # message, and `False`, which is the conservative half:
+            #
+            #   opening   the caller stops for this poll. The next poll sees a
+            #             position of the wrong size and reports it as drift
+            #             (see `drift_from_book`); it does NOT re-open, so a
+            #             partial fill cannot become a double position.
+            #   closing   the remainder is still held, and the next poll tries
+            #             to close it again - which is what should happen.
+            #
+            # `volume` in the record is now what the broker actually filled and
+            # `asked` is what was requested. They were one field carrying the
+            # REQUESTED size under the name `volume`, on every line including
+            # the successful ones, so the record could not show a partial fill
+            # even after someone went looking for one.
+            partial = retcode == mt5.TRADE_RETCODE_DONE_PARTIAL
+            ok = retcode in (mt5.TRADE_RETCODE_DONE, mt5.TRADE_RETCODE_PLACED)
+            kind = "order" if ok else ("order-partial" if partial else "order-failed")
+            log(out, kind, action=what, retcode=retcode,
+                comment=getattr(result, "comment", None), ticket=getattr(result, "order", None),
+                deal=getattr(result, "deal", None),
+                price=getattr(result, "price", None), volume=filled, asked=asked,
+                requested=request.get("price"))
             # Carried into the snapshot so it leaves this machine. A refusal
             # that only ever reaches a log file is a book that quietly stopped
             # trading: the desk goes on deciding, the paper P&L goes on moving,
@@ -765,9 +799,14 @@ def main() -> int:
             if ok:
                 nonlocal_blocked(None)
                 nonlocal_standing_out(None)
+            elif partial:
+                print(f"PARTIAL: the broker filled {filled} of {asked} lots on '{what}'. "
+                      f"Nothing was re-sent.", flush=True)
+                nonlocal_blocked(f"partial fill: {filled} of {asked} lots on '{what}'; the "
+                                 f"account no longer holds the book's size")
             else:
                 nonlocal_blocked(
-                    f"broker refused: {getattr(result, 'retcode', '?')} "
+                    f"broker refused: {retcode} "
                     f"{(getattr(result, 'comment', '') or mt5.last_error())}"[:160])
             return ok
 
