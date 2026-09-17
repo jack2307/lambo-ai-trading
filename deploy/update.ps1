@@ -499,8 +499,15 @@ if ($ServerOnly) {
     Note "    the watch via       : $watchHow"
     Note "  will NOT touch        : $($running.Count) executor(s), the AI traders, the pollers"
     Note "  artefacts             : $artefact"
-    Note '  the executors keep the Python they were launched with; a change to'
-    Note '  mt5_executor.py is on disk and NOT in effect after this run.'
+    # Named by PROCESS and not by file. This sentence used to say "a change to
+    # mt5_executor.py is on disk and not in effect", which was true of the
+    # change in flight when it was written and immediately misleading when the
+    # next one landed in mt5_bars.py: a reader could infer that the pollers
+    # were current because only the executor was named. The pull prints the
+    # actual list below, from git, so nothing here has to guess which.
+    Note '  none of those three pick up this pull. They keep the Python they were'
+    Note '  launched with, and anything it changes for them takes effect at their'
+    Note '  next restart, which this mode does not perform.'
 } elseif ($NoRestart) {
     Note 'MODE: -NoRestart'
     Note '  will stop and restart : nothing'
@@ -578,6 +585,38 @@ if ($before -eq $after) {
 } else {
     Note "$($before.Substring(0,7)) -> $($after.Substring(0,7))"
     git --no-pager log --oneline "$before..$after" | ForEach-Object { Note "  $_" }
+
+    # WHAT THIS PULL CHANGED FOR PROCESSES NOBODY IS RESTARTING, asked of git
+    # rather than claimed.
+    #
+    # The Python under py\live\ is read at process start and never again, so a
+    # pull changes those files on disk while the running executors, traders
+    # and pollers go on executing what they were launched with. The plan block
+    # says that as a property of the mode; this says WHICH FILES, tonight,
+    # from the commit range that actually landed - so the list cannot go stale
+    # and cannot be wrong about a change nobody anticipated.
+    #
+    # It is a report and never a refusal: deploying code that takes effect at
+    # the next restart is the normal, intended shape of -ServerOnly.
+    $pyChanged = @(git --no-pager diff --name-only "$before..$after" -- py/live 2>$null |
+                   Where-Object { $_ -match '\.py$' })
+    if ($pyChanged.Count -gt 0) {
+        Write-Host ''
+        Write-Host "  this pull changed $($pyChanged.Count) file(s) under py\live\:" -ForegroundColor Yellow
+        foreach ($c in $pyChanged) { Write-Host "    $c" -ForegroundColor Yellow }
+        # The list is from git; the mapping from file to process is NOT, and
+        # is not attempted. An earlier draft printed these under "running
+        # processes will not pick up" and was wrong about telegram_notify.py -
+        # the watch IS restarted by -ServerOnly, so that one does take effect.
+        # A file-to-process table here would be a second copy of a fact the
+        # script already knows exactly, and would be wrong the first time
+        # someone adds a process. So it states what it restarts and leaves the
+        # reader to join them, which cannot go stale.
+        Write-Host '  Python is read at process start and never again. This run restarts only' -ForegroundColor DarkGray
+        Write-Host '  the processes named in the plan above; every other process keeps the code' -ForegroundColor DarkGray
+        Write-Host '  it was launched with, whatever this pull changed. Restarting the rest is a' -ForegroundColor DarkGray
+        Write-Host '  separate decision with its own checks - the executors especially.' -ForegroundColor DarkGray
+    }
 }
 
 if ($NoRestart -and $SkipBuild) { Write-Host "`nnothing else asked for"; exit 0 }
