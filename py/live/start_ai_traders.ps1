@@ -77,6 +77,28 @@ $campaigns = @(
     # claude-opus-5 goes through the account's PLAN, via the Claude Code CLI.
     # No API key is involved; see the `claude-cli` provider in advisor.py.
     @{ model = 'claude-opus-5'; run = 'ai-xau-opus-ctx'; control = 'ai-xau-opus-ctx-coin'; seed = 11; log = 'ai_trader_opus_ctx' },
+    # THE SAME MODEL ON THE SAME BARS WITH ONE SENTENCE REMOVED, and it is a
+    # second campaign rather than an edit to the row above for the reason
+    # terra is not sol: an id has to keep meaning one thing, and here the
+    # comparison between the two books IS the experiment.
+    #
+    # WHY. `ai-xau-opus-ctx` has never once entered. 79 real answers out of 99
+    # rows on 2026-09-17 - the other 20 were CLI auth failures - every one
+    # NONE, with a coherent reason each time. On the same bars and the same
+    # prompt deepseek-flash entered 7 of 77 and gpt-5.6-sol 6 of 94. The
+    # suspect is the opening sentence's second half, which tells the model
+    # that a trade it is not confident in is WORSE than no trade: for a
+    # cautious instruction-follower that makes standing aside the
+    # literal-safe answer every bar, and a book that never trades measures
+    # nothing.
+    #
+    # `no-coin-penalty` removes that clause and adds nothing in its place.
+    # Registered at docs/hypotheses/2026-09-17-prompt-coin-penalty.md with the
+    # decision rule and the falsifier written down before the first bar.
+    #
+    # Seed 17 and not 11 on purpose: a shared seed would give the two
+    # campaigns the same coin sequence, and then neither has a control.
+    @{ model = 'claude-opus-5'; run = 'ai-xau-opus-ctx-b'; control = 'ai-xau-opus-ctx-b-coin'; seed = 17; log = 'ai_trader_opus_ctx_b'; promptVariant = 'no-coin-penalty' },
     # DeepSeek's cheap model, straight at the metered API — no CLI, no plan.
     # Measured 2026-09-16: 1.5s and roughly a dollar a month for one 15m book,
     # because a direct call spends 2,853 tokens on the question where the CLI
@@ -173,6 +195,11 @@ New-Item -ItemType Directory -Force -Path $logs | Out-Null
 foreach ($c in $campaigns) {
     $args = @('py/live/ai_trader.py', "--model=$($c.model)", '--market=xauusd', '--tf=15m',
               "--run=$($c.run)", "--control=$($c.control)", "--seed=$($c.seed)")
+    # Passed only when a campaign names one, so every existing row keeps the
+    # trader's own default - `base`, which renders byte-identical to the
+    # prompt these books have always run. A campaign that says nothing about
+    # its prompt gets the prompt it has always had.
+    if ($c.promptVariant) { $args += "--prompt-variant=$($c.promptVariant)" }
     if ($DryRun) { $args += '--dry-run' }
     # --control is still passed: the coin is still flipped off the same seed
     # so the sequence does not depend on whether a control book exists, and
@@ -185,7 +212,11 @@ foreach ($c in $campaigns) {
     # "-> ai-xau-sol-ctx vs ai-xau-sol-ctx-coin" on a run started with
     # -NoControl, which is the log claiming a comparison that does not exist.
     $against = if ($NoControl) { 'no coin' } else { "vs $($c.control)" }
-    Write-Host "started $($c.model) -> $($c.run) $against (seed $($c.seed)) [$mode]"
+    # The variant is on the line because two rows now name the same model and
+    # the only thing separating them is the prompt. A start line that says
+    # "claude-opus-5" twice and nothing else is a log nobody can read back.
+    $variant = if ($c.promptVariant) { " prompt=$($c.promptVariant)" } else { ' prompt=base' }
+    Write-Host "started $($c.model) -> $($c.run) $against (seed $($c.seed))$variant [$mode]"
 }
 
 Start-Sleep -Seconds 2

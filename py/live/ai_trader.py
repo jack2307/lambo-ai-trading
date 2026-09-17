@@ -62,9 +62,48 @@ for _stream in (sys.stdout, sys.stderr):
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 
-PROMPT = """You are trading one paper book on {market} {tf} bars. You are being measured against a
-coin that takes the same trades at the same bars with a random side, so a trade you are not
-actually confident in is worse than no trade: it hands the coin a free sample.
+# The one sentence that differs between prompt variants, quoted in full in both
+# forms so the difference is readable here rather than reconstructed from a
+# diff. See PROMPT_VARIANTS below for why there are two.
+COIN_CLAUSE = {
+    "base": (
+        "You are being measured against a\n"
+        "coin that takes the same trades at the same bars with a random side, so a trade you are not\n"
+        "actually confident in is worse than no trade: it hands the coin a free sample."
+    ),
+    "no-coin-penalty": (
+        "You are being measured against a\n"
+        "coin that takes the same trades at the same bars with a random side."
+    ),
+}
+
+# The prompt variants this trader can run, and the whole of what differs.
+#
+# WHY THERE IS A SECOND ONE. `ai-xau-opus-ctx` answered NONE on every bar it
+# ever saw - 79 real answers out of 99 rows on 2026-09-17, the other 20 being
+# CLI auth failures, with a coherent reason given each time and not one entry.
+# On the same bars and the same prompt, deepseek-flash entered 7 of 77 and
+# gpt-5.6-sol 6 of 94.
+#
+# The suspicion is the second half of the opening sentence. "A trade you are
+# not actually confident in is worse than no trade" is an asymmetric penalty,
+# and for a cautious instruction-following model it makes standing aside the
+# literal-safe answer on every bar. A book that never trades measures nothing.
+#
+# `no-coin-penalty` removes that clause and adds NOTHING in its place. The coin
+# is still named as the measurement, because it is; what goes is the
+# instruction about what to conclude from it. No nudge toward trading, no base
+# rate, no "you may be too cautious" - any of those would be a different
+# experiment and the result would not say which half did the work.
+#
+# The base prompt is NOT edited and the running book is not touched. Changing a
+# running book's prompt makes its record two campaigns wearing one id, which is
+# the rule this desk already applies to models and accounts. The comparison
+# between the two books IS the experiment; it is registered at
+# docs/hypotheses/2026-09-17-prompt-coin-penalty.md.
+PROMPT_VARIANTS = tuple(COIN_CLAUSE)
+
+PROMPT = """You are trading one paper book on {market} {tf} bars. {coin_clause}
 
 You may only answer in one of two ways: propose ONE trade, or stand aside.
 
@@ -617,6 +656,14 @@ def main() -> int:
     ap.add_argument("--poll", type=float, default=20.0)
     ap.add_argument("--timeout", type=float, default=90.0)
     ap.add_argument("--seed", type=int, default=7, help="the coin's seed, so the control replays")
+    # Which prompt this campaign runs. `base` is the prompt every book has used
+    # since the beginning, NAMED rather than left implicit: a row that does not
+    # say which prompt produced it is a row nobody can compare later, and the
+    # default having a name is what makes the old rows and the new ones talk to
+    # each other. See PROMPT_VARIANTS for the difference and for the
+    # registration.
+    ap.add_argument("--prompt-variant", default="base", choices=PROMPT_VARIANTS,
+                    help="which prompt wording to run; the record carries it per row")
     ap.add_argument("--dry-run", action="store_true", help="decide and log; post nothing")
     ap.add_argument("--once", action="store_true")
     args = ap.parse_args()
@@ -758,6 +805,7 @@ def main() -> int:
         limits = read_limits(args.api)
         prompt = PROMPT.format(
             market=args.market, tf=args.tf, n=len(shown), bars=rows,
+            coin_clause=COIN_CLAUSE[args.prompt_variant],
             position=describe_position(detail),
             desk=desk_block(detail, limits, atr_now, args.run),
             context=context_block(bars),
@@ -812,6 +860,13 @@ def main() -> int:
                   f"{verdict['action']:5s} (advisory)  {verdict['reason'][:64]}", flush=True)
             log(args.run, {
                 "at": int(time.time() * 1000), "bar_time": last_time, "model": args.model,
+            # WHICH PROMPT PRODUCED THIS ROW. The same rule the desk
+            # applies to every other unit it carries: a number whose unit
+            # lives somewhere else is a number nobody can compare later.
+            # The prompt TEXT is already stored per row, but text is not
+            # a key - two campaigns are compared by variant name, and
+            # rows written before this existed are `base` by the default.
+            "prompt_variant": args.prompt_variant,
                 "prompt": hold_prompt, "response": text, "latency_ms": ms,
                 # The RESOLVED provider, not the one derived from the model
                 # name. `--provider anthropic` forces a CLI-named model onto
@@ -920,6 +975,13 @@ def main() -> int:
         cost = cost_of(args.model, usage, provider) if usage else None
         log(args.run, {
             "at": int(time.time() * 1000), "bar_time": last_time, "model": args.model,
+            # WHICH PROMPT PRODUCED THIS ROW. The same rule the desk
+            # applies to every other unit it carries: a number whose unit
+            # lives somewhere else is a number nobody can compare later.
+            # The prompt TEXT is already stored per row, but text is not
+            # a key - two campaigns are compared by variant name, and
+            # rows written before this existed are `base` by the default.
+            "prompt_variant": args.prompt_variant,
             "prompt": prompt, "response": text, "latency_ms": ms,
             # What the call actually spent. `cost_usd` is null for a plan: that
             # call is not free, it draws on a quota, and printing $0.00 beside

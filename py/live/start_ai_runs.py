@@ -55,6 +55,22 @@ BOOKS = [
      "AI trader - gpt-5.6-terra (plan, Codex CLI), prompt co desk state + market context"),
     ("ai-xau-opus-ctx", "ai-xau-opus-ctx-coin",
      "AI trader - claude-opus-5, prompt co desk state + market context"),
+    # The same model and the same bars as the row above, with one sentence
+    # removed from the prompt: the clause saying that a trade you are not
+    # confident in is worse than no trade. The book above has answered NONE
+    # on every bar it has ever seen - 79 real answers out of 99 rows on
+    # 2026-09-17 - and that clause is the suspect.
+    #
+    # A SECOND BOOK AND NOT AN EDIT TO THE FIRST. The rule this file already
+    # applies to models applies to prompts: change a running book's prompt
+    # and its record becomes two campaigns wearing one id, intact and
+    # meaningless. Here the comparison between the two IS the experiment, so
+    # both have to exist and the first has to keep running untouched.
+    #
+    # Registered before its first bar at
+    # docs/hypotheses/2026-09-17-prompt-coin-penalty.md.
+    ("ai-xau-opus-ctx-b", "ai-xau-opus-ctx-b-coin",
+     "AI trader - claude-opus-5, prompt no-coin-penalty (coin named, penalty clause removed)"),
 ]
 
 # Read from the books the hand-made campaigns are still running on.
