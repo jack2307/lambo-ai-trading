@@ -58,9 +58,10 @@ foreach ($t in $TASKS) {
     try { $exists = Get-ScheduledTask -TaskName $t.Name -ErrorAction Stop } catch { }
     Write-Host ''
     Write-Host "  $($t.Name) - $($t.What)" -ForegroundColor White
-    Note "action    : cmd.exe /c `"$script`""
+    Note "action    : cmd.exe /c `"$script`"   (workdir $Root)"
     Note "principal : SYSTEM, ServiceAccount, Highest"
     Note "trigger   : at startup"
+    Note "settings  : RestartCount=999 every 1m, ExecutionTimeLimit=0 (none), MultipleInstances=IgnoreNew"
     Note "stdout    : appended to data\paper\logs\$($t.Log), with a boundary line per start"
     if ($exists) { Note "currently : present, State=$($exists.State)" } else { Note 'currently : NOT REGISTERED' }
     if (-not (Test-Path $script)) { Write-Host "   MISSING   : $script" -ForegroundColor Red }
@@ -101,14 +102,33 @@ foreach ($t in $TASKS) {
 foreach ($t in $TASKS) {
     $script = Join-Path $Root "deploy\$($t.Cmd)"
     if (-not (Test-Path $script)) { Write-Error "missing $script; not registering $($t.Name)"; continue }
-    $action = New-ScheduledTaskAction -Execute 'cmd.exe' -Argument "/c `"$script`""
+    $action = New-ScheduledTaskAction -Execute 'cmd.exe' -Argument "/c `"$script`"" -WorkingDirectory $Root
     $principal = New-ScheduledTaskPrincipal -UserId 'SYSTEM' -LogonType ServiceAccount -RunLevel Highest
     $trigger = New-ScheduledTaskTrigger -AtStartup
-    # ExecutionTimeLimit 0 because these are meant to run forever; the default
-    # stops a task after three days, which is a desk that goes quiet on a
-    # Wednesday for no reason anyone will connect to this setting.
+    # Every one of these is taken from the definitions running on the VPS,
+    # read out on 2026-09-17 so this file reconciles with them rather than
+    # overwriting them. The three that are load-bearing, in the operator's
+    # words, are the first three:
+    #
+    #   RestartCount 999 / RestartInterval 1m - this is what has brought
+    #     fd-api back after every death since the move to SYSTEM tasks. A
+    #     first draft of this file had 3, which is a desk that stays down on
+    #     the fourth crash of a bad afternoon and nobody knowing why.
+    #   ExecutionTimeLimit 0 - the default stops a task after three days,
+    #     which is a server that goes quiet on a Wednesday for a reason
+    #     nobody will connect to this setting.
+    #   MultipleInstances IgnoreNew - set EXPLICITLY rather than left to the
+    #     platform default, because a definition kept in a repository is
+    #     worth nothing if it only describes the settings someone bothered to
+    #     name. A second instance would be a second process on port 8138.
+    #
+    # The battery settings look irrelevant on a rented server and are kept
+    # because they are what is running; a reconciliation that quietly drops
+    # fields is not a reconciliation.
     $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries `
-        -StartWhenAvailable -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1)
+        -StartWhenAvailable -ExecutionTimeLimit ([TimeSpan]::Zero) `
+        -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1) `
+        -MultipleInstances IgnoreNew
     Register-ScheduledTask -TaskName $t.Name -Action $action -Principal $principal `
         -Trigger $trigger -Settings $settings -Force | Out-Null
     Write-Host "  registered $($t.Name)" -ForegroundColor Green
