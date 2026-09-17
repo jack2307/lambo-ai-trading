@@ -714,14 +714,25 @@ def main() -> int:
     #
     # MEASURED, replaying this rule over the 55 live paper entries with a stop:
     #
+    # THE ARGUMENT THAT DOES NOT DEPEND ON THE SAMPLE, first because it is the
+    # one that survives more data. Over the same 55 entries the one-sided rule
+    # selects a set of trades the BOOK lost 4.17R on and makes +0.84R on them:
+    # a +5.01R divergence, against +0.60R for the symmetric bound. That is
+    # arithmetic ON the entries, not an inference FROM them. The mirror beats
+    # the book by construction - which is exactly the bias the symmetric bound
+    # was written to prevent, arriving through the other door.
+    #
+    # THE CORROBORATING RESULT, which is suggestive and sample-limited:
+    #
     #   it takes 8 entries the symmetric rule refused
     #   7 of those 8 were trades the book was later STOPPED OUT of, against a
-    #     base rate of 38% (p = 0.006, binomial - checked)
+    #     base rate of 38% (p = 0.006, binomial - recomputed, not quoted)
     #   net -1.20R after the mirror's own fill
-    #   and on the selected set it opens a FIVE R gap between the book's result
-    #     and the mirror's, where the symmetric rule produced 0.6R. The mirror
-    #     beating the book by construction - which is the bias the symmetric
-    #     bound was written against, arriving through the other door.
+    #
+    # Read that one carefully. p = 0.006 is about the stop-out RATE, not about
+    # P&L, and the window was nine days of 37 longs against 18 shorts in a
+    # rising market. It is worth having and it is not worth betting the flag
+    # on by itself.
     #
     # THE MECHANISM, and why this does not contradict the four-year run
     # recorded above the adverse bound. Both results are true and they measure
@@ -740,11 +751,25 @@ def main() -> int:
     # on means systematically selecting trades on their way to their stop, with
     # real money, and finding out in the P&L.
     #
-    # WHAT WOULD JUSTIFY TURNING IT ON: a replay on a larger sample covering
-    # both regimes in which the stop-out rate of favourable joins sits near the
-    # 38% base rate rather than above it. Not a profitable week, and not the
-    # mechanical argument above - that argument is already known to be true and
-    # already known not to be sufficient.
+    # WHAT WOULD JUSTIFY TURNING IT ON, and the two halves have different
+    # answers, which is the point of putting the construction argument first.
+    #
+    # The stop-out result can be overturned by data: a larger both-regime
+    # replay in which the stop-out rate of favourable joins sits near the 38%
+    # base rate rather than above it.
+    #
+    # The CONSTRUCTION gap cannot be, and no amount of P&L evidence touches it.
+    # A sample showing favourable joins are profitable would not answer it - it
+    # would confirm it, because the mirror out-performing the book on a subset
+    # it selected for itself IS the objection. The only thing that answers it
+    # is a decision that the mirror's purpose has changed: that it is no longer
+    # an instrument for measuring what this book would do live, and is instead
+    # an account trading on its own account. That is the owner's decision about
+    # what this desk is for, not a measurement anyone can bring.
+    #
+    # So: a profitable week is not a reason. Neither is the mechanical argument
+    # above, which is already known to be true and already known not to be
+    # sufficient.
     #
     # The two STRUCTURAL bounds stay in the code path for when the flag is on:
     # a favourable drift of a full R is the book's own stop, and a join inside
