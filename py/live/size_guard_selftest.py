@@ -989,7 +989,9 @@ def a_better_price_is_not_a_reason_to_sit_out() -> None:
     drifts. Four of six were refused at least once for being too GOOD, and
     because a refusal is a retry rather than a skip, the mirror then waited for
     the price to come back to it: one book sat eighteen minutes and filled 3.5
-    points worse, another was never joined while the book booked +1.32R.
+    points worse, another was never joined at all - the book made +1.32R on it,
+    of which a mirror joining at first sighting would have had about +1.00R and
+    fifteen seconds later none, the price being through the target already.
 
     The favourable half of the bound is replaced by two STRUCTURAL limits,
     which is the part worth pinning: a favourable drift of a full R means the

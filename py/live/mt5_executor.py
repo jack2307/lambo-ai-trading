@@ -627,7 +627,8 @@ def main() -> int:
     # refusal is a retry rather than a skip, the mirror then waited for the
     # price to come back - entering on the retracement, or not at all. One book
     # sat eighteen minutes and filled 3.5 points worse; another was never
-    # joined while the book booked +1.32R.
+    # joined at all (the book made +1.32R on it; the MIRROR forwent about
+    # +1.00R - see the correction below).
     #
     # So the symmetric bound did not buy an unbiased sample. It bought an
     # adversely selected one, which is the same bias it was written to prevent,
@@ -658,21 +659,48 @@ def main() -> int:
     # cannot tell those apart, and a bound moved on nine days of one direction
     # is a bound fitted to a fortnight.
     #
-    # The same question is being run over the four-year 15m series, every bar,
-    # both regimes. Until that lands the bound does not move, and the two
-    # outcomes are already known:
+    # THE FOUR-YEAR RUN LANDED 2026-09-17, AND THE SECOND BRANCH FIRED: it was
+    # the trend, and 0.25R stays. 81,789 observations of 15m gold, 2022-06 to
+    # 2026-09, R = 1.2 x ATR14, 16-bar horizon, measured from the MIRROR's own
+    # fill rather than the book's:
     #
-    #   mechanism holds generally -> the adverse bound should be looser, or
-    #     should become a pure "is this trade already over" check like the
-    #     favourable side below; and the real repair is closing the one-bar
-    #     entry lag at the source, with this guard as the stopgap it was.
-    #   it was the trend -> 0.25R stays, and the nine-day number is an artefact
-    #     of a directional window.
+    #   after adverse drift   +0.0926R
+    #   inside the band       +0.0992R
+    #   after favourable      +0.0938R
+    #
+    # Equal within 0.007R, stable every year and in both regimes.
+    # corr(drift, after-fill return) is -0.003 on overlapping windows and
+    # +0.047 on 5,112 non-overlapping ones. Drift does not predict what the
+    # mirror earns.
+    #
+    # THE NINE-DAY +0.54 WAS MOSTLY AN ARITHMETIC IDENTITY - 59% of it. The
+    # drift is INSIDE the book's total return by construction, so correlating
+    # the two partly correlates a quantity with itself. Against the mirror's own
+    # after-fill return the same 55 trades give +0.222, and the four-year series
+    # takes even that away.
+    #
+    # The other error in the nine-day number, and the one to watch for because
+    # this desk made it twice in a day: it compared the BOOK's return on refused
+    # trades against the account's on taken ones, which counts the drift twice.
+    # A mirror earns `book_r - drift at its own fill`, never `book_r`. The trade
+    # quoted here and elsewhere as a +1.32R miss is the BOOK's R; the mirror
+    # forwent about +1.00R at first sighting and 0.00R fifteen seconds later,
+    # the price being already through the target. See 8400182 for the table.
+    #
+    # SO WHAT IS THE BOUND FOR, now that it is known not to pay? Not returns. It
+    # is expectancy-neutral and must never be defended as an edge again. It is
+    # for FIDELITY, which is what it was written for before anyone measured it:
+    # a mirror that joins far from the book's entry reports a trade the book did
+    # not take, and the gap between those two entry prices is the one
+    # measurement this whole apparatus exists to produce. 0.25R bounds how much
+    # of that measurement execution is allowed to eat. That reason never rested
+    # on the return distribution, which is why it survives a result that removed
+    # the other one.
     #
     # Recorded here rather than in a commit message because the next person to
-    # look at this number should find the measurement beside it, and should
-    # know it was CHOSEN against evidence rather than picked. What it was not
-    # chosen against is the four-year series, and that is the gap.
+    # look at this number should find the measurement beside it, and should know
+    # it was CHOSEN against evidence - including evidence that took the first
+    # answer away.
     ap.add_argument("--max-join-r", type=float, default=0.25,
                     help="do not open if the price has moved this far AGAINST the book's entry, in R")
     ap.add_argument("--dry-run", action="store_true", help="reconcile and log, send nothing")
@@ -988,8 +1016,17 @@ def main() -> int:
               ds SHORT book 4360.41, -0.32R to -0.63R for five minutes, all
                 better, all refused; sent at 4365.56.
               terra LONG book 4350.05, +0.34R rising to +2.45R, adverse
-                throughout, never taken. The book booked +1.32R and the account
-                got none of it.
+                throughout, never taken.
+
+            On that last one, be careful with the number, because this desk got
+            it wrong twice in one day and it is the kind of error that flatters
+            a fix. The BOOK made +1.32R, measured from the book's entry. A
+            mirror only ever earns the part after its OWN fill, so what the
+            account forwent is `book_r - drift at the moment it would have
+            filled`: about +1.00R at first sighting (would_fill 4354.27,
+            +0.34R), 0.00R fifteen seconds later when the price was already
+            through the target, +0.23R at the third look. Quoting the book's
+            +1.32R as the cost of a refusal counts the drift twice.
 
             Four of six were refused at least once for being too GOOD. And the
             refusal is not a skip, it is a retry: the mirror waits until the
@@ -1009,6 +1046,17 @@ def main() -> int:
             Favourable drift is now taken. A better entry carrying the book's
             own stop and target is the book's trade at a better price - the
             same trade, the same exits, less paid to get in.
+
+            WHAT THIS CHANGE IS NOT EXPECTED TO DO IS MAKE MONEY. Measured over
+            81,789 observations of 15m gold, 2022-2026, from the MIRROR's own
+            fill: entries after adverse drift returned +0.0926R, entries inside
+            the band +0.0992R, entries after favourable drift +0.0938R. Within
+            0.007R of one another, with the correlation between drift and
+            outcome running -0.003 to +0.047 and flipping sign year to year.
+            Drift does not predict the mirror's result. So this is not an edge
+            and must not be reported as one; what it stops is a mirror that
+            refused better prices and then waited for worse ones, which was
+            never defensible whatever the return distribution says.
 
             WHAT THIS COSTS, said plainly: the account's equity curve is no
             longer a fair test of the book, because adverse joins are skipped
