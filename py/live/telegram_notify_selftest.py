@@ -1,0 +1,172 @@
+"""Exercise the watch's alerting logic on synthetic payloads.
+
+    C:\\Python39\\python.exe py/live/telegram_notify_selftest.py
+
+No token is read, no message is sent and no route is called. Every function
+under test is pure over a status/accounts payload, which is the only way this
+file can be checked at all: the channel is a real group and the bot's token is
+a credential this has no business touching.
+
+What it pins, in the order the gaps were reported on 2026-09-17:
+
+  1  a funded book is read at three bars and a paper book at four, and the
+     60-minute outage that went unreported this morning now fires on the
+     funded side and still does not on the paper side
+  2  an account not mirroring a book it is configured for is announced BY NAME,
+     once, on the transition, and the recovery is announced too
+  3  a real-money gap is announced with the market shut; a paper gap is not
+  4  an executor refusal is announced once, a repeat is silent, and an event
+     older than the freshness window on first sight is learned rather than
+     replayed into the channel
+"""
+
+from __future__ import annotations
+
+import datetime as dt
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import telegram_notify as T  # noqa: E402
+
+FAIL = 0
+
+
+def check(name: str, got, want) -> None:
+    global FAIL
+    ok = got == want
+    if not ok:
+        FAIL += 1
+    print(f"  {'ok  ' if ok else 'FAIL'} {name}")
+    if not ok:
+        print(f"       got  {got!r}")
+        print(f"       want {want!r}")
+
+
+def at(y, m, d, hh, mm=0) -> float:
+    """A UTC instant in milliseconds."""
+    return dt.datetime(y, m, d, hh, mm, tzinfo=dt.timezone.utc).timestamp() * 1000
+
+
+def book(rid, tf="15m", market="xauusd", last=None, **kw) -> dict:
+    r = {"id": rid, "tf": tf, "market": market, "last_bar_time": last,
+         "net_usd": 0.0, "trades": 0, "open": None, "brokers": []}
+    r.update(kw)
+    return r
+
+
+def main() -> int:
+    # A Wednesday at 14:00 UTC: metals open, nowhere near the 21:00 halt.
+    now = at(2026, 9, 16, 14, 0)
+
+    print("1. the feed threshold, funded against paper")
+    sixty = book("xau-ema", last=now - 60 * 60_000)
+    check("60 min on a paper 15m book is NOT dead (4 bars, strict >)",
+          T.is_dead(sixty, now, T.STALE_BARS), False)
+    check("60 min on a FUNDED 15m book is dead (3 bars)",
+          T.is_dead(sixty, now, T.STALE_BARS_REAL), True)
+    check("45 min is the funded boundary and is not dead either (strict >)",
+          T.is_dead(book("x", last=now - 45 * 60_000), now, T.STALE_BARS_REAL), False)
+    check("46 min on a funded book is dead",
+          T.is_dead(book("x", last=now - 46 * 60_000), now, T.STALE_BARS_REAL), True)
+    check("the default is still the paper threshold",
+          T.is_dead(sixty, now), False)
+    # The whole point of the parameter: the same book, same instant, two answers.
+    check("a 5m funded book is dead after 16 min",
+          T.is_dead(book("x", tf="5m", last=now - 16 * 60_000), now, T.STALE_BARS_REAL), True)
+
+    print("\n2. which books count as funded")
+    accounts = [
+        {"id": "vantage-cent", "real_money": True, "dry_run": True,
+         "runs": ["xau-ema", "xau-close"], "mirroring": ["xau-ema", "xau-close"]},
+        {"id": "vantage-demo", "real_money": False, "dry_run": False,
+         "runs": ["xau-box-5m"], "mirroring": ["xau-box-5m"]},
+    ]
+    check("real_money wins even while the account is dry",
+          T.funded_books(accounts), {"xau-ema", "xau-close"})
+    check("no accounts payload means no funded books, not a crash",
+          T.funded_books([]), set())
+
+    print("\n3. changes() applies the tighter threshold to a funded book")
+    runs = [book("xau-ema", last=now - 60 * 60_000),
+            book("xau-box-5m", last=now - 60 * 60_000)]
+    state = {"runs": {r["id"]: {"trades": 0, "net": 0.0, "open": None, "dead": False,
+                                "mute": False, "mirrors": 0, "refused": None}
+                      for r in runs}}
+    lines = T.changes(runs, state, now, {"xau-ema"})
+    check("the funded book is reported dead", any("xau-ema" in l and "feed dead" in l for l in lines), True)
+    check("the paper book is not", any("xau-box-5m" in l for l in lines), False)
+
+    print("\n4. an account that stops mirroring, by name")
+    st: dict = {}
+    gap = [{"id": "vantage-cent", "real_money": True, "runs": ["a", "b", "c"],
+            "mirroring": ["a", "b", "c"]}]
+    check("a fresh state learns and says nothing", T.mirror_gaps(gap, st, now), [])
+    gap[0]["mirroring"] = ["a"]
+    out = T.mirror_gaps(gap, st, now)
+    check("the drop is announced once", len(out), 1)
+    check("and it names the books", "<code>b</code>" in out[0] and "<code>c</code>" in out[0], True)
+    check("and says it is real money", "REAL MONEY" in out[0], True)
+    check("and counts them", "2 of 3" in out[0], True)
+    check("the same gap on the next poll is silent", T.mirror_gaps(gap, st, now), [])
+    gap[0]["mirroring"] = ["a", "b", "c"]
+    back = T.mirror_gaps(gap, st, now)
+    check("the recovery is announced", len(back) == 1 and "again" in back[0], True)
+
+    print("\n5. a PARTIAL loss is what the per-book line cannot see")
+    st2: dict = {}
+    two = [{"id": "vantage-cent", "real_money": True, "runs": ["x"], "mirroring": ["x"]},
+           {"id": "vantage-demo", "real_money": False, "runs": ["x"], "mirroring": ["x"]}]
+    T.mirror_gaps(two, st2, now)
+    two[0]["mirroring"] = []          # the funded mirror dies; the demo one lives
+    out2 = T.mirror_gaps(two, st2, now)
+    check("the funded account's loss is announced on its own",
+          len(out2) == 1 and "vantage-cent" in out2[0], True)
+
+    print("\n6. market suppression, and the judgement it encodes")
+    shut = at(2026, 9, 19, 12, 0)     # a Saturday: metals closed
+    st3: dict = {}
+    both = [{"id": "vantage-cent", "real_money": True, "runs": ["g"], "mirroring": ["g"]},
+            {"id": "vantage-demo", "real_money": False, "runs": ["g"], "mirroring": ["g"]}]
+    markets = {"g": "xauusd"}
+    T.mirror_gaps(both, st3, shut, markets)
+    both[0]["mirroring"] = []
+    both[1]["mirroring"] = []
+    out3 = T.mirror_gaps(both, st3, shut, markets)
+    check("with the market shut only the real-money account speaks",
+          len(out3) == 1 and "vantage-cent" in out3[0], True)
+    check("btc is never suppressed",
+          T.mirror_gaps(
+              [{"id": "d", "real_money": False, "runs": ["b1"], "mirroring": []}],
+              {"accounts": {"d": {"missing": []}}}, shut, {"b1": "btc"}) != [], True)
+
+    print("\n7. the executor refusing to start")
+    st4: dict = {}
+    fresh = [{"at": now - 60_000, "kind": "autotrading-off"}]
+    out4 = T.broker_alarms("xau-ema", "vantage-cent", fresh, st4, now)
+    check("a fresh refusal is announced", len(out4), 1)
+    check("it names the book and the account",
+          "xau-ema" in out4[0] and "vantage-cent" in out4[0], True)
+    check("the same event next poll is silent",
+          T.broker_alarms("xau-ema", "vantage-cent", fresh, st4, now), [])
+    newer = fresh + [{"at": now - 10_000, "kind": "refused",
+                      "reason": "AutoTrading is disabled in the terminal"}]
+    out5 = T.broker_alarms("xau-ema", "vantage-cent", newer, st4, now)
+    check("a NEWER refusal is announced", len(out5), 1)
+    check("and carries the reason verbatim",
+          "AutoTrading is disabled in the terminal" in out5[0], True)
+    check("a sizing refusal is not alarming",
+          T.broker_alarms("b", "acc", [{"at": now, "kind": "refused-size"}], {}, now), [])
+    old = [{"at": now - 3 * 24 * 3_600_000, "kind": "autotrading-off"}]
+    st5: dict = {}
+    check("an old event on FIRST sight is learned, not replayed",
+          T.broker_alarms("b", "acc", old, st5, now), [])
+    check("and having been learned, it stays quiet",
+          T.broker_alarms("b", "acc", old, st5, now), [])
+
+    print(f"\n{'all checks passed' if not FAIL else str(FAIL) + ' CHECK(S) FAILED'}")
+    return 1 if FAIL else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
