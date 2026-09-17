@@ -255,11 +255,38 @@ def probe(provider: str, model: str | None, timeout: float, key: str | None = No
         text, ms = advisor.ask(PROBE, model, provider, key, timeout, usage)
     except Exception as e:                                   # noqa: BLE001
         return False, str(e).splitlines()[0][:220]
-    cost = advisor.cost_of(model, usage)
+    # `provider` is passed, and it is the whole difference between this line
+    # being true and being a lie.
+    #
+    # `cost_of` decides by ROUTE and not by model name - the same
+    # `claude-opus-5` is quota through the CLI and dollars through the API -
+    # and without the third argument it falls back to deriving the route from
+    # the name, which sends every Claude model to the plan. So a probe run as
+    # `--provider anthropic` made one REAL metered call and then reported
+    # "billed to a plan, not per token" at it.
+    #
+    # Small in money: one call, and the probe asks for a single word. Not
+    # small in kind, and this is the worst file in the desk for it - a setup
+    # tool is what someone runs BECAUSE they do not yet know what a route
+    # costs. The number it prints is the answer to the question they came
+    # with.
+    cost = advisor.cost_of(model, usage, provider)
     bits = [f"{model} answered in {ms} ms"]
     if usage:
         bits.append(f"{usage.get('input', 0)} in / {usage.get('output', 0)} out")
-    bits.append(f"${cost:.5f}" if cost is not None else "billed to a plan, not per token")
+    # Three states, not two. `cost is None` used to print "billed to a plan"
+    # for both a plan call and a METERED call whose model has no entry in
+    # advisor.PRICES - so a probe that spent money on an unpriced model said
+    # it had spent none. The same shape as the executor's snapshot learning to
+    # tell a demo from an account it cannot see: an answer nobody has is not
+    # the same as a no.
+    if cost is not None:
+        bits.append(f"${cost:.5f}")
+    elif kind(provider) == "plan":
+        bits.append("billed to a plan, not per token")
+    else:
+        bits.append("metered, and this call was billed - no price for "
+                    f"{model!r} in advisor.PRICES, so the amount is unknown")
     return True, "; ".join(bits)
 
 
