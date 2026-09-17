@@ -66,7 +66,15 @@ foreach ($s in $streams) {
     # Named only when given. A machine with one terminal has nothing to choose
     # between; a machine with two does, and the cent symbols quoted here live
     # on the live account only.
-    if ($Terminal) { $args += "--terminal=$Terminal" }
+    #
+    # Quoted, because Start-Process -ArgumentList joins an array with spaces
+    # and quotes nothing. The desktop's live terminal lives in
+    # `C:\Program Files\MetaTrader 5\`, so the unquoted form reached argparse
+    # as two arguments and every poller exited with "unrecognized arguments:
+    # Files\MetaTrader 5\terminal64.exe" - measured 2026-09-17, which took the
+    # desk's feed down until it was read. The server never showed it: its
+    # terminals are at C:\MT5-demo and C:\MT5-live, which have no spaces.
+    if ($Terminal) { $args += "--terminal=`"$Terminal`"" }
     Start-Process -FilePath $Python -ArgumentList $args -WorkingDirectory $Root -WindowStyle Hidden `
         -RedirectStandardOutput (Join-Path $logs "$($s.log).out") -RedirectStandardError (Join-Path $logs "$($s.log).err")
     Write-Host "started $($s.symbol) $($s.tf) -> $($s.market) (warm $($s.warm))"
