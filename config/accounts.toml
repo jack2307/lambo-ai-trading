@@ -228,13 +228,24 @@ lot_scale = 0.2
 # command line is typed by someone who is awake.
 real_money = true
 
-# Recording only, until the first real fills have been read.
+# Off since 2026-09-17, on the owner's explicit word.
 #
-# The demo below spent a full day like this before it was turned off, and that
-# day is what caught the contract sizes being wrong by 1000x on two pairs. The
-# same caution is worth more here, not less: flip this to false once a dry run
-# has shown the volumes this account will actually send.
-dry_run = true
+# The demo spent a full day recording before it was turned off, and that day
+# is what caught two contract sizes being wrong by a factor of a thousand. I
+# put the same day to the owner here and he asked to go straight to it; that
+# is his call to make and it is written down as his.
+#
+# What stood in for the day: the mirrors ran dry against this account first
+# and reported the symbol, the contract size and the magic they would use, and
+# the volume arithmetic was checked by hand. At lot_scale 0.2 a book asking
+# 0.06 lots sends 0.01 - the broker's minimum, and a 17% trim - so on this
+# account the 0.01 floor is doing part of the sizing. A book wanting less than
+# 0.05 lots is pushed UP to 0.01, which the executor marks `clipped` rather
+# than absorbing quietly.
+#
+# The file grants; the command line still has to spend it. `-Live` and
+# `-AllowReal` are both required, and neither is in this file.
+dry_run = false
 
 enabled = true
 
