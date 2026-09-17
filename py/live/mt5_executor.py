@@ -186,9 +186,71 @@ def clamp_volume(info, raw: float) -> tuple:
     return held, abs(held - vol) > step / 2
 
 
-def notional_of(info, vol: float, price: float) -> float:
-    """What the order is actually worth, in the account's currency."""
-    return vol * info.trade_contract_size * price
+def notional_of(info, vol: float, price: float) -> float | None:
+    """What this order is worth, in the units `account_info().equity` is in.
+
+    Returns None when the broker has not said enough to convert. A caller must
+    read that as "cannot check" and refuse, never as "no limit" - see
+    `open_like`, where that distinction is the whole guard.
+
+    WHY THIS IS NOT `vol * contract_size * price`, which is what it was until
+    2026-09-17:
+
+      * `vol * trade_contract_size * price` is the position's value in the
+        SYMBOL's profit currency. For XAUUSD.sc, XAGUSD.sc and EURUSD.sc -
+        every symbol this desk sends - that is USD.
+      * `account_info().equity` is in the ACCOUNT's currency. On the Vantage
+        cent account funded 2026-09-17 (login 33705331) that is USC, and
+        10,000 USC is USD 100.
+
+    The caller compared the first against the second. Dollars against cents:
+    a hundred times more numerous for the same money, so `--max-notional-ratio
+    10.0` admitted 1000x. The audit's worked example - 20 lots of XAUUSD.sc at
+    4350 - is USD 87,000 of gold against USC 10,000 of equity, which the old
+    arithmetic scored 8.7x and PASSED. In one currency it is USC 8,700,000
+    against USC 10,000: 870x, and refused.
+
+    This guard exists to catch an order wrong by a FACTOR, and it was wrong by
+    a factor. It was written and signed off against `vantage-demo` (login
+    26108386), a STANDARD account in USD, where `trade_tick_value /
+    trade_tick_size` equals `trade_contract_size` exactly and the two units
+    agree by coincidence. The demo cannot reproduce this bug. The next guard
+    proved out on it deserves the same question asked twice.
+
+    The conversion is the broker's own, not a table of currency names.
+    `trade_tick_value` is the ACCOUNT-currency value of one `trade_tick_size`
+    of price, on one lot, so
+
+        account units per unit of profit currency
+            = trade_tick_value / (trade_tick_size * trade_contract_size)
+
+    and `trade_contract_size` cancels out of the product, leaving
+
+        notional (account units) = vol * price * trade_tick_value / trade_tick_size
+
+    There is deliberately no `if currency == "USC": x100` here. That form is
+    right for the one account this desk holds today and silently wrong for an
+    account denominated in anything else - which is the same class of mistake
+    as the one it would be fixing, only harder to see the second time.
+
+    Checked against both accounts, 2026-09-17:
+      vantage-demo   XAUUSD    contract 100, tick 0.01, tick_value 1.0
+                     -> 1 lot at 4350 = 435,000 USD, identical to the old
+                        arithmetic. Nothing changes on the demo.
+      vantage cent   XAUUSD.sc contract 1.0, tick 0.01, tick_value 1.0
+                     -> 1 lot at 4350 = 435,000 USC = USD 4,350. The old
+                        arithmetic said 4,350 and meant USD, against equity
+                        that meant USC.
+    """
+    tick_size = getattr(info, "trade_tick_size", 0.0) or 0.0
+    tick_value = getattr(info, "trade_tick_value", 0.0) or 0.0
+    if tick_size <= 0 or tick_value <= 0:
+        # A symbol that will not say what a tick is worth cannot be sized
+        # against equity at all. Refusing here is the point: the value this
+        # used to return in that case was a number in an unknown currency,
+        # which is worse than no number.
+        return None
+    return vol * price * tick_value / tick_size
 
 
 MAX_FILLS = 40
@@ -340,6 +402,34 @@ def check_identity(path: Path, acc, account: str) -> str:
     A directory that quietly changes which account it describes does not
     destroy any data - it destroys the meaning of all of it, and leaves every
     file looking perfectly fine.
+
+    WHAT IS COMPARED, and what is only recorded (tightened 2026-09-17, after an
+    audit found this function writing four fields and checking two):
+
+      login   compared. The identity of the account.
+      server  compared when the stamp has it. A login number is unique to a
+              SERVER, not to the broker: VantageMarkets-Demo 26108386 and
+              VantageMarkets-Live 21 26108386 are two different accounts that
+              this function used to call the same one. Vantage runs enough
+              servers for that collision to be reachable by a typo in a
+              launcher argument, which is how account ids get crossed.
+      demo    compared when the stamp has it.
+      currency  RECORDED AND NOT COMPARED, deliberately. Currency is a property
+              of an account, not its identity, and the login+server pair
+              already pins the identity. A broker redenominating an account
+              would then fail this check for a reason that has nothing to do
+              with mixing two accounts' fills, and the refusal would be
+              indistinguishable from the real one. It stays in the stamp
+              because the record should say what the numbers in it are in -
+              see `notional_of` for what that costs when nobody wrote it down.
+
+    A stamp missing `server` or `demo` is compared on what it does have. Those
+    two are permitted rather than refused because `login` alone already
+    identifies the account and a missing FIELD is a stamp-format gap, not
+    evidence of a different account; a missing `login` is refused, because
+    without it the stamp guards nothing. (Every stamp this repo has ever
+    written carries all four. The permissive branch is for a stamp edited by
+    hand, and anyone editing it by hand could have edited `login` too.)
     """
     now = {"account": account, "login": int(acc.login), "server": str(acc.server),
            "currency": str(acc.currency),
@@ -359,14 +449,54 @@ def check_identity(path: Path, acc, account: str) -> str:
             # directory that cannot be stamped is still the right directory.
             pass
         return ""
-    except (OSError, ValueError):
-        return ""  # unreadable stamp is not evidence of a mismatch
-    if int(was.get("login", now["login"])) != now["login"]:
+    except (OSError, ValueError) as e:
+        # REFUSE. This used to return "" - "unreadable stamp is not evidence of
+        # a mismatch" - which is true and is the wrong test. The question this
+        # guard answers is not "do we have evidence of a mismatch", it is "do
+        # we know whose directory this is", and an unreadable stamp is exactly
+        # the state where the answer is no. Permitting there means the one way
+        # to defeat the guard is to damage the file it reads.
+        #
+        # The cost, stated because it is not small: this refusal EXITS the
+        # executor, and it can exit one that is mirroring an open position on
+        # the funded account. What survives that is the broker's own stop and
+        # target, which are sent with every order and sit on the server, so the
+        # position is not unprotected - what stops is the reconciler, and the
+        # position rides to sl/tp instead of closing when the book says to.
+        # That is a bounded loss of fidelity. Two accounts' fills written into
+        # one executor.jsonl is not bounded and is not repairable afterwards,
+        # because nothing about the file looks wrong.
+        #
+        # It is also cheap to be wrong about: the stamp is read once per start,
+        # not per poll, so a transient lock has to land in the same instant as
+        # a start; the refusal prints what to look at; and the repair is to
+        # read the file and either fix it or move the directory aside. A person
+        # decides, once, which is the rule the rest of this module follows.
+        return (f"{path} cannot be read ({type(e).__name__}), so there is no way to tell whether "
+                f"data/live/{account}/ is this account's history or another's. Read or repair the "
+                f"file, or use a new account id; nothing is sent until one of those happens")
+    if not isinstance(was, dict):
+        return (f"{path} does not contain an account record, so it cannot say whose history "
+                f"data/live/{account}/ is. Repair it or use a new account id")
+    try:
+        was_login = int(was["login"])
+    except (KeyError, TypeError, ValueError):
+        # `was.get("login", now["login"])` used to stand here, which defaulted a
+        # stamp with NO login to "matches" and then compared it to itself. A
+        # stamp that does not name an account cannot vouch for one.
+        return (f"{path} records no usable login, so it cannot say whose history "
+                f"data/live/{account}/ is. Repair it or use a new account id")
+    if was_login != now["login"]:
         return (f"data/live/{account}/ already holds the record of login "
-                f"{was.get('login')}; this terminal is {now['login']}. Use a new account id "
+                f"{was_login}; this terminal is {now['login']}. Use a new account id "
                 f"rather than writing two accounts into one history")
-    if bool(was.get("demo")) != now["demo"]:
-        kind = "a demo" if was.get("demo") else "a real"
+    was_server = was.get("server")
+    if was_server is not None and str(was_server) != now["server"]:
+        return (f"data/live/{account}/ holds login {was_login} on {was_server}; this terminal is "
+                f"the same login number on {now['server']}, which is a different account. Use a "
+                f"new account id rather than writing two accounts into one history")
+    if "demo" in was and bool(was["demo"]) != now["demo"]:
+        kind = "a demo" if was["demo"] else "a real"
         return (f"data/live/{account}/ was started as {kind} account and this one is not; "
                 f"use a new account id")
     return ""
@@ -582,8 +712,22 @@ def main() -> int:
                 return 3
         info = mt5.symbol_info(args.symbol)
         magic = magic_for(args.run)
-        log(out, "started", login=acc.login, server=acc.server, balance=acc.balance, symbol=args.symbol, magic=magic,
-            dry_run=args.dry_run, lot_scale=args.lot_scale, contract=info.trade_contract_size)
+        # `currency`, `tick_size` and `tick_value` are on this line because the
+        # notional ceiling is computed from them and a number nobody can see is
+        # a number nobody checks. With them here, "is the ceiling measuring the
+        # right currency?" is answerable from the log for any account, past or
+        # present, without a terminal - which it was not on 2026-09-17, when
+        # the answer was no. `one_lot_at` is that arithmetic already done:
+        # what ONE lot of this symbol is worth, in the same units as `balance`
+        # directly above it, so the two can be read against each other at a
+        # glance.
+        log(out, "started", login=acc.login, server=acc.server, balance=acc.balance,
+            currency=acc.currency, symbol=args.symbol, magic=magic,
+            dry_run=args.dry_run, lot_scale=args.lot_scale, contract=info.trade_contract_size,
+            tick_size=getattr(info, "trade_tick_size", None),
+            tick_value=getattr(info, "trade_tick_value", None),
+            one_lot_at=(lambda n: None if n is None else round(n, 2))(
+                notional_of(info, 1.0, getattr(mt5.symbol_info_tick(args.symbol), "ask", 0.0) or 0.0)))
 
         def positions():
             return [p for p in (mt5.positions_get(symbol=args.symbol) or []) if p.magic == magic]
@@ -747,38 +891,113 @@ def main() -> int:
                     reason="the price has moved too far from the book's entry to mirror the same trade")
                 return False
 
-            equity = getattr(mt5.account_info(), "equity", 0.0) or 0.0
-            notional = notional_of(info, vol, price)
-            if equity > 0 and notional > args.max_notional_ratio * equity:
+            # ---- the two size guards, and the reading they both depend on ----
+            #
+            # One `account_info()` for both, and a refusal if it does not
+            # answer. Both guards used to read it with `getattr(..., 0.0)` and
+            # then test `> 0`, so a terminal that was not answering scored zero
+            # equity, failed the test, and the order was sent WITHOUT EITHER
+            # GUARD having run. Nothing in the log said so, because skipping a
+            # check writes no line.
+            #
+            # Measured 2026-09-17: the terminal was restarted underneath five
+            # polling executors and `account_info()` returned None to every one
+            # of them for as long as it was down - the same outage that filled
+            # `broker.json` with `login: null, demo: false`. That is not a
+            # hypothetical state, it is the state this desk was in today, and
+            # in it the funded account had no notional ceiling and no margin
+            # floor while the process went on sending.
+            #
+            # So the failure direction is inverted: no account reading means no
+            # order. `snapshot()` below has always done this - it returns on
+            # `acc is None` - and this is the same rule on the path that spends
+            # money. The cost is real and is accepted: a terminal that blinks
+            # out for a single poll costs a trade the book wanted, and on a
+            # mirror that exists to measure slippage a missed entry is a gap in
+            # the record. It is still the cheaper of the two errors, and unlike
+            # the old behaviour it leaves a line saying which one happened.
+            acc_now = mt5.account_info()
+            if acc_now is None:
+                log(out, "refused-size", sending_lots=vol, error=str(mt5.last_error()),
+                    reason="the terminal did not answer account_info(), so neither the notional "
+                           "ceiling nor the margin floor could be evaluated; nothing sent")
+                print("REFUSED: the terminal is not answering account_info() - neither size "
+                      "guard can run, so nothing was sent.", flush=True)
+                nonlocal_blocked("terminal not answering account_info(); size guards cannot run")
+                return False
+            # Equity and notional are both in the ACCOUNT's currency here, and
+            # the name says so. A bare `notional` compared against a bare
+            # `equity` is exactly how the USD-against-USC error survived
+            # review - see `notional_of`.
+            equity_acct = getattr(acc_now, "equity", None)
+            currency = getattr(acc_now, "currency", "?")
+            if equity_acct is None or equity_acct <= 0:
+                log(out, "refused-size", sending_lots=vol, equity=equity_acct, currency=currency,
+                    reason="the account reports no equity, so no size can be justified against it; "
+                           "nothing sent")
+                print(f"REFUSED: account equity reads {equity_acct} {currency}. Nothing sent.",
+                      flush=True)
+                nonlocal_blocked(f"account equity reads {equity_acct} {currency}")
+                return False
+            notional_acct = notional_of(info, vol, price)
+            if notional_acct is None:
+                log(out, "refused-size", sending_lots=vol, symbol=args.symbol,
+                    tick_size=getattr(info, "trade_tick_size", None),
+                    tick_value=getattr(info, "trade_tick_value", None),
+                    reason="the symbol did not give a usable tick value, so the order's notional "
+                           "cannot be put in the account's currency; nothing sent")
+                print(f"REFUSED: {args.symbol} gives no usable tick value, so this order's size "
+                      f"cannot be checked against equity. Nothing sent.", flush=True)
+                nonlocal_blocked(f"{args.symbol} gives no tick value; notional cannot be checked")
+                return False
+            if notional_acct > args.max_notional_ratio * equity_acct:
                 log(out, "refused-size", asked_lots=float(book_open["lots"]), sending_lots=vol,
-                    notional=round(notional, 2), equity=round(equity, 2),
-                    ratio=round(notional / equity, 2), limit=args.max_notional_ratio,
+                    notional=round(notional_acct, 2), equity=round(equity_acct, 2),
+                    currency=currency,
+                    ratio=round(notional_acct / equity_acct, 2), limit=args.max_notional_ratio,
                     reason="order notional exceeds the sanity ceiling; nothing sent")
-                print(f"REFUSED: {vol} lots = {notional:,.0f} on {equity:,.0f} equity "
-                      f"({notional / equity:.1f}x, ceiling {args.max_notional_ratio}x). Nothing sent.", flush=True)
-                nonlocal_blocked(f"{vol} lots is {notional / equity:.0f}x equity, over the {args.max_notional_ratio}x ceiling")
+                print(f"REFUSED: {vol} lots = {notional_acct:,.0f} {currency} on "
+                      f"{equity_acct:,.0f} {currency} equity "
+                      f"({notional_acct / equity_acct:.1f}x, ceiling {args.max_notional_ratio}x). "
+                      f"Nothing sent.", flush=True)
+                nonlocal_blocked(f"{vol} lots is {notional_acct / equity_acct:.0f}x equity, over "
+                                 f"the {args.max_notional_ratio}x ceiling")
                 return False
             # What this order would tie up, and what the account would look
             # like holding it. `order_calc_margin` is the broker's own answer
             # rather than notional/leverage, which is wrong for any symbol with
-            # a margin rate of its own.
+            # a margin rate of its own. It answers in the account's currency,
+            # as `margin` and `equity` are, so this arithmetic needs no
+            # conversion - which is why the unit error was in the ceiling above
+            # and not here.
             need = mt5.order_calc_margin(
                 mt5.ORDER_TYPE_BUY if is_long else mt5.ORDER_TYPE_SELL, args.symbol, vol, price)
-            acc_now = mt5.account_info()
-            used = getattr(acc_now, "margin", 0.0) or 0.0
-            eq = getattr(acc_now, "equity", 0.0) or 0.0
-            if need is not None and eq > 0:
-                after = 100.0 * eq / (used + need) if (used + need) > 0 else float("inf")
-                if after < args.min_margin_level:
-                    log(out, "refused-margin", lots=vol, margin_needed=round(need, 2),
-                        margin_used=round(used, 2), equity=round(eq, 2),
-                        level_after=round(after, 1), floor=args.min_margin_level,
-                        reason="opening this would take the account below its margin floor")
-                    print(f"REFUSED: margin level would be {after:.0f}% "
-                          f"(floor {args.min_margin_level:.0f}%). Nothing sent.", flush=True)
-                    nonlocal_blocked(f"margin level would be {after:.0f}%, under the "
-                                     f"{args.min_margin_level:.0f}% floor")
-                    return False
+            used = getattr(acc_now, "margin", None)
+            if need is None or used is None:
+                # Same inversion as above and for the same reason: `need is
+                # None` is the terminal declining to answer, and the old code
+                # read that as permission. It is the likelier half of the
+                # 2026-09-17 outage to survive, because `order_calc_margin`
+                # needs the symbol loaded as well as the connection up.
+                log(out, "refused-margin", lots=vol, margin_needed=need, margin_used=used,
+                    error=str(mt5.last_error()),
+                    reason="the terminal would not say what this order costs in margin, so the "
+                           "account's margin floor could not be checked; nothing sent")
+                print("REFUSED: the terminal will not price this order's margin, so the margin "
+                      "floor cannot be checked. Nothing sent.", flush=True)
+                nonlocal_blocked("terminal will not price margin; the margin floor cannot be checked")
+                return False
+            after = 100.0 * equity_acct / (used + need) if (used + need) > 0 else float("inf")
+            if after < args.min_margin_level:
+                log(out, "refused-margin", lots=vol, margin_needed=round(need, 2),
+                    margin_used=round(used, 2), equity=round(equity_acct, 2), currency=currency,
+                    level_after=round(after, 1), floor=args.min_margin_level,
+                    reason="opening this would take the account below its margin floor")
+                print(f"REFUSED: margin level would be {after:.0f}% "
+                      f"(floor {args.min_margin_level:.0f}%). Nothing sent.", flush=True)
+                nonlocal_blocked(f"margin level would be {after:.0f}%, under the "
+                                 f"{args.min_margin_level:.0f}% floor")
+                return False
 
             req = {
                 "action": mt5.TRADE_ACTION_DEAL, "symbol": args.symbol, "volume": vol,
