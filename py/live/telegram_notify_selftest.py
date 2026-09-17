@@ -327,6 +327,41 @@ def main() -> int:
     check("a mirror that stopped reporting is not read for drift",
           T.drifts(stale_only, {}, now), [])
 
+    print("\n14. entry lag, measured rather than assumed")
+    bar = now - 20 * 60_000
+    evs = [
+        {"kind": "opened", "time": bar, "learned_at": bar + 900_000},      # one bar
+        {"kind": "opened", "time": bar, "learned_at": bar + 2_000},        # after the fix
+        {"kind": "trade"}, {"kind": "gap"},                                # not entries
+        {"kind": "opened", "time": bar},                                   # no learned_at
+        {"kind": "opened", "learned_at": bar},                             # no bar time
+    ]
+    got = T.lags(evs, now)
+    check("only opened lines with BOTH clocks are counted", sorted(got), [2.0, 900.0])
+    check("a line missing a clock is skipped, not counted as zero", 0.0 in got, False)
+    old_entry = [{"kind": "opened", "time": now - 40 * 3_600_000,
+                  "learned_at": now - 40 * 3_600_000 + 900_000}]
+    check("an entry older than the window is out", T.lags(old_entry, now), [])
+
+    check("no entries reads as no entries, not as zero lag",
+          "no entries in 24h" in T.lag_line("b", []), True)
+    line = T.lag_line("ai-xau-terra-ctx", [2.0, 900.0, 910.0])
+    check("the line carries the count, the median and the max",
+          "3 entries" in line and "median 900s" in line and "max 910s" in line, True)
+    check("the median is the middle and not the mean",
+          "median 900s" in T.lag_line("b", [1.0, 900.0, 1000.0]), True)
+
+    st12: dict = {}
+    check("the alarm is SILENT at the shipped default of 0",
+          T.lag_alarms("b", evs, st12, now, 0), [])
+    a1 = T.lag_alarms("b", evs, st12, now, 60)
+    check("at 60s the slow entry alarms and the fast one does not", len(a1), 1)
+    check("and it says how late and against what threshold",
+          "900s later" in a1[0] and "60s threshold" in a1[0], True)
+    check("the same entry is not announced twice",
+          T.lag_alarms("b", evs, st12, now, 60), [])
+    check("the default constant really is off", T.LAG_ALARM_DEFAULT_S, 0)
+
     print(f"\n{'all checks passed' if not FAIL else str(FAIL) + ' CHECK(S) FAILED'}")
     return 1 if FAIL else 0
 

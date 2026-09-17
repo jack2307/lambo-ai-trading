@@ -155,6 +155,34 @@ STOP_CLOSE_WINDOW_MS = 60_000
 CLIP_CHECK_MS = 30 * 60_000
 CLIP_MIN_EVENTS = 3
 
+# Entry lag: how long after a fill's own bar the desk learned about it.
+#
+# `docs/decisions/2026-09-17-entry-lag.md` found that a paper book only reports
+# a position once the bar has CLOSED, so the gap between the bar a fill is
+# priced at and the wall clock the desk learned it is a full bar - about
+# fifteen minutes on every entry today, and twenty-four times larger than the
+# fill-price effect the investigation was commissioned to measure.
+#
+# It is MEASURED here and not assumed, because an engine change on `entry-lag`
+# is meant to bring it to seconds and the watch should say what the number
+# actually is on the day someone asks.
+LAG_WINDOW_MS = 24 * 3_600_000
+LAG_CHECK_MS = 15 * 60_000
+
+# The alarm's threshold, in seconds, from `[alerts.watch] entry_lag_alarm_s` in
+# config/local.toml. ABSENT MEANS OFF, and off is the shipped default.
+#
+# Off because today the lag is a full bar on every entry: switched on now it
+# would fire on every trade the desk takes, and an alert that fires on every
+# trade teaches its reader to swipe the channel away - which costs far more
+# than this measurement is worth, because the same channel carries the funded
+# account's mirror and kill-switch alerts.
+#
+# What turns it on: the deploy that ships the `entry-lag` engine change, with
+# `entry_lag_alarm_s = 60`. At that point a lag above a minute means the new
+# path is not running, which is a real thing to be told.
+LAG_ALARM_DEFAULT_S = 0
+
 
 # --------------------------------------------------------------- the secret
 
@@ -310,6 +338,97 @@ def funded_books(accounts: list) -> set:
     for a in accounts or []:
         if a.get("real_money"):
             out.update(a.get("runs") or [])
+    return out
+
+
+def lag_alarm_s() -> int:
+    """The entry-lag threshold in seconds, or 0 for off.
+
+    Read per call rather than cached at startup: turning this on should be a
+    config edit and a restart of nothing, on the day the engine change ships.
+    """
+    try:
+        text = io.open(os.path.join(ROOT, "config", "local.toml"), encoding="utf-8").read()
+    except OSError:
+        return LAG_ALARM_DEFAULT_S
+    m = re.search(r"\[alerts\.watch\][^\[]*?entry_lag_alarm_s\s*=\s*(\d+)", text, re.S)
+    return int(m.group(1)) if m else LAG_ALARM_DEFAULT_S
+
+
+def lags(events: list, now_ms: float, window_ms: float = LAG_WINDOW_MS) -> list[float]:
+    """Seconds between the bar each entry was PRICED at and when the desk learned it.
+
+    Read from the `opened` lines of `fills.jsonl`, which the run-detail route
+    serves - NOT from the status payload's copy. `OpenDto.learned_at` is
+    cleared when the book goes flat, so a day's worth of entries cannot be read
+    from it: by the time you ask, most of them are gone. The file keeps one
+    line per entry whatever the book did afterwards.
+
+    A line missing either clock is skipped rather than counted as zero. Zero is
+    a meaningful value here - it is what the engine change is trying to reach -
+    and inventing it would make the fix look finished.
+    """
+    out: list[float] = []
+    for e in events or []:
+        if e.get("kind") != "opened":
+            continue
+        t, learned = e.get("time"), e.get("learned_at")
+        if not isinstance(t, (int, float)) or not isinstance(learned, (int, float)):
+            continue
+        if now_ms - float(learned) > window_ms:
+            continue
+        out.append((float(learned) - float(t)) / 1000.0)
+    return out
+
+
+def lag_line(run_id: str, seconds: list[float]) -> str:
+    """One book's lag, as a sentence someone reads on a phone.
+
+    Median and max rather than a mean: one restart that replayed a stale bar
+    would drag a mean somewhere nobody could interpret, and the pair answers
+    both questions a reader has - what it usually is, and what the worst was.
+    """
+    if not seconds:
+        return f"· <code>{esc(run_id)}</code> — no entries in 24h"
+    ordered = sorted(seconds)
+    mid = ordered[len(ordered) // 2] if len(ordered) % 2 else \
+        (ordered[len(ordered) // 2 - 1] + ordered[len(ordered) // 2]) / 2
+    return (f"· <code>{esc(run_id)}</code> — {len(ordered)} entries, "
+            f"median {mid:.0f}s, max {max(ordered):.0f}s")
+
+
+def lag_alarms(run_id: str, events: list, state: dict, now_ms: float,
+               threshold_s: int) -> list[str]:
+    """One line per ENTRY that took longer than the threshold to be learned.
+
+    Keyed on the entry's own bar time, so an entry is announced once however
+    many polls see it, and a book that keeps being slow says so once per trade
+    rather than once per fifteen seconds.
+
+    Silent entirely when the threshold is 0, which is the shipped default - see
+    LAG_ALARM_DEFAULT_S for why, and what turns it on.
+    """
+    if threshold_s <= 0:
+        return []
+    seen: dict = state.setdefault("lag_seen", {})
+    out: list[str] = []
+    for e in events or []:
+        if e.get("kind") != "opened":
+            continue
+        t, learned = e.get("time"), e.get("learned_at")
+        if not isinstance(t, (int, float)) or not isinstance(learned, (int, float)):
+            continue
+        gap = (float(learned) - float(t)) / 1000.0
+        if gap <= threshold_s or now_ms - float(learned) > LAG_WINDOW_MS:
+            continue
+        key = f"{run_id}/{int(t)}"
+        if seen.get(key):
+            continue
+        seen[key] = True
+        out.append(
+            f"⏱️ <b>{esc(run_id)}</b> — an entry priced at its bar was learned "
+            f"{gap:.0f}s later, over the {threshold_s}s threshold."
+        )
     return out
 
 
@@ -1102,6 +1221,28 @@ def main() -> int:
                 # almost never arrives.
                 if not a.get("real_money"):
                     continue
+
+                # Entry lag, from the run-detail route's `events` — which is
+                # `fills.jsonl` served, so this reads the file's own `opened`
+                # lines rather than the status payload's copy of `learned_at`.
+                # That copy is cleared when a book goes flat, so a day of
+                # entries cannot be read back from it: by the time anyone asks,
+                # most of them are gone.
+                thr = lag_alarm_s()
+                lag_due: dict = state.setdefault("lag_checked", {})
+                rows: dict = state.setdefault("lag_rows", {})
+                for book in sorted(have):
+                    if now_ms - float(lag_due.get(book) or 0) >= LAG_CHECK_MS:
+                        lag_due[book] = now_ms
+                        try:
+                            det = desk(f"/api/paper/run/{urllib.parse.quote(book)}?bars=1")
+                        except Exception:  # noqa: BLE001
+                            pass
+                        else:
+                            evs = det.get("events") or []
+                            rows[book] = lags(evs, now_ms)
+                            lines += lag_alarms(book, evs, state, now_ms, thr)
+
                 for book in sorted(have):
                     if now_ms - float(due.get(f"{aid}/{book}") or 0) < CLIP_CHECK_MS:
                         continue
@@ -1110,6 +1251,26 @@ def main() -> int:
                         lines += clipping(book, aid, events_for(book, aid), state, now_ms)
                     except Exception:  # noqa: BLE001
                         continue
+
+            # One entry-lag line per funded book, once a day.
+            #
+            # There was no periodic summary in this file to put it in - the
+            # watch speaks on transitions and otherwise says nothing - so this
+            # is one, and it is deliberately the smallest one that answers the
+            # question: what is the gap today. A first run LEARNS the day
+            # rather than sending, the same rule every other alert here
+            # follows, so starting the watch does not announce a summary
+            # nobody asked for.
+            today = dt.datetime.utcfromtimestamp(now_ms / 1000).strftime("%Y-%m-%d")
+            rows = state.get("lag_rows") or {}
+            if state.get("lag_day") is None:
+                state["lag_day"] = today
+            elif state["lag_day"] != today and rows:
+                state["lag_day"] = today
+                lines.append("\n".join(
+                    ["<b>Entry lag, last 24h</b>"]
+                    + [lag_line(k, v) for k, v in sorted(rows.items())]
+                ))
 
             if state.get("api_down"):
                 state["api_down"] = False
