@@ -1,7 +1,8 @@
-import { useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   Activity,
   BarChart3,
+  ChevronDown,
   ChevronsLeft,
   FlaskConical,
   LayoutDashboard,
@@ -262,12 +263,34 @@ export function Sidebar({
 }
 
 /**
+ * A display name, from the registry ID rather than its label.
+ *
+ * `label` is a description meant for a settings page — "Vantage cent - REAL
+ * MONEY", "Vantage demo - cent mirror" — and in a 216px rail it truncated to
+ * "Vantage cent - REAL MON…", which is a name cut off mid-warning. The ID is
+ * already the short, stable handle: `vantage-cent`.
+ *
+ * Whether the account is real money is a TAG beside the name, not words inside
+ * it. A fact that can be rendered as a mark should not be spelled into a string
+ * that has to fit.
+ */
+function displayName(a: BrokerAccount): string {
+  const words = a.id.replace(/[-_]+/g, ' ').trim()
+  return words.charAt(0).toUpperCase() + words.slice(1)
+}
+
+/**
  * Which book, and what it is worth — the first thing on the panel.
  *
- * The lime edge appears only on REAL MONEY. It is the one place the chrome
- * accent is spent on state rather than on navigation, and it earns that
- * because "am I on the funded account" is the question the owner opens this
- * desk asking. A demo and a funded account otherwise look identical.
+ * The card shows the CURRENT book only and opens the list on click. It used to
+ * render the choices permanently underneath, so the selected book appeared
+ * twice, a disabled account took a row it could not be picked from, and the
+ * whole thing read as a form control somebody left open.
+ *
+ * The lime mark appears only on REAL MONEY. It is the one place the chrome
+ * accent is spent on state rather than on navigation, and it earns that:
+ * "am I on the funded account" is the question the owner opens this desk
+ * asking, and a demo and a funded account otherwise look identical.
  */
 function BookCard({
   book,
@@ -284,29 +307,59 @@ function BookCard({
   railed: boolean
   isLive: (a: BrokerAccount) => boolean
 }) {
+  const [open, setOpen] = useState(false)
+  const box = useRef<HTMLDivElement>(null)
+  const trigger = useRef<HTMLButtonElement>(null)
+  const items = useRef<(HTMLButtonElement | null)[]>([])
+
   const real = chosen?.real_money === true
   const live = chosen ? isLive(chosen) : false
+  const name = chosen ? displayName(chosen) : 'Paper'
 
   // Books the registry says this account should mirror, against the ones
-  // actually reporting. The count answers a question the position cards raise
+  // actually reporting. This count answers a question the position cards raise
   // one at a time: is that red edge one book, or the whole desk?
   const want = chosen?.runs?.length ?? 0
   const have = chosen?.mirroring?.length ?? 0
   const short = chosen != null && want > 0 && have < want
 
-  const label = chosen?.label ?? 'paper'
-  const initial = (chosen ? chosen.label : 'paper').trim().charAt(0).toUpperCase() || 'P'
-  const hint = chosen
-    ? `${chosen.label} · ${chosen.equity != null ? `${Math.round(chosen.equity).toLocaleString('en-US')} ${chosen.currency ?? ''}` : 'no equity reported'}${real ? ' · REAL MONEY' : ''}${short ? ` · ${have} of ${want} books mirrored` : ''}`
-    : 'the paper book — the rule executed perfectly at the bar’s price'
+  const equity =
+    chosen?.equity != null
+      ? `${Math.round(chosen.equity).toLocaleString('en-US')} ${chosen.currency ?? ''}`.trim()
+      : null
+
+  // Enabled first, disabled last and greyed. Hiding a disabled account would
+  // make one somebody switched off look like one nobody ever configured; the
+  // two are different and only one of them is a thing to go and fix.
+  const enabled = accounts.filter((a) => a.enabled)
+  const disabled = accounts.filter((a) => !a.enabled)
+
+  useEffect(() => {
+    if (!open) return
+    const onDown = (e: MouseEvent) => {
+      if (!box.current?.contains(e.target as Node)) setOpen(false)
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      setOpen(false)
+      trigger.current?.focus()
+    }
+    window.addEventListener('mousedown', onDown)
+    window.addEventListener('keydown', onKey)
+    return () => {
+      window.removeEventListener('mousedown', onDown)
+      window.removeEventListener('keydown', onKey)
+    }
+  }, [open])
 
   if (railed) {
+    const initial = name.trim().charAt(0).toUpperCase() || 'P'
     return (
       <div className="px-2">
         <button
           type="button"
-          title={hint}
-          onClick={() => onBookChange(book === 'paper' && accounts[0] ? accounts[0].login : 'paper')}
+          title={`${name}${equity ? ` · ${equity}` : ''}${real ? ' · real money' : ''}`}
+          onClick={() => onBookChange(book === 'paper' && enabled[0] ? enabled[0].login : 'paper')}
           className={cn(
             'relative flex size-7 items-center justify-center rounded-sm border text-[11px] font-semibold transition-colors duration-100 motion-reduce:transition-none',
             real
@@ -315,25 +368,84 @@ function BookCard({
           )}
         >
           {initial}
-          {live && (
-            <span className="bg-lc absolute -top-px -right-px size-1.5 rounded-full" aria-hidden />
-          )}
+          {live && <span className="bg-lc absolute -top-px -right-px size-1.5 rounded-full" aria-hidden />}
         </button>
       </div>
     )
   }
 
+  /** One row of the menu. Arrow keys walk them; Enter and Space are the
+   *  button's own. */
+  const choice = (
+    key: string,
+    label: string,
+    selected: boolean,
+    opts: { realMoney?: boolean; disabled?: boolean; note?: string; onPick: () => void },
+    index: number,
+  ) => (
+    <button
+      key={key}
+      ref={(el) => {
+        items.current[index] = el
+      }}
+      type="button"
+      role="option"
+      aria-selected={selected}
+      disabled={opts.disabled}
+      onClick={() => {
+        opts.onPick()
+        setOpen(false)
+        trigger.current?.focus()
+      }}
+      onKeyDown={(e) => {
+        if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
+        e.preventDefault()
+        const next = index + (e.key === 'ArrowDown' ? 1 : -1)
+        items.current[(next + items.current.length) % items.current.length]?.focus()
+      }}
+      className={cn(
+        'flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-[12px] transition-colors duration-100 motion-reduce:transition-none',
+        selected ? 'text-sidebar-primary font-medium' : 'text-sidebar-foreground/80',
+        opts.disabled
+          ? 'cursor-not-allowed opacity-45'
+          : 'hover:bg-sidebar-accent focus-visible:bg-sidebar-accent focus-visible:outline-none',
+      )}
+    >
+      <span
+        className={cn('w-[2px] self-stretch rounded-full', selected ? 'bg-sidebar-primary' : 'bg-transparent')}
+        aria-hidden
+      />
+      <span className="min-w-0 flex-1 truncate">{label}</span>
+      {opts.realMoney && <RealTag />}
+      {opts.note && <span className="text-sidebar-foreground/45 text-[10px]">{opts.note}</span>}
+    </button>
+  )
+
+  let i = -1
   return (
-    <div className="px-3">
-      <div
+    <div className="relative px-3" ref={box}>
+      <button
+        ref={trigger}
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        onKeyDown={(e) => {
+          if (e.key !== 'ArrowDown') return
+          e.preventDefault()
+          setOpen(true)
+          window.setTimeout(() => items.current[0]?.focus(), 0)
+        }}
+        aria-haspopup="listbox"
+        aria-expanded={open}
         className={cn(
-          'bg-sidebar-accent/50 relative overflow-hidden rounded-sm border px-2.5 py-2',
+          'relative w-full overflow-hidden rounded-sm border px-2.5 py-2 text-left transition-colors duration-100 motion-reduce:transition-none',
+          'bg-sidebar-accent/50 hover:bg-sidebar-accent',
           real ? 'border-sidebar-primary/35' : 'border-sidebar-border',
         )}
       >
         {real && <span className="bg-sidebar-primary absolute inset-y-0 left-0 w-[2px]" aria-hidden />}
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-sidebar-foreground truncate text-[12px] font-medium">{label}</span>
+        <div className="flex items-center gap-1.5">
+          <span className="text-sidebar-foreground min-w-0 flex-1 truncate text-[12px] font-medium">{name}</span>
+          {real && <RealTag />}
           {chosen && (
             <span
               className={cn('size-1.5 shrink-0 rounded-full', live ? 'bg-lc' : 'bg-muted-foreground/50')}
@@ -341,79 +453,71 @@ function BookCard({
               aria-hidden
             />
           )}
+          <ChevronDown
+            className={cn(
+              'text-sidebar-foreground/40 size-3 shrink-0 transition-transform duration-100 motion-reduce:transition-none',
+              open && 'rotate-180',
+            )}
+            aria-hidden
+          />
         </div>
 
         {chosen ? (
-          <div className="num text-sidebar-foreground/80 mt-0.5 text-[13px] tabular-nums">
-            {chosen.equity != null
-              ? `${Math.round(chosen.equity).toLocaleString('en-US')} ${chosen.currency ?? ''}`.trim()
-              : '—'}
-          </div>
+          <div className="num text-sidebar-foreground/80 mt-0.5 text-[13px] tabular-nums">{equity ?? '—'}</div>
         ) : (
           <div className="text-sidebar-foreground/50 mt-0.5 text-[11px]">the decisions, not the money</div>
         )}
 
         {short && (
           <div className="text-lp mt-1 text-[10px]">
-            {have} of {want} books mirrored
+            {have} of {want} mirrored
           </div>
         )}
+      </button>
 
-        {/* The switch itself. Paper is always reachable; an account that is
-            defined but not reporting is listed and not selectable, because
-            hiding it would make a dead mirror look like an account nobody set
-            up. */}
-        <div className="mt-1.5 flex flex-wrap gap-1">
-          <BookChip active={book === 'paper'} onClick={() => onBookChange('paper')} label="paper" />
-          {accounts.map((a) => (
-            <BookChip
-              key={a.login}
-              active={book === a.login}
-              disabled={!isLive(a)}
-              real={a.real_money}
-              onClick={() => onBookChange(a.login)}
-              label={a.label}
-              title={isLive(a) ? a.label : `${a.label} — not running`}
-            />
-          ))}
+      {open && (
+        <div
+          role="listbox"
+          className="bg-sidebar border-sidebar-border absolute inset-x-3 top-full z-50 mt-1 overflow-hidden rounded-sm border py-1 shadow-lg shadow-black/40"
+        >
+          {choice('paper', 'Paper', book === 'paper', { onPick: () => onBookChange('paper') }, ++i)}
+          {enabled.map((a) =>
+            choice(
+              String(a.login),
+              displayName(a),
+              book === a.login,
+              {
+                realMoney: a.real_money,
+                disabled: !isLive(a),
+                note: isLive(a) ? undefined : 'not running',
+                onPick: () => onBookChange(a.login),
+              },
+              ++i,
+            ),
+          )}
+          {disabled.map((a) =>
+            choice(
+              String(a.login),
+              displayName(a),
+              false,
+              { realMoney: a.real_money, disabled: true, note: 'disabled', onPick: () => {} },
+              ++i,
+            ),
+          )}
         </div>
-      </div>
+      )}
     </div>
   )
 }
 
-function BookChip({
-  active,
-  disabled,
-  real,
-  label,
-  title,
-  onClick,
-}: {
-  active: boolean
-  disabled?: boolean
-  real?: boolean
-  label: string
-  title?: string
-  onClick: () => void
-}) {
+/** Real money, as a mark rather than as words inside a name that has to fit. */
+function RealTag() {
   return (
-    <button
-      type="button"
-      disabled={disabled}
-      onClick={onClick}
-      title={title ?? label}
-      aria-pressed={active}
-      className={cn(
-        'rounded-sm border px-1.5 py-px text-[10px] transition-colors duration-100 motion-reduce:transition-none',
-        active
-          ? 'border-sidebar-primary/60 bg-sidebar-primary/15 text-sidebar-primary font-medium'
-          : 'border-sidebar-border text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent',
-        disabled && 'cursor-not-allowed opacity-40 hover:bg-transparent',
-        real && !active && 'border-sidebar-primary/25',
-      )}
+    <span
+      className="border-sidebar-primary/50 text-sidebar-primary shrink-0 rounded-[3px] border px-1 text-[9px] leading-[1.4] font-semibold tracking-wide"
+      title="real money"
     >
-      {label}
-    </button>
+      REAL
+    </span>
   )
 }
