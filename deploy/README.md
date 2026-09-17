@@ -26,6 +26,23 @@ blind that it does not currently have.
 
 ## First time
 
+A fresh Windows Server has no git, and `bootstrap.ps1` lives in the
+repository that needs git to clone. That circle has to be broken by hand
+exactly once: copy `deploy\first-run.ps1` across - dragging it over an RDP
+session is fine - and run it from an **elevated** PowerShell.
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File first-run.ps1
+```
+
+It installs git (resolved from the releases API, not a pinned URL that
+rots), clones to `C:\flowdesk`, and hands over to the bootstrap. A private
+repository asks for a GitHub login at the clone and the credential manager
+opens a browser, which is why this wants an RDP session rather than a
+headless one.
+
+Every machine after the first is just:
+
 ```powershell
 git clone <repo> C:\flowdesk
 cd C:\flowdesk
