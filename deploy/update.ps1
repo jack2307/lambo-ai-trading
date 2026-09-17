@@ -2,6 +2,12 @@
 #
 #   powershell -NoProfile -ExecutionPolicy Bypass -File deploy\update.ps1
 #   powershell -NoProfile -ExecutionPolicy Bypass -File deploy\update.ps1 -NoRestart
+#   powershell -NoProfile -ExecutionPolicy Bypass -File deploy\update.ps1 -AllowOrphans
+#
+# It REFUSES while a real-money account is holding a position, because stopping
+# the executors leaves that position with nobody mirroring the book's exit.
+# -AllowOrphans is the override, and what refusing costs is printed where it
+# happens rather than left for the reader to weigh.
 #
 # The desk is stopped before anything is rebuilt and started again after, in an
 # order that matters: the executors go down FIRST and come up LAST. An executor
@@ -12,7 +18,20 @@
 param(
     [string]$Root = '',
     [switch]$NoRestart,
-    [switch]$SkipBuild
+    [switch]$SkipBuild,
+
+    # Deploy anyway while a real-money account is holding a position.
+    #
+    # Stopping the executors leaves any open position with nobody reconciling
+    # it: the book will decide to exit and nothing will carry that decision to
+    # the broker, so the trade runs to its stop or its target instead. That is
+    # not the trade the book took, and measuring exactly that difference is the
+    # only reason the mirror exists.
+    #
+    # So a deploy taken over an open real position refuses, and this is the
+    # word that overrides it. What refusing COSTS is written out at the point
+    # where it happens, below; it is not free and it is not small.
+    [switch]$AllowOrphans
 )
 
 $ErrorActionPreference = 'Stop'
@@ -38,13 +57,121 @@ function Note($what) { Write-Host "   $what" -ForegroundColor DarkGray }
 
 function Stop-Desk {
     # Executors first. See the note at the top of this file.
-    foreach ($m in '*mt5_executor.py*', '*ai_trader.py*', '*advisor.py*', '*telegram_notify*', '*mt5_bars.py*', '*spread_log*') {
+    #
+    # `telegram_notify` is NOT in this list, and its absence is the point. It
+    # is the only thing watching while everything else is down, and stopping it
+    # here put the alarm out for the whole pull-stop-build window - minutes, in
+    # which the executors are already dead and any open position has nobody
+    # reconciling it. That is precisely the window someone needs to be told
+    # about.
+    #
+    # It is pure Python with no build artefact, so there is nothing to rebuild
+    # it for, and `start_telegram.ps1` at the end of this script stops whatever
+    # is running before starting a fresh copy - so a watcher left alive here is
+    # still replaced by the new code, just later.
+    #
+    # What it costs: two messages per deploy. The watcher will see fd-api go
+    # away and say "the desk stopped answering", then "the desk is answering
+    # again". Both are edge-triggered (`api_down` in telegram_notify.py), so it
+    # is two lines and not a storm, and they are a true account of what
+    # happened.
+    foreach ($m in '*mt5_executor.py*', '*ai_trader.py*', '*advisor.py*', '*mt5_bars.py*', '*spread_log*') {
         Get-CimInstance Win32_Process -Filter "name='python.exe'" |
             Where-Object { $_.CommandLine -like $m } |
             ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
     }
     Get-Process fd-api -ErrorAction SilentlyContinue | Stop-Process -Force
     Start-Sleep -Seconds 3
+}
+
+# What the accounts are holding RIGHT NOW, read from the mirrors themselves.
+#
+# Deliberately duplicated from py\live\start_executors.ps1 rather than shared.
+# A third file that both of them dot-source is one more thing to be missing on
+# the server at the moment someone is trying to stop a trade, and this is
+# twenty lines that read the same file the same way. If it changes, change it
+# in both - the comment there says the same.
+function Get-Holdings([string]$root) {
+    $live = Join-Path $root 'data\live'
+    if (-not (Test-Path $live)) { return @() }
+    $nowMs = [int64]((Get-Date).ToUniversalTime() - [datetime]'1970-01-01').TotalMilliseconds
+    $out = @()
+    foreach ($acctDir in @(Get-ChildItem $live -Directory -ErrorAction SilentlyContinue)) {
+        foreach ($runDir in @(Get-ChildItem $acctDir.FullName -Directory -ErrorAction SilentlyContinue)) {
+            $p = Join-Path $runDir.FullName 'broker.json'
+            if (-not (Test-Path $p)) { continue }
+            try { $snap = Get-Content $p -Raw -ErrorAction Stop | ConvertFrom-Json } catch { continue }
+            if (-not $snap -or -not $snap.position) { continue }
+            $at = 0
+            if ($snap.at) { $at = [int64]$snap.at }
+            $out += [pscustomobject]@{
+                Account = $acctDir.Name
+                Run     = $runDir.Name
+                Real    = ($snap.demo -eq $false)
+                Side    = $snap.position.side
+                Lots    = $snap.position.lots
+                Ticket  = $snap.position.ticket
+                AgeMs   = $nowMs - $at
+                Stale   = (($nowMs - $at) -gt 60000)
+            }
+        }
+    }
+    return $out
+}
+
+# ------------------------------------------------------------- open positions
+#
+# Before the pull, before anything. A deploy that is going to be refused should
+# leave the server exactly as it found it - including its commit, so that what
+# is running and what is checked out still match while someone decides what to
+# do.
+#
+# Skipped under -NoRestart, which stops nothing and therefore orphans nothing.
+#
+# ON STALENESS, because it decides what this does rather than merely how it
+# reads. A FRESH snapshot means the executor is alive and the position is open
+# now; killing it is an orphan this script would be creating, so that refuses.
+# A STALE one means the mirror already stopped, at some point that may have
+# been months ago - broker.json is never deleted and `data/` is never cleaned -
+# so the position it describes may have closed long since. Refusing on that
+# would make the desk permanently un-deployable on the strength of a file
+# nobody tidies. So stale holdings are NAMED and do not refuse.
+#
+# Absolute age and not a window relative to the other mirrors, unlike the API's
+# `mirroring` count: the question here is "is this one alive", and at deploy
+# time the whole set may legitimately be down already, which is exactly when a
+# relative measure says nothing. Same reasoning as MIRROR_STALE_MS in
+# telegram_notify.py, and the same 60 seconds.
+if (-not $NoRestart) {
+    $holding = @(Get-Holdings $Root)
+    if ($holding.Count -gt 0) {
+        Step 'open positions'
+        foreach ($h in $holding) {
+            $what = "$($h.Account)/$($h.Run): $($h.Side) $($h.Lots) lots, ticket $($h.Ticket)"
+            if ($h.Real) { $what += ' [REAL MONEY]' }
+            if ($h.Stale) { $what += "  (snapshot $([int]($h.AgeMs / 1000))s old - this mirror ALREADY stopped)" }
+            Write-Host "   $what" -ForegroundColor $(if ($h.Real) { 'Red' } else { 'Gray' })
+        }
+        $atRisk = @($holding | Where-Object { $_.Real -and -not $_.Stale })
+        if ($atRisk.Count -gt 0 -and -not $AllowOrphans) {
+            Write-Host ''
+            Write-Host 'This deploy stops the executors and does not start them again, so those' -ForegroundColor Yellow
+            Write-Host 'position(s) would be left with nobody mirroring the book''s exit. Refusing.' -ForegroundColor Yellow
+            Write-Host ''
+            Write-Host 'WHAT THIS COSTS, so it is a decision and not a wall: the desk is now' -ForegroundColor DarkGray
+            Write-Host 'un-deployable until the account goes flat, and on a 15m book with a four-' -ForegroundColor DarkGray
+            Write-Host 'hour maximum hold that can be most of a session. A fix that has to wait' -ForegroundColor DarkGray
+            Write-Host 'for a trade to close is a fix that is not deployed, and if the thing being' -ForegroundColor DarkGray
+            Write-Host 'deployed is what makes the desk safe, waiting is the more dangerous half.' -ForegroundColor DarkGray
+            Write-Host 'Three ways past it, in the order worth trying:' -ForegroundColor DarkGray
+            Write-Host '  1. Wait for flat. Right when nothing is urgent.' -ForegroundColor DarkGray
+            Write-Host '  2. Close on purpose: drop data\live\<account>\<book>\STOP, let the' -ForegroundColor DarkGray
+            Write-Host '     executor close and exit, then deploy. The exit is then a decision' -ForegroundColor DarkGray
+            Write-Host '     in the record rather than a trade nobody managed.' -ForegroundColor DarkGray
+            Write-Host '  3. -AllowOrphans, and go and watch the account yourself.' -ForegroundColor DarkGray
+            exit 1
+        }
+    }
 }
 
 # --------------------------------------------------------------------- pull
@@ -136,4 +263,20 @@ if (-not $NoRestart) {
     Write-Host '  powershell -NoProfile -File py\live\start_executors.ps1 -Live' -ForegroundColor Yellow
     Write-Host 'Sending real orders after an unattended rebuild should be a decision,' -ForegroundColor DarkGray
     Write-Host 'not something a script did while nobody was reading the output.' -ForegroundColor DarkGray
+
+    # Said LAST because it is the thing to act on, and last is what stays on
+    # the screen. The check at the top of this script already refused unless
+    # -AllowOrphans was given, so reaching here holding something means someone
+    # chose it - and the one way that choice goes wrong is being forgotten
+    # while the build scrolled past.
+    $stillOpen = @($holding | Where-Object { $_.Real -and -not $_.Stale })
+    if ($stillOpen.Count -gt 0) {
+        Write-Host ''
+        Write-Host "$($stillOpen.Count) REAL position(s) have had no mirror since this deploy began:" -ForegroundColor Red
+        foreach ($h in $stillOpen) {
+            Write-Host "  $($h.Account)/$($h.Run): $($h.Side) $($h.Lots) lots, ticket $($h.Ticket)" -ForegroundColor Red
+        }
+        Write-Host 'Until an executor is running for each of those, the book''s exit reaches' -ForegroundColor Red
+        Write-Host 'nobody and the trade ends at the broker''s stop or target instead.' -ForegroundColor Red
+    }
 }

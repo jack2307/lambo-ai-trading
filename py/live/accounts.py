@@ -12,6 +12,21 @@ into ONE account and must not grow an opinion about which accounts exist.
     python py/live/accounts.py                 # every enabled account
     python py/live/accounts.py --id demo       # one, enabled or not
     python py/live/accounts.py --all           # every account, enabled or not
+
+`enabled` IS REPORTED AND IS NEVER A PERMISSION HERE. This is a reader: `--id`
+and `--all` answer for a disabled account on purpose, because inspecting an
+account you have deliberately turned off is a thing people need to do, and a
+reader that hid one would be lying about the file it exists to report. Every
+record carries `enabled` and the caller decides what to do with it.
+
+Nothing enforced it on EITHER side until 2026-09-17. `start_executors.ps1
+-Account <id>` reaches here as `--id`, which skips the enabled filter, and the
+launcher never read the field - so an account switched off because a second
+machine still holds a terminal logged into it could be started simply by
+naming it. The check now lives in the launcher, which is the only thing that
+starts processes and therefore the only place where "off" has to mean "does
+not run". Do not add it here: two places that can refuse is two places to look
+when something does not start, and only one of them can be the right one.
 """
 import argparse
 import json

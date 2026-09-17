@@ -91,15 +91,21 @@ lot_scale = 1.0
 #
 # Turned off 2026-09-16 on the owner's explicit instruction, after a day of dry
 # runs on this account in which every book reconciled, the sizes came out right
-# and nothing was refused. This is a DEMO account and the executor refuses a
-# real-money one outright, whatever this file says.
+# and nothing was refused. This is a DEMO account.
+#
+# It said "and the executor refuses a real-money one outright, whatever this
+# file says" until 2026-09-17, which stopped being true the day the owner
+# funded a real account: the wall became a permission, and a real account now
+# runs when `real_money = true` here and `-AllowReal` is typed. See the block
+# below. Corrected rather than deleted because it is the sentence the day's
+# reasoning rested on.
 #
 # It still takes `-Live` on the command line for an order to leave the machine:
 # the file grants permission, the command line spends it.
 dry_run = false
 
-# False hides the account from the launcher's `-All` without deleting what you
-# worked out to set it up.
+# False means this account does not run. Nothing is deleted: what you worked
+# out to set it up stays here, and the launcher skips it.
 #
 # Off since 2026-09-17, on the owner's word: the demo had done its job and a
 # real cent account took over. Everything that made it work is still written
@@ -109,8 +115,22 @@ dry_run = false
 # desk now runs on ONE machine, and the desktop it moved from still has a
 # terminal logged into this same demo. Two machines mirroring one account send
 # every order twice, and the launcher's mutex is system-wide, not world-wide -
-# it cannot see the other machine at all. An account that is off cannot be
-# started by accident on either.
+# it cannot see the other machine at all.
+#
+# THIS LINE USED TO SAY "an account that is off cannot be started by accident
+# on either", AND THAT WAS FALSE FROM THE DAY IT WAS WRITTEN UNTIL 2026-09-17.
+# `-Account <id>` reaches accounts.py as `--id`, which answers for a disabled
+# account by design, and start_executors.ps1 never read this field - so
+# `start_executors.ps1 -Account vantage-demo -Live` started this account's
+# mirrors, on either machine, exactly as though the line above were absent.
+# The launcher now checks it. The wrong sentence is recorded rather than
+# quietly replaced because it was believed, and by the person who wrote it.
+#
+# What it still cannot do is see the other machine. `enabled = false` is one
+# file on one disk; the desktop has its own copy of this repository and its own
+# copy of this file. Turning an account off here stops it HERE. The only thing
+# that stops it there is that file being off there too, or the terminal not
+# being logged in.
 enabled = false
 
 # Which books this account mirrors. This IS the strategy selection: a book not
@@ -220,12 +240,30 @@ symbol_suffix = ".sc"
 # about. Nothing else in this file is closer to the money.
 lot_scale = 0.2
 
-# THE THIRD KEY. Without it the executor exits 3 on a REAL account however the
-# command line reads, and the other two keys are `--allow-real` on that command
-# line and `--login` matching the terminal. See mt5_executor.py's docstring for
-# why the permission is split across a file and a command line rather than kept
-# in one place: a config was edited once by someone who has gone to bed, a
-# command line is typed by someone who is awake.
+# THE KEY THAT LIVES IN A FILE. Without it the executor exits 3 on a REAL
+# account however the command line reads. The executor makes three checks in
+# all: this one, `--allow-real` on the command line, and `--login` matching the
+# account the terminal is actually holding.
+#
+# THEY ARE THREE CHECKS AND NOT THREE INDEPENDENT DECISIONS, and this file said
+# otherwise until 2026-09-17. Started the documented way, through
+# `start_executors.ps1`, the launcher reads THIS line and adds `--allow-real`
+# itself, and `--login` comes from the `login =` field a few lines above - so
+# one edit to this block plus one typed `-AllowReal` spends the whole
+# permission, and the third check is asked a question this same block supplied
+# the answer to. Only an executor started by hand puts three separate hands
+# on it.
+#
+# What the third check IS worth, on every path: it is the only one of the three
+# that asks the TERMINAL rather than a file. A registry that grants
+# `vantage-cent` cannot reach an account the terminal is not holding, so a
+# terminal logged into the wrong account still stops everything, whatever this
+# file says and whatever was typed. That is a real guarantee, and it is the one
+# to say out loud instead of a count.
+#
+# The split between a file and a command line is still worth what it was worth:
+# a config was edited once by someone who has gone to bed, a command line is
+# typed by someone who is awake.
 real_money = true
 
 # Off since 2026-09-17, on the owner's explicit word.
@@ -285,7 +323,15 @@ runs = [
 # one uncommented line away from pointing the desk at real money, and an
 # example is exactly the thing people uncomment without reading.
 #
-# The executor refuses a real-money account outright, whatever this file says.
-# That lock is in the code and not in configuration on purpose: a live account
-# reached by a book that has never been verified against a demo is the one
-# mistake here that costs real money.
+# This paragraph used to end "the executor refuses a real-money account
+# outright, whatever this file says", and that has been untrue since
+# 2026-09-17. A real account now runs on `real_money = true` here plus
+# `-AllowReal` typed at the launcher. An example block that quietly relied on a
+# lock which no longer exists is the worst possible place for a stale comment,
+# so it is corrected here rather than left to be read as reassurance.
+#
+# What is still true, and is the reason the example stays a DEMO: a live
+# account reached by a book that has never been verified against a demo is the
+# one mistake in this file that costs real money. The defence is now a
+# permission spent in two places rather than a wall, which means reading before
+# uncommenting matters more than it did, not less.

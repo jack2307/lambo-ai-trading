@@ -5,6 +5,11 @@
 #   powershell -NoProfile -File py\live\start_executors.ps1 -Account vantage-demo -Runs xau-ema
 #   powershell -NoProfile -File py\live\start_executors.ps1 -Live
 #
+# It stops EVERY executor and starts only what the registry and the command
+# line together name, so it REFUSES when that would walk away from an open
+# real-money position - see -AllowOrphans. An account with `enabled = false`
+# does not start, by name or otherwise.
+#
 # Paper and live are separate by construction and this script is the only thing
 # that joins them. The paper desk decides; an executor MIRRORS one paper book
 # into one MT5 account and does nothing else - no strategy logic lives here, so
@@ -50,6 +55,24 @@ param(
     # Without it a real-money account is SKIPPED, with a line saying so, and
     # the demo accounts in the same registry start exactly as before.
     [switch]$AllowReal,
+
+    # Start anyway when a book that will NOT be restarted is holding a position
+    # on a real-money account.
+    #
+    # This script stops EVERY executor and then starts only what the registry
+    # and the command line together name, so any narrowing - `-Account`,
+    # `-Runs`, a book dropped from `runs`, a STOP file - can leave a real
+    # position on the account with nothing reconciling it. Nobody then mirrors
+    # the book's exit and the trade runs to the broker's stop or target
+    # instead, which is not the trade the book took.
+    #
+    # So that case refuses, and this is the word that overrides it. Refusing is
+    # the right default because the alternative is silent: the orphan looks
+    # exactly like a book that is simply flat. The override exists because
+    # "wait until the account is flat" is not always the right answer either -
+    # a book whose executor is already wedged needs restarting most when it is
+    # holding something.
+    [switch]$AllowOrphans,
 
     [string]$Python = 'C:\Python39\python.exe',
     [string]$Root = ''
@@ -107,6 +130,66 @@ function Resolve-Symbol([string]$run, [string]$suffix) {
     return "$base$suffix"
 }
 
+# What the accounts are holding RIGHT NOW, read from the mirrors themselves.
+#
+# `data/live/<account>/<book>/broker.json` is written whole-then-renamed by
+# each executor every poll, and it carries the position, the login and whether
+# the account is a demo. It is the only view of the broker that does not
+# involve talking to MetaTrader, which this script must not do: it starts the
+# processes that own those terminals and has no business opening one itself.
+#
+# STALENESS IS THE POINT, not a caveat. A snapshot older than a minute means
+# the executor that wrote it has already stopped, so the file says what was
+# true when it died and not what is true now. Those are reported separately
+# below, because "this stopped while holding" needs a person just as much as
+# "this is about to be orphaned" does - it is the same position with nobody
+# watching it, discovered later. What they do NOT do is refuse; see the
+# predicate below for why.
+#
+# Absolute age, not a window relative to the other mirrors. The API's
+# `mirroring` count is relative and is right to be - it asks "is this one
+# behind its neighbours" - and reading it as an absolute once produced
+# "mirroring 8/6". This asks a different question, "is this one alive", and it
+# is asked at the one moment when the whole set may legitimately be down
+# already, which is exactly when a relative measure answers nothing. Same
+# reasoning and the same 60 seconds as MIRROR_STALE_MS in telegram_notify.py.
+#
+# Deliberately duplicated in deploy\update.ps1 rather than shared. A third
+# file that both of them dot-source is one more thing to be missing on the
+# server at the moment someone is trying to stop a trade, and this is twenty
+# lines that read the same file the same way.
+function Get-Holdings([string]$root) {
+    $live = Join-Path $root 'data\live'
+    if (-not (Test-Path $live)) { return @() }
+    $nowMs = [int64]((Get-Date).ToUniversalTime() - [datetime]'1970-01-01').TotalMilliseconds
+    $out = @()
+    foreach ($acctDir in @(Get-ChildItem $live -Directory -ErrorAction SilentlyContinue)) {
+        foreach ($runDir in @(Get-ChildItem $acctDir.FullName -Directory -ErrorAction SilentlyContinue)) {
+            $p = Join-Path $runDir.FullName 'broker.json'
+            if (-not (Test-Path $p)) { continue }
+            try { $snap = Get-Content $p -Raw -ErrorAction Stop | ConvertFrom-Json } catch { continue }
+            if (-not $snap -or -not $snap.position) { continue }
+            $at = 0
+            if ($snap.at) { $at = [int64]$snap.at }
+            $out += [pscustomobject]@{
+                Account = $acctDir.Name
+                Run     = $runDir.Name
+                # `demo` is the account's own word for itself, taken from
+                # `account_info().trade_mode`, and it is better evidence than
+                # the registry: the registry says what we meant to trade, this
+                # says what the terminal was actually holding.
+                Real    = ($snap.demo -eq $false)
+                Side    = $snap.position.side
+                Lots    = $snap.position.lots
+                Ticket  = $snap.position.ticket
+                AgeMs   = $nowMs - $at
+                Stale   = (($nowMs - $at) -gt 60000)
+            }
+        }
+    }
+    return $out
+}
+
 # ---- the registry ----
 $readerArgs = @('py/live/accounts.py')
 if ($Account) { $readerArgs += "--id=$Account" }
@@ -149,25 +232,41 @@ if (-not $mutex.WaitOne(0)) {
 }
 
 try {
-    # Every executor, not just this account's. Starting one account must not
-    # leave another account's mirrors running against a desk that has moved on
-    # - and the registry, not the survivors, is the record of what should be up.
-    Get-CimInstance Win32_Process -Filter "name='python.exe'" |
-        Where-Object { $_.CommandLine -like '*mt5_executor.py*' } |
-        ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
-    Start-Sleep -Seconds 3
-
-    $alive = @(Get-CimInstance Win32_Process -Filter "name='python.exe'" |
-        Where-Object { $_.CommandLine -like '*mt5_executor.py*' })
-    if ($alive.Count -gt 0) {
-        Write-Error "$($alive.Count) executor(s) survived the stop; not starting more"
-        exit 1
-    }
-
-    $started = 0
-    $wanted = 0
+    # ---- pass one: decide everything, start nothing ----
+    #
+    # The plan is built BEFORE any executor is stopped, and that ordering is
+    # the whole point of the split.
+    #
+    # It used to kill first and decide afterwards, which meant a run that was
+    # going to be skipped anyway - a terminal that is not installed, a market
+    # with no symbol - still cost every other book its process. Worse, there
+    # was no moment at which this script knew both what was running and what
+    # it was about to run, so it could not see that it was about to walk away
+    # from an open position. It now does, and that check is below.
+    $plan = @()
 
     foreach ($acct in $accounts) {
+        # `enabled = false` means this account does not run. Checked HERE and
+        # not in accounts.py, which is a reader: `--id` deliberately answers
+        # for a disabled account so one can be inspected, and a reader that
+        # hid it would be lying about the file it exists to report.
+        #
+        # It was checked in NEITHER place until 2026-09-17. `-Account <id>`
+        # reaches accounts.py as `--id`, which skips the enabled filter, and
+        # nothing here read the field - so `-Account vantage-demo -Live`
+        # started the mirrors of an account that had been turned off precisely
+        # because a second machine still holds a terminal logged into it. The
+        # note in accounts.toml saying that could not happen was simply wrong,
+        # and has been corrected there too.
+        #
+        # This is also the rule the header of this file already states: the
+        # command line NARROWS what the registry says and never widens it.
+        # `-Account` naming a disabled account was the one place that widened.
+        if (-not $acct.enabled) {
+            Write-Host "skipping $($acct.id) - enabled = false in accounts.toml" -ForegroundColor Yellow
+            continue
+        }
+
         if (-not (Test-Path $acct.terminal)) {
             Write-Host "skipping $($acct.id) - no terminal at $($acct.terminal)"
             continue
@@ -223,13 +322,6 @@ try {
                 continue
             }
 
-            $wanted++
-            # Everything one account writes about one book lives together,
-            # stdout included. Two accounts mirroring the same book used to
-            # share exec_<run>.out and overwrite each other's record.
-            $here = Join-Path $Root "data\live\$($acct.id)\$run"
-            New-Item -ItemType Directory -Force -Path $here | Out-Null
-
             # The terminal path is QUOTED. Start-Process joins this array with
             # spaces and quotes nothing, and the real account's terminal lives
             # in `C:\Program Files\MetaTrader 5\` - unquoted it reaches argparse
@@ -237,20 +329,112 @@ try {
             # The pollers hit exactly this on 2026-09-17 and took the feed down
             # with it; the demo path, C:\MT5-demo, has no space and never showed
             # it.
-            $args = @('py/live/mt5_executor.py', "--run=$run", "--terminal=`"$($acct.terminal)`"",
+            #
+            # `$argv` and not `$args`: `$args` is a PowerShell automatic
+            # variable holding the parameters nothing bound. Assigning it works
+            # at script scope, which is why this was fine, and stops working
+            # silently the moment this block is moved into a function - at
+            # which point `Start-Process -ArgumentList $args` would hand the
+            # executor whatever the caller typed and nothing else.
+            $argv = @('py/live/mt5_executor.py', "--run=$run", "--terminal=`"$($acct.terminal)`"",
                       "--login=$($acct.login)", "--account=$($acct.id)", "--symbol=$sym",
                       "--lot-scale=$($acct.lot_scale)")
-            if ($dry) { $args += '--dry-run' }
+            if ($dry) { $argv += '--dry-run' }
             # Passed only for an account the registry marks, and only when the
             # command line asked. The executor checks the registry again for
-            # itself; this is not the permission, only one third of it.
-            if ($real) { $args += '--allow-real' }
-            Start-Process -FilePath $Python -ArgumentList $args -WorkingDirectory $Root -WindowStyle Hidden `
-                -RedirectStandardOutput (Join-Path $here 'exec.out') `
-                -RedirectStandardError (Join-Path $here 'exec.err')
-            Write-Host "  mirroring $run -> $sym at x$($acct.lot_scale)"
-            $started++
+            # itself; this is not the permission, only one of the three checks
+            # it makes - and see accounts.toml on why those three checks are
+            # not three independent decisions on this path.
+            if ($real) { $argv += '--allow-real' }
+
+            # Everything one account writes about one book lives together,
+            # stdout included. Two accounts mirroring the same book used to
+            # share exec_<run>.out and overwrite each other's record.
+            $plan += [pscustomobject]@{
+                Account  = [string]$acct.id
+                Run      = [string]$run
+                Symbol   = $sym
+                LotScale = $acct.lot_scale
+                Here     = Join-Path $Root "data\live\$($acct.id)\$run"
+                Argv     = $argv
+            }
         }
+    }
+
+    $wanted = @($plan).Count
+
+    # ---- the orphan check, between deciding and stopping ----
+    #
+    # Everything this script is about to kill that it is not about to start
+    # again, and that is holding a position. See -AllowOrphans at the top for
+    # why this refuses rather than warns.
+    #
+    # Read here and not earlier: the executors are still running, so their
+    # snapshots are seconds old and say what the accounts hold right now.
+    $keep = @{}
+    foreach ($p in $plan) { $keep["$($p.Account)/$($p.Run)"] = $true }
+    $orphans = @(Get-Holdings $Root | Where-Object { -not $keep["$($_.Account)/$($_.Run)"] })
+
+    if ($orphans.Count -gt 0) {
+        Write-Host ''
+        Write-Host 'Holding a position, and NOT in what this would start:' -ForegroundColor Yellow
+        foreach ($o in $orphans) {
+            $what = "  $($o.Account)/$($o.Run): $($o.Side) $($o.Lots) lots, ticket $($o.Ticket)"
+            if ($o.Real) { $what += ' [REAL MONEY]' }
+            if ($o.Stale) { $what += "  (snapshot $([int]($o.AgeMs / 1000))s old - this mirror ALREADY stopped)" }
+            Write-Host $what -ForegroundColor $(if ($o.Real) { 'Red' } else { 'Gray' })
+        }
+        # Only FRESH real-money holdings refuse, and that asymmetry is the
+        # deliberate part rather than an oversight.
+        #
+        # A fresh snapshot means the executor is alive and the position is open
+        # now: killing it is an orphan this script would be CREATING, and it is
+        # the caller's to decide. A stale one means the mirror already stopped,
+        # at some point that could be months ago - broker.json is never deleted
+        # and `data/` is never cleaned - so the position it describes may have
+        # closed long since. Refusing on that would make the launcher
+        # permanently unusable on the strength of a file nobody tidies, and a
+        # kill switch that cannot be reached is worse than a loud warning.
+        #
+        # So the stale ones are named, in the same list, and do not refuse.
+        # They still need a person; they do not need this script to stop.
+        $realOrphans = @($orphans | Where-Object { $_.Real -and -not $_.Stale })
+        if ($realOrphans.Count -gt 0 -and -not $AllowOrphans) {
+            Write-Host ''
+            Write-Error ("$($realOrphans.Count) real-money position(s) would be left with nobody reconciling them. " +
+                         'Nothing has been stopped. Either start those books too, or wait for the account to go ' +
+                         'flat, or drop a STOP file to close them deliberately - and if you mean to leave them ' +
+                         'open, say -AllowOrphans.')
+            exit 1
+        }
+        Write-Host ''
+    }
+
+    # ---- pass two: stop everything, start the plan ----
+    #
+    # Every executor, not just this account's. Starting one account must not
+    # leave another account's mirrors running against a desk that has moved on
+    # - and the registry, not the survivors, is the record of what should be up.
+    Get-CimInstance Win32_Process -Filter "name='python.exe'" |
+        Where-Object { $_.CommandLine -like '*mt5_executor.py*' } |
+        ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+    Start-Sleep -Seconds 3
+
+    $alive = @(Get-CimInstance Win32_Process -Filter "name='python.exe'" |
+        Where-Object { $_.CommandLine -like '*mt5_executor.py*' })
+    if ($alive.Count -gt 0) {
+        Write-Error "$($alive.Count) executor(s) survived the stop; not starting more"
+        exit 1
+    }
+
+    $started = 0
+    foreach ($p in $plan) {
+        New-Item -ItemType Directory -Force -Path $p.Here | Out-Null
+        Start-Process -FilePath $Python -ArgumentList $p.Argv -WorkingDirectory $Root -WindowStyle Hidden `
+            -RedirectStandardOutput (Join-Path $p.Here 'exec.out') `
+            -RedirectStandardError (Join-Path $p.Here 'exec.err')
+        Write-Host "  mirroring $($p.Account)/$($p.Run) -> $($p.Symbol) at x$($p.LotScale)"
+        $started++
     }
 
     Start-Sleep -Seconds 3
