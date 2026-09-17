@@ -1,9 +1,18 @@
 # Pull, rebuild, restart. RUN THIS ON THE SERVER, every time there is a change.
 #
 #   powershell -NoProfile -ExecutionPolicy Bypass -File deploy\update.ps1
-#   powershell -NoProfile -ExecutionPolicy Bypass -File deploy\update.ps1 -ServerOnly
-#   powershell -NoProfile -ExecutionPolicy Bypass -File deploy\update.ps1 -NoRestart
-#   powershell -NoProfile -ExecutionPolicy Bypass -File deploy\update.ps1 -AllowOrphans
+#   powershell ... -File deploy\update.ps1 -ServerOnly -Staged C:\Windows\Temp\flowdesk-build
+#   powershell ... -File deploy\update.ps1 -ServerOnly -Binary <exe> -Client <dist>
+#   powershell ... -File deploy\update.ps1 -NoRestart
+#   powershell ... -File deploy\update.ps1 -AllowOrphans
+#
+# THE SERVER HAS NO TOOLCHAIN. The VPS has git and nothing else - no cargo, no
+# rustc - so `cargo build` can never run on the one machine this script exists
+# for. The copy is therefore the primary path and the build is the local
+# convenience, which is the opposite of how this file read until 2026-09-17.
+# -Staged names a folder holding `fd-api.exe` and `dist\`; -Binary and -Client
+# name them separately. With neither, and no cargo, the run REFUSES at the
+# build step rather than restarting the old binary green.
 #
 # TWO MODES, AND THEY DIFFER IN WHAT THEY KILL.
 #
@@ -83,7 +92,28 @@ param(
     # to mt5_executor.py is on disk and not in effect after this mode, and the
     # run prints which books are still on old code rather than leaving that to
     # be discovered.
-    [switch]$ServerOnly
+    [switch]$ServerOnly,
+
+    # A prebuilt fd-api.exe to install, instead of building one here.
+    #
+    # THIS IS THE NORMAL CASE ON THE SERVER, not a fallback. The VPS has git
+    # and nothing else - no cargo, no rustc - so the build step can never run
+    # on the one machine this script exists for. Every deploy there is a
+    # binary built elsewhere and copied in, which makes the copy the primary
+    # path and `cargo build` the local convenience.
+    #
+    # Until 2026-09-17 that case ended with `cargo not found` after the desk
+    # had already been stopped, or - worse, under -SkipBuild - with the OLD
+    # binary restarting green and every downstream check passing.
+    [string]$Binary = '',
+
+    # A prebuilt ui/dist to install, same reasoning. A directory, not a zip.
+    [string]$Client = '',
+
+    # One folder holding both, as `fd-api.exe` and `dist\`. Sugar for the pair
+    # above, because the staged copy arrives as a pair and typing two paths
+    # that must agree is a way to get one of them wrong.
+    [string]$Staged = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -105,6 +135,36 @@ if ($ServerOnly -and $NoRestart) {
     Write-Host '-ServerOnly and -NoRestart contradict each other: -ServerOnly IS a restart,' -ForegroundColor Red
     Write-Host '  of fd-api and the watch. -NoRestart pulls and builds and starts nothing.' -ForegroundColor Red
     exit 2
+}
+
+# -Staged is the pair, so it cannot also be given piecemeal.
+if ($Staged -and ($Binary -or $Client)) {
+    Write-Host '-Staged already names both artefacts; do not also pass -Binary or -Client.' -ForegroundColor Red
+    exit 2
+}
+if ($Staged) {
+    $Binary = Join-Path $Staged 'fd-api.exe'
+    $Client = Join-Path $Staged 'dist'
+}
+
+# Sources are checked HERE, before the pull and long before anything is
+# stopped. A path typed wrong should cost nothing; discovering it after the
+# desk is down costs the desk.
+if ($Binary) {
+    if (-not (Test-Path $Binary -PathType Leaf)) {
+        Write-Host "-Binary: no file at $Binary" -ForegroundColor Red
+        exit 2
+    }
+}
+if ($Client) {
+    if (-not (Test-Path $Client -PathType Container)) {
+        Write-Host "-Client: no directory at $Client (a built ui\dist, not a zip)" -ForegroundColor Red
+        exit 2
+    }
+    if (-not (Test-Path (Join-Path $Client 'index.html'))) {
+        Write-Host "-Client: $Client has no index.html, so it is not a built client" -ForegroundColor Red
+        exit 2
+    }
 }
 
 # TLS 1.2, explicitly.
@@ -328,10 +388,24 @@ $holding = @()
 Step 'what this run will touch'
 $running = @(Get-CimInstance Win32_Process -Filter "name='python.exe'" -ErrorAction SilentlyContinue |
              Where-Object { $_.CommandLine -like '*mt5_executor.py*' })
+$artefact = if ($Binary -or $Client) {
+    $bits = @()
+    if ($Binary) { $bits += "binary from $Binary" }
+    if ($Client) { $bits += "client from $Client" }
+    'COPY ' + ($bits -join ' and ')
+} elseif ($SkipBuild) {
+    'NEITHER - -SkipBuild, so whatever binary and client are already here'
+} elseif (Get-Command cargo -ErrorAction SilentlyContinue) {
+    'BUILD here with cargo'
+} else {
+    'NOTHING CAN - no cargo and no -Binary; this run will refuse at the build step'
+}
+
 if ($ServerOnly) {
     Note 'MODE: -ServerOnly'
     Note '  will stop and restart : fd-api, the telegram watch'
     Note "  will NOT touch        : $($running.Count) executor(s), the AI traders, the pollers"
+    Note "  artefacts             : $artefact"
     Note '  the executors keep the Python they were launched with; a change to'
     Note '  mt5_executor.py is on disk and NOT in effect after this run.'
 } elseif ($NoRestart) {
@@ -343,6 +417,7 @@ if ($ServerOnly) {
     Note "  will STOP             : $($running.Count) executor(s), AI traders, pollers, fd-api"
     Note '  will restart          : fd-api, pollers, AI traders, the telegram watch'
     Note '  will NOT restart      : the executors - that stays a decision, by hand'
+    Note "  artefacts             : $artefact"
 }
 
 if (-not $NoRestart) {
@@ -436,8 +511,92 @@ if (-not $NoRestart) {
     }
 }
 
+# ------------------------------------------------------------ install: copy
+#
+# The copy is now a first-class path and not a fallback, because on the VPS it
+# is the ONLY path: that machine has git and nothing else. `cargo build` is the
+# local convenience; this is the deploy.
+#
+# It runs after the stop above, which is the ordering that matters - a running
+# .exe cannot be overwritten on Windows, and a failed Copy-Item in a hand-typed
+# sequence scrolls past while the old binary restarts green.
+if ($Binary -or $Client) {
+    Step 'installing the staged artefacts'
+    if (Get-Process fd-api -ErrorAction SilentlyContinue) {
+        Write-Error 'fd-api is still running; a copy over a running exe fails and the old one restarts green. Nothing was copied.'
+        exit 1
+    }
+    if ($Binary) {
+        $srcHash = Hash-Of $Binary
+        Note "source  $Binary  sha $srcHash"
+        # A heuristic, run BEFORE the copy because it can save stopping the
+        # desk for the wrong artefact. version.rs bakes the commit in with
+        # env!(), so the 40-character sha is a plain UTF-8 literal in .rodata
+        # and a byte search finds it. Presence is good evidence; absence is
+        # only suspicious - a different toolchain or a future packer could
+        # hide it. /api/version after the start is the actual check, and this
+        # never gates, it only warns.
+        try {
+            $bytes = [IO.File]::ReadAllBytes($Binary)
+            $text = [Text.Encoding]::ASCII.GetString($bytes)
+            if ($text.Contains($after)) {
+                Note "the staged binary contains the string $($after.Substring(0,12)) - consistent with this commit"
+            } else {
+                Write-Host "   WARNING: $after does not appear in the staged binary." -ForegroundColor Yellow
+                Write-Host '   It may be built from another commit. Heuristic only; /api/version decides.' -ForegroundColor Yellow
+            }
+        } catch {
+            Note 'could not scan the staged binary for its commit; /api/version will decide'
+        }
+        $rolled = Roll-Aside $exe $stamp
+        if ($rolled) { Note "previous binary kept at $(Split-Path $rolled -Leaf)" }
+        New-Item -ItemType Directory -Force -Path (Split-Path $exe -Parent) | Out-Null
+        try {
+            Copy-Item -Path $Binary -Destination $exe -Force -ErrorAction Stop
+        } catch {
+            Write-Error "copying the binary FAILED: $($_.Exception.Message). The old binary is still in place and has NOT been started."
+            exit 1
+        }
+        # Two genuinely different files now, so this is the real check that
+        # was degenerate while the build wrote in place.
+        $dstHash = Hash-Of $exe
+        if ($srcHash -ne $dstHash) {
+            Write-Error "the copy did not land: source sha $srcHash, destination sha $dstHash. Do not start this."
+            exit 1
+        }
+        Note "installed: destination sha $dstHash matches the source"
+    }
+    if ($Client) {
+        $rolledDist = Roll-Aside $dist $stamp
+        if ($rolledDist) { Note "previous client kept at $(Split-Path $rolledDist -Leaf)" }
+        if (Test-Path $dist) {
+            # The destination MUST be gone before the copy. `Copy-Item -Recurse`
+            # onto an existing directory copies the source INTO it - the result
+            # is ui\dist\dist, index.html is not where fd-api looks, and the
+            # desk serves nothing while every step above reported success.
+            #
+            # And it may only be removed once the roll-aside has actually
+            # produced a copy. "Never deleted" is not satisfied by deleting it
+            # after a failed backup, so a failed roll-aside stops the run with
+            # the old client still in place.
+            if (-not $rolledDist) {
+                Write-Error "could not roll the existing $dist aside, so it will not be removed. The old client is intact and nothing was installed."
+                exit 1
+            }
+            Remove-Item -Path $dist -Recurse -Force
+        }
+        try {
+            Copy-Item -Path $Client -Destination $dist -Recurse -Force -ErrorAction Stop
+        } catch {
+            Write-Error "copying the client FAILED: $($_.Exception.Message). The previous client is at $rolledDist."
+            exit 1
+        }
+        Note "client installed from $Client"
+    }
+}
+
 # -------------------------------------------------------------------- build
-if (-not $SkipBuild) {
+if (-not $SkipBuild -and -not $Binary) {
     Step 'building'
     if ($NoRestart) {
         # fd-api was not stopped, so the link will fail if it is running. Said
@@ -447,29 +606,39 @@ if (-not $SkipBuild) {
             exit 1
         }
     }
+    $cargo = (Get-Command cargo -ErrorAction SilentlyContinue).Source
+    if (-not $cargo) { $cargo = "$env:USERPROFILE\.cargo\bin\cargo.exe" }
+    # THE REFUSAL, and it is the one that matters most on the server.
+    #
+    # No toolchain and no staged binary means there is no way to produce a
+    # current one. Before today this fell through to `cargo not found` after
+    # the desk was already stopped, or - under -SkipBuild - to the OLD binary
+    # restarting green with every downstream check passing, which is the
+    # incident the staleness note was written about.
+    if (-not (Test-Path $cargo)) {
+        Write-Host ''
+        Write-Host 'No toolchain here and no staged binary given, so nothing can produce a' -ForegroundColor Red
+        Write-Host 'current fd-api.exe. NOTHING WAS BUILT and nothing was copied.' -ForegroundColor Red
+        Write-Host '  This is the normal state of the VPS: it has git and nothing else.' -ForegroundColor Yellow
+        Write-Host '  Build on a machine that has cargo, copy the pair over, then:' -ForegroundColor Yellow
+        Write-Host '    update.ps1 -ServerOnly -Staged C:\Windows\Temp\flowdesk-build' -ForegroundColor Yellow
+        Write-Host '  or name them separately with -Binary and -Client.' -ForegroundColor Yellow
+        Write-Host '  -SkipBuild restarts whatever binary is already here, deliberately.' -ForegroundColor DarkGray
+        exit 1
+    }
     $rolled = Roll-Aside $exe $stamp
     if ($rolled) { Note "previous binary kept at $(Split-Path $rolled -Leaf)" }
     $rolledDist = Roll-Aside $dist $stamp
     if ($rolledDist) { Note "previous client kept at $(Split-Path $rolledDist -Leaf)" }
-
-    $cargo = (Get-Command cargo -ErrorAction SilentlyContinue).Source
-    if (-not $cargo) { $cargo = "$env:USERPROFILE\.cargo\bin\cargo.exe" }
-    # Named as the cause it is. The incident behind the staleness note was
-    # exactly this: cargo absent from PATH, the build not run, and a binary
-    # from before the day's changes left sitting there looking plausible.
-    if (-not (Test-Path $cargo)) { Write-Error 'cargo not found; run bootstrap.ps1 -WithToolchain. NOTHING WAS BUILT and the binary on disk is whatever was there before.'; exit 1 }
     & $cargo build --release -p fd-api
     if ($LASTEXITCODE -ne 0) { Write-Error 'cargo build failed'; exit 1 }
     if (-not (Test-Path $exe)) { Write-Error "cargo reported success but $exe does not exist"; exit 1 }
     $exeAfter = Hash-Of $exe
-    # -48's check (2) is "stop before copy, hash the destination after and
-    # compare it to the source". THIS SCRIPT HAS NO COPY: cargo links straight
-    # into target\release, so source and destination are one file and the
-    # comparison degenerates to before-and-after. Said rather than simulated,
-    # because a check that pretends to compare two things that are one thing
-    # reads as stronger than it is. The copy case is pack.ps1 and the staged
-    # sequence, and it is theirs to make.
-    Note "fd-api built: $exeBefore -> $exeAfter (built in place; no copy step in this script)"
+    # Built in place: cargo links straight into target\release, so source and
+    # destination are one file and this is before-and-after rather than the
+    # two-file comparison. The two-file version is in the copy branch above,
+    # which is the branch the server actually takes.
+    Note "fd-api built in place: $exeBefore -> $exeAfter"
     if ($exeBefore -and $exeAfter -eq $exeBefore -and $before -ne $after) {
         # Not fatal - a pull that touched only Python or config legitimately
         # leaves the binary identical - but it must be said, because the same
