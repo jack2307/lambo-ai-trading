@@ -156,6 +156,18 @@ function marginOf(lots: number, price: number, run: PaperRun): { used: number; p
  * counted in hundredths. Converting here and nowhere else is deliberate — a
  * factor of a hundred loose in the arithmetic would multiply through every
  * cost, every guard and every receipt.
+ *
+ * THE MINUS SIGN HERE IS LOAD-BEARING. This writes U+2212; `brokerMoney`
+ * below writes the ASCII hyphen `toLocaleString` produces. That difference is
+ * not a tidiness bug to be unified away - it is a free check on the only
+ * mistake either function can make. This one MULTIPLIES by `units_per_usd`;
+ * `brokerMoney` takes money that is already in the account's currency and must
+ * not. So a typographic minus appearing on an ACCOUNT number means account
+ * money was routed through this function and multiplied by a hundred, and it
+ * says so in one character, on screen, before anyone reconciles a total.
+ *
+ * Whoever unifies these two - and it is a reasonable thing to want - has to
+ * replace that check with something, not merely delete it.
  */
 function accountMoney(usd: number | null | undefined, run: { account_currency?: string; units_per_usd?: number } | null | undefined, signed = true): string {
   if (usd == null || !Number.isFinite(usd)) return '—'
@@ -440,7 +452,16 @@ function accountTrades(broker: PaperBroker | null): ChartTrade[] {
     }))
 }
 
-/** Money in the BROKER's currency, which is not the paper book's. */
+/**
+ * Money in the BROKER's currency, which is not the paper book's.
+ *
+ * No conversion, on purpose: `profit`, `pnl`, `balance` and `equity` on a
+ * `PaperBroker` are already in the account's own units, and passing one of
+ * them through `accountMoney` would multiply it by `units_per_usd` a second
+ * time. The sign comes from `toLocaleString`, so it is an ASCII hyphen where
+ * `accountMoney` writes U+2212 - see the note there; the two glyphs are how a
+ * misrouted number announces itself on screen.
+ */
 function brokerMoney(v: number | null | undefined, currency: string | null | undefined): string {
   if (v == null || !Number.isFinite(v)) return '--'
   const sign = v > 0 ? '+' : ''
