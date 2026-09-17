@@ -451,12 +451,12 @@ pub fn run_backtest_guarded(
                     let refused = guards.and_then(|g| {
                         guard_state
                             .refusal(g, bar.time, 0)
-                            .or_else(|| i.checked_sub(1).and_then(|s| g.calendar_refusal(&bars[s], bar, bar_ms)))
+                            .or_else(|| i.checked_sub(1).and_then(|s| g.calendar_refusal(bars[s].time, bar.time, bar_ms)))
                     });
                     if let Some(why) = refused {
                         *skipped_by_guard.entry(why.label().to_string()).or_default() += 1;
                     } else {
-                        match open_position(side, stop, target, reason, bar, atr, equity, rules, self_managed, guards) {
+                        match open_position(side, stop, target, reason, bar.time, bar.open, atr, equity, rules, self_managed, guards) {
                             Ok((opened, sized_down)) => {
                                 sized_down_by_guard += usize::from(sized_down);
                                 guard_state.opened(opened.entry_time);
@@ -580,19 +580,26 @@ pub enum Refused {
 
 /// The position, and whether a guard reduced its lots.
 #[allow(clippy::too_many_arguments)]
+/// Takes the filling bar's TIME and OPEN rather than the bar, because those
+/// are the only two fields it has ever read and at the moment a live book can
+/// first act on a bar the other three do not exist yet. Passing a `Bar` with
+/// `high`/`low`/`close` filled in from the open would be three fabricated
+/// numbers on the one path that opens a position with real money behind it;
+/// the signature says what is true instead.
 pub fn open_position(
     side: Side,
     stop: Option<f64>,
     target: Option<f64>,
     reason: String,
-    bar: &Bar,
+    bar_time: i64,
+    bar_open: f64,
     atr: Option<f64>,
     equity: f64,
     rules: &TradingRules,
     self_managed: bool,
     guards: Option<&Guards>,
 ) -> Result<(Live, bool), Refused> {
-    let entry = apply_costs(bar.open, side, true, rules);
+    let entry = apply_costs(bar_open, side, true, rules);
 
     let stop = match stop.filter(|s| s.is_finite()) {
         Some(explicit) => Some(explicit),
@@ -642,7 +649,7 @@ pub fn open_position(
     Ok((
         Live {
             side,
-            entry_time: bar.time,
+            entry_time: bar_time,
             entry_price: entry,
             stop,
             target,

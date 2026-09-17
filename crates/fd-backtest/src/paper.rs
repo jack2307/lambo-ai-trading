@@ -218,89 +218,19 @@ impl PaperBook {
         bar_ms: i64,
         advice: Option<&Advice>,
     ) -> StepReport {
-        let mut report = StepReport::default();
-
-        // 1. Fill whatever the previous bar decided, at this bar's open.
-        if let Some(intent) = self.pending.take() {
-            match intent {
-                Intent::Enter { side, stop, target, reason } if self.position.is_none() => {
-                    let atr = atr_prev.filter(|v| v.is_finite());
-                    // The advisor is asked before the guards, and it is the
-                    // only one of the two that can be absent: with no advice
-                    // the trade is exactly the trade the strategy decided,
-                    // which is the default a broken advisor must fall back to.
-                    let cut = advice.map_or(1.0, |a| a.size_factor);
-                    // The guards are asked before any sizing happens. The
-                    // signal bar is the previous bar, as in the engine; with
-                    // no previous bar there is no calendar check, and no
-                    // pending signal either.
-                    let refused = guards.and_then(|g| {
-                        self.guard_state
-                            .refusal(g, bar.time, 0)
-                            .or_else(|| self.last_bar.as_ref().and_then(|s| g.calendar_refusal(s, bar, bar_ms)))
-                    });
-                    if cut <= 0.0 {
-                        // A veto is recorded as its own refusal rather than as
-                        // a guard: a reader must be able to tell a rule the
-                        // desk wrote from an opinion a model had.
-                        self.advisor_vetoed += 1;
-                        report.refused = Some("ADVISOR".to_string());
-                        report.advice = advice.map(|a| (0.0, a.reason.clone()));
-                    } else if let Some(why) = refused {
-                        *self.skipped_by_guard.entry(why.label().to_string()).or_default() += 1;
-                        report.refused = Some(why.label().to_string());
-                    } else {
-                        match open_position(side, stop, target, reason, bar, atr, self.equity, rules, self.self_managed, guards) {
-                            Ok((mut opened, sized_down)) => {
-                                // The cut is applied to the lots and to nothing
-                                // else: risk is a price distance, so R, the
-                                // stop and the target are untouched and a
-                                // half-size trade is the same trade at half the
-                                // money. Rounded DOWN to the venue's step, and
-                                // a cut that lands under the minimum lot is a
-                                // veto rather than a trade the broker refuses.
-                                if cut < 1.0 {
-                                    let scaled = ((opened.lots * cut) / rules.lot_step).floor() * rules.lot_step;
-                                    if scaled < rules.min_lot {
-                                        self.advisor_vetoed += 1;
-                                        report.refused = Some("ADVISOR".to_string());
-                                        report.advice = advice.map(|a| (0.0, a.reason.clone()));
-                                        self.last_bar = Some(*bar);
-                                        return report;
-                                    }
-                                    opened.lots = scaled;
-                                    self.advisor_reduced += 1;
-                                    report.advice = advice.map(|a| (a.size_factor, a.reason.clone()));
-                                }
-                                self.sized_down_by_guard += usize::from(sized_down);
-                                report.sized_down = sized_down;
-                                report.opened = true;
-                                self.guard_state.opened(opened.entry_time);
-                                self.position = Some(opened);
-                            }
-                            Err(Refused::NoRisk) => {
-                                self.skipped_no_atr += 1;
-                                report.no_risk = true;
-                            }
-                            Err(Refused::Guard(why)) => {
-                                *self.skipped_by_guard.entry(why.label().to_string()).or_default() += 1;
-                                report.refused = Some(why.label().to_string());
-                            }
-                        }
-                    }
-                }
-                Intent::Exit { reason } if self.position.is_some() => {
-                    let open = self.position.take().expect("checked");
-                    let exit = apply_costs(bar.open, open.side, false, rules);
-                    let trade = self.book(open, exit, bar.time, ExitKind::Signal, &reason, rules);
-                    report.trades.push(trade);
-                }
-                _ => {}
-            }
-        }
+        // 1. Fill whatever the previous bar decided, at this bar's open —
+        //    unless [`PaperBook::fill_open`] already did it when this bar
+        //    opened, in which case `pending` is already `None` and this is a
+        //    no-op. That is the whole of the idempotency: there is no flag to
+        //    keep in step, because the thing being consumed is the evidence.
+        let mut report = self.fill_pending(bar.time, bar.open, atr_prev, rules, guards, bar_ms, advice);
 
         // 2. Manage an open position against this bar's range: the engine's
         // own stop, target and clock first, then the position guards.
+        //
+        // This runs whether the fill happened here or at the open, and it must:
+        // a position opened at this bar's open can be stopped out on this same
+        // bar's low, exactly as it could when both halves were one call.
         if let Some(open) = self.position.as_mut() {
             let exit = check_exit(open, bar, rules).or_else(|| {
                 let exposure = Exposure { side: open.side, entry_price: open.entry_price, risk: open.risk };
@@ -322,6 +252,180 @@ impl PaperBook {
         }
 
         self.last_bar = Some(*bar);
+        report
+    }
+
+    /// Fill the pending intent at the open of the bar that has just STARTED,
+    /// before it closes, and report what happened — or `None` when this is not
+    /// that bar.
+    ///
+    /// Why this exists. A paper book learns about a bar when the bar CLOSES,
+    /// because that is when the poller can post it, so an intent decided at
+    /// the close of bar `t` was filled at the open of bar `t+1` and the book
+    /// did not know it held the position until `t+1` closed — a bar later than
+    /// the price it holds it at. Measured on the VPS 2026-09-17, six live
+    /// positions out of six surfaced to the executor exactly one bar after the
+    /// book's own stamp. See `docs/decisions/2026-09-17-entry-lag.md`.
+    ///
+    /// The PRICE is unchanged and that is the point: this fills at
+    /// `apply_costs(open)` exactly as [`PaperBook::advance`] does, so a
+    /// backtest replaying the same tape produces the same trades to the byte.
+    /// What moves is the wall clock at which the book, and therefore the
+    /// mirror, finds out.
+    ///
+    /// ORDERING. Valid only for a bar strictly newer than the last one
+    /// advanced over, which is the same rule the closed-bar path already
+    /// applies (`PaperRun::accept` refuses a bar at or before its last). Not
+    /// "exactly one bar later": the broker's tape has a weekend and an hour a
+    /// day with no bars at all, so requiring adjacency would refuse the first
+    /// open of every session and hand the lag straight back on the entry taken
+    /// into the thinnest book of the day. The strict-newer test still refuses
+    /// the case that matters — an open replayed after its own bar has closed,
+    /// which would otherwise fill the NEXT bar's decision at the previous
+    /// bar's price.
+    ///
+    /// It does not manage the position and does not set `last_bar`: there is
+    /// no range to manage against yet, and the bar has not happened. Both are
+    /// [`PaperBook::advance`]'s when the bar closes.
+    ///
+    /// Guards and the advisor are asked HERE rather than at the close, and
+    /// they answer the same: both calendar tests read only the two bar times
+    /// (`Guards::calendar_refusal`), the session guard reads only `time`, and
+    /// the advisor's verdict was posted before either. Asked earlier, same
+    /// answer.
+    // Eight arguments, inherited verbatim from the call this was extracted
+    // from: the same allow `open_position` carries, for the same reason.
+    #[allow(clippy::too_many_arguments)]
+    pub fn fill_open(
+        &mut self,
+        time: i64,
+        open: f64,
+        atr_prev: Option<f64>,
+        rules: &TradingRules,
+        guards: Option<&Guards>,
+        bar_ms: i64,
+        advice: Option<&Advice>,
+    ) -> Option<StepReport> {
+        if !open.is_finite() || open <= 0.0 {
+            return None;
+        }
+        // No bar advanced over yet means nothing can be pending, and there is
+        // no `signal` bar for the calendar check to read.
+        if self.last_bar.is_none_or(|last| time <= last.time) {
+            return None;
+        }
+        Some(self.fill_pending(time, open, atr_prev, rules, guards, bar_ms, advice))
+    }
+
+    /// Step (1) of [`PaperBook::advance`], on its own: the pending intent
+    /// against a bar's time and open, which are the only two things filling
+    /// one has ever needed.
+    ///
+    /// Deliberately takes no `&Bar`. At the moment a live book can first act
+    /// on a bar, its high, low and close do not exist; a `Bar` here would be
+    /// three invented numbers travelling with two real ones through the code
+    /// path that opens a position against a funded account.
+    // Eight arguments, inherited verbatim from the call this was extracted
+    // from: the same allow `open_position` carries, for the same reason.
+    #[allow(clippy::too_many_arguments)]
+    fn fill_pending(
+        &mut self,
+        time: i64,
+        open: f64,
+        atr_prev: Option<f64>,
+        rules: &TradingRules,
+        guards: Option<&Guards>,
+        bar_ms: i64,
+        advice: Option<&Advice>,
+    ) -> StepReport {
+        let mut report = StepReport::default();
+        let Some(intent) = self.pending.take() else { return report };
+        match intent {
+            Intent::Enter { side, stop, target, reason } if self.position.is_none() => {
+                let atr = atr_prev.filter(|v| v.is_finite());
+                // The advisor is asked before the guards, and it is the
+                // only one of the two that can be absent: with no advice
+                // the trade is exactly the trade the strategy decided,
+                // which is the default a broken advisor must fall back to.
+                let cut = advice.map_or(1.0, |a| a.size_factor);
+                // The guards are asked before any sizing happens. The
+                // signal bar is the previous bar, as in the engine; with
+                // no previous bar there is no calendar check, and no
+                // pending signal either.
+                let refused = guards.and_then(|g| {
+                    self.guard_state
+                        .refusal(g, time, 0)
+                        .or_else(|| self.last_bar.as_ref().and_then(|s| g.calendar_refusal(s.time, time, bar_ms)))
+                });
+                if cut <= 0.0 {
+                    // A veto is recorded as its own refusal rather than as
+                    // a guard: a reader must be able to tell a rule the
+                    // desk wrote from an opinion a model had.
+                    self.advisor_vetoed += 1;
+                    report.refused = Some("ADVISOR".to_string());
+                    report.advice = advice.map(|a| (0.0, a.reason.clone()));
+                } else if let Some(why) = refused {
+                    *self.skipped_by_guard.entry(why.label().to_string()).or_default() += 1;
+                    report.refused = Some(why.label().to_string());
+                } else {
+                    match open_position(side, stop, target, reason, time, open, atr, self.equity, rules, self.self_managed, guards) {
+                        Ok((mut opened, sized_down)) => {
+                            // The cut is applied to the lots and to nothing
+                            // else: risk is a price distance, so R, the
+                            // stop and the target are untouched and a
+                            // half-size trade is the same trade at half the
+                            // money. Rounded DOWN to the venue's step, and
+                            // a cut that lands under the minimum lot is a
+                            // veto rather than a trade the broker refuses.
+                            //
+                            // That veto used to `return` from `advance`,
+                            // setting `last_bar` on the way out and skipping
+                            // the position management below. It cannot return
+                            // from here, and it does not need to: the branch
+                            // is inside `self.position.is_none()` and sets no
+                            // position, so the management step it skipped was
+                            // a no-op every time it ran.
+                            let mut vetoed = false;
+                            if cut < 1.0 {
+                                let scaled = ((opened.lots * cut) / rules.lot_step).floor() * rules.lot_step;
+                                if scaled < rules.min_lot {
+                                    self.advisor_vetoed += 1;
+                                    report.refused = Some("ADVISOR".to_string());
+                                    report.advice = advice.map(|a| (0.0, a.reason.clone()));
+                                    vetoed = true;
+                                } else {
+                                    opened.lots = scaled;
+                                    self.advisor_reduced += 1;
+                                    report.advice = advice.map(|a| (a.size_factor, a.reason.clone()));
+                                }
+                            }
+                            if !vetoed {
+                                self.sized_down_by_guard += usize::from(sized_down);
+                                report.sized_down = sized_down;
+                                report.opened = true;
+                                self.guard_state.opened(opened.entry_time);
+                                self.position = Some(opened);
+                            }
+                        }
+                        Err(Refused::NoRisk) => {
+                            self.skipped_no_atr += 1;
+                            report.no_risk = true;
+                        }
+                        Err(Refused::Guard(why)) => {
+                            *self.skipped_by_guard.entry(why.label().to_string()).or_default() += 1;
+                            report.refused = Some(why.label().to_string());
+                        }
+                    }
+                }
+            }
+            Intent::Exit { reason } if self.position.is_some() => {
+                let open_position = self.position.take().expect("checked");
+                let exit = apply_costs(open, open_position.side, false, rules);
+                let trade = self.book(open_position, exit, time, ExitKind::Signal, &reason, rules);
+                report.trades.push(trade);
+            }
+            _ => {}
+        }
         report
     }
 

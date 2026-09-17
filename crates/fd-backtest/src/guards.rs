@@ -214,12 +214,17 @@ impl Guards {
     /// is not acted on even when its fill would land outside (the Sunday
     /// reopen fill of a Friday-close signal), and a fill inside a window is
     /// refused whatever produced it.
+    ///
+    /// Takes the two TIMES and not the two bars. It never read anything else,
+    /// and a live book asks this the moment the filling bar opens, when that
+    /// bar has no high, low or close yet - so a `&Bar` here would have to be
+    /// three invented numbers to ask a question about two real ones.
     #[must_use]
-    pub fn calendar_refusal(&self, signal: &Bar, fill: &Bar, bar_ms: i64) -> Option<Refusal> {
-        if self.past_weekend_cutoff(signal.time + bar_ms) || self.past_weekend_cutoff(fill.time + bar_ms) {
+    pub fn calendar_refusal(&self, signal_time: i64, fill_time: i64, bar_ms: i64) -> Option<Refusal> {
+        if self.past_weekend_cutoff(signal_time + bar_ms) || self.past_weekend_cutoff(fill_time + bar_ms) {
             return Some(Refusal::Weekend);
         }
-        if self.in_news_window(signal.time) || self.in_news_window(fill.time) {
+        if self.in_news_window(signal_time) || self.in_news_window(fill_time) {
             return Some(Refusal::News);
         }
         None

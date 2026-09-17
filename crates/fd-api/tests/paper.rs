@@ -12,7 +12,7 @@ use axum::Json;
 use axum::extract::State;
 use axum::response::IntoResponse;
 use axum::extract::{Path as PathParam, Query};
-use fd_api::paper::{DEFAULT_DETAIL_BARS, DetailQuery, MAX_LIVE_AGE_MS, bar, detail, intent, start, status, stop, tick};
+use fd_api::paper::{DEFAULT_DETAIL_BARS, open_now, DetailQuery, MAX_LIVE_AGE_MS, bar, detail, intent, start, status, stop, tick};
 use fd_api::{ApiError, AppState};
 use fd_core::config::Config;
 use fd_core::types::Bar;
@@ -1070,4 +1070,192 @@ async fn a_decided_intent_records_when_the_decider_spoke_against_the_price_it_go
         rule_opens.iter().all(|e| e["decided_at"].is_null()),
         "a rule decides instantly, so it has no gap to record: {rule_opens:?}"
     );
+}
+
+/* ------------------------------------------------ filling at the open */
+
+/// Post the open of a bar that has only just started, before it closes.
+async fn post_open(state: &Arc<AppState>, market: &str, tf: &str, time: i64, open: f64) -> Result<Value, ApiError> {
+    let body = json!({ "market": market, "tf": tf, "time": time, "open": open });
+    let request = serde_json::from_value(body).expect("an open body");
+    open_now(State(Arc::clone(state)), Json(request)).await.map(|Json(v)| serde_json::to_value(v).expect("json"))
+}
+
+/// A run that has a pending entry waiting, and the bar whose open will fill it.
+async fn run_with_a_pending_entry(dir: &Path) -> (Arc<AppState>, Bar) {
+    let state = state_over(dir, 300);
+    start_run(&state, json!({ "market": "btc", "tf": "15m", "strategy": "external", "id": "b", "window": 200 }))
+        .await
+        .expect("start");
+    post_bar(&state, "btc", "15m", wave(300)).await.expect("bar");
+    post_intent(
+        &state,
+        json!({ "run": "b", "bar_time": wave(300).time, "side": "LONG", "reason": "a model said so", "decider": "gpt-5" }),
+    )
+    .await
+    .expect("intent");
+    (state, wave(301))
+}
+
+#[tokio::test]
+async fn a_restart_between_the_open_and_the_close_fills_once() {
+    // THE test for this change, and written before the split existed.
+    //
+    // The two halves are now two calls with a persist between them, so a
+    // process that dies in the middle is a state nothing had seen before. The
+    // account is real; "filled twice" here is a second live position, and
+    // "filled zero times" is the bug this whole change exists to remove.
+    //
+    // Proves: the TIME moved. The goldens cannot show that - they replay a
+    // backtest, which has no wall clock and no restart.
+    let dir = tempfile::tempdir().expect("temp dir");
+    let (state, next) = run_with_a_pending_entry(dir.path()).await;
+
+    // Half one: the bar has opened and has not closed.
+    post_open(&state, "btc", "15m", next.time, next.open).await.expect("open");
+    let before = run_named(&read_status(&state).await, "b").clone();
+    assert!(!before["open"].is_null(), "the book holds the position at the OPEN, not a bar later: {before}");
+    let entry_price = before["open"]["entry_price"].as_f64().expect("entry_price");
+    let entry_time = before["open"]["entry_time"].as_i64().expect("entry_time");
+    assert_eq!(entry_time, next.time, "priced at the bar that just opened");
+
+    // The process dies here. Everything the book knows is on disk or gone.
+    let reborn = Arc::new(AppState::new(config(), dir.path().to_path_buf()));
+    let recovered = run_named(&read_status(&reborn).await, "b").clone();
+    assert_eq!(recovered["open"]["entry_price"], entry_price, "the fill survived the restart");
+    assert_eq!(recovered["open"]["entry_time"], entry_time);
+
+    // Half two, on the process that did not do half one: the same bar closes.
+    post_bar(&reborn, "btc", "15m", next).await.expect("bar");
+    let after = run_named(&read_status(&reborn).await, "b").clone();
+    if !after["open"].is_null() {
+        assert_eq!(after["open"]["entry_price"], entry_price, "not re-filled at a second price");
+        assert_eq!(after["open"]["entry_time"], entry_time, "and not re-stamped");
+    }
+    // One entry, whichever way the bar went: either it is still open at the
+    // same price, or it closed and is ONE trade.
+    let trades = after["trades"].as_u64().expect("trades");
+    assert!(trades <= 1, "one intent must not become two trades: {after}");
+}
+
+#[tokio::test]
+async fn the_open_fills_at_the_same_price_the_close_would_have() {
+    // Proves: the PRICE did not move. The one thing the goldens also prove,
+    // asserted here directly so the two halves can be compared side by side
+    // rather than inferred from a parity suite passing.
+    let a = tempfile::tempdir().expect("temp dir");
+    let b = tempfile::tempdir().expect("temp dir");
+    let (early, next) = run_with_a_pending_entry(a.path()).await;
+    let (late, _) = run_with_a_pending_entry(b.path()).await;
+
+    // One fills at the open and then sees the bar close; the other only ever
+    // sees the closed bar, which is what the desk does today.
+    post_open(&early, "btc", "15m", next.time, next.open).await.expect("open");
+    post_bar(&early, "btc", "15m", next).await.expect("bar");
+    post_bar(&late, "btc", "15m", next).await.expect("bar");
+
+    let x = run_named(&read_status(&early).await, "b").clone();
+    let y = run_named(&read_status(&late).await, "b").clone();
+
+    // Every field of the position except one, and the exception is the point:
+    // `learned_at` is the wall clock at which the desk found out, and moving
+    // it is the entire purpose of the change. Everything that describes the
+    // TRADE - price, stamp, size, stop, target, risk - must be identical to
+    // the bit, and this comparison is what says so.
+    //
+    // It did not start identical. `risk`, `stop` and `target` differed in the
+    // eighth decimal because the two halves computed the sizing ATR over
+    // windows offset by one bar; see the comment in `accept_open`. The same
+    // fill was getting two different stops depending on which half filled it,
+    // which is exactly the kind of difference that is too small to matter and
+    // too real to leave.
+    let mut a = x["open"].clone();
+    let mut b = y["open"].clone();
+    assert!(!a["learned_at"].is_null() && !b["learned_at"].is_null(), "both learned it");
+    a["learned_at"] = Value::Null;
+    b["learned_at"] = Value::Null;
+    assert_eq!(a, b, "same trade in every respect but when it was learned");
+    assert_eq!(x["net_usd"], y["net_usd"], "and the same money");
+    assert_eq!(x["trades"], y["trades"]);
+}
+
+#[tokio::test]
+async fn an_open_at_or_before_the_last_bar_fills_nothing_and_a_gap_still_fills() {
+    // The ordering rule, and it is the SAME one the closed-bar path already
+    // applies: strictly newer than the last bar. Not adjacency.
+    //
+    // Adjacency was the first design and it is wrong on this instrument. The
+    // broker's tape has a weekend and one hour a day with no bars at all
+    // (21:00Z March-November, 22:00Z otherwise - 6c, over 100,586 bars), so
+    // requiring `time == last + bar_ms` would refuse the first open of every
+    // session and hand the lag back on the entry taken into the thinnest book
+    // of the day. A gap is indistinguishable from a jump-ahead by time alone,
+    // and the closed-bar path already chose to accept both and record the gap.
+    let dir = tempfile::tempdir().expect("temp dir");
+    let (state, next) = run_with_a_pending_entry(dir.path()).await;
+
+    // At the last bar: not newer, so nothing.
+    post_open(&state, "btc", "15m", wave(300).time, wave(300).open).await.expect("open");
+    assert!(run_named(&read_status(&state).await, "b")["open"].is_null(), "the bar already advanced over is not next");
+
+    // Before it: likewise.
+    post_open(&state, "btc", "15m", wave(299).time, wave(299).open).await.expect("open");
+    assert!(run_named(&read_status(&state).await, "b")["open"].is_null(), "and neither is one before that");
+
+    // Across a gap, which is what a Monday open is: it fills.
+    let after_gap = wave(305);
+    post_open(&state, "btc", "15m", after_gap.time, after_gap.open).await.expect("open");
+    let filled = run_named(&read_status(&state).await, "b").clone();
+    assert!(!filled["open"].is_null(), "the first open after a gap must fill: {filled}");
+    assert_eq!(filled["open"]["entry_time"], after_gap.time, "at the bar it actually opened on");
+    let _ = next;
+}
+
+#[tokio::test]
+async fn an_open_replayed_after_its_bar_closed_cannot_take_the_next_intent() {
+    // The case the ordering rule exists for, and the only one that could cost
+    // money: an open for bar t+1 arriving late, after t+1 has closed and the
+    // strategy has decided the NEXT entry. Filling it would price the next
+    // bar's decision at the previous bar's open - a trade at a price the book
+    // never saw, and on the mirror a real order at it.
+    let dir = tempfile::tempdir().expect("temp dir");
+    let (state, next) = run_with_a_pending_entry(dir.path()).await;
+
+    post_open(&state, "btc", "15m", next.time, next.open).await.expect("open");
+    post_bar(&state, "btc", "15m", next).await.expect("bar");
+    post_intent(
+        &state,
+        json!({ "run": "b", "bar_time": next.time, "side": "LONG", "reason": "the next one", "decider": "gpt-5" }),
+    )
+    .await
+    .expect("intent");
+
+    let before = run_named(&read_status(&state).await, "b").clone();
+    post_open(&state, "btc", "15m", next.time, next.open).await.expect("open");
+    let after = run_named(&read_status(&state).await, "b").clone();
+    assert_eq!(after["open"], before["open"], "a replayed open changed no position");
+    assert_eq!(after["pending"], before["pending"], "and did not consume the waiting intent");
+}
+
+#[tokio::test]
+async fn the_open_half_fills_and_the_close_half_still_manages_the_bar() {
+    // The half that is easy to lose in a refactor. A position opened at the
+    // bar's open must still be tested against THAT bar's high and low when it
+    // closes - today both happen in one call, and splitting them must not turn
+    // "fill and manage" into "fill only".
+    let dir = tempfile::tempdir().expect("temp dir");
+    let (state, next) = run_with_a_pending_entry(dir.path()).await;
+    post_open(&state, "btc", "15m", next.time, next.open).await.expect("open");
+
+    let open_before = run_named(&read_status(&state).await, "b")["open"].clone();
+    let stop = open_before["stop"].as_f64().expect("a stop");
+
+    // A bar whose low is through the stop: opened at the open, stopped on the
+    // same bar's range.
+    let crash = Bar { time: next.time, open: next.open, high: next.open, low: stop - 50.0, close: stop - 40.0, volume: Some(1.0) };
+    post_bar(&state, "btc", "15m", crash).await.expect("bar");
+
+    let after = run_named(&read_status(&state).await, "b").clone();
+    assert!(after["open"].is_null(), "the bar that opened it also stopped it: {after}");
+    assert_eq!(after["trades"], 1, "and it is one closed trade");
 }
