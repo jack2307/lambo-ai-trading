@@ -703,12 +703,93 @@ def main() -> int:
     # answer away.
     ap.add_argument("--max-join-r", type=float, default=0.25,
                     help="do not open if the price has moved this far AGAINST the book's entry, in R")
+    # Join when the price is BETTER than the book's entry. DEFAULT OFF.
+    #
+    # 728a4a4 made this the unconditional behaviour, on an argument that was
+    # mechanically true and selectively wrong, and it is worth separating those
+    # because the mechanical half still holds. A better entry carrying the
+    # book's own stop and target IS the book's trade at a better price - that
+    # was never the error. The error was ignoring what a favourable move MEANS
+    # in the bar after a signal fired.
+    #
+    # MEASURED, replaying this rule over the 55 live paper entries with a stop:
+    #
+    #   it takes 8 entries the symmetric rule refused
+    #   7 of those 8 were trades the book was later STOPPED OUT of, against a
+    #     base rate of 38% (p = 0.006, binomial - checked)
+    #   net -1.20R after the mirror's own fill
+    #   and on the selected set it opens a FIVE R gap between the book's result
+    #     and the mirror's, where the symmetric rule produced 0.6R. The mirror
+    #     beating the book by construction - which is the bias the symmetric
+    #     bound was written against, arriving through the other door.
+    #
+    # THE MECHANISM, and why this does not contradict the four-year run
+    # recorded above the adverse bound. Both results are true and they measure
+    # different things. On BARE BARS drift carries no information about what
+    # follows: 81,789 observations, adverse +0.0926R, kept +0.0992R, favourable
+    # +0.0938R. CONDITIONAL ON A SIGNAL HAVING FIRED, favourable drift is the
+    # first leg of the move to the stop - the trade is already going wrong and
+    # the better price is the evidence of it. Anyone reading the four-year "no
+    # relationship" result as licence to turn this on is using an unconditional
+    # measurement to answer a conditional question.
+    #
+    # ON n = 8, because it is eight trades and that should worry a reader. The
+    # p-value is real and the sample is tiny. What makes OFF the right default
+    # anyway is the asymmetry of being wrong: wrong to keep it off costs missed
+    # entries, which are visible in the log and recoverable; wrong to leave it
+    # on means systematically selecting trades on their way to their stop, with
+    # real money, and finding out in the P&L.
+    #
+    # WHAT WOULD JUSTIFY TURNING IT ON: a replay on a larger sample covering
+    # both regimes in which the stop-out rate of favourable joins sits near the
+    # 38% base rate rather than above it. Not a profitable week, and not the
+    # mechanical argument above - that argument is already known to be true and
+    # already known not to be sufficient.
+    #
+    # The two STRUCTURAL bounds stay in the code path for when the flag is on:
+    # a favourable drift of a full R is the book's own stop, and a join inside
+    # the broker's minimum stop distance comes back rejected. Neither is a
+    # judgement and neither depends on this decision.
+    ap.add_argument("--allow-favourable-join", action="store_true",
+                    help="join when the price is better than the book's entry (default: refuse, "
+                         "symmetric with the adverse bound)")
     ap.add_argument("--dry-run", action="store_true", help="reconcile and log, send nothing")
     # One of the three keys to a real account. On its own it does nothing:
     # the registry must also say `real_money = true` for --account, and the
     # terminal must hold exactly --login. See the module docstring.
     ap.add_argument("--allow-real", action="store_true",
                     help="permit a REAL account (registry must also allow it)")
+    # Answer what the join rule is, and exit. Before parse_args on purpose:
+    # --run, --terminal, --login and --symbol are required, and making them
+    # conditionally optional to support a query would put a branch in the
+    # argument parsing of the process that sends real orders.
+    #
+    # ONE LINE, and the launcher that calls this echoes it VERBATIM rather than
+    # parsing or rewording it. That is the whole point of the query existing: a
+    # hardcoded "symmetric" string in a launcher is a record that agrees with
+    # the code today and disagrees the day someone flips the default, which is
+    # the defect this repo has spent the day removing. The sentence lives here,
+    # beside the flag that decides it, and there is no second copy to go stale.
+    # Add a third mode and the launcher prints the new sentence without
+    # knowing anything changed.
+    #
+    # It honours whatever flags it is given, so a launcher can ask with the
+    # same arguments it is about to launch with. Nothing passes a join flag
+    # today; the property matters if the mode ever becomes per-account.
+    if "--print-join-mode" in sys.argv:
+        favourable = "--allow-favourable-join" in sys.argv
+        limit = "0.25"
+        for i, a in enumerate(sys.argv):
+            if a.startswith("--max-join-r="):
+                limit = a.split("=", 1)[1]
+            elif a == "--max-join-r" and i + 1 < len(sys.argv):
+                limit = sys.argv[i + 1]
+        if favourable:
+            print(f"join: adverse refused beyond {limit}R, favourable TAKEN (one-sided)")
+        else:
+            print(f"join: adverse and favourable both refused beyond {limit}R (symmetric)")
+        return 0
+
     args = ap.parse_args()
 
     # data/live/<account>/<run>/ - the live side, kept out of data/paper
@@ -1043,20 +1124,41 @@ def main() -> int:
             a trade the book did not pay for, and the difference is not the
             book's edge, it is the mirror's cost.
 
-            Favourable drift is now taken. A better entry carrying the book's
-            own stop and target is the book's trade at a better price - the
-            same trade, the same exits, less paid to get in.
+            Favourable drift is taken ONLY behind `--allow-favourable-join`,
+            which is off by default. The reasoning below is the argument that
+            made it unconditional in 728a4a4; it is kept because half of it is
+            still true and because the half that was wrong is the instructive
+            part.
 
-            WHAT THIS CHANGE IS NOT EXPECTED TO DO IS MAKE MONEY. Measured over
-            81,789 observations of 15m gold, 2022-2026, from the MIRROR's own
-            fill: entries after adverse drift returned +0.0926R, entries inside
-            the band +0.0992R, entries after favourable drift +0.0938R. Within
-            0.007R of one another, with the correlation between drift and
-            outcome running -0.003 to +0.047 and flipping sign year to year.
-            Drift does not predict the mirror's result. So this is not an edge
-            and must not be reported as one; what it stops is a mirror that
-            refused better prices and then waited for worse ones, which was
-            never defensible whatever the return distribution says.
+            STILL TRUE: a better entry carrying the book's own stop and target
+            is the book's trade at a better price - the same trade, the same
+            exits, less paid to get in. Mechanically that is not in dispute.
+
+            WHAT IT MISSED: what a favourable move MEANS in the bar after a
+            signal has fired. Replaying the one-sided rule over these same 55
+            entries, it takes 8 the symmetric rule refused, and 7 of those 8
+            were trades the book was later STOPPED OUT of against a 38% base
+            rate (p = 0.006), for -1.20R after the mirror's own fill. The
+            better price was not an opportunity, it was the first leg of the
+            move to the stop.
+
+            AND IT DOES NOT CONTRADICT THE FOUR-YEAR RUN recorded above the
+            adverse bound, which is the trap for the next reader. Over 81,789
+            observations of 15m gold, 2022-2026, from the MIRROR's own fill:
+            adverse +0.0926R, inside the band +0.0992R, favourable +0.0938R -
+            equal within 0.007R, correlation -0.003 to +0.047, sign flipping
+            year to year. That measures BARE BARS, where drift carries no
+            information about what follows. This measures drift CONDITIONAL ON
+            A SIGNAL, where it does. Both are true. Using the unconditional
+            result to answer the conditional question is how the flag gets
+            turned on for a bad reason.
+
+            So the one-sided rule was never an edge and was never going to be
+            one; and it was not merely neutral either, which is what 728a4a4
+            believed. See `--allow-favourable-join` for the numbers, for what
+            would justify switching it on, and for why n=8 is still enough to
+            decide the DEFAULT even though it is not enough to decide the
+            question.
 
             WHAT THIS COSTS, said plainly: the account's equity curve is no
             longer a fair test of the book, because adverse joins are skipped
@@ -1105,6 +1207,19 @@ def main() -> int:
                            f"{args.max_join_r}R this will join at; the mirror would be paying "
                            f"for a trade the book did not pay for")
             if r >= 0:
+                return r, None
+            # ---- favourable drift: a BETTER price than the book got ----
+            if not args.allow_favourable_join:
+                # Symmetric with the adverse bound, which is what this was
+                # before 728a4a4 and is again. Inside the band a better price
+                # still joins - the old rule refused `abs(r) > max_join_r`, not
+                # every favourable tick, and matching it exactly matters
+                # because that is the behaviour being restored.
+                if -r > args.max_join_r:
+                    return r, (f"the price is {r:+.2f}R better than the book's entry, past the "
+                               f"{args.max_join_r}R this will join at; favourable joins are off "
+                               f"because 7 of the 8 they added were trades the book was stopped "
+                               f"out of - see --allow-favourable-join")
                 return r, None
             if -r >= 1.0:
                 return r, (f"the price is {r:+.2f}R better, which puts it at or beyond the book's "

@@ -65,17 +65,25 @@ them coming back. Each section names the failure it pins.
      same tuple as DONE and was called success, which cleared the refusal
      channel and left the account permanently smaller than the book.
 
-  9  A BETTER PRICE IS NOT A REASON TO SIT OUT. `--max-join-r` bounded the
-     ABSOLUTE drift, so four of six real entries on 2026-09-17 were refused at
-     least once for being too good - and a refusal is a retry, so the mirror
-     then waited for the price to come back to it. The favourable half is now
-     bounded structurally instead: a full R better IS the book's stop.
-
   8  EVERY TIME THAT LEAVES THIS PROCESS IS ON THE BOOK'S CLOCK. `history_of`
      published `d.time_msc` raw - server time - into `broker.json` beside an
      `at` field that is true UTC, and `opened_at` did the same. Two clocks,
      adjacent keys, neither labelled. Pinned here per rule 4 of
      `docs/decisions/2026-09-17-unit-carrying.md`.
+
+  9  A BETTER PRICE IS NOT A REASON TO SIT OUT - BUT IT IS NOT A REASON TO
+     JOIN EITHER. `--max-join-r` bounded the ABSOLUTE drift, so four of six
+     real entries were refused at least once for being too good, and a refusal
+     is a retry, so the mirror waited for the price to come back. 728a4a4 made
+     favourable joins unconditional; replaying that over the 55 live entries
+     showed 7 of the 8 it added were trades the book was STOPPED OUT of. So
+     the one-sided rule now lives behind `--allow-favourable-join`, with its
+     two structural bounds, and these checks exercise it switched ON.
+
+ 10  AND THE DEFAULT IS OFF, which is pinned separately because the default is
+     the thing that ships. The equivalence with the pre-728a4a4 symmetric rule
+     is SWEPT rather than asserted, and `--print-join-mode` lets a launcher ask
+     the mode instead of hardcoding a claim about it.
 
 The provenance of every symbol number is marked. MEASURED means read from a
 terminal on the date given; DERIVED means computed from a measured value and
@@ -339,7 +347,8 @@ class Flaky:
         return self.acc if self.n <= self.answers else None
 
 
-def drive(account, symbol: str = "XAUUSD.sc", margin=5.0, lots: float = 0.05, book=None) -> tuple:
+def drive(account, symbol: str = "XAUUSD.sc", margin=5.0, lots: float = 0.05, book=None,
+          extra: list | None = None) -> tuple:
     """One poll of `main()` against a temporary ROOT.
 
     Returns `(rc, requests that reached order_send, rows written to
@@ -365,7 +374,7 @@ def drive(account, symbol: str = "XAUUSD.sc", margin=5.0, lots: float = 0.05, bo
 
         X.time.sleep = stop_after_one_poll
         sys.argv = ["mt5_executor.py", "--run=t", "--terminal=x", "--login=33705331",
-                    f"--symbol={symbol}", "--account=acct"]
+                    f"--symbol={symbol}", "--account=acct"] + list(extra or [])
         rc = X.main()
 
         out = tmp / "data" / "live" / "acct" / "t" / "executor.jsonl"
@@ -958,7 +967,7 @@ def the_published_times_are_utc() -> None:
         MT5.deals = []
 
 
-def drive_at(book_open: dict, price: float) -> tuple:
+def drive_at(book_open: dict, price: float, favourable: bool = False) -> tuple:
     """One poll with a given book position and a given market price.
 
     The spread is ZEROED for these - bid and ask both sit at `price` - because
@@ -972,7 +981,8 @@ def drive_at(book_open: dict, price: float) -> tuple:
         MT5.symbol_info_tick = lambda sym: Obj(
             ask=price, bid=price, time=int(time.time()) + MT5.server_offset_s)
         MT5.price = price
-        return drive(CENT, lots=book_open.get("lots", 0.05), book=book_open)
+        return drive(CENT, lots=book_open.get("lots", 0.05), book=book_open,
+                     extra=["--allow-favourable-join"] if favourable else None)
     finally:
         MT5.symbol_info_tick = real_tick
         X.read_status = real_status
@@ -1020,7 +1030,7 @@ def a_better_price_is_not_a_reason_to_sit_out() -> None:
     for name, side, entry, risk, price, drift, should_join in REPLAY:
         held = book(side, entry, risk)
         MT5.deals = []
-        _, sent, rows = drive_at(held, price)
+        _, sent, rows = drive_at(held, price, favourable=True)
         joined = len(sent) == 1
         check(f"{name}: drift {drift:+.2f}R -> {'joins' if should_join else 'sits out'}",
               joined == should_join,
@@ -1053,7 +1063,7 @@ def a_better_price_is_not_a_reason_to_sit_out() -> None:
     # Reachable, not impossible - which is the half of this that is easy to
     # get backwards.
     held = book('LONG', 4350.05, 10.0)
-    _, sent, rows = drive_at(held, held['stop'] - 0.5)
+    _, sent, rows = drive_at(held, held['stop'] - 0.5, favourable=True)
     check("a full R better puts the price past the book's STOP: refused",
           len(sent) == 0, f"{sent}")
     check("...and says the book is about to exit, not that the price is too far",
@@ -1061,14 +1071,14 @@ def a_better_price_is_not_a_reason_to_sit_out() -> None:
           f"{[r.get('reason') for r in rows if r['kind'] == 'not-adopted']}")
 
     # Just inside it still joins: the bound is the stop, not a round number.
-    _, sent, _ = drive_at(held, held['stop'] + 1.5)
+    _, sent, _ = drive_at(held, held['stop'] + 1.5, favourable=True)
     check("just short of the stop still joins", len(sent) == 1, f"sent {len(sent)}")
 
     # The broker's own minimum stop distance. An order whose sl sits inside it
     # comes back rejected, and a mirror that retried would refuse every poll.
     try:
         MT5.stops_level = 200  # points, x 0.01 = 2.00 in price
-        _, sent, rows = drive_at(held, held['stop'] + 1.5)
+        _, sent, rows = drive_at(held, held['stop'] + 1.5, favourable=True)
         check("a join inside the broker's minimum stop distance: refused, not sent",
               len(sent) == 0, f"{sent}")
         check("...and names the broker's limit rather than the desk's",
@@ -1081,8 +1091,120 @@ def a_better_price_is_not_a_reason_to_sit_out() -> None:
     # A book with no stop cannot be measured in R at all; that path is
     # unchanged and still joins.
     held = dict(BOOK, side='LONG', entry_price=4350.0, stop=None, target=None)
-    _, sent, _ = drive_at(held, 4340.0)
+    _, sent, _ = drive_at(held, 4340.0, favourable=True)
     check("a book with no stop still joins, as before", len(sent) == 1, f"sent {len(sent)}")
+
+
+# ---------------------------------------------------------------------------
+# 10 - the favourable half is OFF unless someone asks for it
+# ---------------------------------------------------------------------------
+
+def favourable_joins_are_off_by_default() -> None:
+    """728a4a4 made favourable joins unconditional; they are now behind a flag.
+
+    Replaying that rule over the same 55 live entries, it took 8 the symmetric
+    rule refused and 7 of those 8 were trades the book was later STOPPED OUT
+    of, against a 38% base rate (p = 0.006), for -1.20R after the mirror's own
+    fill. A better price in the bar after a signal is the first leg of the move
+    to the stop.
+
+    The default matters more than the flag, so it is pinned first and the
+    equivalence with the pre-728a4a4 rule is proved rather than asserted.
+    """
+    section("favourable joins, off unless asked for")
+
+    # The four measured entries again, this time with NO flag: the three
+    # favourable ones must now sit out, and the adverse one still does.
+    for name, side, entry, risk, price, drift in [
+        ('terra SHORT', 'SHORT', 4306.38, 10.93, 4309.33, -0.27),
+        ('ds LONG', 'LONG', 4332.12, 11.40, 4328.13, -0.35),
+        ('ds SHORT', 'SHORT', 4360.41, 19.98, 4373.00, -0.63),
+    ]:
+        stop = entry - risk if side == 'LONG' else entry + risk
+        target = entry + 2 * risk if side == 'LONG' else entry - 2 * risk
+        held = dict(BOOK, side=side, entry_price=entry, stop=stop, target=target)
+        MT5.deals = []
+        _, sent, rows = drive_at(held, price)
+        check(f"{name}: {drift:+.2f}R better, default -> sits out",
+              len(sent) == 0, f"sent {len(sent)}")
+        check(f"{name}: ...and the refusal names the flag",
+              any('--allow-favourable-join' in str(r.get('reason', ''))
+                  for r in rows if r['kind'] == 'not-adopted'),
+              f"{[r.get('reason') for r in rows if r['kind'] == 'not-adopted']}")
+
+    # THE EQUIVALENCE, swept rather than argued. With the flag off the executor
+    # must decide exactly what the rule before 728a4a4 decided:
+    #
+    #     return r if abs(r) > args.max_join_r else None
+    #
+    # so the old predicate is written out here and the two are compared at
+    # every interesting r, including both sides of the boundary and both sides
+    # of the 1R structural bound - which the flag-off path must NOT reach,
+    # because it returns first.
+    entry, risk = 4350.0, 10.0
+    held_base = dict(BOOK, side='LONG', entry_price=entry, stop=entry - risk,
+                     target=entry + 2 * risk)
+    mismatches = []
+    for r in (-2.0, -1.5, -1.01, -1.0, -0.99, -0.5, -0.26, -0.25, -0.24,
+              0.0, 0.24, 0.25, 0.26, 0.5, 1.0, 2.0):
+        MT5.deals = []
+        _, sent, _ = drive_at(held_base, entry + r * risk)
+        joined = len(sent) == 1
+        old_rule_joins = not (abs(r) > 0.25)
+        if joined != old_rule_joins:
+            mismatches.append((r, joined, old_rule_joins))
+    check("flag off is EXACTLY the pre-728a4a4 symmetric rule, swept over 16 drifts",
+          not mismatches, f"disagreed at {mismatches}")
+
+    # And the flag does turn it back on, so the default is a choice rather than
+    # a path that no longer exists.
+    MT5.deals = []
+    _, sent, _ = drive_at(held_base, entry - 0.5 * risk, favourable=True)
+    check("with the flag, a 0.50R better price joins again", len(sent) == 1, f"sent {len(sent)}")
+
+    # The structural bounds are the flag's, not the default's: with the flag
+    # off the 1R case is refused by the symmetric bound long before the stop
+    # bound is consulted, so its reason must be the flag's, not the stop's.
+    MT5.deals = []
+    _, sent, rows = drive_at(held_base, held_base['stop'] - 0.5)
+    reasons = [r.get('reason', '') for r in rows if r['kind'] == 'not-adopted']
+    check("past the stop with the flag off: refused by the symmetric bound, not the stop bound",
+          len(sent) == 0 and any('--allow-favourable-join' in str(x) for x in reasons)
+          and not any('already lost' in str(x) for x in reasons),
+          f"{reasons}")
+
+
+def the_launcher_can_ask_what_the_rule_is() -> None:
+    """`--print-join-mode` exists so a launcher never has to CLAIM the mode.
+
+    A hardcoded "symmetric" string in a launcher is a record that agrees with
+    the code today and disagrees the day someone flips the default - the defect
+    this repo spent 2026-09-17 removing. The sentence lives beside the flag
+    that decides it and the launcher echoes it verbatim.
+    """
+    section("the join mode, asked rather than claimed")
+
+    import subprocess
+    exe = sys.executable
+    script = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'mt5_executor.py')
+
+    def ask(*flags):
+        out = subprocess.run([exe, script, '--print-join-mode', *flags],
+                             capture_output=True, text=True)
+        return out.returncode, out.stdout.strip(), out.stderr.strip()
+
+    rc, line, err = ask()
+    check("the query exits 0 without the required trading arguments", rc == 0, f"rc={rc} err={err}")
+    check("one line, and it says symmetric by default",
+          line.count('\n') == 0 and 'symmetric' in line and '0.25R' in line, repr(line))
+
+    rc, line, _ = ask('--allow-favourable-join')
+    check("with the flag it says one-sided", rc == 0 and 'one-sided' in line and 'TAKEN' in line,
+          repr(line))
+
+    rc, line, _ = ask('--max-join-r=0.4')
+    check("it reports the bound it was actually given, not a hardcoded 0.25",
+          rc == 0 and '0.4R' in line, repr(line))
 
 
 def main() -> int:
@@ -1095,6 +1217,8 @@ def main() -> int:
     a_partial_fill_is_not_a_fill()
     the_published_times_are_utc()
     a_better_price_is_not_a_reason_to_sit_out()
+    favourable_joins_are_off_by_default()
+    the_launcher_can_ask_what_the_rule_is()
     print(f"\n{'all checks passed' if not FAIL else str(FAIL) + ' CHECK(S) FAILED'}")
     return 1 if FAIL else 0
 
