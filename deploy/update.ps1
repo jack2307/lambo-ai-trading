@@ -1,20 +1,52 @@
 # Pull, rebuild, restart. RUN THIS ON THE SERVER, every time there is a change.
 #
 #   powershell -NoProfile -ExecutionPolicy Bypass -File deploy\update.ps1
+#   powershell -NoProfile -ExecutionPolicy Bypass -File deploy\update.ps1 -ServerOnly
 #   powershell -NoProfile -ExecutionPolicy Bypass -File deploy\update.ps1 -NoRestart
 #   powershell -NoProfile -ExecutionPolicy Bypass -File deploy\update.ps1 -AllowOrphans
 #
-# It REFUSES while a real-money account is holding a position, because stopping
-# the executors leaves that position with nobody mirroring the book's exit.
-# -AllowOrphans is the override, and what refusing costs is printed where it
-# happens rather than left for the reader to weigh.
+# TWO MODES, AND THEY DIFFER IN WHAT THEY KILL.
+#
+#   (default)     the whole desk: executors, traders, pollers and fd-api stop,
+#                 everything but the mirrors comes back. REFUSES while a
+#                 real-money account is holding, because stopping the executors
+#                 leaves that position with nobody mirroring the book's exit;
+#                 -AllowOrphans is the override, and what refusing costs is
+#                 printed where it happens rather than left for the reader.
+#   -ServerOnly   fd-api and the watch, and NOTHING else. Executors, traders
+#                 and pollers are never signalled. Nothing is orphaned, so an
+#                 open position is NAMED and does not refuse.
+#
+# The two cannot be blended: -ServerOnly with a flag that only means something
+# in the full mode is refused rather than interpreted, because a flag that is
+# inert is indistinguishable from a flag that was understood.
+#
+# EVERY IRREVERSIBLE STAGE PRINTS WHAT IT IS ABOUT TO DO BEFORE DOING IT, and
+# every artefact it replaces is rolled aside with a timestamp rather than
+# deleted. See docs/decisions/2026-09-17-deploy-staleness.md: the incident that
+# prompted that note was a 13 MB binary with tonight's mtime and last week's
+# contents, and mtime is the number a reader instinctively trusts.
 #
 # The desk is stopped before anything is rebuilt and started again after, in an
-# order that matters: the executors go down FIRST and come up LAST. An executor
-# talking to an fd-api that is mid-restart reads no book at all, and its rule
-# for "the book is flat and the account is not" is to close the position - so a
-# restart with the mirrors still running would flatten every live trade on the
-# way past.
+# order that matters: the executors go down FIRST and come up LAST.
+#
+# THE REASON THIS FILE USED TO GIVE FOR THAT WAS WRONG, and it is corrected
+# here rather than quietly replaced because it is the reason -ServerOnly looked
+# dangerous. It said: "an executor talking to an fd-api that is mid-restart
+# reads no book at all, and its rule for 'the book is flat and the account is
+# not' is to close the position - so a restart with the mirrors still running
+# would flatten every live trade on the way past."
+#
+# It does not. mt5_executor.py catches the failed read and never reaches the
+# reconciler: `api-unreachable` logs, writes a snapshot, sleeps and continues,
+# and `run-missing` does the same. A mirror cannot close a position on a book
+# it could not read.
+#
+# What WOULD do it is narrower and still worth the ordering: an fd-api that
+# answers, with the run present, and its book flat - a restarted process whose
+# paper state came back incomplete. That is a live risk and it is why the full
+# mode still stops the mirrors first. But it is not the unreachable window, and
+# -ServerOnly is safe across the unreachable window for exactly that reason.
 param(
     [string]$Root = '',
     [switch]$NoRestart,
@@ -31,10 +63,49 @@ param(
     # So a deploy taken over an open real position refuses, and this is the
     # word that overrides it. What refusing COSTS is written out at the point
     # where it happens, below; it is not free and it is not small.
-    [switch]$AllowOrphans
+    [switch]$AllowOrphans,
+
+    # Restart fd-api and the watch, and touch nothing else.
+    #
+    # For the deploy that moves the binary and the client while the mirrors go
+    # on running the Python they started with. That is not a lesser version of
+    # the full mode, it is a different intention: the full mode says "the desk
+    # is going down and coming back", this one says "the server process is
+    # being replaced underneath a desk that stays up".
+    #
+    # The executors are not signalled at all, so nothing is orphaned and an
+    # open position does not refuse - it is named, because a person running a
+    # deploy while the account is holding should see that on the screen even
+    # when it is safe.
+    #
+    # What it does NOT do, stated because it is the thing someone will assume:
+    # the running executors keep the Python they were launched with. A change
+    # to mt5_executor.py is on disk and not in effect after this mode, and the
+    # run prints which books are still on old code rather than leaving that to
+    # be discovered.
+    [switch]$ServerOnly
 )
 
 $ErrorActionPreference = 'Stop'
+
+# ---- the modes cannot be blended, and this is checked before anything moves ----
+#
+# Refused rather than ignored. A flag that is silently inert reads exactly like
+# a flag that was understood, and the operator who typed -AllowOrphans believes
+# they have authorised something. In -ServerOnly nothing is orphaned, so that
+# authorisation has no referent: the honest answer is to stop and say so.
+if ($ServerOnly -and $AllowOrphans) {
+    Write-Host '-ServerOnly and -AllowOrphans contradict each other.' -ForegroundColor Red
+    Write-Host '  -ServerOnly orphans nothing: the executors are never signalled, so there is' -ForegroundColor Red
+    Write-Host '  nothing for -AllowOrphans to permit. If you meant the full deploy, drop' -ForegroundColor Red
+    Write-Host '  -ServerOnly. If you meant the server only, drop -AllowOrphans.' -ForegroundColor Red
+    exit 2
+}
+if ($ServerOnly -and $NoRestart) {
+    Write-Host '-ServerOnly and -NoRestart contradict each other: -ServerOnly IS a restart,' -ForegroundColor Red
+    Write-Host '  of fd-api and the watch. -NoRestart pulls and builds and starts nothing.' -ForegroundColor Red
+    exit 2
+}
 
 # TLS 1.2, explicitly.
 #
@@ -82,6 +153,110 @@ function Stop-Desk {
     }
     Get-Process fd-api -ErrorAction SilentlyContinue | Stop-Process -Force
     Start-Sleep -Seconds 3
+}
+
+function Stop-Server {
+    # -ServerOnly's stop: fd-api alone. The watch is not killed here because
+    # `start_telegram.ps1` stops whatever is running before it starts a fresh
+    # copy, so calling that at the end both replaces the watch's code AND
+    # leaves it alive across the window where fd-api is down - which is the
+    # window worth watching. Same reasoning as the full mode's list above.
+    Get-Process fd-api -ErrorAction SilentlyContinue | Stop-Process -Force
+    Start-Sleep -Seconds 3
+}
+
+# ---------------------------------------------------------------- staleness
+#
+# Everything below exists because of one incident and one general fact.
+#
+# The incident: a build made with `cargo` missing from PATH left a plausible
+# 13 MB fd-api.exe in target/release. It was from before the day's changes.
+# The general fact: `Copy-Item` stamps the DESTINATION, so a binary built three
+# days ago and copied tonight carries tonight's mtime. mtime is worse than no
+# evidence, because it is the number a reader instinctively checks and it says
+# "fresh" exactly when the file is not.
+#
+# See docs/decisions/2026-09-17-deploy-staleness.md.
+
+function Hash-Of([string]$path) {
+    if (-not (Test-Path $path)) { return $null }
+    try { return (Get-FileHash -Path $path -Algorithm SHA256).Hash.Substring(0, 12) } catch { return $null }
+}
+
+function Roll-Aside([string]$path, [string]$stamp) {
+    # COPIED aside, not moved. The note says an old artefact is rolled aside
+    # and never deleted; a move would also satisfy that and would leave the
+    # tree without a binary or without a client if the build then failed, which
+    # trades one silent failure for a louder one. A copy costs disk and keeps
+    # both properties.
+    if (-not (Test-Path $path)) { return $null }
+    $dest = "$path.$stamp"
+    try {
+        Copy-Item -Path $path -Destination $dest -Recurse -Force -ErrorAction Stop
+        return $dest
+    } catch {
+        Write-Host "   could not roll $path aside: $($_.Exception.Message)" -ForegroundColor Yellow
+        return $null
+    }
+}
+
+function Assert-BundleReferenced([string]$dist) {
+    # The client is read from disk at runtime, so a stale ui/dist is served
+    # forever and is internally consistent while it does it - index.html
+    # references its own hashed bundle and that file is there, so nothing 404s.
+    #
+    # Check the REFERENCED name and never a directory listing. The hand check
+    # done on the night this was written grepped the oldest index-*.js in the
+    # directory, because `ls | head -1` is not "newest" and a dozen generations
+    # are kept. The reference is the only name that means anything.
+    $index = Join-Path $dist 'index.html'
+    if (-not (Test-Path $index)) { return @{ ok = $false; why = "no index.html in $dist" } }
+    $html = Get-Content $index -Raw
+    $m = [regex]::Matches($html, '(?:src|href)="(?<p>[^"]*?/assets/[^"]+?\.(?:js|css))"')
+    if ($m.Count -eq 0) { return @{ ok = $false; why = "index.html references no /assets/ bundle" } }
+    $missing = @()
+    $seen = @()
+    foreach ($x in $m) {
+        $rel = $x.Groups['p'].Value.TrimStart('/')
+        $seen += $rel
+        if (-not (Test-Path (Join-Path $dist $rel))) { $missing += $rel }
+    }
+    if ($missing.Count -gt 0) {
+        return @{ ok = $false; why = "index.html references $($missing -join ', '), which $($dist) does not contain" }
+    }
+    return @{ ok = $true; refs = $seen }
+}
+
+function Wait-ForVersion([string]$expected, [int]$seconds = 30) {
+    # Readiness is the hash, not a 200.
+    #
+    # The old probe polled /api/paper/status and accepted any answer. A stale
+    # binary answers that endpoint perfectly - it is the same endpoint it has
+    # always served - so the probe could not fail for the reason it exists.
+    #
+    # FAILS CLOSED. /api/version is being added on another branch and is not on
+    # main yet. Until it is, this returns "missing" and the caller stops: an
+    # absent check must not read as a passed one, which is the whole thesis of
+    # the note this comes from.
+    $sawSomething = $false
+    foreach ($i in 1..$seconds) {
+        Start-Sleep -Seconds 1
+        try {
+            $r = Invoke-WebRequest -Uri 'http://127.0.0.1:8138/api/version' -UseBasicParsing -TimeoutSec 2
+            $v = $r.Content | ConvertFrom-Json
+            return @{ state = 'answered'; body = $v }
+        } catch {
+            $code = $null
+            try { $code = [int]$_.Exception.Response.StatusCode } catch { }
+            if ($code -eq 404 -or $code -eq 501) {
+                # The process is up and does not have the route. That is a
+                # different fact from "not listening yet" and stops the wait.
+                return @{ state = 'missing'; code = $code }
+            }
+            if ($code) { $sawSomething = $true }
+        }
+    }
+    return @{ state = $(if ($sawSomething) { 'erroring' } else { 'silent' }) }
 }
 
 # What the accounts are holding RIGHT NOW, read from the mirrors themselves.
@@ -142,6 +317,34 @@ function Get-Holdings([string]$root) {
 # time the whole set may legitimately be down already, which is exactly when a
 # relative measure says nothing. Same reasoning as MIRROR_STALE_MS in
 # telegram_notify.py, and the same 60 seconds.
+$holding = @()
+
+# ---- what this run will and will not touch, before it touches anything ----
+#
+# Printed rather than implied. The sentence that prompted -ServerOnly was "the
+# executors do NOT restart", said about a script whose first act was to kill
+# them: the intention and the script disagreed and nothing on the screen would
+# have said so. This is the screen saying so.
+Step 'what this run will touch'
+$running = @(Get-CimInstance Win32_Process -Filter "name='python.exe'" -ErrorAction SilentlyContinue |
+             Where-Object { $_.CommandLine -like '*mt5_executor.py*' })
+if ($ServerOnly) {
+    Note 'MODE: -ServerOnly'
+    Note '  will stop and restart : fd-api, the telegram watch'
+    Note "  will NOT touch        : $($running.Count) executor(s), the AI traders, the pollers"
+    Note '  the executors keep the Python they were launched with; a change to'
+    Note '  mt5_executor.py is on disk and NOT in effect after this run.'
+} elseif ($NoRestart) {
+    Note 'MODE: -NoRestart'
+    Note '  will stop and restart : nothing'
+    Note '  will do               : pull, and build unless -SkipBuild'
+} else {
+    Note 'MODE: full desk'
+    Note "  will STOP             : $($running.Count) executor(s), AI traders, pollers, fd-api"
+    Note '  will restart          : fd-api, pollers, AI traders, the telegram watch'
+    Note '  will NOT restart      : the executors - that stays a decision, by hand'
+}
+
 if (-not $NoRestart) {
     $holding = @(Get-Holdings $Root)
     if ($holding.Count -gt 0) {
@@ -153,7 +356,21 @@ if (-not $NoRestart) {
             Write-Host "   $what" -ForegroundColor $(if ($h.Real) { 'Red' } else { 'Gray' })
         }
         $atRisk = @($holding | Where-Object { $_.Real -and -not $_.Stale })
-        if ($atRisk.Count -gt 0 -and -not $AllowOrphans) {
+        # -ServerOnly names them and proceeds. It signals no executor, so no
+        # position here is being orphaned BY THIS RUN - and a check that
+        # refuses when it is not protecting anything teaches the operator to
+        # reach for the override, which is how the override stops meaning
+        # anything. Named anyway: a person deploying while the account holds
+        # money should see that, safe or not.
+        if ($atRisk.Count -gt 0 -and $ServerOnly) {
+            Write-Host ''
+            Write-Host "$($atRisk.Count) real position(s) are open. -ServerOnly does not touch their" -ForegroundColor Yellow
+            Write-Host 'executors, so they stay mirrored throughout and this is NOT a refusal.' -ForegroundColor Yellow
+            Write-Host 'fd-api does go down for a moment: the mirrors will log api-unreachable,' -ForegroundColor DarkGray
+            Write-Host 'hold what they have and reconcile again when it answers. They do not' -ForegroundColor DarkGray
+            Write-Host 'close a position on an unreadable book - that path logs and sleeps.' -ForegroundColor DarkGray
+        }
+        if ($atRisk.Count -gt 0 -and -not $ServerOnly -and -not $AllowOrphans) {
             Write-Host ''
             Write-Host 'This deploy stops the executors and does not start them again, so those' -ForegroundColor Yellow
             Write-Host 'position(s) would be left with nobody mirroring the book''s exit. Refusing.' -ForegroundColor Yellow
@@ -196,21 +413,70 @@ if ($before -eq $after) {
 if ($NoRestart -and $SkipBuild) { Write-Host "`nnothing else asked for"; exit 0 }
 
 # --------------------------------------------------------------------- stop
+#
+# BEFORE the build, in both restart modes, and that ordering is a staleness
+# check rather than tidiness: a running .exe cannot be overwritten on Windows.
+# With fd-api up, the link step fails, and in a hand-typed sequence that line
+# scrolls past and the OLD binary restarts green with every downstream check
+# passing. Stopping first turns a silent stale deploy into a build error.
+$exe = Join-Path $Root 'target\release\fd-api.exe'
+$dist = Join-Path $Root 'ui\dist'
+$stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
+$exeBefore = Hash-Of $exe
+
 if (-not $NoRestart) {
-    Step 'stopping the desk'
-    Stop-Desk
-    Note 'executors, traders, pollers and fd-api down'
+    if ($ServerOnly) {
+        Step 'stopping fd-api (and nothing else)'
+        Stop-Server
+        Note 'fd-api down; executors, traders and pollers untouched'
+    } else {
+        Step 'stopping the desk'
+        Stop-Desk
+        Note 'executors, traders, pollers and fd-api down'
+    }
 }
 
 # -------------------------------------------------------------------- build
 if (-not $SkipBuild) {
     Step 'building'
+    if ($NoRestart) {
+        # fd-api was not stopped, so the link will fail if it is running. Said
+        # before the attempt rather than diagnosed after it.
+        if (Get-Process fd-api -ErrorAction SilentlyContinue) {
+            Write-Error 'fd-api is running and -NoRestart did not stop it; the link step cannot overwrite a running exe. Stop it, or drop -NoRestart.'
+            exit 1
+        }
+    }
+    $rolled = Roll-Aside $exe $stamp
+    if ($rolled) { Note "previous binary kept at $(Split-Path $rolled -Leaf)" }
+    $rolledDist = Roll-Aside $dist $stamp
+    if ($rolledDist) { Note "previous client kept at $(Split-Path $rolledDist -Leaf)" }
+
     $cargo = (Get-Command cargo -ErrorAction SilentlyContinue).Source
     if (-not $cargo) { $cargo = "$env:USERPROFILE\.cargo\bin\cargo.exe" }
-    if (-not (Test-Path $cargo)) { Write-Error 'cargo not found; run bootstrap.ps1 -WithToolchain'; exit 1 }
+    # Named as the cause it is. The incident behind the staleness note was
+    # exactly this: cargo absent from PATH, the build not run, and a binary
+    # from before the day's changes left sitting there looking plausible.
+    if (-not (Test-Path $cargo)) { Write-Error 'cargo not found; run bootstrap.ps1 -WithToolchain. NOTHING WAS BUILT and the binary on disk is whatever was there before.'; exit 1 }
     & $cargo build --release -p fd-api
     if ($LASTEXITCODE -ne 0) { Write-Error 'cargo build failed'; exit 1 }
-    Note 'fd-api built'
+    if (-not (Test-Path $exe)) { Write-Error "cargo reported success but $exe does not exist"; exit 1 }
+    $exeAfter = Hash-Of $exe
+    # -48's check (2) is "stop before copy, hash the destination after and
+    # compare it to the source". THIS SCRIPT HAS NO COPY: cargo links straight
+    # into target\release, so source and destination are one file and the
+    # comparison degenerates to before-and-after. Said rather than simulated,
+    # because a check that pretends to compare two things that are one thing
+    # reads as stronger than it is. The copy case is pack.ps1 and the staged
+    # sequence, and it is theirs to make.
+    Note "fd-api built: $exeBefore -> $exeAfter (built in place; no copy step in this script)"
+    if ($exeBefore -and $exeAfter -eq $exeBefore -and $before -ne $after) {
+        # Not fatal - a pull that touched only Python or config legitimately
+        # leaves the binary identical - but it must be said, because the same
+        # observation with a Rust change in the pull is the stale-binary bug.
+        Write-Host '   NOTE: the pull moved HEAD and the binary is byte-identical.' -ForegroundColor Yellow
+        Write-Host '   Fine if the change was Python or config; wrong if it was Rust.' -ForegroundColor Yellow
+    }
 
     Push-Location ui
     # `npm ci` and not `npm install`: it installs exactly the lockfile, so the
@@ -224,6 +490,38 @@ if (-not $SkipBuild) {
     Note 'client built'
 }
 
+# The client is checked whether or not this run built it, because -SkipBuild is
+# the short path to serving last week's bundle and the check costs nothing.
+Step 'client bundle'
+$bundle = Assert-BundleReferenced $dist
+if (-not $bundle.ok) {
+    Write-Error "ui/dist is not serveable: $($bundle.why)"
+    exit 1
+}
+foreach ($r in $bundle.refs) { Note "index.html references $r, present" }
+
+# A run that restarts nothing still has to say which build is answering.
+#
+# The note's finding 4: -SkipBuild and -NoRestart turn off the step that would
+# have made the artefact current while leaving every downstream check green. So
+# the version is REPORTED here even when this run will not restart anything -
+# reported and not enforced, because nothing was deployed and there is nothing
+# to refuse.
+if ($NoRestart) {
+    Step 'what is currently answering'
+    $cur = Wait-ForVersion $after 3
+    if ($cur.state -eq 'answered') {
+        $h = "$($cur.body.git_hash)"
+        $tag = if ($h -eq $after) { 'matches the tree' } else { "DOES NOT match the tree ($after)" }
+        Note "fd-api is on $($h.Substring(0, [Math]::Min(12, $h.Length))) built $($cur.body.built_at_utc) - $tag"
+        if ($cur.body.git_dirty) { Note 'and it was built from a dirty tree' }
+    } elseif ($cur.state -eq 'missing') {
+        Note 'fd-api is up but has no /api/version - it predates the version stamp'
+    } else {
+        Note 'fd-api is not answering; nothing was restarted, so that is how it was found'
+    }
+}
+
 # -------------------------------------------------------------------- start
 if (-not $NoRestart) {
     Step 'starting the desk'
@@ -232,29 +530,86 @@ if (-not $NoRestart) {
 
     Start-Process -FilePath (Join-Path $Root 'target\release\fd-api.exe') -WorkingDirectory $Root -WindowStyle Hidden `
         -RedirectStandardOutput (Join-Path $logs 'fd-api.out') -RedirectStandardError (Join-Path $logs 'fd-api.err')
-    Note 'fd-api starting; waiting for it to answer'
+    Note 'fd-api starting; waiting for it to report its version'
 
-    # Waited for rather than slept past. Everything below posts to it, and a
-    # poller that starts against a socket nobody is listening on logs an error
-    # and carries on as though the desk were simply quiet.
-    $ready = $false
-    foreach ($i in 1..30) {
-        Start-Sleep -Seconds 1
-        try {
-            Invoke-WebRequest -Uri 'http://127.0.0.1:8138/api/paper/status' -UseBasicParsing -TimeoutSec 2 | Out-Null
-            $ready = $true
-            break
-        } catch { }
+    # Readiness is the HASH, not a 200. See Wait-ForVersion.
+    $v = Wait-ForVersion $after 30
+    if ($v.state -eq 'missing') {
+        Write-Error ("fd-api is up but has no /api/version (HTTP $($v.code)). That endpoint is " +
+                     'the only check that can tell a fresh binary from a stale one, so this ' +
+                     'run FAILS CLOSED rather than reporting a deploy it cannot verify. It ' +
+                     'lands on main tonight; until then, verify by hand and deploy with the ' +
+                     'staged sequence. fd-api IS running.')
+        exit 1
     }
-    if (-not $ready) { Write-Error 'fd-api did not answer within 30s; read data\paper\logs\fd-api.err'; exit 1 }
-    Note 'fd-api answering'
+    if ($v.state -ne 'answered') {
+        Write-Error "fd-api did not report a version within 30s ($($v.state)); read data\paper\logs\fd-api.err"
+        exit 1
+    }
+    # Field names read from crates/fd-api/src/version.rs, not from a summary of
+    # it: `git_hash`, `git_dirty`, `built_at_ms`, `built_at_utc`. GIT_HASH is a
+    # full 40-character sha or the literal "unknown" - never empty, which is
+    # what makes an equality test safe here.
+    $got = "$($v.body.git_hash)"
+    $builtAt = "$($v.body.built_at_utc)"
+    if ($got -eq 'unknown') {
+        Write-Error ("fd-api reports git_hash 'unknown': git was unreachable when this binary " +
+                     "was compiled, so nothing can say what source it contains. Built $builtAt. " +
+                     'Rebuild it somewhere git works; do not deploy a binary that cannot name itself.')
+        exit 1
+    }
+    Note "fd-api answering, built from $($got.Substring(0, [Math]::Min(12, $got.Length))) at $builtAt"
+    if ($got -ne $after) {
+        # Both hashes and the build time, then the two causes, because the
+        # message is the whole value of the check. And NEVER a rebuild from
+        # here: a deploy that quietly fixes what it just caught destroys the
+        # evidence of how the server got into this state.
+        Write-Host ''
+        Write-Host 'THE RUNNING BINARY IS NOT THE COMMIT THIS DEPLOY PULLED.' -ForegroundColor Red
+        Write-Host "  tree HEAD after the pull : $after" -ForegroundColor Red
+        Write-Host "  binary reports built from: $got" -ForegroundColor Red
+        Write-Host "  binary built at          : $builtAt" -ForegroundColor Red
+        Write-Host '  Two causes, and they need different answers:' -ForegroundColor Yellow
+        Write-Host '   1. it was never rebuilt - cargo missing from PATH, or -SkipBuild.' -ForegroundColor Yellow
+        Write-Host '      The binary on disk is whatever was there before the pull.' -ForegroundColor Yellow
+        Write-Host '   2. the write failed because the old exe was still running, so the' -ForegroundColor Yellow
+        Write-Host '      link could not overwrite it and the old one started again green.' -ForegroundColor Yellow
+        Write-Host '  Not rebuilding from here on purpose: fixing this automatically would' -ForegroundColor DarkGray
+        Write-Host '  erase which of the two happened, and that is the thing worth knowing.' -ForegroundColor DarkGray
+        exit 1
+    }
+    if ($v.body.git_dirty) {
+        # Named, never refused, and -48 is right about why: this is the state
+        # most likely to be running during an incident, and a check that
+        # refuses it means the person firefighting cannot deploy. A dirty build
+        # has a hash that is true and a content that is not; the deploy's job
+        # is to say which state the server is in, not to have an opinion.
+        Write-Host '   WARNING: built from a DIRTY tree. The hash above names a commit whose' -ForegroundColor Yellow
+        Write-Host '   contents this binary does not contain. Running, and said out loud.' -ForegroundColor Yellow
+    }
 
-    foreach ($s in 'start_pollers.ps1', 'start_ai_traders.ps1', 'start_telegram.ps1') {
+    # -ServerOnly restarts the watch and nothing else. The pollers and traders
+    # were never stopped, so starting them here would start a SECOND copy of
+    # each - the mutex in start_pollers would refuse, noisily, which is a
+    # failure invented by this script rather than found by it.
+    $toRun = if ($ServerOnly) { @('start_telegram.ps1') } else { @('start_pollers.ps1', 'start_ai_traders.ps1', 'start_telegram.ps1') }
+    foreach ($s in $toRun) {
         $p = Join-Path $Root "py\live\$s"
         if (Test-Path $p) {
             Note "running $s"
             powershell -NoProfile -ExecutionPolicy Bypass -File $p | Out-Null
         }
+    }
+
+    if ($ServerOnly) {
+        $still = @(Get-CimInstance Win32_Process -Filter "name='python.exe'" -ErrorAction SilentlyContinue |
+                   Where-Object { $_.CommandLine -like '*mt5_executor.py*' })
+        Write-Host ''
+        Write-Host "$($still.Count) executor(s) ran throughout and were not signalled." -ForegroundColor Green
+        Write-Host 'They are still on the Python they were LAUNCHED with, not what was just' -ForegroundColor Yellow
+        Write-Host 'pulled. A change to mt5_executor.py needs start_executors.ps1 to take' -ForegroundColor Yellow
+        Write-Host 'effect, and that is a separate decision with its own orphan check.' -ForegroundColor Yellow
+        exit 0
     }
 
     Write-Host "`nThe mirrors are NOT started." -ForegroundColor Yellow
