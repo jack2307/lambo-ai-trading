@@ -57,6 +57,9 @@ pub fn router(state: Arc<AppState>, ui: Option<PathBuf>) -> Router {
         .route("/api/paper/start", post(paper::start))
         .route("/api/paper/bar", post(paper::bar))
         .route("/api/paper/tick", post(paper::tick))
+        // The open of a bar that has just started. Separate from `tick` on
+        // purpose: this one can open a position, `tick` never touches a run.
+        .route("/api/paper/open", post(paper::open_now))
         .route("/api/paper/stop", post(paper::stop))
         .route("/api/paper/status", get(paper::status))
         .route("/api/paper/accounts", get(paper::accounts))

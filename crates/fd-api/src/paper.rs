@@ -362,6 +362,80 @@ impl PaperRun {
         format!("{}:{}", self.config.id, self.bars.last().map_or(0, |b| b.time))
     }
 
+    /// The open of a bar that has just STARTED, before it closes: fill the
+    /// pending intent at it, and nothing else.
+    ///
+    /// `None` when there is nothing to do — no bar advanced over yet, a time
+    /// at or before the last bar, or no pending intent. The window is NOT
+    /// pushed to and the strategy is NOT asked: this bar has not happened, and
+    /// the only thing that can be known about it is where it opened.
+    ///
+    /// The counterfactual is seeded here as well as in [`PaperRun::accept`],
+    /// and for the same reason it is seeded there: a shadow cloned from a book
+    /// that has already taken an advised fill inherits that fill, and the
+    /// comparison it exists to make is gone. It must be taken before anything
+    /// on this bar touches the book, and that is now here.
+    ///
+    /// The shadow itself is not filled early. It fills when the bar closes, at
+    /// the same `apply_costs(open)` — the same price, the same stamp, the same
+    /// trade. What the counterfactual measures is advice, not wall clock, so
+    /// there is nothing for it to learn from filling sooner.
+    // Eight arguments, inherited verbatim from the call this was extracted
+    // from: the same allow `open_position` carries, for the same reason.
+    #[allow(clippy::too_many_arguments)]
+    pub fn accept_open(
+        &mut self,
+        time: i64,
+        open: f64,
+        strategy: &dyn Strategy,
+        params: &Params,
+        rules: &TradingRules,
+        guards: Option<&Guards>,
+        bar_ms: i64,
+    ) -> Option<StepReport> {
+        // The same ordering rule the closed-bar path applies, deliberately:
+        // strictly newer than the last bar, gaps included. See
+        // `PaperBook::fill_open` for why it is not adjacency.
+        let last = self.bars.last()?;
+        if time <= last.time {
+            return None;
+        }
+        self.book.pending()?;
+
+        // `atr_prev` is the sizing ATR of the last CLOSED bar, and it must be
+        // computed over the same bars the closed-bar path will use - not over
+        // the window as it stands.
+        //
+        // `accept` pushes the arriving bar and then TRIMS the window's head to
+        // `window` bars, and the indicators are computed on that window rather
+        // than on the whole history. An indicator with memory never entirely
+        // forgets its seed, so a window starting one bar later gives a
+        // slightly different value: measured here, an ATR-derived stop moved
+        // by 4e-6 of a point, which is nothing to a trade and is still the
+        // same fill getting two different stops depending on which half of
+        // this change filled it. This is the residue the module docstring
+        // names, and the point of the split is that ONLY the clock moves.
+        //
+        // So: compute over the window the trim will leave. The test that
+        // caught this is `the_open_fills_at_the_same_price_the_close_would_have`.
+        let window = self.config.window.max(1);
+        let start = (self.bars.len() + 1).saturating_sub(window);
+        let bars = &self.bars[start..];
+        let mut ind = compute_indicators(bars, &strategy.indicators(params)).unwrap_or_default();
+        ensure_fallback_atr(bars, params, rules, &mut ind);
+        let atr_prev = ind
+            .get(&sizing_atr_key(params, rules))
+            .and_then(|s| s.last().copied())
+            .filter(|v| v.is_finite());
+
+        let pending_id = self.pending_id();
+        if self.shadow.is_none() {
+            self.shadow = Some(self.book.clone());
+        }
+        let advice = self.advice.take().filter(|a| a.intent_id == pending_id);
+        self.book.fill_open(time, open, atr_prev, rules, guards, bar_ms, advice.as_ref())
+    }
+
     /// One closed bar. `Err` for a bar older than the last or malformed;
     /// `Ok(Seen)` for the last bar again.
     pub fn accept(
@@ -1862,6 +1936,116 @@ fn feed_run(state: &AppState, run: &mut PaperRun, bar: Bar) -> Result<RunBarResp
         refused: report.refused,
         gap,
     })
+}
+
+/// `POST /api/paper/open`: the open of a bar that has just started.
+///
+/// Deliberately not folded into `/api/paper/tick`. That route is documented as
+/// "never in a run, never on disk, never read by anything in this module's
+/// decision path", it is posted for streams no run is on, and it fires every
+/// few seconds. A route that can open a position against a funded account
+/// should be the one thing it is, and be auditable by its name.
+#[derive(Debug, Deserialize)]
+pub struct OpenRequest {
+    pub market: String,
+    pub tf: String,
+    /// The bar's own stamp — the bucket it belongs to, not the moment it was
+    /// read. The same `time` the closed bar will carry when it is posted.
+    pub time: i64,
+    pub open: f64,
+}
+
+/// What one run did with an open.
+#[derive(Debug, Serialize)]
+pub struct RunOpenResponse {
+    pub id: String,
+    /// True when this open filled a pending entry. False is the ordinary
+    /// answer: most opens arrive with nothing waiting.
+    pub opened: bool,
+    /// The guard or advisor that refused the entry this open would have
+    /// filled, if one did — the refusal happens here now, a bar earlier than
+    /// it used to, and answers the same.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub refused: Option<String>,
+}
+
+/// One run, one open. The record-keeping is deliberately the same as the
+/// closed-bar path's: an entry filled here writes the same `opened` line with
+/// the same two clocks, so nothing downstream can tell which half filled it
+/// except by the gap between them, which is the whole point.
+fn feed_open(state: &AppState, run: &mut PaperRun, time: i64, open: f64) -> Result<RunOpenResponse, ApiError> {
+    let id = run.config.id();
+    let (rules, guards) = rules_and_guards(state, &run.config)?;
+    let (strategy, params) = resolve(&state.registry, &run.config, &rules.news_currencies)?;
+    let bar_ms = timeframe_ms(&run.config.tf).unwrap_or(0);
+    let halted = Halted { inner: &strategy };
+    let driver: &dyn Strategy = if run.paused { &halted } else { &strategy };
+
+    let Some(report) = run.accept_open(time, open, driver, &params, &rules, guards.as_ref(), bar_ms) else {
+        return Ok(RunOpenResponse { id, opened: false, refused: None });
+    };
+
+    let learned_at = now_ms();
+    if report.opened {
+        run.opened_learned_at = Some(learned_at);
+    }
+    let decided_at = run.pending_decided_at.take();
+    persist(&state.data, run)?;
+
+    if let Some(why) = &report.refused {
+        record(&state.data, &id, &json!({ "kind": "refused", "time": time, "reason": why }))?;
+    }
+    if report.opened {
+        if let Some(p) = run.book.position.as_ref() {
+            record(
+                &state.data,
+                &id,
+                &json!({
+                    "kind": "opened",
+                    "time": p.entry_time,
+                    "learned_at": learned_at,
+                    "side": p.side.as_str(),
+                    "entry_price": p.entry_price,
+                    "lots": p.lots,
+                    "decided_at": decided_at,
+                }),
+            )?;
+        }
+    }
+    Ok(RunOpenResponse { id, opened: report.opened, refused: report.refused })
+}
+
+/// `POST /api/paper/open`
+///
+/// The bar stamped `time` has just opened at `open`; fill anything waiting on
+/// it. Every run on the stream is offered it, and a run with nothing pending,
+/// or one already past this bar, simply answers `opened: false` — an open is
+/// posted four times an hour whether or not anybody is waiting for it, so
+/// "nothing to do" is the ordinary answer and is not an error.
+///
+/// 404 when no run is on the stream, as `/api/paper/bar` does. There is no
+/// 400-when-all-refused equivalent: a refusal here is a guard doing its job on
+/// one run, not a malformed post.
+pub async fn open_now(
+    State(state): State<Arc<AppState>>,
+    Json(request): Json<OpenRequest>,
+) -> Result<Json<serde_json::Value>, ApiError> {
+    if !request.open.is_finite() || request.open <= 0.0 {
+        return Err(ApiError::BadRequest(format!("open {} is not a price", request.open)));
+    }
+    if request.time <= 0 {
+        return Err(ApiError::BadRequest(format!("time {} is not a bar stamp", request.time)));
+    }
+    let stream = stream_key(&request.market, &request.tf);
+    let mut runs = state.paper.lock().expect("paper runs");
+    let mut out = Vec::new();
+    for run in runs.values_mut().filter(|r| r.config.stream() == stream) {
+        out.push(feed_open(&state, run, request.time, request.open)?);
+    }
+    if out.is_empty() {
+        return Err(ApiError::NotFound(format!("no paper run for {stream}")));
+    }
+    Ok(Json(json!({ "time": request.time, "open": request.open, "runs": out })))
 }
 
 /// `POST /api/paper/bar`
