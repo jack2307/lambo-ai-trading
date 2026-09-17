@@ -245,6 +245,49 @@ try {
     # from an open position. It now does, and that check is below.
     $plan = @()
 
+    # What join rule the executors this run starts will actually use.
+    #
+    # ASKED, NEVER STATED, and the difference is the whole reason this is four
+    # lines of subprocess rather than one of string. A hardcoded "symmetric"
+    # here would be a record that agrees with the code today and disagrees the
+    # day someone flips the default - the same defect as a comment that was
+    # true when it was written, which this repository spent 2026-09-17
+    # removing from six places.
+    #
+    # So the executor is asked, and its answer is printed VERBATIM. The
+    # sentence lives in exactly one place - mt5_executor.py, beside the flag
+    # that decides it - and there is no second copy here to go stale. A third
+    # mode could appear tomorrow and this line would print it without anyone
+    # touching this file.
+    #
+    # `--print-join-mode` short-circuits before parse_args and before MT5 is
+    # imported, so this costs one interpreter start and cannot reach the order
+    # path. It honours any join flags it is given: nothing passes one today,
+    # and if the mode ever becomes per-account in accounts.toml, whoever adds
+    # it to $argv below must add it here too or this line starts lying.
+    #
+    # A FAILED ASK PRINTS THAT IT FAILED. It does not fall back to a guess -
+    # an unavailable answer and a wrong answer look identical to a reader at
+    # three in the morning, and only one of them is honest.
+    # Captured WHOLE and then indexed, never piped into `Select-Object -First
+    # 1`. That pipeline terminates the upstream command early and leaves
+    # $LASTEXITCODE at -1 even when the query succeeded and printed the right
+    # line - measured, not feared: the first version of this read the correct
+    # sentence, saw -1, discarded it, and printed COULD NOT ASK every single
+    # time. It fails in the safe direction, which is exactly why nobody would
+    # have noticed: the fallback message looks deliberate.
+    $joinMode = ''
+    try {
+        $out = & $Python (Join-Path $Root 'py\live\mt5_executor.py') '--print-join-mode' 2>&1
+        if ($LASTEXITCODE -eq 0 -and $out) { $joinMode = [string](@($out)[0]) }
+    } catch { $joinMode = '' }
+    if ($joinMode) {
+        Write-Host "  $joinMode" -ForegroundColor Cyan
+    } else {
+        Write-Host '  join rule: COULD NOT ASK the executor (--print-join-mode failed).' -ForegroundColor Yellow
+        Write-Host '  Not guessing. Read join_check in py\live\mt5_executor.py before starting.' -ForegroundColor Yellow
+    }
+
     foreach ($acct in $accounts) {
         # `enabled = false` means this account does not run. Checked HERE and
         # not in accounts.py, which is a reader: `--id` deliberately answers
