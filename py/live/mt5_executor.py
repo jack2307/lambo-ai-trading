@@ -23,18 +23,32 @@ What it does, every `--poll` seconds:
 
 What it refuses, in code, before any order:
 
-* A REAL account, unless THREE independent things agree: `--allow-real` is
-  on the command line, `config/accounts.toml` says `real_money = true` for
-  the account named by `--account`, and `--login` matches the account the
-  terminal is actually holding. Any one missing and the process exits 3
-  having sent nothing.
+* A REAL account, unless three things agree: `--allow-real` is on the command
+  line, `config/accounts.toml` says `real_money = true` for the account named
+  by `--account`, and `--login` matches the account the terminal is actually
+  holding. Any one missing and the process exits 3 having sent nothing.
 
-  Until 2026-09-17 this was simply "demo only, and no flag disables it".
-  The owner funded a real cent account and asked for it, so the wall became
-  a permission that has to be spent three times over. The shape is the one
-  `-Live` already uses: a file can only ever make a run SAFER by itself,
-  and making it riskier costs a word on the command line too. A forgotten
-  flag, a stale config, or the wrong terminal — each alone still stops it.
+  They are three CHECKS. They are not three independent decisions, and the
+  word "independent" was wrong here until 2026-09-17. Started the documented
+  way, through `start_executors.ps1`, the launcher reads `real_money` from the
+  registry and adds `--allow-real` itself, and `--login` comes from the same
+  `[[account]]` block that granted it - so one edit to that block plus one
+  typed `-AllowReal` spends the whole permission, and the third check is asked
+  a question the same block supplied the answer to. Only a hand-started
+  executor puts three separate hands on it.
+
+  What the third check IS worth, on every path: it is the only one of the
+  three that asks the TERMINAL rather than a file. A registry that grants
+  `vantage-cent` cannot reach an account the terminal is not holding, so a
+  terminal logged into the wrong account still stops everything, whatever the
+  file says and whatever was typed. That is a real guarantee, and it is the
+  one to say out loud instead of a count.
+
+  Until 2026-09-17 this was simply "demo only, and no flag disables it". The
+  owner funded a real cent account and asked for it, so the wall became a
+  permission that can be granted. The shape is the one `-Live` already uses: a
+  file can only ever make a run SAFER by itself, and making it riskier costs a
+  word on the command line too.
 * `account_info().login != --login` — exits, demo or real. A terminal that
   is not the one you named is not the one you meant.
 * An account directory whose recorded login is not this one — exits. See
@@ -1092,9 +1106,33 @@ def main() -> int:
         while True:
             if stop_file.exists() or stop_all.exists():
                 which = "STOP file" if stop_file.exists() else "desk-wide STOP file"
-                for p in positions():
-                    close(p, which)
+                # A list and not a generator: `all(close(p) for p in ...)`
+                # would stop closing at the first refusal and leave the rest of
+                # the positions open, which is the opposite of what a kill
+                # switch is for.
+                [close(p, which) for p in positions()]
                 log(out, "stopped", reason=f"{which} present")
+                # The last snapshot, and the reason this path has one.
+                #
+                # Until 2026-09-17 this returned here, so `broker.json` kept
+                # whatever it said on the poll before the STOP file appeared -
+                # a position that is now closed, claimed as open, for as long
+                # as the directory exists. The desk reads that file, not this
+                # log, so the screen went on showing a holding that was not
+                # there and no reader could tell a clean stop from a failed one.
+                #
+                # `positions()` is asked AGAIN rather than reusing the list
+                # above: what belongs in the record is what the account holds
+                # after the close attempt, not what it held before. If a close
+                # was refused the position is still in it, `blocked` still
+                # carries the broker's reason from `send()`, and the pair says
+                # "stopped while still holding, and here is why" - which is the
+                # state a person has to act on.
+                #
+                # `standing_out` is cleared because it describes a trade being
+                # sat out by a running mirror, and this one has stopped.
+                standing_out = None
+                snapshot(positions(), None)
                 return 0
             try:
                 run = read_status(args.api, args.run)

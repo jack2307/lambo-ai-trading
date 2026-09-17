@@ -465,10 +465,95 @@ def the_stamp_knows_whose_directory_it_is() -> None:
           "does not contain an account record" in stamped('"just a string"'))
 
 
+# ---------------------------------------------------------------------------
+# 4 - the kill switch leaves a true record behind it
+# ---------------------------------------------------------------------------
+
+def stop_leaves_a_true_record() -> None:
+    """The STOP path used to return before writing a snapshot.
+
+    So `broker.json` kept whatever it said on the poll before the file
+    appeared - a closed position claimed as open, for as long as the directory
+    exists. The desk and the Telegram watch read that file, not executor.jsonl,
+    so nothing downstream could tell a clean stop from a refused one.
+    """
+    section("the kill switch's last snapshot")
+
+    held = Obj(ticket=1, type=MT5.POSITION_TYPE_BUY, volume=0.05, price_open=4311.85,
+               price_current=4311.85, sl=4301.85, tp=4331.85, profit=0.0, swap=0.0,
+               time=1_000_000, magic=X.magic_for("t"), symbol="XAUUSD.sc")
+
+    def with_stop(close_succeeds: bool) -> dict:
+        """Drive one poll with a STOP file present and one position open."""
+        tmp = Path(tempfile.mkdtemp(prefix="sgst-stop-"))
+        real_root, real_status = X.ROOT, X.read_status
+        real_send, argv = MT5.order_send, sys.argv
+        try:
+            MT5.sent = []
+            MT5.account = CENT
+            MT5.info = info_for("XAUUSD.sc")
+            MT5.margin = 5.0
+            MT5.price = SYMBOLS["XAUUSD.sc"][4]
+            # The position is held until a close succeeds, exactly as the
+            # terminal would report it.
+            state = {"open": True}
+            MT5.positions_get = lambda **kw: ([held] if state["open"] else [])
+
+            def send_or_refuse(req):
+                MT5.sent.append(req)
+                if close_succeeds:
+                    state["open"] = False
+                    return Obj(retcode=MT5.TRADE_RETCODE_DONE, comment="ok", order=1,
+                               deal=1, price=req["price"])
+                return Obj(retcode=10027, comment="AutoTrading disabled by client",
+                           order=0, deal=0, price=0.0)
+
+            MT5.order_send = send_or_refuse
+            X.ROOT = tmp
+            X.read_status = lambda api, run: dict(RUN)
+            here = tmp / "data" / "live" / "acct" / "t"
+            here.mkdir(parents=True, exist_ok=True)
+            (here / "STOP").write_text("", encoding="utf-8")
+            sys.argv = ["mt5_executor.py", "--run=t", "--terminal=x", "--login=33705331",
+                        "--symbol=XAUUSD.sc", "--account=acct"]
+            rc = X.main()
+            snap = here / "broker.json"
+            return {"rc": rc, "sent": list(MT5.sent),
+                    "snapshot": json.loads(snap.read_text(encoding="utf-8"))
+                    if snap.exists() else None}
+        finally:
+            X.ROOT, X.read_status = real_root, real_status
+            MT5.order_send, sys.argv = real_send, argv
+            MT5.positions_get = lambda **kw: []
+            shutil.rmtree(tmp, ignore_errors=True)
+
+    ok = with_stop(close_succeeds=True)
+    check("a STOP file closes the open position", len(ok["sent"]) == 1, f"{ok['sent']}")
+    check("a snapshot is written on the way out", ok["snapshot"] is not None)
+    check("and it says the position is gone, not still open",
+          (ok["snapshot"] or {}).get("position") is None,
+          f"{(ok['snapshot'] or {}).get('position')}")
+    check("a clean stop leaves nothing in `blocked`",
+          (ok["snapshot"] or {}).get("blocked") is None,
+          f"{(ok['snapshot'] or {}).get('blocked')}")
+
+    # The case worth having a record of: the kill switch was thrown and the
+    # broker would not take the close. The old code returned with the screen
+    # showing a healthy mirror.
+    bad = with_stop(close_succeeds=False)
+    check("a refused close still writes a snapshot", bad["snapshot"] is not None)
+    check("and it still shows the position, because it is still held",
+          (bad["snapshot"] or {}).get("position") is not None)
+    check("and `blocked` carries the broker's refusal",
+          "10027" in str((bad["snapshot"] or {}).get("blocked")),
+          f"{(bad['snapshot'] or {}).get('blocked')}")
+
+
 def main() -> int:
     the_ceiling_measures_one_currency()
     both_size_guards_fail_closed()
     the_stamp_knows_whose_directory_it_is()
+    stop_leaves_a_true_record()
     print(f"\n{'all checks passed' if not FAIL else str(FAIL) + ' CHECK(S) FAILED'}")
     return 1 if FAIL else 0
 
