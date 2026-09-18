@@ -169,6 +169,38 @@ def log(path: Path, kind: str, **fields) -> None:
     print(f"{stamp} {kind} {json.dumps(fields, ensure_ascii=False)[:160]}", flush=True)
 
 
+# The longest order comment this account is MEASURED to accept.
+#
+# MT5 documents the limit as 31 characters. This desk's own record narrows it:
+# comments of 22 to 25 characters were accepted (every open, 10009), and
+# comments of exactly 31 were refused before leaving the terminal (every close,
+# `order_send` -> None, 1,389 of them). 25 is therefore not a guess at the
+# limit, it is the longest string this broker has actually taken.
+#
+# Deliberately NOT 31. Sitting on a documented boundary is what produced seven
+# hours of a mirror that could not exit, and the margin costs a few characters
+# of a comment nobody reads except in a deal history.
+COMMENT_MAX = 25
+
+
+def close_comment(run: str, why: str) -> str:
+    """The comment on a closing order, short enough to send.
+
+    Drops the `flowdesk ` prefix the open carries, because the run id alone is
+    already 16 characters on this desk and the reason has to fit beside it.
+    The reason is abbreviated rather than truncated: `[:25]` on a sentence
+    gives "ai-xau-terra-ctx book " - a word cut in half, in the one field a
+    person reads when asking why a position closed.
+    """
+    short = {
+        "book flat": "flat",
+        "side changed": "flip",
+        "STOP file": "stop",
+        "desk-wide STOP file": "stop",
+    }.get(why, why)
+    return f"{run} {short}"[:COMMENT_MAX]
+
+
 def magic_for(run: str) -> int:
     # A stable 31-bit magic per run id, so ten runs on one terminal never
     # touch each other's positions.
@@ -1017,11 +1049,28 @@ def main() -> int:
             partial = retcode == mt5.TRADE_RETCODE_DONE_PARTIAL
             ok = retcode in (mt5.TRADE_RETCODE_DONE, mt5.TRADE_RETCODE_PLACED)
             kind = "order" if ok else ("order-partial" if partial else "order-failed")
+            # `error` and `sent` are on every FAILURE line, and they are here
+            # because their absence cost this desk two winning trades.
+            #
+            # `order_send` returning None is the terminal refusing a request
+            # before it leaves the machine - a malformed field - and it sets
+            # `last_error()` saying which. That was never logged, so 1,389
+            # consecutive failures on the funded account recorded `retcode:
+            # null` and nothing else: a loop that said only that it was
+            # failing, never why, for seven hours. The request itself goes in
+            # too, minus nothing that matters, because the whole question on a
+            # None is what was in the dict.
+            failed_extra = {}
+            if not ok:
+                failed_extra = {
+                    "error": str(mt5.last_error()),
+                    "sent": {k: v for k, v in request.items() if k != "type_filling"},
+                }
             log(out, kind, action=what, retcode=retcode,
                 comment=getattr(result, "comment", None), ticket=getattr(result, "order", None),
                 deal=getattr(result, "deal", None),
                 price=getattr(result, "price", None), volume=filled, asked=asked,
-                requested=request.get("price"))
+                requested=request.get("price"), **failed_extra)
             # Carried into the snapshot so it leaves this machine. A refusal
             # that only ever reaches a log file is a book that quietly stopped
             # trading: the desk goes on deciding, the paper P&L goes on moving,
@@ -1044,13 +1093,58 @@ def main() -> int:
             return ok
 
         def close(pos, why: str) -> bool:
+            """Close one position at market.
+
+            THIS HAS NEVER ONCE SUCCEEDED, and the comment is why.
+
+            Measured 2026-09-18 across every `executor.jsonl` this desk has
+            written: 1,389 closes, all `order_send` returning None, and ZERO
+            successful closes ever, on any account. Opens from the same
+            terminal in the same minute returned 10009. Every earlier exit was
+            the broker's own stop or target, so nothing had ever needed this
+            path until a book went flat while the account still held - and
+            then the mirror was stuck, ds-ctx sat on a short through two book
+            winners it could not take.
+
+            The one field that varies with the outcome is the COMMENT, and it
+            varies perfectly. MT5 caps an order comment at 31 characters. The
+            close built `f"flowdesk {run} {why}"[:31]`, and for every run on
+            this desk that string is longer than 31, so the slice made every
+            close EXACTLY 31 - the boundary - while no open ever reached it:
+
+                open   flowdesk ai-xau-ds-ctx            22  10009
+                open   flowdesk ai-xau-terra-ctx         25  10009
+                close  flowdesk ai-xau-ds-ctx book fla   31  None
+                close  flowdesk ai-xau-terra-ctx side    31  None
+
+            Four runs, three reasons, one length, one outcome each way.
+
+            THIS IS EVIDENCE AND NOT PROOF. There is no terminal here to put a
+            31-character comment to, so what is established is the
+            correlation, not the mechanism - a field length that MT5 documents
+            as the limit, hit by every failing request and by no succeeding
+            one. The fix therefore does not bet on it alone: the comment is
+            bounded to 25, the length this account is MEASURED to accept, and
+            the other fields that differ from the open path are coerced to the
+            types MT5 expects rather than passed through as whatever the
+            terminal handed back. If the next failure is still None, the
+            `error` and `sent` now on every failed line say which field it is
+            without waiting seven hours to find out.
+            """
             tick = mt5.symbol_info_tick(args.symbol)
             is_long = pos.type == mt5.POSITION_TYPE_BUY
             req = {
-                "action": mt5.TRADE_ACTION_DEAL, "symbol": args.symbol, "volume": pos.volume, "position": pos.ticket,
+                "action": mt5.TRADE_ACTION_DEAL, "symbol": args.symbol,
+                # float() and int() rather than whatever `positions_get`
+                # returned. These are the close path's own fields - the open
+                # has no `position` at all - so they are where a type the
+                # binding rejects could hide, and coercing costs nothing.
+                "volume": float(pos.volume), "position": int(pos.ticket),
                 "type": mt5.ORDER_TYPE_SELL if is_long else mt5.ORDER_TYPE_BUY,
-                "price": tick.bid if is_long else tick.ask, "deviation": args.deviation, "magic": magic,
-                "comment": f"flowdesk {args.run} {why}"[:31], "type_time": mt5.ORDER_TIME_GTC, "type_filling": mt5.ORDER_FILLING_IOC,
+                "price": tick.bid if is_long else tick.ask, "deviation": int(args.deviation),
+                "magic": int(magic),
+                "comment": close_comment(args.run, why),
+                "type_time": mt5.ORDER_TIME_GTC, "type_filling": mt5.ORDER_FILLING_IOC,
             }
             return send(req, f"close {why}")
 

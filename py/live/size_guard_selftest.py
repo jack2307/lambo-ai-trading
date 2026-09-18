@@ -1207,6 +1207,128 @@ def the_launcher_can_ask_what_the_rule_is() -> None:
           rc == 0 and '0.4R' in line, repr(line))
 
 
+# ---------------------------------------------------------------------------
+# 11 - the close request, against the open request that works
+# ---------------------------------------------------------------------------
+
+def the_close_request_can_actually_be_sent() -> None:
+    """Closing had never once succeeded, and nothing said why.
+
+    Measured 2026-09-18 over every executor.jsonl this desk has written: 1,389
+    closes, all `order_send` returning None, ZERO successful closes ever, on
+    any account. Opens from the same terminal in the same minute returned
+    10009. Every earlier exit was the broker's own stop or target, so the path
+    was never exercised until a book went flat while the account still held -
+    and then the mirror was stuck through two winners it could not take.
+
+    The one field that varied with the outcome was the comment: MT5 caps it at
+    31, and `[:31]` put every close exactly on the boundary while no open ever
+    reached it. These checks pin the length, the shape against the open, and
+    that a failure can never again be invisible.
+    """
+    section("the close request")
+
+    # Every run on this desk, every reason, against the length the account is
+    # measured to accept. The old code produced exactly 31 for all of them.
+    for run in ('ai-xau-ds-ctx', 'ai-xau-terra-ctx', 'ai-xau-opus-ctx', 'xau-macd-asia'):
+        for why in ('book flat', 'side changed', 'STOP file', 'desk-wide STOP file'):
+            c = X.close_comment(run, why)
+            check(f"close comment fits: {c!r} ({len(c)})", len(c) <= X.COMMENT_MAX, f"{len(c)}")
+            # Not merely short - not cut mid-word either, because this is the
+            # field a person reads when asking why a position closed.
+            check(f"...and is not truncated mid-word: {c!r}", not c.endswith(' ') and c == c.strip(), c)
+
+    held = Obj(ticket=578869788, type=1, volume=0.01, price_open=4365.56, price_current=4362.84,
+               sl=4381.2, tp=4330.0, profit=9.0, swap=0.0, time=1_000_000, magic=MAGIC,
+               symbol='XAUUSD.sc')
+
+    def drive_flat_with_position() -> tuple:
+        """One poll: the book is FLAT and the account still holds. The state
+        that produced 1,389 failures."""
+        tmp = Path(tempfile.mkdtemp(prefix='sgst-close-'))
+        real_root, real_status, real_sleep = X.ROOT, X.read_status, X.time.sleep
+        argv = sys.argv
+        try:
+            MT5.sent = []
+            MT5.account = CENT
+            MT5.info = info_for('XAUUSD.sc')
+            MT5.margin = 5.0
+            MT5.price = 4362.84
+            MT5.positions_get = lambda **kw: [held]
+            X.ROOT = tmp
+            X.read_status = lambda api, run: dict(RUN, open=None)
+
+            def stop_after_one_poll(_):
+                raise KeyboardInterrupt
+
+            X.time.sleep = stop_after_one_poll
+            sys.argv = ['mt5_executor.py', '--run=t', '--terminal=x',
+                        '--login=33705331', '--symbol=XAUUSD.sc', '--account=acct']
+            X.main()
+            out = tmp / 'data' / 'live' / 'acct' / 't' / 'executor.jsonl'
+            rows = [json.loads(l) for l in out.read_text(encoding='utf-8').splitlines()
+                    if l.strip()] if out.exists() else []
+            return list(MT5.sent), rows
+        finally:
+            X.ROOT, X.read_status, X.time.sleep = real_root, real_status, real_sleep
+            sys.argv = argv
+            MT5.positions_get = lambda **kw: []
+            shutil.rmtree(tmp, ignore_errors=True)
+
+    CLOSE_ASK = 4362.84
+    sent, rows = drive_flat_with_position()
+    check("a book that went flat sends a close", len(sent) == 1, f"sent {len(sent)}")
+    req = sent[0] if sent else {}
+
+    check("the close comment is within the measured limit",
+          len(str(req.get('comment', ''))) <= X.COMMENT_MAX,
+          f"{req.get('comment')!r} is {len(str(req.get('comment','')))}")
+
+    # The shape, against the request that is known to work. The close may add
+    # `position` and nothing else; anything else it carries alone is a field
+    # the open path has never proved.
+    MT5.deals = []
+    _, opened, _ = drive(CENT, lots=0.05)
+    open_req = opened[0] if opened else {}
+    # `sl`/`tp` belong to an OPENING order and are rightly absent from a close -
+    # you do not attach a stop to the order that removes the position. Every
+    # other field the open proves must be present.
+    extra = set(req) - set(open_req)
+    missing = set(open_req) - set(req) - {'sl', 'tp'}
+    check("the close carries every field the open proves, bar sl/tp",
+          not missing, f"missing {missing}")
+    check("...and adds only `position`", extra == {'position'}, f"extra {extra}")
+    check("...and carries no sl/tp, which belong to an opening order",
+          'sl' not in req and 'tp' not in req, f"{sorted(set(req) & {'sl', 'tp'})}")
+
+    # Types the terminal expects, not whatever `positions_get` handed back.
+    check("position is an int", isinstance(req.get('position'), int), f"{type(req.get('position'))}")
+    check("volume is a float", isinstance(req.get('volume'), float), f"{type(req.get('volume'))}")
+    check("magic and deviation are ints",
+          isinstance(req.get('magic'), int) and isinstance(req.get('deviation'), int),
+          f"{type(req.get('magic'))} {type(req.get('deviation'))}")
+
+    # Closing a SHORT buys, and buys at the ask. The wrong side here would be
+    # a rejection or, worse, a second position.
+    check("closing a short BUYS", req.get('type') == MT5.ORDER_TYPE_BUY, f"{req.get('type')}")
+    check("...at the ask", req.get('price') == CLOSE_ASK, f"{req.get('price')} vs {CLOSE_ASK}")
+
+    # A refusal must never be invisible again.
+    real_send = MT5.order_send
+    try:
+        MT5.order_send = lambda r: None
+        _, rows = drive_flat_with_position()
+        failed = next((r for r in rows if r['kind'] == 'order-failed'), {})
+        check("order_send returning None is logged as a failure", bool(failed), f"{[r['kind'] for r in rows]}")
+        check("...with last_error, so the reason is never invisible",
+              'error' in failed and failed['error'], f"{failed}")
+        check("...and with the request that was refused",
+              isinstance(failed.get('sent'), dict) and 'position' in failed['sent'],
+              f"{failed.get('sent')}")
+    finally:
+        MT5.order_send = real_send
+
+
 def main() -> int:
     the_ceiling_measures_one_currency()
     both_size_guards_fail_closed()
@@ -1219,6 +1341,7 @@ def main() -> int:
     a_better_price_is_not_a_reason_to_sit_out()
     favourable_joins_are_off_by_default()
     the_launcher_can_ask_what_the_rule_is()
+    the_close_request_can_actually_be_sent()
     print(f"\n{'all checks passed' if not FAIL else str(FAIL) + ' CHECK(S) FAILED'}")
     return 1 if FAIL else 0
 
