@@ -2,7 +2,8 @@
 //! same numbers.
 //!
 //! `GET /api/paper/htf?market=xauusd`. Everything here is derived from CLOSED
-//! H4 and D1 bars and nothing else: no 15m bar, no forming bar, no tick. The
+//! H1, H4 and D1 bars and nothing else: no 15m bar, no forming bar, no tick.
+//! The
 //! point of the route is that there is exactly one implementation of these
 //! facts — an AI prompt and a Desk panel that each computed their own would
 //! eventually disagree, and the disagreement would surface as a model
@@ -26,7 +27,21 @@
 //! means the fact could not be computed — a warmup not met, a swing leg that
 //! has not formed, a Donchian window with no new high in it. Zero is a
 //! measurement. A reader must render them differently.
+//!
+//! ## Two intraday blocks, and no vote between them
+//!
+//! `h1` and `h4` are the SAME facts on different bars: one type, one code
+//! path, with `timeframe` and `bar_ms` on each object saying which. There is
+//! deliberately no alignment score, no agreement flag and no combined bias
+//! word. When the two disagree, the two labels side by side ARE the
+//! information, and a number averaging them would destroy the thing the second
+//! block was added to show.
+//!
+//! The running books are unaffected. Their prompt reads H4 only, exactly as
+//! registered; adding H1 to it would be a prompt change and therefore a new
+//! campaign, which is not what this is.
 
+use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use axum::Json;
@@ -114,7 +129,7 @@ pub struct SwingDto {
     pub bar_ms: i64,
 }
 
-/// Donchian(20) on H4, as a state rather than a channel.
+/// Donchian(20) on an intraday timeframe, as a state rather than a channel.
 #[derive(Debug, Serialize)]
 pub struct DonchianDto {
     pub upper: Option<f64>,
@@ -125,10 +140,16 @@ pub struct DonchianDto {
     pub bars_since_new_low: Option<usize>,
 }
 
-/// H4 facts, all from closed bars.
+/// Trend facts on ONE intraday timeframe, all from closed bars.
+///
+/// One type for `h1` and `h4` rather than two, because they are the same
+/// facts under the same rules and the only differences are the two fields
+/// that say so. Two structs would let them drift apart a field at a time, and
+/// the drift would show up as a card whose H1 row quietly stopped matching its
+/// H4 row for a reason nobody chose.
 #[derive(Debug, Serialize)]
-pub struct H4Dto {
-    /// The CLOSED H4 bar these facts describe, UTC epoch milliseconds. The
+pub struct TrendDto {
+    /// The CLOSED bar these facts describe, UTC epoch milliseconds. The
     /// book's clock, not the broker's: `mt5_bars.py` converts with `to_utc_ms`
     /// before anything is stored.
     pub computed_at_bar_ms: i64,
@@ -138,9 +159,10 @@ pub struct H4Dto {
     pub computed_at_ms: i64,
     /// This object's own timeframe and bar length, so a reader ageing
     /// `computed_at_bar_ms` never has to reach for a sibling field to learn
-    /// how long a bar is. `h4_source` cannot be null while this object is not
-    /// — they are built from the same `Ok` — but a client should not have to
-    /// know that to divide by a bar.
+    /// how long a bar is. It is also what tells `h1` from `h4` in a value that
+    /// has been handed around on its own. The matching `*_source` cannot be
+    /// null while this object is not — they are built from the same `Ok` — but
+    /// a client should not have to know that to divide by a bar.
     pub timeframe: String,
     pub bar_ms: i64,
     pub structure: StructureDto,
@@ -150,7 +172,8 @@ pub struct H4Dto {
     /// closed bars. `0` is a genuine flat, not an absence.
     pub ema21_slope_sign: Option<i8>,
     pub ema55_slope_sign: Option<i8>,
-    /// ATR(14) on H4, in quote units. Published because it is the unit
+    /// ATR(14) on this timeframe, in quote units. Published because it is the
+    /// unit
     /// `dist_ema21_atr` is measured in, and a ratio whose denominator is
     /// invisible cannot be checked.
     pub atr14: Option<f64>,
@@ -159,12 +182,13 @@ pub struct H4Dto {
     pub adx14: Option<f64>,
     pub plus_di14: Option<f64>,
     pub minus_di14: Option<f64>,
-    /// Kaufman efficiency ratio over 20 bars: |net move| / sum|bar moves|, so
+    /// Kaufman efficiency ratio over 20 bars OF THIS TIMEFRAME: |net move| /
+    /// sum|bar moves|, so
     /// 1.0 is a straight line and 0.0 is pure churn. Unitless by construction.
     pub efficiency_20: Option<f64>,
     pub donchian20: DonchianDto,
-    /// The last closed H4 close, so every level above can be read against it
-    /// without a second request.
+    /// The last closed close on this timeframe, so every level above can be
+    /// read against it without a second request.
     pub last_close: Option<f64>,
 }
 
@@ -201,24 +225,44 @@ pub struct D1Dto {
 /// `GET /api/paper/htf?market=<id>`
 ///
 /// Always 200 when the market is known, so a card can say WHY it has nothing
-/// rather than handling a status code. `h4` and `d1` are `null` only when the
-/// stored bars for that timeframe are missing entirely; `unavailable` then
-/// says which and why, in one sentence meant to be displayed.
+/// rather than handling a status code. A block is `null` only when the stored
+/// bars for that timeframe are missing entirely; `unavailable_by_tf` then
+/// carries the reason, keyed by the same timeframe string that block's own
+/// `timeframe` field would have held.
 ///
-/// Individual facts inside a present `h4`/`d1` go `null` on their own when
-/// their warmup is not met — ADX(14) needs its bars, a fractal needs a leg
-/// that has formed. That is a different condition from the timeframe being
-/// absent, and the two are reported differently on purpose.
+/// Individual facts inside a PRESENT block go `null` on their own when their
+/// warmup is not met — ADX(14) needs its bars, a fractal needs a leg that has
+/// formed. That is a different condition from the timeframe being absent, and
+/// the two are reported differently on purpose.
 #[derive(Debug, Serialize)]
 pub struct HtfResponse {
     pub market: String,
-    pub h4: Option<H4Dto>,
+    pub h1: Option<TrendDto>,
+    pub h4: Option<TrendDto>,
     pub d1: Option<D1Dto>,
+    pub h1_source: Option<HtfSourceDto>,
     pub h4_source: Option<HtfSourceDto>,
     pub d1_source: Option<HtfSourceDto>,
-    /// Why something is missing, or `null` when nothing is. Written for a
-    /// human reading a card.
+    /// Every reason joined into one sentence, or `null` when nothing is
+    /// missing.
+    ///
+    /// **This cannot say which timeframe it is about, so a caption placed
+    /// against one row must not use it.** It was written when there were two
+    /// timeframes and the realistic state was that both were absent together.
+    /// With three the realistic state is MIXED — H4 answering from its
+    /// exported file while H1 is still missing — and one joined sentence under
+    /// a good row is a caption confidently wrong about the row above it. Kept,
+    /// with its old meaning, for anything already reading it; anything placed
+    /// next to a specific block reads `unavailable_by_tf`. (Raised by -48
+    /// before building the card rather than after.)
     pub unavailable: Option<String>,
+    /// Why each ABSENT timeframe is absent, keyed by `"1h"`, `"4h"`, `"1d"`.
+    ///
+    /// ALWAYS PRESENT, `{}` when nothing is missing, so a client indexes it
+    /// without first testing for null. A key is present exactly when the
+    /// matching block is `null`, and an absent key means that timeframe is
+    /// fine.
+    pub unavailable_by_tf: BTreeMap<String, String>,
 }
 
 /* ------------------------------------------------ the facts themselves */
@@ -416,13 +460,44 @@ fn weeks_of(bars: &[Bar]) -> Vec<std::ops::Range<usize>> {
 
 /* ------------------------------------------------ loading, and refusing */
 
-/// How far back the facts are computed from. 400 H4 bars is ten weeks, which
-/// covers EMA55 and a Donchian(20) with room; 200 D1 is ten months.
-const H4_BARS: usize = 400;
+/// How far back the intraday facts are computed from, in BARS of whatever
+/// timeframe was asked for.
+///
+/// The bound is WARMUP, not calendar. EMA55 is the longest thing here and is
+/// within a rounding error of converged well inside 400 bars; ADX(14),
+/// Donchian(20), efficiency(20) and fractal(2) need far fewer. So the same
+/// number serves H1 and H4.
+///
+/// The consequence, said out loud because it is the part a reader would
+/// otherwise assume away: the two blocks look back over different LENGTHS of
+/// TIME — about ten weeks on H4, about three on H1. That is the intended
+/// reading. `h1` is a statement about the last few weeks of hours and `h4` a
+/// statement about the last few months of sessions, and forcing them onto a
+/// common calendar window would make one of them shorter than its own warmup
+/// or the other longer than anybody would call intraday.
+const TREND_BARS: usize = 400;
+/// 200 D1 is ten months.
 const D1_BARS: usize = 200;
 /// The fractal half-width. A parameter because the brief asked for one, not
 /// because anything here tunes it.
 const FRACTAL_N: usize = 2;
+
+/// The MT5 name for one of our timeframes, for the export hint in a refusal.
+///
+/// Exhaustive rather than `if 4h { H4 } else { D1 }`, which is what this was
+/// while the route served two timeframes. That spelling was correct for its
+/// two callers and silently wrong for the third: adding `1h` to the caller
+/// list would have printed `--timeframes D1` in the sentence telling an
+/// operator how to fix a missing H1 file, and the sentence would have read
+/// perfectly.
+fn mt5_name(timeframe: &str) -> &str {
+    match timeframe {
+        "1h" => "H1",
+        "4h" => "H4",
+        "1d" => "D1",
+        other => other,
+    }
+}
 
 /// The stored series for a timeframe, and nothing else.
 ///
@@ -440,6 +515,28 @@ const FRACTAL_N: usize = 2;
 /// It also reads the file directly rather than through the bar cache, because
 /// that cache is keyed `market/timeframe` and would hand back a resampled
 /// series under the same key if any other route had asked for one first.
+///
+/// ## H1 refuses too, for a DIFFERENT reason
+///
+/// The anchor argument above does not apply to H1, and it should not be
+/// repeated as though it did. The server is a whole number of hours from UTC,
+/// so its hour boundaries and the epoch's coincide: measured 2026-09-18 over
+/// the stored XAUUSD files, all 6,727 H4 stamps and all 1,122 D1 stamps carry
+/// minute 0 and second 0, back to 2022. An epoch-anchored 1h bucket really
+/// would be the broker's 1h bucket.
+///
+/// It refuses anyway, because [`fd_store::resample`] closes a bucket only when
+/// a row lands past it and therefore emits the TRAILING PARTIAL BUCKET as an
+/// ordinary bar. Resampling 1h from 15m five minutes into the hour would hand
+/// this route a still-forming hour indistinguishable from a closed one, and
+/// every fact in this file is documented as closed-bars-only. The structure
+/// label would repaint — the exact property the fractal rule was chosen to
+/// avoid — and it would repaint invisibly, four times an hour.
+///
+/// So: same refusal, different reason. Written down because "H1 is whole
+/// hours, so there is no anchor question" is true and is not a reason to
+/// resample, and the next person to notice it is true will need the second
+/// half of the sentence.
 fn stored_only(state: &AppState, market: &str, timeframe: &str) -> Result<(Vec<Bar>, HtfSourceDto), String> {
     let spec = state.config.market(market).map_err(|e| e.to_string())?;
     let name = format!("{}-{timeframe}.parquet", spec.bar_symbol);
@@ -449,7 +546,7 @@ fn stored_only(state: &AppState, market: &str, timeframe: &str) -> Result<(Vec<B
             "no {timeframe} bars for {market}: bars/{name} has not been exported yet \
              (py/ingest/mt5_export.py --symbols {} --timeframes {})",
             spec.bar_symbol,
-            if timeframe == "4h" { "H4" } else { "D1" }
+            mt5_name(timeframe)
         ));
     }
     let bars = read_bars(&path).map_err(|e| format!("bars/{name}: {e}"))?;
@@ -460,13 +557,21 @@ fn stored_only(state: &AppState, market: &str, timeframe: &str) -> Result<(Vec<B
     Ok((bars, source))
 }
 
+/// The trend facts for one intraday timeframe.
+///
+/// `timeframe` and `bar_ms` are passed in rather than derived, and they are
+/// the ONLY things that differ between `h1` and `h4`: one code path computes
+/// both, so a change to the rules cannot reach one block and miss the other.
+/// They are not cross-checked against each other here because the single
+/// caller is the route, three lines below the constants they come from.
+///
 /// `all` is never empty: [`stored_only`] refuses an empty file before this is
 /// called, and that is the only caller. The `map_or(0, ..)` on the bar stamp
 /// below is therefore unreachable rather than a default — a zero there would
 /// render as 1970 downstream, which is why it is named here instead of left
 /// to be discovered. (Raised by b5 reading the code rather than the summary.)
-fn h4_facts(all: &[Bar]) -> H4Dto {
-    let bars = &all[all.len().saturating_sub(H4_BARS)..];
+fn trend_facts(all: &[Bar], timeframe: &str, bar_ms: i64) -> TrendDto {
+    let bars = &all[all.len().saturating_sub(TREND_BARS)..];
     let specs = [
         IndicatorSpec::new("ema").with("period", 21.0),
         IndicatorSpec::new("ema").with("period", 55.0),
@@ -494,11 +599,11 @@ fn h4_facts(all: &[Bar]) -> H4Dto {
         _ => None,
     };
 
-    H4Dto {
+    TrendDto {
         computed_at_bar_ms: bars.last().map_or(0, |b| b.time),
         computed_at_ms: now_ms(),
-        timeframe: "4h".to_string(),
-        bar_ms: 14_400_000,
+        timeframe: timeframe.to_string(),
+        bar_ms,
         structure: structure_of(bars, FRACTAL_N),
         ema21,
         ema55: last_finite(ema55_series),
@@ -520,7 +625,7 @@ fn h4_facts(all: &[Bar]) -> H4Dto {
     }
 }
 
-/// Same invariant as [`h4_facts`]: `all` is non-empty because `stored_only`
+/// Same invariant as [`trend_facts`]: `all` is non-empty because `stored_only`
 /// refused an empty file, so the zero stamp is unreachable.
 fn d1_facts(all: &[Bar]) -> D1Dto {
     let bars = &all[all.len().saturating_sub(D1_BARS)..];
@@ -579,6 +684,27 @@ fn d1_facts(all: &[Bar]) -> D1Dto {
     }
 }
 
+/// One intraday block, or its reason recorded against its own timeframe.
+///
+/// The reason is keyed here rather than pushed onto a list, because a list
+/// joined into a sentence cannot say which timeframe it is about and the
+/// realistic state with three timeframes is a mixed one.
+fn intraday(
+    state: &AppState,
+    market: &str,
+    timeframe: &'static str,
+    bar_ms: i64,
+    missing: &mut Vec<(&'static str, String)>,
+) -> (Option<TrendDto>, Option<HtfSourceDto>) {
+    match stored_only(state, market, timeframe) {
+        Ok((bars, source)) => (Some(trend_facts(&bars, timeframe, bar_ms)), Some(source)),
+        Err(why) => {
+            missing.push((timeframe, why));
+            (None, None)
+        }
+    }
+}
+
 /// `GET /api/paper/htf?market=xauusd`
 ///
 /// 200 whenever the market is known, so a card can say why it has nothing
@@ -588,30 +714,35 @@ pub async fn htf(
     Query(query): Query<HtfQuery>,
 ) -> Result<Json<HtfResponse>, ApiError> {
     let market = query.market;
-    let mut missing: Vec<String> = Vec::new();
+    // Kept in CALL order — finest first — so the joined `unavailable` sentence
+    // reads the way the card is laid out. The map below is ordered by key
+    // instead, which is a different and equally deterministic thing.
+    let mut missing: Vec<(&'static str, String)> = Vec::new();
 
-    let (h4, h4_source) = match stored_only(&state, &market, "4h") {
-        Ok((bars, source)) => (Some(h4_facts(&bars)), Some(source)),
-        Err(why) => {
-            missing.push(why);
-            (None, None)
-        }
-    };
+    let (h1, h1_source) = intraday(&state, &market, "1h", 3_600_000, &mut missing);
+    let (h4, h4_source) = intraday(&state, &market, "4h", 14_400_000, &mut missing);
     let (d1, d1_source) = match stored_only(&state, &market, "1d") {
         Ok((bars, source)) => (Some(d1_facts(&bars)), Some(source)),
         Err(why) => {
-            missing.push(why);
+            missing.push(("1d", why));
             (None, None)
         }
     };
 
     Ok(Json(HtfResponse {
         market,
+        h1,
         h4,
         d1,
+        h1_source,
         h4_source,
         d1_source,
-        unavailable: (!missing.is_empty()).then(|| missing.join("; ")),
+        unavailable: (!missing.is_empty())
+            .then(|| missing.iter().map(|(_, why)| why.as_str()).collect::<Vec<_>>().join("; ")),
+        unavailable_by_tf: missing
+            .into_iter()
+            .map(|(tf, why)| (tf.to_string(), why))
+            .collect(),
     }))
 }
 
@@ -812,6 +943,191 @@ mod tests {
         assert_eq!(d1.prior_week_low, None);
         assert_eq!(d1.prior_week_mid, None);
         assert_eq!(d1.close_pct_of_prior_week_range, None);
+    }
+
+    /* ------------------------------------------ h1 beside h4, on the route */
+
+    fn state_with(dir: &std::path::Path, files: &[(&str, Vec<Bar>)]) -> Arc<AppState> {
+        for (tf, bars) in files {
+            let path = dir.join("bars").join(format!("BTCUSDT-{tf}.parquet"));
+            fd_store::write_bars(&path, bars).expect("write");
+        }
+        let config_dir =
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("..").join("..").join("config");
+        let config = fd_core::config::Config::load(config_dir).expect("config");
+        Arc::new(AppState::new(config, dir.to_path_buf()))
+    }
+
+    /// Rising bars at `step` apart, each `i` higher than the last.
+    fn ladder(step: i64, n: i64, base: f64) -> Vec<Bar> {
+        (0..n)
+            .map(|i| {
+                let mid = base + i as f64;
+                Bar { time: i * step, open: mid, high: mid + 1.0, low: mid - 1.0, close: mid, volume: Some(1.0) }
+            })
+            .collect()
+    }
+
+    #[test]
+    fn the_two_intraday_blocks_are_the_same_facts_with_their_own_period() {
+        // One code path, two labels. Fed the SAME bars, everything but the two
+        // fields that say which timeframe it is must come out identical - that
+        // is what makes a single type honest rather than merely convenient.
+        let bars = ladder(3_600_000, 120, 100.0);
+        let h1 = trend_facts(&bars, "1h", 3_600_000);
+        let h4 = trend_facts(&bars, "4h", 14_400_000);
+
+        assert_eq!(h1.timeframe, "1h");
+        assert_eq!(h1.bar_ms, 3_600_000);
+        assert_eq!(h4.timeframe, "4h");
+        assert_eq!(h4.bar_ms, 14_400_000);
+
+        assert_eq!(h1.computed_at_bar_ms, h4.computed_at_bar_ms);
+        assert_eq!(h1.ema21, h4.ema21);
+        assert_eq!(h1.ema55, h4.ema55);
+        assert_eq!(h1.atr14, h4.atr14);
+        assert_eq!(h1.adx14, h4.adx14);
+        assert_eq!(h1.efficiency_20, h4.efficiency_20);
+        assert_eq!(h1.last_close, h4.last_close);
+        assert_eq!(h1.structure.rule, h4.structure.rule);
+        assert_eq!(h1.donchian20.upper, h4.donchian20.upper);
+        assert_eq!(h1.donchian20.bars_since_new_high, h4.donchian20.bars_since_new_high);
+    }
+
+    #[tokio::test]
+    async fn h1_and_h4_are_read_from_different_files() {
+        // a5 asked for this one by name, and it is worth having: the failure it
+        // catches is `h1` being served from the H4 parquet, which would look
+        // completely plausible on a card - a trend label, a real level, a fresh
+        // stamp - and would be a statement about four-hour bars sitting in a
+        // row captioned H1. The two series are deliberately hundreds of points
+        // apart so no value could be mistaken for the other's.
+        let dir = tempfile::tempdir().expect("temp dir");
+        let state = state_with(
+            dir.path(),
+            &[
+                ("1h", ladder(3_600_000, 300, 100.0)),
+                ("4h", ladder(14_400_000, 300, 5_000.0)),
+                ("1d", ladder(86_400_000, 40, 9_000.0)),
+            ],
+        );
+
+        let res = htf(State(state), Query(HtfQuery { market: "btc".to_string() }))
+            .await
+            .expect("200")
+            .0;
+
+        let h1 = res.h1.expect("h1");
+        let h4 = res.h4.expect("h4");
+        let h1_source = res.h1_source.expect("h1_source");
+        let h4_source = res.h4_source.expect("h4_source");
+
+        assert_eq!(h1_source.file, "bars/BTCUSDT-1h.parquet");
+        assert_eq!(h4_source.file, "bars/BTCUSDT-4h.parquet");
+        assert_ne!(h1_source.file, h4_source.file, "different files");
+        assert_eq!(h1_source.timeframe, "1h");
+        assert_eq!(h4_source.timeframe, "4h");
+
+        // And the facts followed the files rather than the labels.
+        assert_eq!(h1.timeframe, "1h");
+        assert_eq!(h4.timeframe, "4h");
+        assert!(h1.last_close.expect("close") < 1_000.0, "h1 close came from the 1h ladder");
+        assert!(h4.last_close.expect("close") > 4_000.0, "h4 close came from the 4h ladder");
+        assert_ne!(h1.computed_at_bar_ms, h4.computed_at_bar_ms, "different last bars");
+
+        assert!(res.unavailable.is_none());
+        assert!(res.unavailable_by_tf.is_empty(), "nothing missing, so no keys");
+    }
+
+    #[tokio::test]
+    async fn a_missing_timeframe_is_named_beside_the_one_that_answered() {
+        // The mixed state, which is the state at launch: H4 exported, H1 not.
+        // One joined sentence cannot say which row it is about, so the reason is
+        // keyed by timeframe and a client puts it under the row it belongs to.
+        let dir = tempfile::tempdir().expect("temp dir");
+        let state = state_with(dir.path(), &[("4h", ladder(14_400_000, 300, 5_000.0))]);
+
+        let res = htf(State(state), Query(HtfQuery { market: "btc".to_string() }))
+            .await
+            .expect("200")
+            .0;
+
+        assert!(res.h4.is_some(), "H4 answered");
+        assert!(res.h1.is_none());
+        assert!(res.d1.is_none());
+
+        // A key exists exactly for the blocks that are null, and for no others.
+        let keys: Vec<&str> = res.unavailable_by_tf.keys().map(String::as_str).collect();
+        assert_eq!(keys, vec!["1d", "1h"], "only the absent ones, and not 4h");
+
+        // Each reason names its OWN timeframe and its OWN export flag. The
+        // `--timeframes D1` that the old two-armed `if` would have printed into
+        // the H1 sentence is the thing this asserts against.
+        let h1_why = &res.unavailable_by_tf["1h"];
+        assert!(h1_why.contains("BTCUSDT-1h.parquet"), "{h1_why}");
+        assert!(h1_why.contains("--timeframes H1"), "names H1, not D1: {h1_why}");
+        let d1_why = &res.unavailable_by_tf["1d"];
+        assert!(d1_why.contains("--timeframes D1"), "{d1_why}");
+
+        // The joined field still exists with its old meaning, and still cannot
+        // say which row it is about - which is why the doc forbids using it as
+        // a per-row caption.
+        let joined = res.unavailable.expect("a joined sentence");
+        assert!(joined.contains(h1_why) && joined.contains(d1_why));
+    }
+
+    #[test]
+    fn every_timeframe_this_route_serves_has_an_mt5_name() {
+        // The refusal sentence is an instruction an operator pastes. A wrong
+        // flag in it reads perfectly and does not fix the problem.
+        assert_eq!(mt5_name("1h"), "H1");
+        assert_eq!(mt5_name("4h"), "H4");
+        assert_eq!(mt5_name("1d"), "D1");
+    }
+
+    #[test]
+    fn the_served_json_carries_h1_beside_h4_at_the_top_level() {
+        // Serve it and read the KEY PATHS, because that is the half that was
+        // missed this morning: the field names were agreed and right, and the
+        // nesting was never stated. -48 parses `h1`, `h1_source` and
+        // `unavailable_by_tf` as siblings of `h4`, so this pins where they sit
+        // and not merely that they exist.
+        let bars = ladder(3_600_000, 120, 100.0);
+        let res = HtfResponse {
+            market: "xauusd".to_string(),
+            h1: Some(trend_facts(&bars, "1h", 3_600_000)),
+            h4: None,
+            d1: None,
+            h1_source: Some(HtfSourceDto {
+                file: "bars/XAUUSD-1h.parquet".to_string(),
+                bars: 120,
+                timeframe: "1h".to_string(),
+            }),
+            h4_source: None,
+            d1_source: None,
+            unavailable: Some("nope".to_string()),
+            unavailable_by_tf: [("4h".to_string(), "nope".to_string())].into_iter().collect(),
+        };
+        let v = serde_json::to_value(&res).expect("json");
+        let obj = v.as_object().expect("an object");
+
+        for key in ["market", "h1", "h4", "d1", "h1_source", "h4_source", "d1_source", "unavailable", "unavailable_by_tf"] {
+            assert!(obj.contains_key(key), "top level is missing {key}");
+        }
+        assert_eq!(obj.len(), 9, "and nothing else at the top level: {:?}", obj.keys().collect::<Vec<_>>());
+
+        // snake_case, not camelCase. A decorative `rename_all` renamed only the
+        // new fields once already.
+        assert!(!obj.contains_key("h1Source"));
+        assert_eq!(v["h1"]["timeframe"], "1h");
+        assert_eq!(v["h1"]["bar_ms"], 3_600_000);
+        assert!(v["h1"]["donchian20"]["bars_since_new_high"].is_number());
+        assert_eq!(v["h1_source"]["timeframe"], "1h");
+        assert_eq!(v["unavailable_by_tf"]["4h"], "nope");
+        // Absent means fine, and is absent rather than null.
+        assert!(v["unavailable_by_tf"].get("1h").is_none());
+        // A null block is PRESENT and null, never missing.
+        assert!(v["h4"].is_null());
     }
 
     #[test]
