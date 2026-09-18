@@ -420,3 +420,37 @@ call here and DeepSeek emits 2,209, because one answers in JSON and the other
 reasons out loud on the way there. At $25/MTok that difference would dominate
 any direct-API comparison, and it is the reason the cheap model is not as cheap
 as its input price suggests.
+
+
+## 2026-09-18: terra's outage, and the account behind it
+
+`ai-xau-terra-ctx` answered nothing between **10:15:13Z and 17:03:03Z** - 28
+consecutive rows reading `codex exited 1: ... You've hit your usage limit ...
+try again at Oct 17th, 2026 11:32 AM`. Its last real answer before the gap was
+at 10:00:25Z. The book has 124 rows, of which 96 are real answers and 6 are
+entries; the 28 dead rows are NOT decisions and are excluded the same way
+every `unreachable` row on this desk is - the model was not consulted, so it
+did not stand aside.
+
+**What the CLI's own cache hid.** The owner reset the plan on the web and the
+machine went on refusing. `~/.codex/auth.json` on the VPS had been written
+2026-09-17 10:59 and carried `chatgpt_plan_type: "free"` with
+`chatgpt_subscription_last_checked: 2026-09-17T03:59Z`. The entitlement is
+cached in that file, so nothing done on the web reaches the CLI until it
+re-authenticates. `codex login --device-auth` is the headless way: it prints
+a URL and a one-time code, the owner approves in his own browser, and no
+credential is typed on the VPS.
+
+**The account changed, and the record must say so.** Before: the free tier on
+`support@backcom.io`. After, from 17:10:31Z: `appjevn@gmail.com`, plan
+`plus`, subscription active until **2026-09-23T17:48:08Z**. Same model string,
+same route, different payer - which is exactly why `codex/gpt-5.6-terra`
+names the route and not just the model. A probe at 17:11Z answered `OK` and
+reported 11,988 tokens used for a one-word reply, in line with the CLI route's
+overhead measured above.
+
+**It expires on 2026-09-23.** Four days from the re-login. When it lapses the
+book will start writing usage-limit rows again, which is a silent stop: the
+run stays "alive", the executor stays attached, and only the decision rows
+say anything is wrong. Whoever reads this next should check the newest row's
+`response` before believing a quiet terra book.
