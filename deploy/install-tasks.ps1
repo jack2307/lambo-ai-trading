@@ -45,6 +45,11 @@ $env:Path = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' +
 
 function Note($what) { Write-Host "   $what" -ForegroundColor DarkGray }
 
+function Get-DeskTaskSafe([string]$name) {
+    if (-not (Get-Command Get-ScheduledTask -ErrorAction SilentlyContinue)) { return $null }
+    try { return Get-ScheduledTask -TaskName $name -ErrorAction Stop } catch { return $null }
+}
+
 $TASKS = @(
     @{ Name = 'flowdesk-api';   Cmd = 'run-fd-api.cmd';   Log = 'fd-api.out';   What = 'the API and the client' },
     @{ Name = 'flowdesk-watch'; Cmd = 'run-telegram.cmd'; Log = 'telegram.out'; What = 'the telegram watch' }
@@ -81,6 +86,39 @@ if (-not $Apply) {
     exit 0
 }
 
+# One stamp for the whole apply, set before anything uses it: the exported
+# task XML and the rolled-aside logs then carry the SAME timestamp, so a
+# rollback and the logs it belongs with are findable together.
+$stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
+
+# ---- export what is there BEFORE replacing it ----
+#
+# The rollback has to restore what was RUNNING, not what someone wrote down.
+# The definitions on the server were read out by hand and reconciled into this
+# file field by field, and that reconciliation found one value wrong
+# (RestartCount 3 against the live 999) - which is exactly the reason not to
+# trust a reconstruction as a rollback. `Export-ScheduledTask` returns the
+# task's own XML, including any field nobody thought to check.
+#
+# Written before anything is replaced, named with the same timestamp as the
+# rolled-aside logs, and the exact restore command is printed at the end.
+$backup = Join-Path $Root "deploy\task-backup-$stamp"
+$restorable = @()
+foreach ($t in $TASKS) {
+    if (-not (Get-DeskTaskSafe $t.Name)) { continue }
+    New-Item -ItemType Directory -Force -Path $backup | Out-Null
+    $xmlPath = Join-Path $backup "$($t.Name).xml"
+    try {
+        Export-ScheduledTask -TaskName $t.Name | Out-File $xmlPath -Encoding utf8 -ErrorAction Stop
+        $restorable += $t.Name
+        Note "exported the live definition of $($t.Name) to $(Split-Path $xmlPath -Leaf)"
+    } catch {
+        Write-Error ("could not export $($t.Name): $($_.Exception.Message). " +
+                     'Refusing to replace a definition that cannot be restored.')
+        exit 1
+    }
+}
+
 # ---- roll the stale log aside, never append to it ----
 #
 # The existing data\paper\logs\fd-api.out was written by a wrapper-started
@@ -89,7 +127,6 @@ if (-not $Apply) {
 # file in which the top describes a process that no longer exists and nothing
 # marks the join. Rolled aside with a timestamp and kept, the same rule the
 # deploy uses for the binary and the client.
-$stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
 foreach ($t in $TASKS) {
     $log = Join-Path $Root "data\paper\logs\$($t.Log)"
     if (Test-Path $log) {
@@ -137,5 +174,25 @@ foreach ($t in $TASKS) {
 Write-Host ''
 Write-Host 'Registered, and NOT started. Start them when you are ready:' -ForegroundColor Yellow
 foreach ($t in $TASKS) { Write-Host "  Start-ScheduledTask -TaskName $($t.Name)" -ForegroundColor Yellow }
-Write-Host 'Then read data\paper\logs\ - each start now writes a boundary line, so the' -ForegroundColor DarkGray
-Write-Host 'version summary and the advisor-gate line are readable for the first time.' -ForegroundColor DarkGray
+Write-Host ''
+Write-Host 'PROVE IT TOOK - two lines, and read both:' -ForegroundColor Cyan
+Write-Host '  Get-ScheduledTask flowdesk-api,flowdesk-watch | Select TaskName,State; Get-CimInstance Win32_Process -Filter "name=''fd-api.exe''" | Select ProcessId,SessionId,@{n=''Owner'';e={(Invoke-CimMethod $_ -MethodName GetOwner).User}}'
+Write-Host '  Get-Item data\paper\logsd-api.out | Select Length,LastWriteTime; Get-Content data\paper\logsd-api.out -Tail 6'
+Write-Host ''
+Write-Host '  The first must read State=Running and SessionId=0 with Owner=SYSTEM. A' -ForegroundColor DarkGray
+Write-Host '  non-zero session is the task running as the logged-on user: it dies at' -ForegroundColor DarkGray
+Write-Host '  logoff and reads the wrong environment for the advisor gate.' -ForegroundColor DarkGray
+Write-Host '  The second must show a NEW boundary line dated now, then the version' -ForegroundColor DarkGray
+Write-Host '  summary. Run it twice a minute apart: Length must grow. A file that' -ForegroundColor DarkGray
+Write-Host '  exists and never grows is the old defect wearing a new name.' -ForegroundColor DarkGray
+if ($restorable.Count -gt 0) {
+    Write-Host ''
+    Write-Host 'ROLLBACK, if the new action does not start. One command:' -ForegroundColor Yellow
+    foreach ($n in $restorable) {
+        Write-Host ("  Register-ScheduledTask -TaskName $n -Xml (Get-Content '" +
+                    (Join-Path $backup "$n.xml") + "' -Raw) -Force") -ForegroundColor Yellow
+    }
+    Write-Host '  That restores the task EXACTLY as it was, from its own exported XML -' -ForegroundColor DarkGray
+    Write-Host '  not from this file, and not from values anyone wrote down. Then' -ForegroundColor DarkGray
+    Write-Host '  Start-ScheduledTask it. The logs rolled aside keep their timestamps.' -ForegroundColor DarkGray
+}
