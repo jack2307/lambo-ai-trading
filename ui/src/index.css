@@ -93,10 +93,29 @@
     --elevated: #eef2ea;
     --popover: #ffffff;
     --popover-foreground: #0a0a0a;
-    /* Brand lime is unreadable on white; light mode carries the same hue,
-     * darkened until text on it can be the brand's own #071400. */
-    --primary: #5c9e06;
-    --primary-foreground: #071400;
+    /* THE LIME HAD TWO JOBS AND COULD ONLY DO ONE.
+     *
+     * #5c9e06 was darkened "until text on it can be the brand's own #071400",
+     * and at that it worked: 5.72 against #071400. But lime is also used AS
+     * text and as an icon and as an active-nav mark - 21 places against 24
+     * fills - and there it measured 3.31 on white and 2.83 on the nav fill.
+     * Both under 4.5. Measured 2026-09-18, the first time the light palette
+     * had ever been rendered.
+     *
+     * No single lime clears 4.5 in both directions; the range where one
+     * passes is exactly where the other fails. So the fill is darkened until
+     * lime-as-text works (#457604: 5.46 on white, 4.67 on the nav fill) and
+     * the text ON the fill becomes white (5.46) instead of #071400 (3.47).
+     *
+     * DESIGN.md says "text on lime. Never white". That rule is about the
+     * BRAND swatch #8dff08 on dark, where white genuinely fails and the
+     * near-black is the brand's own. Light mode already departed from that
+     * swatch by necessity - this block's previous comment said so - and in
+     * dark mode nothing here changes: #071400 on #8dff08 is 14.82. If the
+     * owner would rather keep near-black on lime in light too, revert these
+     * two lines and the 21 text uses go back to 3.31. */
+    --primary: #457604;
+    --primary-foreground: #ffffff;
     --brand-mint: #0aa878;
     --secondary: #e6eae2;
     --secondary-foreground: #0a0a0a;
@@ -107,31 +126,39 @@
     --destructive: #c2323f;
     --border: #d6dbd2;
     --input: #d6dbd2;
-    --ring: #5c9e06;
+    --ring: #457604;
 
-    --lc: #1f9c63;
-    --sp: #178e92;
+    /* Win green and the tape's teal, darkened until they are legible as TEXT
+     * on white and on the page ground - 3.50 and 3.95 before, 5.20 and 5.24
+     * now. They are P&L figures and fill prices, read as numbers rather than
+     * seen as blocks, so the text threshold is the one that applies. Loss red
+     * (5.49) and caution (4.91) already passed and are untouched. */
+    --lc: #187c4f;
+    --sp: #13787c;
     --lp: #c2323f;
     --sc: #a86b1c;
     --caution: #8a6d15;
 
-    --chart-1: #5c9e06;
-    --chart-2: #178e92;
+    --chart-1: #457604;
+    --chart-2: #13787c;
     --chart-3: #a86b1c;
-    --chart-4: #1f9c63;
+    --chart-4: #187c4f;
     --chart-5: #c2323f;
     --radius: 0.5rem;
 
     --sidebar: #ffffff;
     --sidebar-foreground: #0a0a0a;
-    --sidebar-primary: #5c9e06;
-    --sidebar-primary-foreground: #071400;
+    /* The nav's active mark and its lime text, on the same argument as
+     * --primary above: 3.31 on the sidebar ground and 2.83 on the item fill
+     * before, 5.46 and 4.67 now. */
+    --sidebar-primary: #457604;
+    --sidebar-primary-foreground: #ffffff;
     /* Light already sat on the brand accent (#5c9e06); only the neutrals
      * needed taking off blue-grey, for the same reason as dark. */
     --sidebar-accent: #eceee9;
     --sidebar-accent-foreground: #0a0a0a;
     --sidebar-border: #d8dcd4;
-    --sidebar-ring: #5c9e06;
+    --sidebar-ring: #457604;
 }
 
 .dark {

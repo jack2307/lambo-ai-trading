@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Menu } from 'lucide-react'
+import { Menu, Monitor, Moon, Sun } from 'lucide-react'
 
 import type { Book, View } from '@/App'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { GuardsPanel } from '@/components/GuardsPanel'
 import type { BrokerAccount, LiveBar, MarketInfo } from '@/lib/api'
 import { liveAge } from '@/lib/format'
+import type { Theme } from '@/lib/theme'
 import { cn } from '@/lib/utils'
 
 interface Props {
@@ -19,6 +20,8 @@ interface Props {
   /** The live stream, subscribed once in `App`. */
   ticks: Record<string, LiveBar>
   streaming: boolean
+  theme: Theme
+  onThemeChange: (theme: Theme) => void
   /** Narrow screens only: the sidebar is an overlay there and needs opening. */
   onOpenMenu: () => void
 }
@@ -64,7 +67,7 @@ const MARKET_VIEWS: View[] = ['workbench', 'tape']
  * screen and never clicks: which market, what the broker side is doing, and
  * what the selected account is worth.
  */
-export function AppBar({ view, markets, market, onMarketChange, book, accounts, isLive, ticks, streaming, onOpenMenu }: Props) {
+export function AppBar({ view, markets, market, onMarketChange, book, accounts, isLive, ticks, streaming, theme, onThemeChange, onOpenMenu }: Props) {
   const needsMarket = MARKET_VIEWS.includes(view)
   const [now, setNow] = useState(() => Date.now())
 
@@ -195,6 +198,32 @@ export function AppBar({ view, markets, market, onMarketChange, book, accounts, 
         )}
         <GuardsPanel />
         <BrokerCaption accounts={accounts} live={live} chosen={chosen} now={now} />
+        {/* Three states, not a switch. `system` is a real choice - follow the
+            machine at dusk - and a boolean cannot say it. */}
+        <div className="border-border flex items-center rounded-sm border p-px" role="group" aria-label="Theme">
+          {([
+            ['dark', Moon, 'Dark'],
+            ['light', Sun, 'Light'],
+            ['system', Monitor, 'Follow the system'],
+          ] as [Theme, typeof Moon, string][]).map(([id, Icon, label]) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => onThemeChange(id)}
+              aria-pressed={theme === id}
+              title={label}
+              aria-label={label}
+              className={cn(
+                'flex size-5 items-center justify-center rounded-[3px] transition-colors duration-100 motion-reduce:transition-none',
+                theme === id
+                  ? 'bg-accent text-foreground'
+                  : 'text-muted-foreground hover:text-foreground',
+              )}
+            >
+              <Icon className="size-3" />
+            </button>
+          ))}
+        </div>
       </div>
     </header>
   )

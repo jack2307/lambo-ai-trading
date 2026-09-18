@@ -14,6 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Toaster } from '@/components/ui/sonner'
 import { api, type BrokerAccount, type Catalog } from '@/lib/api'
 import { useTicks } from '@/lib/ticks'
+import { applyTheme, readTheme, resolveTheme, watchSystem, writeTheme, type Theme } from '@/lib/theme'
 
 export type View = 'desk' | 'analytics' | 'workbench' | 'tape' | 'research' | 'floor' | 'settings'
 
@@ -99,6 +100,19 @@ export default function App() {
   // answers a fraction of a second apart. Same rule as the accounts poll: one
   // subscription, one answer, handed down.
   const { ticks, connected: streaming } = useTicks()
+
+  // `main.tsx` has already applied this before the first paint; App holds it
+  // so the toggle has somewhere to live and so the chart can be told.
+  const [theme, setTheme] = useState<Theme>(readTheme)
+  const [resolved, setResolved] = useState<'light' | 'dark'>(() => resolveTheme(readTheme()))
+  const chooseTheme = useCallback((next: Theme) => {
+    setTheme(next)
+    writeTheme(next)
+    setResolved(applyTheme(next))
+  }, [])
+  // Follow the machine only while the choice IS `system`. An explicit choice
+  // is not a thing the OS gets to overrule.
+  useEffect(() => watchSystem(theme, () => setResolved(applyTheme(theme))), [theme])
   const [railed, setRailed] = useState<boolean>(readRail)
   const [drawerOpen, setDrawerOpen] = useState(false)
 
@@ -223,6 +237,8 @@ export default function App() {
         isLive={isLive}
         ticks={ticks}
         streaming={streaming}
+        theme={theme}
+        onThemeChange={chooseTheme}
         onOpenMenu={() => setDrawerOpen(true)}
       />
 
@@ -232,7 +248,7 @@ export default function App() {
           one: the default screen must not be held behind a request it does not
           use, and Analytics asks only the paper routes. */}
       {view === 'desk' ? (
-        <Desk book={book} ticks={ticks} streaming={streaming} />
+        <Desk book={book} ticks={ticks} streaming={streaming} theme={resolved} />
       ) : view === 'analytics' ? (
         <Analytics />
       ) : view === 'floor' ? (

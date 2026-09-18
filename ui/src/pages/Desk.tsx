@@ -573,13 +573,18 @@ function brokerMoney(v: number | null | undefined, currency: string | null | und
   return `${sign}${v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency ?? ''}`.trim()
 }
 
-export function Desk({ book, ticks, streaming }: {
+export function Desk({ book, ticks, streaming, theme }: {
   book: Book
   /** The live stream, subscribed ONCE in `App` and handed down. Two
    *  subscriptions would be two answers a fraction of a second apart, on one
    *  screen, about one price. */
   ticks: Record<string, LiveBar>
   streaming: boolean
+  /** The palette in force. Passed down only so the chart can be REMOUNTED on a
+   *  change: `PriceChart` reads its colours from CSS custom properties once, at
+   *  mount, so a theme switch would otherwise leave dark candles on a white
+   *  page until the next navigation. */
+  theme: 'light' | 'dark'
 }) {
   // Everything below asks one question of the mode - which account, or none -
   // so it is asked once here rather than re-derived at each use.
@@ -797,7 +802,7 @@ export function Desk({ book, ticks, streaming }: {
                 Fills the column's height above xl and keeps a floor below it,
                 where the page scrolls instead. */}
             <div className="border-border min-h-[340px] shrink-0 border-b xl:min-h-0 xl:flex-1 xl:shrink">
-              <RunChart detail={live} live={livePrice} focus={focusFill} broker={activeBroker} />
+              <RunChart detail={live} live={livePrice} focus={focusFill} broker={activeBroker} theme={theme} />
             </div>
             {/* The fills have seven columns and the rail has 460px, so they
                 stay here where the width is. Capped at two fifths of the
@@ -2606,6 +2611,7 @@ function RunChart({
   live,
   focus,
   broker,
+  theme,
 }: {
   detail: PaperRunDetail | null
   live: LiveBar | null
@@ -2614,6 +2620,8 @@ function RunChart({
   /** The selected account's record of this book, when the desk is showing an
    *  account rather than the paper book. */
   broker: PaperBroker | null
+  /** Only to key the chart, so a palette change remounts it. */
+  theme: 'light' | 'dark'
 }) {
   // `bars` arrives as `[ms, o, h, l, c]` and `PriceChart` takes milliseconds
   // and divides, so the tuple goes straight across. (`series` times are
@@ -2761,7 +2769,7 @@ function RunChart({
             book, and drawing the book's level around a broker's fill would mix
             the two records the switch exists to keep apart. */}
         <PriceChart
-          key={detail.run.id}
+          key={`${detail.run.id}:${theme}`}
           open={chartOpen}
           openPnl={openPnl}
           showOpen={showOpen}
