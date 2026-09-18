@@ -86,11 +86,26 @@
  * anyone who forces it, but the product is a dark room with a tape in it.
  */
 :root {
-    --background: #f4f6f2;
+    /* THREE SURFACES, NOT ONE.
+     *
+     * The first light pass fixed contrast and left every region the same
+     * near-white: measured 2026-09-18, page against card was 1.087 and
+     * SIDEBAR AGAINST CARD WAS 1.000 - the same colour. Only hairlines
+     * separated the rail, the page, the chart panel and the cards, so the
+     * desk read as one flat sheet and the eye had to parse text to find the
+     * regions.
+     *
+     * Now: the rail sits BEHIND the page, the page behind the cards, each a
+     * measured step apart. Light inverts dark's direction deliberately -
+     * dark elevates by getting lighter, light elevates by getting whiter -
+     * and the rail goes the other way from the cards so the three are three,
+     * not two-and-a-hairline. --elevated keeps the one true white for the
+     * things that must sit above a card: popovers, hovers, the menu. */
+    --background: #eef1eb;
     --foreground: #0a0a0a;
-    --card: #ffffff;
+    --card: #fbfcfa;
     --card-foreground: #0a0a0a;
-    --elevated: #eef2ea;
+    --elevated: #ffffff;
     --popover: #ffffff;
     --popover-foreground: #0a0a0a;
     /* THE LIME HAD TWO JOBS AND COULD ONLY DO ONE.
@@ -120,12 +135,36 @@
     --secondary: #e6eae2;
     --secondary-foreground: #0a0a0a;
     --muted: #e6eae2;
-    --muted-foreground: #5f665f;
+    --muted-foreground: #5c625c;
+    /*
+     * THE RUNG BELOW MUTED, AND IT EXISTS BECAUSE OPACITY CANNOT MAKE ONE.
+     *
+     * `text-muted-foreground/70` is used 41 times and `/60` 31 times. Those
+     * are not the token: Tailwind mixes it toward transparent and the browser
+     * composites it over whatever is behind, which in LIGHT means lighter.
+     * Measured against the shipped palette: the token itself passed at 5.91,
+     * and every rung below 90% failed - 13 failing rungs, from 4.40 down to
+     * 1.91. The owner called this "small text is washed out" and he was
+     * reading composited colour, not the token.
+     *
+     * No single token can fix it. For /60 to reach 4.5 the base would have to
+     * be #1b1b1b, which at full strength is 17.2:1 - darker than body text,
+     * so "muted" would stop being muted. An opacity ladder works in dark
+     * because it fades toward black on a black ground and starts with
+     * headroom; in light it fades toward the page and runs out.
+     *
+     * So light stops using opacity for muted text at all: every rung is
+     * mapped to this solid colour below, tuned against the DARKEST surface
+     * (the sidebar) so it holds on all three. 4.51 there, 4.79 on the page,
+     * 4.97 on a card - still visibly lighter than --muted-foreground, which
+     * is the whole job of the rung. Dark keeps its ladder untouched.
+     */
+    --muted-subtle: #666b65;
     --accent: #e3efd6;
     --accent-foreground: #0a0a0a;
     --destructive: #c2323f;
-    --border: #d6dbd2;
-    --input: #d6dbd2;
+    --border: #ccd3c6;
+    --input: #ccd3c6;
     --ring: #457604;
 
     /* Win green and the tape's teal, darkened until they are legible as TEXT
@@ -133,20 +172,54 @@
      * now. They are P&L figures and fill prices, read as numbers rather than
      * seen as blocks, so the text threshold is the one that applies. Loss red
      * (5.49) and caution (4.91) already passed and are untouched. */
-    --lc: #187c4f;
-    --sp: #13787c;
+    /* Re-solved after the surfaces darkened. Each of these cleared 4.5 on
+     * PURE WHITE and three of them stopped clearing it on the new page and
+     * sidebar - amber worst at 3.63. Measured against the darkest ground the
+     * desk now has, so one value holds on all three: win 4.54, teal 4.58,
+     * amber 4.58, caution 4.51. Loss red (4.55) and the lime (4.52) already
+     * held and are untouched. */
+    --lc: #17784d;
+    --sp: #127478;
     --lp: #c2323f;
-    --sc: #a86b1c;
-    --caution: #8a6d15;
+    --sc: #925d18;
+    --caution: #826614;
 
     --chart-1: #457604;
-    --chart-2: #13787c;
-    --chart-3: #a86b1c;
-    --chart-4: #187c4f;
+    --chart-2: #127478;
+    --chart-3: #925d18;
+    --chart-4: #17784d;
     --chart-5: #c2323f;
     --radius: 0.5rem;
 
-    --sidebar: #ffffff;
+    /*
+     * THE CHART'S OWN PALETTE, because a candle is not a number.
+     *
+     * The chart reused --lc and --lp, which are tuned to be legible as TEXT.
+     * As fills covering half the panel that is far too loud on a light
+     * ground: the owner's word was that the chart was "the loudest thing on
+     * the page". Candles are graphics, so the threshold that applies is the
+     * non-text 3.0 and not 4.5 - which buys the room to drop saturation.
+     * Measured on the card ground: up 4.07, down 4.25, both well clear.
+     *
+     * The grid is separated from --border on purpose. The border defines the
+     * panel's edge and should hold; the grid sits UNDER the data and should
+     * not compete with it. They were one token and the grid won.
+     */
+    --candle-up: #3f8a60;
+    --candle-down: #bd5a62;
+    --chart-grid: #e2e7dd;
+    /* Band opacity, as numbers the chart reads at mount. Halved for light: a
+     * 0.13 fill over white is a solid slab, over a tinted card at 0.07 it is
+     * a tint you can still read candles through, which is the entire point of
+     * drawing the stop and target as bands rather than lines. */
+    --band-fill: 0.07;
+    --band-edge: 0.38;
+
+    /* A step BEHIND the page, where dark puts its rail a step in front of
+     * the ground. Both read as "not the content"; in light, going lighter
+     * than an already near-white page has nowhere to go, which is how the
+     * rail ended up identical to the cards. */
+    --sidebar: #e7ebe3;
     --sidebar-foreground: #0a0a0a;
     /* The nav's active mark and its lime text, on the same argument as
      * --primary above: 3.31 on the sidebar ground and 2.83 on the item fill
@@ -155,9 +228,9 @@
     --sidebar-primary-foreground: #ffffff;
     /* Light already sat on the brand accent (#5c9e06); only the neutrals
      * needed taking off blue-grey, for the same reason as dark. */
-    --sidebar-accent: #eceee9;
+    --sidebar-accent: #dbe1d6;
     --sidebar-accent-foreground: #0a0a0a;
-    --sidebar-border: #d8dcd4;
+    --sidebar-border: #d2d8cc;
     --sidebar-ring: #457604;
 }
 
@@ -184,6 +257,14 @@
     --accent-foreground: #ffffff;
     --destructive: #e05d6a;
     --border: #242724;
+    /* Dark's chart values, named. These are exactly what the chart already
+     * used - --lc, --lp, --border and the two constants in tradeZones.ts - so
+     * naming them changes nothing here and gives light somewhere to differ. */
+    --candle-up: #46c98a;
+    --candle-down: #e05d6a;
+    --chart-grid: #242724;
+    --band-fill: 0.13;
+    --band-edge: 0.55;
     --input: #242724;
     --ring: #8dff08;
 
@@ -310,6 +391,33 @@
 /* Tabular figures. Every number in the product goes through this: a column of
  * proportional digits does not line up, which is the only reason a column of
  * numbers exists. */
+/*
+ * LIGHT MODE DOES NOT FADE TEXT WITH OPACITY.
+ *
+ * See --muted-subtle for the measurements. Every faded rung is mapped to one
+ * solid colour that clears 4.5 on all three surfaces; the visual step between
+ * "muted" and "fainter than muted" survives, it is just a step between two
+ * legible colours instead of a slide into the background.
+ *
+ * Unlayered on purpose. Tailwind's utilities live in @layer utilities, and an
+ * unlayered rule beats a layered one whatever the specificity says - which is
+ * the only reliable way to override a generated utility without !important.
+ * Scoped to :root:not(.dark) so the dark ladder is untouched: it works there,
+ * because fading toward black on a black ground starts with headroom.
+ */
+:root:not(.dark) .text-muted-foreground\/90,
+:root:not(.dark) .text-muted-foreground\/80,
+:root:not(.dark) .text-muted-foreground\/70,
+:root:not(.dark) .text-muted-foreground\/60,
+:root:not(.dark) .text-muted-foreground\/55,
+:root:not(.dark) .text-muted-foreground\/50,
+:root:not(.dark) .text-muted-foreground\/45,
+:root:not(.dark) .text-sidebar-foreground\/50,
+:root:not(.dark) .text-sidebar-foreground\/45,
+:root:not(.dark) .text-sidebar-foreground\/40 {
+    color: var(--muted-subtle);
+}
+
 .tnum {
     font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;

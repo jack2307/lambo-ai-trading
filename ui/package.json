@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build && node scripts/prune-dist.mjs",
     "lint": "oxlint",
-    "check": "node --experimental-strip-types scripts/timeframes.check.mjs",
+    "check": "node --experimental-strip-types scripts/timeframes.check.mjs && node scripts/contrast.check.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

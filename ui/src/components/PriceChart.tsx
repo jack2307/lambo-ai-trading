@@ -183,8 +183,24 @@ export function PriceChart({
       card: token('--card', '#131413'),
       border: token('--border', '#242724'),
       muted: token('--muted-foreground', '#9aa39a'),
-      bull: token('--lc', '#46c98a'),
-      bear: token('--lp', '#e05d6a'),
+      // Candles read their OWN tokens, not the text colours. `--lc` and
+      // `--lp` are tuned to be legible as small text; as fills across half a
+      // light panel they are far too loud. The fallbacks are dark's values,
+      // so a stylesheet that predates these tokens draws exactly as before.
+      bull: token('--candle-up', '#46c98a'),
+      bear: token('--candle-down', '#e05d6a'),
+      // Under the data rather than around the panel: the border holds the
+      // edge, the grid must not compete with the candles.
+      grid: token('--chart-grid', '#242724'),
+    }
+
+    // Band opacity comes from the stylesheet so light can halve it. Parsed
+    // rather than assumed: a missing or malformed token falls back to the
+    // value tradeZones.ts has always used instead of drawing an invisible
+    // band or a solid one.
+    const alpha = (name: string, fallback: number): number => {
+      const raw = Number.parseFloat(token(name, ''))
+      return Number.isFinite(raw) && raw > 0 && raw <= 1 ? raw : fallback
     }
 
     const instance = createChart(container.current, {
@@ -196,8 +212,8 @@ export function PriceChart({
         panes: { separatorColor: theme.border, separatorHoverColor: theme.muted },
       },
       grid: {
-        vertLines: { color: theme.border, style: 1 },
-        horzLines: { color: theme.border, style: 1 },
+        vertLines: { color: theme.grid, style: 1 },
+        horzLines: { color: theme.grid, style: 1 },
       },
       rightPriceScale: { borderColor: theme.border, scaleMargins: { top: 0.08, bottom: 0.08 } },
       timeScale: { borderColor: theme.border, timeVisible: true, secondsVisible: false },
@@ -227,11 +243,17 @@ export function PriceChart({
 
     // Bands go on before the markers so the arrows sit on top of them.
     zones.current = new TradeZones({
-      target: theme.bull,
-      stop: theme.bear,
+      // The BANDS keep the data colours rather than the candle colours: a
+      // stop and a target are levels the book chose, and they are read as
+      // "which side" at a glance. The candles around them are the ones that
+      // had to quieten down.
+      target: token('--lc', '#46c98a'),
+      stop: token('--lp', '#e05d6a'),
       entry: token('--primary', '#8dff08'),
       text: theme.muted,
       focus: token('--primary', '#8dff08'),
+      fill: alpha('--band-fill', 0.13),
+      edge: alpha('--band-edge', 0.55),
     })
     candles.current.attachPrimitive(zones.current)
 

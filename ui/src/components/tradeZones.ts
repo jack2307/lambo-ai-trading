@@ -63,6 +63,16 @@ export interface ZoneColors {
   text: string
   /** The chrome accent, for the bracket around the trade in focus. */
   focus: string
+  /**
+   * How opaque the band and its edge are, when the caller wants to differ.
+   *
+   * Light halves both. A 0.13 fill is a readable tint on a near-black ground
+   * and a solid slab on a near-white one — the same number is not the same
+   * weight against two different grounds, which is why this became a
+   * parameter rather than staying a constant.
+   */
+  fill?: number
+  edge?: number
 }
 
 /** How opaque the bands are. Low enough that candles stay readable through them. */
@@ -197,9 +207,9 @@ class ZonesRenderer implements IPrimitivePaneRenderer {
     const top = Math.min(from, to)
     const height = Math.abs(to - from)
     ctx.save()
-    ctx.fillStyle = withAlpha(color, FILL_ALPHA * weight)
+    ctx.fillStyle = withAlpha(color, (this.colors.fill ?? FILL_ALPHA) * weight)
     ctx.fillRect(left, top, width, height)
-    ctx.strokeStyle = withAlpha(color, EDGE_ALPHA * weight)
+    ctx.strokeStyle = withAlpha(color, (this.colors.edge ?? EDGE_ALPHA) * weight)
     ctx.lineWidth = lineWidth
     ctx.beginPath()
     // Only the boundary that matters: the price the trade was waiting for.
