@@ -666,8 +666,21 @@ def ask_codex(prompt: str, model: str, timeout: float, usage: dict | None = None
 
 
 def ask(prompt: str, model: str, provider: str, api_key: str, timeout: float,
-        usage: dict | None = None) -> tuple[str, int]:
+        usage: dict | None = None, thinking: str | None = None) -> tuple[str, int]:
     """One model call, any provider. Returns (text, latency_ms); raises on failure.
+
+    `thinking` is the per-call reasoning switch for a metered provider that
+    has one. DeepSeek (read 2026-09-18 from api-docs.deepseek.com): thinking is
+    ON at effort `high` unless told otherwise, and the request may say
+    `{"thinking": {"type": "disabled"}}` or `reasoning_effort: low|high|max`.
+    Reasoning is billed as output at four times the input rate, and on this
+    desk it was 87% of the DeepSeek bill (830k of 1.3M tokens on 2026-09-18),
+    which is why a narrow question - "has this trade's reason broken", "is the
+    trigger here" - must be able to ask WITHOUT it. `None` leaves the
+    provider's default alone, so every existing caller is unchanged; "off"
+    disables it; "low"/"high"/"max" set the effort. Recorded into `usage` as
+    `thinking` so the row says what was asked for. Providers without the knob
+    ignore it.
 
     `usage`, when given, is filled in place with whatever the provider actually
     reported — `input`, `cached_input`, `output`, or a bare `total` for a
@@ -700,6 +713,11 @@ def ask(prompt: str, model: str, provider: str, api_key: str, timeout: float,
         }
         if model.lower().startswith(REASONING_PREFIXES):
             body["reasoning_effort"] = REASONING_EFFORT
+        if thinking and provider == "deepseek":
+            if thinking == "off":
+                body["thinking"] = {"type": "disabled"}
+            elif thinking in ("low", "high", "max"):
+                body["reasoning_effort"] = thinking
         head = {"Authorization": f"Bearer {api_key}"}
 
         # Two parameters here are newer than some of the models that accept
@@ -729,6 +747,11 @@ def ask(prompt: str, model: str, provider: str, api_key: str, timeout: float,
                 "cached_input": int(u.get("prompt_cache_hit_tokens") or 0),
                 "output": int(u.get("completion_tokens") or 0),
             })
+            reasoning = (u.get("completion_tokens_details") or {}).get("reasoning_tokens")
+            if reasoning is not None:
+                usage["reasoning"] = int(reasoning)
+            if thinking:
+                usage["thinking"] = thinking
         choices = (out or {}).get("choices") or []
         text = (choices[0].get("message", {}).get("content") or "") if choices else ""
         if not text.strip():

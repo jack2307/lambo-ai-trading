@@ -96,11 +96,20 @@ def to_utc_ms(server_epoch: int) -> int:
 def post(api: str, path: str, payload: dict, timeout: float = 10.0) -> tuple[int, str]:
     body = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(f"{api}{path}", data=body, headers={"Content-Type": "application/json"}, method="POST")
+    # The WHOLE body, not its first 200 characters. `send_open` parses the
+    # answer to say which runs filled, and with twenty-three runs on the
+    # stream that answer is longer than 200 bytes: truncated here, it raised
+    # JSONDecodeError on the first live bar after the flag went on
+    # (2026-09-18 15:41Z), `opened_for` was never set, and the same open was
+    # re-posted every two seconds for the rest of the bar. Harmless to the
+    # book - a second open of the same bar finds nothing pending - but noise
+    # the log could not read through. Callers that only quote the body for a
+    # note cut it themselves.
     try:
         with urllib.request.urlopen(req, timeout=timeout) as r:
-            return r.status, r.read().decode("utf-8", "replace")[:200]
+            return r.status, r.read().decode("utf-8", "replace")
     except urllib.error.HTTPError as e:  # type: ignore[attr-defined]
-        return e.code, e.read().decode("utf-8", "replace")[:200]
+        return e.code, e.read().decode("utf-8", "replace")
     except Exception as e:  # noqa: BLE001
         return 0, str(e)[:200]
 

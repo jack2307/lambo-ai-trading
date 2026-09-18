@@ -190,3 +190,17 @@ on those bars. A comparison in which one side is filtered is not a
 comparison.
 
 *Added 2026-09-18, after this book was already running and before any disagreement rate had been computed for it. The confound is the same one and the rule is the same rule; what is not claimed is that it was written before this book's first bar.*
+
+
+## Amendment 2026-09-18 ~16:00Z - layout and hold funnel, not a new book
+
+From the traders' restart after this stamp, every row carries
+`prompt_layout: "cache-v2"`: the SAME sentences in a different order (rules
+and answer shape first, slow blocks next, bars last) so DeepSeek's prefix
+cache can hit. Rows before it are layout v1 (the field is absent). The hold
+question is now asked on events (`hold_trigger` on `hold_check` rows,
+`hold_skip` rows for the bars not asked) with thinking off; it was and is
+advisory, so no book's result moves. Both are stage 3-4 of
+`docs/plans/2026-09-18-staged-ai-entry.md`. If the split by `prompt_layout`
+shows a different entry rate, that is a finding about the order and belongs
+here, not hidden by pooling the two.

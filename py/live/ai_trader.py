@@ -167,6 +167,19 @@ HTF_RULE = (
 )
 PROMPT_VARIANTS = tuple(VARIANTS)
 
+PROMPT_LAYOUT = "cache-v2"
+
+# ORDER IS DELIBERATE, AND IT IS NOT THE READING ORDER. Cost, not clarity,
+# decides it: DeepSeek serves an exact prefix of a previous request from cache
+# at one fiftieth of the fresh input price, and it is an EXACT prefix - the
+# first byte that differs ends the hit. So the text that never changes comes
+# first (the rules and the answer shape), then what changes hourly at most
+# (the higher-timeframe and options blocks), then what changes every bar
+# (context, desk state, position), and the bars themselves last. Under the
+# old order the desk block sat third, its equity and spread differed every
+# call, and the hit rate measured 1%. The sentences are the previous layout's
+# sentences, unedited; rows carry `prompt_layout` so the two can be told
+# apart in the record (stage 4 of docs/plans/2026-09-18-staged-ai-entry.md).
 PROMPT = """You are trading one paper book on {market} {tf} bars. {coin_clause}
 
 You may only answer in one of two ways: propose ONE trade, or stand aside.
@@ -176,24 +189,25 @@ the trailing range. You cannot act on the bar below; whatever you propose fills 
 next bar. The desk owns the maximum hold, and it will close the position if your stop or target is
 not hit first.
 
-{position}
-
-THE DESK'S STATE — these are the rules you are already playing under, not advice
-{desk}
-
-MARKET CONTEXT — computed from the same bars, for convenience; none of it is a signal
-{context}{otl_block}{htf_block}
-
-LAST {n} BARS of {market}:{tf}, oldest first, times UTC
-{bars}
-{htf_rule_block}
 Answer with JSON and nothing else:
 
   {{"side": "LONG" | "SHORT" | "NONE", "stop": <price or null>, "target": <price or null>,
     "reason": "<one sentence, under 200 characters, naming what in the bars above you are acting on>"}}
 
 "NONE" is a real answer and is often the right one. If you propose a trade, the stop must be on the
-losing side of the last close and the target on the winning side, or it will be refused."""
+losing side of the last close and the target on the winning side, or it will be refused.
+{htf_rule_block}{htf_block}{otl_block}
+
+MARKET CONTEXT — computed from the same bars, for convenience; none of it is a signal
+{context}
+
+THE DESK'S STATE — these are the rules you are already playing under, not advice
+{desk}
+
+{position}
+
+LAST {n} BARS of {market}:{tf}, oldest first, times UTC
+{bars}"""
 
 
 def read_limits(api: str = "") -> dict:
@@ -729,6 +743,22 @@ def main() -> int:
     ap.add_argument("--prompt-variant", default="base", choices=PROMPT_VARIANTS,
                     help="which prompt wording to run; the record carries it per row")
     ap.add_argument("--dry-run", action="store_true", help="decide and log; post nothing")
+    # The hold funnel (stage 3 of docs/plans/2026-09-18-staged-ai-entry.md).
+    # `bar` is the old behaviour: while a position is open, the model is asked
+    # "has the reason broken" on EVERY bar, each answer costing ~2k reasoning
+    # tokens - 117 of them on 2026-09-18 for a quarter of the day's bill, on a
+    # verdict that is recorded and never acted on. `event` asks only when
+    # something has happened to the trade: price half a stop against it, a
+    # full stop in its favour, or four bars since the last look as a floor so
+    # a slow bleed is still seen hourly. What is skipped is logged as
+    # `hold_skip` with the numbers that decided it, so the record still shows
+    # every bar the position was held through.
+    ap.add_argument("--hold-check", choices=("bar", "event"), default="event",
+                    help="ask the hold question every bar, or only when price moved (default event)")
+    ap.add_argument("--hold-thinking", choices=("default", "off", "low"), default="off",
+                    help="reasoning on the hold question; off by default because the question is narrow")
+    ap.add_argument("--decision-thinking", choices=("default", "off", "low", "high"), default="default",
+                    help="reasoning on the entry decision; default leaves the provider's setting")
     ap.add_argument("--once", action="store_true")
     args = ap.parse_args()
 
@@ -821,6 +851,13 @@ def main() -> int:
     decided_on: int | None = recall()
     if decided_on is not None:
         print(f"resuming: bar {decided_on} was already decided", flush=True)
+    # The hold funnel's memory: which position was last looked at, on which
+    # bar, and whether its favourable trigger has already fired. Per process,
+    # not persisted: a restart looks once more, which is the cheap side to err on.
+    hold_state = {"last_bar": None, "entry_time": None, "favourable_seen": False, "trigger": ""}
+    bar_ms = {"1m": 60_000, "5m": 300_000, "15m": 900_000, "1h": 3_600_000, "4h": 14_400_000}.get(args.tf, 900_000)
+    print(f"hold check: {args.hold_check}, thinking {args.hold_thinking}; decision thinking {args.decision_thinking}; "
+          f"prompt layout {PROMPT_LAYOUT}", flush=True)
     while True:
         beat()
         try:
@@ -948,6 +985,50 @@ def main() -> int:
         # opinion first is what tells us whether the power is worth a campaign
         # of its own.
         held = (detail.get("run") or {}).get("open")
+        if held and args.hold_check == "event":
+            # Decide from the desk's own numbers whether this bar is worth a
+            # question. Units are R when the stop is known, price otherwise.
+            entry = held.get("entry_price")
+            stop = held.get("stop")
+            side = str(held.get("side") or "").upper()
+            moved = None
+            if isinstance(entry, (int, float)) and isinstance(last_close, (int, float)):
+                moved = (last_close - entry) if side == "LONG" else (entry - last_close)
+            unit = abs(float(entry) - float(stop)) if isinstance(entry, (int, float)) and isinstance(stop, (int, float)) and entry != stop else None
+            moved_r = (moved / unit) if (moved is not None and unit) else None
+            since = 0 if hold_state["last_bar"] is None else max(0, (last_time - hold_state["last_bar"]) // max(1, bar_ms))
+            trigger = ""
+            if hold_state["entry_time"] != held.get("entry_time"):
+                # A new position: the first bar it is held through is always
+                # looked at, so every trade has at least one verdict early.
+                trigger = "first bar held"
+            elif moved_r is not None and moved_r <= -0.5:
+                trigger = f"adverse {moved_r:+.2f}R"
+            elif moved_r is not None and moved_r >= 1.0 and not hold_state["favourable_seen"]:
+                trigger = f"favourable {moved_r:+.2f}R"
+            elif since >= 4:
+                trigger = f"floor, {since} bars since the last look"
+            if not trigger:
+                decided_on = last_time
+                remember(last_time)
+                log(args.run, {
+                    "at": int(time.time() * 1000), "bar_time": last_time, "model": args.model,
+                    "prompt_variant": args.prompt_variant, "prompt_layout": PROMPT_LAYOUT,
+                    "kind": "hold_skip",
+                    "moved_r": None if moved_r is None else round(moved_r, 3),
+                    "bars_since_check": int(since),
+                    "decision": {"side": "NONE", "reason": "[HOLD] no event on this bar; not asked"},
+                    "posted": False, "refused_locally": "", "dry_run": bool(args.dry_run),
+                })
+                if args.once:
+                    return 0
+                time.sleep(args.poll)
+                continue
+            hold_state["trigger"] = trigger
+            if moved_r is not None and moved_r >= 1.0:
+                hold_state["favourable_seen"] = True
+        elif held:
+            hold_state["trigger"] = "every bar"
         if held:
             hold_prompt = HOLD_PROMPT.format(
                 market=args.market, tf=args.tf, n=len(shown), bars=rows,
@@ -956,7 +1037,8 @@ def main() -> int:
             )
             usage = {}
             try:
-                text, ms = ask(hold_prompt, args.model, provider, key, args.timeout, usage)
+                text, ms = ask(hold_prompt, args.model, provider, key, args.timeout, usage,
+                               thinking=None if args.hold_thinking == "default" else args.hold_thinking)
                 verdict = parse_hold(text)
             except Exception as e:  # noqa: BLE001
                 text, ms, usage = f"ERROR: {type(e).__name__}: {e}", 0, {}
@@ -967,7 +1049,9 @@ def main() -> int:
             from advisor import cost_of
             stamp = dt.datetime.now(dt.timezone.utc).strftime("%H:%M:%SZ")
             print(f"{stamp} bar {dt.datetime.utcfromtimestamp(last_time/1000):%H:%MZ}  "
-                  f"{verdict['action']:5s} (advisory)  {verdict['reason'][:64]}", flush=True)
+                  f"{verdict['action']:5s} (advisory, {hold_state['trigger']})  {verdict['reason'][:64]}", flush=True)
+            hold_state["last_bar"] = last_time
+            hold_state["entry_time"] = held.get("entry_time")
             log(args.run, {
                 "at": int(time.time() * 1000), "bar_time": last_time, "model": args.model,
             # WHICH PROMPT PRODUCED THIS ROW. The same rule the desk
@@ -976,7 +1060,8 @@ def main() -> int:
             # The prompt TEXT is already stored per row, but text is not
             # a key - two campaigns are compared by variant name, and
             # rows written before this existed are `base` by the default.
-            "prompt_variant": args.prompt_variant,
+                "prompt_variant": args.prompt_variant, "prompt_layout": PROMPT_LAYOUT,
+                "hold_trigger": hold_state["trigger"],
                 "prompt": hold_prompt, "response": text, "latency_ms": ms,
                 # The RESOLVED provider, not the one derived from the model
                 # name. `--provider anthropic` forces a CLI-named model onto
@@ -998,7 +1083,8 @@ def main() -> int:
 
         try:
             usage = {}
-            text, ms = ask(prompt, args.model, provider, key, args.timeout, usage)
+            text, ms = ask(prompt, args.model, provider, key, args.timeout, usage,
+                           thinking=None if args.decision_thinking == "default" else args.decision_thinking)
             decision = parse(text)
         except Exception as e:  # noqa: BLE001
             text, ms, usage = f"ERROR: {type(e).__name__}: {e}", 0, {}
@@ -1091,7 +1177,7 @@ def main() -> int:
             # The prompt TEXT is already stored per row, but text is not
             # a key - two campaigns are compared by variant name, and
             # rows written before this existed are `base` by the default.
-            "prompt_variant": args.prompt_variant,
+            "prompt_variant": args.prompt_variant, "prompt_layout": PROMPT_LAYOUT,
             # Which bars had the options context and which did not, so the
             # two can be separated when the book is read. "n/a" for the
             # variants that never ask for it.
