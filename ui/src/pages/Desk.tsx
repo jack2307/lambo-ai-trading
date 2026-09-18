@@ -2795,7 +2795,10 @@ function RunChart({
   const market = detail?.run.market ?? null
   const ownTf = runTf != null && tf === runTf
 
-  const alt = useChartBars(market, tf, detail != null && !ownTf)
+  // Bumped when somebody picks the timeframe that is ALREADY selected, which
+  // is how a failed one is retried: `setTf` to the same value is a no-op.
+  const [retry, setRetry] = useState(0)
+  const alt = useChartBars(market, tf, detail != null && !ownTf, retry)
 
   // Timeframes this market has refused, remembered for the selector. Earned
   // from an actual refusal rather than declared up front: a timeframe is only
@@ -2830,6 +2833,12 @@ function RunChart({
   )
 
   const pickTf = (next: Timeframe) => {
+    if (next === tf) {
+      // Same timeframe: this is a retry, not a change. Nothing to remember and
+      // nothing to set - only the request to make again.
+      setRetry((n) => n + 1)
+      return
+    }
     setTf(next)
     writeTimeframe(next)
   }

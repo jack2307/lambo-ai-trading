@@ -48,7 +48,22 @@ const POLL_MS = 20_000
  */
 const WANT = 400
 
-export function useChartBars(market: string | null, tf: Timeframe, enabled: boolean): ChartBarsState {
+export function useChartBars(
+  market: string | null,
+  tf: Timeframe,
+  enabled: boolean,
+  /**
+   * Bump to ask again for the SAME market and timeframe.
+   *
+   * Nothing reads the value; it is a dependency and only a dependency. Picking
+   * a different timeframe re-runs this effect on its own, but picking the one
+   * already selected does not change `tf`, so React bails and nothing is
+   * re-requested — which would make "click to try again" on a failed
+   * timeframe a promise the control does not keep. The failed timeframe is the
+   * one a person is most likely looking at when they want to retry.
+   */
+  nonce = 0,
+): ChartBarsState {
   const [state, setState] = useState<ChartBarsState>(EMPTY)
 
   // Which request the answer belongs to. A slow 1d fetch that resolves after
@@ -92,7 +107,8 @@ export function useChartBars(market: string | null, tf: Timeframe, enabled: bool
       live = false
       window.clearInterval(timer)
     }
-  }, [market, tf, enabled])
+    // `nonce` is deliberately in here and deliberately unread above.
+  }, [market, tf, enabled, nonce])
 
   return state
 }

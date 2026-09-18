@@ -36,9 +36,18 @@ export function TimeframeBar({
 }) {
   const items = useRef<(HTMLButtonElement | null)[]>([])
 
-  // Disabled choices are still walked by the arrow keys. A choice you cannot
-  // reach is a choice you cannot find out is unavailable, and "why is 1d
-  // missing" is a worse question than "why is 1d greyed out".
+  // NOTHING HERE IS EVER `disabled`, and that is a fix rather than an
+  // oversight. A struck-out timeframe used to be a disabled button, which made
+  // it unpickable, which meant it was never re-requested, which meant the mark
+  // saying it was unavailable could never clear: export the daily series and
+  // the desk went on insisting there wasn't one until somebody reloaded. A
+  // disabled button is also unfocusable, so the arrow keys stopped dead at it
+  // — the comment that used to sit here claimed they walked through, three
+  // lines above the attribute that stopped them.
+  //
+  // The strike is INFORMATION — "this wasn't there last time we looked" — and
+  // it was implemented as a LOCK. Clicking retries, a retry that answers
+  // clears the mark, and focus walks the whole group.
   const move = (from: number, step: number) => {
     const next = (from + step + DESK_TIMEFRAMES.length) % DESK_TIMEFRAMES.length
     items.current[next]?.focus()
@@ -67,8 +76,7 @@ export function TimeframeBar({
             // The one tab stop is whichever is selected; the rest are reached
             // with the arrows once focus is inside.
             tabIndex={selected ? 0 : -1}
-            disabled={missing && !selected}
-            onClick={() => !missing && onChange(tf)}
+            onClick={() => onChange(tf)}
             onKeyDown={(event) => {
               if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
                 event.preventDefault()
@@ -86,7 +94,7 @@ export function TimeframeBar({
             }}
             title={
               missing
-                ? `No stored ${tf} series for this market — the chart cannot draw it`
+                ? `No stored ${tf} series when this was last asked — click to try again`
                 : traded
                   ? `${tf} — the timeframe this book actually trades`
                   : `Draw the chart on ${tf}`
@@ -95,7 +103,7 @@ export function TimeframeBar({
               'num focus-visible:ring-ring relative px-1.5 py-px fd-caption normal-case transition-colors duration-100 focus-visible:z-10 focus-visible:ring-2 focus-visible:outline-none motion-reduce:transition-none',
               index > 0 && 'border-border border-l',
               missing && !selected
-                ? 'text-muted-foreground/40 cursor-not-allowed line-through'
+                ? 'text-muted-foreground/45 hover:text-muted-foreground hover:bg-accent line-through'
                 : selected
                   ? 'bg-primary text-primary-foreground font-medium'
                   : 'text-muted-foreground hover:bg-accent hover:text-foreground',
