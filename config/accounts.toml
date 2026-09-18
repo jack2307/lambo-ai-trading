@@ -120,6 +120,16 @@ login = 26108386
 server = "VantageMarkets-Demo"
 terminal = 'C:\MT5-demo\terminal64.exe'
 
+# Let the launcher hand this terminal its own autologin file, so it comes up
+# logged in without somebody typing a password into an RDP session.
+#
+# Opt-in, and off everywhere it is not written. Before 2026-09-18 the launcher
+# passed `/config:` to this terminal by hard-coded path and to nothing else;
+# deriving it from "does the file exist" would have extended it to the funded
+# terminal, whose autologin nobody has read. The default protects the account
+# with money in it; this key is one account saying yes.
+autologin = true
+
 # Terminal volume = the book's lots x this.
 #
 # 1.0 is right for a CENT paper book mirrored into a STANDARD account, and that

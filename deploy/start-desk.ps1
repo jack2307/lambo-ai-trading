@@ -90,12 +90,12 @@ if (-not $env:SESSIONNAME) {
 # The consequence worth having: add an account to the registry tomorrow and
 # this starts its terminal without being edited.
 $registry = Join-Path $Root 'py\live\accounts.py'
-if (-not (Test-Path $registry)) { Write-Error "missing: $registry"; exit 1 }
+if (-not (Test-Path $registry)) { Write-Host "missing: $registry" -ForegroundColor Red; exit 1 }
 
 function Read-Registry($argsList) {
     if ($RegistryFile) { $argsList = @('--file', $RegistryFile) + $argsList }
     $json = & $Python $registry @argsList 2>&1
-    if ($LASTEXITCODE) { Write-Error ("accounts.py " + ($argsList -join ' ') + " failed: $json"); exit 1 }
+    if ($LASTEXITCODE) { Write-Host ("accounts.py " + ($argsList -join ' ') + " failed: $json") -ForegroundColor Red; exit 1 }
     return ($json | ConvertFrom-Json)
 }
 $accounts = @(Read-Registry @('--all'))
@@ -122,7 +122,7 @@ $priceTerminal = $prices.terminal
 switch ($prices.symbol_suffix) {
     '.sc'   { $priceSymbols = 'cent' }
     ''      { $priceSymbols = 'standard' }
-    default { Write-Error "[prices] symbol_suffix '$($prices.symbol_suffix)' is not one start_pollers.ps1 knows ('.sc' or empty)"; exit 1 }
+    default { Write-Host "[prices] symbol_suffix '$($prices.symbol_suffix)' is not one start_pollers.ps1 knows ('.sc' or empty)" -ForegroundColor Red; exit 1 }
 }
 
 # Every terminal that must be up: each enabled account's own, plus the price
@@ -132,15 +132,32 @@ switch ($prices.symbol_suffix) {
 $plan = @{}
 foreach ($a in $accounts) {
     if (-not $a.enabled) { continue }
-    $plan[$a.terminal] = @{ path = $a.terminal; why = @() }
+    $plan[$a.terminal] = @{ path = $a.terminal; why = @(); autologin = $false }
 }
-if (-not $plan.ContainsKey($priceTerminal)) { $plan[$priceTerminal] = @{ path = $priceTerminal; why = @() } }
+if (-not $plan.ContainsKey($priceTerminal)) { $plan[$priceTerminal] = @{ path = $priceTerminal; why = @(); autologin = $false } }
 foreach ($a in $accounts) {
     if ($a.enabled) {
         $plan[$a.terminal].why += ("$($a.id) login $($a.login)" + $(if ($a.real_money) { ' REAL MONEY' } else { '' }))
+        # Opt-in, from the registry. See the `autologin` key's comment there:
+        # deriving this from "the file exists" would hand an unread autologin
+        # to the terminal carrying real money, which the old launcher never
+        # did.
+        if ($a.autologin) { $plan[$a.terminal].autologin = $true }
     }
 }
 $plan[$priceTerminal].why += 'prices'
+
+# Decided here rather than at launch, so the plan printed below SAYS whether a
+# terminal will be handed an autologin file. It was decided nine lines lower
+# to begin with, past the `-PlanOnly` exit, which meant the selftest could not
+# see the one decision on this path that touches a funded terminal. A choice an
+# operator cannot read before it happens is a choice nobody reviews.
+foreach ($k in @($plan.Keys)) {
+    $f = Join-Path (Split-Path -Parent $k) ('config' + [char]92 + 'autologin.ini')
+    $plan[$k].autologinFile = $f
+    $plan[$k].autologinPresent = (Test-Path $f)
+    $plan[$k].autologinUse = ($plan[$k].autologin -and $plan[$k].autologinPresent)
+}
 
 # PRINTED BEFORE ANYTHING STARTS, so the operator reads the plan rather than
 # inferring it from what came up. The desk has been started by hand at speed
@@ -148,10 +165,22 @@ $plan[$priceTerminal].why += 'prices'
 # green lines.
 Note 'launch plan, from config/accounts.toml:'
 foreach ($k in ($plan.Keys | Sort-Object)) {
-    Note ("   " + $k + "  <- " + ($plan[$k].why -join ', '))
+    $note = ''
+    if ($plan[$k].autologinUse) { $note = '  [autologin]' }
+    elseif ($plan[$k].autologin) { $note = '  [autologin asked for, file missing]' }
+    elseif ($plan[$k].autologinPresent) { $note = '  [autologin present, NOT used]' }
+    Note ("   " + $k + "  <- " + ($plan[$k].why -join ', ') + $note)
 }
 foreach ($a in $accounts) {
-    if (-not $a.enabled) { Note ("   (disabled, not started: " + $a.id + " " + $a.terminal + ")") }
+    if ($a.enabled) { continue }
+    # A disabled account whose terminal is the PRICE feed still has its
+    # terminal started, and saying "not started" beside a plan line that starts
+    # it is two true sentences that read as nonsense together.
+    if ($plan.ContainsKey($a.terminal)) {
+        Note ("   (disabled: " + $a.id + " - its terminal starts anyway, for prices)")
+    } else {
+        Note ("   (disabled, not started: " + $a.id + " " + $a.terminal + ")")
+    }
 }
 
 # A registry path that is not on this disk is a STOP, not a warning.
@@ -163,38 +192,57 @@ foreach ($a in $accounts) {
 $absent = @($plan.Keys | Where-Object { -not (Test-Path $_) })
 if ($absent.Count) {
     foreach ($m in $absent) { Warn ("registry names a terminal that is not on this disk: " + $m) }
-    Write-Error 'refusing to start a partial desk; fix config/accounts.toml or install the terminal'
+    Write-Host 'refusing to start a partial desk; fix config/accounts.toml or install the terminal' -ForegroundColor Red
     exit 1
 }
 
 if ($PlanOnly) { Note 'plan only: nothing started'; exit 0 }
 
+$startedAny = $false
 foreach ($k in ($plan.Keys | Sort-Object)) {
     $what = $plan[$k].why -join ', '
     $running = Get-Process terminal64 -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq $k }
     if ($running) {
         Note ("already up: " + $what)
     } else {
+        $startedAny = $true
         # `/portable` keeps each install's config and logs in its own
         # directory, which is what makes two terminals on one machine
         # independent rather than two views of one profile.
         #
-        # `/config:` is passed when the terminal has an autologin file, and is
-        # DERIVED rather than hard-coded. The old script passed it for the demo
-        # terminal only, by path, so a second terminal with an autologin would
-        # have started unauthorised and then answered every request with "no
-        # such symbol" - which reads as a broker problem, not a launcher one.
-        # Each install keeps its own under `config\autologin.ini` because
-        # `/portable` puts it there.
+        # `/config:` IS OPT-IN, FROM THE REGISTRY, AND THE DEFAULT IS OFF.
+        #
+        # The first version of this derived it — pass `/config:` if the install
+        # has a `config\autologin.ini`. That is one line and it is wrong on
+        # this desk. `/portable` gives EVERY install that directory, any
+        # terminal ever configured through the GUI may have such a file, and
+        # nobody has read the one on the funded install. So the derivation
+        # would have handed an unread autologin to the terminal carrying real
+        # money, which the launcher it replaced never did: either it names a
+        # different account and the terminal comes up on the wrong login, or it
+        # names the same one and forces a re-login on the terminal that is also
+        # the price feed — the exact failure `config/accounts.toml` warns about,
+        # on a machine with no second terminal to fall back to. Found by b5
+        # reviewing the change.
+        #
+        # The thing the derivation was for is still worth having: a terminal
+        # that silently starts unauthorised answers every request with "no such
+        # symbol", which reads as a broker problem. So an unused autologin is
+        # WARNED about rather than acted on. Saying it out loud costs nothing
+        # and logging somebody in does not.
         $targs = @('/portable')
-        $autologin = Join-Path (Split-Path -Parent $k) 'config\autologin.ini'
-        if (Test-Path $autologin) { $targs += "/config:$autologin" }
+        if ($plan[$k].autologinUse) { $targs += ("/config:" + $plan[$k].autologinFile) }
         Start-Process -FilePath $k -ArgumentList $targs
-        Note ("started: " + $what + $(if (Test-Path $autologin) { ' (autologin)' } else { '' }))
+        Note ("started: " + $what + $(if ($plan[$k].autologinUse) { ' (autologin)' } else { '' }))
     }
 }
-Note 'give them a moment to authorise before the pollers ask for bars'
-Start-Sleep -Seconds 20
+# Only when something actually started. Restarting after a crash the terminals
+# survived is the common case, and twenty seconds of nothing there reads as the
+# script having hung.
+if ($startedAny) {
+    Note 'give them a moment to authorise before the pollers ask for bars'
+    Start-Sleep -Seconds 20
+}
 
 # --------------------------------------------------------------- the API
 Step 'fd-api'
@@ -218,7 +266,7 @@ foreach ($i in 1..30) {
         $ready = $true; break
     } catch { }
 }
-if (-not $ready) { Write-Error 'fd-api did not answer within 30s; read data\paper\logs\fd-api.err'; exit 1 }
+if (-not $ready) { Write-Host 'fd-api did not answer within 30s; read data\paper\logs\fd-api.err' -ForegroundColor Red; exit 1 }
 Note 'answering on 127.0.0.1:8138'
 
 # ------------------------------------------------------------ the rest
@@ -250,9 +298,14 @@ if (-not $WithMirrors) {
     Note 'machine and nothing at all across two. Two executors on one account is'
     Note 'two copies of every order.'
 } else {
-    $args = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', (Join-Path $Root 'py\live\start_executors.ps1'))
-    if ($MirrorsLive) { $args += '-Live' } else { $args += '-DryRun' }
-    & powershell $args
+    # `$argv`, not `$args`: `$args` is an automatic variable and assigning to
+    # it happens to work at script scope and does not inside a function. The
+    # same trap cost this repo a fix in `start_executors.ps1` (9ee54c8); it was
+    # latent here and is not worth leaving for the next person who wraps this
+    # block in a function.
+    $argv = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', (Join-Path $Root 'py\live\start_executors.ps1'))
+    if ($MirrorsLive) { $argv += '-Live' } else { $argv += '-DryRun' }
+    & powershell $argv
 }
 
 Write-Host "`nRemember: DISCONNECT this RDP session, do not LOG OFF." -ForegroundColor Green

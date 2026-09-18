@@ -132,6 +132,25 @@ def load(path):
             # account as XAUUSD.sc. '' keeps every account that existed before
             # this field naming exactly what it named.
             "symbol_suffix": str(a.get("symbol_suffix", "")),
+            # Whether the launcher may hand this terminal its own
+            # `config\\autologin.ini`. **Default FALSE, and the default is the
+            # point.**
+            #
+            # `/portable` gives every install a `config` directory, and any
+            # terminal ever configured through the GUI may have an autologin
+            # file in it naming some login. Deriving "pass /config: if the file
+            # exists" would hand that file to whichever terminals have one -
+            # including, on this desk, the one carrying real money, which the
+            # previous launcher never did. Either it names a different account
+            # and the terminal comes up on the wrong login, or it names the
+            # same one and forces a re-login on the terminal that is also the
+            # price feed. Nobody has read those files.
+            #
+            # So it is opt-in per account. The launcher warns when a terminal
+            # has an autologin it is NOT being told to use, which keeps the
+            # thing worth keeping - a terminal silently starting unauthorised
+            # is a real defect - without acting on a file no one has looked at.
+            "autologin": bool(a.get("autologin", False)),
             "runs": [str(r) for r in (a.get("runs") or [])],
         })
     return out

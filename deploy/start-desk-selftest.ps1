@@ -62,7 +62,14 @@ try {
     $termA = Join-Path $tmp 'MT5-a\terminal64.exe'
     $termB = Join-Path $tmp 'MT5-b\terminal64.exe'
     $termGone = Join-Path $tmp 'MT5-gone\terminal64.exe'
-    foreach ($t in @($termA, $termB)) {
+    # A third that exists and has no `config` directory at all, for the
+    # autologin-asked-for-but-absent case. It has to be a terminal NO other
+    # account claims: `accounts.py` refuses a registry where two accounts share
+    # a terminal, which is correct - two executors on one account is two copies
+    # of every order - and which made the first version of this case fail for
+    # that reason rather than the one it names.
+    $termC = Join-Path $tmp 'MT5-c\terminal64.exe'
+    foreach ($t in @($termA, $termB, $termC)) {
         New-Item -ItemType Directory -Force -Path (Split-Path -Parent $t) | Out-Null
         Set-Content -Path $t -Value 'not really a terminal' -Encoding ASCII
     }
@@ -120,6 +127,32 @@ enabled = false
     Write-Host 'a price terminal that is nobody''s account'
     Check 'exits 0' ($r3.code -eq 0)
     Check 'the price terminal is in the plan anyway' ($r3.text -match ([regex]::Escape($termB) + '\s+<-'))
+
+    # AUTOLOGIN IS OPT-IN. The decision is made while the plan is built and
+    # printed with it, so this can see it; it used to be made past -PlanOnly,
+    # which is why the first version of this file could not test the one
+    # decision on this path that touches a funded terminal.
+    New-Item -ItemType Directory -Force -Path (Join-Path (Split-Path -Parent $termA) 'config') | Out-Null
+    Set-Content -Path (Join-Path (Split-Path -Parent $termA) ('config' + [char]92 + 'autologin.ini')) -Value 'Login=1' -Encoding ASCII
+    $r5 = Run-Plan $reg
+    Write-Host 'an autologin file the registry has not opted into'
+    Check 'is reported, not used' ($r5.text -match 'autologin present, NOT used')
+    Check 'and the plan does not claim it will be passed' (-not ($r5.text -match '\[autologin\]'))
+
+    $optIn = $account -replace 'id = "a"', "id = `"a`"`nautologin = true"
+    $reg5 = Join-Path $tmp 'optin.toml'
+    Write-Registry $reg5 $optIn
+    $r6 = Run-Plan $reg5
+    Write-Host 'the same file with the registry opting in'
+    Check 'the plan says it will be passed' ($r6.text -match '\[autologin\]')
+
+    # Asked for and absent: say so rather than start silently unauthorised.
+    $optInB = $optIn -replace [regex]::Escape($termA), $termC
+    $reg6 = Join-Path $tmp 'optin-missing.toml'
+    Write-Registry $reg6 $optInB
+    $r7 = Run-Plan $reg6
+    Write-Host 'autologin asked for where there is no file'
+    Check 'the plan says the file is missing' ($r7.text -match 'file missing')
 
     # An unknown suffix is a stop, not a default. 'standard' would quietly ask
     # a cent terminal for symbols it does not carry.
