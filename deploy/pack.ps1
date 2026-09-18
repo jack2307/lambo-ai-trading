@@ -48,6 +48,29 @@ if (-not $cargoDir) { Write-Error 'cargo not found; install rustup or add it to 
 $winlibs = "$env:LOCALAPPDATA\Microsoft\WinGet\Packages\BrechtSanders.WinLibs.POSIX.UCRT_Microsoft.Winget.Source_8wekyb3d8bbwe\mingw64\bin"
 $env:PATH = if (Test-Path $winlibs) { "$cargoDir;$winlibs;$env:PATH" } else { "$cargoDir;$env:PATH" }
 
+# THE TREE IS MEASURED HERE, BEFORE ANYTHING IS BUILT OR WRITTEN.
+#
+# It used to be measured at the end, after this script had created
+# `deploy\staged-<stamp>\` inside the repo - so `git status --porcelain`
+# counted pack's own output and EVERY VERSION said `git_dirty: true`. A
+# warning that is always on is a warning nobody reads, and this one printed
+# "the tree had uncommitted changes, so this binary contains something the
+# hash above does not name" on every clean pack.
+#
+# It was also inconsistent with the binary. `build.rs` runs its own
+# `git status --porcelain` during the cargo build below, before any output
+# folder exists, so the exe's baked `FD_GIT_DIRTY` was correct while the
+# VERSION file beside it was not - and `update.ps1` warns off the binary's
+# value, so the two disagreed with nobody comparing them.
+#
+# Measured at the same moment build.rs measures it, the two agree by
+# construction. `.gitignore` now also covers `deploy/staged-*` and
+# `deploy/task-backup-*`, which stops a LEFTOVER folder from a previous run
+# dirtying the tree that cargo is about to read - that one reached the binary.
+$head = (git rev-parse HEAD).Trim()
+$porcelain = @(git status --porcelain | Where-Object { $_ })
+$dirty = [bool]$porcelain.Count
+
 Write-Host 'building fd-api...'
 & (Join-Path $cargoDir 'cargo.exe') build --release -p fd-api
 if ($LASTEXITCODE -ne 0) { Write-Error 'cargo build failed'; exit 1 }
@@ -128,7 +151,13 @@ $mb = (Get-Item $zip).Length / 1MB
 # sits in .rodata as a plain literal - and `binary_contains_hash` records
 # whether the bytes corroborate the claim. A false there is the stale-binary
 # case caught at pack time instead of at readiness.
-$staged = Join-Path $Root "deploy\staged-$stamp"
+# `-Out` names the zip; the staged pair goes beside it rather than always
+# under `deploy\`. It used to ignore -Out entirely, so asking for the output
+# somewhere else moved half of it and left the half that matters - the folder
+# update.ps1 -Staged actually installs from - in the repo.
+$stagedParent = if ($Out) { Split-Path -Parent $Out } else { Join-Path $Root 'deploy' }
+if (-not $stagedParent) { $stagedParent = Join-Path $Root 'deploy' }
+$staged = Join-Path $stagedParent "staged-$stamp"
 if (Test-Path $staged) { Remove-Item $staged -Recurse -Force }
 New-Item -ItemType Directory -Force -Path $staged | Out-Null
 
@@ -139,8 +168,6 @@ Copy-Item (Join-Path $Root 'ui\dist') (Join-Path $staged 'dist') -Recurse -Force
 # script that installs it cannot be a different vintage from the artefacts.
 Copy-Item (Join-Path $Root 'deploy\update.ps1') (Join-Path $staged 'update.ps1') -Force
 
-$head = (git rev-parse HEAD).Trim()
-$dirty = [bool]((git status --porcelain) -ne $null -and (git status --porcelain).Length -gt 0)
 $corroborated = $false
 try {
     $bytes = [IO.File]::ReadAllBytes($exe)
@@ -149,6 +176,10 @@ try {
 $version = [ordered]@{
     git_hash              = $head
     git_dirty             = $dirty
+    # A true flag that does not say what it is about is a flag nobody can
+    # act on. The first few paths are enough to tell "I forgot to commit
+    # something" from "a build artefact is untracked".
+    git_dirty_files       = @($porcelain | Select-Object -First 10)
     built_at_utc          = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
     binary_sha256         = (Get-FileHash -Path $exe -Algorithm SHA256).Hash
     binary_contains_hash  = $corroborated

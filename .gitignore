@@ -37,3 +37,15 @@ config/local.toml
 
 # Deploy kit output - the zip is a build artefact, not source.
 /deploy/flowdesk-*.zip
+# The staged pair, same argument as the zip. AND a correctness one: pack.ps1
+# used to create this INSIDE the repo and then ask git whether the tree was
+# dirty, so every VERSION said git_dirty=true and the flag stopped meaning
+# anything. Worse, a leftover folder from the previous pack was present when
+# cargo ran, so build.rs baked dirty=true into the BINARY - the value the
+# deploy actually acts on. Ignoring it fixes the propagation; pack.ps1 also
+# now measures before it writes anything.
+/deploy/staged-*
+# install-tasks.ps1 -Apply exports each live task's XML here before replacing
+# it. Rollback material, per-machine, and not source - and it dirtied the
+# tree the same way.
+/deploy/task-backup-*
