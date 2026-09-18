@@ -57,3 +57,22 @@ To regenerate:
 cargo run -p fd-api --bin fd-api -- --port=8207 --data=<store>
 curl -s "http://127.0.0.1:8207/api/paper/htf?market=btc"
 ```
+
+## Update, same day: the two intraday rows run DIFFERENT rules
+
+`htf-three-timeframes.json` was re-served after the H1 row moved to a live
+ATR-zigzag. The thing to check in it is that `h1.structure.rule` and
+`h4.structure.rule` are not the same string — `zigzag 3xATR(14) (live)` against
+`fractal(2)` — because two rows drawn identically under two methods is the
+failure this field exists to prevent.
+
+Beside it, `structure.rule_measured` carries how each rule behaved on the
+study's 25,708-bar H1 sample: median lag, turns missed, and flips undone within
+three bars. That last one is the cost of the fast row (16% against fractal(2)'s
+1%) and it is a sibling of `rule` rather than part of its text, because a rule
+is a definition and these are a measurement that will go stale.
+
+BTC again, so the labels describe nothing about gold. The zigzag's fidelity to
+the research definition is not checked here but in
+`crates/fd-api/tests/fixtures/zigzag-h1-xauusd.csv`, which is real XAUUSD H1
+bars labelled by `py/research/bias_defs.py` itself.

@@ -2,31 +2,38 @@
   "market": "btc",
   "h1": {
     "computed_at_bar_ms": 1789207200000,
-    "computed_at_ms": 1789709154663,
+    "computed_at_ms": 1789719924124,
     "timeframe": "1h",
     "bar_ms": 3600000,
     "structure": {
-      "label": "RANGE",
-      "rule": "fractal(2)",
-      "confirmed_at_bar_ms": 1789196400000,
+      "label": "DOWN",
+      "rule": "zigzag 3xATR(14) (live)",
+      "confirmed_at_bar_ms": 1789138800000,
       "last_high": {
-        "price": 77378.37,
-        "bar_ms": 1789174800000
-      },
-      "prior_high": {
         "price": 79890.0,
         "bar_ms": 1789135200000
       },
+      "prior_high": {
+        "price": 78148.74,
+        "bar_ms": 1789128000000
+      },
       "last_low": {
-        "price": 77164.06,
-        "bar_ms": 1789189200000
+        "price": 76046.58,
+        "bar_ms": 1789128000000
       },
       "prior_low": {
-        "price": 76967.13,
-        "bar_ms": 1789164000000
+        "price": 76464.0,
+        "bar_ms": 1789081200000
       },
-      "break_level": null,
-      "break_side": null
+      "rule_measured": {
+        "median_lag_bars": 6.0,
+        "missed_pct": 1.0,
+        "undone_within_3_pct": 16.0,
+        "source": "docs/decisions/2026-09-18-market-bias-definitions.md",
+        "sample_bars": 25708
+      },
+      "break_level": 79890.0,
+      "break_side": "ABOVE"
     },
     "ema21": 77349.39383306843,
     "ema55": 77563.48662204573,
@@ -48,7 +55,7 @@
   },
   "h4": {
     "computed_at_bar_ms": 1789200000000,
-    "computed_at_ms": 1789709154673,
+    "computed_at_ms": 1789719924128,
     "timeframe": "4h",
     "bar_ms": 14400000,
     "structure": {
@@ -70,6 +77,13 @@
       "prior_low": {
         "price": 76464.0,
         "bar_ms": 1789070400000
+      },
+      "rule_measured": {
+        "median_lag_bars": 12.0,
+        "missed_pct": 23.0,
+        "undone_within_3_pct": 1.0,
+        "source": "docs/decisions/2026-09-18-market-bias-definitions.md",
+        "sample_bars": 25708
       },
       "break_level": null,
       "break_side": null
@@ -94,7 +108,7 @@
   },
   "d1": {
     "computed_at_bar_ms": 1789171200000,
-    "computed_at_ms": 1789709154679,
+    "computed_at_ms": 1789719924130,
     "timeframe": "1d",
     "bar_ms": 86400000,
     "prior_day_high": 79890.0,
