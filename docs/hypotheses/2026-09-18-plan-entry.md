@@ -257,3 +257,53 @@ Written by the TRADER session (Claude Fable 5.1, `backcom-vantage`,
 2026-09-18) on branch `agent/plan-prompt`, against the API contract as given
 by the lead, before the engine's routes were read - the contract is quoted
 above so the two can be compared when they land.
+
+
+## Amendment 2026-09-18 16:55Z - the four books' FIRST trade is excluded, and why
+
+Written before any result of these campaigns was read.
+
+**What happened.** The books were created at 16:38:36Z and their traders were
+started in the same minute, against an fd-api that was still the OLD binary
+(32b98ff) - the pending-order contract had not been deployed yet. An unknown
+field on a JSON body is ignored, not refused, so a plan would have been
+accepted as a plain market intent. The traders were killed at 16:39:48Z, but
+not before each of the four books had taken exactly one trade:
+
+| | |
+|---|---|
+| decided at | 16:39:13Z (trigger arm) / 16:39:16Z (plan arm) |
+| on bar | 08:45:00Z - the warm-up window's last bar, 7h45m stale |
+| answer | `side LONG`, `entry {"type":"market","price":null}` |
+| then | a `gap` row, 30 missing bars |
+| filled | 16:30:00Z bar open, LONG 4377.79 -> 4377.51, STOP |
+| result | pnl -0.02, **R -0.0513**, 0.06 lots, on all four books alike |
+
+**Why the cold-window rule above does not catch it.** That rule reads the
+row's own `LAST <n> BARS` and excludes `n < 40`. This row says 40: a book
+created mid-session is seeded with the poller's stored window, so the prompt
+was full while the last bar in it was eight hours old. The confound here is
+not a short window, it is a STALE one.
+
+**THE RULE, pre-committed, in addition to the cold-window rule:** a row counts
+only when its decision bar is the CURRENT bar - `at - bar_time` less than two
+bar lengths (30 minutes at 15m) - and only when its book's server carried the
+pending-order contract, which fd-api first reported at **16:50:21Z** (version
+f2e9038). Rows before that stamp, and rows decided on a bar more than two bar
+lengths old, are excluded from the plan rate, the fill rate, the
+missed-winner R, the price saved and the net R, and are reported separately
+with their count. Both arms and both coins are filtered by the same rule; on
+these four books it excludes exactly one trade each, the one tabled above.
+
+**It is not deleted.** The rows stay in `fills.jsonl` and `decisions.jsonl`
+where they happened, and every figure quoted from these books says how many
+rows the rule removed. A campaign whose first trade is quietly missing is
+worse than one that says which trade it is not counting.
+
+**The general trap, worth carrying to the next book.** Any book created
+mid-session decides immediately on the stale last bar of its seeded window,
+and the intent then fills at the next bar the poller feeds it - seconds later
+on the wall clock, hours later on the bar clock, with a `gap` row between.
+The fix is to create books in the quiet window and start their traders only
+after the poller has fed the run a current bar; until that is enforced in
+`start_ai_runs.py`, this exclusion is how the record stays honest.
