@@ -2161,6 +2161,9 @@ pub async fn tick(State(state): State<Arc<AppState>>, Json(request): Json<TickRe
     };
     let key = stream_key(&request.market, &request.tf);
     state.live_bars.lock().expect("live bars").insert(key.clone(), live.clone());
+    // The same quote folds into the market's minute bars (m1.rs); a second
+    // poller's copy of it is recognised there and not counted twice.
+    let _ = crate::m1::on_tick(&state, &request.market, &live);
     // Anyone watching hears it now rather than on their next poll. `send`
     // fails only when nobody is subscribed, which is the normal case and not
     // an error: the bar is already stored and `/status` will carry it.
