@@ -163,3 +163,49 @@ worth paying for. Everything else becomes nearly free.
   an arm and not a default.
 - DeepSeek's cache has no SLA; the hit rate is logged per call and the prompt
   order is worth having even at zero hits.
+
+
+## Measured after shipping, 2026-09-18 16:53Z
+
+Read from the books' own rows, deepseek-flash only (the Opus and Codex books
+are on CLI routes whose cache accounting is not comparable and whose cost is
+a plan, not a bill). Everything before 16:05Z is layout v1; after it,
+`cache-v2`.
+
+| | rows | input | cached | hit | output | of which reasoning | cost |
+|---|---|---|---|---|---|---|---|
+| v1 decision | 99 | 269,521 | 4,864 | 2% | 591,915 | not recorded | $0.564 |
+| cache-v2 decision | 14 | 43,916 | 2,560 | 6% | 66,361 | 65,443 | $0.046 |
+| v1 hold check | 121 | 249,445 | 0 | 0% | 272,691 | not recorded | $0.268 |
+| cache-v2 hold check | 3 | 7,314 | 0 | 0% | 173 | 0 | $0.001 |
+
+**Stage 4 did not work, and the reason is structural.** The reorder moved the
+hit rate from 2% to 6% - about 183 cached tokens on a 3,100-token call, worth
+$0.00005 a call. DeepSeek's cache is an exact prefix, so only the text BEFORE
+the first byte that differs can hit, and on a 15-minute decision everything
+after the rulebook and the answer shape is new every bar: the context block,
+the desk state, the position line and the forty bars. The static header is
+roughly 300 tokens of 3,100, which is the ceiling the measurement found. The
+plan's ">50%" was wrong because it assumed the slow blocks would sit in the
+prefix unchanged; the HTF and options blocks do change within an hour, and
+they sit before the bars.
+
+The layout stays: it costs nothing, it is the order the fast loop needs, and
+the 6% is real. But the honest statement is that **prompt ordering does not
+pay for a per-bar call** - it pays for a REPEATED call, which is stage 2's
+fast loop, where the whole 3,100-token decision prompt is the prefix. The
+saving claimed in the table above for "after 3+4" should be read as coming
+from the hold funnel alone.
+
+**Stage 3 worked, and by more than the estimate.** The hold question is now
+asked on an event instead of every bar: 121 calls in the v1 period against 3
+in the first 50 minutes of `cache-v2`, and with thinking off each answer is
+about 58 output tokens instead of about 2,254. The verdict is still advisory
+and still recorded, and the bars not asked about are in the record as
+`hold_skip` rows with the numbers that decided them, so nothing about the
+trade's history is lost.
+
+**What the bill looks like now.** 2026-09-18 to 16:53Z, deepseek-flash, four
+context books plus the two plan books: $0.88 logged. The decision call's own
+reasoning - 4,675 tokens on a typical `cache-v2` decision - remains the
+whole cost, which is the design: that is the call worth paying for.
