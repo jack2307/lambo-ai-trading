@@ -1344,6 +1344,35 @@ function houseOf(name: string | undefined): 'openai' | 'claude' | 'deepseek' | n
  * the control, the campaign is the difference between it and the model, and a
  * badge that made them look alike would hide the one comparison that matters.
  */
+/**
+ * The shortest name that still says which model drove the book.
+ *
+ * The chip used to print the decider's full id and let the row truncate it,
+ * so `deepseek-flash` and `claude-opus-5` ended in an ellipsis on the narrow
+ * rows — and an ellipsis in the one field that identifies WHO traded is that
+ * field failing at its only job. Shortened here instead, deliberately, with
+ * the full id kept in the title where it can still be read.
+ *
+ * Rules rather than a lookup table, because the deciders change: a new model
+ * id has to shorten to SOMETHING sensible without anyone editing this. The
+ * trailing word is preferred when there is one — `gpt-5.6-terra` is known
+ * around here as terra — and a version number is never the answer.
+ */
+function shortDecider(name: string): string {
+  // `codex/` is the route, not the model; it never survives into the label.
+  const raw = name.toLowerCase().replace(/^codex\//, '')
+  if (raw === 'coin') return 'coin'
+  if (raw.startsWith('deepseek')) return 'deepseek'
+  for (const family of ['opus', 'sonnet', 'haiku']) {
+    if (raw.includes(family)) return family
+  }
+  const parts = raw.split(/[-_/]/).filter(Boolean)
+  const tail = parts[parts.length - 1]
+  // A trailing word names the model; a trailing number only versions it.
+  if (parts.length > 1 && tail && tail.length <= 8 && !/^[\d.]+$/.test(tail)) return tail
+  return parts[0] ?? raw
+}
+
 function DeciderTag({ run, silent = false }: { run: PaperRun; silent?: boolean }) {
   if (run.strategy !== 'external' && !run.decider) return null
 
@@ -1354,7 +1383,7 @@ function DeciderTag({ run, silent = false }: { run: PaperRun; silent?: boolean }
   const total = Object.values(run.decider?.decisions ?? {}).reduce((a, b) => a + b, 0)
   const house = coin || mixed ? null : houseOf(last)
 
-  const text = last ? (coin ? 'coin' : last) : 'idle'
+  const text = last ? (coin ? 'coin' : shortDecider(last)) : 'idle'
   const aside = run.decider?.stood_aside ?? 0
   const spoke = last ? `${total} trade${total === 1 ? '' : 's'}, ${aside} stood aside` : ''
   const quiet = run.decider?.last_at ? Math.round((Date.now() - run.decider.last_at) / 60000) : null
@@ -1366,30 +1395,39 @@ function DeciderTag({ run, silent = false }: { run: PaperRun; silent?: boolean }
         ? `${last}: ${spoke}. Standing aside is a real answer; it keeps the badge alive without a trade.`
         : 'externally driven; nothing has posted to it yet'
 
-  // Gradients are inline rather than Tailwind classes because the stops are
-  // brand values, not theme tokens — putting #CC785C in the token set would
-  // imply the desk owns that colour, and it does not.
-  // Each house in the colour its own mark is published in, lifted until 9px
-  // text holds on the dark ground. Inline rather than Tailwind classes because
-  // these are brand values, not theme tokens — putting #D97757 in the token set
-  // would imply the desk owns that colour.
-  const SKINS = {
-    claude: { rgb: '217,119,87', text: '#F2C3AC' },   // #D97757
-    deepseek: { rgb: '77,107,254', text: '#B9C6FF' }, // #4D6BFE
-    // OpenAI's brand is monochrome, so theirs is a metal sheen rather than a
-    // borrowed hue — which also keeps it distinct from the flat grey the coin
-    // wears.
-    openai: { rgb: '255,255,255', text: '#F3F5F7' },
+  /*
+   * ONE STYLE: an outline in the house hue, a coloured mark, and real text.
+   *
+   * It used to be a tinted fill carrying tinted TEXT — #F2C3AC on a 32% wash
+   * of #D97757. That survives on a dark ground, where a lifted tint is
+   * brighter than what is behind it, and dies on a light one, where the text
+   * is a paler version of an already pale fill. The owner's report was that
+   * it was unreadable and the measurement agreed.
+   *
+   * So colour and legibility are now carried by different things. The hue
+   * goes on the border and the vendor mark, where it only has to be SEEN —
+   * the non-text threshold, 3.0. The name is ordinary foreground text, which
+   * is already measured against every ground the desk has. Nothing needs to
+   * be tinted in order to look like it belongs to the family.
+   *
+   * The mark rather than a plain dot: same size, carries the hue just as
+   * well, and says which house at a glance without the reader having to
+   * decode a colour. The hue itself comes from a per-theme variable, so this
+   * component never has to know which theme it is in.
+   */
+  const HOUSE = {
+    claude: 'var(--house-claude)',
+    deepseek: 'var(--house-deepseek)',
+    openai: 'var(--house-openai)',
   } as const
   // A stopped model loses its house colour entirely. Dimming the brand tint
   // would still read as "this is the DeepSeek book, slightly faded"; dropping
   // it reads as "this book is not being driven", which is the true statement.
-  const tone = silent ? null : house ? SKINS[house] : null
+  const tone = silent ? null : house ? HOUSE[house] : null
   const skin = tone
     ? {
-        backgroundImage: `linear-gradient(100deg, rgba(${tone.rgb},0.32), rgba(${tone.rgb},0.06))`,
-        borderColor: `rgba(${tone.rgb},0.5)`,
-        color: tone.text,
+        borderColor: `color-mix(in oklab, ${tone} 55%, transparent)`,
+        backgroundColor: `color-mix(in oklab, ${tone} 7%, transparent)`,
       }
     : undefined
 
@@ -1398,7 +1436,10 @@ function DeciderTag({ run, silent = false }: { run: PaperRun; silent?: boolean }
       title={title}
       style={skin}
       className={cn(
-        'mr-1 inline-flex items-center gap-1 rounded-sm border px-1 py-px align-middle fd-caption tracking-wide uppercase',
+        // `shrink-0` and `whitespace-nowrap`: a narrow row is allowed to
+        // squeeze many things, and the name of who traded is not one of them.
+        'mr-1 inline-flex shrink-0 items-center gap-1 rounded-sm border px-1 py-px align-middle fd-label tracking-wide whitespace-nowrap',
+        skin && 'text-foreground',
         silent && 'border-caution/40 bg-caution/10 text-caution',
         !silent &&
           !skin &&
@@ -1414,16 +1455,25 @@ function DeciderTag({ run, silent = false }: { run: PaperRun; silent?: boolean }
       {/* The house mark goes with the house colour when the model has
           stopped: a book nothing is driving should not still be wearing a
           vendor's logo. */}
-      {!silent && house === 'openai' && <OpenAIMark className="size-[10px] shrink-0" />}
-      {!silent && house === 'claude' && <ClaudeMark className="size-[10px] shrink-0" />}
-      {!silent && house === 'deepseek' && <DeepSeekMark className="size-[10px] shrink-0" />}
+      {/* The marks take `currentColor`, so the hue is set on them directly.
+          The text beside them is deliberately NOT tinted, and letting the
+          marks inherit it would have turned every one of them grey. */}
+      {!silent && house === 'openai' && (
+        <OpenAIMark className="size-[10px] shrink-0" style={{ color: tone ?? undefined }} />
+      )}
+      {!silent && house === 'claude' && (
+        <ClaudeMark className="size-[10px] shrink-0" style={{ color: tone ?? undefined }} />
+      )}
+      {!silent && house === 'deepseek' && (
+        <DeepSeekMark className="size-[10px] shrink-0" style={{ color: tone ?? undefined }} />
+      )}
       {silent && <span aria-hidden>{'\u23f8'}</span>}
       {!silent && !house && !coin && <span aria-hidden>{mixed ? '\u26a0' : '\u25c6'}</span>}
-      <span className="num normal-case">{text}</span>
+      <span className="num">{text}</span>
       {/* Named, not implied. "stopped" beside the model is the one word
           that stops a reader taking the row's numbers as something still
           being added to. */}
-      {silent && <span className="normal-case">stopped</span>}
+      {silent && <span>stopped</span>}
     </span>
   )
 }

@@ -103,6 +103,22 @@ for (const [theme, t] of [
   check(theme, 'candle up on card', t['candle-up'], t.card, GRAPHIC)
   check(theme, 'candle down on card', t['candle-down'], t.card, GRAPHIC)
 
+  // The decider chip's vendor marks. Graphics, not text — the model's NAME
+  // beside them is ordinary foreground, already checked above, which is the
+  // whole point of the chip's design: the hue only has to be seen, so it
+  // never has to be lifted until it stops looking like the brand.
+  //
+  // Checked on every ground because these rows appear on cards and on the
+  // page, and because a published brand colour is chosen against one ground
+  // and this desk has three. #D97757 measures 5.92 on the dark card and 2.74
+  // on the light page; OpenAI's white is not a colour on a white page at all.
+  console.log(`\n-- ${theme.trim()}: decider chip, house marks --`)
+  for (const [name, bg] of grounds) {
+    for (const house of ['claude', 'deepseek', 'openai']) {
+      check(theme, `${house} mark on ${name}`, t[`house-${house}`], bg, GRAPHIC)
+    }
+  }
+
   console.log(`\n-- ${theme.trim()}: three surfaces, not one sheet --`)
   // Not a WCAG rule. A minimum separation, because the failure the owner
   // reported was that the rail, the page and the cards were the same colour:

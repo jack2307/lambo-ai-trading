@@ -205,6 +205,34 @@
      * panel's edge and should hold; the grid sits UNDER the data and should
      * not compete with it. They were one token and the grid won.
      */
+    /*
+     * THE HOUSE HUES, AND WHY THEY ARE TOKENS RATHER THAN LITERALS.
+     *
+     * These are vendor marks, not desk colours, and the comment on
+     * `DeciderTag` is right that the desk does not own them. But a published
+     * brand colour is chosen against ONE ground, and this desk has two:
+     * Anthropic's #D97757 measures 5.92 on the dark card and 2.74 on the
+     * light page, under the 3.0 a mark needs; OpenAI's brand is monochrome
+     * white, which on a white page is not a colour at all. The badge was
+     * already adjusting them - it carried lifted tints like #F2C3AC - it just
+     * only had the dark half.
+     *
+     * So each hue is stated once per theme, adjusted the least amount that
+     * makes the mark hold, and checked by scripts/contrast.check.mjs. The
+     * alternative is a component that knows which theme it is in, which is
+     * the thing CSS variables exist to avoid.
+     */
+    /* #D97757 darkened until it holds on the page: 3.87 there, 4.29 on a
+     * card. */
+    --house-claude: #b85f42;
+    /* #4D6BFE as published - it is the one brand colour that clears both
+     * grounds unchanged. */
+    --house-deepseek: #4d6bfe;
+    /* OpenAI's mark is monochrome, so on light it becomes graphite rather
+     * than a borrowed hue - which also keeps it distinct from the flat grey
+     * the coin control wears. */
+    --house-openai: #5a5f5e;
+
     --candle-up: #3f8a60;
     --candle-down: #bd5a62;
     --chart-grid: #e2e7dd;
@@ -260,6 +288,13 @@
     /* Dark's chart values, named. These are exactly what the chart already
      * used - --lc, --lp, --border and the two constants in tradeZones.ts - so
      * naming them changes nothing here and gives light somewhere to differ. */
+    /* Dark keeps the published colours, which is what the badge already
+     * drew; only the text tints it used to carry are gone, replaced by real
+     * foreground text beside a coloured mark. */
+    --house-claude: #d97757;
+    --house-deepseek: #4d6bfe;
+    --house-openai: #f3f5f7;
+
     --candle-up: #46c98a;
     --candle-down: #e05d6a;
     --chart-grid: #242724;
