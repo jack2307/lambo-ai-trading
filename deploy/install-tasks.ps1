@@ -120,16 +120,30 @@ $TASKS = @(
 # this returns $null and the caller REFUSES to register the export rather than
 # guessing at a username.
 function Get-TerminalPrincipal {
-    $procs = @(Get-CimInstance Win32_Process -Filter "name='terminal64.exe'" -ErrorAction SilentlyContinue)
-    foreach ($proc in $procs) {
+    # EVERY terminal, not the first one found. This machine runs two - the
+    # cent terminal the pollers and the export read, and a demo terminal - and
+    # taking whichever CIM listed first would make the principal depend on
+    # enumeration order. Measured 2026-09-18: both are session 2 under one
+    # owner, so they agree and the answer is the same either way. If they ever
+    # DO disagree, that is a machine whose terminals run as different users
+    # and there is no single right answer to guess at, so this returns nothing
+    # and the caller refuses.
+    $found = @()
+    foreach ($proc in @(Get-CimInstance Win32_Process -Filter "name='terminal64.exe'" -ErrorAction SilentlyContinue)) {
         try {
             $o = Invoke-CimMethod -InputObject $proc -MethodName GetOwner -ErrorAction Stop
         } catch { continue }
         if ($o.ReturnValue -ne 0 -or -not $o.User) { continue }
         $who = if ($o.Domain) { "$($o.Domain)\$($o.User)" } else { "$($o.User)" }
-        return @{ User = $who; Pid = $proc.ProcessId; Session = $proc.SessionId; Path = $proc.ExecutablePath }
+        $found += @{ User = $who; Pid = $proc.ProcessId; Session = $proc.SessionId; Path = $proc.ExecutablePath }
     }
-    return $null
+    if ($found.Count -eq 0) { return $null }
+    $owners = @($found | ForEach-Object { $_.User } | Sort-Object -Unique)
+    if ($owners.Count -gt 1) {
+        Write-Host "   two terminals run as different users ($($owners -join ', ')); cannot choose one" -ForegroundColor Red
+        return $null
+    }
+    return $found[0]
 }
 
 Write-Host ''

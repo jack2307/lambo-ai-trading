@@ -600,13 +600,16 @@ function Test-HtfReadiness([string]$root) {
     Write-Host '  gitignored, so the bars ship with nothing - they have to be exported' -ForegroundColor Yellow
     Write-Host '  on THIS machine, once, against the running demo terminal:' -ForegroundColor Yellow
     Write-Host ''
-    Write-Host '    C:\Python39\python.exe py\ingest\mt5_export.py --symbols XAUUSD ' -NoNewline -ForegroundColor Cyan
-    Write-Host '--timeframes H4,D1 --terminal "C:\MT5-demo\terminal64.exe"' -ForegroundColor Cyan
+    Write-Host '    C:\Python39\python.exe py\ingest\mt5_export.py --symbols XAUUSD.sc ' -NoNewline -ForegroundColor Cyan
+    Write-Host '--timeframes H4,D1 --terminal "C:\MT5-cent\terminal64.exe"' -ForegroundColor Cyan
     Write-Host ''
     Write-Host '  That is the same command deploy\run-htf-export.cmd runs hourly once' -ForegroundColor Yellow
     Write-Host '  install-tasks.ps1 -Apply has registered flowdesk-htf-export. Run it by' -ForegroundColor Yellow
     Write-Host '  hand first: if the symbol is wrong on this terminal, mt5_export logs' -ForegroundColor Yellow
     Write-Host '  "skipped" and still exits 0, so read its output rather than its code.' -ForegroundColor Yellow
+    Write-Host '  The suffix is stripped when the file is named, so XAUUSD-4h.parquet is' -ForegroundColor Yellow
+    Write-Host '  what lands whichever symbol was asked for - the file existing does NOT' -ForegroundColor Yellow
+    Write-Host '  prove the right series is in it. The skip line is the only thing that does.' -ForegroundColor Yellow
     Write-Host '  Until the bars exist, any book on an htf prompt variant decides every' -ForegroundColor Yellow
     Write-Host '  bar with an apology where its context should be - which is a' -ForegroundColor Yellow
     Write-Host '  context-absent campaign wearing a context-present id.' -ForegroundColor Yellow
