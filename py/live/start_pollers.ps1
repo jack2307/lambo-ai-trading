@@ -33,10 +33,27 @@ param(
     # calls a native command, so `-Suffix ''` would leave -Suffix to swallow
     # whatever came next.
     [ValidateSet('cent', 'standard')]
-    [string]$Symbols = 'cent'
+    [string]$Symbols = 'cent',
+    # Pass --fill-on-open to every poller: a book's pending entry fills at the
+    # open of the next bar the moment it opens, not when it closes. Off unless
+    # given OR unless the registry's [prices] fill_on_open says so - the
+    # registry is read below, so a launcher that forgets the switch (update.ps1
+    # passes none) still starts the pollers the way the owner set them.
+    [switch]$FillOnOpen
 )
 
 $suffix = if ($Symbols -eq 'cent') { '.sc' } else { '' }
+# The registry's answer, when the switch was not given. Read through
+# accounts.py like start-desk.ps1 does, so there is one parser of the file.
+if (-not $FillOnOpen) {
+    $registryPy = Join-Path $Root 'py\live\accounts.py'
+    if (Test-Path $registryPy) {
+        $pj = & $Python $registryPy --prices 2>$null
+        if (-not $LASTEXITCODE -and $pj) {
+            try { if (($pj | ConvertFrom-Json).fill_on_open) { $FillOnOpen = $true } } catch { }
+        }
+    }
+}
 
 # $Root is computed, not given, and a wrong one does not announce itself: the
 # pollers would start with the wrong working directory, fail to find
@@ -75,7 +92,8 @@ foreach ($s in $streams) {
     # desk's feed down until it was read. The server never showed it: its
     # terminals are at C:\MT5-demo and C:\MT5-live, which have no spaces.
     if ($Terminal) { $args += "--terminal=`"$Terminal`"" }
+    if ($FillOnOpen) { $args += '--fill-on-open' }
     Start-Process -FilePath $Python -ArgumentList $args -WorkingDirectory $Root -WindowStyle Hidden `
         -RedirectStandardOutput (Join-Path $logs "$($s.log).out") -RedirectStandardError (Join-Path $logs "$($s.log).err")
-    Write-Host "started $($s.symbol) $($s.tf) -> $($s.market) (warm $($s.warm))"
+    Write-Host "started $($s.symbol) $($s.tf) -> $($s.market) (warm $($s.warm)$(if ($FillOnOpen) { ', fill on open' }))"
 }

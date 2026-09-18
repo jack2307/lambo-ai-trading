@@ -274,9 +274,9 @@ Step 'pollers, traders, watch'
 # Their output is shown, not swallowed. Measured 2026-09-17: start_pollers.ps1
 # was silently starting nothing - the output that said so went to Out-Null, and
 # the desk ran for an hour with three traders and no prices reaching them.
-Note "prices: $priceTerminal, $priceSymbols symbols"
+Note "prices: $priceTerminal, $priceSymbols symbols$(if ($prices.fill_on_open) { ', fill on open' })"
 $launchers = @(
-    @{ script = 'start_pollers.ps1'; args = @('-Terminal', $priceTerminal, '-Symbols', $priceSymbols) },
+    @{ script = 'start_pollers.ps1'; args = @('-Terminal', $priceTerminal, '-Symbols', $priceSymbols) + $(if ($prices.fill_on_open) { @('-FillOnOpen') } else { @() }) },
     @{ script = 'start_ai_traders.ps1'; args = @() },
     # The advisor panel, AFTER the traders because it advises them, and with
     # NO ARGUMENTS ON PURPOSE - which means dry run, because `-Apply` is a

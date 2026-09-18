@@ -74,7 +74,14 @@ def prices(path):
         sys.exit(f"{path}: [prices] needs a `terminal` - the desk has no default price feed")
     # An absent suffix is a real answer (a standard account carries none), so
     # it defaults to empty where `terminal` refuses to.
-    return {"terminal": terminal, "symbol_suffix": str(table.get("symbol_suffix") or "")}
+    # `fill_on_open` is the owner's switch for the poller's `--fill-on-open`
+    # (docs/decisions/2026-09-17-entry-lag.md). Absent means off, exactly as
+    # the flag does, so an old registry keeps the old behaviour.
+    return {
+        "terminal": terminal,
+        "symbol_suffix": str(table.get("symbol_suffix") or ""),
+        "fill_on_open": bool(table.get("fill_on_open", False)),
+    }
 
 
 def load(path):

@@ -105,6 +105,14 @@ terminal = 'C:\MT5-cent\terminal64.exe'
 # reason `symbol_suffix` does on an account: `xauusd` is the same gold on both
 # and only the name differs.
 symbol_suffix = ".sc"
+# Fill a book's pending entry at the OPEN of the next bar the moment that bar
+# opens, instead of when it closes fifteen minutes later. Same price, earlier
+# knowledge: the mirror then enters on the same bar the book did rather than
+# one behind it. Built 2026-09-17 (docs/decisions/2026-09-17-entry-lag.md),
+# off until the owner turned it on 2026-09-18 as stage 0 of
+# docs/plans/2026-09-18-staged-ai-entry.md. start_pollers.ps1 reads this key
+# itself, so every launcher path (start-desk, update, by hand) agrees.
+fill_on_open = true
 
 [[account]]
 # Short, stable, and what you type at the launcher. It is also the name the
