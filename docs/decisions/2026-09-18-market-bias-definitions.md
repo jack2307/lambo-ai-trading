@@ -301,8 +301,51 @@ is not a signal, and the card should say so in as many words.**
 
 ---
 
-*Study: `bias_defs.py`, `bias_ref.py`, `bias_measures.py`, `bias_run.py`
-(session scratch). One bug worth recording: the first reference-turn generator
+## Addendum, 2026-09-18: the recommendation was independently reimplemented, and the reimplementation is why this section exists
+
+d1 ported `zigzag 3×ATR` into the route in Rust and compared against this
+study's own function rather than against its description. **Zero mismatches
+on all 25,708 bars** — 14,214 UP / 11,481 DOWN / 13 FLAT, and UP on all seven
+bars of the owner's morning.
+
+Getting there required pinning four choices that the prose above did not:
+highs and lows rather than closes; ATR at the **current** bar rather than at
+the pivot, so the threshold moves under an open leg; the reversal taken on
+the bar that crosses, so a closed-bar recomputation is identical and an
+**intrabar** one is not; and FLAT only before the first pivot — 13 bars of
+the 25,708, never again. They are now in `py/research/bias_defs.py`, which
+is in the repository precisely because a definition that lives in one
+session and a paragraph is not a definition.
+
+**The finding worth keeping is d1's, and it validates this note's method
+from the outside.** Three of d1's four independent choices differed from this
+study's — `>=` where this has strictly `>`, down tested before up on a bar
+that could seed either direction, and a running high *and* low before the
+first pivot rather than one wandering scalar. **Every one of those three
+reproduces the owner's morning.** Seven bars of agreement discriminates
+between none of them; only the aggregate row does. Had the port been
+validated against the case that prompted the study, three different rules
+would have passed.
+
+One property fell out of the comparison for free: d1's labels are derived in
+one pass from the pivot list — the label at bar *t* is the direction set by
+the last pivot confirmed at or before *t* — while this study's are streamed
+bar by bar. Those agreeing on every one of 25,708 bars **is** the no-repaint
+property holding on real data, and it is a better demonstration than a
+synthetic prefix test because nothing about the data was chosen to make it
+pass.
+
+`crates/fd-api/tests/fixtures/zigzag-h1-xauusd.csv` now holds the last 2,000
+bars with this function's own output as the label column, so `cargo test`
+re-runs the comparison without needing the VPS export. **Changing
+`atr_zigzag` will break that test**, which is the intended coupling: the
+route must not drift away from the definition these numbers were measured
+on.
+
+---
+
+*Study: `py/research/bias_defs.py`, `bias_ref.py`, `bias_measures.py`,
+`bias_run.py`, run with `FD_BARS` pointing at the fingerprinted files above. One bug worth recording: the first reference-turn generator
 initialised `direction = 0` with two unguarded branches, so at direction 0
 both fired every bar and the only reversal it could detect was a single bar
 whose range exceeded the threshold. Its first pivot was bar 21,918 of 25,708 —

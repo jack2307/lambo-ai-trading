@@ -135,9 +135,28 @@ def atr_zigzag(bars, k=3.0, n=14):
     afterwards it looks prescient. Here the label at bar t is the leg that was
     in force AT t, which is the only version anyone could have traded.
 
+    THIS FUNCTION IS PINNED BY A RUST TEST. `crates/fd-api/tests/fixtures/
+    zigzag-h1-xauusd.csv` holds the last 2,000 bars of the H1 file the study
+    was measured on WITH THIS FUNCTION'S OWN OUTPUT as its label column, and
+    `cargo test` compares the route's port against it. So **changing
+    anything below breaks a test in another language, and that is the
+    intended behaviour** - the route must not drift away from the definition
+    the published numbers were measured on. If you mean to change it, change
+    the fixture in the same commit and re-measure the note's table; if you do
+    not mean to, the failing test is the point.
+
+    Verified 2026-09-18: this function reproduces that fixture on all 2,000
+    rows, and d1's independent Rust port matches on all 25,708 bars of the
+    full file.
+
     FOUR CHOICES THIS PINS, because prose about "an ATR zigzag" does not, and
     each of them moves the numbers. Asked by d1 before reimplementing it in
-    the route, 2026-09-18, which is the right question to have asked:
+    the route, 2026-09-18, which is the right question to have asked - and
+    the asking earned its keep: three of d1's four independent choices
+    differed from these (`>=` for `>`, testing down before up on a bar that
+    could seed either direction, and a running high AND low before the first
+    pivot rather than one wandering scalar), and **all three reproduced the
+    owner's morning**. Seven bars of agreement discriminates nothing.
 
     1. HIGHS AND LOWS, not closes, for both the extension of a leg and the
        reversal test. A leg extends on `b[H]` while up and on `b[L]` while
