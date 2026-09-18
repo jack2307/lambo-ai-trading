@@ -49,6 +49,11 @@ from advisor import PROVIDERS, ask, provider_of  # noqa: E402
 # unconditionally so a broken import fails at start rather than at the first
 # bar of a campaign that has already been launched.
 import otl_context  # noqa: E402
+# Higher-timeframe facts, used by the `htf-context` and `htf-filter` variants
+# only. Imported unconditionally for the same reason as the line above: a
+# broken import should stop a process at start, not at the first bar it was
+# needed on.
+import htf_context  # noqa: E402
 
 # Output is UTF-8, and undisplayable characters are replaced rather than fatal.
 #
@@ -117,11 +122,49 @@ COIN_CLAUSE = {
 # is a different claim from the twenty-five registrations that tested levels of
 # this kind as mechanical rules and found nothing: those asked whether the
 # levels predict price, this asks whether they change what a model decides.
+#
+# `htf` adds the higher-timeframe facts block to MARKET CONTEXT and nothing
+# else. `htf_rule` adds ONE further sentence, and only on top of `htf`: the
+# two differ by exactly that sentence, so whatever separates them is the
+# sentence and cannot be anything else.
+#
+# WHY THE RULE KEYS ON THE STRUCTURE LABEL AND NOTHING ELSE. ADX and the
+# efficiency ratio are in the block as facts and are deliberately NOT in the
+# rule. An ADX gate measured over the last twelve months of H4 on the broker's
+# own anchor is open most of the time, which makes it a filter that mostly
+# does not filter, and the study behind this registration found that three of
+# its four trend definitions changed sign or size when that anchor was
+# corrected - the structure label being the one that did not. A rule keyed on
+# the least anchor-sensitive definition is the only one whose result will mean
+# something. Decision recorded by a5, 2026-09-18.
 VARIANTS = {
-    "base":            {"coin": "base",            "otl": False},
-    "no-coin-penalty": {"coin": "no-coin-penalty", "otl": False},
-    "otl-context":     {"coin": "base",            "otl": True},
+    "base":            {"coin": "base",            "otl": False, "htf": False, "htf_rule": False},
+    "no-coin-penalty": {"coin": "no-coin-penalty", "otl": False, "htf": False, "htf_rule": False},
+    "otl-context":     {"coin": "base",            "otl": True,  "htf": False, "htf_rule": False},
+    "htf-context":     {"coin": "base",            "otl": False, "htf": True,  "htf_rule": False},
+    "htf-filter":      {"coin": "base",            "otl": False, "htf": True,  "htf_rule": True},
 }
+
+# The whole of what `htf-filter` adds to `htf-context`, quoted here in full so
+# the difference between the two books is readable in one place rather than
+# reconstructed from a diff.
+#
+# It is one sentence and it names its own null behaviour, because a rule that
+# said only "do not trade against the structure" would leave RANGE, an absent
+# label and an unreachable route undefined - and a model resolving that
+# silently, three different ways on three different bars, is a book measuring
+# a mixture. The clause that keeps both sides open in those states is what
+# makes the variant's trades attributable to the rule.
+#
+# It is also the only place in either prompt that contradicts the MARKET
+# CONTEXT header's "none of it is a signal", which is why it says so out loud
+# instead of leaving a model to reconcile the two.
+HTF_RULE = (
+    "ONE ADDITIONAL RULE FOR THIS BOOK - unlike the context above, this one is binding: do not\n"
+    "propose LONG while the H4 swing structure label reads DOWN and do not propose SHORT while it\n"
+    "reads UP; on RANGE, or whenever that label is absent, thin, stale or unavailable, both sides\n"
+    "stay open."
+)
 PROMPT_VARIANTS = tuple(VARIANTS)
 
 PROMPT = """You are trading one paper book on {market} {tf} bars. {coin_clause}
@@ -139,11 +182,11 @@ THE DESK'S STATE — these are the rules you are already playing under, not advi
 {desk}
 
 MARKET CONTEXT — computed from the same bars, for convenience; none of it is a signal
-{context}{otl_block}
+{context}{otl_block}{htf_block}
 
 LAST {n} BARS of {market}:{tf}, oldest first, times UTC
 {bars}
-
+{htf_rule_block}
 Answer with JSON and nothing else:
 
   {{"side": "LONG" | "SHORT" | "NONE", "stop": <price or null>, "target": <price or null>,
@@ -842,9 +885,36 @@ def main() -> int:
             if otl_state == "stale" and age is not None:
                 otl_state = f"stale {int(age / 60000)}m"
 
+        # The higher-timeframe block, fetched per decision for the same reason
+        # as the options block above: facts from the bar before the one being
+        # decided describe the same market, facts from three days ago do not,
+        # and `htf_context` judges that against THIS bar rather than against a
+        # wall clock - which cannot tell a stopped export from a weekend.
+        #
+        # An absent, thin or stale route does NOT fall back to the base
+        # prompt. The block says which it is and `htf` below records it, so
+        # the bars that had the facts can be separated from the bars that did
+        # not when the book is read.
+        htf_state, htf_block, htf_rule_block = "n/a", "", ""
+        if VARIANTS[args.prompt_variant]["htf"]:
+            ctx_htf = htf_context.gather(args.api, args.market, last_time)
+            htf_block = "\n\n" + htf_context.block(ctx_htf)
+            htf_state = ctx_htf["state"]
+            if htf_state == "stale" and ctx_htf.get("behind_bars") is not None:
+                htf_state = f"stale {ctx_htf['behind_bars']:.1f} bars"
+            elif htf_state == "thin":
+                htf_state = "thin " + ",".join(ctx_htf.get("thin_fields") or [])
+        # The rule is NOT dropped when the facts are missing. It names that
+        # case itself - both sides stay open - so a bar with no facts is still
+        # a bar decided under this book's rule, and the record says so. A rule
+        # that vanished on the bars its input was absent would make the
+        # variant two prompts sharing one book id.
+        if VARIANTS[args.prompt_variant]["htf_rule"]:
+            htf_rule_block = "\n" + HTF_RULE + "\n"
+
         prompt = PROMPT.format(
             market=args.market, tf=args.tf, n=len(shown), bars=rows,
-            otl_block=otl_block,
+            otl_block=otl_block, htf_block=htf_block, htf_rule_block=htf_rule_block,
             coin_clause=COIN_CLAUSE[VARIANTS[args.prompt_variant]["coin"]],
             position=describe_position(detail),
             desk=desk_block(detail, limits, atr_now, args.run),
@@ -1026,6 +1096,12 @@ def main() -> int:
             # two can be separated when the book is read. "n/a" for the
             # variants that never ask for it.
             "otl": otl_state,
+            # Which bars had the higher-timeframe facts, and in what
+            # condition: `ok`, `thin <fields>`, `stale <n> bars`,
+            # `unavailable`, or `n/a` for the variants that never ask. The
+            # first analysis this book gets is disagreement rate, and a bar
+            # whose facts were absent cannot be counted in it.
+            "htf": htf_state,
             "prompt": prompt, "response": text, "latency_ms": ms,
             # What the call actually spent. `cost_usd` is null for a plan: that
             # call is not free, it draws on a quota, and printing $0.00 beside
