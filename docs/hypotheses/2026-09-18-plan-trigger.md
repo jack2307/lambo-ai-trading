@@ -248,3 +248,44 @@ on the wall clock, hours later on the bar clock, with a `gap` row between.
 The fix is to create books in the quiet window and start their traders only
 after the poller has fed the run a current bar; until that is enforced in
 `start_ai_runs.py`, this exclusion is how the record stays honest.
+
+
+## Amendment 2026-09-18 17:05Z - the first real plan order, and what it showed
+
+The first plan the new server accepted, recorded here because it settles two
+questions the registration could only assume.
+
+| | |
+|---|---|
+| book | `ai-xau-ds-plan` (and its coin, which mirrored to the same side) |
+| decided | 17:04:00Z on the 16:45Z bar, 40 bars shown |
+| plan | LONG, **stop entry at 4383.70**, valid 4 bars, zone [4383.64, 4385.00], invalidate below 4374.48 |
+| filled | from a TICK, same minute, `bars_waited 0`, ask 4386.27 -> entry 4386.41 after cost |
+| so | the order rested, the tick feed filled it, and `filled_from: tick` is in the row |
+
+**The mechanism works.** A resting stop, a fill from the quote stream, the
+requested price kept beside the filled one, and the coin carrying the same
+shape. Nothing about it needed the 15-minute bar.
+
+**It filled 2.57 points above the price it asked for, and OUTSIDE its own
+zone.** The minute bar shows the move: open 4383.655, high 4386.585, 104
+ticks. The ask crossed 4383.70 and the next quote the API saw was 4386.27, so
+that is where the order filled. The engine is right to fill there - a stop
+takes the touched side and the desk does not invent a price between two
+quotes - but it means `zone` is **informational**: the API stores it and does
+not bound the fill.
+
+**THE RULE, pre-committed:** the measurement reports fills inside and outside
+the plan's own `zone` SEPARATELY, and the entry-price-saved figure is
+computed against `requested_price`, not against the fill. A stop that gaps
+past its zone is not the entry the model planned, and pooling it with the
+ones that filled where they were asked would hide the exact cost this
+campaign exists to measure. Both arms and both coins are reported the same
+way. The join is offline and needs no code: the `intent` row carries `zone`
+and `entry.price`, the `opened` row carries `entry.requested_price`,
+`entry_price` and `filled_from`.
+
+**Whether the engine SHOULD refuse a fill beyond the zone is the owner's
+call, not mine**, and it is a change of fill semantics - a new campaign
+generation - so it is not being made mid-campaign. Recorded here so the
+question is on the record with the trade that raised it.
