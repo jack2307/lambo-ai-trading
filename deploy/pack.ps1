@@ -106,10 +106,77 @@ Compress-Archive -Path (Join-Path $stage '*') -DestinationPath $zip -Compression
 Remove-Item $stage -Recurse -Force
 
 $mb = (Get-Item $zip).Length / 1MB
+
+# ------------------------------------------------------------ the staged pair
+#
+# The zip is for standing a server UP. This folder is for UPDATING one, and it
+# exists because the server has no toolchain: the VPS has git and nothing else,
+# so every deploy there is a binary built here and copied over, and
+# `update.ps1 -Staged <folder>` is the only path that installs it.
+#
+# WHY A VERSION FILE. Finding 8 of the staleness note: the artefacts that
+# decide what the desk DOES - the binary and the client - are the two that
+# `git pull` cannot touch, and a dated zip filename is an invitation to ship
+# the wrong one. mtime cannot help, because a copy stamps the destination. So
+# the folder carries the commit it was built from, and update.ps1 can compare
+# that to the pulled HEAD BEFORE it stops anything.
+#
+# THE HASH IS THE TREE'S, AND THE FILE SAYS SO. `git rev-parse HEAD` describes
+# the checkout that cargo was pointed at, not the bytes that came out. Those
+# are the same thing only if the build actually ran and actually wrote. So the
+# exe is also SCANNED for that hash - version.rs bakes it in with env!(), so it
+# sits in .rodata as a plain literal - and `binary_contains_hash` records
+# whether the bytes corroborate the claim. A false there is the stale-binary
+# case caught at pack time instead of at readiness.
+$staged = Join-Path $Root "deploy\staged-$stamp"
+if (Test-Path $staged) { Remove-Item $staged -Recurse -Force }
+New-Item -ItemType Directory -Force -Path $staged | Out-Null
+
+$exe = Join-Path $Root 'target\release\fd-api.exe'
+Copy-Item $exe (Join-Path $staged 'fd-api.exe') -Force
+Copy-Item (Join-Path $Root 'ui\dist') (Join-Path $staged 'dist') -Recurse -Force
+# update.ps1 travels with the pair so the operator copies ONE folder and the
+# script that installs it cannot be a different vintage from the artefacts.
+Copy-Item (Join-Path $Root 'deploy\update.ps1') (Join-Path $staged 'update.ps1') -Force
+
+$head = (git rev-parse HEAD).Trim()
+$dirty = [bool]((git status --porcelain) -ne $null -and (git status --porcelain).Length -gt 0)
+$corroborated = $false
+try {
+    $bytes = [IO.File]::ReadAllBytes($exe)
+    $corroborated = [Text.Encoding]::ASCII.GetString($bytes).Contains($head)
+} catch { }
+$version = [ordered]@{
+    git_hash              = $head
+    git_dirty             = $dirty
+    built_at_utc          = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+    binary_sha256         = (Get-FileHash -Path $exe -Algorithm SHA256).Hash
+    binary_contains_hash  = $corroborated
+    bundle                = (Get-ChildItem (Join-Path $staged 'dist') -Filter 'index.html' | Select-Object -First 1).Name
+    packed_by             = 'deploy/pack.ps1'
+}
+$version | ConvertTo-Json | Out-File (Join-Path $staged 'VERSION') -Encoding utf8
+
 Write-Host ''
 Write-Host ("packed {0} ({1:N0} MB)" -f $zip, $mb)
+Write-Host ("staged {0}" -f $staged)
+Write-Host ("  git_hash   {0}" -f $head)
+Write-Host ("  git_dirty  {0}" -f $dirty) -ForegroundColor $(if ($dirty) { 'Yellow' } else { 'DarkGray' })
+if ($dirty) {
+    Write-Host '  the tree had uncommitted changes, so this binary contains something' -ForegroundColor Yellow
+    Write-Host '  the hash above does not name. Deployable, and worth knowing.' -ForegroundColor Yellow
+}
+if ($corroborated) {
+    Write-Host '  binary corroborates the hash (the commit string is in the exe)' -ForegroundColor DarkGray
+} else {
+    Write-Host '  WARNING: the exe does NOT contain that commit string.' -ForegroundColor Red
+    Write-Host '  Either it was not rebuilt, or the write failed. Do not ship this.' -ForegroundColor Red
+}
 Write-Host ''
-Write-Host 'On the server: unpack it, then'
+Write-Host 'To update a running server, copy the STAGED FOLDER and run, on the server:'
+Write-Host ("  powershell -NoProfile -File deploy\update.ps1 -ServerOnly -Staged <folder>")
+Write-Host ''
+Write-Host 'On a NEW server: unpack the zip, then'
 Write-Host '  powershell -NoProfile -ExecutionPolicy Bypass -File deploy\bootstrap.ps1'
 Write-Host ''
 Write-Host 'The live books (data\paper) are NOT in here. Copy them at cutover,'

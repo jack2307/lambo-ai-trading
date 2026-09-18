@@ -711,6 +711,86 @@ if ($before -eq $after) {
 
 if ($NoRestart -and $SkipBuild) { Write-Host "`nnothing else asked for"; exit 0 }
 
+# ------------------------------------------- the staged artefacts, BEFORE the stop
+#
+# Everything here needs only two things: the files that were copied over, and
+# the commit the pull just landed on. Both exist by this line, so both checks
+# run while the desk is still up.
+#
+# They used to run inside the install block, after the stop. That is the
+# principle the operator stated after the first real deploy - a refusal at the
+# readiness line with fd-api already down is a worse place to learn it than
+# here - applied one layer in: the cheapest signal that the wrong artefact was
+# staged fired with the desk already stopped, when it could fire while
+# everything is still running and cost nothing but an exit.
+if ($Binary -or $Client) {
+    Step 'the staged artefacts, checked before anything stops'
+
+    # VERSION, written by pack.ps1. Its `git_hash` is the TREE cargo was
+    # pointed at; `binary_contains_hash` is whether the exe's own bytes
+    # corroborate that. Both are reported and only the first is enforced,
+    # because a false corroboration is pack.ps1's problem to have caught and
+    # this is the second line of defence, not the first.
+    $verFile = if ($Staged) { Join-Path $Staged 'VERSION' } `
+               elseif ($Binary) { Join-Path (Split-Path $Binary -Parent) 'VERSION' } else { $null }
+    if ($verFile -and (Test-Path $verFile)) {
+        try { $ver = Get-Content $verFile -Raw | ConvertFrom-Json } catch { $ver = $null }
+        if ($ver) {
+            Note "VERSION: built from $($ver.git_hash) at $($ver.built_at_utc)"
+            if ($ver.git_dirty) {
+                Write-Host '   the staged binary was built from a DIRTY tree; its hash names a' -ForegroundColor Yellow
+                Write-Host '   commit whose contents it does not contain.' -ForegroundColor Yellow
+            }
+            if ($ver.PSObject.Properties.Name -contains 'binary_contains_hash' -and -not $ver.binary_contains_hash) {
+                Write-Host '   pack.ps1 could NOT find that commit string inside the exe.' -ForegroundColor Yellow
+                Write-Host '   Treat the hash below as a claim rather than a fact.' -ForegroundColor Yellow
+            }
+            if ("$($ver.git_hash)" -ne $after) {
+                Stop-Here ("the staged artefacts were built from $($ver.git_hash) and this pull " +
+                           "landed on $after. Nothing has been stopped and nothing copied. " +
+                           'Rebuild at the pulled commit, or pull to the commit they were built ' +
+                           'from. This is the check that used to fire after the desk was down.')
+            }
+            Note 'VERSION matches the pulled HEAD'
+        } else {
+            Note "VERSION at $verFile could not be parsed; falling back to the byte scan"
+        }
+    } else {
+        Note 'no VERSION file beside the staged artefacts (packed before pack.ps1 emitted one)'
+    }
+
+    # The byte scan, moved here from the install block. A heuristic, and it
+    # says so: version.rs bakes the commit in with env!() so it sits in
+    # .rodata as a plain literal, but a different toolchain or a packer could
+    # hide it. It never gates - /api/version after the start is the check -
+    # and it is here because it can save stopping the desk for the wrong file.
+    if ($Binary) {
+        try {
+            $probe = [Text.Encoding]::ASCII.GetString([IO.File]::ReadAllBytes($Binary))
+            if ($probe.Contains($after)) {
+                Note "the staged binary contains $($after.Substring(0,12)) - consistent with this commit"
+            } else {
+                Write-Host "   WARNING: $after does not appear in the staged binary." -ForegroundColor Yellow
+                Write-Host '   It may be built from another commit. Heuristic only; /api/version decides.' -ForegroundColor Yellow
+            }
+        } catch {
+            Note 'could not scan the staged binary for its commit; /api/version will decide'
+        }
+    }
+
+    # The client, checked the same way and for the same reason: index.html
+    # must reference bundles the folder actually contains, and finding that
+    # out after the old dist has been rolled aside is finding it out late.
+    if ($Client) {
+        $stagedBundle = Assert-BundleReferenced $Client
+        if (-not $stagedBundle.ok) {
+            Stop-Here ("the staged client is not serveable: $($stagedBundle.why). " +
+                       'Nothing has been stopped and nothing copied.')
+        }
+        foreach ($r in $stagedBundle.refs) { Note "staged index.html references $r, present" }
+    }
+}
+
 # --------------------------------------------------------------------- stop
 #
 # BEFORE the build, in both restart modes, and that ordering is a staleness
@@ -758,25 +838,10 @@ if ($Binary -or $Client) {
     if ($Binary) {
         $srcHash = Hash-Of $Binary
         Note "source  $Binary  sha $srcHash"
-        # A heuristic, run BEFORE the copy because it can save stopping the
-        # desk for the wrong artefact. version.rs bakes the commit in with
-        # env!(), so the 40-character sha is a plain UTF-8 literal in .rodata
-        # and a byte search finds it. Presence is good evidence; absence is
-        # only suspicious - a different toolchain or a future packer could
-        # hide it. /api/version after the start is the actual check, and this
-        # never gates, it only warns.
-        try {
-            $bytes = [IO.File]::ReadAllBytes($Binary)
-            $text = [Text.Encoding]::ASCII.GetString($bytes)
-            if ($text.Contains($after)) {
-                Note "the staged binary contains the string $($after.Substring(0,12)) - consistent with this commit"
-            } else {
-                Write-Host "   WARNING: $after does not appear in the staged binary." -ForegroundColor Yellow
-                Write-Host '   It may be built from another commit. Heuristic only; /api/version decides.' -ForegroundColor Yellow
-            }
-        } catch {
-            Note 'could not scan the staged binary for its commit; /api/version will decide'
-        }
+        # The commit scan and the VERSION comparison used to live here. They
+        # moved ABOVE the stop, because both need only the staged files and
+        # the pulled hash, and a refusal that costs nothing is worth more than
+        # the same refusal after the desk is down.
         $rolled = Roll-Aside $exe $stamp
         if ($rolled) { Note "previous binary kept at $(Split-Path $rolled -Leaf)" }
         New-Item -ItemType Directory -Force -Path (Split-Path $exe -Parent) | Out-Null
