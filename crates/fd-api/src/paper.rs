@@ -247,6 +247,10 @@ pub struct PaperRun {
     /// now on instead of being invisible in it.
     #[serde(default)]
     pub pending_decided_at: Option<i64>,
+    /// The H4 bar the pending intent's decider read, when it said so. Taken
+    /// with the pending it belongs to, exactly as `pending_decided_at` is.
+    #[serde(default)]
+    pub pending_htf_bar_time: Option<i64>,
     /// Who has been posting this book's entries, if anyone has. `None` on
     /// every rule-based run and on an `external` run nobody has driven yet.
     #[serde(default)]
@@ -1779,6 +1783,7 @@ pub async fn start(State(state): State<Arc<AppState>>, Json(request): Json<Start
         // A new book holds nothing, so there is no fill to have learned about.
         opened_learned_at: None,
         pending_decided_at: None,
+        pending_htf_bar_time: None,
         // Claimed by whoever posts the first accepted intent, never at start.
         decider: None,
         started_at: now_ms(),
@@ -1851,6 +1856,7 @@ fn feed_run(state: &AppState, run: &mut PaperRun, bar: Bar) -> Result<RunBarResp
     // whether it filled or a guard refused it, so the stamp must not survive
     // into the next bar and describe a decision that is no longer waiting.
     let decided_at = run.pending_decided_at.take();
+    let htf_bar_time = run.pending_htf_bar_time.take();
 
     persist(&state.data, run)?;
     if let Some(missing) = gap {
@@ -1878,6 +1884,10 @@ fn feed_run(state: &AppState, run: &mut PaperRun, bar: Bar) -> Result<RunBarResp
                     // model book this is AFTER `time`, and the difference is
                     // how much of the fill price the model had not yet earned.
                     "decided_at": decided_at,
+                    // The H4 state the decision saw, carried from the intent
+                    // to the fill so the trade record answers "what did it
+                    // know" without joining two files on a timestamp.
+                    "htf_bar_time": htf_bar_time,
                 }),
             )?;
         }
@@ -1990,6 +2000,7 @@ fn feed_open(state: &AppState, run: &mut PaperRun, time: i64, open: f64) -> Resu
         run.opened_learned_at = Some(learned_at);
     }
     let decided_at = run.pending_decided_at.take();
+    let htf_bar_time = run.pending_htf_bar_time.take();
     persist(&state.data, run)?;
 
     if let Some(why) = &report.refused {
@@ -2008,6 +2019,10 @@ fn feed_open(state: &AppState, run: &mut PaperRun, time: i64, open: f64) -> Resu
                     "entry_price": p.entry_price,
                     "lots": p.lots,
                     "decided_at": decided_at,
+                    // The H4 state the decision saw, carried from the intent
+                    // to the fill so the trade record answers "what did it
+                    // know" without joining two files on a timestamp.
+                    "htf_bar_time": htf_bar_time,
                 }),
             )?;
         }
@@ -2988,6 +3003,18 @@ pub struct IntentRequest {
     /// trade; they just leave the badge unclaimed.
     #[serde(default)]
     pub decider: Option<String>,
+    /// The H4 bar whose facts this decision READ, epoch ms — the
+    /// `h4.computed_at_bar_ms` the decider fetched from `/api/paper/htf`.
+    ///
+    /// Recorded so the book's own record says which higher-timeframe state
+    /// each decision saw, instead of leaving it to be reconstructed later from
+    /// two logs and a guess about latency. A decider that read no HTF context
+    /// omits it, and that absence is the honest reading: an experiment
+    /// comparing context-present rows against context-absent ones cannot tell
+    /// them apart if a missing fetch looks the same as a fetch that returned
+    /// nothing.
+    #[serde(default)]
+    pub htf_bar_time: Option<i64>,
 }
 
 #[derive(Debug, Serialize)]
@@ -3058,6 +3085,7 @@ pub async fn intent(
     let decided_at = now_ms();
     if side.is_some() {
         run.pending_decided_at = Some(decided_at);
+        run.pending_htf_bar_time = body.htf_bar_time;
     }
     if let Some(side) = side {
         run.book.decide(Intent::Enter {
@@ -3103,6 +3131,12 @@ pub async fn intent(
             // stamped `time`, which on a slow model is a price that existed
             // before the decision did.
             "decided_at": decided_at,
+            // And which H4 state it saw, when it read one. Null means the
+            // decider did not fetch the higher-timeframe facts at all - a
+            // different thing from fetching them and finding nothing, and the
+            // two must stay distinguishable or an experiment comparing the
+            // variants is measuring a mixture.
+            "htf_bar_time": body.htf_bar_time,
             "side": body.side.to_ascii_uppercase(),
             "stop": body.stop,
             "target": body.target,
