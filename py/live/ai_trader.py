@@ -15,6 +15,18 @@ cannot reach a broker. `py/live/mt5_executor.py` remains the only code in this
 repository that can send an order, and it refuses any account that is not a
 demo.
 
+One exception to "cannot act on the bar it was shown", and it is narrow: the
+`plan` variants (stages 1 and 2 of docs/plans/2026-09-18-staged-ai-entry.md)
+let the model name an entry TYPE - market, limit or stop - and a price, so it
+can say "wait for 4331" instead of taking the next open or standing aside. The
+order still fills by the desk's rules, from the desk's tick feed, and expires
+unfilled after the bars the model named; `plan-trigger` additionally asks the
+model, once a minute while the order waits, whether to fill it now, cancel it,
+or leave it - a narrow question, sent with thinking off, on a prompt whose
+first six kilobytes are byte-identical to the decision so the provider serves
+them from cache. The coin control takes the same entry type at mirrored
+distances and never gets the fast question.
+
 **The coin is not decoration.** By default every decision drives two books:
 the model's side into `--run`, and a seeded coin flip into `--control`. If the
 control is unreachable the model's trade is NOT posted either — a campaign
@@ -137,12 +149,33 @@ COIN_CLAUSE = {
 # corrected - the structure label being the one that did not. A rule keyed on
 # the least anchor-sensitive definition is the only one whose result will mean
 # something. Decision recorded by a5, 2026-09-18.
+#
+# `plan` changes the ANSWER SHAPE and nothing else: the same base prompt, the
+# same coin clause, no options block, no higher-timeframe block, plus one
+# block that replaces `{side, stop, target}` with a plan - an entry type
+# (market, limit or stop), a price, a zone, a validity in bars and two
+# invalidation levels. It is stage 1 of docs/plans/2026-09-18-staged-ai-entry.md
+# and is registered at docs/hypotheses/2026-09-18-plan-entry.md. What it asks
+# is whether a model that can say "wait for 4331" saves more at the entry than
+# it loses in the trades that never fill; the market variant on the same model
+# is its control, and the coin takes the same entry type at mirrored distances.
+#
+# `plan-trigger` is `plan` with the SAME prompt - the rendered text is
+# byte-identical, and the selftest pins that - plus a second, fast question
+# asked while a limit or stop is waiting: every `--fast-poll` seconds the
+# decision prompt is re-sent unchanged with the one-minute bars since the
+# decision appended, and the model answers TRIGGER, WAIT or CANCEL with
+# thinking off. Stage 2, registered at docs/hypotheses/2026-09-18-plan-trigger.md.
+# The comparison is against `plan`, whose orders fill by rule alone: does a
+# model at the trigger add anything, or only cost?
 VARIANTS = {
-    "base":            {"coin": "base",            "otl": False, "htf": False, "htf_rule": False},
-    "no-coin-penalty": {"coin": "no-coin-penalty", "otl": False, "htf": False, "htf_rule": False},
-    "otl-context":     {"coin": "base",            "otl": True,  "htf": False, "htf_rule": False},
-    "htf-context":     {"coin": "base",            "otl": False, "htf": True,  "htf_rule": False},
-    "htf-filter":      {"coin": "base",            "otl": False, "htf": True,  "htf_rule": True},
+    "base":            {"coin": "base",            "otl": False, "htf": False, "htf_rule": False, "plan": False, "trigger": False},
+    "no-coin-penalty": {"coin": "no-coin-penalty", "otl": False, "htf": False, "htf_rule": False, "plan": False, "trigger": False},
+    "otl-context":     {"coin": "base",            "otl": True,  "htf": False, "htf_rule": False, "plan": False, "trigger": False},
+    "htf-context":     {"coin": "base",            "otl": False, "htf": True,  "htf_rule": False, "plan": False, "trigger": False},
+    "htf-filter":      {"coin": "base",            "otl": False, "htf": True,  "htf_rule": True,  "plan": False, "trigger": False},
+    "plan":            {"coin": "base",            "otl": False, "htf": False, "htf_rule": False, "plan": True,  "trigger": False},
+    "plan-trigger":    {"coin": "base",            "otl": False, "htf": False, "htf_rule": False, "plan": True,  "trigger": True},
 }
 
 # The whole of what `htf-filter` adds to `htf-context`, quoted here in full so
@@ -165,6 +198,69 @@ HTF_RULE = (
     "reads UP; on RANGE, or whenever that label is absent, thin, stale or unavailable, both sides\n"
     "stay open."
 )
+# The whole of what `plan` adds to base, quoted in full for the same reason
+# HTF_RULE is. It REPLACES the answer shape rather than extending it, and says
+# so in its first sentence: a block that only added fields would leave the
+# model two contracts to choose between, and a book measuring a mixture of
+# the two is the failure every registration here is written to avoid.
+#
+# Every rule the shape needs is in the block and none is left to the model:
+# which side of the last close a limit sits on, which side a stop sits on,
+# what happens after `valid_bars`, and that a missed fill is COUNTED. That
+# last one matters for the record - `cancelled_unfilled` rows are how missed
+# winners are measured, and a model told its unfilled orders simply vanish
+# would price them as free.
+#
+# No sentence about WHEN to prefer a limit over a market entry. That is the
+# question the campaign asks the model; a hint here would be the answer
+# leaking into the prompt.
+PLAN_BLOCK = (
+    "THIS BOOK ANSWERS WITH A PLAN, NOT AN ORDER. The answer shape above is replaced by the one below;\n"
+    "every other rule stands, including that NONE is a real answer:\n"
+    "\n"
+    '  {"side": "LONG" | "SHORT" | "NONE",\n'
+    '   "entry": {"type": "market" | "limit" | "stop", "price": <price or null>},\n'
+    '   "zone": [<lo>, <hi>] or null, "stop": <price>, "target": <price or null>,\n'
+    '   "valid_bars": <1 to 4>, "invalidate_above": <price or null>, "invalidate_below": <price or null>,\n'
+    '   "reason": "<one sentence, under 200 characters, naming what in the bars above you are acting on>"}\n'
+    "\n"
+    'A "market" entry fills at the OPEN of the next bar as before, and its "price" is null. A "limit"\n'
+    "waits for the price to come back to it: below the last close for a LONG, above it for a SHORT. A\n"
+    '"stop" waits for the price to go through it: above the last close for a LONG, below it for a SHORT.\n'
+    'A limit or stop still unfilled after "valid_bars" bars (1 to 4) is cancelled and counted as a missed\n'
+    "trade, never as a stand-aside. For a limit or stop the stop must be on the losing side of the ENTRY\n"
+    'price and the target on the winning side, or the plan is refused. "zone" is the price band inside\n'
+    'which the entry is still worth taking; "invalidate_above" and "invalidate_below" are levels that\n'
+    "cancel the pending entry if the price reaches them first. The zone and the invalidation levels may\n"
+    "be null; the entry type may not."
+)
+
+# The fast question, asked by `plan-trigger` while a limit or stop waits. It
+# is APPENDED to the decision prompt, which is sent again byte for byte: the
+# provider's cache is keyed on an exact prefix (see PROMPT below), so the
+# whole decision - rules, context, forty bars - costs one fiftieth the second
+# time and only this tail is fresh. `{plan}` is the model's own answer, which
+# it has otherwise no way of knowing: the prompt carries the question, not
+# the reply, and a model asked to trigger a plan it cannot see would guess.
+TRIGGER_BLOCK = """
+
+SINCE THAT DECISION
+
+YOUR PLAN from the bars above, as the desk holds it: {plan}
+It fills by itself when the price reaches the entry, expires unfilled after the bars you named, and is
+cancelled if an invalidation level is reached first. None of that needs you. This question does.
+
+ONE-MINUTE BARS closed since the last bar above, oldest first, times UTC ({m1_state}):
+{m1_bars}
+{quote}
+
+Answer with JSON and nothing else:
+
+  {{"action": "TRIGGER" | "WAIT" | "CANCEL", "reason": "<one sentence, under 200 characters>"}}
+
+TRIGGER fills the plan NOW at the current quote instead of waiting for the entry price. WAIT leaves the
+order to its own rules. CANCEL withdraws it. WAIT is the right answer most of the time."""
+
 PROMPT_VARIANTS = tuple(VARIANTS)
 
 PROMPT_LAYOUT = "cache-v2"
@@ -196,7 +292,7 @@ Answer with JSON and nothing else:
 
 "NONE" is a real answer and is often the right one. If you propose a trade, the stop must be on the
 losing side of the last close and the target on the winning side, or it will be refused.
-{htf_rule_block}{htf_block}{otl_block}
+{plan_block}{htf_rule_block}{htf_block}{otl_block}
 
 MARKET CONTEXT — computed from the same bars, for convenience; none of it is a signal
 {context}
@@ -574,12 +670,15 @@ def describe_position(detail: dict) -> str:
     )
 
 
-def parse(text: str) -> dict:
+def parse(text: str, plan: bool = False) -> dict:
     """The decision, or a stand-aside.
 
     An unreadable reply is NOT a trade. Every other failure mode in this
     repository resolves toward doing nothing, and a parser that guessed a side
     would be the one place a bug could put on a position nobody chose.
+
+    `plan` reads the plan fields too (see PLAN_BLOCK). Off by default so the
+    market books' rows keep exactly the shape they have always had.
     """
     start, end = text.find("{"), text.rfind("}")
     if start < 0 or end <= start:
@@ -591,12 +690,53 @@ def parse(text: str) -> dict:
     side = str(obj.get("side", "NONE")).upper()
     if side not in ("LONG", "SHORT"):
         return {"side": "NONE", "reason": str(obj.get("reason", ""))[:200]}
-    return {
+    out = {
         "side": side,
         "stop": obj.get("stop"),
         "target": obj.get("target"),
         "reason": str(obj.get("reason", ""))[:200],
     }
+    if plan:
+        # The plan fields are READ here and JUDGED in `sane`: this keeps
+        # what the model said, in the shape the poster needs, and refuses
+        # nothing. `entry` is always present on a plan decision, even when
+        # the reply had none, so `sane` can name the omission instead of a
+        # market fill quietly standing in for an entry type nobody chose.
+        raw = obj.get("entry")
+        if isinstance(raw, dict):
+            kind = raw.get("type")
+            entry = {"type": str(kind).strip().lower() if kind is not None else None,
+                     "price": raw.get("price")}
+        elif isinstance(raw, str):
+            # `"entry": "limit"` with the price beside it is a shape a model
+            # produces often enough to read; the price is then wherever the
+            # model put it, and `sane` refuses a limit that names none.
+            entry = {"type": raw.strip().lower(), "price": obj.get("entry_price", obj.get("price"))}
+        else:
+            entry = {"type": None, "price": None}
+        out["entry"] = entry
+        out["zone"] = obj.get("zone")
+        # Absent means the API's own default of two bars, and the row then
+        # carries the 2 the intent carried rather than a null the reader
+        # would have to resolve against the API's code. Anything the model
+        # DID say is kept as said; `sane` refuses what is not 1 to 4.
+        valid = obj.get("valid_bars")
+        if valid is None:
+            valid = 2
+        else:
+            try:
+                valid = int(valid) if float(valid).is_integer() else valid
+            except (TypeError, ValueError):
+                pass
+        out["valid_bars"] = valid
+        out["invalidate_above"] = obj.get("invalidate_above")
+        out["invalidate_below"] = obj.get("invalidate_below")
+    return out
+
+
+def _price(v):
+    """A float, or None for null; raises on anything else."""
+    return None if v is None else float(v)
 
 
 def sane(decision: dict, last_close: float) -> tuple[bool, str]:
@@ -606,6 +746,13 @@ def sane(decision: dict, last_close: float) -> tuple[bool, str]:
     words say. A LONG whose stop is above the price is not a bold trade, it is
     a reply that did not understand the question, and posting it would put a
     position on the book for a reason nobody held.
+
+    A plan decision (one carrying `entry`) is held to the same idea with the
+    reference point moved: a limit sits on the pullback side of the last
+    close and a stop on the breakout side, and the exit levels are then judged
+    against the ENTRY price, because that is where the trade would start. A
+    market entry keeps the last close as its reference, so a plan variant
+    answering "market" is checked exactly as the market books are.
     """
     stop, target = decision.get("stop"), decision.get("target")
     if stop is None:
@@ -615,12 +762,205 @@ def sane(decision: dict, last_close: float) -> tuple[bool, str]:
         target = float(target) if target is not None else None
     except (TypeError, ValueError):
         return False, "stop or target not a number"
-    long = decision["side"] == "LONG"
-    if (long and stop >= last_close) or (not long and stop <= last_close):
-        return False, f"stop {stop} is on the winning side of {last_close} for a {decision['side']}"
-    if target is not None and ((long and target <= last_close) or (not long and target >= last_close)):
-        return False, f"target {target} is on the losing side of {last_close}"
+    side = decision["side"]
+    long = side == "LONG"
+    ref = last_close
+    entry = decision.get("entry")
+    if entry is not None:
+        kind = entry.get("type")
+        if kind not in ("market", "limit", "stop"):
+            return False, f"entry type {kind!r} is not market, limit or stop"
+        if kind != "market":
+            try:
+                price = _price(entry.get("price"))
+            except (TypeError, ValueError):
+                return False, f"{kind} entry price {entry.get('price')!r} is not a number"
+            if price is None:
+                return False, f"a {kind} entry names no price"
+            if kind == "limit" and ((long and price >= last_close) or (not long and price <= last_close)):
+                return False, f"limit {price} is not on the pullback side of {last_close} for a {side}"
+            if kind == "stop" and ((long and price <= last_close) or (not long and price >= last_close)):
+                return False, f"stop entry {price} is not on the breakout side of {last_close} for a {side}"
+            valid = decision.get("valid_bars")
+            if isinstance(valid, bool) or not isinstance(valid, int) or not 1 <= valid <= 4:
+                return False, f"valid_bars {valid!r} is not a whole number from 1 to 4"
+            ref = price
+        zone = decision.get("zone")
+        if zone is not None:
+            try:
+                ok_zone = (isinstance(zone, (list, tuple)) and len(zone) == 2
+                           and float(zone[0]) <= float(zone[1]))
+            except (TypeError, ValueError):
+                ok_zone = False
+            if not ok_zone:
+                return False, f"zone {zone!r} is not [lo, hi]"
+        for key in ("invalidate_above", "invalidate_below"):
+            try:
+                _price(decision.get(key))
+            except (TypeError, ValueError):
+                return False, f"{key} {decision.get(key)!r} is not a price"
+    if (long and stop >= ref) or (not long and stop <= ref):
+        return False, f"stop {stop} is on the winning side of {ref} for a {side}"
+    if target is not None and ((long and target <= ref) or (not long and target >= ref)):
+        return False, f"target {target} is on the losing side of {ref}"
     return True, ""
+
+
+def plan_body(decision: dict) -> dict:
+    """The plan fields of an accepted decision, as the intent route takes them.
+
+    Everything numeric is a float and `valid_bars` is null for a market entry:
+    the API applies validity to limit and stop orders only, and sending a
+    number it would ignore invites a reader to think it meant something.
+    """
+    entry = decision["entry"]
+    market = entry["type"] == "market"
+    zone = decision.get("zone")
+    return {
+        "entry": {"type": entry["type"], "price": None if market else float(entry["price"])},
+        "zone": None if zone is None else [float(zone[0]), float(zone[1])],
+        "valid_bars": None if market else int(decision["valid_bars"]),
+        "invalidate_above": _price(decision.get("invalidate_above")),
+        "invalidate_below": _price(decision.get("invalidate_below")),
+    }
+
+
+def reflect(price: float, ref: float) -> float:
+    """The same distance from `ref`, on the other side of it.
+
+    Written as `ref - (p - ref)` above and `ref + (ref - p)` below rather than
+    `2 * ref - p`: those are the two expressions the market books' coin has
+    always used for its stop, and a plan book's coin should land on the same
+    float for the same input, not one that differs in the last place.
+    """
+    return ref - (price - ref) if price > ref else ref + (ref - price)
+
+
+def coin_plan(decision: dict, flip: str, last_close: float) -> dict:
+    """The coin's plan: the book's plan at mirrored distances from the last close.
+
+    Same entry TYPE, same `valid_bars`, same zone width, same stop and target
+    distances - so both books share the fill mechanics and the comparison
+    stays fair. When the coin lands on the book's own side every price is
+    taken as is; when it lands on the other side every price is reflected
+    about the last close, and the two invalidation levels swap roles, because
+    "above" for a LONG is "below" for the SHORT mirror of it.
+
+    Not the market books' formula, on purpose. That one measures each level's
+    distance from the last close and puts it on the coin's losing side, which
+    is right when the entry IS the last close and wrong the moment it is not:
+    a LONG stop-entry at +6 with its stop at +2 has a stop ABOVE the last
+    close, and "the same distance on the losing side" would put the coin's
+    stop at -2, four points further from its entry than the book's. Reflection
+    keeps every distance measured from the entry, which is the one that sizes
+    the trade.
+    """
+    same = flip == decision["side"]
+    def m(p):
+        return None if p is None else (float(p) if same else reflect(float(p), last_close))
+    entry = decision["entry"]
+    market = entry["type"] == "market"
+    zone = decision.get("zone")
+    if zone is None:
+        c_zone = None
+    else:
+        lo, hi = m(zone[0]), m(zone[1])
+        c_zone = [min(lo, hi), max(lo, hi)]
+    above, below = decision.get("invalidate_above"), decision.get("invalidate_below")
+    return {
+        "side": flip,
+        "stop": m(decision["stop"]),
+        "target": m(decision.get("target")),
+        "entry": {"type": entry["type"], "price": None if market else m(entry["price"])},
+        "zone": c_zone,
+        "valid_bars": None if market else int(decision["valid_bars"]),
+        "invalidate_above": m(above) if same else m(below),
+        "invalidate_below": m(below) if same else m(above),
+    }
+
+
+def describe_plan(decision: dict) -> str:
+    """The plan in one line, for the fast question and the console."""
+    e = decision.get("entry") or {}
+    where = "at the next open" if e.get("type") == "market" else f"at {e.get('price')}"
+    return (f"{decision['side']} {e.get('type')} {where}, stop {decision.get('stop')}, "
+            f"target {decision.get('target')}, valid {decision.get('valid_bars')} bars, "
+            f"zone {decision.get('zone')}, invalidate above {decision.get('invalidate_above')} / "
+            f"below {decision.get('invalidate_below')}")
+
+
+def m1_since(m1: dict, bar_time: int, bar_ms: int) -> tuple[str, str]:
+    """The closed one-minute bars after the decision bar, and the feed's state.
+
+    `bar_time` is the OPEN of the decision bar, so a minute counts once its
+    own open is at or past that bar's close. The bars are rendered in the
+    15m rows' own format, `:g` and all, so a number the model has already
+    seen in the decision reads the same way here.
+    """
+    if not m1 or m1.get("unavailable"):
+        return "  (the one-minute feed is unavailable)", "unavailable"
+    rows = []
+    for b in m1.get("bars") or []:
+        t = b.get("time")
+        if t is None or t < bar_time + bar_ms:
+            continue
+        if any(b.get(k) is None for k in ("open", "high", "low", "close")):
+            # A minute the feed could not price is left out rather than
+            # rendered as "None": the fast call must never die on the shape
+            # of one bar, and a bar with no prices tells the model nothing.
+            continue
+        rows.append(
+            f"  {dt.datetime.utcfromtimestamp(t / 1000):%Y-%m-%d %H:%MZ}  "
+            f"O {b.get('open'):g}  H {b.get('high'):g}  L {b.get('low'):g}  C {b.get('close'):g}"
+            + (f"  ({b.get('ticks')} ticks, mean spread {b.get('spread_mean'):.2f})"
+               if b.get("ticks") is not None and b.get("spread_mean") is not None else "")
+        )
+    if not rows:
+        return "  (none closed yet)", "ok, 0 bars"
+    return chr(10).join(rows), f"ok, {len(rows)} bars"
+
+
+def quote_line(live: dict, forming: dict) -> str:
+    """The latest quote and the forming minute, or a plain statement that there is none."""
+    live = live or {}
+    parts = []
+    if live.get("bid") is not None and live.get("ask") is not None:
+        at = live.get("at")
+        when = f" at {dt.datetime.utcfromtimestamp(at / 1000):%H:%M:%SZ}" if at else ""
+        parts.append(f"quote now: bid {live['bid']:g}  ask {live['ask']:g}{when}")
+    else:
+        parts.append("quote now: none (the feed gave no bid/ask)")
+    if forming and forming.get("open") is not None:
+        parts.append(f"the forming minute so far: O {forming.get('open'):g}  H {forming.get('high'):g}  "
+                     f"L {forming.get('low'):g}  C {forming.get('close'):g}")
+    return chr(10).join(parts)
+
+
+def fast_prompt(decision_prompt: str, decision: dict, m1: dict, live: dict,
+                bar_time: int, bar_ms: int) -> str:
+    """The decision prompt, byte for byte, then what has happened since."""
+    bars, state = m1_since(m1, bar_time, bar_ms)
+    return decision_prompt + TRIGGER_BLOCK.format(
+        plan=describe_plan(decision), m1_state=state, m1_bars=bars,
+        quote=quote_line(live, (m1 or {}).get("forming") or {}),
+    )
+
+
+def parse_trigger(text: str) -> dict:
+    """TRIGGER, WAIT or CANCEL. Anything unreadable is WAIT - the answer that
+    changes nothing, and the one the order's own rules give anyway."""
+    start, end = text.find("{"), text.rfind("}")
+    if start < 0 or end <= start:
+        return {"action": "WAIT", "reason": f"unreadable reply: {text[:100]!r}"}
+    try:
+        obj = json.loads(text[start : end + 1])
+    except (ValueError, TypeError) as e:
+        return {"action": "WAIT", "reason": f"unreadable reply: {e}"}
+    action = str(obj.get("action", "WAIT")).upper()
+    return {
+        "action": action if action in ("TRIGGER", "CANCEL") else "WAIT",
+        "reason": str(obj.get("reason", ""))[:200],
+    }
 
 
 # Roll `decisions.jsonl` aside once it passes 32 MiB.
@@ -759,6 +1099,13 @@ def main() -> int:
                     help="reasoning on the hold question; off by default because the question is narrow")
     ap.add_argument("--decision-thinking", choices=("default", "off", "low", "high"), default="default",
                     help="reasoning on the entry decision; default leaves the provider's setting")
+    # The fast loop's cadence, used by `plan-trigger` only. Sixty seconds
+    # because that is one M1 bar - the finest thing the fast prompt shows -
+    # so a faster loop would re-ask on the same bars. It cannot run faster
+    # than `--poll`, which is what actually wakes the process; the check is
+    # made on the first poll at or after the interval.
+    ap.add_argument("--fast-poll", type=float, default=60.0,
+                    help="seconds between trigger questions while a plan waits (plan-trigger only)")
     ap.add_argument("--once", action="store_true")
     args = ap.parse_args()
 
@@ -856,8 +1203,20 @@ def main() -> int:
     # not persisted: a restart looks once more, which is the cheap side to err on.
     hold_state = {"last_bar": None, "entry_time": None, "favourable_seen": False, "trigger": ""}
     bar_ms = {"1m": 60_000, "5m": 300_000, "15m": 900_000, "1h": 3_600_000, "4h": 14_400_000}.get(args.tf, 900_000)
+    is_plan = VARIANTS[args.prompt_variant]["plan"]
+    is_trigger = VARIANTS[args.prompt_variant]["trigger"]
+    # The plan this process posted and has not yet seen resolve: the exact
+    # prompt string that produced it (the fast question re-sends it byte for
+    # byte, so it is kept and never rebuilt), the decision, the bar, and when
+    # the fast question was last asked. Per process and not persisted, on
+    # purpose: a restart cannot reproduce the prompt - the desk state in it
+    # has moved on - so it leaves the order to the rules, and says so once.
+    pending_plan = None
+    pending_seen = None  # the `decided_at` of a pending order this process did not post, warned once
     print(f"hold check: {args.hold_check}, thinking {args.hold_thinking}; decision thinking {args.decision_thinking}; "
-          f"prompt layout {PROMPT_LAYOUT}", flush=True)
+          f"prompt layout {PROMPT_LAYOUT}"
+          + (f"; plan answers, fast loop {'every %gs' % args.fast_poll if is_trigger else 'OFF (rule-only fill)'}"
+             if is_plan else ""), flush=True)
     while True:
         beat()
         try:
@@ -879,6 +1238,84 @@ def main() -> int:
 
         last_time, *_rest = bars[-1]
         last_close = bars[-1][4]
+
+        # ---- the pending order, on EVERY poll and not only on a new bar ----
+        #
+        # `pending_order` is the desk's word on whether a limit or stop is
+        # still waiting. The moment it reads null the order has filled,
+        # expired, been invalidated, been cancelled or been replaced - the
+        # book's fills.jsonl says which - and the memory of it goes, so a
+        # later order this process did not post is never mistaken for it.
+        pending = (detail.get("run") or {}).get("pending_order") if is_plan else None
+        if pending_plan is not None and not pending:
+            pending_plan = None
+        if pending and is_trigger and pending_plan is None and pending.get("decided_at") != pending_seen:
+            # An order from before this process started. Its prompt is gone
+            # with the process that built it, and a rebuilt one would not be
+            # the same bytes, so the fast question is not asked: the order
+            # fills by rule, as the `plan` book's do, and the record shows
+            # the gap as an absence of trigger_check rows for this order.
+            pending_seen = pending.get("decided_at")
+            print(f"pending order from before this process started ({pending.get('side')} "
+                  f"{pending.get('type')} at {pending.get('price')}); rule-only fill until it resolves",
+                  flush=True)
+        if (pending and is_trigger and pending_plan is not None
+                and not (detail.get("run") or {}).get("open")
+                and time.monotonic() - pending_plan["asked_at"] >= args.fast_poll):
+            pending_plan["asked_at"] = time.monotonic()
+            try:
+                m1 = get_json(f"{args.api}/api/paper/m1?market={args.market}&n=60")
+            except Exception as e:  # noqa: BLE001
+                # Asked anyway, with the block saying the feed is down. The
+                # question is still worth its cached price and the record
+                # must show the call, not a silent skip.
+                m1 = {"unavailable": True, "why": f"{type(e).__name__}: {e}"}
+            fprompt = fast_prompt(pending_plan["prompt"], pending_plan["decision"], m1,
+                                  detail.get("live") or {}, pending_plan["bar_time"], bar_ms)
+            usage = {}
+            try:
+                text, ms = ask(fprompt, args.model, provider, key, args.timeout, usage, thinking="off")
+                verdict = parse_trigger(text)
+            except Exception as e:  # noqa: BLE001
+                text, ms, usage = f"ERROR: {type(e).__name__}: {e}", 0, {}
+                verdict = {"action": "WAIT", "reason": f"the model was unreachable; NOT an opinion: {type(e).__name__}"}
+            acted, reply = False, None
+            if verdict["action"] in ("TRIGGER", "CANCEL") and not args.dry_run:
+                # The book only. The coin's order fills by rule alone - a
+                # coin that could be triggered would need an opinion, and
+                # then it would not be a coin.
+                try:
+                    reply = post_json(f"{args.api}/api/paper/pending/act", dict(
+                        run=args.run, action=verdict["action"].lower(), reason=verdict["reason"][:200]))
+                    acted = bool(reply.get("ok", reply.get("accepted", True)))
+                except Exception as e:  # noqa: BLE001
+                    reply = {"error": f"{type(e).__name__}: {e}"}
+            from advisor import cost_of
+            stamp = dt.datetime.now(dt.timezone.utc).strftime("%H:%M:%SZ")
+            print(f"{stamp} trigger? {verdict['action']:7s} "
+                  f"{'acted' if acted else ('dry run' if args.dry_run else 'no act')}  "
+                  f"cached {usage.get('cached_input')}/{usage.get('input')}  {verdict['reason'][:60]}", flush=True)
+            log(args.run, {
+                "at": int(time.time() * 1000), "bar_time": pending_plan["bar_time"], "model": args.model,
+                "prompt_variant": args.prompt_variant, "prompt_layout": PROMPT_LAYOUT,
+                # Marked so nothing downstream reads a trigger opinion as an
+                # entry decision; `decision` is the same NONE-shaped record
+                # the hold check writes, for the readers that expect one.
+                "kind": "trigger_check",
+                "pending": pending, "m1_state": m1_since(m1, pending_plan["bar_time"], bar_ms)[1],
+                "prompt": fprompt, "response": text, "latency_ms": ms,
+                "usage": usage, "cached_input": usage.get("cached_input"),
+                "cost_usd": cost_of(args.model, usage, provider) if usage else None,
+                "action": verdict["action"], "verdict": verdict, "acted": acted, "act_reply": reply,
+                "decision": {"side": "NONE", "reason": f"[{verdict['action']}] {verdict['reason']}"},
+                "posted": False, "refused_locally": "", "dry_run": bool(args.dry_run),
+            })
+            if acted:
+                # The desk reads null on its next poll; until then this is
+                # the same order, and not one to warn about.
+                pending_plan = None
+                pending_seen = pending.get("decided_at")
+
         if last_time == decided_on:
             if args.once:
                 return 0
@@ -948,9 +1385,13 @@ def main() -> int:
         # variant two prompts sharing one book id.
         if VARIANTS[args.prompt_variant]["htf_rule"]:
             htf_rule_block = "\n" + HTF_RULE + "\n"
+        # The plan block is static text, so it lands in the cached prefix
+        # with the rules it amends - before the blocks that change hourly.
+        plan_block = ("\n" + PLAN_BLOCK + "\n") if is_plan else ""
 
         prompt = PROMPT.format(
             market=args.market, tf=args.tf, n=len(shown), bars=rows,
+            plan_block=plan_block,
             otl_block=otl_block, htf_block=htf_block, htf_rule_block=htf_rule_block,
             coin_clause=COIN_CLAUSE[VARIANTS[args.prompt_variant]["coin"]],
             position=describe_position(detail),
@@ -1081,11 +1522,35 @@ def main() -> int:
             time.sleep(args.poll)
             continue
 
+        # A plan book with an order still waiting is NOT asked again on the
+        # new bar. The model named how many bars the order lives for, and
+        # asking it afresh every bar would replace that order with a new one
+        # each time - the API keeps one pending order per run - so a
+        # `valid_bars` of 4 would never mean four. The bar is recorded, as a
+        # held bar is, so the log has no gap; nothing is posted, because a
+        # NONE intent is a new intent and would replace the order too.
+        # Whether to withdraw it early is the fast loop's question, and only
+        # on the `plan-trigger` book.
+        if pending:
+            decided_on = last_time
+            remember(last_time)
+            log(args.run, {
+                "at": int(time.time() * 1000), "bar_time": last_time, "model": args.model,
+                "prompt_variant": args.prompt_variant, "prompt_layout": PROMPT_LAYOUT,
+                "kind": "pending_skip", "pending": pending,
+                "decision": {"side": "NONE", "reason": "[PENDING] an order is still waiting; not asked"},
+                "posted": False, "refused_locally": "", "dry_run": bool(args.dry_run),
+            })
+            if args.once:
+                return 0
+            time.sleep(args.poll)
+            continue
+
         try:
             usage = {}
             text, ms = ask(prompt, args.model, provider, key, args.timeout, usage,
                            thinking=None if args.decision_thinking == "default" else args.decision_thinking)
-            decision = parse(text)
+            decision = parse(text, plan=is_plan)
         except Exception as e:  # noqa: BLE001
             text, ms, usage = f"ERROR: {type(e).__name__}: {e}", 0, {}
             # `unreachable` is NOT a stand-aside. It is marked so the poster
@@ -1138,11 +1603,22 @@ def main() -> int:
             # when the intent is actually accepted.
             body = dict(bar_time=last_time, stop=decision.get("stop"),
                         target=decision.get("target"), reason=decision["reason"][:200])
+            if is_plan:
+                body.update(plan_body(decision))
             try:
                 a = post_json(f"{args.api}/api/paper/intent",
                               dict(run=args.run, side=decision["side"], decider=args.model, **body))
                 b = {"accepted": True}
-                if not args.no_control:
+                if not args.no_control and is_plan:
+                    # The whole plan at mirrored distances - same entry
+                    # type, same validity - so both books share the fill
+                    # mechanics. See `coin_plan` for why this is not the
+                    # market books' arithmetic below.
+                    c = coin_plan(decision, flip, last_close)
+                    b = post_json(f"{args.api}/api/paper/intent", dict(
+                        run=args.control, bar_time=last_time, reason=f"coin: {flip}",
+                        decider="coin", **c))
+                elif not args.no_control:
                     # The control's stop must be the same DISTANCE on its own
                     # side, or the two books are not sized alike and the
                     # comparison dies.
@@ -1156,9 +1632,16 @@ def main() -> int:
                         run=args.control, side=flip, bar_time=last_time, stop=c_stop,
                         target=c_target, reason=f"coin: {flip}", decider="coin"))
                 posted = bool(a.get("accepted")) and bool(b.get("accepted"))
+                if posted and is_plan and decision["entry"]["type"] != "market":
+                    # The order now waits on the desk. Kept with the exact
+                    # prompt that produced it, for the fast loop; a market
+                    # entry has nothing to wait for and keeps no memory.
+                    pending_plan = {"prompt": prompt, "decision": decision, "bar_time": last_time,
+                                    "asked_at": time.monotonic()}
                 against = "no coin" if args.no_control else f"vs coin {flip:5s}"
+                how = f"{decision['entry']['type']} at {decision['entry']['price']}  " if is_plan else ""
                 print(f"{stamp} bar {dt.datetime.utcfromtimestamp(last_time/1000):%H:%MZ}  "
-                      f"{decision['side']:5s} {against}  "
+                      f"{decision['side']:5s} {against}  {how}"
                       f"{'posted' if posted else 'REFUSED: ' + str(a.get('reason')) + ' / ' + str(b.get('reason'))}"
                       f"  {decision['reason'][:60]}", flush=True)
             except Exception as e:  # noqa: BLE001
@@ -1193,6 +1676,12 @@ def main() -> int:
             # call is not free, it draws on a quota, and printing $0.00 beside
             # it would claim something untrue.
             "usage": usage, "cost_usd": cost,
+            # How the trade was to be entered, hoisted out of `decision` so
+            # the plan books' rows can be split by entry type without
+            # parsing the reply. Null on every market book: those rows never
+            # carried an entry and an absent key would read as one more
+            # thing to look up.
+            "entry": decision.get("entry"),
             "decision": decision, "posted": posted, "refused_locally": refused,
             "dry_run": bool(args.dry_run),
         })

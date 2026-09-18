@@ -110,6 +110,37 @@ BOOKS = [
      "AI trader - deepseek-flash, prompt htf-context (base + H4/D1 facts block)"),
     ("ai-xau-ds-ctx-htf-filter", "ai-xau-ds-ctx-htf-filter-coin",
      "AI trader - deepseek-flash, prompt htf-filter (htf-context + one structure-only rule)"),
+    # deepseek-flash a fifth and sixth time, for the staged-entry pair
+    # (docs/plans/2026-09-18-staged-ai-entry.md, stages 1 and 2).
+    # `ai-xau-ds-ctx` is the control for the first and keeps running unchanged.
+    #
+    # `plan` answers with an entry TYPE - market, limit or stop - a price, a
+    # zone, a validity in bars and two invalidation levels, instead of a side
+    # that fills at the next open. The order fills from the desk's own tick
+    # feed and is cancelled unfilled after the bars the model named, and that
+    # cancellation is a ROW in fills.jsonl, so a missed trade is counted rather
+    # than absent. `plan-trigger` is the same prompt with a fast question on
+    # top: every minute while an order waits the model is asked TRIGGER, WAIT
+    # or CANCEL, with thinking off, on a prompt whose first six kilobytes are
+    # the decision prompt again so the provider serves them from cache.
+    #
+    # Two books because they are two claims and the second is only worth
+    # reading against the first: does a limit entry beat a market entry at
+    # all, and if it does, does a model at the trigger add anything to a rule
+    # that fills by itself. Each has its own coin, which takes the same entry
+    # type at mirrored distances so the two share the fill mechanics.
+    #
+    # Registered before their first bar at
+    # docs/hypotheses/2026-09-18-plan-entry.md and 2026-09-18-plan-trigger.md,
+    # with the kill conditions in advance: net R of `plan` not above the
+    # market book's over 30 trades and two windows drops limit entries, and
+    # no difference between `plan-trigger` and `plan` drops the model at the
+    # trigger. Nothing here reaches the funded account: the executor's
+    # --mirror-pending is off until the stage-1 comparison has 30 trades.
+    ("ai-xau-ds-plan", "ai-xau-ds-plan-coin",
+     "AI trader - deepseek-flash, prompt plan (base + plan answer: entry type/price, zone, valid_bars)"),
+    ("ai-xau-ds-plan-trigger", "ai-xau-ds-plan-trigger-coin",
+     "AI trader - deepseek-flash, prompt plan-trigger (plan + TRIGGER/WAIT/CANCEL every minute while waiting)"),
 ]
 
 # Read from the books the hand-made campaigns are still running on.

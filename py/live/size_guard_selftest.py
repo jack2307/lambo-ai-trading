@@ -85,6 +85,17 @@ them coming back. Each section names the failure it pins.
      is SWEPT rather than asserted, and `--print-join-mode` lets a launcher ask
      the mode instead of hardcoding a claim about it.
 
+ 12  THE BOOK'S PENDING ORDER IS MIRRORED ONLY BEHIND `--mirror-pending`, and
+     with the flag off nothing changes - not a request, not a call to
+     `orders_get`, not a field in the snapshot's meaning. With it on: the
+     order-type map (LONG limit is BUY_LIMIT, SHORT stop is SELL_STOP, and
+     nothing else is guessed), the expiry put on the terminal's clock by the
+     measured offset, the same two size guards a market order runs, removal
+     when the book's order disappears without a fill and when the book fills,
+     one poll of grace when the terminal fills before the book does, and the
+     three-key lock still exiting 3 in front of all of it. Written before the
+     flag is ever turned on, per the plan that introduced it.
+
 The provenance of every symbol number is marked. MEASURED means read from a
 terminal on the date given; DERIVED means computed from a measured value and
 said so. Nothing here is a guess presented as a measurement.
@@ -140,8 +151,21 @@ def make_mt5():
     m.TRADE_RETCODE_PLACED = 10008
     m.DEAL_ENTRY_IN = 0
     m.DEAL_TYPE_BUY = 0
+    # The pending-order half of the terminal, for --mirror-pending. The
+    # values are MT5's own enum numbers, so a test asserting on `type` reads
+    # like a real request would.
+    m.TRADE_ACTION_PENDING = 5
+    m.TRADE_ACTION_REMOVE = 8
+    m.ORDER_TYPE_BUY_LIMIT = 2
+    m.ORDER_TYPE_SELL_LIMIT = 3
+    m.ORDER_TYPE_BUY_STOP = 4
+    m.ORDER_TYPE_SELL_STOP = 5
+    m.ORDER_TIME_SPECIFIED = 2
+    m.ORDER_FILLING_RETURN = 2
 
     m.sent = []          # every request that reached order_send
+    m.orders = []        # the terminal's resting orders
+    m.orders_get_calls = 0  # how often the executor asked for them; zero with the flag off
     m.account = None     # the scenario's account; None means a silent terminal
     m.info = None
     m.margin = 5.0       # order_calc_margin's answer; None means it declines
@@ -172,10 +196,20 @@ def make_mt5():
     m.history_deals_get = lambda a, b: m.deals
     m.order_calc_margin = lambda t, s, v, p: m.margin
 
+    def orders_get(**kw):
+        m.orders_get_calls += 1
+        return list(m.orders)
+
+    m.orders_get = orders_get
+
     def order_send(req):
         m.sent.append(req)
+        # A removal takes the order off the terminal, as the real one does;
+        # the executor re-asks after a removal before placing a replacement.
+        if req.get("action") == m.TRADE_ACTION_REMOVE:
+            m.orders = [o for o in m.orders if o.ticket != req.get("order")]
         return Obj(retcode=m.TRADE_RETCODE_DONE, comment="ok", order=1, deal=1,
-                   price=req["price"], volume=req["volume"])
+                   price=req.get("price"), volume=req.get("volume"))
 
     m.order_send = order_send
     return m
@@ -1329,6 +1363,278 @@ def the_close_request_can_actually_be_sent() -> None:
         MT5.order_send = real_send
 
 
+# ---------------------------------------------------------------------------
+# 12 - the book's pending order, mirrored only behind the flag
+# ---------------------------------------------------------------------------
+
+OFFSET_MS = 3 * 3600 * 1000
+
+
+def pending(side: str = "LONG", kind: str = "limit", price: float = 4305.0, lots=0.05,
+            valid_ms=None, **over) -> dict:
+    """A pending order as `/api/paper/status` publishes it. Its deadline is an
+    hour ahead on UTC unless said otherwise, so the terminal-clock check passes."""
+    if valid_ms is None:
+        valid_ms = int(time.time() * 1000) + 3_600_000
+    risk = 10.0
+    stop = price - risk if side == "LONG" else price + risk
+    target = price + 2 * risk if side == "LONG" else price - 2 * risk
+    p = {"type": kind, "price": price, "side": side, "stop": stop, "target": target, "zone": None,
+         "valid_until_bar_ms": valid_ms, "decided_at": valid_ms - 3_600_000,
+         "invalidate_above": None, "invalidate_below": None, "lots": lots}
+    p.update(over)
+    return p
+
+
+def resting(ticket: int, otype: int, price: float, lots: float = 0.05, valid_ms=None) -> Obj:
+    """A TradeOrder as `orders_get` returns it: server seconds on `time_expiration`."""
+    if valid_ms is None:
+        valid_ms = int(time.time() * 1000) + 3_600_000
+    return Obj(ticket=ticket, type=otype, price_open=price, sl=price - 10, tp=price + 20,
+               volume_current=lots, magic=MAGIC, symbol="XAUUSD.sc",
+               time_expiration=(valid_ms + OFFSET_MS) // 1000, comment="t plan")
+
+
+def drive_status(status: dict, extra=None, orders=None, held=None, polls: int = 1,
+                 account=None) -> dict:
+    """`polls` polls of main() against one status entry, resting orders and positions."""
+    tmp = Path(tempfile.mkdtemp(prefix="sgst-pend-"))
+    real_root, real_status, real_sleep = X.ROOT, X.read_status, X.time.sleep
+    argv = sys.argv
+    try:
+        MT5.sent = []
+        MT5.account = account or CENT
+        MT5.info = info_for("XAUUSD.sc")
+        MT5.margin = 5.0
+        MT5.price = SYMBOLS["XAUUSD.sc"][4]
+        MT5.orders = list(orders or [])
+        MT5.orders_get_calls = 0
+        MT5.deals = []
+        MT5.positions_get = lambda **kw: list(held or [])
+        X.ROOT = tmp
+        X.read_status = lambda api, run: dict(status)
+        n = {"polls": 0}
+
+        def stop_after(_):
+            n["polls"] += 1
+            if n["polls"] >= polls:
+                raise KeyboardInterrupt
+
+        X.time.sleep = stop_after
+        sys.argv = ["mt5_executor.py", "--run=t", "--terminal=x", "--login=33705331",
+                    "--symbol=XAUUSD.sc", "--account=acct"] + list(extra or [])
+        rc = X.main()
+        here = tmp / "data" / "live" / "acct" / "t"
+        out, snap = here / "executor.jsonl", here / "broker.json"
+        rows = [json.loads(l) for l in out.read_text(encoding="utf-8").splitlines()
+                if l.strip()] if out.exists() else []
+        return {"rc": rc, "sent": list(MT5.sent), "rows": rows,
+                "snapshot": json.loads(snap.read_text(encoding="utf-8")) if snap.exists() else None,
+                "orders_get_calls": MT5.orders_get_calls}
+    finally:
+        X.ROOT, X.read_status, X.time.sleep = real_root, real_status, real_sleep
+        sys.argv = argv
+        MT5.positions_get = lambda **kw: []
+        MT5.orders = []
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+def the_pending_order_is_mirrored_only_behind_the_flag() -> None:
+    """`--mirror-pending`, default OFF, and everything it does when on.
+
+    The plan books answer with a limit or a stop that waits on the desk
+    (docs/hypotheses/2026-09-18-plan-entry.md). Off, the executor sees the
+    book flat until the order fills and mirrors the position as it always
+    has. On, the terminal holds the same order at the same price with the
+    same expiry. Pending orders on a funded account add states this
+    executor has never held, so these are written BEFORE the flag is ever
+    turned on, and the default is pinned first because the default ships.
+    """
+    section("the pending order, behind --mirror-pending")
+
+    # The map, and that it guesses nothing.
+    for side, kind, want in (("LONG", "limit", MT5.ORDER_TYPE_BUY_LIMIT),
+                             ("SHORT", "limit", MT5.ORDER_TYPE_SELL_LIMIT),
+                             ("LONG", "stop", MT5.ORDER_TYPE_BUY_STOP),
+                             ("SHORT", "stop", MT5.ORDER_TYPE_SELL_STOP)):
+        check(f"{side} {kind} -> {want}", X.pending_order_type(MT5, side, kind) == want)
+    check("case does not matter", X.pending_order_type(MT5, "long", "Limit") == MT5.ORDER_TYPE_BUY_LIMIT)
+    for side, kind in (("LONG", "market"), ("NONE", "limit"), (None, None), ("LONG", "stop-limit")):
+        check(f"{side} {kind} -> None, not a guess", X.pending_order_type(MT5, side, kind) is None)
+
+    # The expiry, converted once at the boundary onto the terminal's clock.
+    check("UTC ms + offset -> server seconds",
+          X.expiry_on_server(1_700_000_000_000, OFFSET_MS) == 1_700_000_000 + 10_800)
+    check("a float ms stamp converts the same", X.expiry_on_server(1_700_000_000_000.0, OFFSET_MS) == 1_700_010_800)
+    check("no offset -> None", X.expiry_on_server(1_700_000_000_000, None) is None)
+    check("no deadline -> None", X.expiry_on_server(None, OFFSET_MS) is None)
+
+    # The comment, within the measured limit and never cut mid-word.
+    check("a short run id gets the tag", X.pending_comment("ai-xau-ds-plan") == "ai-xau-ds-plan plan")
+    check("ai-xau-ds-plan-trigger (22 chars) has no room for it and is sent alone",
+          X.pending_comment("ai-xau-ds-plan-trigger") == "ai-xau-ds-plan-trigger")
+    for run in ("t", "ai-xau-ds-plan", "ai-xau-ds-plan-trigger", "xau-macd-asia"):
+        c = X.pending_comment(run)
+        check(f"pending comment fits and is whole: {c!r}", len(c) <= X.COMMENT_MAX and c == c.strip())
+
+    flat_with_pending = dict(RUN, open=None, pending_order=pending())
+
+    # THE DEFAULT. A pending order on the book and the flag off: nothing.
+    off = drive_status(flat_with_pending)
+    check("flag off: nothing is sent", off["sent"] == [], f"{off['sent']}")
+    check("flag off: the terminal is never asked for resting orders", off["orders_get_calls"] == 0,
+          f"{off['orders_get_calls']}")
+    check("flag off: no pending line of any kind is written",
+          not any("pending" in r["kind"] for r in off["rows"]), f"{[r['kind'] for r in off['rows']]}")
+    check("flag off: the snapshot says so and holds no order",
+          (off["snapshot"] or {}).get("mirror_pending") is False and (off["snapshot"] or {}).get("pending") is None,
+          f"{(off['snapshot'] or {}).get('mirror_pending')} {(off['snapshot'] or {}).get('pending')}")
+    check("flag off: started says mirror_pending false",
+          next((r for r in off["rows"] if r["kind"] == "started"), {}).get("mirror_pending") is False)
+
+    # ON. A LONG limit becomes a BUY_LIMIT at the book's price, sized by the
+    # lot rule, expiring on the terminal's clock when the book's does.
+    on = drive_status(flat_with_pending, extra=["--mirror-pending"])
+    check("flag on: one request", len(on["sent"]) == 1, f"{[r['kind'] for r in on['rows']]}")
+    req = on["sent"][0] if on["sent"] else {}
+    p = flat_with_pending["pending_order"]
+    check("...a pending-order action", req.get("action") == MT5.TRADE_ACTION_PENDING, f"{req}")
+    check("...BUY_LIMIT", req.get("type") == MT5.ORDER_TYPE_BUY_LIMIT, f"{req.get('type')}")
+    check("...at the book's price", req.get("price") == 4305.0, f"{req.get('price')}")
+    check("...sized by the lot rule (0.05 x scale 1.0)", req.get("volume") == 0.05, f"{req.get('volume')}")
+    check("...with the book's stop and target verbatim",
+          req.get("sl") == p["stop"] and req.get("tp") == p["target"], f"sl {req.get('sl')} tp {req.get('tp')}")
+    check("...ORDER_TIME_SPECIFIED", req.get("type_time") == MT5.ORDER_TIME_SPECIFIED, f"{req.get('type_time')}")
+    check("...expiring at the book's deadline ON THE TERMINAL'S CLOCK (+3h, whole seconds)",
+          req.get("expiration") == (p["valid_until_bar_ms"] + OFFSET_MS) // 1000
+          and isinstance(req.get("expiration"), int),
+          f"{req.get('expiration')} vs {(p['valid_until_bar_ms'] + OFFSET_MS) // 1000}")
+    check("...and NOT on UTC (remove the conversion and this fails)",
+          req.get("expiration") != p["valid_until_bar_ms"] // 1000)
+    check("...comment within the measured limit", len(str(req.get("comment", ""))) <= X.COMMENT_MAX,
+          f"{req.get('comment')!r}")
+    check("...magic and expiration are ints",
+          isinstance(req.get("magic"), int) and isinstance(req.get("expiration"), int))
+    placing = next((r for r in on["rows"] if r["kind"] == "pending-placing"), {})
+    check("the placing line carries both clocks and the offset between them",
+          placing.get("valid_until_utc_ms") == p["valid_until_bar_ms"]
+          and placing.get("expiration_server_s") == req.get("expiration")
+          and placing.get("server_offset_ms") == OFFSET_MS, f"{placing}")
+    check("the snapshot says the flag is on", (on["snapshot"] or {}).get("mirror_pending") is True)
+
+    # The other three types.
+    for side, kind, want in (("SHORT", "limit", MT5.ORDER_TYPE_SELL_LIMIT),
+                             ("LONG", "stop", MT5.ORDER_TYPE_BUY_STOP),
+                             ("SHORT", "stop", MT5.ORDER_TYPE_SELL_STOP)):
+        price = 4318.0 if (side, kind) in (("SHORT", "limit"), ("LONG", "stop")) else 4305.0
+        r = drive_status(dict(RUN, open=None, pending_order=pending(side, kind, price)),
+                         extra=["--mirror-pending"])
+        check(f"{side} {kind} is sent as {want} at {price}",
+              len(r["sent"]) == 1 and r["sent"][0].get("type") == want and r["sent"][0].get("price") == price,
+              f"{r['sent']}")
+
+    # The same two size guards a market order runs.
+    big = drive_status(dict(RUN, open=None, pending_order=pending(lots=100.0)), extra=["--mirror-pending"])
+    check("a pending order over the notional ceiling: nothing is sent", big["sent"] == [], f"{big['sent']}")
+    check("...and it is the size guard that says so",
+          any(r["kind"] == "refused-size" for r in big["rows"]), f"{[r['kind'] for r in big['rows']]}")
+
+    # What it refuses on, each written down.
+    nolots = drive_status(dict(RUN, open=None, pending_order=pending(lots=None)), extra=["--mirror-pending"])
+    check("no lots on the book's order: nothing is sent", nolots["sent"] == [], f"{nolots['sent']}")
+    check("...refused-pending names the lots",
+          any(r["kind"] == "refused-pending" and "lots" in r.get("reason", "") for r in nolots["rows"]),
+          f"{[(r['kind'], r.get('reason')) for r in nolots['rows']]}")
+    check("...and the snapshot says it is standing out, not blocked",
+          (nolots["snapshot"] or {}).get("standing_out") and not (nolots["snapshot"] or {}).get("blocked"),
+          f"{(nolots['snapshot'] or {}).get('standing_out')} / {(nolots['snapshot'] or {}).get('blocked')}")
+
+    real_tick = MT5.symbol_info_tick
+    try:
+        MT5.symbol_info_tick = lambda s: Obj(ask=MT5.price, bid=MT5.price - 0.2)
+        noclock = drive_status(flat_with_pending, extra=["--mirror-pending"])
+        check("no server clock: nothing is sent", noclock["sent"] == [], f"{noclock['sent']}")
+        check("...refused-pending names the clock",
+              any(r["kind"] == "refused-pending" and "clock" in r.get("reason", "") for r in noclock["rows"]),
+              f"{[(r['kind'], r.get('reason')) for r in noclock['rows']]}")
+    finally:
+        MT5.symbol_info_tick = real_tick
+
+    gone = drive_status(dict(RUN, open=None, pending_order=pending(valid_ms=int(time.time() * 1000) - 60_000)),
+                        extra=["--mirror-pending"])
+    check("a deadline already past: nothing is sent", gone["sent"] == [], f"{gone['sent']}")
+    check("...and the line says expired",
+          any(r["kind"] == "pending-expired" for r in gone["rows"]), f"{[r['kind'] for r in gone['rows']]}")
+
+    # Cancel on disappear: the book's order went (expired, invalidated,
+    # cancelled) without a fill, and the terminal still holds its copy.
+    held_order = resting(555, MT5.ORDER_TYPE_BUY_LIMIT, 4305.0)
+    cancel = drive_status(dict(RUN, open=None, pending_order=None), extra=["--mirror-pending"],
+                          orders=[held_order])
+    check("book pending gone, no position: the terminal's order is removed",
+          len(cancel["sent"]) == 1 and cancel["sent"][0].get("action") == MT5.TRADE_ACTION_REMOVE
+          and cancel["sent"][0].get("order") == 555, f"{cancel['sent']}")
+    check("...and the removal carries only action and order",
+          set(cancel["sent"][0]) == {"action", "order"} if cancel["sent"] else False,
+          f"{cancel['sent']}")
+    check("...with the flag off the same state removes nothing",
+          drive_status(dict(RUN, open=None, pending_order=None), orders=[held_order])["sent"] == [])
+
+    # A matching order already rests: nothing is duplicated.
+    same = drive_status(flat_with_pending, extra=["--mirror-pending"], orders=[held_order])
+    check("the book's order already rests on the terminal: nothing is sent", same["sent"] == [], f"{same['sent']}")
+    check("...and the snapshot shows it, with its expiry on the book's clock",
+          (same["snapshot"] or {}).get("pending", {}).get("ticket") == 555
+          and (same["snapshot"] or {}).get("pending", {}).get("expires_at")
+          == held_order.time_expiration * 1000 - OFFSET_MS,
+          f"{(same['snapshot'] or {}).get('pending')}")
+
+    # The book replaced its order (a new decision): the old copy goes, the new one is placed.
+    moved = drive_status(dict(RUN, open=None, pending_order=pending(price=4300.0)),
+                         extra=["--mirror-pending"], orders=[resting(555, MT5.ORDER_TYPE_BUY_LIMIT, 4305.0)])
+    check("book pending replaced: remove the old, then place the new, in that order",
+          [r.get("action") for r in moved["sent"]] == [MT5.TRADE_ACTION_REMOVE, MT5.TRADE_ACTION_PENDING]
+          and moved["sent"][1].get("price") == 4300.0, f"{moved['sent']}")
+
+    # The book filled (or was triggered at market) while a copy still rests:
+    # the copy goes and the position is mirrored as it always has been.
+    filled = drive_status(dict(RUN, open=BOOK, pending_order=None), extra=["--mirror-pending"],
+                          orders=[resting(555, MT5.ORDER_TYPE_BUY_LIMIT, 4305.0)])
+    check("book holds, terminal order rests: remove it, then open at market as today",
+          [r.get("action") for r in filled["sent"]] == [MT5.TRADE_ACTION_REMOVE, MT5.TRADE_ACTION_DEAL],
+          f"{filled['sent']}")
+
+    # The terminal filled before the book did: one poll of grace, then the
+    # book's word wins.
+    pos = position(1)
+    ahead = drive_status(flat_with_pending, extra=["--mirror-pending"], held=[pos], polls=1)
+    check("terminal filled first, poll 1: nothing is closed", ahead["sent"] == [], f"{ahead['sent']}")
+    check("...and the grace is written down",
+          any(r["kind"] == "pending-filled-ahead" for r in ahead["rows"]), f"{[r['kind'] for r in ahead['rows']]}")
+    ahead2 = drive_status(flat_with_pending, extra=["--mirror-pending"], held=[pos], polls=2)
+    closes = [r for r in ahead2["sent"] if r.get("action") == MT5.TRADE_ACTION_DEAL and "position" in r]
+    check("...poll 2, book still flat: the position is closed - the account must not hold what the book does not",
+          len(closes) == 1, f"{ahead2['sent']}")
+
+    # THE LOCK. A real account with the flag on and no --allow-real exits 3
+    # having sent nothing, exactly as it does for a market order.
+    real = Obj(login=33705331, server="VantageMarkets-Live 21", currency="USC",
+               trade_mode=1, balance=10000.0, equity=10000.0, margin=0.0)
+    locked = drive_status(flat_with_pending, extra=["--mirror-pending"], account=real)
+    check("REAL account, flag on, no --allow-real: exit 3", locked["rc"] == 3, f"rc {locked['rc']}")
+    check("...nothing was sent", locked["sent"] == [] and locked["orders_get_calls"] == 0, f"{locked['sent']}")
+    check("...and the refusal names the missing key",
+          any(r["kind"] == "refused" and "--allow-real" in r.get("reason", "") for r in locked["rows"]),
+          f"{[(r['kind'], r.get('reason')) for r in locked['rows']]}")
+
+    # Dry run: the request is logged and nothing reaches the terminal.
+    dry = drive_status(flat_with_pending, extra=["--mirror-pending", "--dry-run"])
+    check("dry run: nothing is sent", dry["sent"] == [], f"{dry['sent']}")
+    check("...and the pending request is written as a dry-run line",
+          any(r["kind"] == "dry-run" and "pending" in str(r.get("action")) for r in dry["rows"]),
+          f"{[(r['kind'], r.get('action')) for r in dry['rows']]}")
+
+
 def main() -> int:
     the_ceiling_measures_one_currency()
     both_size_guards_fail_closed()
@@ -1342,6 +1648,7 @@ def main() -> int:
     favourable_joins_are_off_by_default()
     the_launcher_can_ask_what_the_rule_is()
     the_close_request_can_actually_be_sent()
+    the_pending_order_is_mirrored_only_behind_the_flag()
     print(f"\n{'all checks passed' if not FAIL else str(FAIL) + ' CHECK(S) FAILED'}")
     return 1 if FAIL else 0
 
