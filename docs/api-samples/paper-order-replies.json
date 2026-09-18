@@ -1,0 +1,49 @@
+{
+  "act_cancel_reply": {
+    "accepted": true,
+    "reason": "cancelled:structure broke; the limit at 59927.90306317044 is withdrawn"
+  },
+  "act_trigger_refused_no_tick": {
+    "accepted": false,
+    "reason": "no tick has arrived on this stream"
+  },
+  "act_trigger_reply": {
+    "accepted": true,
+    "reason": "filled at 59934.90306317044 on the ask of the tick at 1789748676492"
+  },
+  "intent_reply": {
+    "accepted": true,
+    "reason": "rests as a limit at 59927.90306317044; fills from the tick feed, cancelled after 3 closed bars unfilled"
+  },
+  "intent_request": {
+    "bar_time": 1788231600000,
+    "decider": "gpt-5",
+    "entry": {
+      "price": 59927.90306317044,
+      "type": "limit"
+    },
+    "invalidate_above": 60077.90306317044,
+    "reason": "wait for the pullback",
+    "run": "l",
+    "side": "LONG",
+    "stop": 59827.90306317044,
+    "target": 60127.90306317044,
+    "valid_bars": 3,
+    "zone": [
+      59922.90306317044,
+      59932.90306317044
+    ]
+  },
+  "tick_reply_filled": {
+    "orders": [
+      {
+        "event": "filled",
+        "id": "t"
+      }
+    ],
+    "stored": true
+  },
+  "tick_reply_no_fill": {
+    "stored": true
+  }
+}

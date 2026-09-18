@@ -1,0 +1,49 @@
+{
+  "advised": false,
+  "bars": "...120 bars elided...",
+  "book_net_usd": 0.0,
+  "book_trades": 0,
+  "filters": [],
+  "intent_id": "l:1788231600000",
+  "label": null,
+  "market": "btc",
+  "params": {
+    "atrPeriod": 14.0
+  },
+  "pending_order": {
+    "bars_waited": 0,
+    "decided_at": 1789748676482,
+    "decided_bar_time": 1788231600000,
+    "invalidate_above": 60077.90306317044,
+    "invalidate_below": null,
+    "lots": 0.5,
+    "price": 59927.90306317044,
+    "reason": "wait for the pullback",
+    "side": "LONG",
+    "stop": 59827.90306317044,
+    "target": 60127.90306317044,
+    "type": "limit",
+    "valid_bars": 3,
+    "valid_until_bar_ms": 1788234300000,
+    "zone": [
+      59922.90306317044,
+      59932.90306317044
+    ]
+  },
+  "reason": "wait for the pullback",
+  "run": "l",
+  "shadow_net_usd": 0.0,
+  "shadow_trades": 0,
+  "side": "LONG",
+  "signal_bar": [
+    1788231600000,
+    60053.205930073214,
+    60083.205930073214,
+    59947.90306317044,
+    59977.90306317044
+  ],
+  "stop": 59827.90306317044,
+  "strategy": "external",
+  "target": 60127.90306317044,
+  "tf": "15m"
+}

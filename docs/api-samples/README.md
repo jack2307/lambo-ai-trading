@@ -43,6 +43,30 @@ The `forming: null` cases are here deliberately. That branch draws words rather
 than a candle, so nobody looks at it, which is exactly why a sample of it is
 worth more than a sample of the happy path.
 
+### Orders resting at a price (stage 1 of `docs/plans/2026-09-18-staged-ai-entry.md`)
+
+| file | what it is |
+|---|---|
+| `paper-order-status.json` | one `/api/paper/status` entry with `pending_order` set (a LONG limit with `invalidate_above` and `valid_bars: 3`); `pending` is `null` beside it, which is the rule and not a coincidence |
+| `paper-order-pending-entry.json` | the same order as `/api/paper/pending` lists it: `intent_id` is the order's own `run:decided_bar_time`, and `pending_order` sits beside the market-intent fields (`bars` elided) |
+| `paper-order-replies.json` | the bodies and replies of one session: the `intent` that rests it, `pending/act` refused with no tick, `cancel`, the `tick` reply with and without a fill, and a `trigger` that filled. Every reply is `{accepted, reason}` |
+| `paper-order-fills.jsonl` | the `fills.jsonl` lines that session wrote, in order: `intent` (with `entry`, `zone`, `valid_bars`, invalidation), `cancelled_unfilled` (`reason: cancelled:<the caller's sentence>`), a second `intent`, the `opened` row of a trigger (`entry.price` is the ask it filled at, `entry.requested_price` the level, `filled_from: act`), and the `trade` row carrying the same `entry` |
+
+Two things a consumer should read off these rather than assume. `entry.price`
+on an `opened` row is what the fill was priced FROM, before the half-spread
+entry cost; `entry_price` beside it is after that cost, which is why the two
+differ by `spread / 2` on every row and not only on orders. And `pending_order`
+is a sibling of `pending`, never nested in it: one is a market intent waiting
+for the next open, the other an order waiting for a price, and a book carries
+at most one of the two.
+
+These were not served over HTTP. They are written by the handlers themselves
+from the ignored test `write_order_samples` in `crates/fd-api/tests/paper.rs`
+(`cargo test -p fd-api --test paper write_order_samples -- --ignored`), on the
+synthetic `btc` tape that file uses, so they carry the same JSON the router
+serialises and can be regenerated from any checkout without a store or a
+terminal. Prices in them are the test's sine wave and mean nothing.
+
 ## Provenance, and how to tell when they are stale
 
 Served 2026-09-18 from branch `chart-window` at 479979b, `XAUUSD.sc` on the
