@@ -76,6 +76,36 @@ a5 as a result, including "the ADX gate would never open", and a5 made a
 decision on them before the error was found. The corrected numbers are the
 ones above.
 
+### The bars Findings 1, 3 and 4 were measured on
+
+Every number above comes from this file, on the desktop, fingerprinted so a
+later reader can tell whether they are looking at the same bars rather than
+the same path:
+
+| file | bars | first | last | sha256 (first 16) |
+|---|---|---|---|---|
+| `data/bars/XAUUSD-15m.parquet` | 100,586 | 2022-06-16T10:30:00Z | 2026-09-17T13:00:00Z | `04ced3bbe30e78b9` |
+
+`sha256:04ced3bbe30e78b9458ee87d4acf9847ecb8eddd13083785dc38349d2059ce20`,
+window 2022-06-16 to 2026-09-17 inclusive UTC, and the file's own provenance:
+`broker_symbol=XAUUSD.sc; server=VantageMarkets-Live 21; timeframe=M15;
+exported_at=2026-09-17T13:23:48Z; contract_size=1.0`.
+
+Recompute with `py -3.9 py/research/bars_fingerprint.py
+data/bars/XAUUSD-15m.parquet --from 2022-06-16 --to 2026-09-17`.
+
+The H4 and D1 series in Finding 1 are not fingerprinted separately because
+they were not read: both were aggregated from this 15m file inside the
+study, on the broker's anchor. The route's own `XAUUSD-4h.parquet` is a
+different artefact and is not what these numbers came from.
+
+**Why a digest and not the path.** The path names a different thing on each
+machine: the VPS rewrites `data/bars/` every five minutes and the desktop's
+copy is frozen. The digest is over the BARS - timestamps and OHLCV as bit
+patterns - not the file, so it is unmoved by re-export and by `exported_at`,
+and the window is bounded so that bars arriving later cannot invalidate a
+reading that never saw them. See `docs/research/WHICH-BARS.md`.
+
 ### Finding 2 — this is why the rule keys on structure and on nothing else
 
 a5's decision of 2026-09-18: **`htf-filter` keys on the STRUCTURE LABEL only.**

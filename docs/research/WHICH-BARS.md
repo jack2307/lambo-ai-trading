@@ -78,17 +78,41 @@ Two limits, both real:
   to the Dukascopy corpus, the Binance series or the GC futures file - but it
   means the command classifies by IMPORTER first and by machine second.
 
-## What would make this unnecessary
+## What makes this unnecessary, and it is now built
 
-A registration that named the file **and its content hash** could say what it
-actually read rather than which path it read from, and the question would
-stop depending on which machine somebody was sitting at. That is d1's
-suggestion and it is the only version that survives two machines. Nobody owns
-it yet; it is in `docs/research/BACKLOG.md` terms a small, real task.
+A registration that names the file **and its content hash** says what it
+actually read rather than which path it read from, and the question stops
+depending on which machine somebody was sitting at. The idea is d1's.
 
-Until then, a study that quotes a number should say which machine produced
-the bars — and the answer, for everything closed before 2026-09-18, is the
-desktop.
+`py/research/bars_fingerprint.py` prints a block a registration pastes, and
+`docs/hypotheses/2026-09-18-htf-context.md` is the first one carrying it.
+
+It hashes the BARS, not the file — timestamps and OHLCV as bit patterns, in
+time order — and each of those three choices is load-bearing:
+
+- **Not the file.** Every export rewrites the parquet and `exported_at`
+  alone changes on each run, so a file hash would differ between two
+  machines holding identical bars and would move hourly on the VPS while
+  nothing about the data did. It would be a hash of *when*, not of *what*.
+- **Bit patterns, not decimal text.** `repr()` of a float has changed
+  between Python versions, and a fingerprint that moves with the interpreter
+  is worse than none.
+- **The window, not the whole file**, when one is given. A study that read
+  four years out of sixteen and hashed all sixteen has pinned bytes it never
+  looked at, and would report a mismatch the day somebody extended the file
+  backwards over a window that did not change. This is also what makes the
+  idea survive the VPS at all: **bars appended after a reading cannot
+  invalidate it.** That property is the one the whole thing stands on, and
+  `bars_fingerprint_selftest.py` checks it directly.
+
+What it does NOT tell you is whether the bars are *right*. A wrong-anchor
+resample fingerprints just as cleanly as a correct export; the provenance
+metadata above is what speaks to that.
+
+A study that quotes a number should still say which machine produced the
+bars — and for everything closed before 2026-09-18 the answer is the
+desktop, because those registrations predate the fingerprint and cannot
+honestly be given one after the fact.
 
 ---
 
