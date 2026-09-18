@@ -2717,7 +2717,9 @@ function ChartSource({
       <span className="text-muted-foreground/70">
         {TF_WORD[tf]} candles from the chart store
         {data?.source?.file ? ` (${data.source.file})` : ''}
-        {data?.exported_at_ms != null ? `, exported ${liveAge(data.exported_at_ms, now)} ago` : ''}
+        {data?.source?.exported_at_ms != null
+          ? `, exported ${liveAge(data.source.exported_at_ms, now)} ago`
+          : ''}
         {'. '}
         Indicators are hidden: a 15-minute average is not a {tf} average, and drawing one here under its own
         name would be wrong in a way nothing on screen could show.

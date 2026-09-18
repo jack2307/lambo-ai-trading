@@ -113,14 +113,31 @@ export interface BarsResponse {
   /** The timeframe's period in ms. For labelling and staleness ONLY — bar
    *  times are the broker's and are not multiples of this from the epoch. */
   bar_ms?: number
-  /** The last CLOSED bar's OPEN time — the same stamp as its bar in `bars`. */
-  last_closed_bar_ms?: number
-  /** When the export was written, epoch ms UTC. A stamp and not a duration, so
-   *  the client ages it against its own clock rather than against however long
-   *  the response spent in flight. */
-  exported_at_ms?: number
-  /** Which file the bars were read from, and whether anything was resampled. */
-  source?: { file: string; timeframe: string; resampled: boolean }
+  /** The last CLOSED bar's OPEN time — the same stamp as its bar in `bars`.
+   *  `null` on a series with no closed bar yet. */
+  last_closed_bar_ms?: number | null
+  /**
+   * Which file the bars were read from, and whether anything was resampled.
+   *
+   * `exported_at_ms` is IN HERE and not beside `bars`, which is where the
+   * agreed contract put it and where this client first read it — silently, so
+   * the export age simply never rendered rather than erroring. It belongs
+   * here: it is that file's last write time, a property of the source and not
+   * of the response, and reading it from the wrong level is a fact quietly
+   * missing rather than a wrong one.
+   */
+  source?: {
+    file: string
+    timeframe: string
+    /** True only for steps that divide an hour, where the broker's whole-hour
+     *  offset makes the anchor irrelevant. `4h` and `1d` are refused instead
+     *  of resampled, because their anchor is the broker's and not the epoch's. */
+    resampled: boolean
+    /** When that file was last written, epoch ms UTC. A stamp and not a
+     *  duration, so the client ages it against its own clock rather than
+     *  against however long the response spent in flight. */
+    exported_at_ms?: number | null
+  }
   /** `null` when no finer series covers the period; the chart then shows
    *  closed bars only and says so. */
   forming?: FormingBar | null
