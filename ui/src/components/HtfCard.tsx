@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { ArrowDown, ArrowUp, MoveHorizontal } from 'lucide-react'
 
 import type { HtfH4, HtfResponse } from '@/lib/api'
-import { liveAge } from '@/lib/format'
+import { clock, since } from '@/lib/format'
 import { BIAS_RULE, biasGlyph, biasTally, biasTint, htfBias } from '@/lib/htfBias'
 import { cn } from '@/lib/utils'
 
@@ -107,9 +107,16 @@ function H4Body({
               <span aria-hidden>{biasGlyph(bias.word)}</span> {bias.word}
             </span>
             <span className="text-muted-foreground fd-caption">{biasTally(bias)}</span>
+            {/* WHAT IT IS AS OF, not merely how old it is.
+                A structure label is confirmed two bars after the swing that
+                produced it, so this stamp is meant to be behind the facts
+                beside it. An age on its own reads as staleness — "14 h ago"
+                looks like a warning — where the bar's own clock time says
+                which candle the word describes and makes the lag legible as
+                the rule working rather than the data rotting. */}
             <span className="text-muted-foreground/70 num fd-caption tabular-nums">
               {s.confirmed_at_bar_ms != null
-                ? `as of ${liveAge(s.confirmed_at_bar_ms, now)}`
+                ? `as of the H4 bar that closed ${since(s.confirmed_at_bar_ms, now)} ago (${clock(s.confirmed_at_bar_ms)}Z)`
                 : 'not yet confirmed'}
             </span>
           </div>
@@ -182,7 +189,7 @@ function H4Body({
         {/* The LABEL's own age, which is not the facts' age. */}
         <span className="text-muted-foreground num fd-caption tabular-nums">
           {s.confirmed_at_bar_ms != null
-            ? `confirmed ${liveAge(s.confirmed_at_bar_ms, now)}`
+            ? `confirmed ${since(s.confirmed_at_bar_ms, now)} ago (${clock(s.confirmed_at_bar_ms)}Z)`
             : 'not yet confirmed'}
         </span>
       </div>
@@ -319,8 +326,8 @@ function H4Body({
           stopped moving. */}
       <div className={cn('num fd-caption tabular-nums', stale ? 'text-caution' : 'text-muted-foreground/60')}>
         {stale
-          ? `the last H4 bar closed ${liveAge(h4.computed_at_bar_ms, now)} — more than ${STALE_BARS} bars ago, so these may not be current`
-          : `H4 bar closed ${liveAge(h4.computed_at_bar_ms, now)}`}
+          ? `the last H4 bar closed ${since(h4.computed_at_bar_ms, now)} ago — more than ${STALE_BARS} bars ago, so these may not be current`
+          : `H4 bar closed ${since(h4.computed_at_bar_ms, now)} ago`}
       </div>
     </div>
   )
@@ -393,7 +400,7 @@ function H1Row({
           so on the hour the word can be two bars older than the numbers. */}
       <span className="text-muted-foreground num fd-caption tabular-nums">
         {s.confirmed_at_bar_ms != null
-          ? `confirmed ${liveAge(s.confirmed_at_bar_ms, now)}`
+          ? `confirmed ${since(s.confirmed_at_bar_ms, now)} ago (${clock(s.confirmed_at_bar_ms)}Z)`
           : 'not yet confirmed'}
       </span>
       {/* Shown only when it exists. `break_level` is null on a RANGE by

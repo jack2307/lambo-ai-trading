@@ -54,7 +54,7 @@ import {
   writeTimeframe,
   type Timeframe,
 } from '@/lib/timeframes'
-import { clock, num, liveAge } from '@/lib/format'
+import { clock, num, liveAge, since } from '@/lib/format'
 import { toast } from 'sonner'
 import { ClaudeMark, DeepSeekMark, OpenAIMark } from '@/components/BrandMarks'
 import type { Consultation, Decision, Reasoning,
@@ -2767,8 +2767,11 @@ function ChartSource({
       <span className="text-muted-foreground/70">
         {TF_WORD[tf]} candles from the chart store
         {data?.source?.file ? ` (${data.source.file})` : ''}
+        {/* `since` and not `liveAge`: an export is hours old on a 4h chart,
+            and `liveAge` both prints raw seconds AND already ends in "ago",
+            so this line used to read "exported 51404 s ago ago". */}
         {data?.source?.exported_at_ms != null
-          ? `, exported ${liveAge(data.source.exported_at_ms, now)} ago`
+          ? `, exported ${since(data.source.exported_at_ms, now)} ago`
           : ''}
         {'. '}
         Indicators are hidden: a 15-minute average is not a {tf} average, and drawing one here under its own

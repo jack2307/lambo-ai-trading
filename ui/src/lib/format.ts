@@ -90,3 +90,60 @@ export const FLOW_CLASS_MEANING: Record<string, string> = {
  */
 export const liveAge = (at: number, now: number): string =>
   `${Math.max(0, Math.round((now - at) / 1000))} s ago`
+
+/**
+ * How long ago something happened, for things measured in BARS rather than in
+ * ticks.
+ *
+ * `liveAge` above is seconds and must stay seconds: it measures a feed that
+ * should move several times a second, where "0 m" would say nothing about
+ * whether it is moving. That is exactly why it was the wrong function for a
+ * four-hour bar — the higher-timeframe card was printing `as of 51404 s ago`,
+ * which is a true number that no person reads as fourteen hours. One
+ * formatter was doing two jobs and only one of them was its own.
+ *
+ * Returns a bare duration — `14 h 17 m` — and never the word "ago", so the
+ * caller decides whether it is "closed 14 h ago", "as of 14 h ago" or
+ * "confirmed 14 h ago". The one place that appended its own "ago" to
+ * `liveAge` was printing "ago ago", which is what happens when a formatter's
+ * output carries a word the call site cannot see.
+ *
+ * Two units at most, largest first, and the smaller one dropped when it is
+ * zero: `2 h` rather than `2 h 0 m`. Precision below the second unit is noise
+ * on something that only changes when a bar closes.
+ */
+export function since(at: number | null | undefined, now: number): string {
+  if (at == null || !Number.isFinite(at)) return EM_DASH
+  const seconds = Math.max(0, Math.round((now - at) / 1000))
+  if (seconds < 60) return `${seconds} s`
+
+  // ROUNDED to the smallest unit shown, not floored, because `liveAge` above
+  // rounds and two ages on one screen that disagree about the same instant is
+  // the defect this file exists to prevent. 51,404 s is 14 h 16 m 44 s and
+  // reads as 14 h 17 m.
+  //
+  // Rounding a remainder can carry — 3,599 s rounds to 60 minutes — so each
+  // branch normalises upward rather than printing "60 m" or "24 h", which
+  // would be the arithmetic showing through the words.
+  if (seconds < 3600) {
+    const minutes = Math.round(seconds / 60)
+    return minutes >= 60 ? '1 h' : `${minutes} m`
+  }
+  if (seconds < 86_400) {
+    let hours = Math.floor(seconds / 3600)
+    let minutes = Math.round((seconds % 3600) / 60)
+    if (minutes === 60) {
+      hours += 1
+      minutes = 0
+    }
+    if (hours >= 24) return '1 d'
+    return minutes ? `${hours} h ${minutes} m` : `${hours} h`
+  }
+  let days = Math.floor(seconds / 86_400)
+  let hours = Math.round((seconds % 86_400) / 3600)
+  if (hours === 24) {
+    days += 1
+    hours = 0
+  }
+  return hours ? `${days} d ${hours} h` : `${days} d`
+}

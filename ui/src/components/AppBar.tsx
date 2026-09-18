@@ -5,7 +5,7 @@ import type { Book, View } from '@/App'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { GuardsPanel } from '@/components/GuardsPanel'
 import type { BrokerAccount, HtfResponse, LiveBar, MarketInfo } from '@/lib/api'
-import { liveAge } from '@/lib/format'
+import { clock, liveAge, since } from '@/lib/format'
 import type { Theme } from '@/lib/theme'
 import {
   BIAS_RULE,
@@ -16,7 +16,6 @@ import {
   structureGlyph,
   structureTint,
 } from '@/lib/htfBias'
-import { liveAge as ageOf } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
 interface Props {
@@ -135,7 +134,9 @@ function StructureWord({
     <span
       className={structureTint(s.label)}
       title={`${tf} structure ${s.label} by ${s.rule}.${
-        s.confirmed_at_bar_ms != null ? ` Confirmed ${ageOf(s.confirmed_at_bar_ms, now)}.` : ''
+        s.confirmed_at_bar_ms != null
+          ? ` Confirmed ${since(s.confirmed_at_bar_ms, now)} ago, on the bar that closed ${clock(s.confirmed_at_bar_ms)}Z.`
+          : ''
       }${where} A published fact, not a summary.`}
     >
       <span aria-hidden>{structureGlyph(s.label)}</span> {tf}: {s.label.toLowerCase()}
@@ -270,7 +271,9 @@ export function AppBar({ view, markets, market, onMarketChange, book, accounts, 
                 <span
                   className={cn('hidden sm:inline', biasTint(bias.word))}
                   title={`H4 bias ${bias.word} — ${biasTally(bias)}. ${lamps}. ${
-                    conf != null ? `Confirmed ${ageOf(conf, now)}. ` : ''
+                    conf != null
+                      ? `Confirmed ${since(conf, now)} ago, on the bar that closed ${clock(conf)}Z. `
+                      : ''
                   }${BIAS_RULE} A summary, not a signal.`}
                 >
                   <span aria-hidden>{biasGlyph(bias.word)}</span> {bias.word.toLowerCase()}
