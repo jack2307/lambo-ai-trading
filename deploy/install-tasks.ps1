@@ -120,28 +120,48 @@ function Roll-LogAside([string]$path, [string]$stamp) {
 # So the limit must stay below the period, and the check below enforces it
 # rather than trusting whoever edits these two lines next.
 #
-# WHY HOURLY TODAY AND NOT FIVE MINUTES. The owner asked for every timeframe
-# on the chart and a5 asked for a 5-minute cadence. It cannot go there yet:
-# `mt5_export.py` re-walks the FULL history on every run - nothing consults
-# the stored file to decide where to resume - so six timeframes every five
-# minutes is twelve full-history pulls an hour against the terminal that is
-# also the price feed and also the funded account. `--days` does not help;
-# it bounds how far back the walk goes, not how much the first call asks for.
+# IT WAS HOURLY UNTIL THE RESUME WAS MEASURED, and this is the measurement.
+#
+# `mt5_export.py` used to re-walk the FULL history on every run, so six
+# timeframes every five minutes would have been twelve full-history pulls an
+# hour against the terminal that is also the price feed and also the funded
+# account. `--days` did not help: it bounds how far back the walk goes, not
+# how much the first call asks for.
 #
 # d1's `--since-stored` resumes from the newest stored bar with one bar of
-# overlap, which makes a routine run cost minutes of data. Resolve-TaskAction
-# REFUSES to register this task against a checkout that lacks it, so the
-# dependency is enforced and not just described.
+# overlap. MEASURED ON THE VPS 2026-09-18 by a5: run 1 backfilled 5m, 15m and
+# 1h and left all six files present; run 2 took about FIVE SECONDS wall,
+# exit 0, with "resuming from ..." on every timeframe and "+0 new"
+# everywhere. Five seconds against a five-minute period is the headroom this
+# needed, so the numbers move together now.
 #
-# WHEN IT LANDS AND HAS BEEN PROVEN ON THE VPS - read the first run's runtime
-# out of data\paper\logs\bars-export.out rather than assuming it - change
-# these two numbers together to 5 and 4. Not one of them.
-$EXPORT_EVERY_MINUTES = 60
-$EXPORT_LIMIT_MINUTES = 30
+# Resolve-TaskAction still REFUSES to register this task against a checkout
+# whose exporter cannot resume, so the dependency stays enforced rather than
+# remembered: roll the exporter back and the task will not register.
+#
+# THE THREE NUMBERS ARE ONE DECISION. The limit must stay BELOW the period or
+# a run that hangs eats the next start - `MultipleInstances IgnoreNew` drops
+# it silently, the task history shows successes, and the gap appears nowhere.
+# The offset must stay below the period too, or it names a slot that never
+# comes round. Both are checked rather than trusted.
+#
+# WHY +1 AND NOT ON THE BOUNDARY. M5 bars close at :00, :05, :10; H4 and D1
+# close on the hour. Starting exactly on the boundary races the close, and
+# the bar the desk most wants is the one that just finished. One minute after
+# is late enough for the terminal to have it and early enough that the
+# freshest bar is never more than a bar and a minute old.
+$EXPORT_EVERY_MINUTES = 5
+$EXPORT_LIMIT_MINUTES = 4
+$EXPORT_OFFSET_MINUTES = 1
 if ($EXPORT_LIMIT_MINUTES -ge $EXPORT_EVERY_MINUTES) {
     Write-Error ("the export's time limit ($EXPORT_LIMIT_MINUTES min) is not below its period " +
                  "($EXPORT_EVERY_MINUTES min). A run that outlives its period silently eats the " +
                  'next start under MultipleInstances=IgnoreNew, and the gap shows up nowhere.')
+    exit 1
+}
+if ($EXPORT_OFFSET_MINUTES -ge $EXPORT_EVERY_MINUTES) {
+    Write-Error ("the export's offset ($EXPORT_OFFSET_MINUTES min) is not below its period " +
+                 "($EXPORT_EVERY_MINUTES min), so it names a slot that never comes round.")
     exit 1
 }
 
@@ -389,7 +409,7 @@ foreach ($t in $TASKS) {
             Write-Host '               as the account that owns it. Start the terminal in the RDP' -ForegroundColor Red
             Write-Host '               session first; -Apply will refuse this task until then.' -ForegroundColor Red
         }
-        Note "trigger   : every $EXPORT_EVERY_MINUTES min at five past, from the next such minute"
+        Note "trigger   : every $EXPORT_EVERY_MINUTES min at +$EXPORT_OFFSET_MINUTES, from the next such minute"
         Note "settings  : ExecutionTimeLimit=${EXPORT_LIMIT_MINUTES}m, MultipleInstances=IgnoreNew, StartWhenAvailable"
     } else {
         Note "principal : SYSTEM, ServiceAccount, Highest"
@@ -560,7 +580,13 @@ foreach ($t in $TASKS) {
         # P99999999DT23H59M59S and is the kind of value a scheduler service
         # is entitled to reject at registration. Ten years is not indefinite
         # and is long enough that the machine will be gone first.
-        $start = (Get-Date).Date.AddHours((Get-Date).Hour).AddHours(1).AddMinutes(5)
+        # The next slot at (offset + k x period) past the hour, derived from
+        # the three numbers above rather than written as a literal - at 60/5
+        # that is five past the next hour, at 5/1 it is :01, :06, :11 and so
+        # on, and neither had to be typed out.
+        $nowT = Get-Date
+        $start = $nowT.Date.AddHours($nowT.Hour).AddMinutes($EXPORT_OFFSET_MINUTES)
+        while ($start -le $nowT) { $start = $start.AddMinutes($EXPORT_EVERY_MINUTES) }
         $trigger = New-ScheduledTaskTrigger -Once -At $start `
             -RepetitionInterval (New-TimeSpan -Minutes $EXPORT_EVERY_MINUTES) `
             -RepetitionDuration ([TimeSpan]::FromDays(3650))
