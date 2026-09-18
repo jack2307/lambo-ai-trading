@@ -22,7 +22,8 @@ rem  EVERY ARGUMENT COMES FROM THE TASK, NOT FROM THIS FILE.
 rem
 rem    %1  terminal   the price terminal, from [prices] in accounts.toml
 rem    %2  symbols    broker symbols, comma-separated, suffix included
-rem    %3  timeframes MT5 names, comma-separated
+rem    %3+ timeframes MT5 names - one comma-separated argument, or
+rem                   several separate ones, which are rejoined below
 rem
 rem  install-tasks.ps1 resolves them through `py\live\accounts.py --prices`
 rem  at REGISTRATION time and writes them into the task's action. Two
@@ -57,12 +58,37 @@ set "LOGDIR=%ROOT%\data\paper\logs"
 set "LOG=%LOGDIR%\bars-export.out"
 if not exist "%LOGDIR%" mkdir "%LOGDIR%"
 
-set "TERMINAL=%~1"
-set "SYMBOLS=%~2"
-set "TIMEFRAMES=%~3"
-
+rem  THE BOUNDARY LINE IS WRITTEN BEFORE ANYTHING CAN FAIL, including the
+rem  argument handling below. a5 asked for this after a task run that exited
+rem  1 in five seconds and left NO log at all.
+rem
+rem  Being honest about what it does and does not buy: that particular run
+rem  never reached this file - cmd mangled the command line and could not
+rem  find the script - so no echo here would have left a trace. What it does
+rem  cover is every failure from this point on, which is the argument
+rem  handling, the python lookup and the exporter itself. A log that starts
+rem  is a log that tells you how far it got.
 >>"%LOG%" echo(
 >>"%LOG%" echo ==== bars export start %DATE% %TIME% ====
+
+set "TERMINAL=%~1"
+set "SYMBOLS=%~2"
+
+rem  THE TIMEFRAME LIST, ACCEPTED IN EITHER SHAPE.
+rem
+rem  cmd splits numbered parameters on COMMAS as well as spaces, so a list
+rem  that loses its quotes anywhere on the way here arrives as %3 %4 %5...
+rem  instead of one argument. The task's action is now quoted so that it
+rem  arrives whole (see Resolve-TaskAction), and this rejoins it anyway:
+rem  a hand-run that types the list unquoted then works too, and the two
+rem  invocations cannot behave differently.
+set "TIMEFRAMES=%~3"
+if not "%~4"=="" set "TIMEFRAMES=%TIMEFRAMES%,%~4"
+if not "%~5"=="" set "TIMEFRAMES=%TIMEFRAMES%,%~5"
+if not "%~6"=="" set "TIMEFRAMES=%TIMEFRAMES%,%~6"
+if not "%~7"=="" set "TIMEFRAMES=%TIMEFRAMES%,%~7"
+if not "%~8"=="" set "TIMEFRAMES=%TIMEFRAMES%,%~8"
+if not "%~9"=="" set "TIMEFRAMES=%TIMEFRAMES%,%~9"
 
 if "%TERMINAL%"=="" goto :noargs
 if "%SYMBOLS%"==""  goto :noargs
@@ -74,7 +100,7 @@ goto :run
 >>"%LOG%" echo ==== This wrapper takes all three from the task's action, which
 >>"%LOG%" echo ==== install-tasks.ps1 fills in from [prices] in accounts.toml.
 >>"%LOG%" echo ==== Re-run: powershell -File deploy\install-tasks.ps1 -Apply
->>"%LOG%" echo ==== By hand:  run-bars-export.cmd "C:\MT5-cent\terminal64.exe" "XAUUSD.sc" "M1,M5,M15,H1,H4,D1"
+>>"%LOG%" echo ==== By hand:  run-bars-export.cmd "C:\MT5-cent\terminal64.exe" "XAUUSD.sc" M1 M5 M15 H1 H4 D1
 exit /b 20
 
 :run

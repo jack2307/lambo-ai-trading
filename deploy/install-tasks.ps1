@@ -269,8 +269,34 @@ function Resolve-TaskAction($t, [string]$root, [string]$python) {
     }
 
     $sym = "$($t.BaseSymbol)$($pr.Suffix)"
+    # THE WHOLE COMMAND IS WRAPPED IN ONE MORE PAIR OF QUOTES, and this is not
+    # decoration. MEASURED 2026-09-18, and it was two live defects at once.
+    #
+    # Task Scheduler hands `Arguments` to cmd.exe as ONE string. cmd's rule
+    # for `/c` is that when the remainder begins with a quote it strips the
+    # FIRST and LAST quote characters and runs what is left - so
+    #
+    #     /c "script.cmd" "A" "B" "M1,M5"
+    #
+    # became  script.cmd" "A" "B" "M1,M5  and cmd answered "The filename,
+    # directory name, or volume label syntax is incorrect", exit 1, in about
+    # five seconds, having never started the wrapper. NO LOG AT ALL, because
+    # the thing that writes the log was never reached. That was a5's second
+    # defect, and its cause is this one.
+    #
+    # The same mangling shifted the quote parity further along the line, which
+    # is why the hand-run - quoted correctly by a shell - still delivered only
+    # `M1` as %3: cmd's numbered parameters split on COMMAS as well as spaces
+    # once the quoting around them is gone. That was a5's first defect, and
+    # its cause is also this one.
+    #
+    # Wrapping the whole remainder in another pair gives cmd something
+    # harmless to strip and leaves the inner quotes intact. Verified on this
+    # machine with a stub that echoes its argv: %1, %2 and %3 arrive whole,
+    # commas included.
+    $inner = "`"$script`" `"$($pr.Terminal)`" `"$sym`" `"$($t.Timeframes)`""
     return @{
-        Args    = "/c `"$script`" `"$($pr.Terminal)`" `"$sym`" `"$($t.Timeframes)`""
+        Args    = "/c `"$inner`""
         Note    = "exports $sym [$($t.Timeframes)] from $($pr.Terminal)"
         Refusal = $null
     }
@@ -440,7 +466,13 @@ foreach ($t in $TASKS) {
 # beside the new one: two processes attaching to the same terminal and
 # writing the same files, which is worse than either alone and would look
 # like the export working.
-$retired = @()
+# NOT `$retired`. PowerShell variable names are CASE-INSENSITIVE, so
+# `$retired = @()` assigned to the very `$RETIRED` this loop then iterates -
+# emptying it first and running the body ZERO times, silently, with no line
+# printed and no error. `flowdesk-htf-export` was still registered after
+# -Apply on the VPS for exactly that reason, and would have kept running
+# hourly beside its own replacement: two writers on the same files.
+$removedTasks = @()
 foreach ($r in $RETIRED) {
     $old = Get-DeskTaskSafe $r.Name
     if (-not $old) { continue }
@@ -459,7 +491,7 @@ foreach ($r in $RETIRED) {
     try {
         Unregister-ScheduledTask -TaskName $r.Name -Confirm:$false -ErrorAction Stop
         Write-Host "  removed $($r.Name) - $($r.Why)" -ForegroundColor Yellow
-        $retired += $r.Name
+        $removedTasks += $r.Name
     } catch {
         Write-Host "  could not remove $($r.Name): $($_.Exception.Message)" -ForegroundColor Red
         $skipped += "$($r.Name) (could not be unregistered)"
@@ -607,9 +639,9 @@ if ($skipped.Count) {
     Write-Host '  Fix the cause and run -Apply again. Re-registering the others is' -ForegroundColor DarkGray
     Write-Host '  harmless: their actions will be unchanged, so their logs are left alone.' -ForegroundColor DarkGray
 }
-if ($retired.Count) {
-    Write-Host "$($retired.Count) task(s) were REMOVED: $($retired -join ', ')" -ForegroundColor Yellow
-    foreach ($n in $retired) {
+if ($removedTasks.Count) {
+    Write-Host "$($removedTasks.Count) task(s) were REMOVED: $($removedTasks -join ', ')" -ForegroundColor Yellow
+    foreach ($n in $removedTasks) {
         Write-Host ("  put it back with: Register-ScheduledTask -TaskName $n -Xml (Get-Content '" +
                     (Join-Path $backup "$n.xml") + "' -Raw) -Force") -ForegroundColor DarkGray
     }
