@@ -79,6 +79,10 @@ pub fn router(state: Arc<AppState>, ui: Option<PathBuf>) -> Router {
         // The advisor lives outside this process and speaks only through
         // these two: it reads what is about to happen and may ask for less.
         .route("/api/paper/pending", get(paper::pending))
+        // Trigger or cancel an order resting at a price: the stage-2 fast
+        // loop's one action over a book. A trigger fills through the same
+        // path a tick reaching the level takes.
+        .route("/api/paper/pending/act", post(paper::act))
         .route("/api/paper/advice", post(paper::advice))
         // An entry proposed from outside, for a run whose strategy is
         // `external`. Fills at the next bar like every rule; cannot arrive
