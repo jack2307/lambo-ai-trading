@@ -904,6 +904,11 @@ def m1_since(m1: dict, bar_time: int, bar_ms: int) -> tuple[str, str]:
         t = b.get("time")
         if t is None or t < bar_time + bar_ms:
             continue
+        if any(b.get(k) is None for k in ("open", "high", "low", "close")):
+            # A minute the feed could not price is left out rather than
+            # rendered as "None": the fast call must never die on the shape
+            # of one bar, and a bar with no prices tells the model nothing.
+            continue
         rows.append(
             f"  {dt.datetime.utcfromtimestamp(t / 1000):%Y-%m-%d %H:%MZ}  "
             f"O {b.get('open'):g}  H {b.get('high'):g}  L {b.get('low'):g}  C {b.get('close'):g}"
