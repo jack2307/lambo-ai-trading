@@ -296,6 +296,66 @@ export interface LiveBar {
   at: number
 }
 
+/**
+ * One minute folded from the tick feed, complete or forming — the shape
+ * `GET /api/paper/m1` sends.
+ *
+ * `time` is the minute's **open**, epoch ms UTC, minute-aligned, on the API's
+ * own receipt clock (not the broker's tick stamp). Prices are the MID of the
+ * posted bid/ask in the market's own quoted price — dollars per ounce on
+ * `XAUUSD.sc` — and `spread_mean` is `ask - bid` averaged over the minute, in
+ * the same units. Not the broker's candle and not the stored 1m file: this is
+ * the last twelve hours as the ticks arrived, up to five minutes ahead of the
+ * export task.
+ */
+export interface M1Bar {
+  time: number
+  open: number
+  high: number
+  low: number
+  close: number
+  /** Distinct quotes in the minute. A second poller's copy of a quote is not one. */
+  ticks: number
+  spread_mean: number
+}
+
+/**
+ * `GET /api/paper/m1?market=…&n=…`.
+ *
+ * `bars` are COMPLETE minutes only, oldest first, at most `n` (720 is the
+ * ring and the server refuses more). `forming` is the current minute, null
+ * before the first tick. `unavailable` is a sentence when there is nothing
+ * yet — the ring lives in memory and starts empty at every restart, so a
+ * null `forming` with a sentence beside it is the honest state right after a
+ * deploy, not a gap.
+ */
+export interface M1Bars {
+  market: string
+  tf: '1m'
+  source: 'ticks'
+  /** The bar symbol from the config, when the market has one — whose quote the mid is. */
+  symbol?: string
+  /** What the prices are, in words, beside them. */
+  price_unit: string
+  /** Which clock `time`, `first_minute_ms` and `last_tick_ms` are on, in words. */
+  clock: string
+  ring_minutes: number
+  bars: M1Bar[]
+  forming: M1Bar | null
+  first_minute_ms: number | null
+  /**
+   * The last accepted quote CHANGE, not the last post: a duplicate does not
+   * advance it, so a quiet market reads old here while the feed is alive.
+   * Feed liveness is the live age on `/api/paper/status`, not this.
+   */
+  last_tick_ms: number | null
+  /** Ticks refused: older than the last accepted, or posted without a quote. */
+  dropped: number
+  /** Ticks seen twice: the same quote again, from the second poller or a quiet second. */
+  duplicates: number
+  unavailable: string | null
+}
+
 /** One paper run, as `/api/paper/status` reports it (snake_case on the wire). */
 export interface PaperRun {
   id: string
@@ -1029,6 +1089,14 @@ export const api = {
   /** What the models said about one book. Newest first. */
   paperReasoning: (id: string, limit = 50) =>
     request<Reasoning>(`/api/paper/reasoning/${encodeURIComponent(id)}?limit=${limit}`),
+
+  /**
+   * The last `n` complete minutes of one market folded from the tick feed,
+   * plus the minute still forming. At most 720; the server answers 400 above
+   * that rather than clipping, so a caller asking for more finds out.
+   */
+  paperM1: (market: string, n = 60) =>
+    request<M1Bars>(`/api/paper/m1?market=${encodeURIComponent(market)}&n=${n}`),
 
   /**
    * How the advisor pays for a verdict. Masks only — no call here ever returns

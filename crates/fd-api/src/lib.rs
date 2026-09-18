@@ -9,6 +9,7 @@ pub mod dto;
 pub mod error;
 pub mod live;
 pub mod htf;
+pub mod m1;
 pub mod paper;
 pub mod research;
 pub mod routes;
@@ -58,6 +59,11 @@ pub fn router(state: Arc<AppState>, ui: Option<PathBuf>) -> Router {
         .route("/api/paper/start", post(paper::start))
         .route("/api/paper/bar", post(paper::bar))
         .route("/api/paper/tick", post(paper::tick))
+        // The minutes those ticks fold into, with the one still forming.
+        // Fresher than the stored 1m series by the export task's lag (up to
+        // five minutes), which is the whole reason it exists; twelve hours
+        // in memory and nothing on disk.
+        .route("/api/paper/m1", get(m1::m1))
         // The open of a bar that has just started. Separate from `tick` on
         // purpose: this one can open a position, `tick` never touches a run.
         .route("/api/paper/open", post(paper::open_now))

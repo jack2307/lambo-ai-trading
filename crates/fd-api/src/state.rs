@@ -66,6 +66,11 @@ pub struct AppState {
     /// client gets the newest candle, never a backlog of stale ones, which is
     /// the only behaviour a price display can honestly have.
     pub ticks: tokio::sync::broadcast::Sender<crate::paper::TickEvent>,
+    /// One-minute bars folded from the same ticks, one series per MARKET
+    /// (every stream of a market posts the same quote). Twelve hours in
+    /// memory, not persisted: the store's minute file is the record, this is
+    /// the part of it that has not been exported yet. See `m1.rs`.
+    pub m1: crate::m1::M1Hub,
 }
 
 pub struct BarSeries {
@@ -94,6 +99,7 @@ impl AppState {
             // enough that a browser blocked on a repaint is not disconnected,
             // small enough that nothing accumulates when nobody is watching.
             ticks: tokio::sync::broadcast::channel(64).0,
+            m1: crate::m1::M1Hub::default(),
         }
     }
 
