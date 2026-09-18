@@ -41,7 +41,19 @@ import { useHtf } from '@/lib/useHtf'
 import { PriceChart, type ActiveIndicator, type ChartTrade } from '@/components/PriceChart'
 import { Skeleton } from '@/components/ui/skeleton'
 import type { Book } from '@/App'
-import { api, type BacktestTrade, type Bar, type BrokerEvent, type LiveBar, type PaperBroker, type PaperEvent, type PaperRun, type PaperRunDetail } from '@/lib/api'
+import { api, type BacktestTrade, type Bar, type BrokerEvent, type IndicatorPoint, type LiveBar, type PaperBroker, type PaperEvent, type PaperRun, type PaperRunDetail } from '@/lib/api'
+import { TimeframeBar } from '@/components/TimeframeBar'
+import { useChartBars } from '@/lib/useChartBars'
+import {
+  TF_MS,
+  TF_WORD,
+  barsBehindBy,
+  isTimeframe,
+  readTimeframe,
+  snapToBar,
+  writeTimeframe,
+  type Timeframe,
+} from '@/lib/timeframes'
 import { clock, num, liveAge } from '@/lib/format'
 import { toast } from 'sonner'
 import { ClaudeMark, DeepSeekMark, OpenAIMark } from '@/components/BrandMarks'
@@ -78,7 +90,6 @@ const CHART_H = 380
 const STALE_BARS = 3
 
 /** The timeframes a run can carry, in milliseconds. */
-const TF_MS: Record<string, number> = { '1m': 60_000, '5m': 300_000, '15m': 900_000, '1h': 3_600_000 }
 
 /** Fallback for a timeframe this table does not know: the old flat window. */
 const STALE_MS_FALLBACK = 45 * 60_000
@@ -831,7 +842,7 @@ export function Desk({ book, ticks, streaming, theme }: {
                 Fills the column's height above xl and keeps a floor below it,
                 where the page scrolls instead. */}
             <div className="border-border min-h-[340px] shrink-0 border-b xl:min-h-0 xl:flex-1 xl:shrink">
-              <RunChart detail={live} live={livePrice} focus={focusFill} broker={activeBroker} theme={theme} htf={htf} />
+              <RunChart detail={live} live={livePrice} focus={focusFill} broker={activeBroker} theme={theme} htf={htf} now={now} />
             </div>
             {/* The fills have seven columns and the rail has 460px, so they
                 stay here where the width is. Capped at two fifths of the
@@ -2646,6 +2657,92 @@ function tokenValue(name: string): string {
  * strategy's definition declares it reads, and `overlay` on each one says
  * whether its series belongs over the candles or wants a pane of its own.
  */
+/*
+ * Stable empties, so switching off the traded timeframe does not hand the
+ * chart a fresh `[]` and `{}` on every render and make it rebuild panes it
+ * could have left alone.
+ */
+const EMPTY_INDICATORS: ActiveIndicator[] = []
+const EMPTY_BARS: Bar[] = []
+const EMPTY_SERIES: Record<string, IndicatorPoint[]> = {}
+
+/**
+ * Where these candles came from, said on the chart.
+ *
+ * On the traded timeframe this is one clause, because there is nothing to
+ * disclose: the bars came with the run. Off it, every fact that the traded
+ * chart gets for free has to be stated — which file, how old the export is,
+ * how many candles have closed that it does not have, and how far into the
+ * forming candle the high and low are actually known.
+ *
+ * That last one is `complete_to_ms` and it is the reason this component
+ * exists rather than a string. The server builds a forming 4h candle out of
+ * closed 15m bars, so its extremes can be a quarter of an hour behind while
+ * the close is current. A wick that is fifteen minutes old, drawn with no
+ * remark, claims to be the high so far — a small lie of exactly the kind the
+ * server-side forming bar was introduced to stop telling.
+ */
+function ChartSource({
+  tf,
+  ownTf,
+  alt,
+  bars,
+  now,
+}: {
+  tf: Timeframe
+  ownTf: boolean
+  alt: ReturnType<typeof useChartBars>
+  bars: Bar[]
+  now: number
+}) {
+  if (ownTf) {
+    return (
+      <span className="text-muted-foreground/70">
+        Candles are the run's own — the same series it decided on.
+      </span>
+    )
+  }
+
+  const data = alt.data
+  const behind = barsBehindBy(bars, tf, now)
+  const forming = data?.forming ?? null
+  // Known only as far as the finer series reaches. One finer period of lag is
+  // ordinary and not worth a remark; beyond that the wick is old enough to
+  // mislead, and how old is the thing worth saying.
+  const lag = forming && forming.complete_to_ms > 0 ? now - forming.complete_to_ms : 0
+  const stale = forming != null && lag > TF_MS[tf] / 4
+
+  return (
+    <>
+      <span className="text-muted-foreground/70">
+        {TF_WORD[tf]} candles from the chart store
+        {data?.source?.file ? ` (${data.source.file})` : ''}
+        {data?.exported_at_ms != null ? `, exported ${liveAge(data.exported_at_ms, now)} ago` : ''}
+        {'. '}
+        Indicators are hidden: a 15-minute average is not a {tf} average, and drawing one here under its own
+        name would be wrong in a way nothing on screen could show.
+      </span>
+      {behind > 0 && (
+        <span className="text-lp">
+          {behind} {tf} {behind === 1 ? 'candle has' : 'candles have'} closed since this export — it is behind.
+        </span>
+      )}
+      {forming && (
+        <span className={stale ? 'text-lp' : 'text-muted-foreground/70'}>
+          The forming candle is built from {forming.from_timeframe} bars: its high and low are known to{' '}
+          {clock(forming.complete_to_ms)}, the close is live.
+        </span>
+      )}
+      {!forming && !alt.loading && data != null && (
+        <span className="text-muted-foreground/70">
+          Closed bars only — nothing finer is stored behind this timeframe, so there is no honest partial
+          candle to draw.
+        </span>
+      )}
+    </>
+  )
+}
+
 function RunChart({
   detail,
   live,
@@ -2653,9 +2750,13 @@ function RunChart({
   broker,
   theme,
   htf,
+  now,
 }: {
   detail: PaperRunDetail | null
   live: LiveBar | null
+  /** The desk's own clock, so the export's age ticks with everything else on
+   *  the page instead of being read fresh during this component's render. */
+  now: number
   /** The fill picked in the table below, or null. */
   focus: BacktestTrade | null
   /** The selected account's record of this book, when the desk is showing an
@@ -2670,23 +2771,105 @@ function RunChart({
   // and divides, so the tuple goes straight across. (`series` times are
   // already seconds, which is what the chart wants there — the two halves of
   // the payload are in different units and neither is converted here.)
-  const bars = useMemo<Bar[]>(
+  const runBars = useMemo<Bar[]>(
     () => (detail?.bars ?? []).map(([time, open, high, low, close]) => ({ time, open, high, low, close })),
     [detail],
   )
 
+  /**
+   * Which timeframe is on screen, and where its candles come from.
+   *
+   * `ownTf` is the one the book trades. On it the chart is the RECORD: the
+   * bars, the indicators and the fills all came from the same series in the
+   * same response, and nothing below has to be reconciled. Every other
+   * timeframe is a VIEW, assembled from the chart store, and the things that
+   * make the record trustworthy have to be re-established one at a time — the
+   * indicators do not apply, the export has its own age, the forming candle is
+   * built elsewhere. The two cases are kept apart here rather than blended,
+   * because a chart that silently degrades is one nobody knows to distrust.
+   */
+  const [tf, setTf] = useState<Timeframe>(readTimeframe)
+  const runTf = detail?.run.tf ?? null
+  const market = detail?.run.market ?? null
+  const ownTf = runTf != null && tf === runTf
+
+  const alt = useChartBars(market, tf, detail != null && !ownTf)
+
+  // Timeframes this market has refused, remembered for the selector. Earned
+  // from an actual refusal rather than declared up front: a timeframe is only
+  // known to be missing once the store has been asked for it.
+  // A timeframe that starts answering is no longer missing — a store that was
+  // empty at lunchtime and has an export by the evening should stop being
+  // struck out — so this reads both ways and returns the set UNCHANGED when
+  // nothing moved, which is what keeps a twenty-second poll that confirms what
+  // is already known from re-rendering the chart.
+  const [missing, setMissing] = useState<Set<string>>(() => new Set())
+  useEffect(() => {
+    if (!alt.error && !alt.data) return
+    setMissing((previous) => {
+      const known = previous.has(tf)
+      if (alt.error && !known) return new Set(previous).add(tf)
+      if (alt.data && known) {
+        const next = new Set(previous)
+        next.delete(tf)
+        return next
+      }
+      return previous
+    })
+  }, [alt.data, alt.error, tf])
+
+  // Memoised for its IDENTITY, not its cost. `?? []` mints a fresh array on
+  // every render, and `bars` is a dependency of both snapping memos and a prop
+  // on the chart — an unstable empty array would rebuild the whole series on
+  // each tick while the store is still being read.
+  const bars = useMemo(
+    () => (ownTf ? runBars : (alt.data?.bars ?? EMPTY_BARS)),
+    [ownTf, runBars, alt.data],
+  )
+
+  const pickTf = (next: Timeframe) => {
+    setTf(next)
+    writeTimeframe(next)
+  }
+
   // The forming candle, in the shape the chart takes. `PriceChart` appends it
   // past the last closed bar and ignores a frame older than one, so a stream
   // that has fallen behind draws nothing rather than a candle in the past.
-  const forming = useMemo<Bar | null>(
-    () =>
-      live
+  const forming = useMemo<Bar | null>(() => {
+    if (ownTf) {
+      return live
         ? { time: live.time, open: live.open, high: live.high, low: live.low, close: live.close }
-        : null,
-    [live],
-  )
+        : null
+    }
 
-  const indicators = useMemo<ActiveIndicator[]>(() => {
+    // Off the traded timeframe there is no stream to build this from. The
+    // client CANNOT do it honestly: `useTicks` keeps only the newest bar per
+    // `market:tf` and no history, and it only carries a `market:tf` some run
+    // actually trades — nothing trades 4h. A client-built 4h open would be the
+    // price when the tab was loaded: wrong by up to four hours, different for
+    // two people on the same chart, and shaped exactly like a real candle. So
+    // it comes from the server, anchored to the closed file's own stamp.
+    const f = alt.data?.forming
+    if (!f) return null
+
+    // The server aggregates the extremes from a finer stored series, so they
+    // are only known as far as `complete_to_ms`, while the tick stream's close
+    // is current. Take the newer close when the stream is inside this bucket,
+    // and widen the extremes to include it — a price that has actually printed
+    // is a real high or low, and leaving it outside would draw a close beyond
+    // its own wick.
+    const inBucket = live != null && live.time >= f.time
+    const close = inBucket ? live.close : f.close
+    return {
+      time: f.time,
+      open: f.open,
+      high: Math.max(f.high, close),
+      low: Math.min(f.low, close),
+      close,
+    }
+  }, [ownTf, live, alt.data])
+
+  const runIndicators = useMemo<ActiveIndicator[]>(() => {
     const active: ActiveIndicator[] = []
     for (const entry of detail?.indicators ?? []) {
       // The wire sends fully-qualified outputs (`ema_21.ema`) and `PriceChart`
@@ -2707,6 +2890,19 @@ function RunChart({
     }
     return active
   }, [detail])
+
+  /**
+   * Indicators are drawn on the traded timeframe ONLY.
+   *
+   * A 21-period EMA of 15-minute closes is not a 21-period EMA of four-hour
+   * closes; it is a different line that happens to share a name. Redrawing the
+   * run's series against 4h candles would put a curve on the chart that is
+   * labelled `ema_21`, looks plausible, and describes nothing on screen — and
+   * because it would be visibly wrong to nobody, it would be believed. The
+   * caption says they are hidden and why, which is the honest version of the
+   * same information.
+   */
+  const indicators = ownTf ? runIndicators : EMPTY_INDICATORS
 
   const [showOpen, setShowOpen] = useState(readShowOpen)
   const [showHtf, setShowHtf] = useState(readShowHtf)
@@ -2777,6 +2973,50 @@ function RunChart({
     [broker, detail, live],
   )
 
+  /**
+   * The fills, moved onto candles that exist.
+   *
+   * A fill happens at an exact millisecond. On the traded timeframe that stamp
+   * IS a bar on the series and the marker lands where it belongs, which is why
+   * this has never mattered before. On any other timeframe there is no candle
+   * at 13:17, and a marker whose time is not a time on the series is one the
+   * chart discards — an entry that vanishes from the record with no error
+   * anywhere.
+   *
+   * `snapToBar` searches the bars rather than computing a bucket, because this
+   * broker's H4 candles start at 21:00 UTC and its daily candles with them —
+   * the server runs UTC+3, moving to UTC+2 in winter. Arithmetic snapping is
+   * three hours wrong, a different amount wrong in winter, and invents
+   * Saturday buckets on a market that is shut. See `lib/timeframes.ts`.
+   *
+   * A fill older than the window drops rather than clamping to the first
+   * candle: a marker parked on the left edge reads as "this happened here".
+   * An entry and an exit inside the same four hours land on the same candle,
+   * which is not a bug — they did.
+   */
+  const chartTrades = useMemo<ChartTrade[]>(() => {
+    const source = broker ? accountTrades(broker) : (detail?.fills ?? [])
+    if (ownTf) return source
+    return source.flatMap((trade) => {
+      const entryTime = snapToBar(trade.entryTime, bars)
+      if (entryTime == null) return []
+      const exitTime = snapToBar(trade.exitTime, bars)
+      return [{ ...trade, entryTime, exitTime: exitTime ?? entryTime }]
+    })
+  }, [broker, detail, ownTf, bars])
+
+  // The picked fill is matched inside the chart on its pair of stamps, so it
+  // has to be moved by the same rule or the focus would stop matching the
+  // trade it came from the moment the timeframe changed.
+  const chartFocus = useMemo<ChartTrade | null>(() => {
+    if (!focus) return null
+    if (ownTf) return focus
+    const entryTime = snapToBar(focus.entryTime, bars)
+    if (entryTime == null) return null
+    const exitTime = snapToBar(focus.exitTime, bars)
+    return { ...focus, entryTime, exitTime: exitTime ?? entryTime }
+  }, [focus, ownTf, bars])
+
   if (!detail) {
     return (
       <div className="space-y-2 px-3 py-2">
@@ -2787,12 +3027,29 @@ function RunChart({
   }
 
   if (bars.length === 0) {
+    // Four different reasons the chart is empty, and only some are worth
+    // getting up to look at. Before the selector there was one, so one
+    // sentence was enough; collapsing them now would make "still loading" and
+    // "this market has no daily series" the same screen.
+    const why = ownTf
+      ? 'No bars to draw — the poller has fed this run nothing yet.'
+      : alt.loading
+        ? `Reading the ${tf} series…`
+        : alt.error
+          ? `No ${tf} series stored for ${market ?? 'this market'} — ${alt.error}`
+          : `No ${tf} bars came back for ${market ?? 'this market'}.`
     return (
       <section className="px-3 py-2">
-        <Heading>Chart</Heading>
-        <p className="text-muted-foreground py-8 text-center fd-label">
-          No bars to draw — the poller has fed this run nothing yet.
-        </p>
+        <Heading>
+          Chart
+          <TimeframeBar value={tf} onChange={pickTf} runTf={runTf} unavailable={missing} />
+        </Heading>
+        <p className="text-muted-foreground py-8 text-center fd-label">{why}</p>
+        {!ownTf && !alt.loading && runTf != null && isTimeframe(runTf) && (
+          <p className="text-muted-foreground/70 text-center fd-caption">
+            The book trades {runTf}, and that chart is drawn from the run itself.
+          </p>
+        )}
       </section>
     )
   }
@@ -2800,8 +3057,19 @@ function RunChart({
   return (
     <section className="flex h-full min-h-0 flex-col px-3 py-2">
       <Heading>
-        Chart <span className="text-muted-foreground/70 num">{detail.run.market}:{detail.run.tf}</span>{' '}
+        Chart{' '}
+        <span className="text-muted-foreground/70 num">
+          {detail.run.market}:{tf}
+        </span>{' '}
         <span className="text-muted-foreground/70 num">{bars.length} bars</span>
+        <TimeframeBar value={tf} onChange={pickTf} runTf={runTf} unavailable={missing} />
+        {/* Said once, near the selector, rather than left for the reader to
+            infer from indicators that quietly stopped being drawn. */}
+        {!ownTf && (
+          <span className="text-muted-foreground/70 ml-2 normal-case">
+            a view — this book trades {runTf}
+          </span>
+        )}
         {focus && (
           <span className="text-primary num ml-2 normal-case">
             showing the {focus.direction.toLowerCase()} closed {shortStamp(focus.exitTime)} — click the row again to
@@ -2875,13 +3143,13 @@ function RunChart({
           pendingFill={!broker && detail.run.pending ? pendingFill(detail.run.pending, live, detail.run.tf) : null}
           bars={bars}
           indicators={indicators}
-          series={detail.series ?? {}}
+          series={ownTf ? (detail.series ?? {}) : EMPTY_SERIES}
           frame={null}
           showLevels={false}
-          trades={broker ? accountTrades(broker) : detail.fills}
+          trades={chartTrades}
           showMarkers
           showZones={!broker}
-          focus={focus}
+          focus={chartFocus}
           liveBar={forming}
         />
       </div>
@@ -2909,6 +3177,7 @@ function RunChart({
         <span className="text-muted-foreground/70">
           The bot decides on closed bars only; the last candle is still forming and is never traded on.
         </span>
+        <ChartSource tf={tf} ownTf={ownTf} alt={alt} bars={bars} now={now} />
       </p>
     </section>
   )

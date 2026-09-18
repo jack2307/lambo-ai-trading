@@ -54,6 +54,40 @@ export interface Bar {
   volume?: number
 }
 
+/**
+ * The candle still forming on the timeframe asked for, aggregated SERVER-SIDE.
+ *
+ * The client cannot build this honestly above the timeframe the books trade.
+ * `useTicks` keeps only the newest bar per `market:tf` and no history, and the
+ * stream only carries a `market:tf` some run actually trades — nothing trades
+ * 4h. So a client-built 4h open would be the price when the tab was loaded:
+ * wrong by up to four hours, different for two people on the same chart, and
+ * shaped exactly like a real candle. The server builds it instead, anchored to
+ * the last closed bar's own stamp from the exported file and aggregated from
+ * the finest stored series that covers the period.
+ */
+export interface FormingBar {
+  /** The bar's start, from the closed file's anchor — never epoch-bucketed. */
+  time: number
+  open: number
+  high: number
+  low: number
+  close: number
+  /** Which stored series it was aggregated from, e.g. `15m` inside a `4h`. */
+  from_timeframe: string
+  /**
+   * The END of the last finer bar included — how far into this candle the high
+   * and low are actually KNOWN.
+   *
+   * Built from 15m bars, the extremes can be a quarter-hour stale while the
+   * tick stream's close runs ahead of them. A wick drawn past this point would
+   * claim "this is the high so far" about a high that is fifteen minutes old,
+   * which is a smaller version of the lie the whole field exists to prevent.
+   * The chart draws up to here and says the rest is the last price only.
+   */
+  complete_to_ms: number
+}
+
 export interface BarsResponse {
   market: string
   symbol: string
@@ -67,6 +101,29 @@ export interface BarsResponse {
   live: boolean
   bars: Bar[]
   stats: { bars: number; from: number; to: number; days: number; gaps: number }
+
+  /*
+   * EVERYTHING BELOW IS OPTIONAL BECAUSE THE SERVER MAY BE OLDER THAN THIS
+   * CLIENT. Deploys here are staged and manual, so a desk can be running a UI
+   * built today against an API built last week; these fields read as absent
+   * then, and every surface that uses them says "not reported" rather than
+   * inventing a value. See docs/decisions/2026-09-17-deploy-staleness.md.
+   */
+
+  /** The timeframe's period in ms. For labelling and staleness ONLY — bar
+   *  times are the broker's and are not multiples of this from the epoch. */
+  bar_ms?: number
+  /** The last CLOSED bar's OPEN time — the same stamp as its bar in `bars`. */
+  last_closed_bar_ms?: number
+  /** When the export was written, epoch ms UTC. A stamp and not a duration, so
+   *  the client ages it against its own clock rather than against however long
+   *  the response spent in flight. */
+  exported_at_ms?: number
+  /** Which file the bars were read from, and whether anything was resampled. */
+  source?: { file: string; timeframe: string; resampled: boolean }
+  /** `null` when no finer series covers the period; the chart then shows
+   *  closed bars only and says so. */
+  forming?: FormingBar | null
 }
 
 export interface Metrics {
@@ -852,8 +909,11 @@ export interface HtfResponse {
 export const api = {
   catalog: () => request<Catalog>('/api/chart/catalog'),
 
-  bars: (market: string, tf: string) =>
-    request<BarsResponse>(`/api/chart/bars?market=${encodeURIComponent(market)}&tf=${encodeURIComponent(tf)}`),
+  bars: (market: string, tf: string, n?: number) =>
+    request<BarsResponse>(
+      `/api/chart/bars?market=${encodeURIComponent(market)}&tf=${encodeURIComponent(tf)}` +
+        (n ? `&n=${n}` : ''),
+    ),
 
   levels: (market: string) =>
     request<{ frame: OptionsFrame | null; frames?: number; live?: boolean }>(
