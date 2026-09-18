@@ -98,12 +98,85 @@ pub enum BreakSide {
     Above,
 }
 
-/// Swing structure by the fractal rule.
+/// Which rule produced a structure label.
+///
+/// The two rows answer different questions on purpose. H4 asks "what is the
+/// larger structure", where lag is affordable and a label that changes its
+/// mind is expensive. H1 asks "what is the chart doing now", where the
+/// opposite is true. Giving both the same rule is what produced a DOWN on the
+/// H1 row on a morning the owner was reading it and the market was up 108 bp
+/// (docs/decisions/2026-09-18-market-bias-definitions.md).
+///
+/// NEITHER RULE PREDICTS ANYTHING. That study measured seventeen definitions
+/// over 34 tests and the best reached z = +1.98 where the expected largest of
+/// 34 standard normals under pure noise is +1.94 — the best cell in the grid
+/// is the size noise produces when you look 34 times, and every candidate has
+/// a losing year. So this is a choice about what is legible on a card and not
+/// about what is informative, and a reader must not size a trade on it.
+#[derive(Debug, Clone, Copy)]
+pub enum StructureRule {
+    /// A swing high is a bar whose high beats the `n` bars on both sides.
+    /// Causal, parameter-poor, and it never repaints — but it cannot name a
+    /// swing until `n` bars have printed past it, so its lag is a constant
+    /// floor of `n` bars and on H1 it misses 23% of turns entirely.
+    Fractal(usize),
+    /// A LIVE ATR-zigzag: the leg extends while price makes new extremes and
+    /// reverses when price retraces `k` × ATR(14) from the leg's extreme.
+    ///
+    /// "Live" is the whole of what makes this admissible here. A zigzag drawn
+    /// afterwards moves its newest leg as price moves — it looks prescient
+    /// because it is reading bars the trader had not seen — and a label taken
+    /// from one is not the label anybody could have acted on. This computes
+    /// the leg in force AT each bar from bars up to that bar and never
+    /// revisits it, which is asserted as a property rather than described:
+    /// see `a_live_zigzag_never_repaints`.
+    ZigzagAtr(f64),
+}
+
+impl StructureRule {
+    /// What the study measured this rule doing on 25,708 H1 bars.
+    ///
+    /// `None` for anything it did not measure, which is honest rather than
+    /// tidy: `fractal(2)`'s numbers here would be its H1 numbers, and the H4
+    /// row runs it on H4 where they are different.
+    fn measured_on_h1(self) -> Option<RuleMeasuredDto> {
+        let (lag, missed, undone) = match self {
+            Self::ZigzagAtr(k) if (k - 3.0).abs() < f64::EPSILON => (6.0, 1.0, 16.0),
+            Self::Fractal(1) => (8.0, 13.0, 9.0),
+            Self::Fractal(2) => (12.0, 23.0, 1.0),
+            _ => return None,
+        };
+        Some(RuleMeasuredDto {
+            median_lag_bars: lag,
+            missed_pct: missed,
+            undone_within_3_pct: undone,
+            source: "docs/decisions/2026-09-18-market-bias-definitions.md".to_string(),
+            sample_bars: 25_708,
+        })
+    }
+
+    /// The rule as it appears on the row, exact enough to argue with.
+    fn name(self) -> String {
+        match self {
+            Self::Fractal(n) => format!("fractal({n})"),
+            // `(live)` is not decoration. It is the difference between this
+            // number and a number that would be wrong, and the row carries it
+            // so the two rows are never read as the same method.
+            Self::ZigzagAtr(k) => format!("zigzag {k}xATR(14) (live)"),
+        }
+    }
+}
+
+/// Swing structure, by whichever rule the row runs.
 #[derive(Debug, Serialize)]
 pub struct StructureDto {
     pub label: Structure,
-    /// The rule, spelled out: `"fractal(2)"` means a swing high is a bar whose
-    /// high exceeds the two bars either side of it.
+    /// The rule, spelled out, because the two intraday rows do NOT use the
+    /// same one and a reader comparing them has to know that. `"fractal(2)"`
+    /// means a swing high is a bar whose high exceeds the two bars either
+    /// side of it; `"zigzag 3xATR(14) (live)"` means the leg reverses when
+    /// price retraces three ATRs from its extreme, evaluated at each bar from
+    /// the bars up to it.
     pub rule: String,
     /// **The bar that CONFIRMED the newest swing, not the swing's own bar.**
     ///
@@ -111,15 +184,64 @@ pub struct StructureDto {
     /// swing on an H4 chart is confirmed up to eight hours after it happened
     /// and the label is as of here. A reader told "structure is UP" without
     /// this is being told something stronger than is known.
+    ///
+    /// Under the zigzag it means the same thing and is MORE worth having,
+    /// because the lag is not a constant. A fractal(2) pivot is always
+    /// confirmed exactly two bars later; a zigzag pivot is confirmed whenever
+    /// price happens to retrace `k` ATRs from it, which may be the next bar
+    /// or twenty bars later. Subtracting this from `computed_at_bar_ms` is
+    /// the only way to know which, and on the zigzag row it is the difference
+    /// between a turn just called and one called a session ago.
     pub confirmed_at_bar_ms: Option<i64>,
     pub last_high: Option<SwingDto>,
     pub prior_high: Option<SwingDto>,
     pub last_low: Option<SwingDto>,
     pub prior_low: Option<SwingDto>,
+    /// How this rule behaved on the study's sample, or `null` for a rule
+    /// nobody has measured. See [`RuleMeasuredDto`].
+    pub rule_measured: Option<RuleMeasuredDto>,
     /// The price that would change the label, and which side breaks it.
-    /// `null` on `RANGE`, which has no single level to break.
+    ///
+    /// `null` on `RANGE`. Under the fractal rule RANGE is a real state — a
+    /// higher high with a lower low is expansion, and inventing one level for
+    /// it would claim a precision the rule does not have. Under the zigzag
+    /// RANGE means only that no leg has been established yet (ATR warmup, or
+    /// no move of `k` ATRs in either direction so far): the zigzag is always
+    /// in one leg or the other once it starts, which is why its U/D/F split
+    /// is 55/45/0 with no flat. Same field, and the two nulls mean different
+    /// things, so the `rule` string is what disambiguates them.
     pub break_level: Option<f64>,
     pub break_side: Option<BreakSide>,
+}
+
+/// How a rule BEHAVED on a measured sample. Not a property of the rule.
+///
+/// a5 asked for the three numbers to ride in the `rule` string. They are
+/// here instead, and the reason is worth a sentence: `rule` is a definition
+/// and these are a measurement of one definition on one file over one
+/// window. Definitions do not go stale and measurements do. Put inside a
+/// field called `rule`, "16% undone within 3 bars" would read a year from
+/// now as a statement about the data in front of the reader, which it is
+/// not and could not be checked as. Split out, it can carry `source` and
+/// `sample_bars` and be argued with.
+///
+/// The intent is met in full: the cost travels with the row, and -48 can
+/// render all three under the rule name.
+#[derive(Debug, Serialize)]
+pub struct RuleMeasuredDto {
+    /// Median bars from a reference turn until the label agrees.
+    pub median_lag_bars: f64,
+    /// Share of reference turns the label never agreed with before the next
+    /// one. Counted, never dropped — dropping them flatters a slow rule by
+    /// deleting the turns it slept through.
+    pub missed_pct: f64,
+    /// Share of this rule's own flips reversed within three bars. THE COST,
+    /// and the number most likely to be left out of a summary: the two
+    /// favourable figures travel on their own.
+    pub undone_within_3_pct: f64,
+    /// Where these came from, so they can be re-derived or contradicted.
+    pub source: String,
+    pub sample_bars: usize,
 }
 
 /// One swing point: its price and the bar it happened on.
@@ -373,7 +495,216 @@ fn bars_since_extreme(bars: &[Bar], period: usize, high: bool) -> Option<usize> 
     Some(window.len() - 1 - at)
 }
 
-fn structure_of(bars: &[Bar], n: usize) -> StructureDto {
+/// One confirmed zigzag pivot.
+struct Pivot {
+    /// The bar the extreme happened on.
+    at: usize,
+    /// The bar the reversal confirmed it on. Never earlier than `at`, and
+    /// unlike a fractal the distance is not a constant.
+    confirmed_at: usize,
+    price: f64,
+    high: bool,
+}
+
+/// A LIVE ATR-zigzag. Pivots oldest first, each with the bar that confirmed it.
+///
+/// The leg extends while price makes new extremes and reverses when price
+/// retraces `k` × ATR(14) from the leg's extreme. `atr` is the ATR series
+/// aligned to `bars` — passed in rather than recomputed so the threshold and
+/// the `atr14` this route publishes cannot come from two different numbers;
+/// `the_threshold_uses_the_published_atr` pins that.
+///
+/// # This is a PORT, not a reimplementation
+///
+/// The definition lives in `py/research/bias_defs.py::atr_zigzag`, which is
+/// what produced every number in
+/// `docs/decisions/2026-09-18-market-bias-definitions.md`. That file is the
+/// source of truth for the RULE; this is the source of truth for what the
+/// route serves, and `zigzag_labels_match_the_research_definition` holds
+/// them together on real bars.
+///
+/// Four things the study's prose did not pin. I had guessed three of them
+/// differently and the guesses were reasonable, which is the argument for
+/// having asked: each one silently changes the label series, and a wrong
+/// one would have reproduced the morning table while missing the aggregates.
+///
+/// * **Highs and lows, not closes.** A leg's extreme is the extreme price
+///   traded, which is what a chart reader points at. Using closes would
+///   ignore the wick that made the high and put the pivot on a different bar.
+/// * **ATR at the CURRENT bar, not at the pivot.** "ATR at the bar" read
+///   literally, and it is the honest reading: the threshold is how far price
+///   must come back *now*, judged by how much this market is moving *now*. It
+///   does mean the bar that ends a leg can be judged against a different ATR
+///   than the bar that started it, which is a real consequence and not a bug
+///   — a leg opened in a quiet tape and closed in a violent one should need a
+///   bigger retrace to call the turn.
+/// * **Confirmed on the bar whose extreme crosses the threshold**, using that
+///   bar's own low (in an up-leg) or high (in a down-leg); the label changes
+///   on that bar and is final at its close. A route recomputing this on
+///   CLOSED bars gets an identical series. One recomputing it INTRABAR would
+///   flip earlier, sometimes flip back, and would not reproduce the study's
+///   numbers - so this route must keep computing on closed bars only, which
+///   it does because every fact in this file does.
+/// * **Strictly greater, not greater-or-equal.** A retrace of exactly `k`
+///   ATRs does NOT turn the leg. One character, and it is the difference
+///   between this series and a different one.
+/// * **On a bar that could seed either direction, UP wins.** Not arbitrary
+///   to leave undecided: the two answers are opposite labels on the same bar.
+/// * **A warmup bar is skipped whole.** While ATR(14) is not finite the bar
+///   is not examined at all and `extreme` does not move - it is not merely
+///   the confirmation that is blocked. Measured on the 25,708-bar H1 file,
+///   that is RANGE on the first 13 bars and never again.
+/// * **The seed is the first bar's CLOSE**, and before a direction exists
+///   one scalar wanders up on a bar that closes at or above it and down
+///   otherwise. The first pivot this emits is therefore the seed reference
+///   the leg came from rather than a swing confirmed by a prior reversal,
+///   and it is emitted so that `break_level` is never null while the label
+///   is not RANGE.
+///
+/// # Why it cannot repaint
+///
+/// A pivot is appended only when the reversal that confirms it has already
+/// happened, and nothing ever pops one. The extreme of the leg IN PROGRESS is
+/// not a pivot and is not published as one. So the pivot list at bar `t` is a
+/// prefix of the list at any later bar, and the label at `t` is the leg in
+/// force at `t` forever after. That is the property the fractal rule was
+/// originally chosen for, kept.
+fn live_zigzag_pivots(bars: &[Bar], k: f64, atr: Option<&[f64]>) -> Vec<Pivot> {
+    let mut out: Vec<Pivot> = Vec::new();
+    if !(k.is_finite() && k > 0.0) || bars.is_empty() {
+        return out;
+    }
+
+    // Seeded from the FIRST BAR'S CLOSE, and the direction-0 branch below
+    // tracks one wandering scalar rather than a running high and a running
+    // low. That is not the shape I would have written; it is `atr_zigzag` in
+    // `py/research/bias_defs.py`, and matching it is the point - see the
+    // header note above.
+    let mut extreme = bars[0].close;
+    let mut extreme_at = 0usize;
+    let mut direction = 0i8;
+
+    for (t, bar) in bars.iter().enumerate() {
+        // SKIPPED ENTIRELY during the ATR warmup, so `extreme` does not drift
+        // before there is a threshold to judge it against. Continuing past the
+        // update rather than only past the test is one of the four places this
+        // could silently diverge.
+        let Some(a) = atr.and_then(|s| s.get(t)).copied().filter(|v| v.is_finite()) else { continue };
+        let thr = k * a;
+
+        match direction {
+            0 => {
+                // UP IS TESTED FIRST, and on a bar that satisfies both it wins.
+                // A tie is not hypothetical on a wide bar, and the two answers
+                // are opposite labels.
+                if bar.high - extreme > thr {
+                    out.push(Pivot { at: extreme_at, confirmed_at: t, price: extreme, high: false });
+                    direction = 1;
+                    extreme = bar.high;
+                    extreme_at = t;
+                } else if extreme - bar.low > thr {
+                    out.push(Pivot { at: extreme_at, confirmed_at: t, price: extreme, high: true });
+                    direction = -1;
+                    extreme = bar.low;
+                    extreme_at = t;
+                } else if bar.close >= extreme {
+                    if bar.high > extreme {
+                        extreme = bar.high;
+                        extreme_at = t;
+                    }
+                } else if bar.low < extreme {
+                    extreme = bar.low;
+                    extreme_at = t;
+                }
+            }
+            1 => {
+                // The leg extends BEFORE the reversal test, so one bar can make
+                // a new high and then give back `thr` from it and turn.
+                if bar.high > extreme {
+                    extreme = bar.high;
+                    extreme_at = t;
+                }
+                if extreme - bar.low > thr {
+                    out.push(Pivot { at: extreme_at, confirmed_at: t, price: extreme, high: true });
+                    direction = -1;
+                    extreme = bar.low;
+                    extreme_at = t;
+                }
+            }
+            _ => {
+                if bar.low < extreme {
+                    extreme = bar.low;
+                    extreme_at = t;
+                }
+                if bar.high - extreme > thr {
+                    out.push(Pivot { at: extreme_at, confirmed_at: t, price: extreme, high: false });
+                    direction = 1;
+                    extreme = bar.high;
+                    extreme_at = t;
+                }
+            }
+        }
+    }
+    out
+}
+
+/// Structure from a live zigzag.
+///
+/// The label is the LEG IN FORCE, not a comparison of swing pairs. After a
+/// pivot high is confirmed the market is in a down-leg and the row reads DOWN;
+/// after a pivot low, UP. That is why this rule has no flat state once it has
+/// started, and why it turns roughly twice as fast as `fractal(2)` on H1.
+///
+/// The break level is the last confirmed pivot on the far side of the leg:
+/// in an up-leg, trading below the low the leg started from ends it. Same
+/// semantics as the fractal rule's break level and a different derivation, so
+/// a reader comparing the two rows is comparing like with like.
+fn structure_zigzag(bars: &[Bar], k: f64, atr: Option<&[f64]>) -> StructureDto {
+    let pivots = live_zigzag_pivots(bars, k, atr);
+    let dto = |p: &Pivot| SwingDto { price: p.price, bar_ms: bars[p.at].time };
+    let nth = |high: bool, back: usize| -> Option<SwingDto> {
+        pivots.iter().rev().filter(|p| p.high == high).nth(back - 1).map(dto)
+    };
+
+    let last = pivots.last();
+    // The leg runs the OTHER way from the pivot that ended the last one.
+    let label = match last {
+        Some(p) if p.high => Structure::Down,
+        Some(_) => Structure::Up,
+        None => Structure::Range,
+    };
+    let last_high = nth(true, 1);
+    let last_low = nth(false, 1);
+    let (break_level, break_side) = match label {
+        Structure::Up => (last_low.as_ref().map(|s| s.price), Some(BreakSide::Below)),
+        Structure::Down => (last_high.as_ref().map(|s| s.price), Some(BreakSide::Above)),
+        Structure::Range => (None, None),
+    };
+
+    let rule = StructureRule::ZigzagAtr(k);
+    StructureDto {
+        label,
+        rule: rule.name(),
+        rule_measured: rule.measured_on_h1(),
+        confirmed_at_bar_ms: last.map(|p| bars[p.confirmed_at].time),
+        last_high,
+        prior_high: nth(true, 2),
+        last_low,
+        prior_low: nth(false, 2),
+        break_level,
+        break_side,
+    }
+}
+
+/// Structure by whichever rule this row runs.
+fn structure_of(bars: &[Bar], rule: StructureRule, atr: Option<&[f64]>) -> StructureDto {
+    match rule {
+        StructureRule::Fractal(n) => structure_fractal(bars, n),
+        StructureRule::ZigzagAtr(k) => structure_zigzag(bars, k, atr),
+    }
+}
+
+fn structure_fractal(bars: &[Bar], n: usize) -> StructureDto {
     let highs = fractal_swings(bars, n, true);
     let lows = fractal_swings(bars, n, false);
     let swing = |v: &[(usize, f64)], back: usize| -> Option<SwingDto> {
@@ -421,7 +752,12 @@ fn structure_of(bars: &[Bar], n: usize) -> StructureDto {
 
     StructureDto {
         label,
-        rule: format!("fractal({n})"),
+        rule: StructureRule::Fractal(n).name(),
+        // The H4 row runs this rule on H4, where these H1 numbers are not
+        // its numbers. Published anyway and labelled with its sample, because
+        // the H1 fallback is `fractal(1)` and a reader comparing the two
+        // options needs both measured on the same sample to compare at all.
+        rule_measured: StructureRule::Fractal(n).measured_on_h1(),
         confirmed_at_bar_ms,
         last_high,
         prior_high,
@@ -481,6 +817,43 @@ const D1_BARS: usize = 200;
 /// The fractal half-width. A parameter because the brief asked for one, not
 /// because anything here tunes it.
 const FRACTAL_N: usize = 2;
+
+/// The zigzag threshold on the H1 row, in ATR(14).
+///
+/// Three and not 1.5, and the difference is the whole point rather than a
+/// tuning. Measured on 25,708 H1 bars
+/// (docs/decisions/2026-09-18-market-bias-definitions.md): at 1.5×ATR the
+/// label turns in two bars and **65% of its turns are undone within three
+/// bars** — twenty-eight flips per hundred bars, which is not a faster row,
+/// it is noise with a direction attached. At 3×ATR it is six bars and 16%.
+///
+/// THE COST, stated here because the two favourable numbers travel on their
+/// own and this one does not: 16% undone within three bars is against
+/// `fractal(2)`'s **1%**. The H1 row will visibly change its mind about one
+/// turn in six, and that is the price paid for halving the lag and for
+/// missing 1% of turns instead of 23%. It was accepted deliberately, for a
+/// row whose question is "what is the chart doing now".
+const ZIGZAG_K: f64 = 3.0;
+
+/// The rule the H1 row runs, and the one named alternative.
+///
+/// TWO OPTIONS, ONE LINE APART, so that finding the fast row too twitchy is
+/// a config change and not a redesign:
+///
+/// * `StructureRule::ZigzagAtr(ZIGZAG_K)` — the default. Median lag 6 bars,
+///   1% of turns missed, 16% of flips undone within three bars.
+/// * `StructureRule::Fractal(1)` — the fallback. Lag 8, 13% missed, 9%
+///   undone. Strictly better than `fractal(2)` on both latency and misses,
+///   roughly half the zigzag's whipsaw, and it keeps both rows in the same
+///   family so they are directly comparable. b5 raised it as a live option
+///   rather than a defeat: the zigzag beats it on every column except the
+///   one this choice is actually about.
+///
+/// NOT A QUERY PARAMETER, deliberately. A caller-chosen rule would let the
+/// card and a prompt disagree about what the H1 row says while both are
+/// "correct", and this desk has spent the day removing exactly that kind of
+/// second answer to one question. One rule, in one place, named on the row.
+const H1_RULE: StructureRule = StructureRule::ZigzagAtr(ZIGZAG_K);
 
 /// The MT5 name for one of our timeframes, for the export hint in a refusal.
 ///
@@ -559,18 +932,22 @@ fn stored_only(state: &AppState, market: &str, timeframe: &str) -> Result<(Vec<B
 
 /// The trend facts for one intraday timeframe.
 ///
-/// `timeframe` and `bar_ms` are passed in rather than derived, and they are
-/// the ONLY things that differ between `h1` and `h4`: one code path computes
-/// both, so a change to the rules cannot reach one block and miss the other.
-/// They are not cross-checked against each other here because the single
-/// caller is the route, three lines below the constants they come from.
+/// `timeframe`, `bar_ms` and `rule` are passed in rather than derived, and
+/// they are the only things that differ between `h1` and `h4`: one code path
+/// computes both, so a change to the indicators, the units or the null
+/// discipline cannot reach one block and miss the other. They are not
+/// cross-checked against each other here because the single caller is the
+/// route, a few lines below the constants they come from.
+///
+/// `rule` is the one place the two rows are deliberately NOT the same, and it
+/// travels to the reader in `structure.rule` for exactly that reason.
 ///
 /// `all` is never empty: [`stored_only`] refuses an empty file before this is
 /// called, and that is the only caller. The `map_or(0, ..)` on the bar stamp
 /// below is therefore unreachable rather than a default — a zero there would
 /// render as 1970 downstream, which is why it is named here instead of left
 /// to be discovered. (Raised by b5 reading the code rather than the summary.)
-fn trend_facts(all: &[Bar], timeframe: &str, bar_ms: i64) -> TrendDto {
+fn trend_facts(all: &[Bar], timeframe: &str, bar_ms: i64, rule: StructureRule) -> TrendDto {
     let bars = &all[all.len().saturating_sub(TREND_BARS)..];
     let specs = [
         IndicatorSpec::new("ema").with("period", 21.0),
@@ -588,8 +965,9 @@ fn trend_facts(all: &[Bar], timeframe: &str, bar_ms: i64) -> TrendDto {
     let ema21_series = at("ema_21");
     let ema55_series = at("ema_55");
 
+    let atr_series = at("atr_14");
     let ema21 = last_finite(ema21_series);
-    let atr14 = last_finite(at("atr_14"));
+    let atr14 = last_finite(atr_series);
     let last_close = bars.last().map(|b| b.close).filter(|v| v.is_finite());
     let dist_ema21_atr = match (last_close, ema21, atr14) {
         // Guarded rather than silently infinite: an ATR of zero is a market
@@ -604,7 +982,11 @@ fn trend_facts(all: &[Bar], timeframe: &str, bar_ms: i64) -> TrendDto {
         computed_at_ms: now_ms(),
         timeframe: timeframe.to_string(),
         bar_ms,
-        structure: structure_of(bars, FRACTAL_N),
+        // The SAME atr series the `atr14` field below publishes. A zigzag
+        // whose threshold came from a second ATR would be measured in a unit
+        // the response does not show, and a ratio whose denominator is
+        // invisible cannot be checked.
+        structure: structure_of(bars, rule, atr_series),
         ema21,
         ema55: last_finite(ema55_series),
         ema21_slope_sign: ema21_series.and_then(|s| slope_sign(s, 3)),
@@ -694,10 +1076,11 @@ fn intraday(
     market: &str,
     timeframe: &'static str,
     bar_ms: i64,
+    rule: StructureRule,
     missing: &mut Vec<(&'static str, String)>,
 ) -> (Option<TrendDto>, Option<HtfSourceDto>) {
     match stored_only(state, market, timeframe) {
-        Ok((bars, source)) => (Some(trend_facts(&bars, timeframe, bar_ms)), Some(source)),
+        Ok((bars, source)) => (Some(trend_facts(&bars, timeframe, bar_ms, rule)), Some(source)),
         Err(why) => {
             missing.push((timeframe, why));
             (None, None)
@@ -719,8 +1102,15 @@ pub async fn htf(
     // instead, which is a different and equally deterministic thing.
     let mut missing: Vec<(&'static str, String)> = Vec::new();
 
-    let (h1, h1_source) = intraday(&state, &market, "1h", 3_600_000, &mut missing);
-    let (h4, h4_source) = intraday(&state, &market, "4h", 14_400_000, &mut missing);
+    // THE TWO ROWS RUN DIFFERENT RULES, AND THAT IS THE POINT. H1 answers
+    // "what is the chart doing now" and H4 "what is the larger structure";
+    // giving both the same rule is what put a DOWN on the H1 row on a morning
+    // that was up 108 bp. H4 additionally KEEPS `fractal(2)` because the two
+    // registered HTF books read it: changing it would make their record two
+    // campaigns under one id.
+    let (h1, h1_source) = intraday(&state, &market, "1h", 3_600_000, H1_RULE, &mut missing);
+    let (h4, h4_source) =
+        intraday(&state, &market, "4h", 14_400_000, StructureRule::Fractal(FRACTAL_N), &mut missing);
     let (d1, d1_source) = match stored_only(&state, &market, "1d") {
         Ok((bars, source)) => (Some(d1_facts(&bars)), Some(source)),
         Err(why) => {
@@ -793,7 +1183,7 @@ mod tests {
     fn higher_highs_and_higher_lows_are_up_and_the_last_low_is_the_break() {
         //                    0     1     2     3     4     5     6     7     8
         let bars = series(&[10.0, 12.0, 9.0, 14.0, 11.0, 16.0, 13.0, 18.0, 15.0]);
-        let s = structure_of(&bars, 1);
+        let s = structure_fractal(&bars, 1);
         assert!(matches!(s.label, Structure::Up), "{:?}", s.label);
         assert_eq!(s.rule, "fractal(1)");
         // Highs at 1, 3, 5, 7; lows at 2, 4, 6. Last high 18+1, prior 16+1.
@@ -809,7 +1199,7 @@ mod tests {
     #[test]
     fn lower_highs_and_lower_lows_are_down_and_the_last_high_is_the_break() {
         let bars = series(&[18.0, 16.0, 19.0, 14.0, 17.0, 12.0, 15.0, 10.0, 13.0]);
-        let s = structure_of(&bars, 1);
+        let s = structure_fractal(&bars, 1);
         assert!(matches!(s.label, Structure::Down), "{:?}", s.label);
         assert_eq!(s.break_level, s.last_high.as_ref().map(|x| x.price));
         assert!(matches!(s.break_side, Some(BreakSide::Above)));
@@ -821,7 +1211,7 @@ mod tests {
         // range has no single price whose break changes the label. Inventing
         // one would be the card claiming a precision the rule does not have.
         let bars = series(&[10.0, 14.0, 9.0, 16.0, 6.0, 18.0, 12.0]);
-        let s = structure_of(&bars, 1);
+        let s = structure_fractal(&bars, 1);
         assert!(matches!(s.label, Structure::Range), "{:?}", s.label);
         assert_eq!(s.break_level, None);
         assert!(s.break_side.is_none());
@@ -834,7 +1224,7 @@ mod tests {
         // bar 7 and a reader ageing it from the swing would think it fresher
         // than it is.
         let bars = series(&[10.0, 12.0, 9.0, 14.0, 11.0, 20.0, 13.0, 12.0]);
-        let s = structure_of(&bars, 2);
+        let s = structure_fractal(&bars, 2);
         assert_eq!(s.last_high.as_ref().map(|x| x.bar_ms), Some(5 * H));
         assert_eq!(s.confirmed_at_bar_ms, Some(7 * H), "confirmed two bars after the swing");
     }
@@ -974,8 +1364,8 @@ mod tests {
         // fields that say which timeframe it is must come out identical - that
         // is what makes a single type honest rather than merely convenient.
         let bars = ladder(3_600_000, 120, 100.0);
-        let h1 = trend_facts(&bars, "1h", 3_600_000);
-        let h4 = trend_facts(&bars, "4h", 14_400_000);
+        let h1 = trend_facts(&bars, "1h", 3_600_000, StructureRule::Fractal(FRACTAL_N));
+        let h4 = trend_facts(&bars, "4h", 14_400_000, StructureRule::Fractal(FRACTAL_N));
 
         assert_eq!(h1.timeframe, "1h");
         assert_eq!(h1.bar_ms, 3_600_000);
@@ -1095,7 +1485,7 @@ mod tests {
         let bars = ladder(3_600_000, 120, 100.0);
         let res = HtfResponse {
             market: "xauusd".to_string(),
-            h1: Some(trend_facts(&bars, "1h", 3_600_000)),
+            h1: Some(trend_facts(&bars, "1h", 3_600_000, StructureRule::ZigzagAtr(ZIGZAG_K))),
             h4: None,
             d1: None,
             h1_source: Some(HtfSourceDto {
@@ -1130,6 +1520,363 @@ mod tests {
         assert!(v["h4"].is_null());
     }
 
+
+    /* ------------------------------------------------ the live zigzag */
+
+    /// A flat ATR series, so a test can state its threshold in points.
+    fn flat_atr(n: usize, v: f64) -> Vec<f64> {
+        vec![v; n]
+    }
+
+    /// Bars from (high, low) pairs, one H apart, closing mid-range.
+    fn hl(pairs: &[(f64, f64)]) -> Vec<Bar> {
+        pairs
+            .iter()
+            .enumerate()
+            .map(|(i, (h, l))| Bar {
+                time: i as i64 * H,
+                open: (h + l) / 2.0,
+                high: *h,
+                low: *l,
+                close: (h + l) / 2.0,
+                volume: Some(1.0),
+            })
+            .collect()
+    }
+
+    #[test]
+    fn a_live_zigzag_never_repaints() {
+        // THE PROPERTY THE WHOLE RULE RESTS ON, and the reason a zigzag is
+        // admissible here at all when the module doc says zigzags repaint.
+        //
+        // For every prefix of the series: the label and the pivots computed
+        // from bars up to t must be exactly what a reader saw at t, and must
+        // still be that after every later bar has printed. Stated as a
+        // property over all prefixes rather than checked at one bar, because
+        // a repaint is precisely the thing that shows up at SOME bar.
+        let bars = hl(&[
+            (10.0, 9.0), (12.0, 10.0), (15.0, 13.0), (18.0, 16.0), (17.0, 11.0),
+            (13.0, 9.0), (10.0, 6.0), (9.0, 5.0), (12.0, 8.0), (16.0, 12.0),
+            (20.0, 17.0), (22.0, 19.0), (21.0, 14.0), (16.0, 11.0), (14.0, 9.0),
+        ]);
+        let atr = flat_atr(bars.len(), 1.0);
+
+        // What each bar said AT the time.
+        let live: Vec<(String, Option<i64>, usize)> = (1..=bars.len())
+            .map(|t| {
+                let s = structure_zigzag(&bars[..t], 3.0, Some(&atr[..t]));
+                (format!("{:?}", s.label), s.confirmed_at_bar_ms, live_zigzag_pivots(&bars[..t], 3.0, Some(&atr[..t])).len())
+            })
+            .collect();
+
+        // Now with the whole series in hand, ask again for each prefix.
+        for t in 1..=bars.len() {
+            let s = structure_zigzag(&bars[..t], 3.0, Some(&atr[..t]));
+            let pivots = live_zigzag_pivots(&bars[..t], 3.0, Some(&atr[..t]));
+            assert_eq!(format!("{:?}", s.label), live[t - 1].0, "label at bar {t} changed");
+            assert_eq!(s.confirmed_at_bar_ms, live[t - 1].1, "confirming bar at {t} changed");
+            assert_eq!(pivots.len(), live[t - 1].2, "pivot count at bar {t} changed");
+        }
+
+        // And the strong form: the pivots at bar t are a PREFIX of the pivots
+        // at the end. A rule that moved its newest leg would fail here while
+        // passing a spot check at the last bar.
+        let full = live_zigzag_pivots(&bars, 3.0, Some(&atr));
+        for t in 1..=bars.len() {
+            let early = live_zigzag_pivots(&bars[..t], 3.0, Some(&atr[..t]));
+            assert!(early.len() <= full.len());
+            for (i, p) in early.iter().enumerate() {
+                assert_eq!(p.at, full[i].at, "pivot {i} moved bar between t={t} and the end");
+                assert_eq!(p.price, full[i].price, "pivot {i} moved price between t={t} and the end");
+                assert_eq!(p.high, full[i].high, "pivot {i} changed side between t={t} and the end");
+                assert_eq!(
+                    p.confirmed_at, full[i].confirmed_at,
+                    "pivot {i} changed its confirming bar between t={t} and the end"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn the_threshold_is_strictly_more_than_k_atrs() {
+        // ONE CHARACTER, and it is the difference between this label series and
+        // a different one. `bias_defs.atr_zigzag` tests `> thr`, so a retrace of
+        // exactly k ATRs does NOT turn the leg. I had written `>=` from the
+        // study's prose, which reads the same to a person and does not to gold.
+        //
+        // Rise to 20 from a close of 9.5, then give back exactly 3.0 with
+        // ATR 1.0 and k = 3.
+        let bars = hl(&[(10.0, 9.0), (14.0, 12.0), (18.0, 16.0), (20.0, 19.0), (19.0, 17.0)]);
+        let atr = flat_atr(bars.len(), 1.0);
+        let pivots = live_zigzag_pivots(&bars, 3.0, Some(&atr));
+        // The up-leg was seeded (price rose well over 3 ATRs from the seed
+        // close), and that seed is the only pivot: 20.0 - 17.0 is exactly 3.0
+        // and does not turn it.
+        assert_eq!(pivots.len(), 1, "exactly k ATRs is not a turn");
+        assert!(!pivots[0].high, "the seed pivot is the low the first leg rose from");
+
+        // One tick deeper and it turns, on that bar.
+        let deeper = hl(&[(10.0, 9.0), (14.0, 12.0), (18.0, 16.0), (20.0, 19.0), (19.0, 16.9)]);
+        let pivots = live_zigzag_pivots(&deeper, 3.0, Some(&flat_atr(deeper.len(), 1.0)));
+        assert_eq!(pivots.len(), 2);
+        assert!(pivots[1].high);
+        assert_eq!(pivots[1].price, 20.0, "the pivot is the leg's extreme");
+        assert_eq!(pivots[1].at, 3, "on the bar that made the high");
+        assert_eq!(pivots[1].confirmed_at, 4, "confirmed on the bar that retraced past it");
+
+        // The threshold is k x ATR and not k points: double the ATR and the
+        // same bars no longer turn.
+        let wide = flat_atr(deeper.len(), 2.0);
+        let pivots = live_zigzag_pivots(&deeper, 3.0, Some(&wide));
+        assert!(pivots.iter().all(|p| !p.high), "no high pivot when the threshold doubles");
+    }
+
+    #[test]
+    fn the_confirming_lag_is_variable_which_is_why_the_field_is_published() {
+        // A fractal(2) pivot is always confirmed exactly two bars later. A
+        // zigzag pivot is confirmed whenever price happens to come back, which
+        // is what `confirmed_at_bar_ms` exists to carry: on this row it is the
+        // difference between a turn just called and one called a session ago.
+        let quick = hl(&[(10.0, 9.0), (20.0, 19.0), (19.0, 16.0)]);
+        let slow = hl(&[
+            (10.0, 9.0), (20.0, 19.0), (19.9, 19.0), (19.8, 18.9), (19.7, 18.8),
+            (19.6, 18.7), (19.0, 16.0),
+        ]);
+        let pq = live_zigzag_pivots(&quick, 3.0, Some(&flat_atr(quick.len(), 1.0)));
+        let ps = live_zigzag_pivots(&slow, 3.0, Some(&flat_atr(slow.len(), 1.0)));
+        let hq = pq.iter().find(|p| p.high).expect("a pivot high");
+        let hs = ps.iter().find(|p| p.high).expect("a pivot high");
+        assert_eq!(hq.at, 1);
+        assert_eq!(hs.at, 1, "the same pivot bar");
+        assert_eq!(hq.confirmed_at, 2);
+        assert_eq!(hs.confirmed_at, 6, "confirmed four bars later than the other");
+        assert_ne!(
+            hq.confirmed_at - hq.at,
+            hs.confirmed_at - hs.at,
+            "the lag is not a constant, unlike a fractal's"
+        );
+    }
+
+    #[test]
+    fn the_label_is_the_leg_in_force_and_range_means_no_leg_yet() {
+        // The zigzag's split is 55/45/0 in the study: once a leg exists the row
+        // is always UP or DOWN. RANGE means "no leg yet", a DIFFERENT statement
+        // from the fractal rule's RANGE, and the `rule` string is what tells a
+        // reader which of the two nulls they are looking at.
+        let bars = hl(&[(10.0, 9.0), (20.0, 19.0), (19.0, 16.0), (25.0, 22.0)]);
+        let atr = flat_atr(bars.len(), 1.0);
+
+        // One bar in: nothing has crossed, so no leg.
+        let early = structure_zigzag(&bars[..1], 3.0, Some(&atr[..1]));
+        assert!(matches!(early.label, Structure::Range));
+        assert_eq!(early.break_level, None, "no leg, so nothing to break");
+        assert_eq!(early.confirmed_at_bar_ms, None);
+
+        // Bar 1 rises more than 3 ATRs off the seed close: an up-leg starts.
+        let up = structure_zigzag(&bars[..2], 3.0, Some(&atr[..2]));
+        assert!(matches!(up.label, Structure::Up), "{:?}", up.label);
+        assert!(matches!(up.break_side, Some(BreakSide::Below)));
+
+        // Bar 2 gives back more than 3 ATRs from 20.0: the leg turns down.
+        let down = structure_zigzag(&bars[..3], 3.0, Some(&atr[..3]));
+        assert!(matches!(down.label, Structure::Down), "{:?}", down.label);
+        assert_eq!(down.break_level, Some(20.0), "trading above the pivot high ends it");
+        assert!(matches!(down.break_side, Some(BreakSide::Above)));
+        assert_eq!(down.rule, "zigzag 3xATR(14) (live)");
+
+        // And the cost rides with the row rather than only in the note.
+        let m = down.rule_measured.expect("the study's numbers");
+        assert_eq!(m.undone_within_3_pct, 16.0);
+        assert_eq!(m.median_lag_bars, 6.0);
+        assert_eq!(m.missed_pct, 1.0);
+        assert!(m.source.contains("market-bias-definitions"));
+    }
+
+    #[test]
+    fn a_bar_that_could_seed_either_way_seeds_up() {
+        // Not arbitrary and not left to the reader: on a bar whose high is more
+        // than k ATRs above the seed AND whose low is more than k ATRs below it,
+        // the two branches give OPPOSITE labels for the same bar. `atr_zigzag`
+        // tests up first, so up wins, and this pins it.
+        let both = hl(&[(10.0, 9.0), (14.5, 5.5)]);
+        let atr = flat_atr(both.len(), 1.0);
+        // seed close is bar 0's mid, 9.5: high is +5.0 and low is -4.0, both
+        // over the 3.0 threshold.
+        let p = live_zigzag_pivots(&both, 3.0, Some(&atr));
+        assert_eq!(p.len(), 1);
+        assert!(!p[0].high, "up won the tie, so the pivot is the low it rose from");
+        assert!(matches!(structure_zigzag(&both, 3.0, Some(&atr)).label, Structure::Up));
+    }
+
+    #[test]
+    fn a_warmup_bar_is_skipped_whole_and_does_not_move_the_extreme() {
+        // Not merely "confirmation is blocked": while ATR is not finite the bar
+        // is not examined at all, so `extreme` stays on the seed. Getting this
+        // wrong would let the reference point drift through the warmup and move
+        // the first pivot, which is one of the four ways this could have
+        // silently diverged from the research definition.
+        let bars = hl(&[(10.0, 9.0), (50.0, 40.0), (12.0, 11.0), (16.0, 15.0)]);
+        // No ATR at all: no pivots, ever.
+        assert!(live_zigzag_pivots(&bars, 3.0, None).is_empty());
+        assert!(matches!(structure_zigzag(&bars, 3.0, None).label, Structure::Range));
+
+        // ATR finite only from bar 2. The spike at bar 1 must not have moved the
+        // seed, so the first cross is judged against bar 0's close of 9.5.
+        let atr = vec![f64::NAN, f64::NAN, 1.0, 1.0];
+        let p = live_zigzag_pivots(&bars, 3.0, Some(&atr));
+        assert_eq!(p.len(), 1, "one pivot, from a seed the warmup left alone");
+        // HAD BAR 1 BEEN EXAMINED, its close of 45 would have carried the seed
+        // up to the 50.0 high, and bar 2's low of 11 would then have been 39
+        // below it - a pivot HIGH at 50.0 and a DOWN leg. Skipping the bar
+        // whole gives the opposite label, which is why this is asserted on the
+        // SIDE and not only on the price.
+        assert!(!p[0].high, "an up-leg, not the down-leg a drifting seed would give");
+        assert_ne!(p[0].price, 50.0, "the skipped bar never became the reference");
+        // The seed does wander once a threshold exists: bar 2 closes above it,
+        // so the reference moves to 12.0 there and the cross comes at bar 3.
+        assert_eq!(p[0].price, 12.0);
+        assert_eq!(p[0].at, 2);
+        assert_eq!(p[0].confirmed_at, 3);
+
+        // A ZERO ATR IS A ZERO THRESHOLD, and the leg turns on any movement at
+        // all. That is not a choice made here - `atr_zigzag` skips a bar only
+        // when its ATR is None, so a zero passes straight through - and it is
+        // kept because matching the research definition is the point. It needs
+        // fourteen identical bars to happen and the label would be meaningless
+        // on such a tape anyway; what matters is that this file does not
+        // quietly diverge from the one the numbers came from.
+        let zero = live_zigzag_pivots(&bars, 3.0, Some(&flat_atr(bars.len(), 0.0)));
+        assert!(!zero.is_empty(), "a zero threshold turns, as the research definition does");
+    }
+
+    #[test]
+    fn zigzag_labels_match_the_research_definition() {
+        // THE CHECK THAT MAKES THIS A PORT RATHER THAN A LOOKALIKE.
+        //
+        // The fixture is real XAUUSD H1 bars with a label column produced by
+        // `py/research/bias_defs.py::atr_zigzag(bars, 3.0)` — b5's own code, the
+        // one that produced every number in the decision note. Agreeing about
+        // the description would not have caught any of the four places this
+        // differed from it: strict `>` against `>=`, up-first against
+        // down-first, a close-seeded scalar against running high/low, and
+        // skipping a warmup bar whole against only blocking its confirmation. I
+        // had three of the four wrong and all three guesses were reasonable.
+        //
+        // The labels here are derived in ONE PASS from the pivot list — the
+        // label at bar t is the direction set by the last pivot confirmed at or
+        // before t — while the Python computes them by streaming. That the two
+        // agree on every bar is also the no-repaint property holding on real
+        // data rather than on a fixture built to show it.
+        //
+        // Run against the WHOLE 25,708-bar file this fixture is sliced from,
+        // the two agree on all 25,708 bars, mix 14,214 UP / 11,481 DOWN / 13
+        // FLAT — which is the study's 55/45/0 and its "FLAT on the first 13
+        // bars and never again".
+        let text = include_str!("../tests/fixtures/zigzag-h1-xauusd.csv");
+        let mut bars: Vec<Bar> = Vec::new();
+        let mut want: Vec<&str> = Vec::new();
+        for line in text.lines() {
+            if line.starts_with('#') || line.trim().is_empty() {
+                continue;
+            }
+            let f: Vec<&str> = line.split(',').collect();
+            assert_eq!(f.len(), 6, "fixture row: {line}");
+            bars.push(Bar {
+                time: f[0].parse().expect("time"),
+                open: f[1].parse().expect("open"),
+                high: f[2].parse().expect("high"),
+                low: f[3].parse().expect("low"),
+                close: f[4].parse().expect("close"),
+                volume: None,
+            });
+            want.push(f[5]);
+        }
+        assert_eq!(bars.len(), 2000, "the fixture is the last 2000 bars");
+
+        let ind = compute_indicators(&bars, &[IndicatorSpec::new("atr").with("period", 14.0)])
+            .unwrap_or_default();
+        let atr = ind.get("atr_14").map(|s| &s[..]);
+        let pivots = live_zigzag_pivots(&bars, ZIGZAG_K, atr);
+
+        let mut got = vec!["FLAT"; bars.len()];
+        let mut next = 0usize;
+        let mut dir = "FLAT";
+        for (t, slot) in got.iter_mut().enumerate() {
+            while next < pivots.len() && pivots[next].confirmed_at <= t {
+                dir = if pivots[next].high { "DOWN" } else { "UP" };
+                next += 1;
+            }
+            *slot = dir;
+        }
+
+        let wrong: Vec<usize> = (0..bars.len()).filter(|&i| got[i] != want[i]).collect();
+        assert!(
+            wrong.is_empty(),
+            "{} of {} labels differ from the research definition; first at bar {} ({} vs {})",
+            wrong.len(),
+            bars.len(),
+            wrong.first().copied().unwrap_or(0),
+            got[wrong.first().copied().unwrap_or(0)],
+            want[wrong.first().copied().unwrap_or(0)]
+        );
+
+        // The fixture carries more FLAT than the full file does (290 against
+        // 13) and that is not a defect: a 2000-bar slice restarts both the
+        // ATR(14) warmup and the wait for the first threshold cross. Asserted
+        // so nobody "fixes" it later.
+        assert_eq!(want.iter().filter(|l| **l == "FLAT").count(), 290);
+        assert!(want.contains(&"UP") && want.contains(&"DOWN"));
+    }
+
+    #[test]
+    fn the_threshold_uses_the_published_atr() {
+        // The zigzag's denominator is the `atr14` the response shows. If these
+        // ever came from two computations, the row would be measured in a unit
+        // the reader cannot see - the same defect as an unpublished ATR behind
+        // `dist_ema21_atr`, which is why that one is published too.
+        let bars: Vec<Bar> = (0..120)
+            .map(|i| {
+                let mid = 100.0 + (i as f64 * 0.7).sin() * 12.0 + i as f64 * 0.05;
+                Bar { time: i as i64 * H, open: mid, high: mid + 1.5, low: mid - 1.5, close: mid, volume: Some(1.0) }
+            })
+            .collect();
+        let facts = trend_facts(&bars, "1h", 3_600_000, StructureRule::ZigzagAtr(ZIGZAG_K));
+        let atr14 = facts.atr14.expect("an ATR");
+
+        // Recompute the zigzag against a flat series at exactly that value and
+        // against a series 20% different; the first must be the closer match.
+        let specs = [IndicatorSpec::new("atr").with("period", 14.0)];
+        let ind = compute_indicators(&bars, &specs).unwrap_or_default();
+        let series = ind.get("atr_14").map(|s| &s[..]);
+        let same = structure_zigzag(&bars, ZIGZAG_K, series);
+        assert_eq!(
+            format!("{:?}", same.label),
+            format!("{:?}", facts.structure.label),
+            "the route's structure is the one computed from the published atr_14"
+        );
+        assert_eq!(same.break_level, facts.structure.break_level);
+        assert!(atr14 > 0.0);
+    }
+
+    #[test]
+    fn h1_runs_the_zigzag_and_h4_keeps_the_fractal() {
+        // The two rows must NOT be the same rule, and the rule string is how a
+        // reader knows. H4 keeping fractal(2) is load-bearing beyond taste:
+        // the two registered HTF books read it, and changing it would make
+        // their record two campaigns under one id.
+        let bars: Vec<Bar> = (0..120)
+            .map(|i| {
+                let mid = 100.0 + (i as f64 * 0.4).sin() * 9.0;
+                Bar { time: i as i64 * H, open: mid, high: mid + 1.0, low: mid - 1.0, close: mid, volume: Some(1.0) }
+            })
+            .collect();
+        let h1 = trend_facts(&bars, "1h", 3_600_000, StructureRule::ZigzagAtr(ZIGZAG_K));
+        let h4 = trend_facts(&bars, "4h", 14_400_000, StructureRule::Fractal(FRACTAL_N));
+        assert_eq!(h1.structure.rule, "zigzag 3xATR(14) (live)");
+        assert_eq!(h4.structure.rule, "fractal(2)");
+        assert_ne!(h1.structure.rule, h4.structure.rule, "the rows are not the same method");
+    }
+
     #[test]
     fn the_prior_day_is_the_one_before_the_newest_closed_bar() {
         let bars = vec![
@@ -1144,3 +1891,4 @@ mod tests {
         assert_eq!(d1.last_close, Some(7.0), "the newest closed bar");
     }
 }
+
