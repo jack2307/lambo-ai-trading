@@ -584,9 +584,39 @@ function Test-HtfReadiness([string]$root) {
         }
         if ($null -eq $body.h4) {
             $bad += [pscustomobject]@{ Market = $m; Why = "$($body.unavailable)" }
-        } else {
-            Note "htf route has H4 bars for $m"
-            if ($null -eq $body.d1) { Write-Host "   WARNING: $m has H4 but no D1 ($($body.unavailable))" -ForegroundColor Yellow }
+            continue
+        }
+        Note "htf route has H4 bars for $m"
+
+        # EVERY timeframe the route says is missing, not the two this was
+        # written for. `unavailable_by_tf` (d1, 3cc80e1) is a map keyed by
+        # timeframe, always present, a key present exactly when that block is
+        # null - so a timeframe added to the route shows up here without this
+        # script being edited. Before it existed this checked `$body.d1` by
+        # name, and an `h1` section would have gone missing silently while the
+        # deploy reported ready and the chart quietly lost a timeframe.
+        #
+        # Only H4 REFUSES. It is what the registered htf books read, and a
+        # deploy that cannot serve them is not ready. The rest are warnings:
+        # the chart degrades without them and the desk still trades.
+        #
+        # THE ROUTE'S OWN PROSE IS PRINTED HERE ON PURPOSE, which is the
+        # opposite of the rule in py/live/htf_context.py. That rule is about
+        # the PROMPT - a controlled variable whose wording must not change
+        # because another file improved a sentence. This is operator output.
+        # It should say exactly what the route says, and the more specific
+        # the better.
+        $byTf = $null
+        if ($body.PSObject.Properties.Name -contains 'unavailable_by_tf') { $byTf = $body.unavailable_by_tf }
+        if ($byTf) {
+            foreach ($tf in @($byTf.PSObject.Properties.Name | Sort-Object)) {
+                if ($tf -eq '4h') { continue }   # refused above, never reached
+                Write-Host "   WARNING: $m has H4 but no $tf - $($byTf.$tf)" -ForegroundColor Yellow
+            }
+        } elseif ($null -eq $body.d1) {
+            # An older binary with no `unavailable_by_tf`. Two timeframes, and
+            # the join is then unambiguous because only one of them is null.
+            Write-Host "   WARNING: $m has H4 but no D1 ($($body.unavailable))" -ForegroundColor Yellow
         }
     }
     if ($bad.Count -eq 0) { return $true }
@@ -598,18 +628,18 @@ function Test-HtfReadiness([string]$root) {
     }
     Write-Host '  This is NOT a code problem and a merge will not fix it. data\ is' -ForegroundColor Yellow
     Write-Host '  gitignored, so the bars ship with nothing - they have to be exported' -ForegroundColor Yellow
-    Write-Host '  on THIS machine, once, against the running demo terminal:' -ForegroundColor Yellow
+    Write-Host '  on THIS machine, once, against the price terminal:' -ForegroundColor Yellow
     Write-Host ''
     Write-Host '    C:\Python39\python.exe py\ingest\mt5_export.py --symbols XAUUSD.sc ' -NoNewline -ForegroundColor Cyan
-    Write-Host '--timeframes H4,D1 --terminal "C:\MT5-cent\terminal64.exe"' -ForegroundColor Cyan
+    Write-Host '--timeframes M1,M5,M15,H1,H4,D1 --terminal "C:\MT5-cent\terminal64.exe"' -ForegroundColor Cyan
     Write-Host ''
-    Write-Host '  That is the same command deploy\run-htf-export.cmd runs hourly once' -ForegroundColor Yellow
-    Write-Host '  install-tasks.ps1 -Apply has registered flowdesk-htf-export. Run it by' -ForegroundColor Yellow
-    Write-Host '  hand first: if the symbol is wrong on this terminal, mt5_export logs' -ForegroundColor Yellow
-    Write-Host '  "skipped" and still exits 0, so read its output rather than its code.' -ForegroundColor Yellow
-    Write-Host '  The suffix is stripped when the file is named, so XAUUSD-4h.parquet is' -ForegroundColor Yellow
-    Write-Host '  what lands whichever symbol was asked for - the file existing does NOT' -ForegroundColor Yellow
-    Write-Host '  prove the right series is in it. The skip line is the only thing that does.' -ForegroundColor Yellow
+    Write-Host '  That is the same command deploy\run-bars-export.cmd runs every five' -ForegroundColor Yellow
+    Write-Host '  minutes once install-tasks.ps1 -Apply has registered' -ForegroundColor Yellow
+    Write-Host '  flowdesk-bars-export. Run it by hand first and read its OUTPUT: the' -ForegroundColor Yellow
+    Write-Host '  suffix is stripped when the file is named, so XAUUSD-4h.parquet is what' -ForegroundColor Yellow
+    Write-Host '  lands whichever symbol was asked for - the file existing does NOT prove' -ForegroundColor Yellow
+    Write-Host '  the right series is in it. A "symbol_select failed - skipped" line is' -ForegroundColor Yellow
+    Write-Host '  the only thing that does.' -ForegroundColor Yellow
     Write-Host '  Until the bars exist, any book on an htf prompt variant decides every' -ForegroundColor Yellow
     Write-Host '  bar with an apology where its context should be - which is a' -ForegroundColor Yellow
     Write-Host '  context-absent campaign wearing a context-present id.' -ForegroundColor Yellow
