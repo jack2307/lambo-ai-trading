@@ -2723,10 +2723,21 @@ function RunChart({
     const st = htf?.h4?.structure
     if (!showHtf || !st) return []
     const out: { label: string; price: number }[] = []
-    if (st.last_high) out.push({ label: 'H4 high', price: st.last_high.price })
-    if (st.last_low) out.push({ label: 'H4 low', price: st.last_low.price })
-    if (st.break_level != null) {
-      out.push({ label: `H4 break ${(st.break_side ?? '').toLowerCase()}`.trim(), price: st.break_level })
+    const bl = st.break_level
+    // THE BREAK LEVEL IS NOT AN INDEPENDENT PRICE. On UP it IS `last_low`; on
+    // DOWN it IS `last_high` - by construction, because it points at whichever
+    // swing the label hangs on. Drawing both would put two dashed lines at the
+    // same price, in the one place this overlay is trying to be clearest.
+    // So the swing is drawn ONCE, and named as the break when it is the break.
+    const same = (a: number, b: number) => Math.abs(a - b) < 1e-9 * Math.max(1, Math.abs(a))
+    const highIsBreak = bl != null && st.last_high != null && same(bl, st.last_high.price)
+    const lowIsBreak = bl != null && st.last_low != null && same(bl, st.last_low.price)
+    const side = (st.break_side ?? '').toLowerCase()
+    if (st.last_high && !highIsBreak) out.push({ label: 'H4 high', price: st.last_high.price })
+    if (st.last_low && !lowIsBreak) out.push({ label: 'H4 low', price: st.last_low.price })
+    if (bl != null) {
+      const what = highIsBreak ? 'H4 high · breaks' : lowIsBreak ? 'H4 low · breaks' : 'H4 breaks'
+      out.push({ label: `${what} ${side}`.trim(), price: bl })
     }
     return out
   }, [htf, showHtf])

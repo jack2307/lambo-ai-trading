@@ -95,6 +95,36 @@ function H4Body({ h4, d1, now }: { h4: HtfH4; d1: HtfResponse['d1']; now: number
         </span>
       </div>
 
+      {/* THE LABEL'S OWN WORKING, which is where the priors belong.
+          They are not levels: they have already been exceeded, and that is
+          what makes the label what it is. A line on a chart claims price may
+          react there; these claim the opposite. So they are shown as the
+          COMPARISON that produced the label, where a reader can check it -
+          on d1's real RANGE, "highs over, lows under" is the whole reason the
+          label is not UP. */}
+      {(s.last_high && s.prior_high) || (s.last_low && s.prior_low) ? (
+        <div className="text-muted-foreground/70 num flex flex-wrap gap-x-3 fd-caption tabular-nums">
+          {s.last_high && s.prior_high && (
+            <span>
+              highs {quote(s.last_high.price)}{' '}
+              <span className="text-muted-foreground/50">
+                {s.last_high.price > s.prior_high.price ? 'over' : 'under'}
+              </span>{' '}
+              {quote(s.prior_high.price)}
+            </span>
+          )}
+          {s.last_low && s.prior_low && (
+            <span>
+              lows {quote(s.last_low.price)}{' '}
+              <span className="text-muted-foreground/50">
+                {s.last_low.price > s.prior_low.price ? 'over' : 'under'}
+              </span>{' '}
+              {quote(s.prior_low.price)}
+            </span>
+          )}
+        </div>
+      ) : null}
+
       {thin ? (
         <p className="text-muted-foreground fd-label">
           not enough H4 bars yet — the bars are there, the indicators need more of them
