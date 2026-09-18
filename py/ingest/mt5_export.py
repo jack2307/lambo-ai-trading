@@ -253,7 +253,12 @@ def write_bars(path: str, rows: list[tuple], metadata: dict[str, str]) -> None:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--symbols", default="XAUUSD.sc,BTCUSD.sc", help="broker symbols, comma-separated")
-    ap.add_argument("--timeframes", default="M1,M15", help="MT5 timeframes, comma-separated (M1,M5,M15,H1)")
+    # The help listed M1,M5,M15,H1 and the table has carried H4 and D1 since
+    # 2026-09-18. A help string that omits an option is the same defect as a
+    # comment that has stopped being true, and it is read by the person
+    # deciding what to type.
+    ap.add_argument("--timeframes", default="M1,M15",
+                    help="MT5 timeframes, comma-separated: " + ",".join(TIMEFRAMES))
     ap.add_argument("--days", type=int, default=None, help="only this many days back (default: all the terminal has)")
     ap.add_argument("--out", default=os.path.join(os.path.dirname(__file__), "..", "..", "data", "bars"))
     ap.add_argument("--keep-suffix", action="store_true", help="name files by the full broker symbol (XAUUSD.sc) instead of stripping .sc")
