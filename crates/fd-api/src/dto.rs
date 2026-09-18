@@ -127,8 +127,22 @@ pub struct BarStats {
     pub gaps: usize,
 }
 
+/// No `rename_all` here, deliberately, and it was removed rather than never
+/// added.
+///
+/// The struct carried `rename_all = "camelCase"` and every field it had was a
+/// single word - `market`, `symbol`, `timeframe`, `synthetic`, `live`, `bars`,
+/// `stats` - so the attribute had never once changed a name. The first
+/// multi-word fields added to it in 2026-09-18 came out as `barMs` and
+/// `lastClosedBarMs` while `BarSourceDto` and `FormingDto`, which carry no
+/// such attribute, stayed snake_case: one response, two conventions, and a
+/// contract already handed to the client in the spelling the code did not use.
+///
+/// Snake_case is what the newer routes on this API emit (`htf.rs`) and what
+/// the client was built against. Removing the attribute changes no existing
+/// field, which is the only reason it is safe to remove rather than work
+/// around.
 #[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
 pub struct BarsResponse {
     pub market: String,
     pub symbol: String,
