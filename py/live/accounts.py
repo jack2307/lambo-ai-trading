@@ -12,6 +12,7 @@ into ONE account and must not grow an opinion about which accounts exist.
     python py/live/accounts.py                 # every enabled account
     python py/live/accounts.py --id demo       # one, enabled or not
     python py/live/accounts.py --all           # every account, enabled or not
+    python py/live/accounts.py --prices        # the terminal the desk reads bars from
 
 `enabled` IS REPORTED AND IS NEVER A PERMISSION HERE. This is a reader: `--id`
 and `--all` answer for a disabled account on purpose, because inspecting an
@@ -39,6 +40,41 @@ DEFAULT = os.path.join(ROOT, "config", "accounts.toml")
 # Fields with no sensible default: an account missing any of them is not an
 # account, and guessing one would mean guessing which terminal to trade.
 REQUIRED = ("id", "login", "terminal")
+
+
+def prices(path):
+    """The one key naming the terminal the desk's bars come from.
+
+    Separate from `load` and from the account list on purpose: it is a fact
+    about the DESK, not about an account, and the two questions have different
+    answers. The funded account's terminal and the price terminal happen to be
+    the same path today and are not the same thing — the first is where orders
+    go, the second is where bars come from, and `config/accounts.toml` carries
+    the argument for why they are currently one.
+
+    Refuses rather than defaults. A missing or empty `terminal` here would
+    otherwise let every caller fall back to "whatever terminal is running",
+    which on a machine with two is a coin toss, and the losing side of that
+    toss is a desk whose bars are a different contract from its fills.
+    """
+    try:
+        import tomli
+    except ImportError:  # pragma: no cover - environment, not logic
+        sys.exit("tomli is not installed: py -3.9 -m pip install tomli")
+    if not os.path.isfile(path):
+        sys.exit(f"no account registry at {path}")
+    with open(path, "rb") as fh:
+        try:
+            doc = tomli.load(fh)
+        except Exception as e:  # noqa: BLE001
+            sys.exit(f"{path}: {e}")
+    table = doc.get("prices") or {}
+    terminal = str(table.get("terminal") or "").strip()
+    if not terminal:
+        sys.exit(f"{path}: [prices] needs a `terminal` - the desk has no default price feed")
+    # An absent suffix is a real answer (a standard account carries none), so
+    # it defaults to empty where `terminal` refuses to.
+    return {"terminal": terminal, "symbol_suffix": str(table.get("symbol_suffix") or "")}
 
 
 def load(path):
@@ -106,7 +142,16 @@ def main() -> int:
     ap.add_argument("--file", default=DEFAULT)
     ap.add_argument("--id", default=None, help="one account by id, enabled or not")
     ap.add_argument("--all", action="store_true", help="include disabled accounts")
+    ap.add_argument("--prices", action="store_true",
+                    help="print the [prices] table instead of the accounts: the terminal the "
+                         "pollers and the higher-timeframe export both read")
     args = ap.parse_args()
+
+    if args.prices:
+        # Printed alone rather than folded into the account list, so the
+        # existing callers that parse that list as an array keep working.
+        json.dump(prices(args.file), sys.stdout)
+        return 0
 
     accounts = load(args.file)
     if args.id:

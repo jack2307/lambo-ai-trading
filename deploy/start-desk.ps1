@@ -32,19 +32,25 @@ param(
     [switch]$WithMirrors,
     [switch]$MirrorsLive,
 
-    # Also start the live terminal, and read prices from it.
+    # Where python is. The same default the launchers under py/live use, and
+    # named here because this script now asks the registry what to start.
+    [string]$Python = 'C:\Python39\python.exe'
+,
+
+    # Print the launch plan and stop, starting nothing.
     #
-    # Off by default, which is a decision about this machine and not a
-    # preference: a rented server does not need the real account's
-    # credentials on it. The demo account quotes the same gold, the same
-    # bitcoin and the same euro - the standard symbol and the cent symbol
-    # differ in contract size, not in price - so prices come from the demo
-    # terminal and nothing about the books changes.
-    #
-    # Pass this once the live terminal here has actually been logged in.
-    # Until then it would start, sit unauthorised, and the pollers would ask
-    # it for XAUUSD.sc and be told there is no such symbol.
-    [switch]$WithLive
+    # For reading before you start the desk by hand, and for the selftest,
+    # which needs to exercise the plan and the refusal without launching a
+    # terminal or an API. It stops AFTER the missing-terminal check, so a
+    # registry that names a path this machine does not have still exits
+    # non-zero here - that check is the one most worth being able to run.
+    [switch]$PlanOnly,
+
+    # Read a registry other than `config/accounts.toml`. For the selftest,
+    # which needs a registry describing terminals it created in a temp
+    # directory; an empty value means the default, which is what every real
+    # run uses.
+    [string]$RegistryFile = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -64,31 +70,127 @@ if (-not $env:SESSIONNAME) {
     Warn 'No session name: this looks like an SSH or service session, which has no'
     Warn 'desktop. MetaTrader will not start here. Run this from RDP.'
 }
-# Where the bars come from, decided here and passed to the poller, so the one
-# place that knows which terminal is logged in is also the place that names
-# the symbols that terminal carries.
-if ($WithLive) {
-    $priceTerminal = 'C:\MT5-live\terminal64.exe'
-    $priceSymbols = 'cent'
-} else {
-    $priceTerminal = 'C:\MT5-demo\terminal64.exe'
-    $priceSymbols = 'standard'
+
+# THE LAUNCH PLAN COMES FROM THE REGISTRY, NOT FROM THIS FILE.
+#
+# Until 2026-09-18 the terminal paths were hard-coded here: `C:\MT5-demo` and
+# `C:\MT5-live`. By then the desk had a funded account on `C:\MT5-cent` and
+# `C:\MT5-live` did not exist on the server at all, so the script whose first
+# line is "Start everything, in the order that matters" could not start the
+# terminal the real money runs through - and would have looked like a clean
+# start with the funded account simply absent. Nothing detected it because a
+# launcher that starts three of four things exits 0.
+#
+# `config/accounts.toml` already knew. It names the terminal for every account
+# and is the file you are told to edit when you add one. So this asks it,
+# through `py/live/accounts.py`, which is the one reader - a second parser here
+# would be a second answer to the same question, and the two would agree until
+# the day they did not.
+#
+# The consequence worth having: add an account to the registry tomorrow and
+# this starts its terminal without being edited.
+$registry = Join-Path $Root 'py\live\accounts.py'
+if (-not (Test-Path $registry)) { Write-Error "missing: $registry"; exit 1 }
+
+function Read-Registry($argsList) {
+    if ($RegistryFile) { $argsList = @('--file', $RegistryFile) + $argsList }
+    $json = & $Python $registry @argsList 2>&1
+    if ($LASTEXITCODE) { Write-Error ("accounts.py " + ($argsList -join ' ') + " failed: $json"); exit 1 }
+    return ($json | ConvertFrom-Json)
+}
+$accounts = @(Read-Registry @('--all'))
+$prices = Read-Registry @('--prices')
+
+# Which terminal the bars come from. ONE key, read here and by the
+# higher-timeframe export, so the 15m series a book decides on and the H4/D1
+# series it reads for context cannot come from different terminals. The
+# argument for the terminal it currently names - and the rule it overrules - is
+# in `config/accounts.toml` beside the key, not repeated here.
+#
+# This replaces a `-WithLive` switch that chose between `C:\MT5-demo` and
+# `C:\MT5-live`. Its reasoning was "a rented server does not need the real
+# account's credentials on it", which was a good rule and was deliberately
+# abandoned on 2026-09-17 when the owner funded the cent account and asked for
+# it to trade from the VPS. The replacement controls are the three-key
+# real-money lock in `mt5_executor.py`, the SYSTEM-task / RDP-session split,
+# and SSH by key only. Recorded so the rule is not re-proposed as new.
+$priceTerminal = $prices.terminal
+# `start_pollers.ps1` takes a NAME for the symbol set rather than the suffix
+# itself, so the registry's suffix is translated here. One place, and it is
+# named rather than inlined so that a third symbol set makes this fail loudly
+# instead of silently choosing 'standard'.
+switch ($prices.symbol_suffix) {
+    '.sc'   { $priceSymbols = 'cent' }
+    ''      { $priceSymbols = 'standard' }
+    default { Write-Error "[prices] symbol_suffix '$($prices.symbol_suffix)' is not one start_pollers.ps1 knows ('.sc' or empty)"; exit 1 }
 }
 
-$terminals = @(
-    @{ path = 'C:\MT5-demo\terminal64.exe'; args = @('/portable', '/config:C:\MT5-demo\config\autologin.ini'); what = 'demo (execution' + $(if ($WithLive) { '' } else { ' and prices' }) + ')' }
-)
-if ($WithLive) {
-    $terminals += @{ path = 'C:\MT5-live\terminal64.exe'; args = @('/portable'); what = 'live (prices)' }
+# Every terminal that must be up: each enabled account's own, plus the price
+# feed's. Deduplicated by path, because on this desk the price terminal is
+# currently also an account's and starting it twice would be two processes
+# fighting over one directory.
+$plan = @{}
+foreach ($a in $accounts) {
+    if (-not $a.enabled) { continue }
+    $plan[$a.terminal] = @{ path = $a.terminal; why = @() }
 }
-foreach ($t in $terminals) {
-    if (-not (Test-Path $t.path)) { Warn ("missing: " + $t.path); continue }
-    $running = Get-Process terminal64 -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq $t.path }
+if (-not $plan.ContainsKey($priceTerminal)) { $plan[$priceTerminal] = @{ path = $priceTerminal; why = @() } }
+foreach ($a in $accounts) {
+    if ($a.enabled) {
+        $plan[$a.terminal].why += ("$($a.id) login $($a.login)" + $(if ($a.real_money) { ' REAL MONEY' } else { '' }))
+    }
+}
+$plan[$priceTerminal].why += 'prices'
+
+# PRINTED BEFORE ANYTHING STARTS, so the operator reads the plan rather than
+# inferring it from what came up. The desk has been started by hand at speed
+# more than once, and "three of four things" is not visible in a scroll of
+# green lines.
+Note 'launch plan, from config/accounts.toml:'
+foreach ($k in ($plan.Keys | Sort-Object)) {
+    Note ("   " + $k + "  <- " + ($plan[$k].why -join ', '))
+}
+foreach ($a in $accounts) {
+    if (-not $a.enabled) { Note ("   (disabled, not started: " + $a.id + " " + $a.terminal + ")") }
+}
+
+# A registry path that is not on this disk is a STOP, not a warning.
+#
+# It used to warn and continue, which is how a missing terminal became a desk
+# that ran without one. The registry is the desk's own description of itself:
+# if it names a terminal this machine does not have, either the file is wrong
+# or the machine is, and both are things to fix before any money moves.
+$absent = @($plan.Keys | Where-Object { -not (Test-Path $_) })
+if ($absent.Count) {
+    foreach ($m in $absent) { Warn ("registry names a terminal that is not on this disk: " + $m) }
+    Write-Error 'refusing to start a partial desk; fix config/accounts.toml or install the terminal'
+    exit 1
+}
+
+if ($PlanOnly) { Note 'plan only: nothing started'; exit 0 }
+
+foreach ($k in ($plan.Keys | Sort-Object)) {
+    $what = $plan[$k].why -join ', '
+    $running = Get-Process terminal64 -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq $k }
     if ($running) {
-        Note ("already up: " + $t.what)
+        Note ("already up: " + $what)
     } else {
-        Start-Process -FilePath $t.path -ArgumentList $t.args
-        Note ("started: " + $t.what)
+        # `/portable` keeps each install's config and logs in its own
+        # directory, which is what makes two terminals on one machine
+        # independent rather than two views of one profile.
+        #
+        # `/config:` is passed when the terminal has an autologin file, and is
+        # DERIVED rather than hard-coded. The old script passed it for the demo
+        # terminal only, by path, so a second terminal with an autologin would
+        # have started unauthorised and then answered every request with "no
+        # such symbol" - which reads as a broker problem, not a launcher one.
+        # Each install keeps its own under `config\autologin.ini` because
+        # `/portable` puts it there.
+        $targs = @('/portable')
+        $autologin = Join-Path (Split-Path -Parent $k) 'config\autologin.ini'
+        if (Test-Path $autologin) { $targs += "/config:$autologin" }
+        Start-Process -FilePath $k -ArgumentList $targs
+        Note ("started: " + $what + $(if (Test-Path $autologin) { ' (autologin)' } else { '' }))
     }
 }
 Note 'give them a moment to authorise before the pollers ask for bars'

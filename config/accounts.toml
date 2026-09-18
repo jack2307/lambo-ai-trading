@@ -60,6 +60,52 @@
 # the executor only ever attaches to a terminal that is ALREADY logged in, and
 # refuses outright if the account it finds is not the `login` named here.
 
+# ------------------------------------------------------------ the price feed
+#
+# WHERE THE DESK'S BARS COME FROM. One key, read by everything that needs a
+# price terminal, so the 15-minute bars a book decides on and the H4/D1 bars it
+# reads for context can never come from different terminals.
+#
+# Read by `deploy/start-desk.ps1` (which passes it to the pollers), and by
+# `deploy/run-htf-export.cmd` and `deploy/install-tasks.ps1` for the higher
+# timeframe export. Before this key existed those three carried the answer
+# separately and agreed only by memory: on 2026-09-18 the pollers were reading
+# `C:\MT5-cent` and the export was pointed at the same path by hand, correctly,
+# and nothing in the repo made that a guarantee. Moving the feed is now one
+# key and a restart instead of a hunt through three files, and a move that
+# misses one of them is not possible rather than merely unlikely.
+#
+# THE TRADEOFF, WHICH IS REAL AND UNRESOLVED.
+#
+# This currently names the terminal the funded account trades on, and there is
+# a written rule against exactly that, a few lines below on the cent account:
+# "it would put the desk's whole price feed on the same login that is carrying
+# money, so a re-login here would blind the desk. Separate installs keep the
+# two failures separate." That rule is good and it was written for the home
+# desktop, where the pollers read a third terminal in Program Files that
+# carries no account of the desk's at all.
+#
+# The VPS has no such terminal. It has the demo install and the funded one, and
+# the argument FOR the funded one is that the books' bars must be the series
+# the account actually fills against: the demo quotes the same gold to the tick
+# but a different contract, which is the kind of "very nearly right" that
+# nobody would ever trace. So the desk trades the feed's independence for the
+# feed matching the fills, on purpose.
+#
+# It is not settled. If the demo terminal is made to carry the `.sc` symbols it
+# becomes the better answer - same series, separate failure - and this key is
+# where that change happens. a5 is taking the question to the owner. Whoever
+# changes it should change this comment with it rather than leave the argument
+# describing a decision that has moved.
+[prices]
+# The terminal the pollers and the higher-timeframe export both read.
+terminal = 'C:\MT5-cent\terminal64.exe'
+# The suffix that terminal's symbols carry: `.sc` on a cent account, empty on a
+# standard one. It belongs to the TERMINAL and not to the market, for the same
+# reason `symbol_suffix` does on an account: `xauusd` is the same gold on both
+# and only the name differs.
+symbol_suffix = ".sc"
+
 [[account]]
 # Short, stable, and what you type at the launcher. It is also the name the
 # desk shows, so it is worth reading well.
