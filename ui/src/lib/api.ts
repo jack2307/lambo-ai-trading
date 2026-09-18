@@ -726,6 +726,129 @@ const post = <T,>(path: string, payload: unknown) =>
     body: JSON.stringify(payload),
   })
 
+
+/* ------------------------------------------------------------ higher timeframe */
+
+/**
+ * The H4/D1 facts the Desk shows as CONTEXT.
+ *
+ * Every field is always present in the JSON; `null` means the fact could not
+ * be computed and is never the same as a zero. `bars_since_new_high: 0` means
+ * THIS bar made a new high — a measurement — while `null` means the 20-bar
+ * window is not full yet. `ema21_slope_sign: 0` is a genuine flat.
+ *
+ * Shapes agreed with the route's author before either side was written, and
+ * checked against real output rather than inferred from a description — the
+ * last time a client assumed a shape from prose it read the wrong hash.
+ */
+export interface HtfLevel {
+  price: number
+  bar_ms: number
+}
+
+export interface HtfStructure {
+  /** Closed set. Switch on it exhaustively. */
+  label: 'UP' | 'DOWN' | 'RANGE'
+  /** The rule that produced it, e.g. `fractal(2)`. Shown, because a label
+   *  without its rule is a stronger claim than the rule supports. */
+  rule: string
+  /**
+   * The bar that CONFIRMED the newest swing — not the bar the swing happened
+   * on. A fractal(2) needs two bars after it, so on H4 the label can be up to
+   * eight hours older than the facts beside it. The card ages the LABEL from
+   * this and the facts from `computed_at_bar_ms`, because they are two
+   * different ages and one stamp cannot carry both.
+   */
+  confirmed_at_bar_ms: number | null
+  /** Swing points. Two of these can share a `bar_ms`: one outside bar can be
+   *  both a fractal high and a fractal low. Do not assume they are distinct. */
+  last_high: HtfLevel | null
+  prior_high: HtfLevel | null
+  last_low: HtfLevel | null
+  prior_low: HtfLevel | null
+  /** The price whose break would change the label. `null` on RANGE — a range
+   *  has no single such level, and inventing one would claim a precision the
+   *  rule does not have. */
+  break_level: number | null
+  break_side: 'BELOW' | 'ABOVE' | null
+}
+
+export interface HtfH4 {
+  /** The CLOSED H4 bar these facts describe, UTC epoch ms. */
+  computed_at_bar_ms: number
+  /** Wall clock when the route computed them, UTC epoch ms. */
+  computed_at_ms: number
+  timeframe: string
+  /** The bar length in ms — read from the object whose stamps are being aged
+   *  rather than from a sibling that describes where the bars came from. */
+  bar_ms: number
+  structure: HtfStructure
+  ema21: number | null
+  ema55: number | null
+  /** -1 | 0 | +1 over the last three closed bars; 0 is a genuine flat. */
+  ema21_slope_sign: number | null
+  ema55_slope_sign: number | null
+  /** Quote units — published so the denominator of `dist_ema21_atr` is
+   *  visible. A ratio whose denominator cannot be checked is not checkable. */
+  atr14: number | null
+  /** Signed, positive when the close is ABOVE the EMA. In ATRs. */
+  dist_ema21_atr: number | null
+  adx14: number | null
+  plus_di14: number | null
+  minus_di14: number | null
+  /** Kaufman efficiency ratio, 0..1, unitless. */
+  efficiency_20: number | null
+  donchian20: {
+    upper: number | null
+    lower: number | null
+    bars_since_new_high: number | null
+    bars_since_new_low: number | null
+  }
+  last_close: number | null
+}
+
+export interface HtfD1 {
+  computed_at_bar_ms: number
+  computed_at_ms: number
+  timeframe: string
+  /** The NOMINAL 86,400,000. The broker's day is not always 24 hours — it
+   *  moves at the daylight-saving changeover — so this ages a stamp and must
+   *  not be used for arithmetic between two of them. */
+  bar_ms: number
+  prior_day_high: number | null
+  prior_day_low: number | null
+  prior_day_bar_ms: number | null
+  prior_week_high: number | null
+  prior_week_low: number | null
+  prior_week_mid: number | null
+  prior_week_start_ms: number | null
+  /** NOT clamped to 0..100. Above 100 is price out of the prior week's range
+   *  upward, below 0 downward, and those are the most informative things it
+   *  ever says — so it must never be drawn as a bar that stops at the ends. */
+  close_pct_of_prior_week_range: number | null
+  last_close: number | null
+}
+
+export interface HtfSource {
+  file: string
+  bars: number
+  timeframe: string
+}
+
+export interface HtfResponse {
+  market: string
+  /** `null` only when the stored bars for that timeframe are missing
+   *  ENTIRELY. A timeframe present but too short returns the object with its
+   *  stamps set and the individual facts null — "no data" and "not enough
+   *  yet" are different states and the card must not say one for the other. */
+  h4: HtfH4 | null
+  d1: HtfD1 | null
+  h4_source: HtfSource | null
+  d1_source: HtfSource | null
+  /** One sentence, written to be displayed, when a timeframe is absent. */
+  unavailable: string | null
+}
+
 export const api = {
   catalog: () => request<Catalog>('/api/chart/catalog'),
 
@@ -765,6 +888,10 @@ export const api = {
   paperAccounts: () => request<{ accounts: BrokerAccount[] }>('/api/paper/accounts'),
 
   guards: () => request<GuardsView>('/api/paper/guards'),
+
+  /** Higher-timeframe context for one market. Read-only, and shown as context
+   *  rather than as a signal. */
+  htf: (market: string) => request<HtfResponse>(`/api/paper/htf?market=${encodeURIComponent(market)}`),
 
   setGuards: (edit: GuardEdit) => post<GuardsView>('/api/paper/guards', edit),
 

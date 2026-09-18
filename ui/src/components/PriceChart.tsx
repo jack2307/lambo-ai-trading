@@ -95,6 +95,12 @@ interface Props {
    */
   pendingFill?: number | null
   /**
+   * Higher-timeframe structure levels, already reduced to name/price pairs by
+   * the caller. Drawn thin and DASHED, so they read as context behind the
+   * book's own solid levels rather than as anything this run decided.
+   */
+  htfLevels?: { label: string; price: number }[]
+  /**
    * The position the book is holding right now.
    *
    * Drawn SOLID, where a pending entry is dotted: one is money already at
@@ -153,6 +159,7 @@ export function PriceChart({
   liveBar,
   pending,
   pendingFill,
+  htfLevels,
   open,
   openPnl = null,
   showOpen = true,
@@ -164,6 +171,7 @@ export function PriceChart({
   const overlays = useRef<Map<string, ISeriesApi<'Line' | 'Histogram'>>>(new Map())
   const priceLines = useRef<IPriceLine[]>([])
   const pendingLines = useRef<IPriceLine[]>([])
+  const htfLines = useRef<IPriceLine[]>([])
   const markers = useRef<ISeriesMarkersPluginApi<Time> | null>(null)
   const zones = useRef<TradeZones | null>(null)
 
@@ -406,6 +414,31 @@ export function PriceChart({
       )
     }
   }, [pending, pendingFill, open, openPnl, showOpen])
+
+  // The higher timeframe's levels, on their own handles so the toggle can
+  // clear them without touching the book's.
+  useEffect(() => {
+    const series = candles.current
+    if (!series) return
+    for (const line of htfLines.current) series.removePriceLine(line)
+    htfLines.current = []
+    for (const level of htfLevels ?? []) {
+      if (!Number.isFinite(level.price)) continue
+      htfLines.current.push(
+        series.createPriceLine({
+          price: level.price,
+          color: token('--muted-foreground', '#9aa39a'),
+          lineWidth: 1,
+          // Dashed and one pixel: this is context from a slower chart, and it
+          // must not compete with the book's own stop and target, which are
+          // the levels that decide this trade.
+          lineStyle: 2,
+          axisLabelVisible: false,
+          title: level.label,
+        }),
+      )
+    }
+  }, [htfLevels])
 
   // Options-derived levels, drawn as price lines on the candles.
   useEffect(() => {

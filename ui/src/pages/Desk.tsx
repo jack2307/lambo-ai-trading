@@ -36,6 +36,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
+import { HtfCard } from '@/components/HtfCard'
+import { useHtf } from '@/lib/useHtf'
 import { PriceChart, type ActiveIndicator, type ChartTrade } from '@/components/PriceChart'
 import { Skeleton } from '@/components/ui/skeleton'
 import type { Book } from '@/App'
@@ -43,7 +45,9 @@ import { api, type BacktestTrade, type Bar, type BrokerEvent, type LiveBar, type
 import { clock, num, liveAge } from '@/lib/format'
 import { toast } from 'sonner'
 import { ClaudeMark, DeepSeekMark, OpenAIMark } from '@/components/BrandMarks'
-import type { Consultation, Decision, Reasoning } from '@/lib/api'
+import type { Consultation, Decision, Reasoning,
+  HtfResponse,
+} from '@/lib/api'
 import { APP_BAR_H } from '@/components/AppBar'
 import { cn } from '@/lib/utils'
 
@@ -87,6 +91,26 @@ const LAST_FILLS_CAP = 10
 
 /** Whether the open position is drawn, remembered per browser. */
 const SHOW_OPEN_KEY = 'fd.desk.showOpen'
+
+/** Whether the higher timeframe's levels are drawn, remembered per viewer. */
+const SHOW_HTF_KEY = 'fd.desk.showHtf'
+
+const readShowHtf = (): boolean => {
+  try {
+    // Absent means ON. They are thin dashed lines behind everything else, and
+    // a level you did not know was there is the one that surprises you.
+    return localStorage.getItem(SHOW_HTF_KEY) !== '0'
+  } catch {
+    return true
+  }
+}
+const writeShowHtf = (on: boolean) => {
+  try {
+    localStorage.setItem(SHOW_HTF_KEY, on ? '1' : '0')
+  } catch {
+    /* private mode: the choice lasts the page */
+  }
+}
 
 const readShowOpen = (): boolean => {
   try {
@@ -702,6 +726,11 @@ export function Desk({ book, ticks, streaming, theme }: {
   // selected account stops reporting, which makes `account` null and this null
   // with it - and depending on the clock here would rebuild the chart's trade
   // array once a second for no reason.
+  // One poll for the whole page: the card NAMES a break level and the chart
+  // DRAWS a line at it, so two fetches would have the desk arguing with itself
+  // in the one place a reader compares them.
+  const { htf, error: htfError } = useHtf(sorted.find((r) => r.id === activeId)?.market ?? '')
+
   const activeBroker = useMemo(() => {
     if (account == null) return null
     const run = sorted.find((r) => r.id === activeId)
@@ -802,7 +831,7 @@ export function Desk({ book, ticks, streaming, theme }: {
                 Fills the column's height above xl and keeps a floor below it,
                 where the page scrolls instead. */}
             <div className="border-border min-h-[340px] shrink-0 border-b xl:min-h-0 xl:flex-1 xl:shrink">
-              <RunChart detail={live} live={livePrice} focus={focusFill} broker={activeBroker} theme={theme} />
+              <RunChart detail={live} live={livePrice} focus={focusFill} broker={activeBroker} theme={theme} htf={htf} />
             </div>
             {/* The fills have seven columns and the rail has 460px, so they
                 stay here where the width is. Capped at two fifths of the
@@ -845,6 +874,8 @@ export function Desk({ book, ticks, streaming, theme }: {
                 now={now}
                 openFill={pickedFill}
                 onOpenFill={openFill}
+                htf={htf}
+                htfError={htfError}
               />
             </div>
           </div>
@@ -2340,6 +2371,8 @@ function Drilldown({
   summary,
   broker,
   live,
+  htf,
+  htfError,
   error,
   now,
   openFill,
@@ -2355,6 +2388,9 @@ function Drilldown({
   now: number
   openFill: string | null
   onOpenFill: (key: string | null) => void
+  /** Higher-timeframe facts, polled once by the page. */
+  htf: HtfResponse | null
+  htfError: string | null
 }) {
   if (error) {
     return (
@@ -2394,6 +2430,10 @@ function Drilldown({
             picker: both describe this one run rather than compare it to the
             others, so this is where they belonged all along. */}
         <PositionBar run={run} live={summary?.live ?? detail.live} broker={broker} />
+        {/* Context, beside the book's own state rather than above it: the
+            higher timeframe is something to weigh what this run is doing
+            against, not an instruction about it. */}
+        <HtfCard market={run.market} data={htf} error={htfError} />
         <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 fd-label">
           <span className="text-muted-foreground fd-caption font-medium tracking-wide uppercase">guards</span>
           <GuardChips run={run} />
@@ -2612,6 +2652,7 @@ function RunChart({
   focus,
   broker,
   theme,
+  htf,
 }: {
   detail: PaperRunDetail | null
   live: LiveBar | null
@@ -2622,6 +2663,8 @@ function RunChart({
   broker: PaperBroker | null
   /** Only to key the chart, so a palette change remounts it. */
   theme: 'light' | 'dark'
+  /** The same facts the card shows, so the line and the number agree. */
+  htf: HtfResponse | null
 }) {
   // `bars` arrives as `[ms, o, h, l, c]` and `PriceChart` takes milliseconds
   // and divides, so the tuple goes straight across. (`series` times are
@@ -2666,6 +2709,27 @@ function RunChart({
   }, [detail])
 
   const [showOpen, setShowOpen] = useState(readShowOpen)
+  const [showHtf, setShowHtf] = useState(readShowHtf)
+
+  /**
+   * The H4 swings and the break level, as lines.
+   *
+   * Only the levels that exist. `break_level` is null on a RANGE - a range has
+   * no single price whose break changes the label - and two swings can share a
+   * bar when one outside bar was both a fractal high and a fractal low, so
+   * nothing here assumes distinct stamps or a full set.
+   */
+  const htfLevels = useMemo(() => {
+    const st = htf?.h4?.structure
+    if (!showHtf || !st) return []
+    const out: { label: string; price: number }[] = []
+    if (st.last_high) out.push({ label: 'H4 high', price: st.last_high.price })
+    if (st.last_low) out.push({ label: 'H4 low', price: st.last_low.price })
+    if (st.break_level != null) {
+      out.push({ label: `H4 break ${(st.break_side ?? '').toLowerCase()}`.trim(), price: st.break_level })
+    }
+    return out
+  }, [htf, showHtf])
 
   /**
    * The open position to draw, taken from whichever book is on screen.
@@ -2756,6 +2820,26 @@ function RunChart({
         >
           on chart {showOpen ? 'on' : 'off'}
         </button>
+        <button
+          type="button"
+          onClick={() => {
+            const next = !showHtf
+            setShowHtf(next)
+            writeShowHtf(next)
+          }}
+          aria-pressed={showHtf}
+          className={cn(
+            'hover:bg-accent focus-visible:ring-ring ml-1 rounded-sm border px-1.5 py-px fd-caption normal-case transition-colors focus-visible:ring-2 focus-visible:outline-none motion-reduce:transition-none',
+            showHtf ? 'border-primary/40 text-primary' : 'border-border text-muted-foreground',
+          )}
+          title={
+            showHtf
+              ? 'Hide the H4 structure levels from the chart'
+              : 'Draw the H4 swing highs, lows and break level'
+          }
+        >
+          H4 levels {showHtf ? 'on' : 'off'}
+        </button>
         {showOpen && openPnl && (
           <span className={cn('num ml-2 normal-case', openPnl.positive ? 'text-lc' : 'text-lp')}>
             {broker ? 'account' : 'book'} P/L {openPnl.label}
@@ -2773,6 +2857,7 @@ function RunChart({
           open={chartOpen}
           openPnl={openPnl}
           showOpen={showOpen}
+          htfLevels={htfLevels}
           // The account's record has no pending entry - a pending is a book
           // decision, and the mirror only ever learns about it as an order.
           pending={broker ? null : detail.run.pending}
