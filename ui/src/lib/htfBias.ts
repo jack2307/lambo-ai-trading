@@ -133,6 +133,35 @@ export function biasTint(word: HtfBias['word']): string {
   return word === 'BULLISH' ? 'text-lc' : word === 'BEARISH' ? 'text-lp' : 'text-muted-foreground'
 }
 
+/**
+ * The bias hue as a CSS value, for the ambient wash and the strip pill.
+ *
+ * `null` on RANGE, and that is the design rather than a gap: nothing lit IS
+ * the range signal. Tinting a range would give it a colour that reads as a
+ * verdict, when a range is precisely the absence of one — the same reason
+ * `htfBias` treats it as an abstention and not as a third direction.
+ *
+ * A VALUE rather than a class, unlike `biasTint`, because the wash composites
+ * it at a measured alpha and `color-mix` needs the colour itself. One
+ * function, so the card, the strip and the contrast check cannot disagree
+ * about which hue means which word.
+ */
+export function biasHue(word: HtfBias['word']): string | null {
+  return word === 'BULLISH' ? 'var(--lc)' : word === 'BEARISH' ? 'var(--lp)' : null
+}
+
+/**
+ * How strongly to wash: unanimous reads brighter than a majority.
+ *
+ * The ONLY strength this rule has. Three votes of three is a different thing
+ * from two of three, and it is the one distinction the count supports — so it
+ * is a step in alpha and never a second colour, because a second hue would
+ * imply a second state rather than more of the same one.
+ */
+export function biasWash(bias: HtfBias): string {
+  return bias.cast >= 3 ? 'var(--bias-wash-strong)' : 'var(--bias-wash-weak)'
+}
+
 /** "1 of 3 bearish", or what actually happened when nothing voted. */
 export function biasTally(b: HtfBias): string {
   if (b.cast === 0) return 'none of the three voted'

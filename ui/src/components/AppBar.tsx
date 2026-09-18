@@ -10,8 +10,10 @@ import type { Theme } from '@/lib/theme'
 import {
   BIAS_RULE,
   biasGlyph,
+  biasHue,
   biasTally,
   biasTint,
+  biasWash,
   htfBias,
   structureGlyph,
   structureTint,
@@ -268,8 +270,22 @@ export function AppBar({ view, markets, market, onMarketChange, book, accounts, 
                 <span className="text-muted-foreground/40 hidden sm:inline" aria-hidden>
                   ·
                 </span>
+                {/* A faint pill in the bias hue, matching the card's wash
+                    so one colour means one thing across the page. Nothing on
+                    RANGE — `biasHue` returns null and the word sits on the
+                    strip's own ground, which is what "no reading" should look
+                    like. The alpha is the same measured token the card uses;
+                    the word is its own hue on a wash of that hue, which is
+                    the pair that caps how strong either can be. */}
                 <span
-                  className={cn('hidden sm:inline', biasTint(bias.word))}
+                  style={
+                    biasHue(bias.word)
+                      ? {
+                          backgroundColor: `color-mix(in oklab, ${biasHue(bias.word)} ${biasWash(bias)}, transparent)`,
+                        }
+                      : undefined
+                  }
+                  className={cn('hidden rounded-sm px-1 sm:inline', biasTint(bias.word))}
                   title={`H4 bias ${bias.word} — ${biasTally(bias)}. ${lamps}. ${
                     conf != null
                       ? `Confirmed ${since(conf, now)} ago, on the bar that closed ${clock(conf)}Z. `

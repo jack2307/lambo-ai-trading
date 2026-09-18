@@ -5,11 +5,14 @@ import { clock, since } from '@/lib/format'
 import {
   BIAS_RULE,
   biasGlyph,
+  biasHue,
   biasTally,
   biasTint,
+  biasWash,
   htfBias,
   structureGlyph,
   structureTint,
+  type HtfBias,
 } from '@/lib/htfBias'
 import { cn } from '@/lib/utils'
 
@@ -73,9 +76,14 @@ export function HtfCard({
   const staleBy = h4 && h4.bar_ms > 0 ? (now - h4.computed_at_bar_ms) / h4.bar_ms : 0
   const stale = staleBy > STALE_BARS + 1
 
+  // Computed here rather than inside the table so the card itself can be lit
+  // by it. One call, handed down, so the wash and the word can never disagree.
+  const bias = h4 ? htfBias(h4) : null
+
   return (
-    <section className="px-3 py-2">
-      <div className="mb-1.5 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+    <section className="relative overflow-hidden px-3 py-2">
+      <BiasWash bias={bias} />
+      <div className="relative mb-1.5 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
         <h2 className="text-muted-foreground fd-caption font-medium tracking-wide uppercase">
           Higher timeframe
         </h2>
@@ -115,17 +123,75 @@ export function HtfCard({
           {data.unavailable_by_tf?.['4h'] ?? data.unavailable ?? 'no H4 data for this market'}
         </p>
       ) : (
-        <Ladder data={data} h4={data.h4} now={now} />
+        <Ladder data={data} h4={data.h4} bias={bias} now={now} />
       )}
     </section>
   )
 }
 
-function Ladder({ data, h4, now }: { data: HtfResponse; h4: HtfH4; now: number }) {
-  const bias = htfBias(h4)
+/**
+ * The market's bias, as light on the card rather than as a fill.
+ *
+ * A TOP EDGE FADING DOWN, not a radial from the corner, and the reason is
+ * measurability. A linear fade puts its maximum at a known band, so the text
+ * that sits in that band can be measured once and asserted forever; a radial's
+ * intensity at any given word depends on the card's size, which means a card
+ * that grows quietly changes its own contrast and no check can pin it. The
+ * card's content is also a table anchored top-left, so a top-left radial would
+ * put peak tint under the header and the first column — the densest small
+ * text on the card.
+ *
+ * NOTHING FOR A RANGE, and that is the signal. A neutral wash would be a
+ * colour that reads as a verdict where there is none; unlit IS the range
+ * state, and the hairline stays so the card still has an edge.
+ *
+ * NOT ANIMATED, deliberately. The bias can only change when an H4 bar closes,
+ * so a crossfade here would be code that runs at most six times a day and is
+ * seen by nobody — and the wash mounts and unmounts with the hue rather than
+ * transitioning between two of them, so a transition would not fire on the
+ * flip that matters anyway. Nothing moves, so `prefers-reduced-motion` has
+ * nothing to respect.
+ */
+function BiasWash({ bias }: { bias: HtfBias | null }) {
+  const hue = bias ? biasHue(bias.word) : null
 
   return (
-    <div className="flex flex-col gap-1.5">
+    <>
+      {/* The edge is always drawn: a card with no rule at all would read as
+          unfinished rather than as neutral. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 h-px"
+        style={{
+          background: hue ? `color-mix(in oklab, ${hue} 60%, transparent)` : 'var(--border)',
+        }}
+      />
+      {hue && bias && (
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 top-0 h-11"
+          style={{
+            background: `linear-gradient(to bottom, color-mix(in oklab, ${hue} ${biasWash(bias)}, transparent), transparent)`,
+          }}
+        />
+      )}
+    </>
+  )
+}
+
+function Ladder({
+  data,
+  h4,
+  bias,
+  now,
+}: {
+  data: HtfResponse
+  h4: HtfH4
+  bias: HtfBias | null
+  now: number
+}) {
+  return (
+    <div className="relative flex flex-col gap-1.5">
       {bias && (
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
           <span className={cn('num fd-display font-semibold', biasTint(bias.word))}>
@@ -281,7 +347,7 @@ function TfRow({
 
   return (
     <>
-      <RowLabel tf={tf} />
+      <RowLabel tf={tf} label={s.label} />
 
       {/* THE LABEL'S OWN WORKING rides with the label, in its tooltip.
           The priors are not levels and must never be drawn as any: they have
@@ -338,8 +404,25 @@ function TfRow({
   )
 }
 
-function RowLabel({ tf }: { tf: string }) {
-  return <span className="text-muted-foreground/60 num fd-caption">{tf}</span>
+/**
+ * The row's own timeframe, and its direction as a shape.
+ *
+ * A two-pixel edge in the row's STRUCTURE colour — not the bias colour. The
+ * card is washed by the H4 bias; these are the individual readings, and a row
+ * whose edge disagreed with the card's wash is the ladder doing its job. A
+ * range gets a neutral edge for the same reason the card gets no wash.
+ */
+function RowLabel({ tf, label }: { tf: string; label?: 'UP' | 'DOWN' | 'RANGE' }) {
+  return (
+    <span
+      className={cn(
+        'text-muted-foreground/60 num border-l-2 pl-1.5 fd-caption',
+        label === 'UP' ? 'border-lc' : label === 'DOWN' ? 'border-lp' : 'border-border',
+      )}
+    >
+      {tf}
+    </span>
+  )
 }
 
 /**

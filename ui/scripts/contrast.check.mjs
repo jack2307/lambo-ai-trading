@@ -119,6 +119,56 @@ for (const [theme, t] of [
     }
   }
 
+  // THE BIAS WASH CHANGES THE GROUND, so the text has to be measured over the
+  // composite and not over the card. This is the whole reason the wash alphas
+  // are tokens rather than numbers in a component: a tint nobody can measure
+  // is a tint that silently eats contrast.
+  //
+  // The worst case is the TOP BAND of the card, where the linear fade is at
+  // full strength — which is exactly where the header and the bias word sit.
+  // A radial from the corner could not be checked this way at all, because
+  // its intensity under any given word depends on the card's size.
+  console.log(`\n-- ${theme.trim()}: text over the bias wash --`)
+  const pct = (token) => {
+    const raw = t[token]
+    if (!raw) throw new Error(`missing --${token}`)
+    const value = Number.parseFloat(raw)
+    if (!Number.isFinite(value)) throw new Error(`--${token} is not a percentage: ${raw}`)
+    return value / 100
+  }
+  /** What the eye actually receives: `hue` at `alpha` over `bg`. */
+  const over = (hue, bg, alpha) => {
+    const [f, b] = [rgb(hue), rgb(bg)]
+    return (
+      '#' +
+      [0, 1, 2]
+        .map((i) => Math.round(alpha * f[i] + (1 - alpha) * b[i]).toString(16).padStart(2, '0'))
+        .join('')
+    )
+  }
+
+  for (const [strength, token] of [
+    ['majority', 'bias-wash-weak'],
+    ['unanimous', 'bias-wash-strong'],
+  ]) {
+    const alpha = pct(token)
+    for (const [word, key] of [
+      ['bullish', 'lc'],
+      ['bearish', 'lp'],
+    ]) {
+      const ground = over(t[key], t.card, alpha)
+      check(theme, `foreground on ${word} wash (${strength})`, t.foreground, ground, TEXT)
+      check(theme, `muted on ${word} wash (${strength})`, t['muted-foreground'], ground, TEXT)
+      if (t['muted-subtle']) {
+        check(theme, `muted-subtle on ${word} wash (${strength})`, t['muted-subtle'], ground, TEXT)
+      }
+      // THE BINDING PAIR. The bias word is drawn in the same hue as the wash
+      // beneath it, so the two converge as the alpha rises — the thing that
+      // caps the wash is the thing the wash exists to highlight.
+      check(theme, `the ${word} WORD on its own wash (${strength})`, t[key], ground, TEXT)
+    }
+  }
+
   console.log(`\n-- ${theme.trim()}: three surfaces, not one sheet --`)
   // Not a WCAG rule. A minimum separation, because the failure the owner
   // reported was that the rail, the page and the cards were the same colour:

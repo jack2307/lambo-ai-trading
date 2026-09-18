@@ -224,6 +224,29 @@
      */
     /* #D97757 darkened until it holds on the page: 3.87 there, 4.29 on a
      * card. */
+    /*
+     * THE BIAS WASH, AS A MEASURED ALPHA RATHER THAN A CHOSEN ONE.
+     *
+     * A tint over the card's own ground changes every contrast ratio on it,
+     * so these two numbers are the largest that keep all of it legible. The
+     * binding constraint is the one worth naming: it is not the body text, it
+     * is the BIAS WORD ITSELF sitting on a wash of its own hue. The word and
+     * its ground converge as the alpha rises, so the thing that caps the wash
+     * is the thing the wash exists to highlight.
+     *
+     * Measured on the card ground: at 12% the loss-red word falls to 4.46 and
+     * `--muted-subtle` to 4.43. At 8% everything holds. `strong` is the
+     * unanimous reading (three votes of three) and `weak` the majority one —
+     * the only "strength" the rule has, and it is a step in alpha rather than
+     * a different colour, because a second hue would imply a second state.
+     *
+     * RANGE GETS NO WASH AT ALL, deliberately. Nothing lit IS the range
+     * signal. A neutral tint would be a colour that looks like a verdict, and
+     * a range is the absence of one.
+     */
+    --bias-wash-weak: 5%;
+    --bias-wash-strong: 8%;
+
     --house-claude: #b85f42;
     /* #4D6BFE as published - it is the one brand colour that clears both
      * grounds unchanged. */
@@ -291,6 +314,13 @@
     /* Dark keeps the published colours, which is what the badge already
      * drew; only the text tints it used to carry are gone, replaced by real
      * foreground text beside a coloured mark. */
+    /* Dark carries more alpha for the same apparent tint: the wash is
+     * lightening a near-black ground rather than darkening a near-white one.
+     * Capped by the same constraint — at 18% the loss-red word falls to 4.22
+     * on its own wash. */
+    --bias-wash-weak: 8%;
+    --bias-wash-strong: 13%;
+
     --house-claude: #d97757;
     --house-deepseek: #4d6bfe;
     --house-openai: #f3f5f7;
