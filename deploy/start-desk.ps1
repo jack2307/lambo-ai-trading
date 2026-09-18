@@ -278,6 +278,24 @@ Note "prices: $priceTerminal, $priceSymbols symbols"
 $launchers = @(
     @{ script = 'start_pollers.ps1'; args = @('-Terminal', $priceTerminal, '-Symbols', $priceSymbols) },
     @{ script = 'start_ai_traders.ps1'; args = @() },
+    # The advisor panel, AFTER the traders because it advises them, and with
+    # NO ARGUMENTS ON PURPOSE - which means dry run, because `-Apply` is a
+    # switch and a switch not passed is off.
+    #
+    # That is the whole safety property of this line, and it is worth saying
+    # rather than leaving as an absence: a reboot can start the panel, and a
+    # reboot can never start it APPLIED. Applied verdicts shrink or refuse real
+    # entries on every mirrored book; whether that ever happens is the owner's
+    # decision and a new campaign generation, so it is something a person types
+    # once, deliberately, and not a state this machine can come up in. Do not
+    # add `-Apply` here. If applied running is ever agreed it belongs in the
+    # registry beside the other opt-ins, where granting it costs a reviewable
+    # edit.
+    #
+    # This line was missing entirely until 2026-09-18, which is why the panel
+    # had never run on this machine: no process, no log, and a comment in
+    # start_ai_traders.ps1 as the only trace that it was meant to exist.
+    @{ script = 'start_advisor.ps1'; args = @() },
     @{ script = 'start_telegram.ps1'; args = @() }
 )
 foreach ($l in $launchers) {
