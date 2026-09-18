@@ -43,7 +43,7 @@ use std::sync::Arc;
 use axum::Json;
 use axum::extract::{Path as PathParam, Query, State};
 use fd_backtest::engine::{ensure_fallback_atr, sizing_atr_key};
-use fd_backtest::paper::Advice;
+use fd_backtest::paper::{Advice, EntryType, PendingOrder};
 use fd_backtest::{Guards, PaperBook, StepReport, Trade, TradingRules};
 use fd_core::types::Bar;
 use fd_indicators::{IndicatorSpec, compute_indicators};
@@ -173,6 +173,35 @@ fn check_id(id: &str) -> Result<(), ApiError> {
     }
 }
 
+/// How a fill was priced: the `entry` object on the `opened` row and on the
+/// `trade` row that closes it, so the record says how the fill happened.
+///
+/// `price` is the number the fill was priced FROM, on the bar's own axis
+/// (the instrument's quote) and before the half-spread entry cost - the bar's
+/// open for a market fill, the order price for a limit, the touched side for
+/// a stop. `entry_price` beside it on the same rows is after the cost. `null`
+/// only on a position that was open before this record existed.
+/// `requested_price` is the order's level, `null` for a market fill.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct EntryRecord {
+    #[serde(rename = "type")]
+    pub entry_type: EntryType,
+    pub price: Option<f64>,
+    pub requested_price: Option<f64>,
+}
+
+impl EntryRecord {
+    fn market(open: f64) -> Self {
+        Self { entry_type: EntryType::Market, price: Some(open), requested_price: None }
+    }
+
+    /// The row for a position that predates the record: a market fill, since
+    /// no other path existed, at an open nobody wrote down.
+    fn unknown() -> Self {
+        Self { entry_type: EntryType::Market, price: None, requested_price: None }
+    }
+}
+
 /// One paper run: the config, the rolling window, the book.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PaperRun {
@@ -251,6 +280,17 @@ pub struct PaperRun {
     /// with the pending it belongs to, exactly as `pending_decided_at` is.
     #[serde(default)]
     pub pending_htf_bar_time: Option<i64>,
+    /// How the OPEN position was entered, for the row its close will write.
+    ///
+    /// Beside `opened_learned_at` and for the same reason: it is a fact about
+    /// the record, not about the book. `fd_backtest::Trade` is replayed by the
+    /// parity goldens and a backtest only ever fills at the open, so the
+    /// field lives here and is attached to the `trade` line when the position
+    /// closes. `None` on a position opened before the field existed - which,
+    /// since no other path existed then, was a market fill at an unknown
+    /// open, and is written as exactly that.
+    #[serde(default)]
+    pub open_entry: Option<EntryRecord>,
     /// Who has been posting this book's entries, if anyone has. `None` on
     /// every rule-based run and on an `external` run nobody has driven yet.
     #[serde(default)]
@@ -406,38 +446,86 @@ impl PaperRun {
         }
         self.book.pending()?;
 
-        // `atr_prev` is the sizing ATR of the last CLOSED bar, and it must be
-        // computed over the same bars the closed-bar path will use - not over
-        // the window as it stands.
-        //
-        // `accept` pushes the arriving bar and then TRIMS the window's head to
-        // `window` bars, and the indicators are computed on that window rather
-        // than on the whole history. An indicator with memory never entirely
-        // forgets its seed, so a window starting one bar later gives a
-        // slightly different value: measured here, an ATR-derived stop moved
-        // by 4e-6 of a point, which is nothing to a trade and is still the
-        // same fill getting two different stops depending on which half of
-        // this change filled it. This is the residue the module docstring
-        // names, and the point of the split is that ONLY the clock moves.
-        //
-        // So: compute over the window the trim will leave. The test that
-        // caught this is `the_open_fills_at_the_same_price_the_close_would_have`.
-        let window = self.config.window.max(1);
-        let start = (self.bars.len() + 1).saturating_sub(window);
-        let bars = &self.bars[start..];
-        let mut ind = compute_indicators(bars, &strategy.indicators(params)).unwrap_or_default();
-        ensure_fallback_atr(bars, params, rules, &mut ind);
-        let atr_prev = ind
-            .get(&sizing_atr_key(params, rules))
-            .and_then(|s| s.last().copied())
-            .filter(|v| v.is_finite());
-
+        let atr_prev = self.atr_for_next_fill(strategy, params, rules);
         let pending_id = self.pending_id();
         if self.shadow.is_none() {
             self.shadow = Some(self.book.clone());
         }
         let advice = self.advice.take().filter(|a| a.intent_id == pending_id);
         self.book.fill_open(time, open, atr_prev, rules, guards, bar_ms, advice.as_ref())
+    }
+
+    /// The sizing ATR a fill BEFORE the next close gets: the last CLOSED bar's,
+    /// computed over the same bars the closed-bar path will use - not over the
+    /// window as it stands.
+    ///
+    /// `accept` pushes the arriving bar and then TRIMS the window's head to
+    /// `window` bars, and the indicators are computed on that window rather
+    /// than on the whole history. An indicator with memory never entirely
+    /// forgets its seed, so a window starting one bar later gives a slightly
+    /// different value: measured here, an ATR-derived stop moved by 4e-6 of a
+    /// point, which is nothing to a trade and is still the same fill getting
+    /// two different stops depending on which half of the split filled it.
+    /// This is the residue the module docstring names, and the point of the
+    /// split is that ONLY the clock moves.
+    ///
+    /// So: compute over the window the trim will leave. The test that caught
+    /// this is `the_open_fills_at_the_same_price_the_close_would_have`. One
+    /// function for the open and for a tick fill, so an order filling inside
+    /// the bar is sized exactly as a market fill at that bar's open would be.
+    fn atr_for_next_fill(&self, strategy: &dyn Strategy, params: &Params, rules: &TradingRules) -> Option<f64> {
+        let window = self.config.window.max(1);
+        let start = (self.bars.len() + 1).saturating_sub(window);
+        let bars = &self.bars[start..];
+        let mut ind = compute_indicators(bars, &strategy.indicators(params)).unwrap_or_default();
+        ensure_fallback_atr(bars, params, rules, &mut ind);
+        ind.get(&sizing_atr_key(params, rules)).and_then(|s| s.last().copied()).filter(|v| v.is_finite())
+    }
+
+    /// The name of the resting order, the way an advisor addresses it: the
+    /// run and the bar whose close produced it. Unlike [`PaperRun::pending_id`]
+    /// it does not move as bars arrive, because the order outlives them.
+    #[must_use]
+    pub fn order_id(&self) -> Option<String> {
+        self.book.pending_order().map(|o| format!("{}:{}", self.config.id, o.decided_bar_time))
+    }
+
+    /// Fill the resting order at `price` inside the bar stamped `time`, the
+    /// tick's bucket, and nothing else - the same shape as
+    /// [`PaperRun::accept_open`], with the same ordering rule (the bucket must
+    /// be strictly newer than the last closed bar, so a tick from a bucket the
+    /// run has already closed over cannot fill anything) and the same
+    /// counterfactual seeding, for the reason given there.
+    ///
+    /// `None` when nothing rests, the bucket is not newer, or the book holds
+    /// a position.
+    // Nine arguments, the eight `accept_open` carries plus the tick's last
+    // price for the fill-bar range: the same allow, for the same reason.
+    #[allow(clippy::too_many_arguments)]
+    pub fn accept_order_fill(
+        &mut self,
+        time: i64,
+        price: f64,
+        last: f64,
+        strategy: &dyn Strategy,
+        params: &Params,
+        rules: &TradingRules,
+        guards: Option<&Guards>,
+        bar_ms: i64,
+    ) -> Option<(PendingOrder, StepReport)> {
+        let last_bar = self.bars.last()?;
+        if time <= last_bar.time {
+            return None;
+        }
+        self.book.pending_order()?;
+
+        let atr_prev = self.atr_for_next_fill(strategy, params, rules);
+        let order_id = self.order_id()?;
+        if self.shadow.is_none() {
+            self.shadow = Some(self.book.clone());
+        }
+        let advice = self.advice.take().filter(|a| a.intent_id == order_id);
+        self.book.fill_order(time, price, last, atr_prev, rules, guards, bar_ms, advice.as_ref())
     }
 
     /// One closed bar. `Err` for a bar older than the last or malformed;
@@ -915,6 +1003,10 @@ pub struct TickRequest {
 pub struct TickResponse {
     /// Always true on a 200: the tick is stored or the request was refused.
     pub stored: bool,
+    /// What the tick did to resting orders on the stream - absent, not
+    /// empty, when it reached none, which is nearly every tick.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub orders: Vec<TickOrderResponse>,
 }
 
 /// Which run to stop: by `id`, or by `market` + `tf` when exactly one run
@@ -1041,6 +1133,109 @@ pub struct PendingDto {
     pub decided_on: Option<i64>,
 }
 
+/// An entry resting at a PRICE, waiting on the tick feed.
+///
+/// The order's own fields as [`PendingOrder`] holds them, plus the two the run
+/// keeps beside it. Every price is on the bar's axis and before the entry
+/// cost, as the order's are. `pending` (the market intent) is `null` while
+/// this is set: the book has one committed entry at most.
+#[derive(Debug, Serialize)]
+pub struct PendingOrderDto {
+    /// `limit` or `stop`; a market entry never rests.
+    #[serde(rename = "type")]
+    pub entry_type: &'static str,
+    pub price: f64,
+    pub side: &'static str,
+    pub stop: Option<f64>,
+    pub target: Option<f64>,
+    pub reason: String,
+    /// `[lo, hi]` as the decider stated it; informational.
+    pub zone: Option<(f64, f64)>,
+    /// The stamp of the bar whose close is EXPECTED to expire it:
+    /// `decided_bar_time + valid_bars x bar_ms`. The rule is the count of
+    /// CLOSED bars, so across a gap in the tape the cancel comes at a later
+    /// stamp than this; `valid_bars` and `bars_waited` are the rule itself.
+    pub valid_until_bar_ms: i64,
+    pub valid_bars: u32,
+    pub bars_waited: u32,
+    /// The bar whose close produced it; also the tail of `intent_id` on
+    /// `/api/paper/pending`, which an advisor answers with.
+    pub decided_bar_time: i64,
+    /// Wall clock, epoch ms, at which the decider posted it. `null` after a
+    /// reload from a state file written without it.
+    pub decided_at: Option<i64>,
+    pub invalidate_above: Option<f64>,
+    pub invalidate_below: Option<f64>,
+    /// The lots the fill WOULD take, by the engine's own sizing rule
+    /// (`open_position`: risk per trade over the stop distance, floored to
+    /// the lot step, then the notional cap) on the book's equity as it stands
+    /// and the order price as the entry. Recomputed on every read, so it
+    /// follows the equity; the ATR does not enter it, because an order always
+    /// carries its stop and the ATR only sizes a stop-less entry. Two things
+    /// can still move the number at the fill: a STOP order fills at the side
+    /// that traded through, not at its level, so its risk unit is measured
+    /// from there; and an advisor's cut is applied at the fill and never
+    /// before. `null` when the rule would refuse the entry outright (no risk
+    /// unit, or the cap refuses), which is what the fill would do too.
+    pub lots: Option<f64>,
+}
+
+impl PendingOrderDto {
+    fn of(order: &PendingOrder, run: &PaperRun, rules: &TradingRules, guards: Option<&Guards>) -> Self {
+        let bar_ms = timeframe_ms(&run.config.tf).unwrap_or(0);
+        let lots = fd_backtest::engine::open_position(
+            order.side,
+            order.stop,
+            order.target,
+            order.reason.clone(),
+            order.decided_bar_time,
+            order.price,
+            None,
+            run.book.equity,
+            rules,
+            run.book.is_self_managed(),
+            guards,
+        )
+        .ok()
+        .map(|(live, _)| live.lots);
+        Self {
+            lots,
+            entry_type: order.entry_type.as_str(),
+            price: order.price,
+            side: order.side.as_str(),
+            stop: order.stop,
+            target: order.target,
+            reason: order.reason.clone(),
+            zone: order.zone,
+            valid_until_bar_ms: order.decided_bar_time + i64::from(order.valid_bars) * bar_ms,
+            valid_bars: order.valid_bars,
+            bars_waited: order.bars_waited,
+            decided_bar_time: order.decided_bar_time,
+            decided_at: run.pending_decided_at,
+            invalidate_above: order.invalidate_above,
+            invalidate_below: order.invalidate_below,
+        }
+    }
+}
+
+/// The order as a `fills.jsonl` row carries it, whole: the `entry` object on
+/// a `cancelled_unfilled` line, and the fields an `intent` line adds.
+fn order_json(order: &PendingOrder) -> serde_json::Value {
+    json!({
+        "type": order.entry_type.as_str(),
+        "price": order.price,
+        "side": order.side.as_str(),
+        "stop": order.stop,
+        "target": order.target,
+        "reason": order.reason,
+        "zone": order.zone,
+        "valid_bars": order.valid_bars,
+        "decided_bar_time": order.decided_bar_time,
+        "invalidate_above": order.invalidate_above,
+        "invalidate_below": order.invalidate_below,
+    })
+}
+
 #[derive(Debug, Serialize)]
 pub struct BlackoutDto {
     pub time: i64,
@@ -1109,6 +1304,10 @@ pub struct RunStatus {
     /// position, so a pending entry means the book is flat right now and will
     /// not be after the next bar opens.
     pub pending: Option<PendingDto>,
+    /// An entry resting at a price, waiting on the tick feed - `null` on
+    /// every rule-based run, and on an external run between orders. Never set
+    /// beside `pending`; see [`PendingOrderDto`].
+    pub pending_order: Option<PendingOrderDto>,
     pub trades: usize,
     pub net_usd: f64,
     /// `null` with no losing trade yet (the engine's infinity).
@@ -1477,6 +1676,7 @@ fn status_of(data: &Path, run: &PaperRun, rules: &TradingRules, guards: Option<&
         }),
         _ => None,
     };
+    let pending_order = run.book.pending_order().map(|o| PendingOrderDto::of(o, run, rules, guards));
     RunStatus {
         id: run.config.id(),
         label: run.config.label.clone(),
@@ -1500,6 +1700,7 @@ fn status_of(data: &Path, run: &PaperRun, rules: &TradingRules, guards: Option<&
         contract_size: rules.contract_size,
         open,
         pending,
+        pending_order,
         trades: book.trades.len(),
         net_usd: metrics.net_pnl_usd,
         profit_factor: metrics.profit_factor,
@@ -1784,6 +1985,7 @@ pub async fn start(State(state): State<Arc<AppState>>, Json(request): Json<Start
         opened_learned_at: None,
         pending_decided_at: None,
         pending_htf_bar_time: None,
+        open_entry: None,
         // Claimed by whoever posts the first accepted intent, never at start.
         decider: None,
         started_at: now_ms(),
@@ -1849,14 +2051,34 @@ fn feed_run(state: &AppState, run: &mut PaperRun, bar: Bar) -> Result<RunBarResp
     let learned_at = now_ms();
     if report.opened {
         run.opened_learned_at = Some(learned_at);
+        run.open_entry = Some(EntryRecord::market(bar.open));
     } else if run.book.position.is_none() {
         run.opened_learned_at = None;
     }
     // Taken, not read: `accept` above has already consumed the pending intent,
     // whether it filled or a guard refused it, so the stamp must not survive
     // into the next bar and describe a decision that is no longer waiting.
-    let decided_at = run.pending_decided_at.take();
-    let htf_bar_time = run.pending_htf_bar_time.take();
+    // Unless what is waiting is an ORDER, which a closed bar never consumes:
+    // its stamps stay with it until it fills, expires or is replaced.
+    let (decided_at, htf_bar_time) = if run.book.pending_order().is_some() {
+        (None, None)
+    } else {
+        (run.pending_decided_at.take(), run.pending_htf_bar_time.take())
+    };
+    // A closed bar has arrived while an order rests: one more waited, and
+    // past `valid_bars` the order is taken back. Counted here and not in
+    // `accept`, because the bar itself never fills an order and the book's
+    // step must stay the engine's step.
+    let expired = run.book.order_saw_bar_close();
+    let expired_decided_at = expired.as_ref().and_then(|_| run.pending_decided_at.take());
+    if expired.is_some() {
+        run.pending_htf_bar_time = None;
+    }
+    // The book takes one position, so a bar closes at most one trade and it
+    // is the position whose entry record the run holds - taken here so it
+    // cannot describe the next position, and before the write so the state
+    // on disk agrees with the row.
+    let entry = (!report.trades.is_empty()).then(|| run.open_entry.take().unwrap_or_else(EntryRecord::unknown));
 
     persist(&state.data, run)?;
     if let Some(missing) = gap {
@@ -1888,12 +2110,19 @@ fn feed_run(state: &AppState, run: &mut PaperRun, bar: Bar) -> Result<RunBarResp
                     // to the fill so the trade record answers "what did it
                     // know" without joining two files on a timestamp.
                     "htf_bar_time": htf_bar_time,
+                    // How the fill was priced - `market` here, always: this
+                    // is the closed-bar path. See `EntryRecord`.
+                    "entry": run.open_entry,
+                    "filled_from": "bar_close",
                 }),
             )?;
         }
     }
     if let Some(why) = &report.refused {
         record(&state.data, &id, &json!({ "kind": "refused", "time": bar.time, "reason": why }))?;
+    }
+    if let Some(order) = &expired {
+        record_cancelled(&state.data, &id, order, bar.time, "expired", expired_decided_at)?;
     }
     // The advisor's own line, and the shadow book beside it. Written whether
     // the verdict changed the trade or waved it through, because "the panel
@@ -1930,7 +2159,7 @@ fn feed_run(state: &AppState, run: &mut PaperRun, bar: Bar) -> Result<RunBarResp
         append_history(&state.data, &id, "shadow", &shadow_closed, shadow.equity);
     }
     for trade in &report.trades {
-        record(&state.data, &id, &trade_event("trade", trade))?;
+        record(&state.data, &id, &trade_row(trade, entry.as_ref()))?;
         if matches!(trade.exit_kind, fd_backtest::ExitKind::Guard(_)) {
             record(&state.data, &id, &trade_event("guard_close", trade))?;
         }
@@ -1946,6 +2175,37 @@ fn feed_run(state: &AppState, run: &mut PaperRun, bar: Bar) -> Result<RunBarResp
         refused: report.refused,
         gap,
     })
+}
+
+/// The `trade` line with how the position was entered beside the trade: a
+/// closed trade's own record says nothing about whether it was a market fill
+/// or an order, and that is the comparison stage 1 exists to make.
+fn trade_row(trade: &Trade, entry: Option<&EntryRecord>) -> serde_json::Value {
+    let mut row = trade_event("trade", trade);
+    row["entry"] = json!(entry);
+    row
+}
+
+/// The `cancelled_unfilled` line: an order that waited and did not fill is
+/// a decision that did not become a trade, and it is COUNTED, because a
+/// fill rate is a fraction and this is its denominator. `time` is on the bar
+/// clock - the closed bar for an expiry, the tick's bucket otherwise - and
+/// `at` is the wall clock the process wrote it, the same two clocks every
+/// other line carries.
+fn record_cancelled(data: &Path, id: &str, order: &PendingOrder, time: i64, reason: &str, decided_at: Option<i64>) -> Result<(), ApiError> {
+    record(
+        data,
+        id,
+        &json!({
+            "kind": "cancelled_unfilled",
+            "time": time,
+            "at": now_ms(),
+            "reason": reason,
+            "entry": order_json(order),
+            "decided_at": decided_at,
+            "bars_waited": order.bars_waited,
+        }),
+    )
 }
 
 /// `POST /api/paper/open`: the open of a bar that has just started.
@@ -1998,6 +2258,7 @@ fn feed_open(state: &AppState, run: &mut PaperRun, time: i64, open: f64) -> Resu
     let learned_at = now_ms();
     if report.opened {
         run.opened_learned_at = Some(learned_at);
+        run.open_entry = Some(EntryRecord::market(open));
     }
     let decided_at = run.pending_decided_at.take();
     let htf_bar_time = run.pending_htf_bar_time.take();
@@ -2023,11 +2284,159 @@ fn feed_open(state: &AppState, run: &mut PaperRun, time: i64, open: f64) -> Resu
                     // to the fill so the trade record answers "what did it
                     // know" without joining two files on a timestamp.
                     "htf_bar_time": htf_bar_time,
+                    "entry": run.open_entry,
+                    "filled_from": "bar_open",
                 }),
             )?;
         }
     }
     Ok(RunOpenResponse { id, opened: report.opened, refused: report.refused })
+}
+
+/// What one run did with a tick that reached its resting order.
+#[derive(Debug, Serialize)]
+pub struct TickOrderResponse {
+    pub id: String,
+    /// `filled`, `refused` (the order was consumed and a guard or the advisor
+    /// refused the entry) or `cancelled` (invalidated, or the book held a
+    /// position the order could not add to).
+    pub event: &'static str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reason: Option<String>,
+}
+
+/// One run, one tick that its order says is a fill: the record-keeping of
+/// [`feed_open`], with the order's own `entry` on the line.
+///
+/// `price` is the order's fill price on the bar's axis - the level for a
+/// limit, the touched side for a stop - and `filled_from` says whether the
+/// tick itself reached it or `pending/act` forced it.
+fn feed_order_fill(
+    state: &AppState,
+    run: &mut PaperRun,
+    live: &LiveBar,
+    price: f64,
+    filled_from: &'static str,
+) -> Result<Option<TickOrderResponse>, ApiError> {
+    let id = run.config.id();
+    let (rules, guards) = rules_and_guards(state, &run.config)?;
+    let (strategy, params) = resolve(&state.registry, &run.config, &rules.news_currencies)?;
+    let bar_ms = timeframe_ms(&run.config.tf).unwrap_or(0);
+    let halted = Halted { inner: &strategy };
+    let driver: &dyn Strategy = if run.paused { &halted } else { &strategy };
+
+    let Some((order, report)) =
+        run.accept_order_fill(live.time, price, live.close, driver, &params, &rules, guards.as_ref(), bar_ms)
+    else {
+        return Ok(None);
+    };
+
+    let learned_at = now_ms();
+    if report.opened {
+        run.opened_learned_at = Some(learned_at);
+        run.open_entry = Some(EntryRecord {
+            entry_type: order.entry_type,
+            price: Some(price),
+            requested_price: Some(order.price),
+        });
+    }
+    let decided_at = run.pending_decided_at.take();
+    let htf_bar_time = run.pending_htf_bar_time.take();
+    persist(&state.data, run)?;
+
+    if let Some(why) = &report.refused {
+        record(&state.data, &id, &json!({ "kind": "refused", "time": live.time, "reason": why, "entry": order_json(&order) }))?;
+    }
+    if report.no_risk {
+        record(&state.data, &id, &json!({ "kind": "refused", "time": live.time, "reason": "NO_RISK_UNIT", "entry": order_json(&order) }))?;
+    }
+    if report.opened {
+        if let Some(p) = run.book.position.as_ref() {
+            record(
+                &state.data,
+                &id,
+                &json!({
+                    "kind": "opened",
+                    // The tick's BUCKET, the bar clock every other `time`
+                    // is on; the instant is `learned_at`, which for a tick
+                    // fill is also when it happened.
+                    "time": p.entry_time,
+                    "learned_at": learned_at,
+                    "side": p.side.as_str(),
+                    "entry_price": p.entry_price,
+                    "lots": p.lots,
+                    "decided_at": decided_at,
+                    "htf_bar_time": htf_bar_time,
+                    "entry": run.open_entry,
+                    "filled_from": filled_from,
+                    "bars_waited": order.bars_waited,
+                    "bid": live.bid,
+                    "ask": live.ask,
+                }),
+            )?;
+        }
+    }
+    let (event, reason) = match &report.refused {
+        Some(why) => ("refused", Some(why.clone())),
+        None if report.no_risk => ("refused", Some("NO_RISK_UNIT".to_string())),
+        None => ("filled", None),
+    };
+    Ok(Some(TickOrderResponse { id, event, reason }))
+}
+
+/// Every run on the stream with an order resting, against one tick: cancel
+/// what the tick invalidates, fill what it reaches, and extend the fill-bar
+/// range of a position filled earlier in the same bucket. The ONE call the
+/// tick handler makes into the order code.
+///
+/// A tick from a bucket the run has already closed over does nothing
+/// (`accept_order_fill`'s ordering rule), which is what makes a tick and a
+/// closed bar racing harmless: whichever lands second finds either the order
+/// gone or the bucket stale. Nothing here writes a book that nothing changed
+/// on, so a tick on a stream of rule-based runs still touches no file - the
+/// test `a_tick_is_reported_and_touches_nothing` holds.
+fn settle_orders_on_tick(state: &AppState, stream: &str, live: &LiveBar) -> Result<Vec<TickOrderResponse>, ApiError> {
+    let mut runs = state.paper.lock().expect("paper runs");
+    let mut out = Vec::new();
+    for run in runs.values_mut().filter(|r| r.config.stream() == stream) {
+        if run.book.observe_tick(live.time, live.close) {
+            persist(&state.data, run)?;
+        }
+        let Some(order) = run.book.pending_order() else { continue };
+        if run.bars.last().is_none_or(|last| live.time <= last.time) {
+            continue;
+        }
+        let id = run.config.id();
+        // Invalidation is read BEFORE the fill on the same tick: a quote that
+        // has gapped through both levels at once cancels rather than fills,
+        // which is the order the contract states and the safer of the two.
+        if order.invalidated_by(live.bid, live.ask) {
+            let order = run.book.cancel_order().expect("checked");
+            let decided_at = run.pending_decided_at.take();
+            run.pending_htf_bar_time = None;
+            persist(&state.data, run)?;
+            record_cancelled(&state.data, &id, &order, live.time, "invalidated", decided_at)?;
+            out.push(TickOrderResponse { id, event: "cancelled", reason: Some("invalidated".to_string()) });
+            continue;
+        }
+        let Some(price) = order.touched(live.bid, live.ask) else { continue };
+        if run.book.position.is_some() {
+            // The engine refuses to fill over a position and the intent route
+            // refuses to place one; this is the seam between the two, and it
+            // is written down rather than left silent.
+            let order = run.book.cancel_order().expect("checked");
+            let decided_at = run.pending_decided_at.take();
+            run.pending_htf_bar_time = None;
+            persist(&state.data, run)?;
+            record_cancelled(&state.data, &id, &order, live.time, "cancelled:position_open", decided_at)?;
+            out.push(TickOrderResponse { id, event: "cancelled", reason: Some("position_open".to_string()) });
+            continue;
+        }
+        if let Some(done) = feed_order_fill(state, run, live, price, "tick")? {
+            out.push(done);
+        }
+    }
+    Ok(out)
 }
 
 /// `POST /api/paper/open`
@@ -2121,16 +2530,21 @@ pub async fn bar(State(state): State<Arc<AppState>>, Json(request): Json<BarRequ
 
 /// `POST /api/paper/tick`
 ///
-/// The bar still **forming** on a `market:tf`, for the screen only.
+/// The bar still **forming** on a `market:tf`, for the screen - and, since
+/// stage 1 of `docs/plans/2026-09-18-staged-ai-entry.md`, for the one thing a
+/// resting order needs, which is a quote.
 ///
-/// This handler touches **no book, no run and no file**. It validates the
-/// bar exactly as [`bar`] validates a closed one — finite prices, `high >=
-/// low`, a timeframe the API serves — stores it in `AppState::live_bars`
-/// under `market:tf` with the server's own clock, and returns. It never
-/// takes the paper mutex, so a tick cannot delay or interleave with a
-/// closed bar's step, and nothing it stores can reach a decision: the only
-/// thing that appends to a run's window is [`PaperRun::accept`], from
-/// [`bar`].
+/// It validates the bar exactly as [`bar`] validates a closed one — finite
+/// prices, `high >= low`, a timeframe the API serves — stores it in
+/// `AppState::live_bars` under `market:tf` with the server's own clock, and
+/// then makes ONE call, [`settle_orders_on_tick`], which is the only place a
+/// tick can reach a book: a LIMIT or STOP order resting on a run of this
+/// stream fills or is invalidated by the quote. Nothing else a tick carries
+/// reaches a decision - the forming bar's open, high, low and close are never
+/// read by a book, and the only thing that appends to a run's window is
+/// [`PaperRun::accept`], from [`bar`]. The paper mutex is taken for that call
+/// and for nothing else, and a stream whose runs rest no order writes no
+/// file.
 ///
 /// A stream with no run is accepted, not 404'd: whether anyone is trading a
 /// symbol is not the poller's business, and a run started later wants the
@@ -2167,8 +2581,9 @@ pub async fn tick(State(state): State<Arc<AppState>>, Json(request): Json<TickRe
     // Anyone watching hears it now rather than on their next poll. `send`
     // fails only when nobody is subscribed, which is the normal case and not
     // an error: the bar is already stored and `/status` will carry it.
-    let _ = state.ticks.send(TickEvent { market: request.market, tf: request.tf, stream: key, live });
-    Ok(Json(TickResponse { stored: true }))
+    let _ = state.ticks.send(TickEvent { market: request.market, tf: request.tf, stream: key.clone(), live: live.clone() });
+    let orders = settle_orders_on_tick(&state, &key, &live)?;
+    Ok(Json(TickResponse { stored: true, orders }))
 }
 
 /// One forming bar, as it reached the desk.
@@ -2243,9 +2658,16 @@ pub async fn stop(State(state): State<Arc<AppState>>, Json(request): Json<StopRe
             return Err(e);
         }
     };
+    // An order resting on a stopped run is withdrawn, and says so: the row is
+    // the only record that it waited.
+    if let Some(order) = run.book.cancel_order() {
+        let decided_at = run.pending_decided_at.take();
+        record_cancelled(&state.data, &id, &order, run.bars.last().map_or(0, |b| b.time), "cancelled:stopped", decided_at)?;
+    }
     let closed = run.book.stop(&rules);
     if let Some(trade) = &closed {
-        record(&state.data, &id, &trade_event("trade", trade))?;
+        let entry = run.open_entry.take().unwrap_or_else(EntryRecord::unknown);
+        record(&state.data, &id, &trade_row(trade, Some(&entry)))?;
     }
     let metrics = run.book.metrics(&rules);
     record(
@@ -2798,6 +3220,11 @@ pub struct PendingEntry {
     pub shadow_net_usd: f64,
     /// A verdict already posted for this same intent, if one has been.
     pub advised: bool,
+    /// Set when the entry is an order resting at a price rather than a
+    /// market intent waiting for the open; `side`, `stop`, `target` and
+    /// `reason` above are then the order's, and `intent_id` is the order's
+    /// own name.
+    pub pending_order: Option<PendingOrderDto>,
 }
 
 /// `GET /api/paper/pending` — every run whose next bar would open a trade.
@@ -2810,26 +3237,42 @@ pub async fn pending(State(state): State<Arc<AppState>>) -> Result<Json<Vec<Pend
     let runs = state.paper.lock().expect("paper runs");
     let mut out = Vec::new();
     for run in runs.values() {
-        let Some(Intent::Enter { side, stop, target, reason }) = run.book.pending() else { continue };
-        let (rules, _) = rules_and_guards(&state, &run.config)?;
+        // An order resting at a price, or a market intent waiting for the
+        // open: one entry either way, and the advisor answers with the id it
+        // is given here.
+        let (rules, guards) = rules_and_guards(&state, &run.config)?;
+        let (side, stop, target, reason, intent_id, pending_order) = match (run.book.pending_order(), run.book.pending()) {
+            (Some(order), _) => (
+                order.side.as_str().to_string(),
+                order.stop,
+                order.target,
+                order.reason.clone(),
+                run.order_id().expect("an order rests"),
+                Some(PendingOrderDto::of(order, run, &rules, guards.as_ref())),
+            ),
+            (None, Some(Intent::Enter { side, stop, target, reason })) => {
+                (format!("{side:?}").to_uppercase(), *stop, *target, reason.clone(), run.pending_id(), None)
+            }
+            _ => continue,
+        };
         let Some(last) = run.bars.last() else { continue };
         let tail: Vec<_> =
             run.bars.iter().rev().take(120).rev().map(|b| (b.time, b.open, b.high, b.low, b.close)).collect();
-        let intent_id = run.pending_id();
         out.push(PendingEntry {
             run: run.config.id(),
             advised: run.advice.as_ref().is_some_and(|a| a.intent_id == intent_id),
             intent_id,
+            pending_order,
             market: run.config.market.clone(),
             tf: run.config.tf.clone(),
             strategy: run.config.strategy.clone(),
             label: run.config.label.clone(),
             params: run.config.params.clone(),
             filters: run.config.filters.clone(),
-            side: format!("{side:?}").to_uppercase(),
-            stop: *stop,
-            target: *target,
-            reason: reason.clone(),
+            side,
+            stop,
+            target,
+            reason,
             signal_bar: (last.time, last.open, last.high, last.low, last.close),
             bars: tail,
             book_trades: run.book.trades.len(),
@@ -2906,8 +3349,11 @@ pub async fn advice(
     // Stale or mistaken: the intent this names is not the one pending. Logged
     // anyway and applied to nothing — a verdict that arrived too late is a
     // fact about the advisor's latency and is worth keeping.
-    let current = run.pending_id();
-    let fresh = current == body.intent_id && matches!(run.book.pending(), Some(Intent::Enter { .. }));
+    // A resting order is addressed by its own id, which does not move as bars
+    // arrive; a market intent by the bar it was decided on, as before.
+    let current = run.order_id().unwrap_or_else(|| run.pending_id());
+    let fresh = current == body.intent_id
+        && (run.book.pending_order().is_some() || matches!(run.book.pending(), Some(Intent::Enter { .. })));
 
     log_consultation(
         &state.data,
@@ -3018,6 +3464,38 @@ pub struct IntentRequest {
     /// nothing.
     #[serde(default)]
     pub htf_bar_time: Option<i64>,
+    /// How to enter. Absent, or `market`, is today's path: the intent fills at
+    /// the next bar's open (or at the open the poller posts). `limit` and
+    /// `stop` rest an order at `price` and fill from the tick feed - see
+    /// [`PendingOrder`] for the fill rule. Stage 1 of
+    /// `docs/plans/2026-09-18-staged-ai-entry.md`.
+    #[serde(default)]
+    pub entry: Option<EntryIn>,
+    /// `[lo, hi]`: where the decider says the entry is still valid.
+    /// Informational; stored on the row and shown, never acted on.
+    #[serde(default)]
+    pub zone: Option<(f64, f64)>,
+    /// Orders only. Cancelled when this many CLOSED bars have arrived after
+    /// the decision bar without a fill. Default 2; must be at least 1.
+    #[serde(default)]
+    pub valid_bars: Option<u32>,
+    /// Orders only. A tick beyond either cancels the order before it fills:
+    /// the ask above the first, the bid below the second.
+    #[serde(default)]
+    pub invalidate_above: Option<f64>,
+    #[serde(default)]
+    pub invalidate_below: Option<f64>,
+}
+
+/// The `entry` object of an intent: `{"type": "market"|"limit"|"stop",
+/// "price": <quote>|null}`. `price` is on the bar's axis, before the entry
+/// cost, and is required for anything but `market`.
+#[derive(Debug, Deserialize)]
+pub struct EntryIn {
+    #[serde(rename = "type")]
+    pub entry_type: String,
+    #[serde(default)]
+    pub price: Option<f64>,
 }
 
 #[derive(Debug, Serialize)]
@@ -3025,6 +3503,53 @@ pub struct IntentResponse {
     pub accepted: bool,
     /// Why not, when not: the run's last bar against the one named.
     pub reason: String,
+}
+
+/// The order an intent describes, checked - or the sentence saying why it
+/// cannot be one. Separated from the handler so the rules are readable as a
+/// list and testable without a run.
+///
+/// The stop must be on the LOSING side of the ENTRY PRICE and the target on
+/// the winning side of it - not of the last close, which is where a market
+/// intent's are judged and which is not where an order fills.
+fn order_of(body: &IntentRequest, side: Side, entry_type: EntryType, decided_bar_time: i64) -> Result<PendingOrder, String> {
+    let type_name = entry_type.as_str();
+    let price = body
+        .entry
+        .as_ref()
+        .and_then(|e| e.price)
+        .filter(|p| p.is_finite() && *p > 0.0)
+        .ok_or_else(|| format!("a {type_name} entry needs a price"))?;
+    let stop = body.stop.filter(|v| v.is_finite()).ok_or_else(|| format!("a {type_name} entry needs a stop"))?;
+    let losing_side = if side.is_long() { stop < price } else { stop > price };
+    if !losing_side {
+        return Err(format!("stop {stop} is not on the losing side of the {type_name} price {price} for a {}", side.as_str()));
+    }
+    let target = body.target.filter(|v| v.is_finite());
+    if let Some(t) = target {
+        let winning_side = if side.is_long() { t > price } else { t < price };
+        if !winning_side {
+            return Err(format!("target {t} is not on the winning side of the {type_name} price {price} for a {}", side.as_str()));
+        }
+    }
+    let valid_bars = body.valid_bars.unwrap_or(2);
+    if valid_bars == 0 {
+        return Err("valid_bars must be at least 1".to_string());
+    }
+    Ok(PendingOrder {
+        entry_type,
+        price,
+        side,
+        stop: Some(stop),
+        target,
+        reason: if body.reason.is_empty() { "external".to_string() } else { body.reason.clone() },
+        zone: body.zone.filter(|(lo, hi)| lo.is_finite() && hi.is_finite()),
+        valid_bars,
+        bars_waited: 0,
+        decided_bar_time,
+        invalidate_above: body.invalidate_above.filter(|v| v.is_finite()),
+        invalidate_below: body.invalidate_below.filter(|v| v.is_finite()),
+    })
 }
 
 pub async fn intent(
@@ -3043,6 +3568,17 @@ pub async fn intent(
         other => {
             return Err(ApiError::BadRequest(format!("side must be LONG, SHORT or NONE, got `{other}`")));
         }
+    };
+    // Absent is `market`, so a body written before orders existed means
+    // exactly what it meant then.
+    let entry_type = match body.entry.as_ref().map(|e| e.entry_type.trim().to_ascii_lowercase()) {
+        None => EntryType::Market,
+        Some(t) => match t.as_str() {
+            "market" | "" => EntryType::Market,
+            "limit" => EntryType::Limit,
+            "stop" => EntryType::Stop,
+            other => return Err(ApiError::BadRequest(format!("entry.type must be market, limit or stop, got `{other}`"))),
+        },
     };
     let mut runs = state.paper.lock().expect("paper runs");
     let run = runs
@@ -3083,20 +3619,51 @@ pub async fn intent(
         }));
     }
 
+    // An order is checked whole before anything is touched, so a refusal
+    // leaves the book - and whatever already rests on it - exactly as it was.
+    let order = match (side, entry_type) {
+        (Some(side), EntryType::Limit | EntryType::Stop) => {
+            if run.book.position.is_some() {
+                return Ok(Json(IntentResponse {
+                    accepted: false,
+                    reason: "run holds a position; an order cannot add to it".to_string(),
+                }));
+            }
+            match order_of(&body, side, entry_type, last) {
+                Ok(order) => Some(order),
+                Err(why) => return Ok(Json(IntentResponse { accepted: false, reason: why })),
+            }
+        }
+        _ => None,
+    };
+
     // Stamped before the badge and before any log line, so that whatever else
     // happens the number belongs to the intent that was just stored.
     let decided_at = now_ms();
+    // A new entry while an order rests REPLACES it, and the replacement is a
+    // row: the order that waited and was withdrawn is a decision that did not
+    // become a trade, and the fill rate needs it in the denominator.
+    let mut replaced = None;
     if side.is_some() {
+        if let Some(old) = run.book.cancel_order() {
+            replaced = Some((old, run.pending_decided_at.take()));
+        }
         run.pending_decided_at = Some(decided_at);
         run.pending_htf_bar_time = body.htf_bar_time;
     }
-    if let Some(side) = side {
-        run.book.decide(Intent::Enter {
-            side,
-            stop: body.stop.filter(|v| v.is_finite()),
-            target: body.target.filter(|v| v.is_finite()),
-            reason: if body.reason.is_empty() { "external".to_string() } else { body.reason.clone() },
-        });
+    match (side, order) {
+        (Some(_), Some(order)) => {
+            run.book.place_order(order);
+        }
+        (Some(side), None) => {
+            run.book.decide(Intent::Enter {
+                side,
+                stop: body.stop.filter(|v| v.is_finite()),
+                target: body.target.filter(|v| v.is_finite()),
+                reason: if body.reason.is_empty() { "external".to_string() } else { body.reason.clone() },
+            });
+        }
+        (None, _) => {}
     }
     // Only now, past every refusal above: the badge names a decision the book
     // actually took, never one it was merely offered.
@@ -3123,6 +3690,10 @@ pub async fn intent(
             reason: "stood aside; the book is unchanged".to_string(),
         }));
     }
+    if let Some((old, old_decided_at)) = &replaced {
+        record_cancelled(&state.data, &body.run, old, body.bar_time, "replaced", *old_decided_at)?;
+    }
+    let resting = run.book.pending_order();
     record(
         &state.data,
         &body.run,
@@ -3145,8 +3716,25 @@ pub async fn intent(
             "target": body.target,
             "reason": body.reason,
             "decider": body.decider,
+            // How it is to be entered. `market` with no price on every row
+            // written before orders existed and on every market intent since.
+            "entry": { "type": entry_type.as_str(), "price": resting.map(|o| o.price) },
+            "zone": resting.and_then(|o| o.zone),
+            "valid_bars": resting.map(|o| o.valid_bars),
+            "invalidate_above": resting.and_then(|o| o.invalidate_above),
+            "invalidate_below": resting.and_then(|o| o.invalidate_below),
         }),
     )?;
+    let reason = match resting {
+        Some(o) => format!(
+            "rests as a {} at {}; fills from the tick feed, cancelled after {} closed bar{} unfilled",
+            o.entry_type.as_str(),
+            o.price,
+            o.valid_bars,
+            if o.valid_bars == 1 { "" } else { "s" }
+        ),
+        None => "fills at the next bar's open".to_string(),
+    };
     // **Before answering, not after.** This route tells the caller "accepted,
     // fills at the next bar's open", and that promise has to survive the
     // fifteen minutes until that bar arrives. The pending intent lived only in
@@ -3154,9 +3742,107 @@ pub async fn intent(
     // silently cancelled a trade the model had been told was on. It was
     // observed doing exactly that: two stand-asides recorded at 16:15 were
     // gone from both badges after a 16:17 restart, and an entry would have
-    // vanished the same way, without a line anywhere saying so.
+    // vanished the same way, without a line anywhere saying so. An order
+    // rests longer still, and the same write is what carries it.
     persist(&state.data, run)?;
-    Ok(Json(IntentResponse { accepted: true, reason: "fills at the next bar's open".to_string() }))
+    Ok(Json(IntentResponse { accepted: true, reason }))
+}
+
+/* ------------------------------------------------ acting on a resting order */
+
+/// `POST /api/paper/pending/act` — trigger or cancel the resting order.
+#[derive(Debug, Deserialize)]
+pub struct ActRequest {
+    pub run: String,
+    /// `trigger`: fill NOW at the latest tick's touched side (the ask for a
+    /// LONG, the bid for a SHORT). `cancel`: withdraw it.
+    pub action: String,
+    /// The caller's sentence; on a cancel it becomes the row's reason,
+    /// `cancelled:<reason>`.
+    #[serde(default)]
+    pub reason: String,
+}
+
+/// The same two fields as [`IntentResponse`], by the Python side's request:
+/// `accepted` false with `reason` saying why nothing was done (no order
+/// resting, no usable quote), true with `reason` saying what was done - on a
+/// trigger, whether the fill opened the position or a guard or the advisor
+/// refused it (the order is consumed either way, as a market fill would be;
+/// the `refused` row says which). After a true reply `pending_order` reads
+/// `null` on the very next status read: the slot is taken under the lock.
+#[derive(Debug, Serialize)]
+pub struct ActResponse {
+    pub accepted: bool,
+    pub reason: String,
+}
+
+/// How old the latest tick may be for a trigger to price off it. A fill
+/// forced against a quote older than this is a fill at a price nobody has
+/// seen; the poller cycles every few seconds, so ten is a dead feed.
+pub const MAX_TRIGGER_TICK_AGE_MS: i64 = 10_000;
+
+/// The stage-2 fast loop's one action. A trigger goes through
+/// [`feed_order_fill`] exactly as a tick that reached the level would, so
+/// the fill is sized, guarded and recorded the same way; the only thing the
+/// caller chooses is WHEN, and the row says `filled_from: act`.
+pub async fn act(State(state): State<Arc<AppState>>, Json(body): Json<ActRequest>) -> Result<Json<ActResponse>, ApiError> {
+    let action = body.action.trim().to_ascii_lowercase();
+    if action != "trigger" && action != "cancel" {
+        return Err(ApiError::BadRequest(format!("action must be trigger or cancel, got `{}`", body.action)));
+    }
+    let refuse = |reason: String| Ok(Json(ActResponse { accepted: false, reason }));
+    // The quote is read before the paper lock and never under it, the same
+    // order every other reader of the two mutexes keeps.
+    let live = state.live_bars.lock().expect("live bars").get(&stream_key_of(&state, &body.run)?).cloned();
+
+    let mut runs = state.paper.lock().expect("paper runs");
+    let run = runs.get_mut(&body.run).ok_or_else(|| ApiError::NotFound(format!("no paper run `{}`", body.run)))?;
+    let Some(order) = run.book.pending_order().cloned() else {
+        return refuse("no order is resting on this run".to_string());
+    };
+
+    if action == "cancel" {
+        let order = run.book.cancel_order().expect("checked");
+        let decided_at = run.pending_decided_at.take();
+        run.pending_htf_bar_time = None;
+        persist(&state.data, run)?;
+        let why = body.reason.trim();
+        let reason = format!("cancelled:{}", if why.is_empty() { "act" } else { why });
+        record_cancelled(&state.data, &body.run, &order, run.bars.last().map_or(0, |b| b.time), &reason, decided_at)?;
+        return Ok(Json(ActResponse { accepted: true, reason: format!("{reason}; the {} at {} is withdrawn", order.entry_type.as_str(), order.price) }));
+    }
+
+    let Some(live) = live else {
+        return refuse("no tick has arrived on this stream".to_string());
+    };
+    let age = now_ms() - live.at;
+    if age > MAX_TRIGGER_TICK_AGE_MS {
+        return refuse(format!("the last tick is {age} ms old; a trigger needs one within {MAX_TRIGGER_TICK_AGE_MS} ms"));
+    }
+    if run.bars.last().is_none_or(|last| live.time <= last.time) {
+        return refuse(format!("the last tick belongs to bar {}, which the run has already closed over", live.time));
+    }
+    let Some(price) = order.trigger_side(live.bid, live.ask) else {
+        return refuse(format!("the last tick carries no {} to fill a {} at", if order.side.is_long() { "ask" } else { "bid" }, order.side.as_str()));
+    };
+    if run.book.position.is_some() {
+        return refuse("run holds a position; the order cannot add to it".to_string());
+    }
+    let done = feed_order_fill(&state, run, &live, price, "act")?
+        .ok_or_else(|| ApiError::Internal("the order was checked and then was not there".to_string()))?;
+    let side = if order.side.is_long() { "ask" } else { "bid" };
+    let reason = match done.reason {
+        None => format!("filled at {price} on the {side} of the tick at {}", live.at),
+        Some(why) => format!("consumed at {price} on the {side} of the tick at {} and refused: {why}", live.at),
+    };
+    Ok(Json(ActResponse { accepted: true, reason }))
+}
+
+/// The `market:tf` a run is on, read under the paper lock and released
+/// before anything else is taken.
+fn stream_key_of(state: &AppState, run: &str) -> Result<String, ApiError> {
+    let runs = state.paper.lock().expect("paper runs");
+    runs.get(run).map(|r| r.config.stream()).ok_or_else(|| ApiError::NotFound(format!("no paper run `{run}`")))
 }
 
 /* --------------------------------------------- reading the models back */

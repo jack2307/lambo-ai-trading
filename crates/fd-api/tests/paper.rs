@@ -12,7 +12,9 @@ use axum::Json;
 use axum::extract::State;
 use axum::response::IntoResponse;
 use axum::extract::{Path as PathParam, Query};
-use fd_api::paper::{DEFAULT_DETAIL_BARS, open_now, DetailQuery, MAX_LIVE_AGE_MS, bar, detail, intent, start, status, stop, tick};
+use fd_api::paper::{
+    DEFAULT_DETAIL_BARS, DetailQuery, MAX_LIVE_AGE_MS, act, bar, detail, intent, open_now, pending, start, status, stop, tick,
+};
 use fd_api::{ApiError, AppState};
 use fd_core::config::Config;
 use fd_core::types::Bar;
@@ -1313,4 +1315,583 @@ async fn an_intent_records_which_higher_timeframe_state_it_read() {
     .expect("intent");
     let last = lines("intent").pop().expect("an intent");
     assert!(last["htf_bar_time"].is_null(), "absent, not zero: {last}");
+}
+
+/* ------------------------------------------------ orders resting at a price */
+
+async fn post_act(state: &Arc<AppState>, body: Value) -> Result<Value, ApiError> {
+    let request = serde_json::from_value(body).expect("an act body");
+    act(State(Arc::clone(state)), Json(request)).await.map(|Json(v)| serde_json::to_value(v).expect("json"))
+}
+
+async fn read_pending(state: &Arc<AppState>) -> Value {
+    let Json(v) = pending(State(Arc::clone(state))).await.expect("pending");
+    serde_json::to_value(v).expect("json")
+}
+
+/// Every `fills.jsonl` line of `kind` for run `id`, oldest first.
+fn rows(dir: &Path, id: &str, kind: &str) -> Vec<Value> {
+    std::fs::read_to_string(dir.join("paper").join(id).join("fills.jsonl"))
+        .unwrap_or_default()
+        .lines()
+        .filter_map(|l| serde_json::from_str::<Value>(l).ok())
+        .filter(|e| e["kind"] == kind)
+        .collect()
+}
+
+/// A tick in `b`'s bucket at `last`, quoting `bid`/`ask`.
+fn quote(b: Bar, last: f64, bid: f64, ask: f64) -> Value {
+    let mut body = forming(b, last);
+    body["bid"] = json!(bid);
+    body["ask"] = json!(ask);
+    body
+}
+
+/// An external run that has advanced over bar 300 and rests nothing; the
+/// bar that will open next.
+async fn external_run(dir: &Path, id: &str) -> (Arc<AppState>, Bar) {
+    let state = state_over(dir, 300);
+    start_run(&state, json!({ "market": "btc", "tf": "15m", "strategy": "external", "id": id, "window": 200 }))
+        .await
+        .expect("start");
+    post_bar(&state, "btc", "15m", wave(300)).await.expect("bar");
+    (state, wave(301))
+}
+
+/// A LONG limit at `price` on bar 300, stop 100 under, target 200 over.
+fn long_limit(id: &str, price: f64) -> Value {
+    json!({
+        "run": id, "bar_time": wave(300).time, "side": "LONG", "decider": "gpt-5",
+        "reason": "wait for the pullback",
+        "entry": { "type": "limit", "price": price },
+        "zone": [price - 5.0, price + 5.0],
+        "stop": price - 100.0, "target": price + 200.0,
+    })
+}
+
+/// `body` with `patch`'s keys written over it.
+fn patched(mut body: Value, patch: Value) -> Value {
+    for (k, v) in patch.as_object().expect("object") {
+        body[k] = v.clone();
+    }
+    body
+}
+
+#[tokio::test]
+async fn a_limit_fill_and_a_market_fill_at_the_same_price_are_the_same_trade() {
+    // The contract's test, at the API: a limit that fills at P through the
+    // tick feed and a market intent that fills at an open of P are one trade
+    // in every field but the clock the desk learned it on.
+    let a = tempfile::tempdir().expect("temp dir");
+    let b = tempfile::tempdir().expect("temp dir");
+    let (market, next) = external_run(a.path(), "m").await;
+    let (limit, _) = external_run(b.path(), "l").await;
+    let price = next.open;
+
+    post_intent(
+        &market,
+        json!({ "run": "m", "bar_time": wave(300).time, "side": "LONG", "decider": "gpt-5",
+                "stop": price - 100.0, "target": price + 200.0, "reason": "now" }),
+    )
+    .await
+    .expect("intent");
+    post_open(&market, "btc", "15m", next.time, price).await.expect("open");
+
+    let reply = post_intent(&limit, long_limit("l", price)).await.expect("intent");
+    assert_eq!(reply["accepted"], true, "{reply}");
+    assert!(reply["reason"].as_str().expect("reason").starts_with("rests as a limit at"), "{reply}");
+
+    // Resting: the status says so, in the shape the contract states.
+    let resting = run_named(&read_status(&limit).await, "l").clone();
+    assert!(resting["open"].is_null() && resting["pending"].is_null(), "one committed entry at most: {resting}");
+    let order = &resting["pending_order"];
+    assert_eq!(order["type"], "limit");
+    assert_eq!(order["price"], price);
+    assert_eq!(order["side"], "LONG");
+    assert_eq!(order["stop"], price - 100.0);
+    assert_eq!(order["target"], price + 200.0);
+    assert_eq!(order["zone"], json!([price - 5.0, price + 5.0]));
+    assert_eq!(order["valid_until_bar_ms"], wave(300).time + 2 * BAR, "default valid_bars is 2");
+    assert_eq!(order["valid_bars"], 2);
+    assert_eq!(order["bars_waited"], 0);
+    assert_eq!(order["decided_bar_time"], wave(300).time);
+    assert!(order["decided_at"].is_number(), "{order}");
+    assert!(order["invalidate_above"].is_null() && order["invalidate_below"].is_null());
+    assert!(order["lots"].as_f64().expect("lots is a number") > 0.0, "{order}");
+
+    // The ask comes down to the level.
+    let reply = post_tick(&limit, "btc", "15m", quote(next, price - 0.5, price - 1.0, price)).await.expect("tick");
+    assert_eq!(reply["orders"][0]["event"], "filled", "{reply}");
+
+    let x = run_named(&read_status(&market).await, "m").clone();
+    let y = run_named(&read_status(&limit).await, "l").clone();
+    assert!(y["pending_order"].is_null(), "consumed");
+    let mut a_open = x["open"].clone();
+    let mut b_open = y["open"].clone();
+    assert!(!a_open.is_null() && !b_open.is_null(), "both filled: {x} {y}");
+    assert_eq!(b_open["lots"], order["lots"], "the size the status promised is the size the fill took");
+    a_open["learned_at"] = Value::Null;
+    b_open["learned_at"] = Value::Null;
+    assert_eq!(a_open, b_open, "same lots, stop, target, risk, price and stamp");
+
+    // And the rows say how each was entered.
+    let m = rows(a.path(), "m", "opened").pop().expect("opened");
+    let l = rows(b.path(), "l", "opened").pop().expect("opened");
+    assert_eq!(m["entry"], json!({ "type": "market", "price": price, "requested_price": null }));
+    assert_eq!(l["entry"], json!({ "type": "limit", "price": price, "requested_price": price }));
+    assert_eq!(l["filled_from"], "tick");
+    assert_eq!(l["decided_at"], order["decided_at"], "the fill names the decision");
+    assert_eq!(m["filled_from"], "bar_open");
+}
+
+#[tokio::test]
+async fn a_tick_short_of_the_level_leaves_the_order_and_writes_nothing() {
+    let dir = tempfile::tempdir().expect("temp dir");
+    let (state, next) = external_run(dir.path(), "l").await;
+    let price = next.open - 50.0;
+    post_intent(&state, long_limit("l", price)).await.expect("intent");
+    let state_json = std::fs::read(dir.path().join("paper").join("l").join("state.json")).expect("state.json");
+    let fills = std::fs::read(dir.path().join("paper").join("l").join("fills.jsonl")).expect("fills.jsonl");
+
+    // Ask still above the limit: nothing.
+    let reply = post_tick(&state, "btc", "15m", quote(next, price + 3.0, price + 2.8, price + 3.2)).await.expect("tick");
+    assert_eq!(reply, json!({ "stored": true }), "no order event");
+    // A tick in the bucket the run has already closed over, even at the
+    // level: nothing. A tick and a bar racing is this case.
+    let stale = post_tick(&state, "btc", "15m", quote(wave(300), price, price - 1.0, price)).await.expect("tick");
+    assert_eq!(stale, json!({ "stored": true }));
+    // A tick with no ask cannot fill a LONG.
+    let mut blind = forming(next, price - 1.0);
+    blind["bid"] = json!(price - 1.2);
+    assert_eq!(post_tick(&state, "btc", "15m", blind).await.expect("tick"), json!({ "stored": true }));
+
+    let run = run_named(&read_status(&state).await, "l").clone();
+    assert!(run["open"].is_null() && !run["pending_order"].is_null(), "{run}");
+    assert_eq!(std::fs::read(dir.path().join("paper").join("l").join("state.json")).expect("state.json"), state_json, "not rewritten");
+    assert_eq!(std::fs::read(dir.path().join("paper").join("l").join("fills.jsonl")).expect("fills.jsonl"), fills, "no line");
+}
+
+#[tokio::test]
+async fn an_order_expires_after_its_valid_bars_and_the_miss_is_counted() {
+    // A limit nobody reaches. Two closed bars after the decision bar it is
+    // gone, and a `cancelled_unfilled` row says it waited and did not fill,
+    // because a fill rate is a fraction and this is its denominator.
+    let dir = tempfile::tempdir().expect("temp dir");
+    let (state, next) = external_run(dir.path(), "l").await;
+    let price = next.open - 5_000.0;
+    post_intent(&state, long_limit("l", price)).await.expect("intent");
+    let decided_at = run_named(&read_status(&state).await, "l")["pending_order"]["decided_at"].clone();
+
+    post_bar(&state, "btc", "15m", wave(301)).await.expect("bar");
+    let run = run_named(&read_status(&state).await, "l").clone();
+    assert_eq!(run["pending_order"]["bars_waited"], 1, "one of two: {run}");
+    // A closed bar whose range covers the level is NOT a fill.
+    let mut wide = wave(302);
+    wide.low = price - 10.0;
+    post_bar(&state, "btc", "15m", wide).await.expect("bar");
+    let run = run_named(&read_status(&state).await, "l").clone();
+    assert!(run["pending_order"].is_null() && run["open"].is_null(), "expired, not filled: {run}");
+
+    let row = rows(dir.path(), "l", "cancelled_unfilled").pop().expect("the miss is a row");
+    assert_eq!(row["reason"], "expired");
+    assert_eq!(row["bars_waited"], 2);
+    assert_eq!(row["time"], wide.time, "on the bar clock");
+    assert!(row["at"].is_number(), "and the wall clock beside it");
+    assert_eq!(row["decided_at"], decided_at);
+    assert_eq!(row["entry"]["type"], "limit");
+    assert_eq!(row["entry"]["price"], price);
+    assert_eq!(row["entry"]["valid_bars"], 2);
+    assert_eq!(row["entry"]["side"], "LONG");
+
+    // Nothing lingers: the next intent's fill carries its own stamp only.
+    post_intent(
+        &state,
+        json!({ "run": "l", "bar_time": wide.time, "side": "LONG", "decider": "gpt-5", "reason": "market now" }),
+    )
+    .await
+    .expect("intent");
+    let run = run_named(&read_status(&state).await, "l").clone();
+    assert!(!run["pending"].is_null() && run["pending_order"].is_null(), "{run}");
+}
+
+#[tokio::test]
+async fn a_tick_beyond_an_invalidation_level_cancels_before_it_fills() {
+    let dir = tempfile::tempdir().expect("temp dir");
+    let (state, next) = external_run(dir.path(), "l").await;
+    let price = next.open - 50.0;
+    let body = patched(long_limit("l", price), json!({ "invalidate_above": next.open + 100.0, "valid_bars": 3 }));
+    post_intent(&state, body).await.expect("intent");
+    let order = run_named(&read_status(&state).await, "l")["pending_order"].clone();
+    assert_eq!(order["invalidate_above"], next.open + 100.0);
+    assert_eq!(order["valid_until_bar_ms"], wave(300).time + 3 * BAR);
+
+    // The ask runs away above the level: cancelled, not filled.
+    let far = next.open + 100.5;
+    let reply = post_tick(&state, "btc", "15m", quote(next, far, far - 0.2, far)).await.expect("tick");
+    assert_eq!(reply["orders"][0]["event"], "cancelled", "{reply}");
+    let run = run_named(&read_status(&state).await, "l").clone();
+    assert!(run["pending_order"].is_null() && run["open"].is_null(), "{run}");
+    let row = rows(dir.path(), "l", "cancelled_unfilled").pop().expect("a row");
+    assert_eq!(row["reason"], "invalidated");
+    assert_eq!(row["bars_waited"], 0);
+    assert_eq!(row["time"], next.time);
+
+    // A quote that has gapped through both the invalidation and the level
+    // on one tick cancels rather than fills: invalidation is read first.
+    let (state2, next2) = external_run(tempfile::tempdir().expect("temp dir").path(), "g").await;
+    let level = next2.open + 30.0;
+    let body = patched(
+        json!({ "run": "g", "bar_time": wave(300).time, "side": "LONG", "decider": "gpt-5", "reason": "breakout",
+                "entry": { "type": "stop", "price": level }, "stop": level - 100.0 }),
+        json!({ "invalidate_above": level + 50.0 }),
+    );
+    post_intent(&state2, body).await.expect("intent");
+    post_tick(&state2, "btc", "15m", quote(next2, level + 60.0, level + 59.8, level + 60.2)).await.expect("tick");
+    let run = run_named(&read_status(&state2).await, "g").clone();
+    assert!(run["open"].is_null() && run["pending_order"].is_null(), "cancelled, not filled: {run}");
+}
+
+#[tokio::test]
+async fn a_new_entry_while_an_order_rests_replaces_it_and_a_stand_aside_leaves_it() {
+    let dir = tempfile::tempdir().expect("temp dir");
+    let (state, next) = external_run(dir.path(), "l").await;
+    post_intent(&state, long_limit("l", next.open - 50.0)).await.expect("intent");
+
+    // A second order takes the slot.
+    let second = patched(
+        long_limit("l", next.open - 40.0),
+        json!({ "entry": { "type": "stop", "price": next.open + 40.0 }, "stop": next.open - 60.0, "target": next.open + 240.0 }),
+    );
+    let reply = post_intent(&state, second).await.expect("intent");
+    assert_eq!(reply["accepted"], true, "{reply}");
+    let run = run_named(&read_status(&state).await, "l").clone();
+    assert_eq!(run["pending_order"]["type"], "stop");
+    assert_eq!(run["pending_order"]["price"], next.open + 40.0);
+    let replaced = rows(dir.path(), "l", "cancelled_unfilled");
+    assert_eq!(replaced.len(), 1);
+    assert_eq!(replaced[0]["reason"], "replaced");
+    assert_eq!(replaced[0]["entry"]["price"], next.open - 50.0);
+
+    // And a market intent takes it from an order too: one committed entry.
+    post_intent(
+        &state,
+        json!({ "run": "l", "bar_time": wave(300).time, "side": "SHORT", "decider": "gpt-5", "reason": "market" }),
+    )
+    .await
+    .expect("intent");
+    let run = run_named(&read_status(&state).await, "l").clone();
+    assert!(run["pending_order"].is_null(), "{run}");
+    assert_eq!(run["pending"]["side"], "SHORT");
+    assert_eq!(rows(dir.path(), "l", "cancelled_unfilled").len(), 2);
+
+    // A stand-aside leaves whatever rests alone: it drove the bar and said
+    // nothing about the order. Only a LONG or SHORT replaces.
+    post_intent(&state, long_limit("l", next.open - 50.0)).await.expect("intent");
+    let before = run_named(&read_status(&state).await, "l")["pending_order"].clone();
+    let reply = post_intent(&state, json!({ "run": "l", "bar_time": wave(300).time, "side": "NONE", "decider": "gpt-5" }))
+        .await
+        .expect("intent");
+    assert_eq!(reply["accepted"], true, "{reply}");
+    let after = run_named(&read_status(&state).await, "l").clone();
+    assert_eq!(after["pending_order"], before, "untouched by a stand-aside");
+    assert_eq!(after["decider"]["stood_aside"], 1, "and the stand-aside was counted");
+    assert_eq!(rows(dir.path(), "l", "cancelled_unfilled").len(), 2, "no replacement row");
+
+    let last = rows(dir.path(), "l", "intent").pop().expect("intent");
+    assert_eq!(last["entry"], json!({ "type": "limit", "price": next.open - 50.0 }));
+    assert_eq!(last["valid_bars"], 2);
+    assert_eq!(last["zone"], json!([next.open - 55.0, next.open - 45.0]));
+    let market_row = &rows(dir.path(), "l", "intent")[2];
+    assert_eq!(market_row["entry"], json!({ "type": "market", "price": null }), "{market_row}");
+}
+
+#[tokio::test]
+async fn a_restart_between_the_decision_and_the_fill_fills_once() {
+    // Mirrors `a_restart_between_the_open_and_the_close_fills_once`: an order
+    // rests for up to two bars, which is two chances for a deploy to land in
+    // the window. It must be there afterwards, fill once, and the bar that
+    // then closes must not fill it again.
+    let dir = tempfile::tempdir().expect("temp dir");
+    let (state, next) = external_run(dir.path(), "l").await;
+    let price = next.open - 20.0;
+    post_intent(&state, long_limit("l", price)).await.expect("intent");
+    let before = run_named(&read_status(&state).await, "l")["pending_order"].clone();
+
+    // The process dies here.
+    let reborn = Arc::new(AppState::new(config(), dir.path().to_path_buf()));
+    let recovered = run_named(&read_status(&reborn).await, "l").clone();
+    assert_eq!(recovered["pending_order"], before, "the order survived the restart, stamps included");
+
+    // The ask reaches it on the new process.
+    post_tick(&reborn, "btc", "15m", quote(next, price - 0.3, price - 0.5, price)).await.expect("tick");
+    let filled = run_named(&read_status(&reborn).await, "l").clone();
+    assert!(!filled["open"].is_null(), "{filled}");
+    let entry_price = filled["open"]["entry_price"].clone();
+    assert_eq!(filled["open"]["entry_time"], next.time, "stamped with the tick's bucket");
+
+    // Another restart, then the bar closes.
+    let again = Arc::new(AppState::new(config(), dir.path().to_path_buf()));
+    let held = run_named(&read_status(&again).await, "l").clone();
+    assert_eq!(held["open"]["entry_price"], entry_price, "the fill survived");
+    assert!(held["pending_order"].is_null());
+    let mut calm = next;
+    calm.low = calm.low.min(price - 1.0);
+    calm.high = calm.high.max(price + 1.0);
+    post_bar(&again, "btc", "15m", calm).await.expect("bar");
+    let after = run_named(&read_status(&again).await, "l").clone();
+    if !after["open"].is_null() {
+        assert_eq!(after["open"]["entry_price"], entry_price, "not re-filled");
+    }
+    assert!(after["trades"].as_u64().expect("trades") <= 1, "one order, at most one trade: {after}");
+    assert_eq!(rows(dir.path(), "l", "opened").len(), 1, "one opened line");
+}
+
+#[tokio::test]
+async fn an_order_is_refused_with_a_reason_and_the_book_is_left_alone() {
+    let dir = tempfile::tempdir().expect("temp dir");
+    let (state, next) = external_run(dir.path(), "l").await;
+    let price = next.open - 50.0;
+
+    let cases = [
+        (patched(long_limit("l", price), json!({ "entry": { "type": "limit", "price": null } })), "needs a price"),
+        (patched(long_limit("l", price), json!({ "stop": null })), "needs a stop"),
+        (patched(long_limit("l", price), json!({ "stop": price + 1.0 })), "losing side"),
+        (patched(long_limit("l", price), json!({ "target": price - 1.0 })), "winning side"),
+        (patched(long_limit("l", price), json!({ "valid_bars": 0 })), "at least 1"),
+    ];
+    for (body, expect) in cases {
+        let reply = post_intent(&state, body.clone()).await.expect("a reply, not an error");
+        assert_eq!(reply["accepted"], false, "{body} -> {reply}");
+        assert!(reply["reason"].as_str().expect("reason").contains(expect), "{body} -> {reply}");
+    }
+    // A stop judged against the ENTRY PRICE, not the last close: a SHORT
+    // limit above the market with its stop between the close and the level
+    // is refused although that stop is above the close.
+    let short = json!({
+        "run": "l", "bar_time": wave(300).time, "side": "SHORT", "decider": "gpt-5", "reason": "fade",
+        "entry": { "type": "limit", "price": next.open + 80.0 }, "stop": next.open + 40.0,
+    });
+    let reply = post_intent(&state, short).await.expect("reply");
+    assert_eq!(reply["accepted"], false, "{reply}");
+    assert!(run_named(&read_status(&state).await, "l")["pending_order"].is_null(), "nothing rested");
+    assert!(rows(dir.path(), "l", "intent").is_empty(), "and nothing was written");
+    // An unknown type is a malformed body, as an unknown side is.
+    let bad = patched(long_limit("l", price), json!({ "entry": { "type": "iceberg", "price": price } }));
+    assert_eq!(http_status(post_intent(&state, bad).await.expect_err("400")), 400);
+    // `market` with a price is today's path, price ignored.
+    let plain = patched(long_limit("l", price), json!({ "entry": { "type": "market", "price": price } }));
+    let reply = post_intent(&state, plain).await.expect("reply");
+    assert_eq!(reply["reason"], "fills at the next bar's open", "{reply}");
+
+    // Over a position, refused: an order cannot add to one.
+    post_open(&state, "btc", "15m", next.time, next.open).await.expect("open");
+    post_bar(&state, "btc", "15m", next).await.expect("bar");
+    let held = run_named(&read_status(&state).await, "l").clone();
+    assert!(!held["open"].is_null(), "{held}");
+    let body = patched(long_limit("l", price), json!({ "bar_time": next.time }));
+    let reply = post_intent(&state, body).await.expect("reply");
+    assert_eq!(reply["accepted"], false, "{reply}");
+    assert!(reply["reason"].as_str().expect("reason").contains("holds a position"));
+}
+
+#[tokio::test]
+async fn pending_act_triggers_at_the_touched_side_and_a_cancel_carries_its_reason() {
+    let dir = tempfile::tempdir().expect("temp dir");
+    let (state, next) = external_run(dir.path(), "l").await;
+    let price = next.open - 50.0;
+    post_intent(&state, long_limit("l", price)).await.expect("intent");
+
+    // No tick yet: refused, with a reason, in the intent reply's shape.
+    let reply = post_act(&state, json!({ "run": "l", "action": "trigger", "reason": "model says go" })).await.expect("reply");
+    assert_eq!(reply, json!({ "accepted": false, "reason": "no tick has arrived on this stream" }), "{reply}");
+
+    // A tick short of the level, then a trigger: fills at the ASK, now.
+    let ask = price + 7.0;
+    post_tick(&state, "btc", "15m", quote(next, ask - 0.2, ask - 0.4, ask)).await.expect("tick");
+    assert!(run_named(&read_status(&state).await, "l")["open"].is_null(), "the tick itself did not fill");
+    let reply = post_act(&state, json!({ "run": "l", "action": "trigger", "reason": "model says go" })).await.expect("reply");
+    assert_eq!(reply["accepted"], true, "{reply}");
+    assert!(reply["reason"].as_str().expect("reason").starts_with(&format!("filled at {ask} on the ask")), "{reply}");
+    assert_eq!(reply.as_object().expect("object").len(), 2, "exactly the intent reply's two fields: {reply}");
+    let run = run_named(&read_status(&state).await, "l").clone();
+    assert!(run["pending_order"].is_null(), "null on the very next read: {run}");
+    let row = rows(dir.path(), "l", "opened").pop().expect("opened");
+    assert_eq!(row["filled_from"], "act");
+    assert_eq!(row["entry"], json!({ "type": "limit", "price": ask, "requested_price": price }));
+    // Priced from the ask through the same cost path a market fill takes.
+    assert!(run["open"]["entry_price"].as_f64().expect("price") > ask, "the half spread is on top: {run}");
+
+    // Nothing to act on now.
+    let reply = post_act(&state, json!({ "run": "l", "action": "cancel", "reason": "late" })).await.expect("reply");
+    assert_eq!(reply["accepted"], false, "{reply}");
+    assert_eq!(http_status(post_act(&state, json!({ "run": "l", "action": "hold" })).await.expect_err("400")), 400);
+    assert_eq!(http_status(post_act(&state, json!({ "run": "nope", "action": "cancel" })).await.expect_err("404")), 404);
+
+    // Cancel on a second run, and the row carries the caller's sentence.
+    let other = tempfile::tempdir().expect("temp dir");
+    let (state2, _) = external_run(other.path(), "c").await;
+    post_intent(&state2, long_limit("c", price)).await.expect("intent");
+    let reply = post_act(&state2, json!({ "run": "c", "action": "cancel", "reason": "structure broke" })).await.expect("reply");
+    assert_eq!(reply["accepted"], true, "{reply}");
+    assert!(run_named(&read_status(&state2).await, "c")["pending_order"].is_null(), "null on the very next read");
+    let row = rows(other.path(), "c", "cancelled_unfilled").pop().expect("a row");
+    assert_eq!(row["reason"], "cancelled:structure broke");
+    assert_eq!(row["entry"]["type"], "limit");
+}
+
+#[tokio::test]
+async fn the_trade_row_says_how_the_position_was_entered() {
+    let dir = tempfile::tempdir().expect("temp dir");
+    let (state, next) = external_run(dir.path(), "l").await;
+    let price = next.open - 20.0;
+    post_intent(&state, long_limit("l", price)).await.expect("intent");
+    post_tick(&state, "btc", "15m", quote(next, price - 0.3, price - 0.5, price)).await.expect("tick");
+    let open = run_named(&read_status(&state).await, "l")["open"].clone();
+    let stop = open["stop"].as_f64().expect("a stop");
+
+    // The bar closes through the stop, after the fill: one trade, entered by
+    // a limit, and the row says so.
+    let mut crash = next;
+    crash.low = stop - 50.0;
+    crash.close = stop - 40.0;
+    crash.high = crash.high.max(crash.open);
+    post_bar(&state, "btc", "15m", crash).await.expect("bar");
+    let run = run_named(&read_status(&state).await, "l").clone();
+    assert_eq!(run["trades"], 1, "{run}");
+    let trade = rows(dir.path(), "l", "trade").pop().expect("a trade row");
+    assert_eq!(trade["entry"], json!({ "type": "limit", "price": price, "requested_price": price }));
+
+    // A market fill's trade row says market, priced from the open. On a
+    // fresh run, so the daily-loss guard the stop-out above just armed has
+    // no say in it.
+    let other = tempfile::tempdir().expect("temp dir");
+    let (market, bar) = external_run(other.path(), "m").await;
+    post_intent(
+        &market,
+        json!({ "run": "m", "bar_time": wave(300).time, "side": "SHORT", "decider": "gpt-5", "reason": "m",
+                "stop": bar.open + 1_000.0 }),
+    )
+    .await
+    .expect("intent");
+    post_bar(&market, "btc", "15m", bar).await.expect("bar");
+    assert_eq!(run_named(&read_status(&market).await, "m")["open"]["side"], "SHORT");
+    stop_with(&market, json!({ "id": "m" })).await.expect("stop");
+    let trade = rows(other.path(), "m", "trade").pop().expect("the stop closed it");
+    assert_eq!(trade["entry"], json!({ "type": "market", "price": bar.open, "requested_price": null }));
+}
+
+#[tokio::test]
+async fn the_fill_bar_of_a_tick_fill_is_managed_from_the_fill_onward() {
+    // The engine test at the API: a LONG limit fills when the ask has come
+    // DOWN to it, so the bar's high before the fill is not a price the trade
+    // saw. A bar that opened above the target and then filled the limit must
+    // not book a winner.
+    let dir = tempfile::tempdir().expect("temp dir");
+    let (state, next) = external_run(dir.path(), "l").await;
+    let price = next.open - 300.0;
+    post_intent(&state, long_limit("l", price)).await.expect("intent");
+    post_tick(&state, "btc", "15m", quote(next, price - 0.3, price - 0.5, price)).await.expect("tick");
+    let target = run_named(&read_status(&state).await, "l")["open"]["target"].as_f64().expect("target");
+    assert!(next.open > target, "the bar opened above the target: {} > {target}", next.open);
+
+    let mut bar = next;
+    bar.high = next.open + 10.0;
+    bar.low = price - 2.0;
+    bar.close = price + 3.0;
+    post_bar(&state, "btc", "15m", bar).await.expect("bar");
+    let run = run_named(&read_status(&state).await, "l").clone();
+    assert_eq!(run["trades"], 0, "no target on a price from before the fill: {run}");
+    assert!(!run["open"].is_null());
+}
+
+#[tokio::test]
+async fn the_pending_route_lists_a_resting_order_under_its_own_id_and_a_stop_withdraws_it() {
+    let dir = tempfile::tempdir().expect("temp dir");
+    let (state, next) = external_run(dir.path(), "l").await;
+    post_intent(&state, long_limit("l", next.open - 50.0)).await.expect("intent");
+
+    let listed = read_pending(&state).await;
+    let entry = listed.as_array().expect("entries").iter().find(|e| e["run"] == "l").expect("listed");
+    assert_eq!(entry["intent_id"], format!("l:{}", wave(300).time));
+    assert_eq!(entry["side"], "LONG");
+    assert_eq!(entry["pending_order"]["type"], "limit");
+    assert_eq!(entry["pending_order"]["price"], next.open - 50.0);
+    assert!(entry["pending_order"]["lots"].is_number());
+    assert_eq!(entry["advised"], false);
+
+    // The id does not move as bars arrive, because the order outlives them.
+    post_bar(&state, "btc", "15m", next).await.expect("bar");
+    let listed = read_pending(&state).await;
+    let entry = listed.as_array().expect("entries").iter().find(|e| e["run"] == "l").expect("still listed");
+    assert_eq!(entry["intent_id"], format!("l:{}", wave(300).time));
+    assert_eq!(entry["pending_order"]["bars_waited"], 1);
+
+    // Stopping the run withdraws it, and the withdrawal is a row.
+    stop_with(&state, json!({ "id": "l" })).await.expect("stop");
+    let row = rows(dir.path(), "l", "cancelled_unfilled").pop().expect("a row");
+    assert_eq!(row["reason"], "cancelled:stopped");
+    assert_eq!(row["bars_waited"], 1);
+}
+
+/* ------------------------------------------------ served samples for docs */
+
+/// Writes `docs/api-samples/paper-order-*.json` from the handlers, so a
+/// consumer can diff key paths against what the API actually emits. Ignored
+/// by default because it writes into the repo; run with
+/// `cargo test -p fd-api --test paper write_order_samples -- --ignored`.
+#[tokio::test]
+#[ignore = "writes docs/api-samples; run on purpose"]
+async fn write_order_samples() {
+    let out = Path::new(env!("CARGO_MANIFEST_DIR")).join("..").join("..").join("docs").join("api-samples");
+    let dir = tempfile::tempdir().expect("temp dir");
+    let (state, next) = external_run(dir.path(), "l").await;
+    let price = next.open - 50.0;
+    let mut samples = serde_json::Map::new();
+
+    // 1. The intent that rests an order, and its reply.
+    let body = patched(long_limit("l", price), json!({ "invalidate_above": next.open + 100.0, "valid_bars": 3 }));
+    let reply = post_intent(&state, body.clone()).await.expect("intent");
+    samples.insert("intent_request".into(), body);
+    samples.insert("intent_reply".into(), reply);
+
+    // 2. The status entry with `pending_order`, and the /pending entry.
+    let run = run_named(&read_status(&state).await, "l").clone();
+    std::fs::write(out.join("paper-order-status.json"), serde_json::to_string_pretty(&run).expect("json")).expect("write");
+    let listed = read_pending(&state).await;
+    let entry = listed.as_array().expect("entries").iter().find(|e| e["run"] == "l").expect("listed").clone();
+    let mut trimmed = entry.clone();
+    trimmed["bars"] = json!("...120 bars elided...");
+    std::fs::write(out.join("paper-order-pending-entry.json"), serde_json::to_string_pretty(&trimmed).expect("json")).expect("write");
+
+    // 3. The act replies: refused (stale), then a cancel; then a fresh order
+    //    that a tick fills, and one a trigger fills.
+    let refused = post_act(&state, json!({ "run": "l", "action": "trigger", "reason": "go" })).await.expect("reply");
+    samples.insert("act_trigger_refused_no_tick".into(), refused);
+    let cancelled = post_act(&state, json!({ "run": "l", "action": "cancel", "reason": "structure broke" })).await.expect("reply");
+    samples.insert("act_cancel_reply".into(), cancelled);
+
+    post_intent(&state, long_limit("l", price)).await.expect("intent");
+    let ask = price + 7.0;
+    let tick = post_tick(&state, "btc", "15m", quote(next, ask - 0.2, ask - 0.4, ask)).await.expect("tick");
+    samples.insert("tick_reply_no_fill".into(), tick);
+    let triggered = post_act(&state, json!({ "run": "l", "action": "trigger", "reason": "model says go" })).await.expect("reply");
+    samples.insert("act_trigger_reply".into(), triggered);
+    // Close it on the bar, so the trade row exists.
+    let stop = run_named(&read_status(&state).await, "l")["open"]["stop"].as_f64().expect("stop");
+    let mut crash = next;
+    crash.low = stop - 50.0;
+    crash.close = stop - 40.0;
+    post_bar(&state, "btc", "15m", crash).await.expect("bar");
+
+    // A second run: a tick fill, then an expiry, then a replacement.
+    let (state2, next2) = external_run(tempfile::tempdir().expect("temp dir").path(), "t").await;
+    post_intent(&state2, long_limit("t", price)).await.expect("intent");
+    let filled = post_tick(&state2, "btc", "15m", quote(next2, price - 0.3, price - 0.5, price)).await.expect("tick");
+    samples.insert("tick_reply_filled".into(), filled);
+    std::fs::write(out.join("paper-order-replies.json"), serde_json::to_string_pretty(&samples).expect("json")).expect("write");
+
+    // 4. The rows: every fills.jsonl line of the first run, in order.
+    let text = std::fs::read_to_string(dir.path().join("paper").join("l").join("fills.jsonl")).expect("fills");
+    let kept: Vec<&str> = text.lines().filter(|l| !l.contains("\"kind\":\"started\"")).collect();
+    std::fs::write(out.join("paper-order-fills.jsonl"), kept.join("\n") + "\n").expect("write");
 }

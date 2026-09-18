@@ -1,0 +1,74 @@
+{
+  "account_currency": "USD",
+  "bars": 200,
+  "bars_seen": 1,
+  "brokers": [],
+  "closed_by_guard": {},
+  "contract_size": 1.0,
+  "decider": {
+    "decisions": {
+      "gpt-5": 1
+    },
+    "last": "gpt-5",
+    "last_at": 1789748676482,
+    "stood_aside": 0
+  },
+  "driver": null,
+  "equity": 10000.0,
+  "equity_curve": 0,
+  "filters": [],
+  "gaps": 0,
+  "guards": true,
+  "id": "l",
+  "label": null,
+  "last_bar_close": 59977.90306317044,
+  "last_bar_time": 1788231600000,
+  "last_fills": [],
+  "leverage": 1.0,
+  "live": null,
+  "market": "btc",
+  "net_usd": 0.0,
+  "news": {
+    "events_loaded": 0,
+    "horizon": null,
+    "horizon_days": null,
+    "horizon_name": null,
+    "next_blackout": null
+  },
+  "open": null,
+  "params": {
+    "atrPeriod": 14.0
+  },
+  "paused": false,
+  "pending": null,
+  "pending_order": {
+    "bars_waited": 0,
+    "decided_at": 1789748676482,
+    "decided_bar_time": 1788231600000,
+    "invalidate_above": 60077.90306317044,
+    "invalidate_below": null,
+    "lots": 0.5,
+    "price": 59927.90306317044,
+    "reason": "wait for the pullback",
+    "side": "LONG",
+    "stop": 59827.90306317044,
+    "target": 60127.90306317044,
+    "type": "limit",
+    "valid_bars": 3,
+    "valid_until_bar_ms": 1788234300000,
+    "zone": [
+      59922.90306317044,
+      59932.90306317044
+    ]
+  },
+  "profit_factor": null,
+  "sized_down": 0,
+  "skipped_by_guard": {},
+  "skipped_no_atr": 0,
+  "started_at": 1789748676477,
+  "strategy": "external",
+  "tf": "15m",
+  "trades": 0,
+  "units_per_usd": 1.0,
+  "warmup_bars": 200
+}

@@ -445,6 +445,15 @@ export interface PaperRun {
     /** The bar whose close produced it; the fill is the NEXT bar's open. */
     decided_on: number | null
   }
+  /**
+   * An entry resting at a PRICE, waiting on the tick feed (stage 1 of
+   * `docs/plans/2026-09-18-staged-ai-entry.md`). Null on every rule-based
+   * run and on an external run between orders, and never set beside
+   * `pending`: the book has one committed entry at most. Every price is on
+   * the bar's axis and BEFORE the half-spread entry cost, exactly as a market
+   * fill's open is; the fill path adds the same cost to both.
+   */
+  pending_order: null | PaperPendingOrder
   trades: number
   net_usd: number
   profit_factor: number | null
@@ -738,18 +747,88 @@ export interface BrokerAccount {
   positions: number
 }
 
+/** A resting limit or stop order, as `PaperRun.pending_order` carries it. */
+export interface PaperPendingOrder {
+  /** `limit` or `stop`; a market entry never rests. */
+  type: 'limit' | 'stop'
+  price: number
+  side: 'LONG' | 'SHORT'
+  stop: number | null
+  target: number | null
+  reason: string
+  /** `[lo, hi]` as the decider stated it; informational. */
+  zone: [number, number] | null
+  /**
+   * The stamp of the bar whose close is EXPECTED to expire it,
+   * `decided_bar_time + valid_bars x bar_ms`. The rule is the COUNT of closed
+   * bars (`valid_bars` against `bars_waited`), so across a gap in the tape
+   * the cancel lands at a later stamp than this.
+   */
+  valid_until_bar_ms: number
+  valid_bars: number
+  bars_waited: number
+  /** The bar whose close produced it; the tail of its `intent_id` on `/api/paper/pending`. */
+  decided_bar_time: number
+  /** Wall clock, epoch ms, at which the decider posted it; null after a reload from an older state file. */
+  decided_at: number | null
+  /** A tick beyond either cancels it before it fills: the ask above the first, the bid below the second. */
+  invalidate_above: number | null
+  invalidate_below: number | null
+  /**
+   * The lots the fill WOULD take by the engine's sizing rule on the book's
+   * equity as it stands, recomputed on every read. Null when the rule would
+   * refuse the entry outright. An advisor's cut, if any, applies at the fill.
+   */
+  lots: number | null
+}
+
+/**
+ * How a fill was priced, on the `opened` row and the `trade` row that closes
+ * it. `price` is what the fill was priced FROM, on the bar's axis and before
+ * the entry cost (the open for a market fill, the level for a limit, the
+ * touched side for a stop); null only on a position open before the record
+ * existed. `requested_price` is the order's level, null for a market fill.
+ */
+export interface PaperEntryRecord {
+  type: 'market' | 'limit' | 'stop'
+  price: number | null
+  requested_price: number | null
+}
+
 /**
  * One line of a run's `fills.jsonl`, less its `trade` lines: what happened to
  * the run that was not a fill.
  *
- * `kind` is `started`, `gap`, `refused`, `guard_close` or `stopped`, and each
- * carries only the fields its kind writes — hence every extra field optional.
+ * `kind` is `started`, `gap`, `refused`, `guard_close`, `stopped`, `intent`,
+ * `opened`, `advice` or `cancelled_unfilled`, and each carries only the
+ * fields its kind writes — hence every extra field optional.
  */
 export interface PaperEvent {
   kind: string
   time: number
-  /** `refused` and `guard_close`: the guard's own label, e.g. `NEWS_FLAT`. */
+  /**
+   * `refused` and `guard_close`: the guard's own label, e.g. `NEWS_FLAT`.
+   * `cancelled_unfilled`: `expired`, `invalidated`, `replaced` or
+   * `cancelled:<the caller's reason>` (`cancelled:stopped` when the run was
+   * stopped with the order resting).
+   */
   reason?: string
+  /** `cancelled_unfilled`: the wall clock the line was written, beside the bar-clock `time`. */
+  at?: number
+  /**
+   * `opened` and `trade`: how the position was entered (`PaperEntryRecord`).
+   * `cancelled_unfilled` and `intent`: the order as posted, whole — `type`,
+   * `price`, `side`, `stop`, `target`, `reason`, `zone`, `valid_bars`,
+   * `decided_bar_time`, `invalidate_above`, `invalidate_below` (an `intent`
+   * row carries only `type` and `price`).
+   */
+  entry?: PaperEntryRecord | Record<string, unknown>
+  /** `opened` (tick fills), `cancelled_unfilled`: closed bars the order waited. */
+  bars_waited?: number
+  /** `opened`, `intent`, `cancelled_unfilled`: when the decider spoke, epoch ms. */
+  decided_at?: number | null
+  /** `opened`: `bar_open`, `bar_close`, `tick` or `act` — which path priced the fill. */
+  filled_from?: 'bar_open' | 'bar_close' | 'tick' | 'act'
   /** `gap`: bars the feed skipped before this one. */
   missing_bars?: number
   /** `started`: the guard sentence and the news file, as the server describes them. */
