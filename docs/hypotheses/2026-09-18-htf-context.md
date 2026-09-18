@@ -214,24 +214,64 @@ whether a difference is the prompt or the bars.
 
 ## Preconditions — why nothing is started
 
-Both are blocking, and both were found by reading rather than by being told:
+Both are blocking. Neither is a code defect any longer, and the second cannot
+be fixed by a commit at all.
 
 1. **The route is not on `main`.** `GET /api/paper/htf` exists on branch
-   `htf-facts` at `82aa047` and nowhere else. Until it is merged and a binary
-   carrying it is deployed, every call returns a connection error and both
-   books would run as base-with-an-apology-block.
-2. **The bars the route needs do not exist, and the exporter cannot make
-   them.** The route reads `data/bars/<SYMBOL>-4h.parquet` and `-1d.parquet`.
-   No such file exists for any symbol. `py/ingest/mt5_export.py` accepts
-   `M1, M5, M15, H1` and nothing else, so its `TIMEFRAMES` table needs H4 and
-   D1 entries before the files can be produced. The route's own "not exported
-   yet" message names the command `--timeframes H4`, which that script would
-   currently reject.
+   `htf-facts` (three commits: `82aa047` the route and the exporter, `fa0b5f3`
+   the record path, `aa71630` a comment) and nowhere else. Until it is merged
+   and a binary carrying it is deployed, every call is a connection error and
+   both books would run as base-with-an-apology-block.
+
+2. **The bars the route needs exist in exactly one worktree, and no commit can
+   ship them.** `data/` is gitignored (`.gitignore:8`, `/data/*`) and therefore
+   per-worktree. d1 exported real H4 and D1 for XAUUSD into
+   `E:/rust/flowdesk-htf/data/bars/` — 6,727 H4 bars from 2022-05-16 and 1,122
+   D1, verified here, with bar opens landing on 01/05/09/13/17/21Z and 21Z
+   respectively, which is the broker's anchor and not the epoch's. They are not
+   in the main worktree and they are not on the VPS. Merging `htf-facts` ships
+   the route and the exporter; **it ships no bars.**
+
+   So the deploy carries an operational step that no commit can express: run
+   `py/ingest/mt5_export.py --symbols XAUUSD --timeframes H4,D1` once on the
+   VPS against the running terminal, after which the route answers. That step
+   belongs in the deploy runbook, not in a diff, and it is the kind of step
+   that gets skipped precisely because a green merge looks complete.
 
 Until both are satisfied, starting either book would produce a campaign whose
 every row read `htf: unavailable` — a context-absent book wearing a
 context-present id, which is the exact failure this registration's own design
 rules out everywhere else.
+
+### Correction, recorded rather than quietly fixed
+
+The first version of this section said the exporter could not produce H4 or D1
+at all, and that the route's own "not exported yet" message named a command
+that `py/ingest/mt5_export.py` would reject. **That was wrong, and it was wrong
+in a way worth naming:** the route was read at `82aa047` and the exporter was
+read in the main worktree. `82aa047` changes three files and the exporter is
+one of them — on that branch `TIMEFRAMES` already carries `H4: ("4h", 14400)`
+and `D1: ("1d", 86400)`, with `WINDOW_DAYS` extended by the same
+86,400-bars-per-request identity. The remedy the route prints can be followed
+as of the branch and could not be as of main.
+
+Verifying a claim against the code is only verification if it is the same tree
+the claim was made about. Corrected 2026-09-18 after d1 pointed it out.
+
+## What the record carries
+
+`fa0b5f3` adds `htf_bar_time` to the intent and opened lines on both fill
+paths — the bar's open and its close, since a fill can happen at either. The
+name is deliberately not the route's `computed_at_bar_ms`: it records what the
+decision SAW, which is a different thing from what the route says now, and a
+shared name would go wrong the first time someone compared a stored intent
+against a fresh call. It is `null` when the decider read no context, and the
+test asserts that case explicitly — a missing fetch must not look like a fetch
+that found nothing, or the two arms of this experiment are a mixture.
+
+Alongside it, the `htf` field on every decision row written by this trader
+records the state the block was in: `ok`, `thin <fields>`, `stale <n> bars`,
+`unavailable`, or `n/a`. Stage 1 below counts only bars where it reads `ok`.
 
 ## Signed
 
