@@ -244,6 +244,34 @@
      * signal. A neutral tint would be a colour that looks like a verdict, and
      * a range is the absence of one.
      */
+    /*
+     * THE LEVEL LADDER'S FOUR FAMILIES.
+     *
+     * Every other hue on this desk already means something: green and red are
+     * win and loss, teal and amber are two of the four flow classes, olive is
+     * caution, lime is chrome. That leaves violet, blue, magenta and taupe,
+     * and they are grouped by WHAT PRODUCED the level rather than by what it
+     * might mean — grouping by meaning would need "support" and "resistance",
+     * and a level above price is only resistance until it is not.
+     *
+     * SPREAD IN LIGHTNESS AND NOT ONLY IN HUE. The first four measured at a
+     * luminance ratio of 1.00-1.03 against each other: four colours a
+     * red-green or blue-yellow colour-blind reader could not separate, on a
+     * chart that can show all four at once. They are now 1.20 to 2.04 apart,
+     * so darkness distinguishes them when hue cannot — and the tag's own word
+     * (POC, FVG, BSL) stays the real carrier.
+     *
+     * 4.5 and not the 3.0 a line would need, because the tags carry TEXT.
+     * Measured on the card and on the page; per theme, because one set cannot
+     * serve both: the same four fall to 3.87 on the dark card. (The tempting
+     * argument that ratio-on-white x ratio-on-black is 21, so one set works,
+     * is true of pure white and pure black and this desk has neither.)
+     */
+    --level-profile: #805ab5;
+    --level-gaps: #386394;
+    --level-liquidity: #783a66;
+    --level-blocks: #4e3f32;
+
     --bias-wash-weak: 5%;
     --bias-wash-strong: 8%;
 
@@ -318,6 +346,14 @@
      * lightening a near-black ground rather than darkening a near-white one.
      * Capped by the same constraint — at 18% the loss-red word falls to 4.22
      * on its own wash. */
+    /* The same four, re-solved against the dark card. Same hues, same
+     * lightness spread, different values — see the light block for why one
+     * set cannot serve both grounds. */
+    --level-profile: #9372c0;
+    --level-gaps: #6f99c8;
+    --level-liquidity: #cd98bd;
+    --level-blocks: #c9b9ab;
+
     --bias-wash-weak: 8%;
     --bias-wash-strong: 13%;
 

@@ -112,6 +112,34 @@ for (const [theme, t] of [
   // page, and because a published brand colour is chosen against one ground
   // and this desk has three. #D97757 measures 5.92 on the dark card and 2.74
   // on the light page; OpenAI's white is not a colour on a white page at all.
+  // The level ladder's four families. 4.5 and not the 3.0 a line needs,
+  // because the tags carry TEXT — and on the page as well as the card,
+  // because the toggles sit in the chart header.
+  //
+  // The SEPARATION assertion is the one that would have caught the mistake:
+  // the first four measured 1.00–1.03 against each other, four colours
+  // distinguished by hue alone on a chart that shows all four at once. A
+  // contrast check that only looked at each against its ground would have
+  // passed them all.
+  console.log(`\n-- ${theme.trim()}: level ladder families --`)
+  const families = ['profile', 'gaps', 'liquidity', 'blocks']
+  for (const family of families) {
+    for (const [name, bg] of grounds.filter(([n]) => n !== 'sidebar')) {
+      check(theme, `${family} on ${name}`, t[`level-${family}`], bg, TEXT)
+    }
+  }
+  for (let i = 0; i < families.length; i += 1) {
+    for (let j = i + 1; j < families.length; j += 1) {
+      const [a, b] = [t[`level-${families[i]}`], t[`level-${families[j]}`]]
+      const r = ratio(a, b)
+      const ok = r >= 1.15
+      if (!ok) failures += 1
+      console.log(
+        `${ok ? 'ok  ' : 'FAIL'}  ${r.toFixed(2)} / 1.15  ${theme}  ${families[i]} vs ${families[j]} separate without colour`,
+      )
+    }
+  }
+
   console.log(`\n-- ${theme.trim()}: decider chip, house marks --`)
   for (const [name, bg] of grounds) {
     for (const house of ['claude', 'deepseek', 'openai']) {
