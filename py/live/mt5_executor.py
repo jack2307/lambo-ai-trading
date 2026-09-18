@@ -1,8 +1,26 @@
-"""Mirror one paper run into one MT5 DEMO account. The only order-sending
-code in this repository, and it refuses to run against anything but a demo.
+"""Mirror one paper run into the MT5 account named in the registry. The only
+order-sending code in this repository.
 
-    python py/live/mt5_executor.py --run=xau-ema --terminal="C:/MT5-demo/terminal64.exe" \
+An account the terminal does not report as a DEMO — a funded one, and a
+contest one too — is refused unless THREE keys agree: `--allow-real` on the
+command line, `real_money = true` for `--account` in `config/accounts.toml`,
+and the login that block names matching the account the terminal is actually
+holding. Any one missing and the process exits 3 having sent nothing. On
+every account, demo included, `--login` must match the terminal as well.
+
+    python py/live/mt5_executor.py --run=xau-ema --terminal="C:/MT5/terminal64.exe" \
         --login=12345678 --symbol=XAUUSD.sc --api=http://127.0.0.1:8138 [--dry-run]
+
+    # a funded account, all three keys:
+    python py/live/mt5_executor.py --run=ai-xau-ds-ctx --terminal="C:/MT5/terminal64.exe" \
+        --login=33705331 --symbol=XAUUSD.sc --account=vantage-cent --allow-real
+
+THIS PARAGRAPH SAID "DEMO ONLY" UNTIL 2026-09-18, fifteen days after it
+stopped being true. The correction was there — forty-five lines down, under
+"What it refuses" — so the file both claimed a wall and documented the gate
+through it, and the first paragraph is the one a person reads before touching
+the only code here that can spend money. The history below is kept because
+how the wall became a gate is worth having; it is just no longer the headline.
 
 What it does, every `--poll` seconds:
 
@@ -570,8 +588,9 @@ def check_identity(path: Path, acc, account: str) -> str:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--run", required=True)
-    ap.add_argument("--terminal", required=True, help="path to the DEMO terminal64.exe")
-    ap.add_argument("--login", type=int, required=True, help="the demo account number the terminal must be logged into")
+    ap.add_argument("--terminal", required=True, help="path to the terminal64.exe to attach to")
+    ap.add_argument("--login", type=int, required=True,
+                    help="the account number the terminal must be logged into; a mismatch exits 3")
     ap.add_argument("--symbol", required=True)
     # Which account's record this is. Everything this program writes lives
     # under it, because two accounts may mirror the SAME book - a demo and a
