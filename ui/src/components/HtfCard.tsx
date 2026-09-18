@@ -1,9 +1,16 @@
 import { useEffect, useState } from 'react'
-import { ArrowDown, ArrowUp, MoveHorizontal } from 'lucide-react'
 
-import type { HtfH4, HtfResponse } from '@/lib/api'
+import type { HtfD1, HtfH4, HtfResponse } from '@/lib/api'
 import { clock, since } from '@/lib/format'
-import { BIAS_RULE, biasGlyph, biasTally, biasTint, htfBias } from '@/lib/htfBias'
+import {
+  BIAS_RULE,
+  biasGlyph,
+  biasTally,
+  biasTint,
+  htfBias,
+  structureGlyph,
+  structureTint,
+} from '@/lib/htfBias'
 import { cn } from '@/lib/utils'
 
 /**
@@ -11,22 +18,43 @@ import { cn } from '@/lib/utils'
  *
  * This card must not look like a buy/sell indicator. A large green UP would
  * be read as an instruction, and nothing here instructs: it is the state of
- * the four-hour and daily charts, which a person weighs against what their
- * book is doing. So the structure label is a small directional mark in the
- * text colour, tinted only on the glyph, and no panel here is filled with a
- * direction's colour.
+ * the hourly, four-hour and daily charts, which a person weighs against what
+ * their book is doing. So the structure label is a small directional mark in
+ * the text colour, tinted only on the glyph, and no panel here is filled with
+ * a direction's colour.
  *
- * TWO AGES, NOT ONE, and it is the thing most likely to be got wrong by
- * whoever edits this next. The facts are as of the closed H4 bar. The
- * structure LABEL is as of the bar that CONFIRMED the swing — a fractal(2)
- * needs two bars after it, so on H4 that is up to eight hours older. Showing
- * one stamp for both would make the label claim more than the rule supports.
+ * A LADDER, BECAUSE THE COMPARISON IS THE POINT. Three timeframes down the
+ * page in the same columns, so "H1 down while H4 ranges" is read by scanning
+ * rather than by parsing differently-shaped sentences. It was prose before —
+ * free-text runs of `break · ATR · ADX · ER` per timeframe — and prose makes
+ * the eye re-find each quantity on every row, which is the work a table
+ * exists to remove.
+ *
+ * TWO CLOCKS, AND CONFUSING THEM IS WHAT MOST LIKELY GOES WRONG HERE.
+ *
+ *   - The FACTS are as of the last CLOSED bar of that timeframe. That is the
+ *     data age: `computed_at_bar_ms`.
+ *   - The structure LABEL is as of the bar that CONFIRMED the swing. A
+ *     fractal(2) needs two bars after it, so on H4 the label can be eight
+ *     hours older than the facts beside it: `confirmed_at_bar_ms`.
+ *
+ * The card printed both as bare ages in two places — "as of … 14 h 36 m ago"
+ * at the top and "H4 bar closed 6 h 36 m ago" at the bottom — with nothing
+ * saying they measured different things. Two numbers that disagree about one
+ * timeframe and never explain themselves read as a bug. Now the confirming
+ * stamp sits in the `as of` column beside the label it qualifies, the data
+ * stamp is named once in the header, and every row's tooltip states both of
+ * its own.
  */
 
 /** How stale is too stale to show without saying so, in bars. */
 const STALE_BARS = 2
 
-export function HtfCard({ market, data, error }: {
+export function HtfCard({
+  market,
+  data,
+  error,
+}: {
   market: string
   /** Fetched ONCE in the Desk and handed here, because the chart draws a line
    *  at the same break level this card names. Two fetches would be two
@@ -41,425 +69,351 @@ export function HtfCard({ market, data, error }: {
     return () => window.clearInterval(timer)
   }, [])
 
+  const h4 = data?.h4 ?? null
+  const staleBy = h4 && h4.bar_ms > 0 ? (now - h4.computed_at_bar_ms) / h4.bar_ms : 0
+  const stale = staleBy > STALE_BARS + 1
+
   return (
     <section className="px-3 py-2">
-      <h2 className="text-muted-foreground mb-1 fd-caption font-medium tracking-wide uppercase">
-        Higher timeframe{' '}
-        <span className="text-muted-foreground/60 num normal-case">{market}</span>
-      </h2>
+      <div className="mb-1.5 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+        <h2 className="text-muted-foreground fd-caption font-medium tracking-wide uppercase">
+          Higher timeframe
+        </h2>
+        <span className="text-muted-foreground/60 num fd-caption">{market}</span>
+        {/* THE DATA CLOCK, named once and named for the timeframe it belongs
+            to. Each row's facts carry their own last-closed-bar stamp — the
+            hourly is fresher than the daily by construction — so an
+            unlabelled "data to" here would be silently wrong about two of the
+            three rows. H4 is the timeframe the bias is computed from, so it
+            is the one that earns the header; the other two are in their row
+            tooltips. */}
+        {h4 && (
+          <span
+            className={cn(
+              'num ml-auto fd-caption tabular-nums',
+              stale ? 'text-caution' : 'text-muted-foreground/60',
+            )}
+            title={
+              stale
+                ? `More than ${STALE_BARS} H4 bars have closed since these facts were computed, so they may not be current.`
+                : 'The last CLOSED H4 bar these facts come from. NOT the age of the structure label, which is in the "as of" column.'
+            }
+          >
+            H4 data to {clock(h4.computed_at_bar_ms)}Z · {since(h4.computed_at_bar_ms, now)} ago
+          </span>
+        )}
+      </div>
 
       {error ? (
-        <p className="text-muted-foreground fd-label">
-          the higher-timeframe route did not answer — {error}
-        </p>
+        <p className="text-muted-foreground fd-label">the higher-timeframe route did not answer — {error}</p>
       ) : !data ? (
         <p className="text-muted-foreground/60 fd-label">reading…</p>
       ) : !data.h4 ? (
         // `h4: null` means the stored bars are missing entirely. The route
         // writes a sentence for exactly this and it is shown verbatim.
-        <p className="text-muted-foreground fd-label">{data.unavailable ?? 'no H4 data for this market'}</p>
+        <p className="text-muted-foreground fd-label">
+          {data.unavailable_by_tf?.['4h'] ?? data.unavailable ?? 'no H4 data for this market'}
+        </p>
       ) : (
-        <H4Body h4={data.h4} d1={data.d1} data={data} now={now} />
+        <Ladder data={data} h4={data.h4} now={now} />
       )}
     </section>
   )
 }
 
-function H4Body({
-  h4,
-  d1,
-  data,
-  now,
-}: {
-  h4: HtfH4
-  d1: HtfResponse['d1']
-  /** For the H1 block and the per-timeframe sentences, which sit beside
-   *  `h4` on the response rather than inside it. */
-  data: HtfResponse
-  now: number
-}) {
-  const s = h4.structure
-  // "Not enough yet" is a different state from "no data", and the route
-  // reports them differently on purpose. A populated object whose facts are
-  // all null is a measurement in progress and will fix itself.
-  const thin = h4.ema21 == null && h4.adx14 == null && h4.atr14 == null
-  const staleBy = h4.bar_ms > 0 ? (now - h4.computed_at_bar_ms) / h4.bar_ms : 0
-  const stale = staleBy > STALE_BARS + 1
-
-  const Mark = s.label === 'UP' ? ArrowUp : s.label === 'DOWN' ? ArrowDown : MoveHorizontal
-  const markTint =
-    s.label === 'UP' ? 'text-lc' : s.label === 'DOWN' ? 'text-lp' : 'text-muted-foreground'
-
+function Ladder({ data, h4, now }: { data: HtfResponse; h4: HtfH4; now: number }) {
   const bias = htfBias(h4)
 
   return (
     <div className="flex flex-col gap-1.5">
-      {/* THE READ, and the rule that produced it, never one without the other.
-          It is a summary of the facts below and the caption says so, because
-          the route publishes no verdict and the books do not read this. */}
       {bias && (
-        <div className="border-border/60 flex flex-col gap-1 border-b pb-1.5">
-          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-            <span
-              className={cn('num fd-display font-semibold', biasTint(bias.word))}
-              title={BIAS_RULE}
-            >
-              <span aria-hidden>{biasGlyph(bias.word)}</span> {bias.word}
-            </span>
-            <span className="text-muted-foreground fd-caption">{biasTally(bias)}</span>
-            {/* WHAT IT IS AS OF, not merely how old it is.
-                A structure label is confirmed two bars after the swing that
-                produced it, so this stamp is meant to be behind the facts
-                beside it. An age on its own reads as staleness — "14 h ago"
-                looks like a warning — where the bar's own clock time says
-                which candle the word describes and makes the lag legible as
-                the rule working rather than the data rotting. */}
-            <span className="text-muted-foreground/70 num fd-caption tabular-nums">
-              {s.confirmed_at_bar_ms != null
-                ? `as of the H4 bar that closed ${since(s.confirmed_at_bar_ms, now)} ago (${clock(s.confirmed_at_bar_ms)}Z)`
-                : 'not yet confirmed'}
-            </span>
-          </div>
-          {/* The lamps: WHICH agreed, not just how many. A word with no
-              working is the thing a reader cannot argue with. */}
-          <div className="flex flex-wrap gap-x-3 gap-y-0.5 fd-caption">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <span className={cn('num fd-display font-semibold', biasTint(bias.word))}>
+            <span aria-hidden>{biasGlyph(bias.word)}</span> {bias.word}
+          </span>
+          <span className="text-muted-foreground fd-caption">{biasTally(bias)}</span>
+          {/* THE LAMPS, as three dots rather than three phrases. WHICH of the
+              three agreed is worth showing; spelling out "structure bull ·
+              EMA stack no vote · momentum bear" put a sentence where a glance
+              belongs. Each dot keeps its own tooltip, so the working is one
+              hover away and nothing has been hidden. */}
+          <span className="flex items-center gap-1" role="list" aria-label="the three votes">
             {bias.votes.map((v) => (
-              <span key={v.name} className="flex items-center gap-1" title={v.why}>
-                <span
-                  className={cn(
-                    'size-1.5 rounded-full',
-                    v.vote === 'bull' ? 'bg-lc' : v.vote === 'bear' ? 'bg-lp' : 'bg-muted-foreground/40',
-                  )}
-                  aria-hidden
-                />
-                <span className="text-muted-foreground/70">
-                  {v.name} {v.vote === 'bull' ? 'bull' : v.vote === 'bear' ? 'bear' : '—'}
-                </span>
-              </span>
-            ))}
-          </div>
-          <p className="text-muted-foreground/50 fd-caption leading-snug">
-            A summary of the three facts below, not a signal — the books do not read it.{' '}
-            {BIAS_RULE}
-          </p>
-        </div>
-      )}
-
-      {/* The facts he would use to argue with the word. */}
-      {d1 && (
-        <p className="text-muted-foreground num fd-caption tabular-nums">
-          {[
-            d1.prior_day_high != null && d1.prior_day_low != null && h4.last_close != null
-              ? `${h4.last_close > (d1.prior_day_high + d1.prior_day_low) / 2 ? 'above' : 'below'} prior-day mid`
-              : null,
-            d1.close_pct_of_prior_week_range != null
-              ? `${d1.close_pct_of_prior_week_range.toFixed(0)}% of the week’s range`
-              : null,
-            h4.dist_ema21_atr != null
-              ? `${h4.dist_ema21_atr >= 0 ? 'above' : 'below'} EMA21 by ${Math.abs(h4.dist_ema21_atr).toFixed(2)} ATR`
-              : null,
-          ]
-            .filter(Boolean)
-            .join(' · ')}
-        </p>
-      )}
-
-      {/* THE HOUR, ABOVE THE FOUR-HOUR DETAIL.
-          One line, the same facts, so the two read as a ladder: when they
-          disagree the disagreement is the information. There is deliberately
-          no combined word and no alignment score — averaging two structures
-          would destroy the one thing this row was added to show. */}
-      <H1Row h1={data.h1} sentence={data.unavailable_by_tf?.['1h'] ?? null} now={now} />
-
-      <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
-        {/* Shape AND colour. The glyph carries the direction on its own, so a
-            reader who cannot separate the two colours loses nothing.
-
-            NAMED `H4` NOW THAT AN H1 ROW SITS ABOVE IT. The whole card used
-            to be four-hour, so every unlabelled fact on it was unambiguous by
-            context. Adding a second timeframe took that away, and an
-            unlabelled structure word directly under a labelled one reads as
-            belonging to the same timeframe. */}
-        <span className="flex items-center gap-1 fd-body">
-          <Mark className={cn('size-3.5 shrink-0', markTint)} aria-hidden />
-          <span className="text-muted-foreground/60 fd-caption">H4</span>
-          <span className="font-medium">{s.label.toLowerCase()}</span>
-        </span>
-        <span className="text-muted-foreground/60 fd-caption">{s.rule}</span>
-        {/* The LABEL's own age, which is not the facts' age. */}
-        <span className="text-muted-foreground num fd-caption tabular-nums">
-          {s.confirmed_at_bar_ms != null
-            ? `confirmed ${since(s.confirmed_at_bar_ms, now)} ago (${clock(s.confirmed_at_bar_ms)}Z)`
-            : 'not yet confirmed'}
-        </span>
-      </div>
-
-      {/* THE LABEL'S OWN WORKING, which is where the priors belong.
-          They are not levels: they have already been exceeded, and that is
-          what makes the label what it is. A line on a chart claims price may
-          react there; these claim the opposite. So they are shown as the
-          COMPARISON that produced the label, where a reader can check it -
-          on d1's real RANGE, "highs over, lows under" is the whole reason the
-          label is not UP. */}
-      {(s.last_high && s.prior_high) || (s.last_low && s.prior_low) ? (
-        <div className="text-muted-foreground/70 num flex flex-wrap gap-x-3 fd-caption tabular-nums">
-          {s.last_high && s.prior_high && (
-            <span>
-              highs {quote(s.last_high.price)}{' '}
-              <span className="text-muted-foreground/50">
-                {s.last_high.price > s.prior_high.price ? 'over' : 'under'}
-              </span>{' '}
-              {quote(s.prior_high.price)}
-            </span>
-          )}
-          {s.last_low && s.prior_low && (
-            <span>
-              lows {quote(s.last_low.price)}{' '}
-              <span className="text-muted-foreground/50">
-                {s.last_low.price > s.prior_low.price ? 'over' : 'under'}
-              </span>{' '}
-              {quote(s.prior_low.price)}
-            </span>
-          )}
-        </div>
-      ) : null}
-
-      {thin ? (
-        <p className="text-muted-foreground fd-label">
-          not enough H4 bars yet — the bars are there, the indicators need more of them
-        </p>
-      ) : (
-        <>
-          {/* The two numbers a person reads first. */}
-          <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-            <Fact
-              label={s.break_level != null ? `breaks ${(s.break_side ?? '').toLowerCase()}` : 'break level'}
-              value={s.break_level != null ? quote(s.break_level) : '—'}
-              hint={
-                s.break_level == null
-                  ? 'a range has no single level whose break changes the label'
-                  : 'the price that would change the structure'
-              }
-            />
-            <Fact
-              label="from EMA21"
-              value={h4.dist_ema21_atr != null ? `${signed(h4.dist_ema21_atr)} ATR` : '—'}
-              hint={
-                h4.atr14 != null
-                  ? `ATR14 is ${quote(h4.atr14)} in quote units — the denominator of the figure beside it`
-                  : undefined
-              }
-            />
-          </div>
-
-          <div className="text-muted-foreground flex flex-wrap gap-x-3 gap-y-1 fd-caption">
-            <Small label="ADX14" value={h4.adx14 != null ? h4.adx14.toFixed(1) : '—'} />
-            <Small
-              label="ER20"
-              value={h4.efficiency_20 != null ? h4.efficiency_20.toFixed(2) : '—'}
-              hint="Kaufman efficiency ratio, 0 to 1"
-            />
-            <Small
-              label="EMA21"
-              value={h4.ema21 != null ? quote(h4.ema21) : '—'}
-              suffix={slope(h4.ema21_slope_sign)}
-            />
-            <Small
-              label="EMA55"
-              value={h4.ema55 != null ? quote(h4.ema55) : '—'}
-              suffix={slope(h4.ema55_slope_sign)}
-            />
-            {/* 0 is a measurement: THIS bar made the new extreme. Null is not,
-                and is an em dash. */}
-            <Small
-              label="since high"
-              value={bars(h4.donchian20.bars_since_new_high)}
-              hint={h4.donchian20.bars_since_new_high === 0 ? 'this bar made a new high' : undefined}
-            />
-            <Small
-              label="since low"
-              value={bars(h4.donchian20.bars_since_new_low)}
-              hint={h4.donchian20.bars_since_new_low === 0 ? 'this bar made a new low' : undefined}
-            />
-          </div>
-
-          {d1 && (
-            <div className="text-muted-foreground flex flex-wrap gap-x-3 gap-y-1 fd-caption">
-              <Small label="prior day" value={range(d1.prior_day_low, d1.prior_day_high)} />
-              <Small label="prior week" value={range(d1.prior_week_low, d1.prior_week_high)} />
-              {/* NOT clamped and NOT a bar that stops at the ends: above 100
-                  is price out of the prior week's range upward and below 0
-                  downward, and those are the most informative states it has.
-                  A capped bar would draw a breakout as a ceiling. */}
-              <Small
-                label="in week range"
-                value={
-                  d1.close_pct_of_prior_week_range != null
-                    ? `${d1.close_pct_of_prior_week_range.toFixed(0)}%`
-                    : '—'
-                }
-                tint={
-                  d1.close_pct_of_prior_week_range == null
-                    ? undefined
-                    : d1.close_pct_of_prior_week_range > 100
-                      ? 'text-lc'
-                      : d1.close_pct_of_prior_week_range < 0
-                        ? 'text-lp'
-                        : undefined
-                }
-                hint={
-                  d1.close_pct_of_prior_week_range == null
-                    ? undefined
-                    : d1.close_pct_of_prior_week_range > 100
-                      ? 'above the prior week’s high'
-                      : d1.close_pct_of_prior_week_range < 0
-                        ? 'below the prior week’s low'
-                        : undefined
-                }
+              <span
+                key={v.name}
+                role="listitem"
+                title={`${v.name}: ${v.vote ?? 'no vote'} — ${v.why}`}
+                className={cn(
+                  'size-1.5 rounded-full',
+                  v.vote === 'bull'
+                    ? 'bg-lc'
+                    : v.vote === 'bear'
+                      ? 'bg-lp'
+                      : 'bg-muted-foreground/40',
+                )}
               />
-            </div>
-          )}
-        </>
+            ))}
+          </span>
+          {/* The rule was five lines of paragraph in the middle of the card.
+              It is the thing a reader needs once and then never again, which
+              is what a tooltip is for. Focusable, so it is not mouse-only. */}
+          <span
+            tabIndex={0}
+            role="note"
+            aria-label="how the bias word is computed"
+            title={`${BIAS_RULE} A summary, not a signal.`}
+            className="text-muted-foreground/60 focus-visible:ring-ring inline-flex size-3.5 cursor-help items-center justify-center rounded-full border border-current fd-caption leading-none focus-visible:ring-2 focus-visible:outline-none"
+          >
+            i
+          </span>
+        </div>
       )}
 
-      {/* The FACTS' age, and it says so rather than showing a number that has
-          stopped moving. */}
-      <div className={cn('num fd-caption tabular-nums', stale ? 'text-caution' : 'text-muted-foreground/60')}>
-        {stale
-          ? `the last H4 bar closed ${since(h4.computed_at_bar_ms, now)} ago — more than ${STALE_BARS} bars ago, so these may not be current`
-          : `H4 bar closed ${since(h4.computed_at_bar_ms, now)} ago`}
+      {/* One grid, the same columns on every row. `overflow-x-auto` because
+          this card lives in a narrow pane and a table is the one thing
+          allowed to scroll sideways rather than reflow — a break level that
+          wrapped onto its own line would stop being comparable with the row
+          above it, which is the entire reason for the table. */}
+      <div className="overflow-x-auto">
+        <div className="grid min-w-[21rem] grid-cols-[auto_minmax(4.5rem,1fr)_auto_auto_auto_auto] items-baseline gap-x-3 gap-y-1">
+          <HeadCell />
+          <HeadCell>structure</HeadCell>
+          <HeadCell right>break</HeadCell>
+          <HeadCell right>vs EMA21</HeadCell>
+          <HeadCell right>ADX / ER</HeadCell>
+          <HeadCell right>as of</HeadCell>
+
+          <TfRow tf="H1" block={data.h1} sentence={data.unavailable_by_tf?.['1h'] ?? null} now={now} />
+          <TfRow tf="H4" block={h4} sentence={null} now={now} />
+        </div>
       </div>
+
+      <D1Line d1={data.d1} h4={h4} sentence={data.unavailable_by_tf?.['1d'] ?? null} />
+
+      <p className="text-muted-foreground/50 fd-caption leading-snug">
+        H4 rule: structure + EMA stack + ADX/DI majority — a summary, not a signal; the books do not read
+        it.
+      </p>
     </div>
+  )
+}
+
+function HeadCell({ children, right }: { children?: React.ReactNode; right?: boolean }) {
+  return <span className={cn('text-muted-foreground/50 fd-caption', right && 'text-right')}>{children}</span>
+}
+
+/**
+ * One timeframe's row. The same six cells on every row.
+ *
+ * THE BREAK LEVEL IS THE ONE NUMBER IN FOREGROUND WEIGHT. It is the only
+ * figure here that anybody acts on — the price whose break changes the label
+ * — and everything beside it is the working behind it. Giving them all equal
+ * weight is what made this card a wall.
+ *
+ * ABSENCE IS THREE DIFFERENT THINGS. `undefined` is an API older than this
+ * desk: a deploy-order artefact, nothing to investigate. `null` is that
+ * timeframe's bars missing, which is. A populated block whose facts are all
+ * null is a measurement in progress that will fix itself. One dash for all
+ * three would send somebody looking for a problem that is either not theirs
+ * or not there.
+ */
+function TfRow({
+  tf,
+  block,
+  sentence,
+  now,
+}: {
+  tf: 'H1' | 'H4'
+  block: HtfH4 | null | undefined
+  sentence: string | null
+  now: number
+}) {
+  if (block === undefined) {
+    return (
+      <>
+        <RowLabel tf={tf} />
+        <span className="text-muted-foreground/50 col-span-5 fd-caption">
+          this desk shows the hourly read; the API it is talking to does not send it yet
+        </span>
+      </>
+    )
+  }
+
+  if (!block) {
+    return (
+      <>
+        <RowLabel tf={tf} />
+        <span className="text-muted-foreground col-span-5 fd-caption">
+          {sentence ?? `no ${tf} bars stored for this market`}
+        </span>
+      </>
+    )
+  }
+
+  const s = block.structure
+  const thin = block.ema21 == null && block.adx14 == null && block.atr14 == null
+
+  // BOTH of this row's clocks, spelled out, so the pair is never two numbers
+  // a reader has to reconcile alone.
+  const clocks =
+    `Facts from the ${tf} bar that closed ${clock(block.computed_at_bar_ms)}Z, ` +
+    `${since(block.computed_at_bar_ms, now)} ago. ` +
+    (s.confirmed_at_bar_ms != null
+      ? `The ${s.label} label is as of the bar that confirmed the swing, ${clock(s.confirmed_at_bar_ms)}Z, ` +
+        `${since(s.confirmed_at_bar_ms, now)} ago — a ${s.rule} needs bars after the swing, so the label is ` +
+        `MEANT to lag the facts rather than being stale.`
+      : 'The swing has not been confirmed yet.')
+
+  // The working that does not earn a column: it is checkable, and a reader
+  // asks for it about one row at a time.
+  const extras = [
+    block.ema21 != null ? `EMA21 ${quote(block.ema21)}${slope(block.ema21_slope_sign)}` : null,
+    block.ema55 != null ? `EMA55 ${quote(block.ema55)}${slope(block.ema55_slope_sign)}` : null,
+    block.atr14 != null ? `ATR14 ${quote(block.atr14)}, the denominator of the ATR column` : null,
+    // 0 is a measurement — THIS bar made the new extreme — and null is not.
+    block.donchian20.bars_since_new_high != null
+      ? `${block.donchian20.bars_since_new_high} bars since a new high`
+      : null,
+    block.donchian20.bars_since_new_low != null
+      ? `${block.donchian20.bars_since_new_low} bars since a new low`
+      : null,
+  ].filter(Boolean)
+
+  return (
+    <>
+      <RowLabel tf={tf} />
+
+      {/* THE LABEL'S OWN WORKING rides with the label, in its tooltip.
+          The priors are not levels and must never be drawn as any: they have
+          already been exceeded, and that is what MAKES the label. A line on a
+          chart claims price may react there; these claim the opposite. Stated
+          as the comparison that produced the word — on a real RANGE, "highs
+          over, lows under" is the whole reason the label is not UP — so the
+          reader can check the rule rather than take it. */}
+      <span
+        className={cn('fd-label', structureTint(s.label))}
+        title={[`${s.label} by ${s.rule}.`, swings(s), clocks].filter(Boolean).join(' ')}
+      >
+        <span aria-hidden>{structureGlyph(s.label)}</span> {s.label.toLowerCase()}
+      </span>
+
+      {/* The one number in foreground weight. A dash on a RANGE is not a
+          missing measurement: a range has no single price whose break changes
+          the label, and the tooltip says so rather than leaving the dash to
+          be read as a gap. */}
+      <span
+        className="num text-right fd-label tabular-nums"
+        title={
+          s.break_level != null
+            ? `${quote(s.break_level)} — a close ${(s.break_side ?? '').toLowerCase()} this would change the ${tf} structure`
+            : 'a range has no single level whose break changes the label'
+        }
+      >
+        {s.break_level != null ? quote(s.break_level) : <span className="text-muted-foreground/40">—</span>}
+      </span>
+
+      <span
+        className="text-muted-foreground num text-right fd-caption tabular-nums"
+        title={extras.length ? extras.join(' · ') : 'not enough bars yet for the indicators'}
+      >
+        {thin || block.dist_ema21_atr == null ? '—' : `${signed(block.dist_ema21_atr)} ATR`}
+      </span>
+
+      <span
+        className="text-muted-foreground num text-right fd-caption tabular-nums"
+        title="ADX14, and the Kaufman efficiency ratio over 20 bars (0 to 1)"
+      >
+        {block.adx14 != null ? block.adx14.toFixed(0) : '—'}
+        <span className="text-muted-foreground/40"> / </span>
+        {block.efficiency_20 != null ? block.efficiency_20.toFixed(2) : '—'}
+      </span>
+
+      {/* THE CONFIRMING BAR, not the data bar — and its clock time rather
+          than its age, because an age alone reads as staleness where the
+          bar's own time says which candle the word describes. */}
+      <span className="text-muted-foreground/70 num text-right fd-caption tabular-nums" title={clocks}>
+        {s.confirmed_at_bar_ms != null ? `${clock(s.confirmed_at_bar_ms)}Z` : '—'}
+      </span>
+    </>
+  )
+}
+
+function RowLabel({ tf }: { tf: string }) {
+  return <span className="text-muted-foreground/60 num fd-caption">{tf}</span>
+}
+
+/**
+ * The daily row, which is a sentence rather than the same six columns.
+ *
+ * D1 publishes different facts — prior-day and prior-week ranges, and where
+ * the close sits within the week — and forcing them into `structure / break /
+ * vs EMA21` would mean five empty cells and one crowded one. A row that
+ * borrows the table's shape without sharing its meaning is worse than a row
+ * that plainly does something else.
+ */
+function D1Line({ d1, h4, sentence }: { d1: HtfD1 | null; h4: HtfH4; sentence: string | null }) {
+  if (!d1) {
+    return (
+      <p className="text-muted-foreground/60 fd-caption">
+        <span className="num">D1</span> {sentence ?? 'no daily bars stored for this market'}
+      </p>
+    )
+  }
+
+  const mid =
+    d1.prior_day_high != null && d1.prior_day_low != null && h4.last_close != null
+      ? `${h4.last_close > (d1.prior_day_high + d1.prior_day_low) / 2 ? 'above' : 'below'} prior-day mid`
+      : null
+
+  // NOT clamped and NOT drawn as a bar: above 100 is price out of the prior
+  // week's range upward and below 0 downward, and those are the most
+  // informative states it has. A capped bar would draw a breakout as a
+  // ceiling.
+  const pct = d1.close_pct_of_prior_week_range
+  const pctTint = pct == null ? undefined : pct > 100 ? 'text-lc' : pct < 0 ? 'text-lp' : undefined
+
+  return (
+    <p
+      className="text-muted-foreground num flex flex-wrap items-baseline gap-x-2 fd-caption tabular-nums"
+      title={
+        d1.prior_week_mid != null
+          ? `The prior week's mid is ${quote(d1.prior_week_mid)}.`
+          : 'No prior-week mid: the daily series has no completed week behind it.'
+      }
+    >
+      <span className="text-muted-foreground/60">D1</span>
+      {mid && <span>{mid}</span>}
+      {pct != null && (
+        <span className={pctTint}>
+          {pct.toFixed(0)}% of week {range(d1.prior_week_low, d1.prior_week_high)}
+        </span>
+      )}
+      <span className="text-muted-foreground/70">prior day {range(d1.prior_day_low, d1.prior_day_high)}</span>
+    </p>
   )
 }
 
 /**
- * The one-hour read, in one line.
+ * The swing comparison that produced the label, as a sentence.
  *
- * THE SAME FACTS AS THE H4 DETAIL, deliberately: a reader comparing two
- * timeframes must be comparing the same measurements, or the comparison is
- * between two different questions. What it does NOT do is combine them — no
- * vote across timeframes, no alignment score. The bias word on this card is
- * H4-only and says so in its own rule string.
- *
- * ABSENCE IS THREE DIFFERENT THINGS AND THEY READ DIFFERENTLY. `undefined` is
- * an API older than this desk, which is a deploy-order artefact and nothing to
- * investigate. `null` is the hourly bars missing, which is. A populated block
- * whose facts are all null is a measurement in progress and will fix itself.
- * One dash for all three would send somebody looking for a problem that is
- * either not theirs or not there.
+ * Two swings can share a bar — one outside bar can be both a fractal high and
+ * a fractal low — so nothing here assumes the pairs are distinct or that a
+ * full set exists. Empty string when neither pair is available, which the
+ * caller filters out rather than printing a dangling clause.
  */
-function H1Row({
-  h1,
-  sentence,
-  now,
-}: {
-  h1: HtfH4 | null | undefined
-  /** The route's own sentence for `1h`, when it sends one. */
-  sentence: string | null
-  now: number
-}) {
-  const shell = 'border-border/60 flex flex-wrap items-baseline gap-x-2.5 gap-y-1 border-b pb-1.5'
-
-  if (h1 === undefined) {
-    return (
-      <div className={shell}>
-        <span className="text-muted-foreground/50 fd-caption">H1 —</span>
-        <span className="text-muted-foreground/50 fd-caption">
-          this desk shows the hourly read; the API it is talking to does not send it yet
-        </span>
-      </div>
+function swings(s: HtfH4['structure']): string {
+  const parts: string[] = []
+  if (s.last_high && s.prior_high) {
+    parts.push(
+      `Highs ${quote(s.last_high.price)} ${s.last_high.price > s.prior_high.price ? 'over' : 'under'} ${quote(s.prior_high.price)}`,
     )
   }
-
-  if (!h1) {
-    return (
-      <div className={shell}>
-        <span className="text-muted-foreground/50 fd-caption">H1 —</span>
-        <span className="text-muted-foreground fd-caption">
-          {sentence ?? 'no hourly bars stored for this market'}
-        </span>
-      </div>
+  if (s.last_low && s.prior_low) {
+    parts.push(
+      `lows ${quote(s.last_low.price)} ${s.last_low.price > s.prior_low.price ? 'over' : 'under'} ${quote(s.prior_low.price)}`,
     )
   }
-
-  const s = h1.structure
-  const thin = h1.ema21 == null && h1.adx14 == null && h1.atr14 == null
-  const Mark = s.label === 'UP' ? ArrowUp : s.label === 'DOWN' ? ArrowDown : MoveHorizontal
-  const tint = s.label === 'UP' ? 'text-lc' : s.label === 'DOWN' ? 'text-lp' : 'text-muted-foreground'
-
-  return (
-    <div className={shell}>
-      <span className="flex items-center gap-1 fd-body">
-        <Mark className={cn('size-3.5 shrink-0', tint)} aria-hidden />
-        <span className="text-muted-foreground/60 fd-caption">H1</span>
-        <span className="font-medium">{s.label.toLowerCase()}</span>
-      </span>
-      <span className="text-muted-foreground/60 fd-caption">{s.rule}</span>
-      {/* The LABEL's age, not the facts' age — a fractal needs bars after it,
-          so on the hour the word can be two bars older than the numbers. */}
-      <span className="text-muted-foreground num fd-caption tabular-nums">
-        {s.confirmed_at_bar_ms != null
-          ? `confirmed ${since(s.confirmed_at_bar_ms, now)} ago (${clock(s.confirmed_at_bar_ms)}Z)`
-          : 'not yet confirmed'}
-      </span>
-      {/* Shown only when it exists. `break_level` is null on a RANGE by
-          construction — a range has no single price whose break changes the
-          label — so printing `breaks —` would turn "does not apply" into
-          "we could not measure it". */}
-      {s.break_level != null && s.break_side && (
-        <span className="text-muted-foreground num fd-caption tabular-nums">
-          breaks {s.break_side.toLowerCase()} {quote(s.break_level)}
-        </span>
-      )}
-      {thin ? (
-        <span className="text-muted-foreground/60 fd-caption">
-          not enough hourly history yet for the rest
-        </span>
-      ) : (
-        <span className="text-muted-foreground/70 num fd-caption tabular-nums">
-          {h1.dist_ema21_atr != null ? `${signed(h1.dist_ema21_atr)} ATR vs EMA21` : '— ATR vs EMA21'}
-          {' · '}
-          ADX {h1.adx14 != null ? h1.adx14.toFixed(1) : '—'}
-          {' · '}
-          ER {h1.efficiency_20 != null ? h1.efficiency_20.toFixed(2) : '—'}
-        </span>
-      )}
-    </div>
-  )
-}
-
-function Fact({ label, value, hint }: { label: string; value: string; hint?: string }) {
-  return (
-    <span className="flex flex-col" title={hint}>
-      <span className="text-muted-foreground fd-caption">{label}</span>
-      <span className="num fd-body tabular-nums">{value}</span>
-    </span>
-  )
-}
-
-function Small({
-  label,
-  value,
-  suffix,
-  hint,
-  tint,
-}: {
-  label: string
-  value: string
-  suffix?: string
-  hint?: string
-  tint?: string
-}) {
-  return (
-    <span className="num tabular-nums" title={hint}>
-      <span className="text-muted-foreground/60">{label} </span>
-      <span className={cn('text-foreground/80', tint)}>
-        {value}
-        {suffix}
-      </span>
-    </span>
-  )
+  return parts.length ? `${parts.join(', ')}.` : ''
 }
 
 /** A slope sign. 0 is a genuine flat and is drawn as one, not as absence. */
@@ -468,12 +422,8 @@ function slope(sign: number | null): string {
   return sign > 0 ? ' ↗' : sign < 0 ? ' ↘' : ' →'
 }
 
-function bars(n: number | null): string {
-  return n == null ? '—' : String(n)
-}
-
 function range(lo: number | null, hi: number | null): string {
-  return lo == null || hi == null ? '—' : `${quote(lo)} – ${quote(hi)}`
+  return lo == null || hi == null ? '—' : `${quote(lo)}–${quote(hi)}`
 }
 
 function signed(v: number): string {
