@@ -38,6 +38,15 @@ What it does, every `--poll` seconds:
    `data/paper/<run>/executor.jsonl` with the terminal's ticket, the
    fill price the terminal reports, and the book's price — the slippage
    the record needs.
+5. With `--mirror-pending` (OFF by default, and off until the stage-1
+   comparison in docs/hypotheses/2026-09-18-plan-entry.md has 30 trades):
+   when the book shows a `pending_order` and no position, places the
+   matching MT5 pending order - BUY_LIMIT/SELL_LIMIT/BUY_STOP/SELL_STOP at
+   the book's price, sized by the same lot rule, expiring on the terminal's
+   clock when the book's order does; removes the terminal's order when the
+   book's disappears without a position; and hands over to step 3 the moment
+   the book holds. The three-key lock above gates this exactly as it gates a
+   market order, because it is checked before the loop that does either.
 
 What it refuses, in code, before any order:
 
@@ -217,6 +226,55 @@ def close_comment(run: str, why: str) -> str:
         "desk-wide STOP file": "stop",
     }.get(why, why)
     return f"{run} {short}"[:COMMENT_MAX]
+
+
+def pending_comment(run: str) -> str:
+    """The comment on a pending order, within the measured limit and never cut mid-word.
+
+    The same rule as `close_comment`: 25 is the longest string this account
+    has taken, and the tag is dropped whole rather than sliced when the run id
+    leaves no room for it. `ai-xau-ds-plan-trigger` is 22 characters, so the
+    tag does not fit and the comment is the id alone - which is the field's
+    one job in a deal history.
+    """
+    tagged = f"{run} plan"
+    return tagged if len(tagged) <= COMMENT_MAX else run[:COMMENT_MAX]
+
+
+def pending_order_type(mt5, side, kind):
+    """The MT5 order type for the book's pending order, or None.
+
+    A LONG limit is a BUY_LIMIT (it waits below the price), a LONG stop a
+    BUY_STOP (it waits above), and the SHORT forms the other way round. None
+    for anything else, and the caller refuses on it: a book side or entry
+    type this table does not know is not an order to guess at.
+    """
+    table = {
+        ("LONG", "limit"): mt5.ORDER_TYPE_BUY_LIMIT,
+        ("SHORT", "limit"): mt5.ORDER_TYPE_SELL_LIMIT,
+        ("LONG", "stop"): mt5.ORDER_TYPE_BUY_STOP,
+        ("SHORT", "stop"): mt5.ORDER_TYPE_SELL_STOP,
+    }
+    return table.get((str(side or "").upper(), str(kind or "").lower()))
+
+
+def expiry_on_server(valid_until_utc_ms, server_offset_ms):
+    """The book's deadline on the terminal's clock, in whole seconds, or None.
+
+    `valid_until_bar_ms` is UTC, as every time the book publishes is; MT5's
+    `expiration` is read on the SERVER's clock, which runs `server_offset_ms`
+    ahead of UTC - measured from the terminal each poll, +3h on Vantage in
+    September 2026. Adding the offset is the whole conversion, and it is done
+    here, once, at the boundary, per docs/decisions/2026-09-17-unit-carrying.md.
+
+    None when either half is unknown, and the caller refuses on it: an order
+    sent with no expiry would outlive the book's, and one sent on the wrong
+    clock would expire three hours early or late. Both are worse than a
+    missed entry, which is at least visible.
+    """
+    if valid_until_utc_ms is None or server_offset_ms is None:
+        return None
+    return int((int(valid_until_utc_ms) + int(server_offset_ms)) // 1000)
 
 
 def magic_for(run: str) -> int:
@@ -859,6 +917,27 @@ def main() -> int:
                     help="join when the price is better than the book's entry (default: refuse, "
                          "symmetric with the adverse bound)")
     ap.add_argument("--dry-run", action="store_true", help="reconcile and log, send nothing")
+    # Mirror the book's PENDING order too, not only its position. DEFAULT OFF.
+    #
+    # The plan books (docs/hypotheses/2026-09-18-plan-entry.md) answer with a
+    # limit or a stop that waits on the desk. With this off the executor
+    # ignores that entirely - it sees the book flat until the order fills,
+    # then mirrors the position as it always has, one poll late and at
+    # market. With it on, the terminal holds the same order at the same price
+    # with the same expiry, so the account fills when the book does and at
+    # the price the book chose - which is the point of a plan.
+    #
+    # Off until the paper comparison has 30 trades over two windows, which
+    # the registration says in advance. Pending orders on a funded account
+    # add states this executor has never held - partial fills of a resting
+    # order, an expiry the broker and the book disagree about by seconds, a
+    # fill the terminal saw and the book's tick feed missed - and the
+    # selftest gains them before the flag is ever turned on, not after.
+    #
+    # It does not touch the three-key lock and cannot: the lock is checked
+    # before the loop, and this flag only changes what the loop does.
+    ap.add_argument("--mirror-pending", action="store_true",
+                    help="place the book's pending limit/stop order on the terminal too (default: off)")
     # One of the three keys to a real account. On its own it does nothing:
     # the registry must also say `real_money = true` for --account, and the
     # terminal must hold exactly --login. See the module docstring.
@@ -1021,7 +1100,8 @@ def main() -> int:
         # glance.
         log(out, "started", login=acc.login, server=acc.server, balance=acc.balance,
             currency=acc.currency, symbol=args.symbol, magic=magic,
-            dry_run=args.dry_run, lot_scale=args.lot_scale, contract=info.trade_contract_size,
+            dry_run=args.dry_run, lot_scale=args.lot_scale, mirror_pending=bool(args.mirror_pending),
+            contract=info.trade_contract_size,
             tick_size=getattr(info, "trade_tick_size", None),
             tick_value=getattr(info, "trade_tick_value", None),
             one_lot_at=(lambda n: None if n is None else round(n, 2))(
@@ -1508,63 +1588,17 @@ def main() -> int:
                 return "taken", f
             return "not-taken", None
 
-        def open_like(book_open: dict, run: dict) -> bool:
-            verdict, taken = already_taken(book_open, run)
-            if verdict == "unknown":
-                # Fail closed, for the same reason as the size guards: the
-                # question "has this account already taken this trade?" has no
-                # safe default. Answering "no" when the answer is unknown is
-                # what re-enters a position that has already been stopped out.
-                # This clears itself on the next poll as soon as a tick or the
-                # deal history comes back, so the cost is a delayed entry and
-                # not a dead mirror.
-                log(out, "refused-unknown-history", side=book_open.get("side"),
-                    book_entry=book_open.get("entry_time"),
-                    reason="cannot read the server's clock offset or this book's deal "
-                           "history, so whether this account already traded the book's "
-                           "current position is unknown; nothing sent")
-                nonlocal_blocked("cannot tell whether this trade was already taken "
-                                 "(no server clock or no deal history)")
-                return False
-            if taken is not None:
-                nonlocal_standing_out(
-                    f"this account already traded the book's current position "
-                    f"({taken.get('direction')} from {taken.get('entryPrice')}, "
-                    f"closed {taken.get('exitReason') or 'out'} for {taken.get('pnl')})")
-                log(out, "already-taken", side=book_open.get("side"),
-                    book_entry=book_open.get("entry_price"), fill=taken,
-                    book_entry_time=book_open.get("entry_time"),
-                    fill_entry_utc=taken.get("entryTime"),
-                    server_offset_ms=server_offset_ms(),
-                    reason="the broker closed this trade before the book's bar did; "
-                           "re-opening would take the same trade twice")
-                return False
+        def size_guards(vol: float, price: float, is_long: bool, asked_lots: float) -> bool:
+            """The notional ceiling and the margin floor, or a refusal that is written down.
 
-            late = too_old(book_open, run)
-            if late is not None:
-                nonlocal_standing_out(f"the book opened this {late:.0f} bars ago")
-                log(out, "not-adopted", side=book_open.get("side"), lots=book_open.get("lots"),
-                    book_entry=book_open.get("entry_price"), bars_old=round(late, 1),
-                    limit=args.max_adopt_bars,
-                    reason="the book opened this too long ago to mirror at a comparable price")
-                return False
-            tick = mt5.symbol_info_tick(args.symbol)
-            is_long = book_open["side"] == "LONG"
-            vol, clipped = clamp_volume(info, float(book_open["lots"]) * args.lot_scale)
-            if clipped:
-                log(out, "clipped", asked=float(book_open["lots"]) * args.lot_scale, sending=vol,
-                    volume_min=info.volume_min, volume_max=info.volume_max)
-            price = tick.ask if is_long else tick.bid
-
-            off, why_not = join_check(book_open, price)
-            if why_not is not None:
-                nonlocal_standing_out(
-                    f"{price} is {off:+.2f}R from the book's entry {book_open.get('entry_price')}")
-                log(out, "not-adopted", side=book_open.get("side"), lots=book_open.get("lots"),
-                    book_entry=book_open.get("entry_price"), would_fill=price,
-                    drift_r=round(off, 2), limit=args.max_join_r, reason=why_not)
-                return False
-
+            One function for the two paths that spend money - a market order in
+            `open_like` and a pending order in `place_pending` - so the pending
+            path cannot be the one that forgot a guard. The body is the block
+            `open_like` carried until 2026-09-18, moved and not rewritten; its
+            own comments say what each refusal is for and what it cost to be
+            without them. `asked_lots` is the book's size before the lot scale
+            and the volume grid, for the ceiling refusal's record.
+            """
             # ---- the two size guards, and the reading they both depend on ----
             #
             # One `account_info()` for both, and a refusal if it does not
@@ -1625,7 +1659,7 @@ def main() -> int:
                 nonlocal_blocked(f"{args.symbol} gives no tick value; notional cannot be checked")
                 return False
             if notional_acct > args.max_notional_ratio * equity_acct:
-                log(out, "refused-size", asked_lots=float(book_open["lots"]), sending_lots=vol,
+                log(out, "refused-size", asked_lots=asked_lots, sending_lots=vol,
                     notional=round(notional_acct, 2), equity=round(equity_acct, 2),
                     currency=currency,
                     ratio=round(notional_acct / equity_acct, 2), limit=args.max_notional_ratio,
@@ -1673,6 +1707,176 @@ def main() -> int:
                                  f"{args.min_margin_level:.0f}% floor")
                 return False
 
+            return True
+
+        # ---- the book's PENDING order, mirrored only behind --mirror-pending ----
+        #
+        # None of these three is reached with the flag off: the loop below
+        # does not call them and `snapshot` does not ask the terminal for
+        # resting orders, so an executor started the way every executor is
+        # started today behaves byte for byte as it did. The selftest pins
+        # that with the flag off and a pending order on the book.
+
+        def pending_orders() -> list:
+            """The terminal's resting orders that carry this book's magic."""
+            return [o for o in (mt5.orders_get(symbol=args.symbol) or []) if o.magic == magic]
+
+        def remove_pending(order, why: str) -> bool:
+            """Withdraw one resting order. `action` and `order` and nothing else -
+            the fewest fields the request can carry, per the close path's lesson."""
+            return send({"action": mt5.TRADE_ACTION_REMOVE, "order": int(order.ticket)},
+                        f"cancel pending {why}")
+
+        def matches(order, pend: dict) -> bool:
+            """Is the terminal's resting order the book's? Same type, same price to half a point."""
+            otype = pending_order_type(mt5, pend.get("side"), pend.get("type"))
+            half = (getattr(info, "point", 0.0) or 0.01) / 2
+            try:
+                return order.type == otype and abs(float(order.price_open) - float(pend.get("price"))) < half
+            except (TypeError, ValueError):
+                return False
+
+        def place_pending(pend: dict) -> bool:
+            """Place the book's pending order on the terminal, or refuse with the reason written down.
+
+            Every refusal here is a `refused-pending` line naming which of the
+            four things it needed was missing: an order type the table knows,
+            a size, a clock, an expiry still ahead. It then runs the SAME two
+            size guards a market order runs, because this is the other path
+            that spends money.
+
+            `type_filling` is RETURN, the mode MT5 documents for limit and
+            stop orders, and it is the one field here that is NOT measured on
+            this account: every order this desk has sent was a market order
+            with IOC. If the broker refuses it the failed line carries
+            `error` and `sent`, which is how the close path's 31-character
+            comment was found, and the fix is one constant.
+            """
+            side, kind, price = pend.get("side"), pend.get("type"), pend.get("price")
+            otype = pending_order_type(mt5, side, kind)
+            if otype is None or price is None:
+                log(out, "refused-pending", side=side, type=kind, price=price,
+                    reason="the book's pending order is not a LONG/SHORT limit/stop with a price; "
+                           "not an order to guess at, nothing sent")
+                nonlocal_blocked(f"the book's pending order ({side} {kind} at {price}) cannot be mirrored")
+                return False
+            lots = pend.get("lots")
+            if lots is None:
+                # The book sizes a trade when it FILLS (`open.lots`), and a
+                # pending order the API publishes without `lots` has no size
+                # to scale. A size invented here would be this executor
+                # sizing a trade, which it has never been allowed to do. So
+                # it sits out and the position is mirrored at market when
+                # the book fills, as it is with the flag off.
+                log(out, "refused-pending", side=side, type=kind, price=price,
+                    reason="the book's pending order carries no lots, so the terminal order cannot "
+                           "be sized; nothing sent - the position is mirrored at market on the fill")
+                nonlocal_standing_out("the book's pending order carries no lots; mirroring at market on the fill")
+                return False
+            offset = server_offset_ms()
+            exp = expiry_on_server(pend.get("valid_until_bar_ms"), offset)
+            if exp is None:
+                log(out, "refused-pending", side=side, type=kind, price=price,
+                    valid_until_bar_ms=pend.get("valid_until_bar_ms"), server_offset_ms=offset,
+                    reason="no server clock offset or no valid_until_bar_ms, so the expiry cannot "
+                           "be put on the terminal's clock; nothing sent")
+                nonlocal_blocked("cannot put the pending order's expiry on the terminal's clock "
+                                 "(no server clock or no valid_until_bar_ms)")
+                return False
+            if exp <= time.time() + offset / 1000.0:
+                log(out, "pending-expired", side=side, type=kind, price=price,
+                    expiration_server_s=exp, server_offset_ms=offset,
+                    reason="the book's order has already expired by the terminal's clock; the book "
+                           "cancels it on its side, nothing sent")
+                nonlocal_standing_out("the book's pending order has expired by the terminal's clock")
+                return False
+            is_long = str(side).upper() == "LONG"
+            vol, clipped = clamp_volume(info, float(lots) * args.lot_scale)
+            if clipped:
+                log(out, "clipped", asked=float(lots) * args.lot_scale, sending=vol,
+                    volume_min=info.volume_min, volume_max=info.volume_max)
+            price = float(price)
+            if not size_guards(vol, price, is_long, float(lots)):
+                return False
+            req = {
+                "action": mt5.TRADE_ACTION_PENDING, "symbol": args.symbol, "volume": vol,
+                "type": otype, "price": price, "magic": int(magic),
+                "comment": pending_comment(args.run),
+                "type_time": mt5.ORDER_TIME_SPECIFIED, "expiration": int(exp),
+                "type_filling": mt5.ORDER_FILLING_RETURN,
+            }
+            if pend.get("stop") is not None:
+                req["sl"] = float(pend["stop"])
+            if pend.get("target") is not None:
+                req["tp"] = float(pend["target"])
+            # Both clocks on the line, named, so the record can answer "did
+            # the terminal's expiry match the book's" without a terminal.
+            log(out, "pending-placing", side=side, type=kind, lots=vol, price=price,
+                sl=req.get("sl"), tp=req.get("tp"),
+                valid_until_utc_ms=pend.get("valid_until_bar_ms"),
+                expiration_server_s=int(exp), server_offset_ms=offset)
+            return send(req, f"pending {str(side).lower()} {kind} {vol}")
+
+        def open_like(book_open: dict, run: dict) -> bool:
+            verdict, taken = already_taken(book_open, run)
+            if verdict == "unknown":
+                # Fail closed, for the same reason as the size guards: the
+                # question "has this account already taken this trade?" has no
+                # safe default. Answering "no" when the answer is unknown is
+                # what re-enters a position that has already been stopped out.
+                # This clears itself on the next poll as soon as a tick or the
+                # deal history comes back, so the cost is a delayed entry and
+                # not a dead mirror.
+                log(out, "refused-unknown-history", side=book_open.get("side"),
+                    book_entry=book_open.get("entry_time"),
+                    reason="cannot read the server's clock offset or this book's deal "
+                           "history, so whether this account already traded the book's "
+                           "current position is unknown; nothing sent")
+                nonlocal_blocked("cannot tell whether this trade was already taken "
+                                 "(no server clock or no deal history)")
+                return False
+            if taken is not None:
+                nonlocal_standing_out(
+                    f"this account already traded the book's current position "
+                    f"({taken.get('direction')} from {taken.get('entryPrice')}, "
+                    f"closed {taken.get('exitReason') or 'out'} for {taken.get('pnl')})")
+                log(out, "already-taken", side=book_open.get("side"),
+                    book_entry=book_open.get("entry_price"), fill=taken,
+                    book_entry_time=book_open.get("entry_time"),
+                    fill_entry_utc=taken.get("entryTime"),
+                    server_offset_ms=server_offset_ms(),
+                    reason="the broker closed this trade before the book's bar did; "
+                           "re-opening would take the same trade twice")
+                return False
+
+            late = too_old(book_open, run)
+            if late is not None:
+                nonlocal_standing_out(f"the book opened this {late:.0f} bars ago")
+                log(out, "not-adopted", side=book_open.get("side"), lots=book_open.get("lots"),
+                    book_entry=book_open.get("entry_price"), bars_old=round(late, 1),
+                    limit=args.max_adopt_bars,
+                    reason="the book opened this too long ago to mirror at a comparable price")
+                return False
+            tick = mt5.symbol_info_tick(args.symbol)
+            is_long = book_open["side"] == "LONG"
+            vol, clipped = clamp_volume(info, float(book_open["lots"]) * args.lot_scale)
+            if clipped:
+                log(out, "clipped", asked=float(book_open["lots"]) * args.lot_scale, sending=vol,
+                    volume_min=info.volume_min, volume_max=info.volume_max)
+            price = tick.ask if is_long else tick.bid
+
+            off, why_not = join_check(book_open, price)
+            if why_not is not None:
+                nonlocal_standing_out(
+                    f"{price} is {off:+.2f}R from the book's entry {book_open.get('entry_price')}")
+                log(out, "not-adopted", side=book_open.get("side"), lots=book_open.get("lots"),
+                    book_entry=book_open.get("entry_price"), would_fill=price,
+                    drift_r=round(off, 2), limit=args.max_join_r, reason=why_not)
+                return False
+
+            if not size_guards(vol, price, is_long, float(book_open["lots"])):
+                return False
+
             req = {
                 "action": mt5.TRADE_ACTION_DEAL, "symbol": args.symbol, "volume": vol,
                 "type": mt5.ORDER_TYPE_BUY if is_long else mt5.ORDER_TYPE_SELL,
@@ -1705,6 +1909,7 @@ def main() -> int:
         blocked = None   # something is wrong and a person has to act
         standing_out = None  # working as designed: this trade is being sat out
         drift = None     # the account holds the right SIDE but not the right shape
+        filled_ahead = 0  # polls the terminal has held the book's pending fill before the book did
 
         def drift_from_book(book_open: dict, held: list):
             """The account agrees with the book on side, but not on count or size.
@@ -1800,6 +2005,10 @@ def main() -> int:
             realised, closed, fills = history_of(mt5, magic, offset)
             tick = mt5.symbol_info_tick(args.symbol)
             pos = held[0] if held else None
+            # The terminal is asked for resting orders only when the flag is
+            # on: with it off this snapshot must be the one it always was.
+            waiting = pending_orders() if args.mirror_pending else []
+            resting = waiting[0] if waiting else None
             payload = {
                 "at": int(time.time() * 1000),
                 "account": account,
@@ -1884,6 +2093,23 @@ def main() -> int:
                 # side, count and size. See `drift_from_book` for why a drift
                 # is reported here and not corrected.
                 "drift": drift,
+                # Whether this executor mirrors the book's pending order at
+                # all, and the order it holds if so. `pending` is null both
+                # when nothing rests and when the flag is off; the flag says
+                # which. `expires_at` is UTC like `at`, converted from the
+                # terminal's `time_expiration` by the offset above, and null
+                # when the offset is - the same rule as `opened_at`.
+                "mirror_pending": bool(args.mirror_pending),
+                "pending": None if resting is None else {
+                    "ticket": resting.ticket,
+                    "type": int(resting.type),
+                    "price": resting.price_open,
+                    "lots": getattr(resting, "volume_current", None),
+                    "sl": resting.sl or None,
+                    "tp": resting.tp or None,
+                    "expires_at": None if offset is None
+                    else int(getattr(resting, "time_expiration", 0) or 0) * 1000 - offset,
+                },
             }
             write_snapshot(snap_path, payload)
 
@@ -1932,6 +2158,59 @@ def main() -> int:
                 continue
             book_open = run.get("open")
             held = positions()
+            # ---- the pending order first, then the position as always ----
+            if args.mirror_pending:
+                pend = run.get("pending_order")
+                waiting = pending_orders()
+                if book_open is not None and waiting:
+                    # The book holds, so its order filled or was triggered at
+                    # market. Anything still resting on the terminal is the
+                    # order that did not fill there, and a second fill on top
+                    # of the position below would be two trades for one. Out,
+                    # then the position reconciles exactly as it always has.
+                    for o in waiting:
+                        remove_pending(o, "book filled")
+                elif book_open is None and pend is None and waiting:
+                    # Expired, invalidated, cancelled or replaced on the desk,
+                    # without a fill - the book's fills.jsonl says which. The
+                    # terminal's copy must go the same way, or it fills a
+                    # trade the book has already given up on.
+                    for o in waiting:
+                        remove_pending(o, "book pending gone")
+                elif book_open is None and pend is not None and not held:
+                    stale = [o for o in waiting if not matches(o, pend)]
+                    for o in stale:
+                        remove_pending(o, "book pending replaced")
+                    if not any(matches(o, pend) for o in waiting):
+                        if stale and pending_orders():
+                            # A removal was refused and the old order still
+                            # rests; `send` has set `blocked`. A second order
+                            # beside it would double the trade, so nothing
+                            # is placed until the next poll finds it gone.
+                            pass
+                        else:
+                            place_pending(pend)
+                if book_open is None and pend is not None and held:
+                    # The terminal filled the order and the book has not -
+                    # yet. The broker fills on its own tick and the book on
+                    # the poller's, a couple of seconds behind, so for one
+                    # poll this is the ordinary order of events and closing
+                    # the position now would sell a fill the book is about
+                    # to acknowledge. If it is still true a poll later, the
+                    # book's feed missed the touch and the book will never
+                    # hold it: the account must not hold what the book does
+                    # not, and the close below is right.
+                    filled_ahead += 1
+                    if filled_ahead < 2:
+                        log(out, "pending-filled-ahead", tickets=[p.ticket for p in held],
+                            book_pending=pend,
+                            reason="the terminal filled the book's pending order before the book "
+                                   "did; waiting one poll for the book before reconciling")
+                        snapshot(held, book_open)
+                        time.sleep(args.poll)
+                        continue
+                else:
+                    filled_ahead = 0
             if book_open is None and held:
                 for p in held:
                     close(p, "book flat")
