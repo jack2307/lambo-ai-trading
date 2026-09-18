@@ -76,7 +76,14 @@ $campaigns = @(
     @{ model = 'codex/gpt-5.6-terra'; run = 'ai-xau-terra-ctx'; control = 'ai-xau-terra-ctx-coin'; seed = 31; log = 'ai_trader_terra_ctx' },
     # claude-opus-5 goes through the account's PLAN, via the Claude Code CLI.
     # No API key is involved; see the `claude-cli` provider in advisor.py.
-    @{ model = 'claude-opus-5'; run = 'ai-xau-opus-ctx'; control = 'ai-xau-opus-ctx-coin'; seed = 11; log = 'ai_trader_opus_ctx' },
+    # STOPPED 2026-09-18 by the owner, to stop spending Opus plan quota on a
+    # book whose answer is known: NONE on every one of ~100 real bars. The
+    # book and its coin were stopped via /api/paper/stop (final.json kept);
+    # the row is kept here, commented, so the id is never reused - starting
+    # it again would be a new campaign under a new id, not a resumption.
+    # It was the base control for docs/hypotheses/2026-09-17-prompt-coin-penalty.md;
+    # its rate (0 entries) is established, the registration records the stop.
+    # @{ model = 'claude-opus-5'; run = 'ai-xau-opus-ctx'; control = 'ai-xau-opus-ctx-coin'; seed = 11; log = 'ai_trader_opus_ctx' },
     # THE SAME MODEL ON THE SAME BARS WITH ONE SENTENCE REMOVED, and it is a
     # second campaign rather than an edit to the row above for the reason
     # terra is not sol: an id has to keep meaning one thing, and here the
