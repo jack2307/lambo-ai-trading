@@ -1,0 +1,80 @@
+{
+  "market": "btc",
+  "h1": null,
+  "h4": {
+    "computed_at_bar_ms": 1789200000000,
+    "computed_at_ms": 1789709165938,
+    "timeframe": "4h",
+    "bar_ms": 14400000,
+    "structure": {
+      "label": "RANGE",
+      "rule": "fractal(2)",
+      "confirmed_at_bar_ms": 1789156800000,
+      "last_high": {
+        "price": 79890.0,
+        "bar_ms": 1789128000000
+      },
+      "prior_high": {
+        "price": 78564.39,
+        "bar_ms": 1789012800000
+      },
+      "last_low": {
+        "price": 76046.58,
+        "bar_ms": 1789128000000
+      },
+      "prior_low": {
+        "price": 76464.0,
+        "bar_ms": 1789070400000
+      },
+      "break_level": null,
+      "break_side": null
+    },
+    "ema21": 77703.54860741197,
+    "ema55": 78212.41007190771,
+    "ema21_slope_sign": -1,
+    "ema55_slope_sign": -1,
+    "atr14": 790.7440085713018,
+    "dist_ema21_atr": -0.3971684944909006,
+    "adx14": 23.616399876467543,
+    "plus_di14": 22.739673319452056,
+    "minus_di14": 15.24620983840112,
+    "efficiency_20": 0.2133463657366246,
+    "donchian20": {
+      "upper": 79890.0,
+      "lower": 76046.58,
+      "bars_since_new_high": 5,
+      "bars_since_new_low": 5
+    },
+    "last_close": 77389.49
+  },
+  "d1": {
+    "computed_at_bar_ms": 1789171200000,
+    "computed_at_ms": 1789709165939,
+    "timeframe": "1d",
+    "bar_ms": 86400000,
+    "prior_day_high": 79890.0,
+    "prior_day_low": 76046.58,
+    "prior_day_bar_ms": 1789084800000,
+    "prior_week_high": null,
+    "prior_week_low": null,
+    "prior_week_mid": null,
+    "prior_week_start_ms": null,
+    "close_pct_of_prior_week_range": null,
+    "last_close": 77389.49
+  },
+  "h1_source": null,
+  "h4_source": {
+    "file": "bars/BTCUSDT-4h.parquet",
+    "bars": 4381,
+    "timeframe": "4h"
+  },
+  "d1_source": {
+    "file": "bars/BTCUSDT-1d.parquet",
+    "bars": 731,
+    "timeframe": "1d"
+  },
+  "unavailable": "no 1h bars for btc: bars/BTCUSDT-1h.parquet has not been exported yet (py/ingest/mt5_export.py --symbols BTCUSDT --timeframes H1)",
+  "unavailable_by_tf": {
+    "1h": "no 1h bars for btc: bars/BTCUSDT-1h.parquet has not been exported yet (py/ingest/mt5_export.py --symbols BTCUSDT --timeframes H1)"
+  }
+}
