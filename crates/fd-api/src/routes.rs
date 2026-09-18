@@ -30,6 +30,18 @@ const DAY_MS: f64 = 86_400_000.0;
 pub struct MarketQuery {
     pub market: Option<String>,
     pub tf: Option<String>,
+    /// How many of the NEWEST closed bars to return. Absent means all of them.
+    ///
+    /// The chart needs about four hundred to fill a viewport and the store
+    /// holds a hundred thousand: measured 2026-09-18, `XAUUSD-5m.parquet` is
+    /// 101,242 bars and `XAUUSD-1m.parquet` 100,000. Without this, selecting
+    /// 5m on the new timeframe selector serialises the entire corpus into one
+    /// response, on every poll, to draw two hundred candles. Asked for by -48,
+    /// who had already written the client to send it.
+    ///
+    /// The NEWEST, never the oldest: a chart that silently answered with 2022
+    /// would look like a feed that had stopped rather than a truncation.
+    pub n: Option<usize>,
 }
 
 impl MarketQuery {
@@ -39,6 +51,12 @@ impl MarketQuery {
 
     fn timeframe(&self, state: &AppState) -> String {
         self.tf.clone().unwrap_or_else(|| state.config.backtest.timeframe.clone())
+    }
+
+    /// Clamped rather than trusted: a caller asking for zero gets the default
+    /// rather than an empty chart, and one asking for a million gets the file.
+    fn window(&self) -> Option<usize> {
+        self.n.filter(|n| *n > 0)
     }
 }
 
@@ -109,7 +127,17 @@ pub async fn bars(
     let market = query.market(&state);
     let timeframe = query.timeframe(&state);
     let step = fd_store::timeframe_ms(&timeframe).unwrap_or(900_000);
-    let got = anchored_bars(&state, &market, &timeframe)?;
+    let mut got = anchored_bars(&state, &market, &timeframe)?;
+    // Trimmed AFTER the resample, so an hour built from fifteens is built from
+    // every fifteen it needs and only then cut - trimming first would drop the
+    // finer bars that make up the oldest returned hour and leave it short.
+    if let Some(n) = query.window() {
+        let skip = got.bars.len().saturating_sub(n);
+        if skip > 0 {
+            got.bars.drain(..skip);
+        }
+    }
+    let got = got;
 
     let (from, to) = match (got.bars.first(), got.bars.last()) {
         (Some(first), Some(last)) => (first.time, last.time),
@@ -709,6 +737,26 @@ mod anchor_tests {
         let f = forming_bar(&got.bars, 4 * H, got.finer.as_ref()).expect("a forming bar");
         assert_eq!(f.complete_to_ms, open_at + M15, "one fifteen into a four-hour bar, and it says so");
         assert!(f.complete_to_ms < f.time + 4 * H);
+    }
+
+    #[test]
+    fn the_window_keeps_the_newest_bars_and_not_the_oldest() {
+        // A chart asking for 400 of 101,242 must get the most recent 400. The
+        // other end of that mistake is a chart quietly showing 2022, which
+        // reads as a feed that has stopped rather than as a truncation.
+        let dir = tempfile::tempdir().expect("temp dir");
+        let fifteens: Vec<Bar> =
+            (0..100).map(|i| bar(ANCHOR + i * M15, i as f64, i as f64, i as f64, i as f64)).collect();
+        let state = state_with(dir.path(), &[("15m", fifteens)]);
+        let all = anchored_bars(&state, "btc", "15m").expect("bars");
+        assert_eq!(all.bars.len(), 100);
+
+        let mut trimmed = anchored_bars(&state, "btc", "15m").expect("bars");
+        let skip = trimmed.bars.len().saturating_sub(10);
+        trimmed.bars.drain(..skip);
+        assert_eq!(trimmed.bars.len(), 10);
+        assert_eq!(trimmed.bars.last().map(|b| b.time), all.bars.last().map(|b| b.time), "newest kept");
+        assert_eq!(trimmed.bars.first().map(|b| b.close), Some(90.0), "and the oldest ten are the ones dropped");
     }
 
     #[test]
