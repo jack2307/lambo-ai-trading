@@ -460,6 +460,11 @@ fn stored_only(state: &AppState, market: &str, timeframe: &str) -> Result<(Vec<B
     Ok((bars, source))
 }
 
+/// `all` is never empty: [`stored_only`] refuses an empty file before this is
+/// called, and that is the only caller. The `map_or(0, ..)` on the bar stamp
+/// below is therefore unreachable rather than a default — a zero there would
+/// render as 1970 downstream, which is why it is named here instead of left
+/// to be discovered. (Raised by b5 reading the code rather than the summary.)
 fn h4_facts(all: &[Bar]) -> H4Dto {
     let bars = &all[all.len().saturating_sub(H4_BARS)..];
     let specs = [
@@ -515,6 +520,8 @@ fn h4_facts(all: &[Bar]) -> H4Dto {
     }
 }
 
+/// Same invariant as [`h4_facts`]: `all` is non-empty because `stored_only`
+/// refused an empty file, so the zero stamp is unreachable.
 fn d1_facts(all: &[Bar]) -> D1Dto {
     let bars = &all[all.len().saturating_sub(D1_BARS)..];
     let last = bars.last();
