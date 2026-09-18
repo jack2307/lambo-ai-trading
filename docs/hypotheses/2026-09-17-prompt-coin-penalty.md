@@ -181,3 +181,19 @@ on those bars. A comparison in which one side is filtered is not a
 comparison.
 
 *Added 2026-09-18, after this book was already running and before any disagreement rate had been computed for it. The confound is the same one and the rule is the same rule; what is not claimed is that it was written before this book's first bar.*
+
+
+## Control stopped (2026-09-18 09:1xZ)
+
+The owner stopped the base book `ai-xau-opus-ctx` and its coin to stop
+spending Opus plan quota on a known answer, and moved the funded account's
+mirror to `ai-xau-opus-ctx-b` (registry a0cd934). At the stop the base book
+had 167 rows, 138 real answers, **1 entry** (a SHORT on 2026-09-17 22:00Z,
+stopped, -1.0R; net -0.59 USD on the book) - so the earlier "NONE on every
+real answer" holds for 137 of 138. Both books were stopped via
+/api/paper/stop (final.json kept; live record under data/live untouched);
+the launcher row is kept commented (e4645d4) so the id is never reused.
+The comparison in this registration is therefore against a FROZEN control:
+the base rate is 1/138 at the stop, and any later bar counts only for `-b`.
+The mirror move does not change `-b`'s prompt or book; it changes only what
+the account follows.
