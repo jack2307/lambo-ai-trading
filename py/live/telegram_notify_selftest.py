@@ -362,6 +362,133 @@ def main() -> int:
           T.lag_alarms("b", evs, st12, now, 60), [])
     check("the default constant really is off", T.LAG_ALARM_DEFAULT_S, 0)
 
+    print("\n15. a healthy mirror whose every order is refused")
+    def fail(ms, action="close", **kw):
+        return dict({"kind": "order-failed", "at": ms, "action": action}, **kw)
+
+    run3 = [fail(now - 30_000), fail(now - 45_000), fail(now - 60_000)]
+    ok, n, newest, oldest = T.failing(run3, 3)
+    check("three in a row is failing", (ok, n), (True, 3))
+    check("counted from the NEWEST backwards", newest["at"], now - 30_000)
+    check("and the streak's START is the oldest of the run", oldest["at"], now - 60_000)
+    check("two in a row is not, at a threshold of three",
+          T.failing(run3[:2], 3)[0], False)
+    broken = [fail(now - 30_000), {"kind": "opened", "at": now - 45_000},
+              fail(now - 60_000), fail(now - 75_000)]
+    check("a success BREAKS the streak - it is not a pause in one",
+          T.failing(broken, 3), (False, 1, None, None))
+    check("a line with no timestamp cannot be ordered and is dropped",
+          T.failing([fail(now - 10_000), {"kind": "order-failed"}] + run3, 3)[1], 4)
+    check("no events is not failing", T.failing([], 3)[0], False)
+
+    st13: dict = {}
+    m1 = T.order_failures("ai-xau-ds-ctx", "vantage-cent",
+                          [fail(now - 30_000, error="Market closed"),
+                           fail(now - 45_000, error="Market closed"),
+                           fail(now - 60_000, error="Market closed")],
+                          st13, now, 3)
+    check("the alert fires once on the transition", len(m1), 1)
+    check("naming the book and the account",
+          "ai-xau-ds-ctx" in m1[0] and "vantage-cent" in m1[0], True)
+    check("the broker's own reason, not a kind name",
+          "Market closed" in m1[0] and "order-failed" not in m1[0], True)
+    check("how long it has been failing, from the START of the streak",
+          "(1 min)" in m1[0], True)
+    check("and what a failing CLOSE means for the account",
+          "still holding a trade the book has already exited" in m1[0], True)
+    check("the same streak next poll is silent",
+          T.order_failures("ai-xau-ds-ctx", "vantage-cent",
+                           [fail(now - 30_000)] * 3, st13, now, 3), [])
+
+    st14: dict = {}
+    m2 = T.order_failures("b", "a", [fail(now - 10_000, action="open", side="buy",
+                                          volume=0.06)] * 3, st14, now, 3)
+    check("an OPEN says the size and side and claims nothing about a holding",
+          "open buy 0.06 lots" in m2[0] and "already exited" not in m2[0], True)
+    check("a failure with no error at all still alerts",
+          "no reason given" in T.order_failures("b", "a2", [fail(now)] * 3,
+                                                {}, now, 3)[0], True)
+    check("and a retcode is used when that is all there is",
+          "retcode 10018" in T.order_failures("b", "a3",
+                                              [fail(now, retcode=10018)] * 3,
+                                              {}, now, 3)[0], True)
+
+    back = T.order_failures("b", "a", [{"kind": "opened", "at": now}] + [fail(now - 60_000)] * 3,
+                            st14, now, 3)
+    check("a SUCCESS clears it and says so", len(back), 1)
+    check("in the words of a recovery", "accepted again" in back[0], True)
+    st15 = {"order_fail": {"a/b": True}}
+    check("but a worse state does NOT retract the alarm",
+          T.order_failures("b", "a", [{"kind": "refused", "at": now}], st15, now, 3), [])
+    check("and it stays latched so the recovery can still be announced later",
+          st15["order_fail"]["a/b"], True)
+    check("the shipped default is three", T.FAIL_STREAK_DEFAULT, 3)
+    check("and the cadence is under a minute of a streak forming", T.FAIL_CHECK_MS, 120_000)
+
+    print("\n16. the daily line: what the deciders spent and what the account banked")
+    until = T.day_start(now)
+    since = until - 86_400_000
+    check("the day boundary is midnight UTC of the day now falls in",
+          until, at(2026, 9, 16, 0, 0))
+
+    decs = [{"at": since + 60_000, "cost_usd": 0.0012},
+            {"at": since + 120_000, "cost_usd": 0.0008},
+            {"at": until + 60_000, "cost_usd": 9.0},        # the NEW day
+            {"at": since - 60_000, "cost_usd": 9.0}]        # the day before
+    check("only the day being reported is counted, at both ends",
+          T.model_day(decs, since, until), (2, 0.002))
+    check("a plan reports None and not a zero nobody measured",
+          T.model_day([{"at": since + 1}, {"at": since + 2}], since, until), (2, None))
+    check("a mixed day reports the dollars that WERE measured",
+          T.model_day([{"at": since + 1}, {"at": since + 2, "cost_usd": 0.5}],
+                      since, until), (2, 0.5))
+    check("no calls at all", T.model_day([], since, until), (0, None))
+
+    fills = [{"exit_time": since + 1, "r": 1.5},
+             {"exit_time": until - 1, "r": -0.5},
+             {"exit_time": until, "r": 99.0},          # the new day's, not ours
+             {"exit_time": since - 1, "r": 99.0}]
+    check("a book's R is summed over the trades that CLOSED in the day",
+          T.book_r(fills, since, until), 1.0)
+    check("by exit and not by entry", T.book_r([{"entry_time": since + 1, "r": 5.0,
+                                                 "exit_time": until + 5}], since, until), 0.0)
+
+    brokers = [{"account": "vantage-cent", "currency": "USC",
+                "fills": [{"exitTime": since + 1, "pnl": 120.0},
+                          {"exitTime": until - 1, "pnl": -20.0},
+                          {"exitTime": until, "pnl": 999.0}]},
+               {"account": "vantage-cent", "currency": "USC",
+                "fills": [{"exitTime": since + 5, "pnl": 5.0}]}]
+    check("the account's day is summed across every book it mirrors",
+          T.account_day(brokers, since, until), (105.0, 3))
+    check("a fill with no pnl is not counted as a zero",
+          T.account_day([{"fills": [{"exitTime": since + 1}]}], since, until), (0.0, 0))
+
+    pairs = T.ai_books([book("ai-xau-ds-ctx"), book("ai-xau-ds-ctx-coin"),
+                        book("xau-ema"), book("ai-xau-opus-ctx")])
+    check("a book is an AI campaign when it has a coin beside it",
+          pairs, {"ai-xau-ds-ctx": "ai-xau-ds-ctx-coin"})
+    check("a rule book is not in the summary at all", "xau-ema" in pairs, False)
+    check("and neither is a campaign started without its control",
+          "ai-xau-opus-ctx" in pairs, False)
+
+    ln = T.ai_line("ai-xau-ds-ctx", 96, 0.0021, 1.25, -0.5)
+    check("the AI line carries the calls, the cost and both Rs",
+          "96 calls" in ln and "$0.0021" in ln and "+1.25R" in ln and "coin -0.50R" in ln,
+          True)
+    check("a plan says plan and not $0.00",
+          "plan" in T.ai_line("b", 96, None, 0.0, 0.0), True)
+    check("a book whose coin is unreadable says so rather than claiming a tie",
+          "no coin" in T.ai_line("b", 1, None, 0.0, None), True)
+
+    al = T.account_line("vantage-cent", "USC", 105.0, 3)
+    check("the money line NAMES the currency rather than converting it",
+          "+105.00 USC" in al and "3 exits" in al, True)
+    check("one exit is not pluralised",
+          "1 exit" in T.account_line("a", "USC", 1.0, 1), True)
+    check("a day with no exits says so, not 0.00",
+          T.account_line("a", "USC", 0.0, 0), "\u00b7 <b>a</b> \u2014 no exits")
+
     print(f"\n{'all checks passed' if not FAIL else str(FAIL) + ' CHECK(S) FAILED'}")
     return 1 if FAIL else 0
 

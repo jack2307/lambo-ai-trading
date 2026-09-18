@@ -8,8 +8,13 @@ Two jobs, one process:
 * **It watches.** Polls `/api/paper/status`, `/api/paper/accounts` and each
   account's `/api/paper/broker-events` and announces what changed: a trade
   opened, a trade closed, a guard fired, a feed died, an account stopped
-  mirroring a book, a terminal refused to send. Nothing here reaches a book —
-  it reads the same routes the UI reads, and every one of them is a GET.
+  mirroring a book, a terminal refused to send, a healthy mirror whose every
+  order is coming back refused. Nothing here reaches a book — it reads the
+  same routes the UI reads, and every one of them is a GET.
+* **It sums up, once a day.** One message after midnight UTC for the day that
+  ENDED: entry lag per funded book, what each AI campaign spent and whether it
+  beat its own coin, and what the funded accounts actually banked in their own
+  currency. The only thing here that speaks without something having changed.
 * **It answers.** Polls `getUpdates` and replies to `/status`, `/books`, `/ai`.
   **Only the allowlisted chat gets an answer.** Anything from another chat is
   refused and logged, and refused with a message that tells the sender nothing
@@ -183,6 +188,27 @@ LAG_CHECK_MS = 15 * 60_000
 # path is not running, which is a real thing to be told.
 LAG_ALARM_DEFAULT_S = 0
 
+# An order that keeps failing, and how often a HEALTHY funded book is asked.
+#
+# Measured 2026-09-17: ds-ctx's executor logged `order-failed` every fifteen
+# seconds for seven and a half hours - 453 lines - and nothing said a word. Not
+# because `order-failed` was unwatched; it is in ALARMING_KINDS. Because
+# `broker_alarms` is only ever called for books an account should be mirroring
+# and IS NOT, and that executor was alive and reporting all night. A book whose
+# mirror is perfectly healthy and whose every order is refused was structurally
+# invisible - the same hole `clipped` fell through.
+#
+# Three in a row is forty-five seconds at the executor's fifteen-second poll:
+# past one transient refusal, short of a minute. Configurable at
+# `[alerts.watch] order_fail_streak` for a desk that wants it slower.
+#
+# Two minutes between checks rather than thirty. The gap-triggered fetch costs
+# nothing on a healthy desk because there is no gap; this one is paid for on
+# every poll of every funded book, and two minutes is the most latency worth
+# accepting for "the account is holding a trade the book has already exited".
+FAIL_STREAK_DEFAULT = 3
+FAIL_CHECK_MS = 2 * 60_000
+
 
 # --------------------------------------------------------------- the secret
 
@@ -355,6 +381,99 @@ def lag_alarm_s() -> int:
     return int(m.group(1)) if m else LAG_ALARM_DEFAULT_S
 
 
+def fail_streak_n() -> int:
+    """How many consecutive failures count as failing, from the watch's config."""
+    try:
+        text = io.open(os.path.join(ROOT, "config", "local.toml"), encoding="utf-8").read()
+    except OSError:
+        return FAIL_STREAK_DEFAULT
+    m = re.search(r"\[alerts\.watch\][^\[]*?order_fail_streak\s*=\s*(\d+)", text, re.S)
+    return max(1, int(m.group(1))) if m else FAIL_STREAK_DEFAULT
+
+
+def describe_action(event: dict) -> str:
+    """What the executor was trying to do, in the words someone acts on.
+
+    `action` alone is the verb; the size and side are what say whether this is
+    a position going on or one that will not come off.
+    """
+    action = str(event.get("action") or "an order")
+    sent = event.get("sent") if isinstance(event.get("sent"), dict) else {}
+    lots = event.get("volume") or sent.get("volume")
+    side = event.get("side") or sent.get("type") or ""
+    bits = [action]
+    if side:
+        bits.append(str(side))
+    if isinstance(lots, (int, float)):
+        bits.append(f"{lots:g} lots")
+    return " ".join(bits)
+
+
+def failing(events: list, need: int) -> tuple:
+    """(is it failing, how many in a row, the newest, the oldest of the run).
+
+    Counted from the NEWEST backwards and broken by any other kind, because
+    that is what "still failing" means: a success or a stop in between is the
+    end of a streak, not a pause in one. A file whose last line is a success
+    reports not failing however many failures sit above it.
+    """
+    ordered = sorted((e for e in (events or []) if e.get("at")),
+                     key=lambda e: int(e.get("at") or 0), reverse=True)
+    run: list = []
+    for e in ordered:
+        if e.get("kind") != "order-failed":
+            break
+        run.append(e)
+    if len(run) < need:
+        return False, len(run), None, None
+    return True, len(run), run[0], run[-1]
+
+
+def order_failures(run_id: str, account_id: str, events: list, state: dict,
+                   now_ms: float, need: int) -> list[str]:
+    """A book whose orders keep being refused, said once and cleared once.
+
+    The message names the action rather than the kind, because "order-failed"
+    sends someone to a log and "close 0.06 lots" tells them what the account is
+    stuck holding. And when the failing action is a CLOSE it says the
+    consequence outright: the account is still in a trade the book has already
+    exited, which is the only part of this an owner has to act on tonight.
+    """
+    key = f"{account_id}/{run_id}"
+    seen: dict = state.setdefault("order_fail", {})
+    was = bool(seen.get(key))
+    bad, count, newest, oldest = failing(events, need)
+
+    if bad and not was:
+        seen[key] = True
+        mins = (now_ms - int(oldest.get("at") or now_ms)) / 60000
+        why = str(newest.get("error") or newest.get("comment")
+                  or (f"retcode {newest['retcode']}" if newest.get("retcode") is not None else "")
+                  or "no reason given")
+        action = describe_action(newest)
+        tail = ""
+        if "close" in action.lower():
+            tail = (" The account is still holding a trade the book has already exited.")
+        return [
+            f"⛔ <b>{esc(run_id)}</b> on <b>{esc(account_id)}</b> — "
+            f"<code>{esc(action)}</code> has failed {count} times in a row "
+            f"({mins:.0f} min): {esc(why)}.{tail}"
+        ]
+    if was and not bad:
+        # Cleared only by an event that is actually GOOD news. A streak can
+        # also fall short because the newest line is `refused` or
+        # `autotrading-off` - a worse state, not a recovery - and saying
+        # "accepted again" there would retract an alarm while the account is
+        # still stuck. Those latch silently and their own alert speaks.
+        top = max((e for e in (events or []) if e.get("at")),
+                  key=lambda e: int(e.get("at") or 0), default=None)
+        if top is not None and str(top.get("kind")) not in ALARMING_KINDS:
+            seen[key] = False
+            return [f"✅ <b>{esc(run_id)}</b> on <b>{esc(account_id)}</b> — "
+                    f"orders are being accepted again."]
+    return []
+
+
 def lags(events: list, now_ms: float, window_ms: float = LAG_WINDOW_MS) -> list[float]:
     """Seconds between the bar each entry was PRICED at and when the desk learned it.
 
@@ -379,6 +498,111 @@ def lags(events: list, now_ms: float, window_ms: float = LAG_WINDOW_MS) -> list[
             continue
         out.append((float(learned) - float(t)) / 1000.0)
     return out
+
+
+def day_start(now_ms: float) -> float:
+    """Midnight UTC of the day `now_ms` falls in, in ms.
+
+    UTC and not the broker's clock: the summary is read against a calendar day
+    and the desk's other daily boundary - the alert's own `lag_day` - is UTC
+    too. Two day boundaries in one message would be worse than a boundary that
+    is an hour off from the trading session.
+    """
+    t = dt.datetime.utcfromtimestamp(now_ms / 1000)
+    return dt.datetime(t.year, t.month, t.day, tzinfo=dt.timezone.utc).timestamp() * 1000
+
+
+def model_day(decisions: list, since_ms: float, until_ms: float) -> tuple:
+    """(calls, dollars) for a model's day; dollars is None for a plan.
+
+    None rather than 0.0, and printed as "plan", because a plan call is not
+    free - it draws on a quota - and a column of $0.00 beside a real cost would
+    say the opposite. `cost_of` in advisor.py returns None for the same reason
+    and this is the same claim one layer out.
+    """
+    rows = [d for d in (decisions or [])
+            if since_ms <= float(d.get("at") or 0) < until_ms]
+    priced = [float(d["cost_usd"]) for d in rows
+              if isinstance(d.get("cost_usd"), (int, float))]
+    return len(rows), (sum(priced) if priced else None)
+
+
+def book_r(fills: list, since_ms: float, until_ms: float) -> float:
+    """R banked by a paper book today, from trades that CLOSED today.
+
+    By exit time and not entry: a trade that opened yesterday and closed this
+    morning is today's result, and counting it by entry would put a number in
+    a day whose books had already been read.
+
+    The paper book spells it `exit_time`; a broker fill on the same payload
+    spells it `exitTime`. That is not a typo here - the two DTOs disagree, and
+    a reader who assumes one spelling silently gets zero from the other.
+    """
+    return sum(float(f.get("r") or 0.0) for f in (fills or [])
+               if since_ms <= float(f.get("exit_time") or 0) < until_ms)
+
+
+def account_day(brokers: list, since_ms: float, until_ms: float) -> tuple:
+    """(pnl in the ACCOUNT's currency, exits) banked on a funded account today.
+
+    Summed from the broker's own closed trades rather than from `realised`,
+    which is cumulative since the account was opened and cannot answer "today".
+    Currency is the account's - USC on a cent account - and it is labelled
+    rather than converted, because the number the owner sees in his terminal is
+    the one he should see on his phone.
+    """
+    total, exits = 0.0, 0
+    for b in brokers or []:
+        for f in (b.get("fills") or []):
+            if not since_ms <= float(f.get("exitTime") or 0) < until_ms:
+                continue
+            if isinstance(f.get("pnl"), (int, float)):
+                total += float(f["pnl"])
+                exits += 1
+    return total, exits
+
+
+def ai_line(run_id: str, calls: int, cost, r: float, coin_r) -> str:
+    """One AI book's day: what it spent, and whether it beat its own coin."""
+    spent = "plan" if cost is None else f"${cost:.4f}"
+    against = "no coin" if coin_r is None else f"coin {coin_r:+.2f}R"
+    return (f"· <code>{esc(run_id)}</code> — {calls} calls, {spent} · "
+            f"{r:+.2f}R vs {against}")
+
+
+def ai_books(runs: list) -> dict:
+    """{book: its coin control} for the running books that have one.
+
+    Paired by the id the campaign scripts already use - `<book>-coin` beside
+    `<book>` - and NOT by a flag on the run, because the coin book is an
+    ordinary `external` run and nothing on the payload tells the two apart.
+
+    Having a coin is also what selects the population. Every AI campaign
+    creates one; the rule-based books have none, and a rule book in this
+    summary would be a row reading "0 calls, $0" every day forever. A book
+    started with --no-control is the cost of that choice: it is left out, and
+    the alternative - listing every book and hoping the reader skips the empty
+    ones - is the thing that teaches a reader to stop opening the message.
+    """
+    ids = {str(r.get("id") or "") for r in (runs or [])}
+    return {rid: f"{rid}-coin"
+            for rid in sorted(i for i in ids if i and not i.endswith("-coin"))
+            if f"{rid}-coin" in ids}
+
+
+def account_line(account_id: str, currency: str, pnl: float, exits: int) -> str:
+    """The funded account's own day, in the units the terminal shows.
+
+    The currency is NAMED and not converted. On a cent account the terminal
+    says USC and a division by a hundred here would put a second, quieter
+    number in front of the owner - which is the trap that cost this desk a
+    day on 2026-09-17.
+    """
+    unit = esc(currency or "?")
+    if not exits:
+        return f"· <b>{esc(account_id)}</b> — no exits"
+    return (f"· <b>{esc(account_id)}</b> — {pnl:+.2f} {unit} "
+            f"over {exits} exit{'' if exits == 1 else 's'}")
 
 
 def lag_line(run_id: str, seconds: list[float]) -> str:
@@ -1229,9 +1453,32 @@ def main() -> int:
                 # entries cannot be read back from it: by the time anyone asks,
                 # most of them are gone.
                 thr = lag_alarm_s()
+                need = fail_streak_n()
                 lag_due: dict = state.setdefault("lag_checked", {})
+                fail_due: dict = state.setdefault("fail_checked", {})
                 rows: dict = state.setdefault("lag_rows", {})
                 for book in sorted(have):
+                    # A HEALTHY funded book's own broker events, on the faster
+                    # of the two clocks here. This read is the one that was
+                    # missing: the fetch above only ever sees books in the GAP,
+                    # so a mirror that is alive and refusing every order is
+                    # structurally invisible - the account goes on reporting
+                    # the book as mirroring while nothing it sends reaches the
+                    # broker.
+                    #
+                    # Keyed by account AND book, like the clipping check below
+                    # and unlike the lag one, because two funded accounts can
+                    # mirror the same book and each has its own executor.
+                    if now_ms - float(fail_due.get(f"{aid}/{book}") or 0) >= FAIL_CHECK_MS:
+                        fail_due[f"{aid}/{book}"] = now_ms
+                        try:
+                            fail_evs = events_for(book, aid)
+                        except Exception:  # noqa: BLE001
+                            pass          # one unreadable book, not the rest
+                        else:
+                            lines += order_failures(book, aid, fail_evs, state,
+                                                    now_ms, need)
+
                     if now_ms - float(lag_due.get(book) or 0) >= LAG_CHECK_MS:
                         lag_due[book] = now_ms
                         try:
@@ -1265,12 +1512,68 @@ def main() -> int:
             rows = state.get("lag_rows") or {}
             if state.get("lag_day") is None:
                 state["lag_day"] = today
-            elif state["lag_day"] != today and rows:
+            elif state["lag_day"] != today:
                 state["lag_day"] = today
-                lines.append("\n".join(
-                    ["<b>Entry lag, last 24h</b>"]
-                    + [lag_line(k, v) for k, v in sorted(rows.items())]
-                ))
+                # The day being reported is the one that ENDED, and it is
+                # bounded at BOTH ends. Without the upper bound a watch
+                # restarted at ten in the morning would report the day as
+                # though it were over and fold ten hours of the new one into
+                # it, and nothing in the message would show that it had.
+                until = day_start(now_ms)
+                since = until - 86_400_000
+                block: list[str] = []
+                if rows:
+                    block += ["<b>Entry lag, last 24h</b>"]
+                    block += [lag_line(k, v) for k, v in sorted(rows.items())]
+
+                # What the deciders spent, and whether they beat their coin.
+                #
+                # Fetched here rather than accumulated through the day. This
+                # is once a day for a handful of books, on routes the watch
+                # already reads; accumulating it would put a second copy of
+                # the desk's own numbers in the watch's state file, free to
+                # drift from them after every restart.
+                spent: list[str] = []
+                for book, coin in ai_books(runs).items():
+                    try:
+                        got = desk(f"/api/paper/reasoning/{urllib.parse.quote(book)}?limit=500")
+                    except Exception:  # noqa: BLE001
+                        continue      # left out, NOT reported as a quiet day
+                    calls, cost = model_day(got.get("decisions") or [], since, until)
+                    mine = coin_r = None
+                    try:
+                        det = desk(f"/api/paper/run/{urllib.parse.quote(book)}?bars=1")
+                        mine = book_r(det.get("fills") or [], since, until)
+                    except Exception:  # noqa: BLE001
+                        pass
+                    try:
+                        det = desk(f"/api/paper/run/{urllib.parse.quote(coin)}?bars=1")
+                        coin_r = book_r(det.get("fills") or [], since, until)
+                    except Exception:  # noqa: BLE001
+                        pass
+                    if mine is not None:
+                        spent.append(ai_line(book, calls, cost, mine, coin_r))
+                if spent:
+                    block += ["", "<b>AI books yesterday</b>"] + spent
+
+                # And the money, from the SAME status payload the rest of this
+                # poll already used. A `brokers` entry belongs to one book on
+                # one account, so an account's day is the sum of its entries
+                # across every book it mirrors.
+                money: list[str] = []
+                for aid in sorted(str(a.get("id") or "")
+                                  for a in accounts if a.get("real_money")):
+                    held = [b for r in runs for b in (r.get("brokers") or [])
+                            if str(b.get("account") or "") == aid]
+                    pnl, exits = account_day(held, since, until)
+                    unit = next((str(b.get("currency")) for b in held
+                                 if b.get("currency")), "")
+                    money.append(account_line(aid, unit, pnl, exits))
+                if money:
+                    block += ["", "<b>Funded accounts yesterday</b>"] + money
+
+                if block:
+                    lines.append("\n".join(block))
 
             if state.get("api_down"):
                 state["api_down"] = False
