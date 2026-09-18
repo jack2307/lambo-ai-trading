@@ -145,3 +145,39 @@ instruction, and it is the control for this experiment.
 And it does not test the coin. The coin is unchanged, still named in both
 prompts, still flipping — on a **different seed** for the -b book, 17 against
 11, so the two campaigns do not share one control sequence.
+
+## The cold-window confound, and the exact rule for it
+
+**A new book starts with an EMPTY window.** `start_ai_runs.py` creates it,
+the poller feeds it one bar, and the trader decides on that one bar while the
+control — running for days — is deciding on forty. Observed in this book's
+own first row: *"the lone 15m bar closed near its low…"*. At 15m it takes
+about ten hours to reach forty.
+
+So a difference measured over that stretch is partly the prompt and partly
+the window, and nothing separates them after the fact unless it is decided
+now. Raised by a5 from the first two rows, and written here before any
+disagreement rate has been computed.
+
+**THE RULE, pre-committed:** a decision row counts toward the disagreement
+rate, the trade count, the win rate and every R figure **only when the book
+saw a full window** — forty bars. Rows below that are excluded from the
+headline numbers and reported separately as the warm-up, with their count
+stated.
+
+**It is measured, not counted.** The criterion is read out of the row's own
+stored prompt, which carries `LAST <n> BARS of <market>:<tf>`, and the row is
+excluded when `n < 40`. Checked 2026-09-18: that line parses from 55 of 55
+decision rows in `ai-xau-ds-ctx`.
+
+Deliberately not "the first forty rows". Position is a proxy for window size
+and a bad one — a restart, a poller outage or a missed bar makes the fortieth
+row and the fortieth bar different things, and the proxy would then exclude
+warm rows and admit cold ones while looking exactly as tidy. The prompt says
+what the model actually saw, so that is what decides.
+
+**Both arms are filtered by the same rule**, including the control's own rows
+on those bars. A comparison in which one side is filtered is not a
+comparison.
+
+*Added 2026-09-18, after this book was already running and before any disagreement rate had been computed for it. The confound is the same one and the rule is the same rule; what is not claimed is that it was written before this book's first bar.*
