@@ -86,6 +86,30 @@ BOOKS = [
     # levels of this kind.
     ("ai-xau-ds-ctx-otl", "ai-xau-ds-ctx-otl-coin",
      "AI trader - deepseek-flash, prompt otl-context (base + COMEX options positioning block)"),
+    # deepseek-flash a third and fourth time, for the higher-timeframe pair.
+    # `ai-xau-ds-ctx` is the control for both and keeps running unchanged.
+    #
+    # `htf-context` is the base prompt plus one facts block: H4 swing
+    # structure, EMAs, ADX, efficiency, Donchian, and the daily and weekly
+    # levels, all from CLOSED bars on the broker's 21Z anchor. `htf-filter`
+    # is that book plus exactly one sentence, which refuses a side against
+    # the H4 structure label and nothing else. Two books because they are two
+    # claims and the second is only worth reading if the first survives.
+    #
+    # Both must be books of their own for the reason the -otl pair is: their
+    # bars divide into ones where the route answered and ones where it did
+    # not, the `htf` field on every decision row records which, and only a
+    # book of its own can carry that distinction in its record.
+    #
+    # Registered before their first bar at
+    # docs/hypotheses/2026-09-18-htf-context.md, which states the kill
+    # conditions in advance - a disagreement rate under 10% closes the first
+    # claim, and htf-filter taking under a third of the control's entries is
+    # recorded as the rule closing the book.
+    ("ai-xau-ds-ctx-htf", "ai-xau-ds-ctx-htf-coin",
+     "AI trader - deepseek-flash, prompt htf-context (base + H4/D1 facts block)"),
+    ("ai-xau-ds-ctx-htf-filter", "ai-xau-ds-ctx-htf-filter-coin",
+     "AI trader - deepseek-flash, prompt htf-filter (htf-context + one structure-only rule)"),
 ]
 
 # Read from the books the hand-made campaigns are still running on.
