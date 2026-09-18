@@ -3,7 +3,16 @@
 **Registered:** 2026-09-18, **before either book has seen a single bar.**
 Everything below is a pre-commitment; nothing in it may be changed by what the
 books turn out to say.
-**Status:** registered, **NOT started** — two preconditions below are unmet.
+**Status:** RUNNING. Both books and their coins were created on the VPS at
+**2026-09-18T04:07:34Z**, and that is when their record begins. The first
+decision is the 04:15Z close.
+
+The books existed as prompt variants and as launcher rows from 03:35Z and as
+books only from 04:07:34Z; in between both traders polled a run id that did
+not exist and decided nothing. Nothing in that gap is data — there are no
+rows, not even NONE rows — but the start time is written here rather than
+inferred from the first row, because "when did this campaign begin" should
+not be answered by whichever bar happened to be first.
 **Books:** `ai-xau-ds-ctx` (base, already running, untouched) as control,
 against `ai-xau-ds-ctx-htf` (variant `htf-context`) and
 `ai-xau-ds-ctx-htf-filter` (variant `htf-filter`), each with its own coin and

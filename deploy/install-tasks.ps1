@@ -111,6 +111,40 @@ function Roll-LogAside([string]$path, [string]$stamp) {
     return $false
 }
 
+# THE EXPORT'S CADENCE AND ITS TIME LIMIT ARE ONE DECISION.
+#
+# Two adjacent numbers on purpose, because they are not independent: a run
+# that can outlive its own period stops being a schedule and becomes a queue.
+# `MultipleInstances IgnoreNew` then drops the starts it overlaps SILENTLY -
+# the task's history shows successful runs and the gap never appears anywhere.
+# So the limit must stay below the period, and the check below enforces it
+# rather than trusting whoever edits these two lines next.
+#
+# WHY HOURLY TODAY AND NOT FIVE MINUTES. The owner asked for every timeframe
+# on the chart and a5 asked for a 5-minute cadence. It cannot go there yet:
+# `mt5_export.py` re-walks the FULL history on every run - nothing consults
+# the stored file to decide where to resume - so six timeframes every five
+# minutes is twelve full-history pulls an hour against the terminal that is
+# also the price feed and also the funded account. `--days` does not help;
+# it bounds how far back the walk goes, not how much the first call asks for.
+#
+# d1's `--since-stored` resumes from the newest stored bar with one bar of
+# overlap, which makes a routine run cost minutes of data. Resolve-TaskAction
+# REFUSES to register this task against a checkout that lacks it, so the
+# dependency is enforced and not just described.
+#
+# WHEN IT LANDS AND HAS BEEN PROVEN ON THE VPS - read the first run's runtime
+# out of data\paper\logs\bars-export.out rather than assuming it - change
+# these two numbers together to 5 and 4. Not one of them.
+$EXPORT_EVERY_MINUTES = 60
+$EXPORT_LIMIT_MINUTES = 30
+if ($EXPORT_LIMIT_MINUTES -ge $EXPORT_EVERY_MINUTES) {
+    Write-Error ("the export's time limit ($EXPORT_LIMIT_MINUTES min) is not below its period " +
+                 "($EXPORT_EVERY_MINUTES min). A run that outlives its period silently eats the " +
+                 'next start under MultipleInstances=IgnoreNew, and the gap shows up nowhere.')
+    exit 1
+}
+
 $TASKS = @(
     @{ Name = 'flowdesk-api';   Cmd = 'run-fd-api.cmd';   Log = 'fd-api.out';   What = 'the API and the client'
        Principal = 'system'; Trigger = 'startup' },
@@ -157,9 +191,10 @@ $TASKS = @(
     # moved underneath them. The export merges and is read-only, so running it
     # more often than strictly needed costs a few seconds and repairs any hour
     # that was missed.
-    @{ Name = 'flowdesk-htf-export'; Cmd = 'run-htf-export.cmd'; Log = 'htf-export.out'
-       What = 'the H4/D1 bar export the htf route reads'
-       Principal = 'interactive'; Trigger = 'hourly' }
+    @{ Name = 'flowdesk-bars-export'; Cmd = 'run-bars-export.cmd'; Log = 'bars-export.out'
+       What = 'the M1-D1 bar export the chart and the htf route read'
+       Principal = 'interactive'; Trigger = 'hourly'; NeedsPrices = $true
+       Timeframes = 'M1,M5,M15,H1,H4,D1'; BaseSymbol = 'XAUUSD' }
 )
 
 # WHICH terminal the desk reads bars from, per `config/accounts.toml`.
@@ -174,17 +209,86 @@ $TASKS = @(
 # user. The tie-break is a nicety; the owner measurement below is the thing
 # that matters, and it must not start depending on a Python call that could
 # fail on a machine where the tasks still need registering.
-function Get-PricesTerminal([string]$root, [string]$python) {
+function Get-Prices([string]$root, [string]$python) {
     $reader = Join-Path $root 'py\live\accounts.py'
     if (-not (Test-Path $reader)) { return $null }
     try {
         $out = & $python $reader '--prices' 2>&1
         if ($LASTEXITCODE -ne 0) { return $null }
         $doc = ([string]::Join("`n", @($out))) | ConvertFrom-Json
-        if ($doc.terminal) { return [string]$doc.terminal }
+        if ($doc.terminal) {
+            # `symbol_suffix` is legitimately empty on a standard account, so
+            # an absent one is a real answer and only `terminal` refuses.
+            return @{ Terminal = [string]$doc.terminal; Suffix = [string]$doc.symbol_suffix }
+        }
     } catch { }
     return $null
 }
+
+# A task's action arguments, and the reason it cannot have any.
+#
+# ONE function, called by the dry run AND by -Apply, because the first draft
+# had the print and the registration compute the action separately: the dry
+# run showed `cmd.exe /c "run-bars-export.cmd"` with no arguments while the
+# apply would have registered it with three, and the precondition refusals
+# below were invisible until you ran -Apply. A preview that does not preview
+# the refusal is worse than no preview, because it is read as an all-clear.
+#
+# Returns @{ Args; Note; Refusal }. `Refusal` non-null means this task cannot
+# be registered on this machine right now, and says why in a sentence meant
+# to be printed.
+function Resolve-TaskAction($t, [string]$root, [string]$python) {
+    $script = Join-Path $root "deploy\$($t.Cmd)"
+    $plain = "/c `"$script`""
+    if (-not $t.NeedsPrices) { return @{ Args = $plain; Note = $null; Refusal = $null } }
+
+    $pr = Get-Prices $root $python
+    if (-not $pr) {
+        return @{ Args = $plain; Note = $null; Refusal =
+            'could not read [prices] from config\accounts.toml, so the terminal and symbol ' +
+            'to export from are unknown. Guessing a terminal on a machine with two is how ' +
+            "one account's contract ends up in the other account's file." }
+    }
+
+    # THE EXPORTER MUST BE ABLE TO RESUME, or this must not go on a clock.
+    # Without `--since-stored` every run walks the FULL history: tolerable
+    # hourly for two timeframes, and not tolerable on any cadence for six,
+    # against the terminal that also carries the funded account. Checked
+    # against the exporter's own --help rather than a commit hash, because
+    # the question is what THIS checkout can do.
+    $exporter = Join-Path $root 'py\ingest\mt5_export.py'
+    if (-not (Test-Path $exporter)) {
+        return @{ Args = $plain; Note = $null; Refusal = "missing $exporter" }
+    }
+    $help = & $python $exporter '--help' 2>&1
+    if (-not (($help -join "`n") -match '--since-stored')) {
+        return @{ Args = $plain; Note = $null; Refusal =
+            'py\ingest\mt5_export.py has no --since-stored in this checkout, so every run ' +
+            'would walk the whole history for every timeframe against the terminal that ' +
+            'carries the funded account. Merge the exporter change first.' }
+    }
+
+    $sym = "$($t.BaseSymbol)$($pr.Suffix)"
+    return @{
+        Args    = "/c `"$script`" `"$($pr.Terminal)`" `"$sym`" `"$($t.Timeframes)`""
+        Note    = "exports $sym [$($t.Timeframes)] from $($pr.Terminal)"
+        Refusal = $null
+    }
+}
+
+# Tasks this file used to define and no longer does. `-Apply` exports each
+# one's XML into the same backup folder as the replacements and then removes
+# it, so a rename is reversible exactly like an edit is.
+#
+# `flowdesk-htf-export` became `flowdesk-bars-export` on 2026-09-18 when the
+# export stopped being about the higher timeframes - the owner asked for every
+# timeframe on the chart, so it pulls M1 through D1 and "htf" named only the
+# two it started with. Leaving the old one registered would run the old
+# wrapper hourly beside the new one: two processes attaching to the same
+# terminal, writing the same files, on two schedules.
+$RETIRED = @(
+    @{ Name = 'flowdesk-htf-export'; Why = 'renamed to flowdesk-bars-export (M1-D1, not just H4/D1)' }
+)
 
 # WHO owns the MetaTrader terminal, measured rather than assumed.
 #
@@ -224,7 +328,8 @@ function Get-TerminalPrincipal {
     # order is not a reason, and a printed principal that names a different
     # terminal than the task will attach to is a line an operator has to
     # reconcile.
-    $preferred = Get-PricesTerminal $Root $Python
+    $p = Get-Prices $Root $Python
+    $preferred = if ($p) { $p.Terminal } else { $null }
     if ($preferred) {
         $match = @($found | Where-Object { $_.Path -and ($_.Path -ieq $preferred) })
         if ($match.Count) { return $match[0] }
@@ -241,7 +346,12 @@ foreach ($t in $TASKS) {
     try { $exists = Get-ScheduledTask -TaskName $t.Name -ErrorAction Stop } catch { }
     Write-Host ''
     Write-Host "  $($t.Name) - $($t.What)" -ForegroundColor White
-    Note "action    : cmd.exe /c `"$script`"   (workdir $Root)"
+    $res = Resolve-TaskAction $t $Root $Python
+    Note "action    : cmd.exe $($res.Args)   (workdir $Root)"
+    if ($res.Note) { Note "exports   : $($res.Note)" }
+    if ($res.Refusal) {
+        Write-Host "   WOULD REFUSE: $($res.Refusal)" -ForegroundColor Red
+    }
     if ($t.Principal -eq 'interactive') {
         $own = Get-TerminalPrincipal
         if ($own) {
@@ -253,8 +363,8 @@ foreach ($t in $TASKS) {
             Write-Host '               as the account that owns it. Start the terminal in the RDP' -ForegroundColor Red
             Write-Host '               session first; -Apply will refuse this task until then.' -ForegroundColor Red
         }
-        Note "trigger   : hourly at five past, from the next such minute"
-        Note "settings  : ExecutionTimeLimit=30m, MultipleInstances=IgnoreNew, StartWhenAvailable"
+        Note "trigger   : every $EXPORT_EVERY_MINUTES min at five past, from the next such minute"
+        Note "settings  : ExecutionTimeLimit=${EXPORT_LIMIT_MINUTES}m, MultipleInstances=IgnoreNew, StartWhenAvailable"
     } else {
         Note "principal : SYSTEM, ServiceAccount, Highest"
         Note "trigger   : at startup"
@@ -263,6 +373,17 @@ foreach ($t in $TASKS) {
     Note "stdout    : appended to data\paper\logs\$($t.Log), with a boundary line per start"
     if ($exists) { Note "currently : present, State=$($exists.State)" } else { Note 'currently : NOT REGISTERED' }
     if (-not (Test-Path $script)) { Write-Host "   MISSING   : $script" -ForegroundColor Red }
+}
+
+foreach ($r in $RETIRED) {
+    $old = Get-DeskTaskSafe $r.Name
+    if ($old) {
+        Write-Host ''
+        Write-Host "  $($r.Name) - WILL BE REMOVED" -ForegroundColor Yellow
+        Note "reason    : $($r.Why)"
+        Note "currently : present, State=$($old.State)"
+        Note 'its XML is exported to the backup folder first, so this is reversible'
+    }
 }
 
 if (-not $Apply) {
@@ -312,6 +433,39 @@ foreach ($t in $TASKS) {
     }
 }
 
+# ---- tasks this file no longer defines ----
+#
+# Backed up the same way a replacement is and then removed. A rename that
+# left the old task registered would run the old wrapper on its own schedule
+# beside the new one: two processes attaching to the same terminal and
+# writing the same files, which is worse than either alone and would look
+# like the export working.
+$retired = @()
+foreach ($r in $RETIRED) {
+    $old = Get-DeskTaskSafe $r.Name
+    if (-not $old) { continue }
+    New-Item -ItemType Directory -Force -Path $backup | Out-Null
+    $xmlPath = Join-Path $backup "$($r.Name).xml"
+    try {
+        Export-ScheduledTask -TaskName $r.Name | Out-File $xmlPath -Encoding utf8 -ErrorAction Stop
+    } catch {
+        # Not fatal, but not silent either: removing a definition that was
+        # never captured is the one step here with no way back.
+        Write-Host "  NOT removing $($r.Name): its XML could not be exported ($($_.Exception.Message))." -ForegroundColor Red
+        Write-Host '  Refusing to delete a definition that cannot be restored.' -ForegroundColor Red
+        $skipped += "$($r.Name) (could not export its XML, so it was left registered)"
+        continue
+    }
+    try {
+        Unregister-ScheduledTask -TaskName $r.Name -Confirm:$false -ErrorAction Stop
+        Write-Host "  removed $($r.Name) - $($r.Why)" -ForegroundColor Yellow
+        $retired += $r.Name
+    } catch {
+        Write-Host "  could not remove $($r.Name): $($_.Exception.Message)" -ForegroundColor Red
+        $skipped += "$($r.Name) (could not be unregistered)"
+    }
+}
+
 # ---- what gets registered, what gets its log rolled, and what could not ----
 #
 # THE LOG IS ROLLED AFTER THE REGISTER, NOT BEFORE, and only when this apply
@@ -337,12 +491,22 @@ foreach ($t in $TASKS) {
         $skipped += "$($t.Name) (missing $($t.Cmd))"
         continue
     }
-    $action = New-ScheduledTaskAction -Execute 'cmd.exe' -Argument "/c `"$script`"" -WorkingDirectory $Root
+    # The same call the dry run made, so what was previewed is what is
+    # registered - arguments, refusals and all.
+    $res = Resolve-TaskAction $t $Root $Python
+    if ($res.Refusal) {
+        Write-Host "  NOT registering $($t.Name): $($res.Refusal)" -ForegroundColor Red
+        $skipped += "$($t.Name) ($($res.Refusal.Split('.')[0]))"
+        continue
+    }
+    $cmdArgs = $res.Args
+    if ($res.Note) { Note "$($t.Name) $($res.Note)" }
+    $newSig = (("{0}|{1}|{2}" -f 'cmd.exe', $cmdArgs, $Root)).Trim()
+    $action = New-ScheduledTaskAction -Execute 'cmd.exe' -Argument $cmdArgs -WorkingDirectory $Root
     # Read BEFORE the register replaces it. If the action is unchanged there
     # is nothing stale in that task's log and it is left alone.
     $wasRunning = $null -ne (Get-DeskTaskSafe $t.Name)
     $oldSig = Get-ActionSignature (Get-DeskTaskSafe $t.Name)
-    $newSig = (("{0}|{1}|{2}" -f 'cmd.exe', ("/c `"$script`""), $Root)).Trim()
     if ($t.Principal -eq 'interactive') {
         $own = Get-TerminalPrincipal
         if (-not $own) {
@@ -366,7 +530,7 @@ foreach ($t in $TASKS) {
         # and is long enough that the machine will be gone first.
         $start = (Get-Date).Date.AddHours((Get-Date).Hour).AddHours(1).AddMinutes(5)
         $trigger = New-ScheduledTaskTrigger -Once -At $start `
-            -RepetitionInterval (New-TimeSpan -Hours 1) `
+            -RepetitionInterval (New-TimeSpan -Minutes $EXPORT_EVERY_MINUTES) `
             -RepetitionDuration ([TimeSpan]::FromDays(3650))
     } else {
         $principal = New-ScheduledTaskPrincipal -UserId 'SYSTEM' -LogonType ServiceAccount -RunLevel Highest
@@ -402,7 +566,7 @@ foreach ($t in $TASKS) {
         # that hangs on a terminal that stopped answering should die before
         # the next one is due.
         $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries `
-            -StartWhenAvailable -ExecutionTimeLimit (New-TimeSpan -Minutes 30) `
+            -StartWhenAvailable -ExecutionTimeLimit (New-TimeSpan -Minutes $EXPORT_LIMIT_MINUTES) `
             -MultipleInstances IgnoreNew
     } else {
         $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries `
@@ -442,6 +606,13 @@ if ($skipped.Count) {
     foreach ($m in $skipped) { Write-Host "  $m" -ForegroundColor Red }
     Write-Host '  Fix the cause and run -Apply again. Re-registering the others is' -ForegroundColor DarkGray
     Write-Host '  harmless: their actions will be unchanged, so their logs are left alone.' -ForegroundColor DarkGray
+}
+if ($retired.Count) {
+    Write-Host "$($retired.Count) task(s) were REMOVED: $($retired -join ', ')" -ForegroundColor Yellow
+    foreach ($n in $retired) {
+        Write-Host ("  put it back with: Register-ScheduledTask -TaskName $n -Xml (Get-Content '" +
+                    (Join-Path $backup "$n.xml") + "' -Raw) -Force") -ForegroundColor DarkGray
+    }
 }
 if ($unrolled.Count) {
     Write-Host "$($unrolled.Count) log(s) could not be rolled aside: $($unrolled -join ', ')" -ForegroundColor Yellow
