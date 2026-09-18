@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Menu } from 'lucide-react'
 
 import type { Book, View } from '@/App'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { GuardsPanel } from '@/components/GuardsPanel'
-import type { BrokerAccount, MarketInfo } from '@/lib/api'
+import type { BrokerAccount, LiveBar, MarketInfo } from '@/lib/api'
+import { liveAge } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
 interface Props {
@@ -15,6 +16,9 @@ interface Props {
   book: Book
   accounts: BrokerAccount[]
   isLive: (a: BrokerAccount) => boolean
+  /** The live stream, subscribed once in `App`. */
+  ticks: Record<string, LiveBar>
+  streaming: boolean
   /** Narrow screens only: the sidebar is an overlay there and needs opening. */
   onOpenMenu: () => void
 }
@@ -41,6 +45,12 @@ export const BROKER_STALE_MS = 45_000
  */
 export const APP_BAR_H = 37
 
+/** A price, formatted as the Desk formats one. */
+const quoteFmt = (v: number): string =>
+  Math.abs(v) >= 1000
+    ? v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    : v.toFixed(Math.abs(v) >= 10 ? 2 : 4)
+
 /** The two screens that read one market at a time; the rest ignore the picker. */
 const MARKET_VIEWS: View[] = ['workbench', 'tape']
 
@@ -54,7 +64,7 @@ const MARKET_VIEWS: View[] = ['workbench', 'tape']
  * screen and never clicks: which market, what the broker side is doing, and
  * what the selected account is worth.
  */
-export function AppBar({ view, markets, market, onMarketChange, book, accounts, isLive, onOpenMenu }: Props) {
+export function AppBar({ view, markets, market, onMarketChange, book, accounts, isLive, ticks, streaming, onOpenMenu }: Props) {
   const needsMarket = MARKET_VIEWS.includes(view)
   const [now, setNow] = useState(() => Date.now())
 
@@ -64,6 +74,28 @@ export function AppBar({ view, markets, market, onMarketChange, book, accounts, 
     const timer = window.setInterval(() => setNow(Date.now()), 1000)
     return () => window.clearInterval(timer)
   }, [])
+
+  // The freshest stream for the market this app is pointed at.
+  //
+  // Keyed `market:tf`, and a market can carry several timeframes, so the
+  // newest reading wins - they are the same price seen at different
+  // resolutions, and the oldest of them is the one that looks like a stall.
+  //
+  // It is the MARKET's price and not the book's: the strip shows the same
+  // thing on paper and on an account, because a spread does not belong to a
+  // book. The label names the market it is quoting so it can never be read as
+  // a price for something else.
+  const quote = useMemo(() => {
+    let best: { stream: string; bar: LiveBar } | null = null
+    for (const [stream, bar] of Object.entries(ticks)) {
+      if (!stream.startsWith(`${market}:`)) continue
+      if (!best || bar.at > best.bar.at) best = { stream, bar }
+    }
+    return best
+  }, [ticks, market])
+
+  const spread =
+    quote?.bar.bid != null && quote?.bar.ask != null ? quote.bar.ask - quote.bar.bid : null
 
   const live = accounts.filter(isLive)
   const chosen = typeof book === 'number' ? (accounts.find((a) => a.login === book) ?? null) : null
@@ -81,6 +113,50 @@ export function AppBar({ view, markets, market, onMarketChange, book, accounts, 
       >
         <Menu className="size-4" />
       </button>
+
+      {/* market · last · spread · age. The market is named, so this can never
+          be read as a price for whatever the Desk happens to be showing.
+          Absence is stated: no tick for this market says so rather than
+          leaving a gap that reads as a quiet market. */}
+      <div className="flex items-baseline gap-2">
+        <span className="text-muted-foreground fd-caption">{market || '—'}</span>
+        {quote ? (
+          <>
+            <span className="num fd-body tabular-nums">{quoteFmt(quote.bar.close)}</span>
+            {spread != null ? (
+              <span
+                className="text-muted-foreground num fd-caption tabular-nums"
+                title="ask minus bid, in the market's quote units"
+              >
+                spread {spread.toFixed(spread < 1 ? 2 : 1)}
+              </span>
+            ) : (
+              <span className="text-muted-foreground/60 fd-caption" title="this feed sends no bid/ask">
+                no spread
+              </span>
+            )}
+            {/* The dot pulses only while ticks are arriving. A chart that has
+                silently stopped updating is indistinguishable from a quiet
+                market, and this is the one thing on the strip that tells them
+                apart - so it must not animate when the stream is down. */}
+            <span
+              className={cn(
+                'size-1.5 rounded-full',
+                streaming ? 'bg-lc motion-safe:animate-pulse' : 'bg-muted-foreground/50',
+              )}
+              title={streaming ? 'stream connected' : 'stream down'}
+              aria-hidden
+            />
+            <span className="text-muted-foreground num fd-caption tabular-nums">
+              {liveAge(quote.bar.at, now)}
+            </span>
+          </>
+        ) : (
+          <span className="text-muted-foreground/60 fd-caption">
+            {streaming ? 'no tick yet' : 'stream down'}
+          </span>
+        )}
+      </div>
 
       {needsMarket && (
         <label className="text-muted-foreground flex items-center gap-2 text-[11px]">

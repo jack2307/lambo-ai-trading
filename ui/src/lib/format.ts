@@ -78,3 +78,15 @@ export const FLOW_CLASS_MEANING: Record<string, string> = {
   LP: 'put, buyer-aggressed',
   SC: 'call, seller-aggressed',
 }
+
+/**
+ * How long ago a live reading arrived, in seconds.
+ *
+ * Seconds and not minutes: this measures a feed that should move several times
+ * a second, and "0 min" would say nothing about whether it is moving. Lives
+ * here rather than in a page because the Desk and the status strip both show
+ * it and they must not phrase it differently — the same instant reading two
+ * ways on one screen is the defect this repo spent the week removing.
+ */
+export const liveAge = (at: number, now: number): string =>
+  `${Math.max(0, Math.round((now - at) / 1000))} s ago`

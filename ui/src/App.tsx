@@ -13,6 +13,7 @@ import { Workbench } from '@/pages/Workbench'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Toaster } from '@/components/ui/sonner'
 import { api, type BrokerAccount, type Catalog } from '@/lib/api'
+import { useTicks } from '@/lib/ticks'
 
 export type View = 'desk' | 'analytics' | 'workbench' | 'tape' | 'research' | 'floor' | 'settings'
 
@@ -91,6 +92,13 @@ export default function App() {
     writeBook(next)
   }, [])
   const [error, setError] = useState<string | null>(null)
+  // ONE tick source for the whole app.
+  //
+  // `useTicks` opens an EventSource, so calling it in two components would open
+  // two connections to `/api/paper/stream` and give the strip and the chart two
+  // answers a fraction of a second apart. Same rule as the accounts poll: one
+  // subscription, one answer, handed down.
+  const { ticks, connected: streaming } = useTicks()
   const [railed, setRailed] = useState<boolean>(readRail)
   const [drawerOpen, setDrawerOpen] = useState(false)
 
@@ -213,6 +221,8 @@ export default function App() {
         book={book}
         accounts={accounts}
         isLive={isLive}
+        ticks={ticks}
+        streaming={streaming}
         onOpenMenu={() => setDrawerOpen(true)}
       />
 
@@ -222,7 +232,7 @@ export default function App() {
           one: the default screen must not be held behind a request it does not
           use, and Analytics asks only the paper routes. */}
       {view === 'desk' ? (
-        <Desk book={book} />
+        <Desk book={book} ticks={ticks} streaming={streaming} />
       ) : view === 'analytics' ? (
         <Analytics />
       ) : view === 'floor' ? (

@@ -40,9 +40,8 @@ import { PriceChart, type ActiveIndicator, type ChartTrade } from '@/components/
 import { Skeleton } from '@/components/ui/skeleton'
 import type { Book } from '@/App'
 import { api, type BacktestTrade, type Bar, type BrokerEvent, type LiveBar, type PaperBroker, type PaperEvent, type PaperRun, type PaperRunDetail } from '@/lib/api'
-import { clock, num } from '@/lib/format'
+import { clock, num, liveAge } from '@/lib/format'
 import { toast } from 'sonner'
-import { useTicks } from '@/lib/ticks'
 import { ClaudeMark, DeepSeekMark, OpenAIMark } from '@/components/BrandMarks'
 import type { Consultation, Decision, Reasoning } from '@/lib/api'
 import { APP_BAR_H } from '@/components/AppBar'
@@ -236,7 +235,8 @@ const ago = (ms: number | null | undefined, now: number): string => {
  * ninety seconds, so anything shown here is inside a minute and a half, and
  * "0 min" would say nothing about whether the feed is moving.
  */
-const liveAge = (at: number, now: number): string => `${Math.max(0, Math.round((now - at) / 1000))} s ago`
+/* `liveAge` moved to lib/format.ts: the status strip shows the same age and
+ * the two must not phrase it differently. */
 
 /**
  * `ask − bid`, at the precision the price itself is quoted in.
@@ -573,7 +573,14 @@ function brokerMoney(v: number | null | undefined, currency: string | null | und
   return `${sign}${v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency ?? ''}`.trim()
 }
 
-export function Desk({ book }: { book: Book }) {
+export function Desk({ book, ticks, streaming }: {
+  book: Book
+  /** The live stream, subscribed ONCE in `App` and handed down. Two
+   *  subscriptions would be two answers a fraction of a second apart, on one
+   *  screen, about one price. */
+  ticks: Record<string, LiveBar>
+  streaming: boolean
+}) {
   // Everything below asks one question of the mode - which account, or none -
   // so it is asked once here rather than re-derived at each use.
   const account = typeof book === 'number' ? book : null
@@ -591,7 +598,6 @@ export function Desk({ book }: { book: Book }) {
   // The forming candle, pushed. The ten-second status poll still carries one,
   // and is still what keeps the table honest when the stream is down — this
   // only ever overrides it with something NEWER, never with something older.
-  const { ticks, connected: streaming } = useTicks()
   // Which fill the explanation below the table is describing. Held here rather
   // than in the table because the table is rendered twice — once in the wide
   // layout's left column, once in the rail under it — and a reader who picks a
