@@ -201,11 +201,42 @@ tradeable direction at Vantage cost, and bolting a model onto the front of one
 does not change that. An advisor can only make a losing book lose more slowly,
 or a winning one win less.
 
-It is **not on by default**. No advisor process is running; no run has ever
-been advised; `advice.jsonl` does not yet exist anywhere. The shadow book runs
-regardless, which costs one extra `PaperBook` per run and means that on the day
-an advisor is first switched on, the comparison starts from a book that has
-been tracking the real one all along.
+It is **not on by default**, and as of 2026-09-18 no verdict has ever been
+applied to any book. The shadow book runs regardless, which costs one extra
+`PaperBook` per run and means that on the day an advisor is first switched on,
+the comparison starts from a book that has been tracking the real one all
+along.
 
-And it is **paper only**. `py/live/mt5_executor.py` remains the only code that
-can send an order, and it refuses any account that is not a demo.
+Two sentences that used to be here were true when written and are not now. They
+are corrected rather than deleted, because the second of them is the one a
+person would read to decide whether applying verdicts is safe.
+
+**`advice.jsonl` exists.** It said it did not. Counted 2026-09-18: 21 files,
+86 consultations. Eighty-five carry `dry_run: true` — written by `advisor.py`
+itself, since a dry run posts nothing for the server to record — and one is a
+deliberate probe from 2026-09-15 (`"probe: can it enlarge a trade?"`, intent
+`xau-stoch:1`) that named an intent which was not pending and was therefore
+dropped by the staleness rule it was testing. **`applied` is `false` on all 86.**
+So "no run has ever been advised" is still true in the sense that matters — no
+book has ever been changed — and the way to check that claim is the `applied`
+field, not the absence of the file.
+
+**It is no longer paper only.** `py/live/mt5_executor.py` is still the only
+code that can send an order, but since 2026-09-17 it can send one to a REAL
+funded cent account: the owner funded it and asked for it, and the demo-only
+wall became a permission with three independent keys — `--allow-real` on the
+command line, `--account`, and `real_money` for that account in
+`config/accounts.toml`, with the terminal's own login checked against the
+registry's. A paper book that is mirrored is therefore a real position, so a
+verdict that shrinks that book shrinks a real order and a veto refuses one.
+
+Nothing in the advisor's own powers changed, and the asymmetry at the top of
+this document still holds everywhere: it can refuse or shrink, never enlarge,
+never open, never choose a direction. The worst case is still a desk that does
+not trade. But "the worst case is harmless" is a different claim from "this is
+paper", and only the first one is still true.
+
+Neither correction was found by reading this file. They were found by counting
+the records and reading the executor while writing `py/live/start_advisor.ps1`,
+which is the launcher that was also missing — the panel had never run on the
+VPS at all, because nothing started it.
