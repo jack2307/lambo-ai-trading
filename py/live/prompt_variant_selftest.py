@@ -38,17 +38,18 @@ def check(ok: bool, what: str) -> None:
 
 
 def render(variant: str, otl_block: str = "", htf_block: str = "",
-           htf_rule_block: str = "") -> str:
+           htf_rule_block: str = "", plan_block: str = "") -> str:
     return A.PROMPT.format(coin_clause=A.COIN_CLAUSE[A.VARIANTS[variant]["coin"]],
                            otl_block=otl_block, htf_block=htf_block,
-                           htf_rule_block=htf_rule_block, **FIELDS)
+                           htf_rule_block=htf_rule_block, plan_block=plan_block,
+                           **FIELDS)
 
 
 base, nocoin = render("base"), render("no-coin-penalty")
 
 check(tuple(A.PROMPT_VARIANTS) == ("base", "no-coin-penalty", "otl-context",
-                                   "htf-context", "htf-filter"),
-      "the variants are the five the registrations name")
+                                   "htf-context", "htf-filter", "plan", "plan-trigger"),
+      "the variants are the seven the registrations name")
 check(PENALTY in base, "base still carries the penalty clause")
 check(PENALTY not in nocoin, "no-coin-penalty does not carry it")
 check("measured against a" in nocoin and "random side" in nocoin,
@@ -321,6 +322,75 @@ check(not half.startswith("HIGHER-TIMEFRAME FACTS for XAUUSD: UNAVAILABLE"),
 check("trend is your friend" not in htext.lower(), "the block asserts no trend doctrine")
 check("you should" not in htext.lower() and "recommend" not in htext.lower(),
       "the block advises nothing")
+
+
+# ---- plan and plan-trigger: one block, then the SAME prompt twice ----
+#
+# Registered at docs/hypotheses/2026-09-18-plan-entry.md and
+# 2026-09-18-plan-trigger.md. `plan` is base plus PLAN_BLOCK and nothing else;
+# `plan-trigger` renders BYTE-IDENTICAL to `plan`, because what separates the
+# two books is the fast question asked while an order waits, not a word in
+# the decision prompt. If the two ever render differently the stage-2
+# comparison is measuring a prompt edit and a fast loop together.
+PMARK = "\n" + A.PLAN_BLOCK + "\n"
+plan = render("plan", plan_block=PMARK)
+trig = render("plan-trigger", plan_block=PMARK)
+check(A.VARIANTS["plan"]["coin"] == "base" and not A.VARIANTS["plan"]["otl"]
+      and not A.VARIANTS["plan"]["htf"] and not A.VARIANTS["plan"]["htf_rule"],
+      "plan runs the BASE coin clause and no other block, so it changes one thing")
+check(plan.replace(PMARK, "") == base,
+      "plan IS base plus the block - remove the block and base returns exactly")
+check(plan == trig, "plan-trigger renders byte-identical to plan; the fast loop is the only difference")
+check(A.VARIANTS["plan-trigger"]["trigger"] and not A.VARIANTS["plan"]["trigger"],
+      "only plan-trigger runs the fast loop")
+check(A.VARIANTS["plan"]["plan"] and A.VARIANTS["plan-trigger"]["plan"]
+      and not any(A.VARIANTS[v]["plan"] for v in ("base", "no-coin-penalty", "otl-context",
+                                                    "htf-context", "htf-filter")),
+      "no existing book starts answering with a plan because these were added")
+check(not any(A.VARIANTS[v]["trigger"] for v in A.VARIANTS if v != "plan-trigger"),
+      "no existing book starts a fast loop because these were added")
+check(render("plan", plan_block="") == base,
+      "with an empty block the plan variant renders as base, so the block is the whole change")
+
+# The block must sit in the CACHED PREFIX: before the hourly blocks and the
+# desk state, with the rules it amends. A block after the bars would be re-read
+# at full price on every call and the stage-2 cost estimate would be wrong.
+check(plan.index(A.PLAN_BLOCK) < plan.index("MARKET CONTEXT"),
+      "the plan block sits before the market context, inside the cacheable prefix")
+
+# What the block must say, because a rule left to the model is a book
+# measuring a mixture. Each of these is a fact the API enforces.
+low = " ".join(A.PLAN_BLOCK.lower().split())
+check('"market" | "limit" | "stop"' in A.PLAN_BLOCK, "the block names the three entry types")
+check("1 to 4" in low, "the block bounds valid_bars to 1..4, the range sane() refuses outside of")
+check("below the last close for a long" in low and "above it for a short" in low,
+      "the block says which side of the last close a limit sits on")
+check("above the last close for a long" in low and "below it for a short" in low,
+      "the block says which side of the last close a stop sits on")
+check("counted as a missed trade" in low and "never as a stand-aside" in low,
+      "the block says an unfilled order is COUNTED, so the model cannot price a miss as free")
+check("losing side of the entry price" in low,
+      "the block judges the stop against the ENTRY price, as sane() does for a limit or stop")
+check("replaced" in low, "the block says it REPLACES the answer shape rather than extending it")
+check("none is a real answer" in low, "the block keeps NONE as a real answer")
+# No hint about WHEN a limit beats a market entry: that is the question the
+# campaign asks, and a sentence here would be the answer leaking in.
+for phrase in ("prefer a limit", "prefer limit", "better to wait", "usually better", "should wait"):
+    check(phrase not in low, f"the block does not advise when to use a limit ({phrase!r})")
+
+# The fast question: appended, never prepended, and it carries the plan the
+# model would otherwise not know it made.
+DEC = {"side": "LONG", "entry": {"type": "limit", "price": 4305.0}, "stop": 4295.0,
+       "target": 4325.0, "valid_bars": 2, "zone": [4303.0, 4307.0],
+       "invalidate_above": None, "invalidate_below": 4290.0, "reason": "r"}
+fast = A.fast_prompt(plan, DEC, {"bars": [], "forming": None, "unavailable": False},
+                     {"bid": 4310.1, "ask": 4310.3, "at": 1_758_232_800_000},
+                     1_758_232_800_000, 900_000)
+check(fast.startswith(plan), "the fast prompt begins with the decision prompt, byte for byte")
+check("SINCE THAT DECISION" in fast[len(plan):], "and the since-block is appended after it")
+check("LONG limit at 4305.0" in fast and "stop 4295.0" in fast,
+      "the fast prompt restates the plan, which the model has no other way of knowing")
+check('"TRIGGER" | "WAIT" | "CANCEL"' in fast, "and asks the narrow three-way question")
 
 print()
 print(f"{'all checks passed' if not fails else str(len(fails)) + ' FAILED'}")
