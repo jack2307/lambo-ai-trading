@@ -273,7 +273,26 @@ check("-12.8" in line and "BELOW" in line,
 # The four states must be distinguishable, and `thin` must not read as
 # `unavailable`: the route separates them on purpose.
 una = H.block(ctx(state="unavailable", h4=None, d1=None, why="no 4h bars for xauusd"))
-check("UNAVAILABLE" in una and "no 4h bars" in una, "an absent timeframe says so, with the reason")
+check("UNAVAILABLE" in una, "an absent timeframe says so")
+
+# THE PROMPT MUST NOT QUOTE THE ROUTE'S PROSE, in any state.
+#
+# `unavailable` on the route is the JOIN of every missing timeframe's reason,
+# written in another file. Printing it verbatim meant that adding a timeframe
+# to the route - `h1` was proposed on 2026-09-18 - would change the wording
+# inside a REGISTERED campaign's prompt with nobody editing this book. A
+# variant whose text depends on another file's prose is not a controlled
+# variable.
+MARKER = "ROUTE-PROSE-THAT-MUST-NOT-REACH-THE-PROMPT"
+for label, c in (
+    ("unavailable", ctx(state="unavailable", h4=None, d1=None, unavailable=MARKER, why=MARKER)),
+    ("d1 absent",   ctx(d1=None, unavailable=MARKER)),
+    ("ok",          ctx(unavailable=MARKER)),
+    ("thin",        ctx(state="thin", h4=dict(FAKE_H4, adx14=None),
+                        unavailable=MARKER, why="warmup not met for adx14", thin_fields=["adx14"])),
+):
+    check(MARKER not in H.block(c),
+          f"the route's own sentence does not reach the prompt ({label})")
 stale = H.block(ctx(state="stale", why="17.0 H4 bars behind"))
 check("STALE" in stale and "17.0" in stale, "a stale route says so, with how far behind")
 thin = H.block(ctx(state="thin", why="warmup not met for adx14",

@@ -202,9 +202,22 @@ def block(ctx: dict) -> str:
         "job. It is context, like everything else in this section, and not a signal.",
     ]
     if ctx.get("state") == "unavailable":
+        # THE PROMPT SAYS THIS IN OUR OWN WORDS, NEVER THE ROUTE'S.
+        #
+        # This used to print the route's `unavailable` field verbatim. That
+        # field is the JOIN of every missing timeframe's reason, written by
+        # another file - so the day a timeframe is added to the route, or its
+        # wording is improved, the text inside a REGISTERED campaign's prompt
+        # changes without anyone editing this book. A prompt variant whose
+        # wording depends on another file's prose is not a controlled
+        # variable, and "a change mid-run is a new campaign".
+        #
+        # The route's sentence is still recorded - `gather` keeps it in
+        # `unavailable` and the caller logs it - because the operator needs
+        # the real reason. It just does not go in the prompt.
         return "\n".join([
             f"HIGHER-TIMEFRAME FACTS for {market.upper()}: UNAVAILABLE for this bar.",
-            f"  reason: {ctx.get('why') or 'not stated'}",
+            "  The desk has no H4 bars for this market right now.",
             "You are deciding without them. Do not guess at what they would have said.",
         ])
     if ctx.get("state") == "stale":
@@ -306,8 +319,16 @@ def block(ctx: dict) -> str:
         # Reported on its own line, because the route can serve H4 and not D1.
         # Saying "higher-timeframe facts unavailable" over a present H4 object
         # would throw away everything above.
-        why = ctx.get("unavailable") or "not stated"
-        L.append(f"  DAILY LEVELS: unavailable ({why}). The H4 facts above are unaffected.")
+        #
+        # AND IN OUR OWN WORDS. This printed the route's `unavailable` field,
+        # which is the join of EVERY missing timeframe's reason. That was
+        # sound while the route served exactly two timeframes and the null
+        # pattern therefore said which reason belonged to which - and it
+        # stopped being sound the moment a third was proposed. With an `h1`
+        # section on the route, a run where both H1 and D1 were missing would
+        # have printed H1's reason inside a line about daily levels, in a
+        # book registered on H4-only facts, with nobody editing this file.
+        L.append("  DAILY LEVELS: unavailable for this bar. The H4 facts above are unaffected.")
         return "\n".join(L)
     L.append("  DAILY LEVELS - the prices a trader names out loud. This broker's day runs "
              "21:00 UTC to 21:00 UTC.")

@@ -256,6 +256,31 @@ whether a difference is the prompt or the bars.
   a prior, and its job is to stop a small positive result being read as a
   discovery.
 
+## What comes after this one
+
+**Queued, not started: `htf-context-v2` = base + H1 **and** H4 facts**, same
+block shape with an H1 row added. The question it would ask is the one this
+registration cannot: *does the finer ladder change decisions beyond H4
+alone?*
+
+The owner asked for H1 in the facts on 2026-09-18 and d1 is adding an `h1`
+section to the route. **The block these two books read does not change.**
+They are registered on H4-only facts, and a prompt edited mid-run makes the
+record two campaigns under one id — the rule this desk already applies to
+models and to accounts. So v2 waits until this registration reaches its
+stage-1 kill or passes it, and then runs as its own books with its own coins.
+
+That the route gains `h1` while these books ignore it is the correct
+outcome, not a gap. The route serves everything; a registration reads the
+subset it named.
+
+One thing that had to be fixed to keep that true: the block used to print the
+route's own `unavailable` sentence into the prompt, and that sentence is the
+join of every missing timeframe's reason. An `h1` section would have put H1's
+wording inside a registered campaign's prompt with nobody editing this book.
+The block now says those things in its own words and the route's text goes to
+the record instead.
+
 ## Preconditions — why nothing is started
 
 Both are blocking. Neither is a code defect any longer, and the second cannot
