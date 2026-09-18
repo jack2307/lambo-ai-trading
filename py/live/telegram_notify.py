@@ -605,6 +605,52 @@ def account_line(account_id: str, currency: str, pnl: float, exits: int) -> str:
             f"over {exits} exit{'' if exits == 1 else 's'}")
 
 
+
+# ---------------------------------------------------------- trade cards
+#
+# Every message about a trade says WHICH ACCOUNT it is about, first, because
+# on 2026-09-18 the owner read "opened SHORT @ 4,360.41" and could not tell
+# whether that was his money. A paper book and a funded account can hold the
+# same trade at two prices, and the line that names the account is the one
+# that stops those two reading as one. Then one field per line, so entry,
+# stop and target are never squeezed into a sentence.
+
+def px(v) -> str:
+    """A price with thousands separators and two decimals, or a dash."""
+    try:
+        return f"{float(v):,.2f}"
+    except (TypeError, ValueError):
+        return "-"
+
+
+def trade_card(head: str, side, lots, entry, sl, tp, lines: list | None = None) -> str:
+    """One trade, one field per line. `head` names the account and the book."""
+    side_s = esc(str(side or "?").upper())
+    lots_s = f" · {esc(f'{float(lots):g}')} lots" if lots not in (None, "") else ""
+    rows = [head, f"opened <b>{side_s}</b>{lots_s}",
+            f"entry  <code>{px(entry)}</code>"]
+    try:
+        e = float(entry)
+        d_sl = f"  ({float(sl) - e:+.2f})" if sl not in (None, "") else ""
+        d_tp = f"  ({float(tp) - e:+.2f})" if tp not in (None, "") else ""
+    except (TypeError, ValueError):
+        d_sl = d_tp = ""
+    rows.append(f"SL     <code>{px(sl)}</code>{esc(d_sl)}")
+    rows.append(f"TP     <code>{px(tp)}</code>{esc(d_tp)}")
+    for extra in lines or []:
+        rows.append(extra)
+    return chr(10).join(rows)
+
+
+def account_head(b: dict, rid: str) -> str:
+    """'💰 REAL 33705331 (vantage-cent) · mirrors <book>' or the demo form."""
+    real = b.get("demo") is False
+    kind = "💰 REAL" if real else "📗 DEMO"
+    login = b.get("login")
+    who = f"{kind} {esc(login)}" if login is not None else kind
+    return f"{who} (<b>{esc(b.get('account') or '?')}</b>) · mirrors {esc(rid)}"
+
+
 def lag_line(run_id: str, seconds: list[float]) -> str:
     """One book's lag, as a sentence someone reads on a phone.
 
@@ -1138,18 +1184,49 @@ def changes(runs: list, state: dict, now_ms: float, funded: set | None = None,
                 closed = trades - was.get("trades", 0)
                 delta = net - was.get("net", 0.0)
                 out.append(
-                    f"<b>{esc(rid)}</b> closed {closed} trade{'s' if closed > 1 else ''} "
+                    f"📘 PAPER · <b>{esc(rid)}</b> closed {closed} trade{'s' if closed > 1 else ''} "
                     f"{money(delta)} → book {money(net)}"
                 )
             # A position opened.
             if open_pos and not was.get("open"):
                 who = (r.get("decider") or {}).get("last")
                 tag = f" [{esc(who)}]" if who else ""
-                out.append(
-                    f"<b>{esc(rid)}</b>{tag} opened <b>{esc(open_pos['side'])}</b> "
-                    f"@ {esc(open_pos['entry_price'])} "
-                    f"stop {esc(open_pos.get('stop'))} target {esc(open_pos.get('target'))}"
-                )
+                out.append(trade_card(
+                    f"📘 PAPER · <b>{esc(rid)}</b>{tag}",
+                    open_pos.get("side"), open_pos.get("lots"), open_pos.get("entry_price"),
+                    open_pos.get("stop"), open_pos.get("target"),
+                ))
+            # The ACCOUNT's side of the same book: a funded or demo mirror
+            # opened or closed a position. Keyed by ticket, so a restart of the
+            # watch does not re-announce a position it already knew.
+            for b in (r.get("brokers") or []):
+                acct = b.get("account") or "?"
+                bpos = b.get("position") or None
+                prev = (was.get("broker") or {}).get(acct) or {}
+                ticket = (bpos or {}).get("ticket")
+                if bpos and ticket and ticket != prev.get("ticket"):
+                    extra = []
+                    if open_pos and open_pos.get("entry_price") is not None and bpos.get("entry_price") is not None:
+                        try:
+                            drift = float(bpos["entry_price"]) - float(open_pos["entry_price"])
+                            extra.append(f"book entry <code>{px(open_pos['entry_price'])}</code> · fill drift {esc(f'{drift:+.2f}')}")
+                        except (TypeError, ValueError):
+                            pass
+                    out.append(trade_card(account_head(b, rid), bpos.get("side"), bpos.get("lots"),
+                                          bpos.get("entry_price"), bpos.get("sl"), bpos.get("tp"), extra))
+                fills = b.get("fills") or []
+                if len(fills) > prev.get("fills", len(fills) if first_run else 0):
+                    unit = esc(b.get("currency") or "?")
+                    for f in fills[prev.get("fills", 0):]:
+                        pnl = f.get("pnl")
+                        pnl_s = f"{float(pnl):+.2f} {unit}" if pnl is not None else "?"
+                        out.append(
+                            f"{account_head(b, rid)}{chr(10)}"
+                            f"closed <b>{esc(str(f.get('side') or '?').upper())}</b> · {esc(f.get('lots'))} lots"
+                            f"{chr(10)}entry  <code>{px(f.get('entry_price'))}</code>"
+                            f"{chr(10)}exit   <code>{px(f.get('exit_price'))}</code>"
+                            f"{chr(10)}P&amp;L    <b>{esc(pnl_s)}</b>"
+                        )
             # A guard fired. Counted, not described: the desk's own log has the
             # detail and this is a nudge to go and look.
             fired = sum((r.get("closed_by_guard") or {}).values())
@@ -1229,6 +1306,12 @@ def changes(runs: list, state: dict, now_ms: float, funded: set | None = None,
             "trades": trades, "net": net, "open": bool(open_pos),
             "guards": sum((r.get("closed_by_guard") or {}).values()), "dead": dead,
             "mute": mute, "idle": idle, "mirrors": live_mirrors, "refused": refused,
+            "broker": {
+                (b.get("account") or "?"): {
+                    "ticket": ((b.get("position") or {}).get("ticket")),
+                    "fills": len(b.get("fills") or []),
+                } for b in (r.get("brokers") or [])
+            },
         }
 
     for gone in set(seen) - {r["id"] for r in runs}:

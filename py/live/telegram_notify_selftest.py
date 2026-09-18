@@ -489,8 +489,27 @@ def main() -> int:
     check("a day with no exits says so, not 0.00",
           T.account_line("a", "USC", 0.0, 0), "\u00b7 <b>a</b> \u2014 no exits")
 
+    print("10. trade cards: the account first, one field per line")
+    check_trade_cards()
+
     print(f"\n{'all checks passed' if not FAIL else str(FAIL) + ' CHECK(S) FAILED'}")
     return 1 if FAIL else 0
+
+
+def check_trade_cards():
+    """A trade message names the account first and puts one field per line."""
+    card = T.trade_card("📘 PAPER · <b>ai-xau-ds-ctx</b>", "short", 0.04, 4360.41, 4381.2, 4330.0)
+    rows = card.split(chr(10))
+    check("paper card names the book on its first line", rows[0], "📘 PAPER · <b>ai-xau-ds-ctx</b>")
+    check("side and lots on the second line", rows[1], "opened <b>SHORT</b> · 0.04 lots")
+    check("entry on its own line, thousands-separated", rows[2], "entry  <code>4,360.41</code>")
+    check("SL carries its distance from entry", rows[3], "SL     <code>4,381.20</code>  (+20.79)")
+    check("TP carries its distance from entry", rows[4], "TP     <code>4,330.00</code>  (-30.41)")
+    b = {"account": "vantage-cent", "login": 33705331, "demo": False, "currency": "USC"}
+    check("a funded mirror is headed REAL with its login",
+          T.account_head(b, "ai-xau-ds-ctx"), "💰 REAL 33705331 (<b>vantage-cent</b>) · mirrors ai-xau-ds-ctx")
+    check("a demo mirror is headed DEMO", T.account_head({"account": "d", "login": 1, "demo": True}, "r")[:6], "📗 DEMO")
+    check("a missing price renders as a dash, not 0.00", T.px(None), "-")
 
 
 if __name__ == "__main__":
