@@ -1259,3 +1259,58 @@ async fn the_open_half_fills_and_the_close_half_still_manages_the_bar() {
     assert!(after["open"].is_null(), "the bar that opened it also stopped it: {after}");
     assert_eq!(after["trades"], 1, "and it is one closed trade");
 }
+
+#[tokio::test]
+async fn an_intent_records_which_higher_timeframe_state_it_read() {
+    // The experiment this exists for compares decisions that saw H4 context
+    // against decisions that did not. If a decider that never fetched the
+    // context is indistinguishable in the record from one that fetched it and
+    // got nothing, the two arms are a mixture and the comparison measures
+    // nothing. So: the H4 bar the decision read is carried from the intent
+    // through to the fill, and ABSENT when there was none.
+    let dir = tempfile::tempdir().expect("temp dir");
+    let state = state_over(dir.path(), 300);
+    start_run(&state, json!({ "market": "btc", "tf": "15m", "strategy": "external", "id": "b", "window": 200 }))
+        .await
+        .expect("start");
+    post_bar(&state, "btc", "15m", wave(300)).await.expect("bar");
+
+    let h4_bar = 1_789_678_800_000_i64;
+    post_intent(
+        &state,
+        json!({ "run": "b", "bar_time": wave(300).time, "side": "LONG",
+                "reason": "the H4 structure was up", "decider": "gpt-5",
+                "htf_bar_time": h4_bar }),
+    )
+    .await
+    .expect("intent");
+
+    let path = dir.path().join("paper").join("b").join("fills.jsonl");
+    let lines = |kind: &str| -> Vec<Value> {
+        std::fs::read_to_string(&path)
+            .expect("fills")
+            .lines()
+            .filter_map(|l| serde_json::from_str::<Value>(l).ok())
+            .filter(|e| e["kind"] == kind)
+            .collect()
+    };
+    assert_eq!(lines("intent").last().expect("an intent")["htf_bar_time"].as_i64(), Some(h4_bar));
+
+    // And the fill it becomes carries the same stamp, so the trade record
+    // answers "what did this decision know" without joining two files on a
+    // timestamp and hoping.
+    post_bar(&state, "btc", "15m", wave(301)).await.expect("bar");
+    let opened = lines("opened");
+    assert_eq!(opened.last().expect("the entry opened")["htf_bar_time"].as_i64(), Some(h4_bar));
+
+    // A decider that read no context leaves it NULL, not zero. Zero is a bar
+    // time at the epoch; absence is absence.
+    post_intent(
+        &state,
+        json!({ "run": "b", "bar_time": wave(301).time, "side": "LONG", "reason": "no context", "decider": "gpt-5" }),
+    )
+    .await
+    .expect("intent");
+    let last = lines("intent").pop().expect("an intent");
+    assert!(last["htf_bar_time"].is_null(), "absent, not zero: {last}");
+}
