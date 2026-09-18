@@ -25,7 +25,7 @@
 use std::collections::BTreeMap;
 
 use fd_core::types::Bar;
-use fd_strategy::registry::{Intent, OpenPosition};
+use fd_strategy::registry::{Intent, OpenPosition, Side};
 use serde::{Deserialize, Serialize};
 
 use crate::engine::{
@@ -52,6 +52,132 @@ pub struct StepReport {
     /// zero when it refused it. `None` when no advisor spoke, which is the
     /// same thing as no advisor running.
     pub advice: Option<(f64, String)>,
+}
+
+/// How an entry is to be priced: at the next open, or at a level.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum EntryType {
+    /// Today's path: fills at the next bar's open (or at the open the poller
+    /// posts). Never rests as an order.
+    Market,
+    /// Rests until the touched side reaches the price: a LONG limit fills when
+    /// `ask <= price`, a SHORT when `bid >= price`, at the order price.
+    Limit,
+    /// Rests until the touched side trades through: a LONG stop fills when
+    /// `ask >= price`, a SHORT when `bid <= price`, at the touched side.
+    Stop,
+}
+
+impl EntryType {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Market => "market",
+            Self::Limit => "limit",
+            Self::Stop => "stop",
+        }
+    }
+}
+
+/// An entry waiting for a PRICE rather than for the next open.
+///
+/// The second thing a book can have pending, beside the market intent in
+/// `pending`, and never at the same time as it: placing one replaces the
+/// other, so the book still has one committed entry at most. It is filled
+/// from the tick feed by [`PaperBook::fill_order`], and only from ticks - a
+/// closed bar whose range covers the price is NOT a fill, because a bar says
+/// nothing about the order in which its prices were traded and a tick gap is
+/// a gap, not a fill (`docs/plans/2026-09-18-staged-ai-entry.md`, stage 1).
+///
+/// Every price here is on the bar's own axis (the instrument's quote, the
+/// same number the bars carry) and BEFORE the half-spread entry cost: the fill
+/// path applies that cost exactly as it does to a market open, so a LONG limit
+/// at `price` records `entry_price = price + spread / 2`, which is what a
+/// market fill at an open of `price` records too. No wall clock lives here;
+/// the API keeps `decided_at` beside the run, as it does for the intent.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct PendingOrder {
+    pub entry_type: EntryType,
+    /// The level, in the instrument's quote (bar price axis).
+    pub price: f64,
+    pub side: Side,
+    /// Absolute stop and target, the same fields the market intent carries.
+    /// The API requires the stop for an order; the engine does not, and
+    /// refuses the fill for `NoRisk` exactly as it would a market intent.
+    pub stop: Option<f64>,
+    pub target: Option<f64>,
+    pub reason: String,
+    /// Informational: where the decider said the entry is still valid.
+    pub zone: Option<(f64, f64)>,
+    /// Closed bars the order may wait through after the decision bar; when
+    /// this many have arrived without a fill it is cancelled as expired.
+    pub valid_bars: u32,
+    /// Closed bars that have arrived since the decision bar.
+    pub bars_waited: u32,
+    /// The bar whose close produced it, the same stamp `pending_id` names.
+    pub decided_bar_time: i64,
+    /// A tick beyond either cancels the order before it can fill: `ask` above
+    /// the first, `bid` below the second - the same sides a stop order reads,
+    /// so "beyond" means the market has traded past the level, not merely
+    /// quoted across it.
+    pub invalidate_above: Option<f64>,
+    pub invalidate_below: Option<f64>,
+}
+
+impl PendingOrder {
+    /// The price this order fills at on a quote, or `None` when the quote has
+    /// not reached it. A limit fills AT its price; a stop at the side that
+    /// traded through, which is the price a broker would give.
+    #[must_use]
+    pub fn touched(&self, bid: Option<f64>, ask: Option<f64>) -> Option<f64> {
+        let long = self.side.is_long();
+        match (self.entry_type, long) {
+            (EntryType::Limit, true) => ask.filter(|a| *a <= self.price).map(|_| self.price),
+            (EntryType::Limit, false) => bid.filter(|b| *b >= self.price).map(|_| self.price),
+            (EntryType::Stop, true) => ask.filter(|a| *a >= self.price),
+            (EntryType::Stop, false) => bid.filter(|b| *b <= self.price),
+            (EntryType::Market, _) => None,
+        }
+    }
+
+    /// True when a quote has gone past an invalidation level.
+    #[must_use]
+    pub fn invalidated_by(&self, bid: Option<f64>, ask: Option<f64>) -> bool {
+        let above = self.invalidate_above.zip(ask).is_some_and(|(level, a)| a > level);
+        let below = self.invalidate_below.zip(bid).is_some_and(|(level, b)| b < level);
+        above || below
+    }
+
+    /// The side a fill forced NOW would take: the ask for a LONG, the bid for
+    /// a SHORT. `None` when the quote lacks that side.
+    #[must_use]
+    pub fn trigger_side(&self, bid: Option<f64>, ask: Option<f64>) -> Option<f64> {
+        if self.side.is_long() { ask } else { bid }
+    }
+}
+
+/// The part of the fill bar a tick-filled position has actually lived
+/// through, so the bar's close can be managed against THAT and not against
+/// prices from before the position existed.
+///
+/// A LONG limit fills when the ask has come DOWN to it, so every price before
+/// the fill was above the level: the bar's high can be above the target
+/// without the position ever having been there. A LONG stop fills when the
+/// ask has come UP through it, so the bar's low can be under the stop without
+/// the position ever having been there. Managing the fill bar against its full
+/// range would book a target on the first and a stop-out on the second, each
+/// on a price the trade never saw. Tracked from the ticks that follow the fill
+/// inside the same bucket; sampled, so a spike between two ticks is missed
+/// rather than invented, which is the same rule the fill itself follows.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct SinceFill {
+    /// The bucket of the bar the fill happened inside.
+    pub bar_time: i64,
+    /// The bar's last price at the fill instant, and the extremes since.
+    pub open: f64,
+    pub high: f64,
+    pub low: f64,
 }
 
 /// The engine's state between two bars.
@@ -84,6 +210,16 @@ pub struct PaperBook {
     pub sized_down_by_guard: usize,
     /// The signal from the previous bar, filled at this bar's open.
     pending: Option<Intent>,
+    /// An entry waiting for a price, filled from ticks. Never set while
+    /// `pending` is: placing one takes the other. Defaulted so every state
+    /// file written before orders existed still loads.
+    #[serde(default)]
+    pending_order: Option<PendingOrder>,
+    /// The fill bar's range since a tick fill, see [`SinceFill`]. `None` on
+    /// every market fill and on every backtest path, which is what keeps the
+    /// parity goldens the same computation.
+    #[serde(default)]
+    since_fill: Option<SinceFill>,
     /// Intents an advisor refused outright, and the size it cut from the rest.
     /// Defaulted so a state file written before advisors existed still loads.
     #[serde(default)]
@@ -148,6 +284,8 @@ impl PaperBook {
             closed_by_guard: BTreeMap::new(),
             sized_down_by_guard: 0,
             pending: None,
+            pending_order: None,
+            since_fill: None,
             advisor_vetoed: 0,
             advisor_reduced: 0,
             guard_state: GuardState::default(),
@@ -172,6 +310,99 @@ impl PaperBook {
     #[must_use]
     pub fn pending(&self) -> Option<&Intent> {
         self.pending.as_ref()
+    }
+
+    /// The entry waiting for a price, if one is.
+    #[must_use]
+    pub fn pending_order(&self) -> Option<&PendingOrder> {
+        self.pending_order.as_ref()
+    }
+
+    /// Rest an order, and hand back whatever it displaced: the order that
+    /// was resting, or nothing. A market intent that was pending is dropped
+    /// silently, since it was never a record - the API writes the
+    /// replacement row for an order, because an order that waited and was
+    /// replaced is a decision that did not happen and must be counted.
+    pub fn place_order(&mut self, order: PendingOrder) -> Option<PendingOrder> {
+        self.pending = None;
+        self.pending_order.replace(order)
+    }
+
+    /// Take the resting order back without filling it.
+    pub fn cancel_order(&mut self) -> Option<PendingOrder> {
+        self.pending_order.take()
+    }
+
+    /// A closed bar has arrived while an order rests: count it, and take the
+    /// order back when it has waited its `valid_bars`. Called by the run after
+    /// the bar is stepped - the bar itself never fills an order, see
+    /// [`PendingOrder`].
+    pub fn order_saw_bar_close(&mut self) -> Option<PendingOrder> {
+        let order = self.pending_order.as_mut()?;
+        order.bars_waited = order.bars_waited.saturating_add(1);
+        if order.bars_waited >= order.valid_bars { self.pending_order.take() } else { None }
+    }
+
+    /// A tick inside the fill bar: extend the range the position has lived
+    /// through. True when something changed and the book is worth writing.
+    pub fn observe_tick(&mut self, bar_time: i64, last: f64) -> bool {
+        let Some(range) = self.since_fill.as_mut() else { return false };
+        if range.bar_time != bar_time || !last.is_finite() {
+            return false;
+        }
+        let before = *range;
+        range.high = range.high.max(last);
+        range.low = range.low.min(last);
+        *range != before
+    }
+
+    /// Fill the resting order at `price`, inside the bar stamped `time`,
+    /// through the SAME path a market intent takes.
+    ///
+    /// Not a second fill model. The order is moved into the `pending` slot
+    /// and [`PaperBook::fill_pending`] is called with the order's price where
+    /// the market path passes the bar's open - so the half-spread cost, the
+    /// ATR-sized risk unit, the guards, the notional cap and the advisor's cut
+    /// are the market path's by construction, and the test
+    /// `a_limit_fill_and_a_market_fill_at_the_same_price_are_the_same_trade`
+    /// says so to the bit. `last` is the bar's last price at the fill
+    /// instant, which seeds [`SinceFill`] when the position opens.
+    ///
+    /// The order is consumed whether it filled or a guard refused it, as a
+    /// market intent is: the report says which. `None` when nothing rests, or
+    /// when the book already holds a position - an order cannot add to one,
+    /// and the API refuses to place one over a position for that reason; this
+    /// is the engine's own guard against the same thing.
+    // The same eight-plus arguments `fill_pending` takes, for the same
+    // reason it takes them.
+    #[allow(clippy::too_many_arguments)]
+    pub fn fill_order(
+        &mut self,
+        time: i64,
+        price: f64,
+        last: f64,
+        atr_prev: Option<f64>,
+        rules: &TradingRules,
+        guards: Option<&Guards>,
+        bar_ms: i64,
+        advice: Option<&Advice>,
+    ) -> Option<(PendingOrder, StepReport)> {
+        if !price.is_finite() || price <= 0.0 || self.position.is_some() {
+            return None;
+        }
+        let order = self.pending_order.take()?;
+        self.pending = Some(Intent::Enter {
+            side: order.side,
+            stop: order.stop,
+            target: order.target,
+            reason: order.reason.clone(),
+        });
+        let report = self.fill_pending(time, price, atr_prev, rules, guards, bar_ms, advice);
+        if report.opened {
+            let last = if last.is_finite() { last } else { price };
+            self.since_fill = Some(SinceFill { bar_time: time, open: last, high: last, low: last });
+        }
+        Some((order, report))
     }
 
     #[must_use]
@@ -231,7 +462,35 @@ impl PaperBook {
         // This runs whether the fill happened here or at the open, and it must:
         // a position opened at this bar's open can be stopped out on this same
         // bar's low, exactly as it could when both halves were one call.
-        if let Some(open) = self.position.as_mut() {
+        //
+        // A position filled from a TICK inside this bar is the one exception,
+        // and only on this bar: it is managed against the range since the
+        // fill, not the bar's whole range - see `SinceFill` for the two false
+        // exits the whole range would book. `since_fill` is `None` on every
+        // other path, so `managed` is the bar itself and nothing here changes
+        // for a backtest or a market fill.
+        let managed = match self.since_fill.take() {
+            Some(range) if range.bar_time == bar.time => Some(Bar {
+                time: bar.time,
+                open: range.open,
+                // The close came after the fill by definition, so it is
+                // always part of the lived range; the extremes are clamped
+                // to the bar's own, which they cannot honestly exceed.
+                high: range.high.max(bar.close).min(bar.high),
+                low: range.low.min(bar.close).max(bar.low),
+                close: bar.close,
+                volume: bar.volume,
+            }),
+            // A bar from BEFORE the fill's bucket, arriving late: the position
+            // did not exist during it, so there is nothing to manage it
+            // against. Kept for the bar that is its own.
+            Some(range) if range.bar_time > bar.time => {
+                self.since_fill = Some(range);
+                None
+            }
+            _ => Some(*bar),
+        };
+        if let (Some(open), Some(bar)) = (self.position.as_mut(), managed.as_ref()) {
             let exit = check_exit(open, bar, rules).or_else(|| {
                 let exposure = Exposure { side: open.side, entry_price: open.entry_price, risk: open.risk };
                 guards.and_then(|g| guard_exit(&exposure, bar, bar_ms, rules, g))
@@ -445,6 +704,11 @@ impl PaperBook {
     /// bar.
     pub fn close_at_last_close(&mut self, kind: ExitKind, reason: &str, rules: &TradingRules) -> Option<Trade> {
         self.pending = None;
+        // A resting order goes the same way. The API takes it first with
+        // `cancel_order` so the cancellation is a row; this is the engine's
+        // own guarantee that a stopped book rests nothing.
+        self.pending_order = None;
+        self.since_fill = None;
         let last = self.last_bar?;
         let open = self.position.take()?;
         let exit = apply_costs(last.close, open.side, false, rules);
@@ -565,6 +829,205 @@ mod tests {
         let back: PaperBook = serde_json::from_str(&text).expect("deserialise");
         assert_eq!(back, book);
         assert!(back.position.is_some() && back.pending().is_some());
+    }
+}
+
+#[cfg(test)]
+mod order_tests {
+    use super::*;
+    use fd_strategy::registry::Side;
+
+    fn bar(time: i64, open: f64, high: f64, low: f64, close: f64) -> Bar {
+        Bar { time, open, high, low, close, volume: None }
+    }
+
+    fn rules() -> TradingRules {
+        TradingRules { spread: 0.4, commission_per_lot: 0.0, contract_size: 1.0, max_hold_ms: 0, ..TradingRules::default() }
+    }
+
+    fn order(entry_type: EntryType, side: Side, price: f64) -> PendingOrder {
+        let (stop, target) = if side.is_long() { (price - 10.0, price + 20.0) } else { (price + 10.0, price - 20.0) };
+        PendingOrder {
+            entry_type,
+            price,
+            side,
+            stop: Some(stop),
+            target: Some(target),
+            reason: "t".into(),
+            zone: None,
+            valid_bars: 2,
+            bars_waited: 0,
+            decided_bar_time: 0,
+            invalidate_above: None,
+            invalidate_below: None,
+        }
+    }
+
+    /// A book that has advanced over bar 0 and rests nothing.
+    fn warm() -> (TradingRules, PaperBook) {
+        let rules = rules();
+        let mut book = PaperBook::new(&rules, false);
+        book.step(&bar(0, 100.0, 101.0, 99.0, 100.0), None, &rules, None, 0, None, |_| Intent::None);
+        (rules, book)
+    }
+
+    #[test]
+    fn a_limit_fill_and_a_market_fill_at_the_same_price_are_the_same_trade() {
+        // The contract's own test: the order path is not a second fill
+        // model. Same price in, same lots, stop, target, risk and entry
+        // price out - to the bit, not to a tolerance, for the reason
+        // `the_open_fills_at_the_same_price_the_close_would_have` gives.
+        let (rules, mut market) = warm();
+        market.decide(Intent::Enter { side: Side::Long, stop: Some(92.0), target: Some(122.0), reason: "t".into() });
+        let r = market.fill_open(60_000, 102.0, Some(3.0), &rules, None, 0, None).expect("that bar is next");
+        assert!(r.opened);
+
+        let (_, mut limit) = warm();
+        let mut o = order(EntryType::Limit, Side::Long, 102.0);
+        o.stop = Some(92.0);
+        o.target = Some(122.0);
+        limit.place_order(o);
+        // The ask has come down to the level.
+        let (_, r) = limit.fill_order(60_000, 102.0, 101.8, Some(3.0), &rules, None, 0, None).expect("rests");
+        assert!(r.opened);
+
+        let a = market.position.as_ref().expect("market filled");
+        let b = limit.position.as_ref().expect("limit filled");
+        assert_eq!((a.lots, a.stop, a.target, a.risk, a.entry_price, a.entry_time), (b.lots, b.stop, b.target, b.risk, b.entry_price, b.entry_time));
+        // And the price is the order price plus the same half spread a
+        // market open pays, which is the unit `PendingOrder::price` states.
+        assert_eq!(b.entry_price, 102.0 + rules.spread / 2.0);
+        assert!(limit.pending_order().is_none() && limit.pending().is_none(), "consumed");
+    }
+
+    #[test]
+    fn the_touched_side_is_the_fill_rule_and_a_stop_fills_at_the_side_that_traded_through() {
+        let long_limit = order(EntryType::Limit, Side::Long, 100.0);
+        assert_eq!(long_limit.touched(Some(99.5), Some(100.2)), None, "ask still above the level");
+        assert_eq!(long_limit.touched(Some(99.5), Some(100.0)), Some(100.0), "at the level, at the order price");
+        assert_eq!(long_limit.touched(Some(99.0), Some(99.4)), Some(100.0), "through it is still the order price");
+        assert_eq!(long_limit.touched(Some(99.0), None), None, "no ask, no fill");
+
+        let short_limit = order(EntryType::Limit, Side::Short, 100.0);
+        assert_eq!(short_limit.touched(Some(99.9), Some(100.3)), None);
+        assert_eq!(short_limit.touched(Some(100.0), Some(100.3)), Some(100.0));
+
+        let long_stop = order(EntryType::Stop, Side::Long, 100.0);
+        assert_eq!(long_stop.touched(Some(99.5), Some(99.9)), None);
+        assert_eq!(long_stop.touched(Some(100.1), Some(100.4)), Some(100.4), "the ask that traded through");
+
+        let short_stop = order(EntryType::Stop, Side::Short, 100.0);
+        assert_eq!(short_stop.touched(Some(100.1), Some(100.4)), None);
+        assert_eq!(short_stop.touched(Some(99.7), Some(100.0)), Some(99.7), "the bid that traded through");
+
+        // Invalidation reads the same sides a stop reads, strictly beyond.
+        let mut guarded = order(EntryType::Limit, Side::Long, 100.0);
+        guarded.invalidate_above = Some(105.0);
+        guarded.invalidate_below = Some(95.0);
+        assert!(!guarded.invalidated_by(Some(104.8), Some(105.0)), "at the level is not beyond it");
+        assert!(guarded.invalidated_by(Some(104.8), Some(105.1)));
+        assert!(guarded.invalidated_by(Some(94.9), Some(95.2)));
+        assert!(!guarded.invalidated_by(None, None), "no quote, no verdict");
+    }
+
+    #[test]
+    fn an_order_expires_after_its_valid_bars_and_a_closed_bar_never_fills_it() {
+        let (rules, mut book) = warm();
+        book.place_order(order(EntryType::Limit, Side::Long, 95.0));
+        // A bar whose range covers the level, twice. Not a fill: a bar does
+        // not say in which order its prices traded.
+        book.step(&bar(60_000, 100.0, 101.0, 90.0, 100.0), Some(1.0), &rules, None, 0, None, |_| Intent::None);
+        assert!(book.position.is_none());
+        assert!(book.order_saw_bar_close().is_none(), "one bar waited of two");
+        assert_eq!(book.pending_order().map(|o| o.bars_waited), Some(1));
+        book.step(&bar(120_000, 100.0, 101.0, 90.0, 100.0), Some(1.0), &rules, None, 0, None, |_| Intent::None);
+        let expired = book.order_saw_bar_close().expect("the second bar expires it");
+        assert_eq!(expired.bars_waited, 2);
+        assert!(book.pending_order().is_none() && book.position.is_none());
+    }
+
+    #[test]
+    fn placing_an_order_replaces_the_one_resting_and_drops_a_market_intent() {
+        let (_, mut book) = warm();
+        book.decide(Intent::Enter { side: Side::Short, stop: Some(110.0), target: None, reason: "market".into() });
+        assert!(book.place_order(order(EntryType::Stop, Side::Long, 103.0)).is_none(), "nothing rested before");
+        assert!(book.pending().is_none(), "one committed entry at most");
+        let replaced = book.place_order(order(EntryType::Limit, Side::Long, 98.0)).expect("the stop order");
+        assert_eq!((replaced.entry_type, replaced.price), (EntryType::Stop, 103.0));
+        assert_eq!(book.pending_order().map(|o| o.price), Some(98.0));
+        assert_eq!(book.cancel_order().map(|o| o.price), Some(98.0));
+        assert!(book.pending_order().is_none());
+    }
+
+    #[test]
+    fn the_fill_bar_is_managed_from_the_fill_and_not_from_its_open() {
+        // LONG limit at 100, target 120. The bar opened at 125, fell to 100
+        // (the fill), and closed at 101. The whole bar's high of 125 is above
+        // the target; the position never saw it. Books that manage the fill
+        // bar against its full range record a winner here.
+        let (rules, mut book) = warm();
+        book.place_order(order(EntryType::Limit, Side::Long, 100.0));
+        let (_, r) = book.fill_order(60_000, 100.0, 99.9, Some(1.0), &rules, None, 0, None).expect("rests");
+        assert!(r.opened);
+        assert!(book.observe_tick(60_000, 101.5), "a new high since the fill");
+        assert!(!book.observe_tick(60_000, 100.5), "inside the range: nothing to write");
+        assert!(!book.observe_tick(120_000, 130.0), "another bucket is not this bar");
+        let r = book.step(&bar(60_000, 125.0, 125.0, 99.8, 101.0), Some(1.0), &rules, None, 0, None, |_| Intent::None);
+        assert!(r.trades.is_empty(), "no target on a price from before the fill: {r:?}");
+        let open = book.position.as_ref().expect("still open");
+        assert!((open.mfe - (101.5 - open.entry_price)).abs() < 1e-9, "excursion measured from the fill: {}", open.mfe);
+
+        // The next bar is managed whole, as every bar is.
+        let r = book.step(&bar(120_000, 101.0, 121.0, 100.5, 118.0), Some(1.0), &rules, None, 0, None, |_| Intent::None);
+        assert_eq!(r.trades.len(), 1);
+        assert_eq!(r.trades[0].exit_kind, ExitKind::Target);
+    }
+
+    #[test]
+    fn a_stop_order_fill_bar_does_not_stop_out_on_prices_from_before_the_fill() {
+        // LONG stop at 100, stop-loss 90. The bar opened at 85 and rose
+        // through 100 (the fill), closing at 102. The bar's low of 85 is under
+        // the stop-loss; the position never saw it.
+        let (rules, mut book) = warm();
+        book.place_order(order(EntryType::Stop, Side::Long, 100.0));
+        let (_, r) = book.fill_order(60_000, 100.3, 100.1, Some(1.0), &rules, None, 0, None).expect("rests");
+        assert!(r.opened);
+        let r = book.step(&bar(60_000, 85.0, 102.5, 85.0, 102.0), Some(1.0), &rules, None, 0, None, |_| Intent::None);
+        assert!(r.trades.is_empty(), "no stop-out on a price from before the fill: {r:?}");
+        assert!(book.position.is_some());
+    }
+
+    #[test]
+    fn an_order_cannot_fill_over_a_position_and_a_stopped_book_rests_nothing() {
+        let (rules, mut book) = warm();
+        book.decide(Intent::Enter { side: Side::Long, stop: Some(90.0), target: None, reason: "t".into() });
+        book.step(&bar(60_000, 100.0, 101.0, 99.0, 100.0), Some(1.0), &rules, None, 0, None, |_| Intent::None);
+        assert!(book.position.is_some());
+        book.place_order(order(EntryType::Limit, Side::Long, 98.0));
+        assert!(book.fill_order(120_000, 98.0, 98.0, Some(1.0), &rules, None, 0, None).is_none(), "a position is held");
+        assert!(book.pending_order().is_some(), "and the order is left where it was for the caller to cancel");
+        book.stop(&rules);
+        assert!(book.pending_order().is_none() && book.position.is_none());
+    }
+
+    #[test]
+    fn a_book_with_an_order_round_trips_and_an_old_state_file_loads_without_one() {
+        let (_, mut book) = warm();
+        let mut o = order(EntryType::Limit, Side::Short, 104.0);
+        o.zone = Some((103.5, 104.5));
+        o.invalidate_below = Some(101.0);
+        book.place_order(o);
+        let text = serde_json::to_string(&book).expect("serialise");
+        assert!(text.contains("\"entry_type\":\"limit\""), "the type is spelled as the wire spells it: {text}");
+        let back: PaperBook = serde_json::from_str(&text).expect("deserialise");
+        assert_eq!(back, book);
+
+        // A state file from before orders existed carries neither field.
+        let mut v: serde_json::Value = serde_json::from_str(&text).expect("json");
+        v.as_object_mut().expect("object").remove("pending_order");
+        v.as_object_mut().expect("object").remove("since_fill");
+        let old: PaperBook = serde_json::from_value(v).expect("an old state file still loads");
+        assert!(old.pending_order().is_none());
     }
 }
 
