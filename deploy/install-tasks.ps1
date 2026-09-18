@@ -177,14 +177,24 @@ foreach ($t in $TASKS) { Write-Host "  Start-ScheduledTask -TaskName $($t.Name)"
 Write-Host ''
 Write-Host 'PROVE IT TOOK - two lines, and read both:' -ForegroundColor Cyan
 Write-Host '  Get-ScheduledTask flowdesk-api,flowdesk-watch | Select TaskName,State; Get-CimInstance Win32_Process -Filter "name=''fd-api.exe''" | Select ProcessId,SessionId,@{n=''Owner'';e={(Invoke-CimMethod $_ -MethodName GetOwner).User}}'
-Write-Host '  Get-Item data\paper\logsd-api.out | Select Length,LastWriteTime; Get-Content data\paper\logsd-api.out -Tail 6'
+Write-Host '  Get-Content data\paper\logs\fd-api.out -Tail 6; (Invoke-WebRequest http://127.0.0.1:8138/api/version -UseBasicParsing).Content'
 Write-Host ''
 Write-Host '  The first must read State=Running and SessionId=0 with Owner=SYSTEM. A' -ForegroundColor DarkGray
 Write-Host '  non-zero session is the task running as the logged-on user: it dies at' -ForegroundColor DarkGray
 Write-Host '  logoff and reads the wrong environment for the advisor gate.' -ForegroundColor DarkGray
-Write-Host '  The second must show a NEW boundary line dated now, then the version' -ForegroundColor DarkGray
-Write-Host '  summary. Run it twice a minute apart: Length must grow. A file that' -ForegroundColor DarkGray
-Write-Host '  exists and never grows is the old defect wearing a new name.' -ForegroundColor DarkGray
+Write-Host '  The second must show a boundary line dated NOW, then the version summary,' -ForegroundColor DarkGray
+Write-Host '  and /api/version must answer the commit you just installed.' -ForegroundColor DarkGray
+Write-Host ''
+Write-Host '  DO NOT judge fd-api by whether its log GROWS. It writes on events -' -ForegroundColor DarkGray
+Write-Host '  startup, reloads, errors - so a healthy API is silent for hours at a' -ForegroundColor DarkGray
+Write-Host '  time. An earlier draft of this file said "Length must grow" for it, and' -ForegroundColor DarkGray
+Write-Host '  that sentence would have had an operator roll back a working server for' -ForegroundColor DarkGray
+Write-Host '  being quiet - the dead-file defect and a quiet server look identical in' -ForegroundColor DarkGray
+Write-Host '  Length alone, which is why the boundary line and /api/version are the' -ForegroundColor DarkGray
+Write-Host '  test instead. (Reported from the VPS by a5, 2026-09-18.)' -ForegroundColor DarkGray
+Write-Host '  GROWTH IS the test for flowdesk-watch and for the executors, which log' -ForegroundColor DarkGray
+Write-Host '  on a clock: read telegram.out twice a minute apart and it must gain' -ForegroundColor DarkGray
+Write-Host '  lines. A file that exists and never grows THERE is the old defect.' -ForegroundColor DarkGray
 if ($restorable.Count -gt 0) {
     Write-Host ''
     Write-Host 'ROLLBACK, if the new action does not start. One command:' -ForegroundColor Yellow
