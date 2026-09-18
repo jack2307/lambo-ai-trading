@@ -453,7 +453,15 @@ runs = [
     "xau-ema",
     "xau-macd-asia",
     "ai-xau-ds-ctx",
-    "ai-xau-opus-ctx",
+    # 2026-09-18, owner's decision: the mirror follows the no-coin-penalty
+    # Opus book, not the base one. `ai-xau-opus-ctx` answered NONE on every
+    # one of ~100 real bars (docs/hypotheses/2026-09-17-prompt-coin-penalty.md)
+    # and a mirror of a book that never enters mirrors nothing; `-b` entered
+    # its first trade this morning. The base book KEEPS RUNNING on paper -
+    # it is the registered control for that experiment - only the account
+    # stops following it. Its data/live/vantage-cent/ai-xau-opus-ctx/ record
+    # stays where it is.
+    "ai-xau-opus-ctx-b",
     "ai-xau-terra-ctx",
 ]
 
