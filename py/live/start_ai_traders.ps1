@@ -161,7 +161,35 @@ $campaigns = @(
     # 31. Two books sharing a seed share a coin's luck on every bar where both
     # traded, which is the one thing a control may not do.
     @{ model = 'deepseek-flash'; run = 'ai-xau-ds-ctx-htf'; control = 'ai-xau-ds-ctx-htf-coin'; seed = 37; log = 'ai_trader_ds_htf'; promptVariant = 'htf-context' },
-    @{ model = 'deepseek-flash'; run = 'ai-xau-ds-ctx-htf-filter'; control = 'ai-xau-ds-ctx-htf-filter-coin'; seed = 41; log = 'ai_trader_ds_htf_filter'; promptVariant = 'htf-filter' }
+    @{ model = 'deepseek-flash'; run = 'ai-xau-ds-ctx-htf-filter'; control = 'ai-xau-ds-ctx-htf-filter-coin'; seed = 41; log = 'ai_trader_ds_htf_filter'; promptVariant = 'htf-filter' },
+    # THE STAGED-ENTRY PAIR, stages 1 and 2 of
+    # docs/plans/2026-09-18-staged-ai-entry.md. Registered at
+    # docs/hypotheses/2026-09-18-plan-entry.md and 2026-09-18-plan-trigger.md
+    # before either book saw a bar.
+    #
+    # `plan` answers with an entry type and price - "wait for 4331" - instead
+    # of a side that fills at the next open; the order fills from the desk's
+    # tick feed and is cancelled unfilled, AS A ROW, after the bars the model
+    # named. `ai-xau-ds-ctx` above is its control: same model, same bars, the
+    # market answer. `plan-trigger` is the same prompt (the selftest pins the
+    # two byte-identical) plus a question every minute while an order waits:
+    # TRIGGER, WAIT or CANCEL, thinking off, on the decision prompt re-sent
+    # unchanged so the provider serves it from cache. `plan` is ITS control:
+    # the rule-only fill against the model at the trigger.
+    #
+    # Same model as the rest of the ds family for the reason the htf pair
+    # gives: a variant tested against a different model's book measures the
+    # model. Their coins take the same entry TYPE at mirrored distances, so
+    # the control shares the fill mechanics and never gets the fast question.
+    #
+    # Seeds 43 and 47: distinct from each other and from 7, 11, 17, 23, 29,
+    # 31, 37 and 41, for the reason every row above gives.
+    #
+    # The funded account does NOT follow these. `mt5_executor.py --mirror-
+    # pending` exists and is off; it stays off until the stage-1 comparison
+    # has 30 trades over two windows, which the registration says in advance.
+    @{ model = 'deepseek-flash'; run = 'ai-xau-ds-plan'; control = 'ai-xau-ds-plan-coin'; seed = 43; log = 'ai_trader_ds_plan'; promptVariant = 'plan' },
+    @{ model = 'deepseek-flash'; run = 'ai-xau-ds-plan-trigger'; control = 'ai-xau-ds-plan-trigger-coin'; seed = 47; log = 'ai_trader_ds_plan_trigger'; promptVariant = 'plan-trigger' }
 )
 
 # `powershell -File script.ps1 -Only a,b` hands the parameter over as the
