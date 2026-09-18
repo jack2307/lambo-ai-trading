@@ -59,13 +59,25 @@ export function HtfCard({ market, data, error }: {
         // writes a sentence for exactly this and it is shown verbatim.
         <p className="text-muted-foreground fd-label">{data.unavailable ?? 'no H4 data for this market'}</p>
       ) : (
-        <H4Body h4={data.h4} d1={data.d1} now={now} />
+        <H4Body h4={data.h4} d1={data.d1} data={data} now={now} />
       )}
     </section>
   )
 }
 
-function H4Body({ h4, d1, now }: { h4: HtfH4; d1: HtfResponse['d1']; now: number }) {
+function H4Body({
+  h4,
+  d1,
+  data,
+  now,
+}: {
+  h4: HtfH4
+  d1: HtfResponse['d1']
+  /** For the H1 block and the per-timeframe sentences, which sit beside
+   *  `h4` on the response rather than inside it. */
+  data: HtfResponse
+  now: number
+}) {
   const s = h4.structure
   // "Not enough yet" is a different state from "no data", and the route
   // reports them differently on purpose. A populated object whose facts are
@@ -145,11 +157,25 @@ function H4Body({ h4, d1, now }: { h4: HtfH4; d1: HtfResponse['d1']; now: number
         </p>
       )}
 
+      {/* THE HOUR, ABOVE THE FOUR-HOUR DETAIL.
+          One line, the same facts, so the two read as a ladder: when they
+          disagree the disagreement is the information. There is deliberately
+          no combined word and no alignment score — averaging two structures
+          would destroy the one thing this row was added to show. */}
+      <H1Row h1={data.h1} sentence={data.unavailable_by_tf?.['1h'] ?? null} now={now} />
+
       <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
         {/* Shape AND colour. The glyph carries the direction on its own, so a
-            reader who cannot separate the two colours loses nothing. */}
+            reader who cannot separate the two colours loses nothing.
+
+            NAMED `H4` NOW THAT AN H1 ROW SITS ABOVE IT. The whole card used
+            to be four-hour, so every unlabelled fact on it was unambiguous by
+            context. Adding a second timeframe took that away, and an
+            unlabelled structure word directly under a labelled one reads as
+            belonging to the same timeframe. */}
         <span className="flex items-center gap-1 fd-body">
           <Mark className={cn('size-3.5 shrink-0', markTint)} aria-hidden />
+          <span className="text-muted-foreground/60 fd-caption">H4</span>
           <span className="font-medium">{s.label.toLowerCase()}</span>
         </span>
         <span className="text-muted-foreground/60 fd-caption">{s.rule}</span>
@@ -296,6 +322,102 @@ function H4Body({ h4, d1, now }: { h4: HtfH4; d1: HtfResponse['d1']; now: number
           ? `the last H4 bar closed ${liveAge(h4.computed_at_bar_ms, now)} — more than ${STALE_BARS} bars ago, so these may not be current`
           : `H4 bar closed ${liveAge(h4.computed_at_bar_ms, now)}`}
       </div>
+    </div>
+  )
+}
+
+/**
+ * The one-hour read, in one line.
+ *
+ * THE SAME FACTS AS THE H4 DETAIL, deliberately: a reader comparing two
+ * timeframes must be comparing the same measurements, or the comparison is
+ * between two different questions. What it does NOT do is combine them — no
+ * vote across timeframes, no alignment score. The bias word on this card is
+ * H4-only and says so in its own rule string.
+ *
+ * ABSENCE IS THREE DIFFERENT THINGS AND THEY READ DIFFERENTLY. `undefined` is
+ * an API older than this desk, which is a deploy-order artefact and nothing to
+ * investigate. `null` is the hourly bars missing, which is. A populated block
+ * whose facts are all null is a measurement in progress and will fix itself.
+ * One dash for all three would send somebody looking for a problem that is
+ * either not theirs or not there.
+ */
+function H1Row({
+  h1,
+  sentence,
+  now,
+}: {
+  h1: HtfH4 | null | undefined
+  /** The route's own sentence for `1h`, when it sends one. */
+  sentence: string | null
+  now: number
+}) {
+  const shell = 'border-border/60 flex flex-wrap items-baseline gap-x-2.5 gap-y-1 border-b pb-1.5'
+
+  if (h1 === undefined) {
+    return (
+      <div className={shell}>
+        <span className="text-muted-foreground/50 fd-caption">H1 —</span>
+        <span className="text-muted-foreground/50 fd-caption">
+          this desk shows the hourly read; the API it is talking to does not send it yet
+        </span>
+      </div>
+    )
+  }
+
+  if (!h1) {
+    return (
+      <div className={shell}>
+        <span className="text-muted-foreground/50 fd-caption">H1 —</span>
+        <span className="text-muted-foreground fd-caption">
+          {sentence ?? 'no hourly bars stored for this market'}
+        </span>
+      </div>
+    )
+  }
+
+  const s = h1.structure
+  const thin = h1.ema21 == null && h1.adx14 == null && h1.atr14 == null
+  const Mark = s.label === 'UP' ? ArrowUp : s.label === 'DOWN' ? ArrowDown : MoveHorizontal
+  const tint = s.label === 'UP' ? 'text-lc' : s.label === 'DOWN' ? 'text-lp' : 'text-muted-foreground'
+
+  return (
+    <div className={shell}>
+      <span className="flex items-center gap-1 fd-body">
+        <Mark className={cn('size-3.5 shrink-0', tint)} aria-hidden />
+        <span className="text-muted-foreground/60 fd-caption">H1</span>
+        <span className="font-medium">{s.label.toLowerCase()}</span>
+      </span>
+      <span className="text-muted-foreground/60 fd-caption">{s.rule}</span>
+      {/* The LABEL's age, not the facts' age — a fractal needs bars after it,
+          so on the hour the word can be two bars older than the numbers. */}
+      <span className="text-muted-foreground num fd-caption tabular-nums">
+        {s.confirmed_at_bar_ms != null
+          ? `confirmed ${liveAge(s.confirmed_at_bar_ms, now)}`
+          : 'not yet confirmed'}
+      </span>
+      {/* Shown only when it exists. `break_level` is null on a RANGE by
+          construction — a range has no single price whose break changes the
+          label — so printing `breaks —` would turn "does not apply" into
+          "we could not measure it". */}
+      {s.break_level != null && s.break_side && (
+        <span className="text-muted-foreground num fd-caption tabular-nums">
+          breaks {s.break_side.toLowerCase()} {quote(s.break_level)}
+        </span>
+      )}
+      {thin ? (
+        <span className="text-muted-foreground/60 fd-caption">
+          not enough hourly history yet for the rest
+        </span>
+      ) : (
+        <span className="text-muted-foreground/70 num fd-caption tabular-nums">
+          {h1.dist_ema21_atr != null ? `${signed(h1.dist_ema21_atr)} ATR vs EMA21` : '— ATR vs EMA21'}
+          {' · '}
+          ADX {h1.adx14 != null ? h1.adx14.toFixed(1) : '—'}
+          {' · '}
+          ER {h1.efficiency_20 != null ? h1.efficiency_20.toFixed(2) : '—'}
+        </span>
+      )}
     </div>
   )
 }

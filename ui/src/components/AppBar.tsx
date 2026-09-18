@@ -7,7 +7,15 @@ import { GuardsPanel } from '@/components/GuardsPanel'
 import type { BrokerAccount, HtfResponse, LiveBar, MarketInfo } from '@/lib/api'
 import { liveAge } from '@/lib/format'
 import type { Theme } from '@/lib/theme'
-import { BIAS_RULE, biasGlyph, biasTally, biasTint, htfBias } from '@/lib/htfBias'
+import {
+  BIAS_RULE,
+  biasGlyph,
+  biasTally,
+  biasTint,
+  htfBias,
+  structureGlyph,
+  structureTint,
+} from '@/lib/htfBias'
 import { liveAge as ageOf } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
@@ -71,6 +79,70 @@ const MARKET_VIEWS: View[] = ['workbench', 'tape']
  * screen and never clicks: which market, what the broker side is doing, and
  * what the selected account is worth.
  */
+/**
+ * One timeframe's structure, as the strip shows it.
+ *
+ * A FACT, not a reading: `structure.label` is what the route publishes, from
+ * a rule it names. The bias word beside it in the strip is this client's
+ * summary and wears a glyph to say so.
+ *
+ * THE THREE ABSENCES ARE DIFFERENT AND ARE SAID DIFFERENTLY. `undefined` is a
+ * server older than the H1 read — nothing is wrong, this desk is simply ahead
+ * of its API. `null` is the timeframe's bars missing entirely, which is worth
+ * going to look at. No `htf` at all is a market with no higher-timeframe read.
+ * Collapsing them into one dash would make a deploy-order artefact look like
+ * a data outage.
+ */
+function StructureWord({
+  tf,
+  htf,
+  which,
+  now,
+}: {
+  tf: 'H1' | 'H4'
+  htf: HtfResponse | null
+  which: 'h1' | 'h4'
+  now: number
+}) {
+  const block = htf ? htf[which] : null
+  // `h1` is optional on the wire; `h4` has always been sent.
+  const unsent = which === 'h1' && htf != null && htf.h1 === undefined
+  const sentence = htf?.unavailable_by_tf?.[which === 'h1' ? '1h' : '4h'] ?? htf?.unavailable ?? null
+
+  if (!block) {
+    return (
+      <span
+        className="text-muted-foreground/50"
+        title={
+          !htf
+            ? 'no higher-timeframe reading for this market'
+            : unsent
+              ? `This desk shows ${tf}, but the API it is talking to does not send it yet.`
+              : (sentence ?? `no ${tf} reading for this market`)
+        }
+      >
+        {tf}: —
+      </span>
+    )
+  }
+
+  const s = block.structure
+  const where =
+    s.break_level != null && s.break_side
+      ? ` Breaks ${s.break_side.toLowerCase()} ${s.break_level.toFixed(2)}.`
+      : ''
+  return (
+    <span
+      className={structureTint(s.label)}
+      title={`${tf} structure ${s.label} by ${s.rule}.${
+        s.confirmed_at_bar_ms != null ? ` Confirmed ${ageOf(s.confirmed_at_bar_ms, now)}.` : ''
+      }${where} A published fact, not a summary.`}
+    >
+      <span aria-hidden>{structureGlyph(s.label)}</span> {tf}: {s.label.toLowerCase()}
+    </span>
+  )
+}
+
 export function AppBar({ view, markets, market, onMarketChange, book, accounts, isLive, ticks, streaming, theme, onThemeChange, htf, onOpenMenu }: Props) {
   const needsMarket = MARKET_VIEWS.includes(view)
   const [now, setNow] = useState(() => Date.now())
@@ -165,28 +237,46 @@ export function AppBar({ view, markets, market, onMarketChange, book, accounts, 
         )}
       </div>
 
-      {/* The read, from every screen. Unavailable says so rather than
-          defaulting to RANGE, which would be a reading nobody made. */}
+      {/* The read, from every screen: two FACTS and then one SUMMARY.
+          Unavailable says so rather than defaulting to RANGE, which would be
+          a reading nobody made.
+
+          The order is the ladder — hour, then four-hour, then the word. When
+          the two disagree, the disagreement IS the information, and there is
+          deliberately no third word averaging them: an "aligned/divergent"
+          score would answer a question nobody here has measured. */}
       {(() => {
         const bias = htfBias(htf?.h4)
-        const conf = htf?.h4?.structure.confirmed_at_bar_ms ?? null
         const lamps = bias
           ? bias.votes.map((v) => `${v.name} ${v.vote ?? 'no vote'}`).join(' · ')
           : ''
+        const conf = htf?.h4?.structure.confirmed_at_bar_ms ?? null
         return (
-          <span
-            className={cn(
-              'border-border num rounded-sm border px-1.5 py-px fd-caption tabular-nums',
-              bias ? biasTint(bias.word) : 'text-muted-foreground/50',
+          <span className="border-border num inline-flex items-center gap-1 rounded-sm border px-1.5 py-px fd-caption tabular-nums">
+            <StructureWord tf="H1" htf={htf} which="h1" now={now} />
+            <span className="text-muted-foreground/40" aria-hidden>
+              ·
+            </span>
+            <StructureWord tf="H4" htf={htf} which="h4" now={now} />
+            {bias && (
+              <>
+                {/* Dropped FIRST when the strip is tight: the two structures
+                    are facts the desk publishes, the word is this client's
+                    summary of one of them. A summary is the right thing to
+                    lose when there is no room for everything. */}
+                <span className="text-muted-foreground/40 hidden sm:inline" aria-hidden>
+                  ·
+                </span>
+                <span
+                  className={cn('hidden sm:inline', biasTint(bias.word))}
+                  title={`H4 bias ${bias.word} — ${biasTally(bias)}. ${lamps}. ${
+                    conf != null ? `Confirmed ${ageOf(conf, now)}. ` : ''
+                  }${BIAS_RULE} A summary, not a signal.`}
+                >
+                  <span aria-hidden>{biasGlyph(bias.word)}</span> {bias.word.toLowerCase()}
+                </span>
+              </>
             )}
-            title={
-              bias
-                ? `H4 ${bias.word} — ${biasTally(bias)}. ${lamps}. ${conf != null ? `Confirmed ${ageOf(conf, now)}. ` : ''}${BIAS_RULE} A summary, not a signal.`
-                : 'no higher-timeframe reading for this market'
-            }
-          >
-            <span aria-hidden>{bias ? biasGlyph(bias.word) : ''}</span> H4:{' '}
-            {bias ? bias.word.toLowerCase() : '—'}
           </span>
         )
       })()}

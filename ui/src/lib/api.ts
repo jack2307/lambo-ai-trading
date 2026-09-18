@@ -915,12 +915,38 @@ export interface HtfResponse {
    *  ENTIRELY. A timeframe present but too short returns the object with its
    *  stamps set and the individual facts null — "no data" and "not enough
    *  yet" are different states and the card must not say one for the other. */
+  /**
+   * The one-hour read, in exactly the H4 shape.
+   *
+   * OPTIONAL ON THE WIRE because this client ships before the route that
+   * sends it. Absent reads as "this server predates H1" and the card says so,
+   * rather than showing an empty row that looks like a missing market.
+   */
+  h1?: HtfH4 | null
   h4: HtfH4 | null
   d1: HtfD1 | null
+  h1_source?: HtfSource | null
   h4_source: HtfSource | null
   d1_source: HtfSource | null
-  /** One sentence, written to be displayed, when a timeframe is absent. */
+  /**
+   * One sentence, written to be displayed, when a timeframe is absent.
+   *
+   * This cannot say WHICH once there are three timeframes, and the mixed case
+   * is the normal one: the daily export can be stale while the hourly is
+   * fresh. A single sentence sitting under a row that rendered perfectly is a
+   * caption confidently wrong about the thing above it.
+   */
   unavailable: string | null
+  /**
+   * The same sentence, per timeframe, keyed as the route names them (`1h`,
+   * `4h`, `1d`). A missing key means that timeframe is fine.
+   *
+   * Read in preference to `unavailable` and shown against the ROW it belongs
+   * to. When it is absent entirely — an older server — the card falls back to
+   * the single sentence and puts it under the card rather than under any one
+   * row, which is the most it can honestly claim about it.
+   */
+  unavailable_by_tf?: Record<string, string> | null
 }
 
 export const api = {

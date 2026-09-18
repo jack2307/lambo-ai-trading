@@ -41,9 +41,20 @@ export interface HtfBias {
   cast: number
 }
 
-/** The rule, in one string, shown in the caption and the hover. */
+/**
+ * The rule, in one string, shown in the caption and the hover.
+ *
+ * IT NAMES ITS OWN TIMEFRAME, and that became load-bearing the moment an H1
+ * row appeared beside the H4 one. Three facts now sit near this word and only
+ * the four-hour ones voted. A reader who sees `H1: UP · H4: RANGE · BULLISH`
+ * and is not told which chart the last word came from will assume it weighed
+ * both, because that is the obvious thing for a summary sitting between two
+ * rows to do — and it would be a cross-timeframe claim nothing here has
+ * measured.
+ */
 export const BIAS_RULE =
-  'Three votes: structure (UP/DOWN), EMA stack (21 vs 55 AND price vs 21), ' +
+  'The FOUR-HOUR chart only — the H1 row does not vote. Three votes: ' +
+  'structure (UP/DOWN), EMA stack (21 vs 55 AND price vs 21), ' +
   'and direction with strength (ADX ≥ 25 with +DI vs −DI). ' +
   'The word is the majority of the votes cast; a tie or fewer than two votes is RANGE.'
 
@@ -93,6 +104,29 @@ export function htfBias(h4: HtfH4 | null | undefined): HtfBias | null {
 /** `▲ ▼ ◆` — the shape, so the word never depends on colour alone. */
 export function biasGlyph(word: HtfBias['word']): string {
   return word === 'BULLISH' ? '▲' : word === 'BEARISH' ? '▼' : '◆'
+}
+
+/**
+ * The same two helpers for STRUCTURE, which is a different vocabulary.
+ *
+ * `UP / DOWN / RANGE` is a published fact — the route's own `structure.label`,
+ * produced by a stated rule. `BULLISH / BEARISH / RANGE` is this file's
+ * summary of three of them. They are deliberately different words so that a
+ * reader can never be unsure which one they are looking at, and these exist so
+ * that showing a structure never requires reaching for the bias helpers and
+ * quietly borrowing the bias's meaning.
+ *
+ * The glyphs match by shape on purpose: up is up on any chart. The WORD is
+ * what distinguishes a fact from a summary, not the mark beside it.
+ */
+export type StructureLabel = 'UP' | 'DOWN' | 'RANGE'
+
+export function structureGlyph(label: StructureLabel): string {
+  return label === 'UP' ? '▲' : label === 'DOWN' ? '▼' : '◆'
+}
+
+export function structureTint(label: StructureLabel): string {
+  return label === 'UP' ? 'text-lc' : label === 'DOWN' ? 'text-lp' : 'text-muted-foreground'
 }
 
 export function biasTint(word: HtfBias['word']): string {
