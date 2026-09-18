@@ -36,6 +36,9 @@
 #   when it cannot measure one.
 param(
     [string]$Root = '',
+    # Only used to ask `py/live/accounts.py` which terminal serves prices.
+    # The same default the launchers under py/live use.
+    [string]$Python = 'C:\Python39\python.exe',
     # Register the tasks. Without it this prints the definitions and changes
     # nothing.
     [switch]$Apply
@@ -61,6 +64,53 @@ function Get-DeskTaskSafe([string]$name) {
 # 'hourly'. Both were implicit while every task was the same shape; the export
 # is neither, and an implicit field is how a third task quietly inherits the
 # two decisions that do not apply to it.
+# What a task's action is RIGHT NOW, as one comparable string.
+#
+# Used to answer "is this apply actually changing anything for this task",
+# which decides whether its log is worth rolling aside. A task being
+# re-registered with the action it already has is the common case - the
+# operator is adding a third task, or re-running after a refusal - and there
+# is nothing stale to roll in that case.
+function Get-ActionSignature($task) {
+    if (-not $task) { return $null }
+    $a = @($task.Actions)[0]
+    if (-not $a) { return $null }
+    return (("{0}|{1}|{2}" -f $a.Execute, $a.Arguments, $a.WorkingDirectory)).Trim()
+}
+
+# Roll a log aside, and NEVER take the apply down with it.
+#
+# WHAT WENT WRONG, 2026-09-18 on the VPS. This ran as a loop over every task
+# BEFORE any registration, and `Move-Item` on data\paper\logs\fd-api.out
+# failed with "being used by another process" - because fd-api was running
+# under its task and holding its own log open. `$ErrorActionPreference` is
+# `Stop`, so that one failure aborted the whole apply: the XML exports had
+# been written, nothing had been registered, and `flowdesk-htf-export` did not
+# exist. One task's log file stopped three tasks from being defined.
+#
+# Two things were wrong and both are fixed here. It rolled unconditionally,
+# including for tasks whose action was not changing and which therefore had
+# nothing stale to roll; and it did it while the writer was still running.
+# Registration with -Force stops the task, so this is now called AFTER the
+# register, when the handle is gone.
+#
+# It still retries, because process exit and handle release are not the same
+# instant, and it still returns rather than throws, because a log that could
+# not be renamed is worth a line and is not worth an undefined task.
+function Roll-LogAside([string]$path, [string]$stamp) {
+    if (-not (Test-Path $path)) { return $true }
+    foreach ($i in 1..5) {
+        try {
+            Move-Item -Path $path -Destination "$path.$stamp" -Force -ErrorAction Stop
+            Note "rolled $(Split-Path $path -Leaf) aside as $(Split-Path "$path.$stamp" -Leaf)"
+            return $true
+        } catch {
+            Start-Sleep -Milliseconds 400
+        }
+    }
+    return $false
+}
+
 $TASKS = @(
     @{ Name = 'flowdesk-api';   Cmd = 'run-fd-api.cmd';   Log = 'fd-api.out';   What = 'the API and the client'
        Principal = 'system'; Trigger = 'startup' },
@@ -112,6 +162,30 @@ $TASKS = @(
        Principal = 'interactive'; Trigger = 'hourly' }
 )
 
+# WHICH terminal the desk reads bars from, per `config/accounts.toml`.
+#
+# Asked rather than hard-coded, and through `py/live/accounts.py --prices`
+# rather than by parsing the TOML here - PowerShell has no TOML reader and a
+# second parser would be a second answer to the same question. d1's key,
+# landed 2026-09-18.
+#
+# Returns $null rather than refusing when the reader cannot answer, because
+# this is only used to BREAK A TIE between two terminals running as the same
+# user. The tie-break is a nicety; the owner measurement below is the thing
+# that matters, and it must not start depending on a Python call that could
+# fail on a machine where the tasks still need registering.
+function Get-PricesTerminal([string]$root, [string]$python) {
+    $reader = Join-Path $root 'py\live\accounts.py'
+    if (-not (Test-Path $reader)) { return $null }
+    try {
+        $out = & $python $reader '--prices' 2>&1
+        if ($LASTEXITCODE -ne 0) { return $null }
+        $doc = ([string]::Join("`n", @($out))) | ConvertFrom-Json
+        if ($doc.terminal) { return [string]$doc.terminal }
+    } catch { }
+    return $null
+}
+
 # WHO owns the MetaTrader terminal, measured rather than assumed.
 #
 # Named here instead of in the table because a principal typed into a file is
@@ -142,6 +216,19 @@ function Get-TerminalPrincipal {
     if ($owners.Count -gt 1) {
         Write-Host "   two terminals run as different users ($($owners -join ', ')); cannot choose one" -ForegroundColor Red
         return $null
+    }
+    # One owner, so any of them gives the right answer - but REPORT the one
+    # the export actually talks to, which is the terminal `[prices]` names.
+    # On the VPS on 2026-09-18 this picked the demo terminal by enumeration
+    # order and was correct by luck: both run as the same user. Enumeration
+    # order is not a reason, and a printed principal that names a different
+    # terminal than the task will attach to is a line an operator has to
+    # reconcile.
+    $preferred = Get-PricesTerminal $Root $Python
+    if ($preferred) {
+        $match = @($found | Where-Object { $_.Path -and ($_.Path -ieq $preferred) })
+        if ($match.Count) { return $match[0] }
+        Write-Host "   note: [prices] names $preferred, which is not running; reporting another terminal's owner (same user)" -ForegroundColor Yellow
     }
     return $found[0]
 }
@@ -225,27 +312,37 @@ foreach ($t in $TASKS) {
     }
 }
 
-# ---- roll the stale log aside, never append to it ----
+# ---- what gets registered, what gets its log rolled, and what could not ----
 #
-# The existing data\paper\logs\fd-api.out was written by a wrapper-started
-# process that has been dead for hours, and two people read it that evening as
-# the live process's output. Appending the new stream to it would produce one
-# file in which the top describes a process that no longer exists and nothing
-# marks the join. Rolled aside with a timestamp and kept, the same rule the
-# deploy uses for the binary and the client.
-foreach ($t in $TASKS) {
-    $log = Join-Path $Root "data\paper\logs\$($t.Log)"
-    if (Test-Path $log) {
-        $dest = "$log.$stamp"
-        Move-Item -Path $log -Destination $dest -Force
-        Note "rolled $($t.Log) aside as $(Split-Path $dest -Leaf)"
-    }
-}
-
+# THE LOG IS ROLLED AFTER THE REGISTER, NOT BEFORE, and only when this apply
+# actually changes that task's action. See Roll-LogAside for the incident that
+# taught both halves. The original reason for rolling at all still stands: the
+# first fd-api.out was written by a process that had been dead for hours and
+# two people read it as live output. But that was a transition from an action
+# with no redirection to one with it - a task whose action is unchanged is
+# already writing a log with a boundary line per start, and rolling it would
+# discard readable history to solve a problem that no longer exists.
+$registered = @()
+$skipped = @()
+$unrolled = @()
 foreach ($t in $TASKS) {
     $script = Join-Path $Root "deploy\$($t.Cmd)"
-    if (-not (Test-Path $script)) { Write-Error "missing $script; not registering $($t.Name)"; continue }
+    if (-not (Test-Path $script)) {
+        # NOT Write-Error. `$ErrorActionPreference` is `Stop`, so Write-Error
+        # terminates the script and the `continue` that used to follow it was
+        # unreachable - one missing .cmd would have aborted the whole apply,
+        # the same shape as the log-handle failure this function was written
+        # for. Named, skipped, reported at the end.
+        Write-Host "  NOT registering $($t.Name): missing $script" -ForegroundColor Red
+        $skipped += "$($t.Name) (missing $($t.Cmd))"
+        continue
+    }
     $action = New-ScheduledTaskAction -Execute 'cmd.exe' -Argument "/c `"$script`"" -WorkingDirectory $Root
+    # Read BEFORE the register replaces it. If the action is unchanged there
+    # is nothing stale in that task's log and it is left alone.
+    $wasRunning = $null -ne (Get-DeskTaskSafe $t.Name)
+    $oldSig = Get-ActionSignature (Get-DeskTaskSafe $t.Name)
+    $newSig = (("{0}|{1}|{2}" -f 'cmd.exe', ("/c `"$script`""), $Root)).Trim()
     if ($t.Principal -eq 'interactive') {
         $own = Get-TerminalPrincipal
         if (-not $own) {
@@ -257,6 +354,7 @@ foreach ($t in $TASKS) {
             Write-Host "  NOT registering $($t.Name): no terminal64.exe is running, so the account" -ForegroundColor Red
             Write-Host '  it must run as cannot be measured. Start the demo terminal in the RDP' -ForegroundColor Red
             Write-Host '  session and run this again; the other tasks above are unaffected.' -ForegroundColor Red
+            $skipped += "$($t.Name) (no terminal64.exe running, so its account could not be measured)"
             continue
         }
         $principal = New-ScheduledTaskPrincipal -UserId $own.User -LogonType Interactive -RunLevel Highest
@@ -315,11 +413,48 @@ foreach ($t in $TASKS) {
     Register-ScheduledTask -TaskName $t.Name -Action $action -Principal $principal `
         -Trigger $trigger -Settings $settings -Force | Out-Null
     Write-Host "  registered $($t.Name)" -ForegroundColor Green
+    $registered += $t.Name
+
+    # NOW the log, with the task stopped by the register above and its writer
+    # gone. Only when the action changed, or when there was no task before -
+    # an unchanged action is already writing a log with boundary lines, and
+    # rolling it would throw away readable history for nothing.
+    $log = Join-Path $Root "data\paper\logs\$($t.Log)"
+    if ((-not $wasRunning) -or ($oldSig -ne $newSig)) {
+        if (-not (Roll-LogAside $log $stamp)) {
+            Write-Host "   could not roll $($t.Log) aside - something still holds it open." -ForegroundColor Yellow
+            Write-Host '   The task IS registered. The new stream will APPEND, so the boundary' -ForegroundColor Yellow
+            Write-Host '   line is what separates this process output from the last one.' -ForegroundColor Yellow
+            $unrolled += $t.Log
+        }
+    } else {
+        Note "$($t.Log) left alone: this task's action is unchanged, so nothing in it is stale"
+    }
+}
+
+# SAID BEFORE THE INSTRUCTIONS, because the instructions assume every task
+# exists. An apply that registered two of three used to look exactly like one
+# that registered three: the loop printed a green line per success and the
+# failure had already taken the script down.
+Write-Host ''
+if ($skipped.Count) {
+    Write-Host "$($skipped.Count) task(s) were NOT registered:" -ForegroundColor Red
+    foreach ($m in $skipped) { Write-Host "  $m" -ForegroundColor Red }
+    Write-Host '  Fix the cause and run -Apply again. Re-registering the others is' -ForegroundColor DarkGray
+    Write-Host '  harmless: their actions will be unchanged, so their logs are left alone.' -ForegroundColor DarkGray
+}
+if ($unrolled.Count) {
+    Write-Host "$($unrolled.Count) log(s) could not be rolled aside: $($unrolled -join ', ')" -ForegroundColor Yellow
+    Write-Host '  Their tasks are registered. Read from the newest boundary line down.' -ForegroundColor DarkGray
+}
+if ($registered.Count -eq 0) {
+    Write-Host 'NOTHING was registered.' -ForegroundColor Red
+    exit 1
 }
 
 Write-Host ''
-Write-Host 'Registered, and NOT started. Start them when you are ready:' -ForegroundColor Yellow
-foreach ($t in $TASKS) { Write-Host "  Start-ScheduledTask -TaskName $($t.Name)" -ForegroundColor Yellow }
+Write-Host "Registered $($registered.Count) task(s), and NOT started. Start them when you are ready:" -ForegroundColor Yellow
+foreach ($n in $registered) { Write-Host "  Start-ScheduledTask -TaskName $n" -ForegroundColor Yellow }
 Write-Host ''
 Write-Host 'PROVE IT TOOK - two lines, and read both:' -ForegroundColor Cyan
 Write-Host '  Get-ScheduledTask flowdesk-api,flowdesk-watch | Select TaskName,State; Get-CimInstance Win32_Process -Filter "name=''fd-api.exe''" | Select ProcessId,SessionId,@{n=''Owner'';e={(Invoke-CimMethod $_ -MethodName GetOwner).User}}'
@@ -352,3 +487,11 @@ if ($restorable.Count -gt 0) {
     Write-Host '  not from this file, and not from values anyone wrote down. Then' -ForegroundColor DarkGray
     Write-Host '  Start-ScheduledTask it. The logs rolled aside keep their timestamps.' -ForegroundColor DarkGray
 }
+
+# A PARTIAL APPLY IS NOT A SUCCESS, and the exit code has to say so now that
+# one is possible. Before this, any failure took the script down and the exit
+# code was right by accident; now the failures are survivable and reported, so
+# the code has to be set deliberately or an operator with two of three tasks
+# registered gets a clean 0.
+if ($skipped.Count) { exit 1 }
+exit 0
