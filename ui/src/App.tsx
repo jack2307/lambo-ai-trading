@@ -14,6 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Toaster } from '@/components/ui/sonner'
 import { api, type BrokerAccount, type Catalog } from '@/lib/api'
 import { useTicks } from '@/lib/ticks'
+import { useHtf } from '@/lib/useHtf'
 import { applyTheme, readTheme, resolveTheme, watchSystem, writeTheme, type Theme } from '@/lib/theme'
 
 export type View = 'desk' | 'analytics' | 'workbench' | 'tape' | 'research' | 'floor' | 'settings'
@@ -113,6 +114,12 @@ export default function App() {
   // Follow the machine only while the choice IS `system`. An explicit choice
   // is not a thing the OS gets to overrule.
   useEffect(() => watchSystem(theme, () => setResolved(applyTheme(theme))), [theme])
+  // Keyed to the market the STRIP names, which is a different question from
+  // the Desk card's - that one follows the selected RUN, and a run can trade a
+  // market this picker is not pointed at. Two hooks because there are two
+  // questions; each surface labels the market it is answering for, so they can
+  // never be read as one answer disagreeing with itself.
+  const { htf: stripHtf } = useHtf(market)
   const [railed, setRailed] = useState<boolean>(readRail)
   const [drawerOpen, setDrawerOpen] = useState(false)
 
@@ -239,6 +246,7 @@ export default function App() {
         streaming={streaming}
         theme={theme}
         onThemeChange={chooseTheme}
+        htf={stripHtf}
         onOpenMenu={() => setDrawerOpen(true)}
       />
 

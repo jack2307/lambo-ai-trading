@@ -4,9 +4,11 @@ import { Menu, Monitor, Moon, Sun } from 'lucide-react'
 import type { Book, View } from '@/App'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { GuardsPanel } from '@/components/GuardsPanel'
-import type { BrokerAccount, LiveBar, MarketInfo } from '@/lib/api'
+import type { BrokerAccount, HtfResponse, LiveBar, MarketInfo } from '@/lib/api'
 import { liveAge } from '@/lib/format'
 import type { Theme } from '@/lib/theme'
+import { BIAS_RULE, biasGlyph, biasTally, biasTint, htfBias } from '@/lib/htfBias'
+import { liveAge as ageOf } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
 interface Props {
@@ -22,6 +24,8 @@ interface Props {
   streaming: boolean
   theme: Theme
   onThemeChange: (theme: Theme) => void
+  /** Higher timeframe for the market this strip names. */
+  htf: HtfResponse | null
   /** Narrow screens only: the sidebar is an overlay there and needs opening. */
   onOpenMenu: () => void
 }
@@ -67,7 +71,7 @@ const MARKET_VIEWS: View[] = ['workbench', 'tape']
  * screen and never clicks: which market, what the broker side is doing, and
  * what the selected account is worth.
  */
-export function AppBar({ view, markets, market, onMarketChange, book, accounts, isLive, ticks, streaming, theme, onThemeChange, onOpenMenu }: Props) {
+export function AppBar({ view, markets, market, onMarketChange, book, accounts, isLive, ticks, streaming, theme, onThemeChange, htf, onOpenMenu }: Props) {
   const needsMarket = MARKET_VIEWS.includes(view)
   const [now, setNow] = useState(() => Date.now())
 
@@ -160,6 +164,32 @@ export function AppBar({ view, markets, market, onMarketChange, book, accounts, 
           </span>
         )}
       </div>
+
+      {/* The read, from every screen. Unavailable says so rather than
+          defaulting to RANGE, which would be a reading nobody made. */}
+      {(() => {
+        const bias = htfBias(htf?.h4)
+        const conf = htf?.h4?.structure.confirmed_at_bar_ms ?? null
+        const lamps = bias
+          ? bias.votes.map((v) => `${v.name} ${v.vote ?? 'no vote'}`).join(' · ')
+          : ''
+        return (
+          <span
+            className={cn(
+              'border-border num rounded-sm border px-1.5 py-px fd-caption tabular-nums',
+              bias ? biasTint(bias.word) : 'text-muted-foreground/50',
+            )}
+            title={
+              bias
+                ? `H4 ${bias.word} — ${biasTally(bias)}. ${lamps}. ${conf != null ? `Confirmed ${ageOf(conf, now)}. ` : ''}${BIAS_RULE} A summary, not a signal.`
+                : 'no higher-timeframe reading for this market'
+            }
+          >
+            <span aria-hidden>{bias ? biasGlyph(bias.word) : ''}</span> H4:{' '}
+            {bias ? bias.word.toLowerCase() : '—'}
+          </span>
+        )
+      })()}
 
       {needsMarket && (
         <label className="text-muted-foreground flex items-center gap-2 text-[11px]">

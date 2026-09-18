@@ -3,6 +3,7 @@ import { ArrowDown, ArrowUp, MoveHorizontal } from 'lucide-react'
 
 import type { HtfH4, HtfResponse } from '@/lib/api'
 import { liveAge } from '@/lib/format'
+import { BIAS_RULE, biasGlyph, biasTally, biasTint, htfBias } from '@/lib/htfBias'
 import { cn } from '@/lib/utils'
 
 /**
@@ -77,8 +78,73 @@ function H4Body({ h4, d1, now }: { h4: HtfH4; d1: HtfResponse['d1']; now: number
   const markTint =
     s.label === 'UP' ? 'text-lc' : s.label === 'DOWN' ? 'text-lp' : 'text-muted-foreground'
 
+  const bias = htfBias(h4)
+
   return (
     <div className="flex flex-col gap-1.5">
+      {/* THE READ, and the rule that produced it, never one without the other.
+          It is a summary of the facts below and the caption says so, because
+          the route publishes no verdict and the books do not read this. */}
+      {bias && (
+        <div className="border-border/60 flex flex-col gap-1 border-b pb-1.5">
+          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+            <span
+              className={cn('num fd-display font-semibold', biasTint(bias.word))}
+              title={BIAS_RULE}
+            >
+              <span aria-hidden>{biasGlyph(bias.word)}</span> {bias.word}
+            </span>
+            <span className="text-muted-foreground fd-caption">{biasTally(bias)}</span>
+            <span className="text-muted-foreground/70 num fd-caption tabular-nums">
+              {s.confirmed_at_bar_ms != null
+                ? `as of ${liveAge(s.confirmed_at_bar_ms, now)}`
+                : 'not yet confirmed'}
+            </span>
+          </div>
+          {/* The lamps: WHICH agreed, not just how many. A word with no
+              working is the thing a reader cannot argue with. */}
+          <div className="flex flex-wrap gap-x-3 gap-y-0.5 fd-caption">
+            {bias.votes.map((v) => (
+              <span key={v.name} className="flex items-center gap-1" title={v.why}>
+                <span
+                  className={cn(
+                    'size-1.5 rounded-full',
+                    v.vote === 'bull' ? 'bg-lc' : v.vote === 'bear' ? 'bg-lp' : 'bg-muted-foreground/40',
+                  )}
+                  aria-hidden
+                />
+                <span className="text-muted-foreground/70">
+                  {v.name} {v.vote === 'bull' ? 'bull' : v.vote === 'bear' ? 'bear' : '—'}
+                </span>
+              </span>
+            ))}
+          </div>
+          <p className="text-muted-foreground/50 fd-caption leading-snug">
+            A summary of the three facts below, not a signal — the books do not read it.{' '}
+            {BIAS_RULE}
+          </p>
+        </div>
+      )}
+
+      {/* The facts he would use to argue with the word. */}
+      {d1 && (
+        <p className="text-muted-foreground num fd-caption tabular-nums">
+          {[
+            d1.prior_day_high != null && d1.prior_day_low != null && h4.last_close != null
+              ? `${h4.last_close > (d1.prior_day_high + d1.prior_day_low) / 2 ? 'above' : 'below'} prior-day mid`
+              : null,
+            d1.close_pct_of_prior_week_range != null
+              ? `${d1.close_pct_of_prior_week_range.toFixed(0)}% of the week’s range`
+              : null,
+            h4.dist_ema21_atr != null
+              ? `${h4.dist_ema21_atr >= 0 ? 'above' : 'below'} EMA21 by ${Math.abs(h4.dist_ema21_atr).toFixed(2)} ATR`
+              : null,
+          ]
+            .filter(Boolean)
+            .join(' · ')}
+        </p>
+      )}
+
       <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
         {/* Shape AND colour. The glyph carries the direction on its own, so a
             reader who cannot separate the two colours loses nothing. */}
