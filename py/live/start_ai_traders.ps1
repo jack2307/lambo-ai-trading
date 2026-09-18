@@ -2,6 +2,11 @@
 #
 #   powershell -NoProfile -File py\live\start_ai_traders.ps1
 #   powershell -NoProfile -File py\live\start_ai_traders.ps1 -DryRun
+#   powershell -NoProfile -File py\live\start_ai_traders.ps1 -Detached   <- from ssh
+#
+# FROM A REMOTE SHELL, PASS -Detached. Without it the traders are children of
+# that shell and die when it does; see the switch's own note below for the
+# day that cost.
 #
 # One process per model, each driving a matched pair of paper books: the
 # model's side and a coin's. Nothing here can reach a broker — the route these
@@ -30,8 +35,55 @@ param(
     # on: without the coin, a campaign can say what it earned but not whether
     # the model earned it, because every long-gold book made money in a week
     # gold rose.
-    [switch]$NoControl
+    [switch]$NoControl,
+
+    # Start the traders so they OUTLIVE the shell that ran this.
+    #
+    # Measured 2026-09-18 17:00Z: all eight traders were found dead minutes
+    # after a deploy. They had been started by this script running inside an
+    # ssh-invoked PowerShell, and when that parent tree went away - the stray
+    # deploy process was killed and the ssh session ended - the traders went
+    # with it. The desk lost ten minutes of bars and nothing said so; the
+    # books simply recorded a gap.
+    #
+    # It is the same fault that put fd-api and the watch on SYSTEM scheduled
+    # tasks: on this machine anything tied to a session or a console dies with
+    # it. -Detached re-launches this script through Win32_Process.Create,
+    # whose child is parented by WMI and not by sshd, then returns. Use it
+    # from every remote shell. A console on the machine itself does not need
+    # it, and a scheduled task must NOT pass it - the task is already the
+    # detachment, and a second one would hide the traders from it.
+    [switch]$Detached
 )
+
+# Re-launch and return, before anything is stopped. Deliberately first: a
+# -Detached run that fell through to the body would stop every trader here
+# AND start a set from the child, which is the one ordering that leaves the
+# desk empty if the child fails.
+if ($Detached) {
+    $self = $MyInvocation.MyCommand.Path
+    $rest = @()
+    if ($DryRun)    { $rest += '-DryRun' }
+    if ($NoControl) { $rest += '-NoControl' }
+    if ($Only.Count) { $rest += @('-Only', ($Only -join ',')) }
+    $logs = Join-Path $Root 'data\paper\logs'
+    New-Item -ItemType Directory -Force -Path $logs | Out-Null
+    $out = Join-Path $logs 'start_ai_traders.out'
+    $inner = "Set-Location '$Root'; & powershell -NoProfile -ExecutionPolicy Bypass -File '$self' $($rest -join ' ') *> '$out'"
+    # Built by concatenation rather than interpolation: PowerShell escapes a
+    # quote inside a double-quoted string with a backtick, not a backslash,
+    # and the backslash form parses as a literal backslash that ENDS the
+    # string - a fault that only shows when the command is run.
+    $cmd = 'powershell.exe -NoProfile -NoLogo -ExecutionPolicy Bypass -Command "' + $inner + '"'
+    $r = Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{ CommandLine = $cmd; CurrentDirectory = $Root }
+    if ($r.ReturnValue -ne 0) {
+        Write-Error "Win32_Process.Create refused with $($r.ReturnValue); nothing was stopped and nothing started"
+        exit 1
+    }
+    Write-Host "detached launcher pid $($r.ProcessId); its output goes to $out"
+    Write-Host 'This shell can close now. Check with: Get-CimInstance Win32_Process -Filter "name=''python.exe''" | Where-Object { $_.CommandLine -like ''*ai_trader.py*'' }'
+    exit 0
+}
 
 $campaigns = @(
     # OpenAI's model through the account's ChatGPT PLAN, via the Codex CLI.
