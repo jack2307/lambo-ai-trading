@@ -1,8 +1,9 @@
 # Staged AI entry: plan at the bar, trigger on ticks, funnel the cadence
 
-Status: **PROPOSED 2026-09-18, not approved.** Nothing here is built. The
-owner asked for a plan before any code; this is that plan, with what was
-measured to write it. Each stage is its own registered campaign with a coin
+Status: **APPROVED by the owner 2026-09-18 evening.** Stages 0, 3, 4 shipped
+that evening (294d358, 4af81c3); stages 1 and 2 merged at 64b34d6 (API:
+agent/pending-orders, agent/m1-ticks; Python: agent/plan-prompt) and run on
+paper only. This is the plan as approved, with what was measured to write it. Each stage is its own registered campaign with a coin
 control, under the three-file rule and the 30-trade / two-window bar that
 every other prompt variant is held to.
 
@@ -101,7 +102,9 @@ While a plan is pending and unfilled:
   arm), output capped at 60 tokens;
 - M1 bars come from the API aggregating its own tick feed (the export task
   lags up to 5 min and cannot time an entry). One new aggregation in
-  `paper.rs`, served on `/api/chart/bars?tf=1m` with the forming bar.
+  `paper.rs`, served on `/api/paper/m1` with the forming minute (built
+  2026-09-18 as `crates/fd-api/src/m1.rs`; the chart route was not reused so
+  the exported 1m series and the tick-built one never share a name).
 - **Compared with** the rule-only trigger from stage 1 (a limit that fills
   itself): does a model at the trigger add anything, or only cost? Two arms,
   same plan source, registered.
