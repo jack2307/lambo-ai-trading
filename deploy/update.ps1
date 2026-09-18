@@ -495,6 +495,124 @@ function Wait-ForVersion([string]$expected, [int]$seconds = 30) {
     return @{ state = $(if ($sawSomething) { 'erroring' } else { 'silent' }) }
 }
 
+# ------------------------------------------------- the htf route's own inputs
+#
+# WHY THIS CHECK EXISTS, and it is not about the route being correct.
+#
+# `GET /api/paper/htf` reads data\bars\<SYMBOL>-4h.parquet and -1d.parquet.
+# `data\` is gitignored, so NO COMMIT CAN SHIP THOSE FILES. A merge that
+# brings the route, the exporter and the two prompt variants brings no bars.
+# The route then answers "not exported yet" - correctly, in a 200, in a
+# sentence written to be displayed - and every other check in this script
+# passes, because every other check is about the binary. The deploy reports
+# success and the first anyone learns of it is a decided bar with no context
+# in it, hours later, in a book whose whole purpose was the context.
+#
+# That is a step whose only enforcement is somebody remembering. This turns it
+# into a deploy-time stop.
+#
+# THREE ANSWERS, AND ONLY ONE OF THEM IS A FAILURE.
+#
+#   404/501  - the binary predates the route. That is an older server, not a
+#              missing export, and refusing on it would block every deploy of
+#              a commit that does not have the route yet. Noted, never fatal.
+#   h4 null  - the route is there and has no bars. THIS is the failure, and it
+#              is the one no other check can see.
+#   h4 there - the bars are present. Their AGE is the route's business and the
+#              block's, not this script's.
+#
+# WHICH MARKETS. The ones the account registry mirrors, resolved to markets by
+# asking the desk - not a list written here, which would become a thing to
+# remember to update the first time a market was added, i.e. exactly the class
+# of failure this check exists to remove. It is also why the scope is the
+# REGISTRY and not every loaded book: `eur-hours` is a paper book on eurusd
+# that nobody mirrors and nobody has exported H4 for, and scoping to every
+# book would refuse every deploy forever over a market no real money touches.
+function Test-HtfReadiness([string]$root) {
+    $acct = Join-Path $root 'config\accounts.toml'
+    if (-not (Test-Path $acct)) {
+        Note 'no config\accounts.toml, so no mirrored runs to check the htf route for'
+        return $true
+    }
+    # The run ids the registry mirrors. Read with a small state machine rather
+    # than a TOML parser, which PowerShell 5.1 does not have: inside a
+    # `runs = [` block, take each quoted string until the closing bracket.
+    $runs = @{}
+    $inRuns = $false
+    foreach ($line in (Get-Content $acct)) {
+        $t = $line.Trim()
+        if ($t -match '^runs\s*=\s*\[') { $inRuns = $true; continue }
+        if ($inRuns) {
+            if ($t -match '^\]') { $inRuns = $false; continue }
+            if ($t -match "^[`"']([^`"']+)[`"']") { $runs[$Matches[1]] = $true }
+        }
+    }
+    if ($runs.Count -eq 0) {
+        Note 'the registry mirrors no runs, so there is no market to check the htf route for'
+        return $true
+    }
+
+    # id -> market, from the desk itself.
+    $markets = @{}
+    try {
+        $st = (Invoke-WebRequest -Uri 'http://127.0.0.1:8138/api/paper/status' -UseBasicParsing -TimeoutSec 5).Content | ConvertFrom-Json
+        foreach ($r in @($st.runs)) { if ($runs.ContainsKey("$($r.id)") -and $r.market) { $markets["$($r.market)"] = $true } }
+    } catch {
+        Note "could not read /api/paper/status to resolve run markets ($($_.Exception.Message)); htf readiness NOT checked"
+        return $true
+    }
+    if ($markets.Count -eq 0) {
+        Note 'none of the mirrored runs is loaded, so there is no market to check the htf route for'
+        return $true
+    }
+
+    $bad = @()
+    foreach ($m in $markets.Keys) {
+        $code = $null
+        $body = $null
+        try {
+            $r = Invoke-WebRequest -Uri "http://127.0.0.1:8138/api/paper/htf?market=$m" -UseBasicParsing -TimeoutSec 5
+            $body = $r.Content | ConvertFrom-Json
+        } catch {
+            try { $code = [int]$_.Exception.Response.StatusCode } catch { }
+            if ($code -eq 404 -or $code -eq 501) {
+                Note "this fd-api has no /api/paper/htf (HTTP $code) - it predates the route. Not a missing export; continuing."
+                return $true
+            }
+            Note "could not reach /api/paper/htf for $m ($($_.Exception.Message)); htf readiness NOT checked"
+            return $true
+        }
+        if ($null -eq $body.h4) {
+            $bad += [pscustomobject]@{ Market = $m; Why = "$($body.unavailable)" }
+        } else {
+            Note "htf route has H4 bars for $m"
+            if ($null -eq $body.d1) { Write-Host "   WARNING: $m has H4 but no D1 ($($body.unavailable))" -ForegroundColor Yellow }
+        }
+    }
+    if ($bad.Count -eq 0) { return $true }
+
+    Write-Host ''
+    Write-Host 'THE HTF ROUTE HAS NO BARS FOR A MARKET THIS DESK MIRRORS.' -ForegroundColor Red
+    foreach ($b in $bad) {
+        Write-Host "  $($b.Market): $($b.Why)" -ForegroundColor Red
+    }
+    Write-Host '  This is NOT a code problem and a merge will not fix it. data\ is' -ForegroundColor Yellow
+    Write-Host '  gitignored, so the bars ship with nothing - they have to be exported' -ForegroundColor Yellow
+    Write-Host '  on THIS machine, once, against the running demo terminal:' -ForegroundColor Yellow
+    Write-Host ''
+    Write-Host '    C:\Python39\python.exe py\ingest\mt5_export.py --symbols XAUUSD ' -NoNewline -ForegroundColor Cyan
+    Write-Host '--timeframes H4,D1 --terminal "C:\MT5-demo\terminal64.exe"' -ForegroundColor Cyan
+    Write-Host ''
+    Write-Host '  That is the same command deploy\run-htf-export.cmd runs hourly once' -ForegroundColor Yellow
+    Write-Host '  install-tasks.ps1 -Apply has registered flowdesk-htf-export. Run it by' -ForegroundColor Yellow
+    Write-Host '  hand first: if the symbol is wrong on this terminal, mt5_export logs' -ForegroundColor Yellow
+    Write-Host '  "skipped" and still exits 0, so read its output rather than its code.' -ForegroundColor Yellow
+    Write-Host '  Until the bars exist, any book on an htf prompt variant decides every' -ForegroundColor Yellow
+    Write-Host '  bar with an apology where its context should be - which is a' -ForegroundColor Yellow
+    Write-Host '  context-absent campaign wearing a context-present id.' -ForegroundColor Yellow
+    return $false
+}
+
 # What the accounts are holding RIGHT NOW, read from the mirrors themselves.
 #
 # Deliberately duplicated from py\live\start_executors.ps1 rather than shared.
@@ -1099,6 +1217,17 @@ if (-not $NoRestart) {
     }
     Paid 'start fd-api'
     Paid 'verify the running version'
+
+    # After the version is proven and before anything is started against it.
+    # A refusal here leaves fd-api RUNNING and correct - the binary is fine,
+    # its inputs are not - so this does not go through Stop-Here, which is for
+    # states where the desk has been left half-stopped.
+    if (-not (Test-HtfReadiness $Root)) {
+        Write-Host ''
+        Write-Host 'fd-api is running and is the right commit. NOT reporting ready.' -ForegroundColor Red
+        Show-Owed
+        exit 1
+    }
     if ($v.body.git_dirty) {
         # Named, never refused, and -48 is right about why: this is the state
         # most likely to be running during an incident, and a check that

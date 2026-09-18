@@ -27,6 +27,13 @@
 #   NOT MetaTrader, and not the pollers or the mirrors. Those need an
 #   interactive session with a desktop - see the long argument at the top of
 #   deploy\start-desk.ps1. Only fd-api and the watch belong under SYSTEM.
+#
+#   AND THEREFORE NOT THE HTF EXPORT EITHER, which is the third task here and
+#   the only one that does NOT run as SYSTEM. It talks to MetaTrader, so the
+#   same rule that keeps the pollers out of session 0 keeps it out. See the
+#   comment on its entry below: the principal is MEASURED from the running
+#   terminal rather than named here, and this script refuses to register it
+#   when it cannot measure one.
 param(
     [string]$Root = '',
     # Register the tasks. Without it this prints the definitions and changes
@@ -50,10 +57,80 @@ function Get-DeskTaskSafe([string]$name) {
     try { return Get-ScheduledTask -TaskName $name -ErrorAction Stop } catch { return $null }
 }
 
+# `Principal` is 'system' or 'interactive', and `Trigger` is 'startup' or
+# 'hourly'. Both were implicit while every task was the same shape; the export
+# is neither, and an implicit field is how a third task quietly inherits the
+# two decisions that do not apply to it.
 $TASKS = @(
-    @{ Name = 'flowdesk-api';   Cmd = 'run-fd-api.cmd';   Log = 'fd-api.out';   What = 'the API and the client' },
-    @{ Name = 'flowdesk-watch'; Cmd = 'run-telegram.cmd'; Log = 'telegram.out'; What = 'the telegram watch' }
+    @{ Name = 'flowdesk-api';   Cmd = 'run-fd-api.cmd';   Log = 'fd-api.out';   What = 'the API and the client'
+       Principal = 'system'; Trigger = 'startup' },
+    @{ Name = 'flowdesk-watch'; Cmd = 'run-telegram.cmd'; Log = 'telegram.out'; What = 'the telegram watch'
+       Principal = 'system'; Trigger = 'startup' },
+    # THE HIGHER-TIMEFRAME BAR EXPORT, and it is the odd one out twice over.
+    #
+    # WHY IT EXISTS. `GET /api/paper/htf` reads data\bars\XAUUSD-4h.parquet
+    # and -1d.parquet. `data\` is gitignored, so NO COMMIT CAN EVER SHIP
+    # THOSE FILES - a merge that brings the route and the exporter brings no
+    # bars, the route then answers "not exported yet" perfectly correctly, and
+    # the deploy reports success. This task is what keeps them current;
+    # deploy\update.ps1 refuses to report ready when the route says they are
+    # missing for a market the desk trades.
+    #
+    # WHY NOT SYSTEM, which is the question that decides whether this works at
+    # all. The answer is already written down twice in this repository and
+    # both places say the same thing. deploy\start-desk.ps1: "Putting the
+    # terminals in an RDP session and the rest under SYSTEM would be betting
+    # that the IPC crosses a session boundary, which is a bet this desk does
+    # not need to take." And py\ingest\mt5_export.py: "The terminal cannot be
+    # launched from SSH at all - it lives in the owner's RDP session - so this
+    # attaches to a terminal that is already up." What is PROVEN on this
+    # machine is that the same USER reaches the terminal from a different
+    # session - that is what the pollers do from the ssh session every day.
+    # What is NOT proven is that a DIFFERENT user - SYSTEM, a different SID
+    # entirely - reaches it at all. Registering this as SYSTEM would be a task
+    # that registers cleanly and attaches to nothing, which is the shape this
+    # desk keeps meeting.
+    #
+    # So: LogonType Interactive, as the account that owns the running
+    # terminal, MEASURED at registration time rather than typed here. That is
+    # the one configuration with evidence behind it - same user, and in fact
+    # the same session the terminal is in. It requires the owner's session to
+    # exist, which is already the operating rule for this machine
+    # ("DISCONNECT the RDP session. Do not LOG OFF."), and if that session is
+    # gone the desk is blind anyway and a missing export is the smaller
+    # problem.
+    #
+    # WHY HOURLY RATHER THAN SIX FIXED TIMES. The broker's H4 candles close at
+    # 01/05/09/13/17/21 UTC and this machine's clock is not UTC. An hourly
+    # trigger at five past needs no knowledge of the offset; six local times
+    # would point at the wrong candles the first time a timezone or a DST rule
+    # moved underneath them. The export merges and is read-only, so running it
+    # more often than strictly needed costs a few seconds and repairs any hour
+    # that was missed.
+    @{ Name = 'flowdesk-htf-export'; Cmd = 'run-htf-export.cmd'; Log = 'htf-export.out'
+       What = 'the H4/D1 bar export the htf route reads'
+       Principal = 'interactive'; Trigger = 'hourly' }
 )
+
+# WHO owns the MetaTrader terminal, measured rather than assumed.
+#
+# Named here instead of in the table because a principal typed into a file is
+# a claim about a machine, and this file is read on more than one. If no
+# terminal is running there is nothing to attach to and nothing to measure, so
+# this returns $null and the caller REFUSES to register the export rather than
+# guessing at a username.
+function Get-TerminalPrincipal {
+    $procs = @(Get-CimInstance Win32_Process -Filter "name='terminal64.exe'" -ErrorAction SilentlyContinue)
+    foreach ($proc in $procs) {
+        try {
+            $o = Invoke-CimMethod -InputObject $proc -MethodName GetOwner -ErrorAction Stop
+        } catch { continue }
+        if ($o.ReturnValue -ne 0 -or -not $o.User) { continue }
+        $who = if ($o.Domain) { "$($o.Domain)\$($o.User)" } else { "$($o.User)" }
+        return @{ User = $who; Pid = $proc.ProcessId; Session = $proc.SessionId; Path = $proc.ExecutablePath }
+    }
+    return $null
+}
 
 Write-Host ''
 Write-Host "flowdesk scheduled tasks, root $Root" -ForegroundColor Cyan
@@ -64,9 +141,24 @@ foreach ($t in $TASKS) {
     Write-Host ''
     Write-Host "  $($t.Name) - $($t.What)" -ForegroundColor White
     Note "action    : cmd.exe /c `"$script`"   (workdir $Root)"
-    Note "principal : SYSTEM, ServiceAccount, Highest"
-    Note "trigger   : at startup"
-    Note "settings  : RestartCount=999 every 1m, ExecutionTimeLimit=0 (none), MultipleInstances=IgnoreNew"
+    if ($t.Principal -eq 'interactive') {
+        $own = Get-TerminalPrincipal
+        if ($own) {
+            Note "principal : $($own.User), Interactive, Highest  (measured from terminal64.exe pid $($own.Pid), session $($own.Session))"
+            Note "            $($own.Path)"
+        } else {
+            Write-Host '   principal : CANNOT BE DETERMINED - no terminal64.exe is running.' -ForegroundColor Red
+            Write-Host '               This task attaches to MetaTrader over local IPC and must run' -ForegroundColor Red
+            Write-Host '               as the account that owns it. Start the terminal in the RDP' -ForegroundColor Red
+            Write-Host '               session first; -Apply will refuse this task until then.' -ForegroundColor Red
+        }
+        Note "trigger   : hourly at five past, from the next such minute"
+        Note "settings  : ExecutionTimeLimit=30m, MultipleInstances=IgnoreNew, StartWhenAvailable"
+    } else {
+        Note "principal : SYSTEM, ServiceAccount, Highest"
+        Note "trigger   : at startup"
+        Note "settings  : RestartCount=999 every 1m, ExecutionTimeLimit=0 (none), MultipleInstances=IgnoreNew"
+    }
     Note "stdout    : appended to data\paper\logs\$($t.Log), with a boundary line per start"
     if ($exists) { Note "currently : present, State=$($exists.State)" } else { Note 'currently : NOT REGISTERED' }
     if (-not (Test-Path $script)) { Write-Host "   MISSING   : $script" -ForegroundColor Red }
@@ -140,8 +232,34 @@ foreach ($t in $TASKS) {
     $script = Join-Path $Root "deploy\$($t.Cmd)"
     if (-not (Test-Path $script)) { Write-Error "missing $script; not registering $($t.Name)"; continue }
     $action = New-ScheduledTaskAction -Execute 'cmd.exe' -Argument "/c `"$script`"" -WorkingDirectory $Root
-    $principal = New-ScheduledTaskPrincipal -UserId 'SYSTEM' -LogonType ServiceAccount -RunLevel Highest
-    $trigger = New-ScheduledTaskTrigger -AtStartup
+    if ($t.Principal -eq 'interactive') {
+        $own = Get-TerminalPrincipal
+        if (-not $own) {
+            # REFUSED, not defaulted. Falling back to SYSTEM here would
+            # register a task that runs every hour and attaches to nothing,
+            # and its Last Run Result would read 0x0 while the desk had no
+            # bars - the exact green failure the rest of this file exists to
+            # prevent.
+            Write-Host "  NOT registering $($t.Name): no terminal64.exe is running, so the account" -ForegroundColor Red
+            Write-Host '  it must run as cannot be measured. Start the demo terminal in the RDP' -ForegroundColor Red
+            Write-Host '  session and run this again; the other tasks above are unaffected.' -ForegroundColor Red
+            continue
+        }
+        $principal = New-ScheduledTaskPrincipal -UserId $own.User -LogonType Interactive -RunLevel Highest
+        # Five past the hour, every hour, starting at the next one. An
+        # explicit finite duration rather than [TimeSpan]::MaxValue: the
+        # object builds either way, but MaxValue serialises to
+        # P99999999DT23H59M59S and is the kind of value a scheduler service
+        # is entitled to reject at registration. Ten years is not indefinite
+        # and is long enough that the machine will be gone first.
+        $start = (Get-Date).Date.AddHours((Get-Date).Hour).AddHours(1).AddMinutes(5)
+        $trigger = New-ScheduledTaskTrigger -Once -At $start `
+            -RepetitionInterval (New-TimeSpan -Hours 1) `
+            -RepetitionDuration ([TimeSpan]::FromDays(3650))
+    } else {
+        $principal = New-ScheduledTaskPrincipal -UserId 'SYSTEM' -LogonType ServiceAccount -RunLevel Highest
+        $trigger = New-ScheduledTaskTrigger -AtStartup
+    }
     # Every one of these is taken from the definitions running on the VPS,
     # read out on 2026-09-17 so this file reconciles with them rather than
     # overwriting them. The three that are load-bearing, in the operator's
@@ -162,10 +280,24 @@ foreach ($t in $TASKS) {
     # The battery settings look irrelevant on a rented server and are kept
     # because they are what is running; a reconciliation that quietly drops
     # fields is not a reconciliation.
-    $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries `
-        -StartWhenAvailable -ExecutionTimeLimit ([TimeSpan]::Zero) `
-        -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1) `
-        -MultipleInstances IgnoreNew
+    if ($t.Principal -eq 'interactive') {
+        # Deliberately NOT the settings above. RestartCount 999 every minute
+        # is right for a server that must never stay down and wrong for an
+        # hourly batch job: a terminal that is not up would be retried a
+        # thousand times an hour, filling the log with the same failure. It
+        # runs, it succeeds or it does not, and the next hour tries again.
+        # ExecutionTimeLimit is 30 minutes rather than none, because an export
+        # that hangs on a terminal that stopped answering should die before
+        # the next one is due.
+        $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries `
+            -StartWhenAvailable -ExecutionTimeLimit (New-TimeSpan -Minutes 30) `
+            -MultipleInstances IgnoreNew
+    } else {
+        $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries `
+            -StartWhenAvailable -ExecutionTimeLimit ([TimeSpan]::Zero) `
+            -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1) `
+            -MultipleInstances IgnoreNew
+    }
     Register-ScheduledTask -TaskName $t.Name -Action $action -Principal $principal `
         -Trigger $trigger -Settings $settings -Force | Out-Null
     Write-Host "  registered $($t.Name)" -ForegroundColor Green
