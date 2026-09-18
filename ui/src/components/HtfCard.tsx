@@ -326,8 +326,8 @@ function TfRow({
     `${since(block.computed_at_bar_ms, now)} ago. ` +
     (s.confirmed_at_bar_ms != null
       ? `The ${s.label} label is as of the bar that confirmed the swing, ${clock(s.confirmed_at_bar_ms)}Z, ` +
-        `${since(s.confirmed_at_bar_ms, now)} ago — a ${s.rule} needs bars after the swing, so the label is ` +
-        `MEANT to lag the facts rather than being stale.`
+        `${since(s.confirmed_at_bar_ms, now)} ago. A swing can only be confirmed after the fact, so the ` +
+        `label is MEANT to lag the facts beside it rather than being stale.`
       : 'The swing has not been confirmed yet.')
 
   // The working that does not earn a column: it is checkable, and a reader
