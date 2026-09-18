@@ -129,7 +129,32 @@ $campaigns = @(
     # into this book's numbers with nothing able to separate them.
     #
     # Seed 29: distinct from 23, or the two ds campaigns share one coin.
-    @{ model = 'deepseek-flash'; run = 'ai-xau-ds-ctx-otl'; control = 'ai-xau-ds-ctx-otl-coin'; seed = 29; log = 'ai_trader_ds_otl'; promptVariant = 'otl-context' }
+    @{ model = 'deepseek-flash'; run = 'ai-xau-ds-ctx-otl'; control = 'ai-xau-ds-ctx-otl-coin'; seed = 29; log = 'ai_trader_ds_otl'; promptVariant = 'otl-context' },
+    # THE HIGHER-TIMEFRAME PAIR. Registered at
+    # docs/hypotheses/2026-09-18-htf-context.md before either book saw a bar,
+    # and they are a PAIR on purpose: `htf-context` is the base prompt plus one
+    # facts block, `htf-filter` is htf-context plus exactly one sentence. Two
+    # claims, and the second is only interesting if the first survives - so
+    # they are read in that order, and the registration says that a
+    # disagreement rate under 10% over the first 100 shared bars closes the
+    # first claim and stops both.
+    #
+    # Same model as `ai-xau-ds-ctx` above, which is their control, because a
+    # variant tested against a different model's book measures the model.
+    #
+    # THEY NEED BARS THAT NO COMMIT SHIPS. Both fetch GET /api/paper/htf,
+    # which reads data\bars\XAUUSD-4h.parquet and -1d.parquet. `data\` is
+    # gitignored: the bars come from the flowdesk-htf-export task
+    # (deploy\install-tasks.ps1), and deploy\update.ps1 refuses to report
+    # ready without them. If they are missing these two books still run and
+    # every decision carries `htf: unavailable` - which is a recorded result
+    # and not a silent one, but it is not the experiment.
+    #
+    # Seeds 37 and 41: distinct from each other and from 7, 11, 17, 23, 29 and
+    # 31. Two books sharing a seed share a coin's luck on every bar where both
+    # traded, which is the one thing a control may not do.
+    @{ model = 'deepseek-flash'; run = 'ai-xau-ds-ctx-htf'; control = 'ai-xau-ds-ctx-htf-coin'; seed = 37; log = 'ai_trader_ds_htf'; promptVariant = 'htf-context' },
+    @{ model = 'deepseek-flash'; run = 'ai-xau-ds-ctx-htf-filter'; control = 'ai-xau-ds-ctx-htf-filter-coin'; seed = 41; log = 'ai_trader_ds_htf_filter'; promptVariant = 'htf-filter' }
 )
 
 # `powershell -File script.ps1 -Only a,b` hands the parameter over as the
