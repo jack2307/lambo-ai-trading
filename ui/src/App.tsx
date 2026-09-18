@@ -258,7 +258,7 @@ export default function App() {
       {view === 'desk' ? (
         <Desk book={book} ticks={ticks} streaming={streaming} theme={resolved} />
       ) : view === 'analytics' ? (
-        <Analytics />
+        <Analytics book={book} accounts={accounts} />
       ) : view === 'floor' ? (
         <Floor />
       ) : view === 'settings' ? (
