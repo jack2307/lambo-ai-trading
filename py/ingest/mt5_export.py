@@ -34,6 +34,16 @@ volume (f64, nullable). `volume` holds MT5 *tick* volume — the number of price
 changes in the bar — because CFD real volume is always zero. That is recorded
 in the file's metadata so a reader does not mistake it for contracts.
 
+Exit codes
+----------
+
+`0` every requested symbol/timeframe pair was written, `1` none of them were,
+`2` some were and some were skipped — the skips are named on the last line
+either way. Three rather than two so the CALLER decides whether a partial run
+is a failure: a task that needs both H4 and D1 can treat `2` as fatal, and one
+pulling a best-effort set need not. This script does not know what the files
+are for.
+
 Usage
 -----
     python py/ingest/mt5_export.py --symbols XAUUSD.sc,BTCUSD.sc --timeframes M1,M15
@@ -247,15 +257,23 @@ def main() -> int:
         now_utc_ms = int(dt.datetime.now(UTC).timestamp() * 1000)
         exported_at = dt.datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
+        timeframes = [t.strip().upper() for t in args.timeframes.split(",") if t.strip()]
+        # Every (symbol, timeframe) pair asked for, and what became of it. The
+        # exit code is computed from these and not from whether the loop ran.
+        written: list[str] = []
+        skipped: list[str] = []
+
         for symbol in [s.strip() for s in args.symbols.split(",") if s.strip()]:
             if not mt5.symbol_select(symbol, True):
                 log(f"{symbol}: symbol_select failed {mt5.last_error()} — skipped")
+                skipped += [f"{symbol} {tf} (symbol_select failed)" for tf in timeframes]
                 continue
             info = mt5.symbol_info(symbol)
             file_symbol = symbol if args.keep_suffix else symbol.split(".")[0]
-            for tf_name in [t.strip().upper() for t in args.timeframes.split(",") if t.strip()]:
+            for tf_name in timeframes:
                 if tf_name not in TIMEFRAMES:
                     log(f"{symbol} {tf_name}: unsupported timeframe — skipped")
+                    skipped.append(f"{symbol} {tf_name} (unsupported timeframe)")
                     continue
                 store_tf, step_seconds = TIMEFRAMES[tf_name]
                 path = os.path.join(args.out, f"{file_symbol}-{store_tf}.parquet")
@@ -266,6 +284,13 @@ def main() -> int:
                 for row in fresh:
                     merged[row[0]] = row  # a re-pulled bar replaces the stored one
                 rows = [merged[k] for k in sorted(merged)]
+                if not rows:
+                    # Nothing pulled and nothing stored. Writing the empty file
+                    # would leave a parquet that every reader then refuses, and
+                    # a run that produced it must not report success.
+                    log(f"  {symbol} {tf_name}: no bars from the terminal and none on disk — skipped")
+                    skipped.append(f"{symbol} {tf_name} (no bars)")
+                    continue
 
                 # How far behind the market this file now ends. Printed every
                 # run because the three-hour lag above survived three separate
@@ -290,6 +315,7 @@ def main() -> int:
                     "exported_at": exported_at,
                 }
                 write_bars(path, rows, metadata)
+                written.append(f"{symbol} {tf_name}")
                 first = dt.datetime.fromtimestamp(rows[0][0] / 1000, tz=UTC) if rows else None
                 last = dt.datetime.fromtimestamp(rows[-1][0] / 1000, tz=UTC) if rows else None
                 log(
@@ -300,6 +326,31 @@ def main() -> int:
                     log(f"    gap {dt.datetime.fromtimestamp(a[0]/1000, tz=UTC)} -> {dt.datetime.fromtimestamp(b[0]/1000, tz=UTC)}")
     finally:
         mt5.shutdown()
+
+    # THE EXIT CODE IS THE OUTCOME, because nothing here is read by a human.
+    #
+    # Until 2026-09-18 every failure above was a `continue` and the function
+    # returned 0 regardless, so a run that exported NOTHING - a bad symbol, a
+    # timeframe this script does not know, a terminal that answered with no
+    # bars - reported success. On a desktop that is a log line somebody reads.
+    # As an hourly scheduled task it is the failure shape this desk has spent a
+    # week finding: Last Run Result 0x0, every hour, forever, while `data/bars`
+    # stays empty and the route goes on correctly answering "not exported yet".
+    # Found by b5 while building that very task.
+    #
+    # Three codes rather than two, because "some of it worked" is a real state
+    # and the caller - not this script - should decide whether it is a failure.
+    # A scheduled task that must have every file can treat 2 as fatal; one
+    # exporting a best-effort set can accept it. Collapsing them would force
+    # that judgement here, where nothing knows what the files are for.
+    if skipped:
+        log(f"skipped: {', '.join(skipped)}")
+    if not written:
+        log("nothing was exported")
+        return 1
+    if skipped:
+        log(f"exported {len(written)} of {len(written) + len(skipped)} requested")
+        return 2
     return 0
 
 
