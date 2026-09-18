@@ -1,0 +1,1 @@
+{"error":"no 1d bars for xauusd: bars/XAUUSD-1d.parquet has not been exported, and 1d cannot be resampled from a finer series because this broker's day starts at 21:00 UTC (22:00 outside US summer time) - an epoch-anchored 1d candle is not the broker's. Export it: py/ingest/mt5_export.py --symbols XAUUSD --timeframes D1"}
