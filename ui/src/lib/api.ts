@@ -941,12 +941,18 @@ export interface HtfResponse {
    * The same sentence, per timeframe, keyed as the route names them (`1h`,
    * `4h`, `1d`). A missing key means that timeframe is fine.
    *
+   * ALWAYS PRESENT, `{}` when nothing is missing — never null. Optional here
+   * only because an API older than this client omits it entirely. Confirmed
+   * against the route rather than assumed: a `| null` in this type would
+   * describe a state the server will never produce, and someone would
+   * eventually write a branch for it.
+   *
    * Read in preference to `unavailable` and shown against the ROW it belongs
    * to. When it is absent entirely — an older server — the card falls back to
    * the single sentence and puts it under the card rather than under any one
    * row, which is the most it can honestly claim about it.
    */
-  unavailable_by_tf?: Record<string, string> | null
+  unavailable_by_tf?: Record<string, string>
 }
 
 export const api = {
