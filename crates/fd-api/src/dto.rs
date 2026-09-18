@@ -12,6 +12,43 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
+/// Which file a chart series was read from.
+#[derive(Debug, Serialize)]
+pub struct BarSourceDto {
+    /// The parquet read, relative to the data root.
+    pub file: String,
+    /// Its stored timeframe, which is not always the one asked for: `1h` may
+    /// be built from `15m`.
+    pub timeframe: String,
+    /// True when the bars were rebucketed from a finer series. Only ever true
+    /// for steps that divide an hour, where the broker's whole-hour offset
+    /// makes the anchor irrelevant; `4h` and `1d` are refused instead.
+    pub resampled: bool,
+    /// Last write time of that file, UTC epoch ms. A stamp and not a duration,
+    /// so a client ages it against its own clock.
+    pub exported_at_ms: Option<i64>,
+}
+
+/// The bar still forming, aggregated from a finer stored series.
+#[derive(Debug, Serialize)]
+pub struct FormingDto {
+    /// Where this bar starts: the last CLOSED bar's time plus the period, so
+    /// it inherits the broker's anchor rather than assuming one.
+    pub time: i64,
+    pub open: f64,
+    pub high: f64,
+    pub low: f64,
+    pub close: f64,
+    /// The stored timeframe it was aggregated from.
+    pub from_timeframe: String,
+    /// The END of the last finer bar included: how far into this bar the high
+    /// and low are actually KNOWN. Built from 15m bars they can be fifteen
+    /// minutes stale while the price moves on, and a wick drawn as "the high
+    /// so far" when the high is that old is the same lie a client-built
+    /// forming candle tells, only smaller.
+    pub complete_to_ms: i64,
+}
+
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MarketInfo {
@@ -96,6 +133,24 @@ pub struct BarsResponse {
     pub market: String,
     pub symbol: String,
     pub timeframe: String,
+    /// The timeframe's period in milliseconds.
+    ///
+    /// NOT a way to compute where a bar starts. Bar times are the broker's own
+    /// stamps and are not multiples of this from the epoch - real 4h candles
+    /// open at 21:00 UTC in summer and 22:00 in winter. To find the bar
+    /// containing an instant, SEARCH the series for the last bar at or before
+    /// it; `floor(t / bar_ms) * bar_ms` is the epoch anchor and puts a marker
+    /// three hours into the wrong candle.
+    pub bar_ms: i64,
+    /// The OPEN time of the last closed bar - the same stamp it carries in
+    /// `bars`, so it compares directly against a bar and against an overlay
+    /// time without anyone adding a period to it.
+    pub last_closed_bar_ms: Option<i64>,
+    /// Where these bars came from, and whether anything was inferred.
+    pub source: BarSourceDto,
+    /// The bar that has not closed yet, or `null` when nothing finer than this
+    /// timeframe is stored to build one from. Never fabricated.
+    pub forming: Option<FormingDto>,
     /// True when the source publishes closes only, so the bars are flat.
     pub synthetic: bool,
     /// True when this market has an upstream websocket. Markets without one

@@ -124,8 +124,21 @@ def mt5_timeframe(name: str) -> int:
     return getattr(mt5, f"TIMEFRAME_{name}")
 
 
-def fetch_windowed(symbol: str, tf_name: str, days: int | None, log) -> list[tuple[int, float, float, float, float, float]]:
-    """Pull `days` of history (all of it when None) in cap-sized windows.
+def fetch_windowed(symbol: str, tf_name: str, days: int | None, log,
+                   since_utc_ms: int | None = None) -> list[tuple[int, float, float, float, float, float]]:
+    """Pull history back to `days` ago or `since_utc_ms`, in cap-sized windows.
+
+    `since_utc_ms` is the newest bar already on disk. Given it, this asks the
+    terminal for the minutes since that bar instead of walking the whole of
+    history and merging the result over what was already there.
+
+    THE WALK WAS THE WHOLE COST. `read_existing` runs after the pull, for the
+    merge only, so nothing consulted the stored file to decide where to
+    resume: every run re-fetched everything the terminal had. At one run an
+    hour for two timeframes that was invisible. At a five-minute cadence
+    across five timeframes it is the same full walk twelve times an hour,
+    against the terminal that is also the price feed and also the funded
+    account. Found by b5 costing the cadence rather than assuming it.
 
     Walks back from now one window at a time. The terminal answers an empty
     window with a single bar rather than nothing, so two consecutive windows
@@ -133,6 +146,8 @@ def fetch_windowed(symbol: str, tf_name: str, days: int | None, log) -> list[tup
     """
     tf = mt5_timeframe(tf_name)
     window = dt.timedelta(days=WINDOW_DAYS[tf_name])
+    # One bar of this timeframe, for the resume overlap below.
+    window_step = dt.timedelta(seconds=TIMEFRAMES[tf_name][1])
     # `copy_rates_range` takes its bounds in the SERVER's clock, not UTC, and
     # this server runs UTC+3 (UTC+2 out of New York DST). Asking for a window
     # ending at `now` in UTC therefore asked for a window ending three hours in
@@ -147,13 +162,27 @@ def fetch_windowed(symbol: str, tf_name: str, days: int | None, log) -> list[tup
     offset = dt.timedelta(seconds=server_offset_seconds(int(now.timestamp()) + 3 * 3600))
     now_server = now + offset
     floor = now_server - dt.timedelta(days=days) if days else None
+    if since_utc_ms is not None:
+        # One bar of overlap, so a bar that was still forming when it was last
+        # stored is re-pulled complete rather than left half-written.
+        resume = dt.datetime.fromtimestamp(since_utc_ms / 1000.0, UTC) + offset - window_step
+        floor = max(floor, resume) if floor is not None else resume
     rows: dict[int, tuple] = {}
     empty_windows = 0
     end = now_server
     while True:
+        # CLAMPED TO THE FLOOR, which it was not until 2026-09-18. `start` was
+        # always `end - window`, so `--days 3` on M5 still asked the terminal
+        # for 300 days - about 86,400 bars - on the first call and only then
+        # stopped. The knob bounded how far back the walk went and not how much
+        # each step asked for, and on a short run the first step is the only
+        # one there is. Found by b5.
         start = end - window
-        if floor is not None and end <= floor:
-            break
+        if floor is not None:
+            if end <= floor:
+                break
+            if start < floor:
+                start = floor
         rates = mt5.copy_rates_range(symbol, tf, start, end)
         if rates is None:
             code, text = mt5.last_error()
@@ -229,6 +258,16 @@ def main() -> int:
     ap.add_argument("--out", default=os.path.join(os.path.dirname(__file__), "..", "..", "data", "bars"))
     ap.add_argument("--keep-suffix", action="store_true", help="name files by the full broker symbol (XAUUSD.sc) instead of stripping .sc")
     ap.add_argument("--quiet", action="store_true")
+    # Resume from the newest bar already stored instead of walking all of
+    # history. Off by default so a hand-run export still backfills; the
+    # scheduled job passes it, because at a five-minute cadence the difference
+    # is minutes of data against every bar the terminal holds.
+    #
+    # A first run, or a missing file, backfills exactly as before: there is no
+    # stored bar to resume from.
+    ap.add_argument("--since-stored", action="store_true",
+                    help="pull only bars newer than the newest one already in the parquet "
+                         "(a first run still backfills everything)")
     # WHICH terminal, on a machine running more than one.
     #
     # The VPS runs two: C:\MT5-cent holds the funded account and sends the
@@ -278,9 +317,14 @@ def main() -> int:
                 store_tf, step_seconds = TIMEFRAMES[tf_name]
                 path = os.path.join(args.out, f"{file_symbol}-{store_tf}.parquet")
 
-                fresh = to_utc_rows(fetch_windowed(symbol, tf_name, args.days, log), step_seconds, now_utc_ms)
+                # Read BEFORE the pull now, so the newest stored bar can bound
+                # it. It was read after, for the merge alone.
                 merged = read_existing(path)
                 before = len(merged)
+                since = max(merged) if (merged and args.since_stored) else None
+                if since is not None:
+                    log(f"  {symbol} {tf_name}: resuming from {dt.datetime.fromtimestamp(since / 1000, tz=UTC)}")
+                fresh = to_utc_rows(fetch_windowed(symbol, tf_name, args.days, log, since), step_seconds, now_utc_ms)
                 for row in fresh:
                     merged[row[0]] = row  # a re-pulled bar replaces the stored one
                 rows = [merged[k] for k in sorted(merged)]
