@@ -1220,11 +1220,19 @@ def changes(runs: list, state: dict, now_ms: float, funded: set | None = None,
                     for f in fills[prev.get("fills", 0):]:
                         pnl = f.get("pnl")
                         pnl_s = f"{float(pnl):+.2f} {unit}" if pnl is not None else "?"
+                        # BrokerFill on the wire is camelCase (direction /
+                        # entryPrice / exitPrice), unlike the position block -
+                        # read both spellings rather than assume one.
+                        side_f = f.get("direction") or f.get("side") or "?"
+                        e_px = f.get("entryPrice") if f.get("entryPrice") is not None else f.get("entry_price")
+                        x_px = f.get("exitPrice") if f.get("exitPrice") is not None else f.get("exit_price")
+                        why = f.get("exitReason")
                         out.append(
                             f"{account_head(b, rid)}{chr(10)}"
-                            f"closed <b>{esc(str(f.get('side') or '?').upper())}</b> · {esc(f.get('lots'))} lots"
-                            f"{chr(10)}entry  <code>{px(f.get('entry_price'))}</code>"
-                            f"{chr(10)}exit   <code>{px(f.get('exit_price'))}</code>"
+                            f"closed <b>{esc(str(side_f).upper())}</b> · {esc(f.get('lots'))} lots"
+                            f"{(' · ' + esc(why)) if why else ''}"
+                            f"{chr(10)}entry  <code>{px(e_px)}</code>"
+                            f"{chr(10)}exit   <code>{px(x_px)}</code>"
                             f"{chr(10)}P&amp;L    <b>{esc(pnl_s)}</b>"
                         )
             # A guard fired. Counted, not described: the desk's own log has the
