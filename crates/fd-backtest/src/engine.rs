@@ -759,6 +759,43 @@ pub fn track_excursion(position: &mut Live, bar: &Bar) {
     position.mae = position.mae.min(worst);
 }
 
+/// The excursion the EXIT bar contributed, measured to the price the trade
+/// actually left at and no further.
+///
+/// [`track_excursion`] is never called on the bar a trade closes on — the exit
+/// branch returns before it — so until 2026-09-18 every `mfe` and `mae` ended
+/// at the bar BEFORE the exit. The record then disagreed with itself: `r > mfe`
+/// is impossible by definition and 26 of the 112 trades in
+/// `tests/golden/btc-backtests.json` do it, the worst being an `ema-cross`
+/// trade that made 1.7826 R and recorded a best excursion of zero. Every
+/// MFE-based measurement this desk has ever made was a lower bound.
+///
+/// To the EXIT PRICE, not to the exit bar's high or low, and the difference is
+/// the whole care of this function. Reaching the exit price is a fact — the
+/// trade left there. The rest of that bar's range may have happened after the
+/// trade was already out, and intrabar order is exactly what a bar does not
+/// record. Claiming the high of a bar a stop-out happened on would be
+/// inventing an excursion the position was not in for.
+///
+/// One signed number, and it lands in the right place on its own: a long
+/// stopped out left below its entry, so it extends `mae` and leaves `mfe`
+/// alone; a long at target left above, so it extends `mfe`. No branch on the
+/// exit kind, and none needed.
+///
+/// The price is the one the trade is BOOKED at, costs included, so `r <= mfe`
+/// is exact rather than approximate and a trade whose best moment was its exit
+/// reads `mfe == r`. That is the invariant `parity.rs` now asserts on every
+/// closed trade.
+pub fn track_exit_excursion(position: &mut Live, exit_price: f64) {
+    let reached = if position.side.is_long() {
+        exit_price - position.entry_price
+    } else {
+        position.entry_price - exit_price
+    };
+    position.mfe = position.mfe.max(reached);
+    position.mae = position.mae.min(reached);
+}
+
 /// Half the spread against the trader on every side.
 pub(crate) fn apply_costs(price: f64, side: Side, entering: bool, rules: &TradingRules) -> f64 {
     let half = rules.spread / 2.0;
@@ -782,6 +819,21 @@ pub fn close_position(
     rules: &TradingRules,
     entry_reason: &str,
 ) -> Trade {
+    // The exit bar's own excursion, counted here and not at the call sites.
+    //
+    // It was reported as "check_exit returns before track_excursion runs",
+    // which is true and is one of FOUR paths in this engine that book a trade:
+    // the stop/target/guard exit, a strategy signal exit, the end-of-data
+    // close, and the run's own close - and `PaperBook::book` delegates here
+    // too, so the live book has three more. Patching the reported one left
+    // `donchian-breakout[3]` on gold finishing at -0.6126 R with a recorded
+    // worst excursion of -0.5925 R, which is the same impossibility in the
+    // other direction. Every exit already passes through this function; that
+    // makes it the only place the correction cannot be forgotten.
+    let mut position = position;
+    track_exit_excursion(&mut position, exit_price);
+    let position = position;
+
     let points =
         if position.side.is_long() { exit_price - position.entry_price } else { position.entry_price - exit_price };
     let commission = rules.commission_per_lot * position.lots * 2.0;

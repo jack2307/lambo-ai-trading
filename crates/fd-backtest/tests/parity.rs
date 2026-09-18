@@ -29,6 +29,35 @@ impl Diffs {
         }
     }
 
+    /// The two fields where this port deliberately does NOT reproduce the
+    /// oracle, and the only two — see `docs/decisions/2026-09-18-mfe-exit-bar.md`.
+    ///
+    /// The oracle never counted the exit bar's excursion, so 26 of its 112
+    /// golden trades record `r > mfe`, which is impossible by definition. This
+    /// port counts it, so its `mfe` can only be greater than or equal to the
+    /// oracle's and its `mae` only less than or equal — the fix adds one
+    /// candidate to a max and to a min and can move them no other way.
+    ///
+    /// THIS IS NOT THE GATE BEING LOOSENED TO PASS. Equality against a number
+    /// known to be wrong is replaced by a relation strictly stronger than that
+    /// equality could be: the oracle's value as a BOUND, and the definitional
+    /// `r <= mfe` the oracle itself violates. A regression that shrank an
+    /// excursion fails here, and so does one that inflated it past the trade's
+    /// own result — which the old equality check could not express at all.
+    fn check_excursion(&mut self, label: &str, rust_mfe: f64, rust_mae: f64, r: f64, expect: &Value) {
+        let oracle_mfe = num(&expect["mfe"]);
+        let oracle_mae = num(&expect["mae"]);
+        if rust_mfe < oracle_mfe && !parity_eq(rust_mfe, oracle_mfe) {
+            self.0.push(format!("{label}.mfe: rust {rust_mfe} is BELOW golden {oracle_mfe}"));
+        }
+        if rust_mae > oracle_mae && !parity_eq(rust_mae, oracle_mae) {
+            self.0.push(format!("{label}.mae: rust {rust_mae} is ABOVE golden {oracle_mae}"));
+        }
+        if r > rust_mfe && !parity_eq(r, rust_mfe) {
+            self.0.push(format!("{label}: r {r} exceeds mfe {rust_mfe}, which is impossible"));
+        }
+    }
+
     fn check_opt(&mut self, label: &str, actual: Option<f64>, expected: &Value) {
         match (actual, opt(expected)) {
             (None, None) => {}
@@ -96,8 +125,7 @@ fn check_market(market: &str) {
             diffs.check(&at("lots"), got.lots, &expect["lots"]);
             diffs.check(&at("pnlUsd"), got.pnl_usd, &expect["pnlUsd"]);
             diffs.check(&at("r"), got.r, &expect["r"]);
-            diffs.check(&at("mae"), got.mae, &expect["mae"]);
-            diffs.check(&at("mfe"), got.mfe, &expect["mfe"]);
+            diffs.check_excursion(&at("excursion"), got.mfe, got.mae, got.r, expect);
             diffs.check(&at("holdMs"), got.hold_ms as f64, &expect["holdMs"]);
         }
 
@@ -197,3 +225,73 @@ fn trading_rules_come_from_the_manifest() {
 
 /// Unused-import guard for the BTreeMap alias used by metric comparison.
 const _: Option<BTreeMap<String, usize>> = None;
+
+/// `r <= mfe` on every closed trade, on both markets, independently of the
+/// oracle.
+///
+/// The check that would have caught this years ago and did not exist. A trade
+/// cannot finish further in your favour than the furthest it ever went — `r`
+/// and `mfe` are the same distance measured to two different points, and the
+/// exit is one of the points `mfe` is a maximum over. Before 2026-09-18 the
+/// exit bar was not tracked at all, so 26 of the 112 trades in the golden file
+/// break it, the worst by 1.7826 R.
+///
+/// Deliberately not a comparison against anything. It is a property of a
+/// single trade and it holds for any strategy, any market and any tape, so a
+/// fixture cannot make it pass and a tape change cannot make it fail. It also
+/// proves the parity path is live rather than skipping: the assertion at the
+/// end fails if no trade was examined, which is how a silently-skipped golden
+/// file would otherwise read as green.
+#[test]
+fn a_trade_never_ends_better_than_its_best_moment() {
+    let registry = Registry::with_builtins();
+    let mut checked = 0usize;
+    let mut at_their_best = 0usize;
+
+    for market in ["gold", "btc"] {
+        let (Some(bars), Some(rules), Some(expected)) =
+            (load_bars(market), rules_from_manifest(market), read_golden(market, "backtests"))
+        else {
+            continue;
+        };
+        let timeline = load_timeline(market);
+        for (id, want) in expected["strategies"].as_object().expect("strategies object") {
+            let Ok(strategy) = registry.get(id) else { continue };
+            let params = params_from_golden(&want["params"]);
+            let result = run_backtest(
+                &bars,
+                strategy,
+                &params,
+                &rules,
+                if strategy.needs_options() { timeline.as_ref() } else { None },
+                Range::default(),
+            );
+            for (n, t) in result.trades.iter().enumerate() {
+                assert!(
+                    t.r <= t.mfe || parity_eq(t.r, t.mfe),
+                    "{market}/{id}[{n}]: r {} exceeds mfe {} — a trade cannot end better than its best moment",
+                    t.r,
+                    t.mfe
+                );
+                assert!(
+                    t.r >= t.mae || parity_eq(t.r, t.mae),
+                    "{market}/{id}[{n}]: r {} is below mae {} — a trade cannot end worse than its worst moment",
+                    t.r,
+                    t.mae
+                );
+                checked += 1;
+                at_their_best += usize::from(parity_eq(t.r, t.mfe));
+            }
+        }
+    }
+
+    assert!(checked > 0, "no trades were examined: the golden files did not load and this test proved nothing");
+    // A target exit leaves AT its best price, so equality is the expected
+    // reading for those and not a suspicious one. Zero of them would mean the
+    // exit bar is still not being counted.
+    assert!(
+        at_their_best > 0,
+        "{checked} trades and not one ended at its own best moment: the exit bar is not being counted"
+    );
+    eprintln!("r <= mfe on {checked} trades; {at_their_best} ended at their best moment");
+}
