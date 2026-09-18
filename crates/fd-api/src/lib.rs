@@ -8,6 +8,7 @@ pub mod advisor;
 pub mod dto;
 pub mod error;
 pub mod live;
+pub mod htf;
 pub mod paper;
 pub mod research;
 pub mod routes;
@@ -60,6 +61,8 @@ pub fn router(state: Arc<AppState>, ui: Option<PathBuf>) -> Router {
         // The open of a bar that has just started. Separate from `tick` on
         // purpose: this one can open a position, `tick` never touches a run.
         .route("/api/paper/open", post(paper::open_now))
+        // Higher-timeframe facts, computed once for the model and the desk.
+        .route("/api/paper/htf", get(htf::htf))
         .route("/api/paper/stop", post(paper::stop))
         .route("/api/paper/status", get(paper::status))
         .route("/api/paper/accounts", get(paper::accounts))

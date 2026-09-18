@@ -38,6 +38,7 @@ Usage
 -----
     python py/ingest/mt5_export.py --symbols XAUUSD.sc,BTCUSD.sc --timeframes M1,M15
     python py/ingest/mt5_export.py --symbols XAUUSD.sc --timeframes M15 --days 400
+    python py/ingest/mt5_export.py --symbols XAUUSD.sc --timeframes H4,D1 --terminal C:\MT5-demo\terminal64.exe
 """
 
 from __future__ import annotations
@@ -66,8 +67,22 @@ TIMEFRAMES = {
     "M5": ("5m", 300),
     "M15": ("15m", 900),
     "H1": ("1h", 3600),
+    "H4": ("4h", 14400),
+    "D1": ("1d", 86400),
 }
-WINDOW_DAYS = {"M1": 60, "M5": 300, "M15": 900, "H1": 3600}
+# Each window is 86,400 bars for a 24/7 symbol, which is under the terminal's
+# 100k cap with room for the overlap. The numbers look like the bar lengths
+# above and are not: they are `86400 / bars-per-day`.
+#
+# H4 and D1 are added 2026-09-18 for the higher-timeframe facts. They must be
+# EXPORTED and never resampled from M15. The broker's day starts at 21:00 UTC
+# in New York summer time and 22:00 outside it, so its H4 candles run
+# 21/01/05/09/13/17 UTC while anything bucketed on the Unix epoch runs
+# 00/04/08/12/16/20. Those are different candles with different highs and lows,
+# and "yesterday's high" on the wrong anchor is a level a trader would
+# recognise the name of and not the value. Verified 2026-09-18: hour 21Z holds
+# exactly zero M15 bars against 332-348 in every neighbouring hour.
+WINDOW_DAYS = {"M1": 60, "M5": 300, "M15": 900, "H1": 3600, "H4": 14400, "D1": 86400}
 
 SCHEMA = pa.schema(
     [
@@ -204,10 +219,26 @@ def main() -> int:
     ap.add_argument("--out", default=os.path.join(os.path.dirname(__file__), "..", "..", "data", "bars"))
     ap.add_argument("--keep-suffix", action="store_true", help="name files by the full broker symbol (XAUUSD.sc) instead of stripping .sc")
     ap.add_argument("--quiet", action="store_true")
+    # WHICH terminal, on a machine running more than one.
+    #
+    # The VPS runs two: C:\MT5-cent holds the funded account and sends the
+    # orders, C:\MT5-demo is there for prices. Point this at the DEMO one.
+    # Both quote the same instrument from the same server, this script is
+    # read-only either way, and attaching to the account that trades in order
+    # to copy some candles is a risk taken for no gain.
+    #
+    # Without it MT5 attaches to whichever terminal is already running, which
+    # is right on a single-terminal desktop and a coin toss on the VPS. The
+    # terminal cannot be launched from SSH at all - it lives in the owner's RDP
+    # session - so this attaches to a terminal that is already up, exactly as
+    # `mt5_bars.py --terminal` does.
+    ap.add_argument("--terminal", default=None,
+                    help="path to terminal64.exe when more than one is running "
+                         "(on the VPS: the DEMO terminal, not the one holding the funded account)")
     args = ap.parse_args()
     log = (lambda *_: None) if args.quiet else (lambda *a: print(*a, flush=True))
 
-    if not mt5.initialize():
+    if not (mt5.initialize(path=args.terminal) if args.terminal else mt5.initialize()):
         sys.exit(f"MT5 initialize failed: {mt5.last_error()}")
     try:
         term = mt5.terminal_info()
