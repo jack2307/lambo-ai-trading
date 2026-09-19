@@ -6,9 +6,11 @@ import {
   LEVEL_FAMILIES,
   LIVE_WINDOW_ATR,
   PROFILE_NOTE,
+  TAGS_PER_PANE,
   censusOf,
   harvestLevels,
   type DeskLevel,
+  type LevelMode,
 } from '@/lib/levels'
 import { cn } from '@/lib/utils'
 
@@ -62,17 +64,52 @@ import { cn } from '@/lib/utils'
  */
 const MAX_PER_SIDE = 6
 
+/**
+ * How many a side at `everything`, where the cap is the only thing left
+ * hiding anything.
+ *
+ * TWENTY, and the number is tied to the chart rather than picked. At
+ * `everything` the chart draws all 252 levels of the captured response and
+ * the pane can only place `TAGS_PER_PANE` (28) tags at their own prices, so
+ * past that the chart can still show a reader WHERE a level is but can no
+ * longer reliably tell them WHICH one it is. Forty rows — twenty a side — is
+ * more than those 28, so every level the chart could still label individually
+ * is named here in words, which is the half of a level a canvas cannot carry.
+ * Above that the panel would be a transcript of the response and the reader
+ * would scroll past the census that puts it in proportion.
+ *
+ * The cap stays SIX at `live`, and that is not a smaller version of the same
+ * argument: six is `smc_context.MAX_PER_SIDE`, so a reader comparing this
+ * panel against what the model was shown is comparing the same twelve rows.
+ * That parity is worth keeping exactly where the chart is in its default
+ * view, and it is already abandoned by the chart at `everything`.
+ */
+const MAX_PER_SIDE_EVERYTHING = 20
+
 /** How stale the response may be before the header says so, in bars. */
 const STALE_BARS = 2
 
 export function LevelsCard({
   data,
   error,
+  mode,
 }: {
   /** Polled ONCE in the Desk and handed here, because the chart draws lines
    *  at the prices this panel names. Two fetches would be two answers. */
   data: PriceLevelsResponse | null
   error: string | null
+  /**
+   * Where the chart's one level switch is.
+   *
+   * THE PANEL FOLLOWS THE SWITCH BUT DOES NOT OBEY IT. It has always listed
+   * every level the response carries, spent ones included, because the chart
+   * says WHERE and this says WHAT — and a reader checking why a line is not
+   * on the chart has to be able to find the level here. So `off` does not
+   * empty this list and `live` does not filter it; what the switch changes is
+   * how many rows a side the cap allows, and the count of what it passed over
+   * is printed either way.
+   */
+  mode: LevelMode
 }) {
   const [now, setNow] = useState(() => Date.now())
 
@@ -152,12 +189,12 @@ export function LevelsCard({
         </p>
       ) : (
         <div className="flex flex-col gap-1.5">
-          <Census census={census} data={data} />
+          <Census census={census} data={data} mode={mode} />
           <Thin data={data} />
-          <Side title="above the last close" rows={sides.above} data={data} />
-          <Side title="below the last close" rows={sides.below} data={data} />
+          <Side title="above the last close" rows={sides.above} data={data} mode={mode} />
+          <Side title="below the last close" rows={sides.below} data={data} mode={mode} />
           {sides.straddling.length > 0 && (
-            <Side title="straddling the last close" rows={sides.straddling} data={data} />
+            <Side title="straddling the last close" rows={sides.straddling} data={data} mode={mode} />
           )}
           <p className="text-muted-foreground/50 fd-caption leading-snug">
             Ordered by distance from the last close and by nothing else — no score, no ranking, no
@@ -224,7 +261,24 @@ function Thin({ data }: { data: PriceLevelsResponse }) {
  * group of their own where the chart puts them with the pools whose stops
  * they are.
  */
-function Census({ census, data }: { census: ReturnType<typeof censusOf>; data: PriceLevelsResponse }) {
+function Census({
+  census,
+  data,
+  mode,
+}: {
+  census: ReturnType<typeof censusOf>
+  data: PriceLevelsResponse
+  mode: LevelMode
+}) {
+  // What the chart is doing with them right now, in the tooltip that explains
+  // how this list and that chart relate. Three positions, three sentences —
+  // the alternative is one sentence that is wrong in two of them.
+  const chartDoes =
+    mode === 'off'
+      ? 'The chart is drawing none of them: the level switch above it is off.'
+      : mode === 'everything'
+        ? `The chart is drawing all ${census.total} of them, spent ones included and with no distance window — past ${TAGS_PER_PANE} tags in a pane the labels are spaced evenly instead of sitting at their prices.`
+        : `The chart draws the live ones within ${LIVE_WINDOW_ATR} ATR of the last close, plus the activity profile at any distance (${PROFILE_NOTE}).`
   const word = (key: string) => LEVEL_FAMILIES.find((f) => f.key === key)?.label ?? key
   return (
     <p className="text-muted-foreground/70 fd-caption leading-snug">
@@ -241,7 +295,7 @@ function Census({ census, data }: { census: ReturnType<typeof censusOf>; data: P
         tabIndex={0}
         role="note"
         className="focus-visible:ring-ring cursor-help underline decoration-dotted underline-offset-2 focus-visible:ring-2 focus-visible:outline-none"
-        title={`Spent means a pool already swept or a block already broken — ${census.spent} of the ${census.total}. The chart draws the live ones within ${LIVE_WINDOW_ATR} ATR of the last close, plus the activity profile at any distance (${PROFILE_NOTE}); this list is every level, nearest first, spent ones included, so the two together account for all of them. Window: ${data.window?.bars ?? '—'} bars of ${data.timeframe} over ${data.window?.days ?? '—'} trading days, from ${data.source?.file ?? 'an unnamed file'}.`}
+        title={`Spent means a pool already swept or a block already broken — ${census.spent} of the ${census.total}. ${chartDoes} This list is every level, nearest first, spent ones included, whatever the switch says, so the two together account for all of them. Window: ${data.window?.bars ?? '—'} bars of ${data.timeframe} over ${data.window?.days ?? '—'} trading days, from ${data.source?.file ?? 'an unnamed file'}.`}
       >
         spent
       </span>{' '}
@@ -250,8 +304,19 @@ function Census({ census, data }: { census: ReturnType<typeof censusOf>; data: P
   )
 }
 
-function Side({ title, rows, data }: { title: string; rows: DeskLevel[]; data: PriceLevelsResponse }) {
-  const shown = rows.slice(0, MAX_PER_SIDE)
+function Side({
+  title,
+  rows,
+  data,
+  mode,
+}: {
+  title: string
+  rows: DeskLevel[]
+  data: PriceLevelsResponse
+  mode: LevelMode
+}) {
+  const cap = mode === 'everything' ? MAX_PER_SIDE_EVERYTHING : MAX_PER_SIDE
+  const shown = rows.slice(0, cap)
   const hidden = rows.length - shown.length
   return (
     <div>
@@ -270,7 +335,7 @@ function Side({ title, rows, data }: { title: string; rows: DeskLevel[]; data: P
                 serves 78 of them on one response, and a key that collided
                 would drop the second silently. */}
             {shown.map((level, i) => (
-              <Row key={`${i}:${level.kind}@${level.anchor}`} level={level} data={data} />
+              <Row key={`${i}:${level.kind}@${level.anchor}`} level={level} data={data} mode={mode} />
             ))}
           </div>
         </div>
@@ -300,14 +365,20 @@ function Side({ title, rows, data }: { title: string; rows: DeskLevel[]; data: P
  * how far apart they sit — is in the row's tooltip, which is where this desk
  * puts a fact a reader asks for one row at a time.
  */
-function Row({ level, data }: { level: DeskLevel; data: PriceLevelsResponse }) {
+function Row({ level, data, mode }: { level: DeskLevel; data: PriceLevelsResponse; mode: LevelMode }) {
   const band = level.bandLow != null && level.bandHigh != null
   // The profile's three marks are never off the chart however far away they
   // are — they are the window's own statistic, not a level price came from,
   // and `exemptFromWindow` in lib/levels.ts carries the argument.
   const profile = level.family === 'profile'
+  // GREYED MEANS "NOT ON THE CHART", so it has to be computed against the
+  // position the switch is actually in. At `everything` every level is drawn
+  // and nothing here is off-chart; at `off` nothing is drawn and greying all
+  // of them would say the window had hidden them, which is a different fact.
   const offChart =
-    !profile && (level.spent || (level.distAtr != null && Math.abs(level.distAtr) > LIVE_WINDOW_ATR))
+    mode === 'live' &&
+    !profile &&
+    (level.spent || (level.distAtr != null && Math.abs(level.distAtr) > LIVE_WINDOW_ATR))
 
   const extras = [
     level.sideWord,
@@ -331,8 +402,8 @@ function Row({ level, data }: { level: DeskLevel; data: PriceLevelsResponse }) {
     profile ? PROFILE_NOTE : null,
     offChart
       ? level.spent
-        ? 'spent, so the chart does not draw it unless the spent switch is on'
-        : `more than ${LIVE_WINDOW_ATR} ATR from the last close, so it is outside the chart's window`
+        ? 'spent, so the chart does not draw it at "live" — the "everything" position does'
+        : `more than ${LIVE_WINDOW_ATR} ATR from the last close, so it is outside the chart's window at "live" — the "everything" position drops the window`
       : null,
     data.atr14 != null ? `ATR(14) is ${quote(data.atr14)}, the denominator of the ATR figure here` : null,
   ].filter(Boolean)

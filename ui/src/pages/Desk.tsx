@@ -42,18 +42,21 @@ import { useHtf } from '@/lib/useHtf'
 import { usePriceLevels } from '@/lib/usePriceLevels'
 import { PriceChart, type ActiveIndicator, type ChartLevel, type ChartTrade } from '@/components/PriceChart'
 import { IndicatorPicker, useViewerIndicators } from '@/components/IndicatorPicker'
-import { LevelToggles } from '@/components/LevelToggles'
+import { LevelLegend, LevelSwitch } from '@/components/LevelToggles'
 import {
   LIVE_WINDOW_ATR,
   PROFILE_NOTE,
+  TAGS_PER_PANE,
+  crowdedSentence,
   familyOf,
   foldSamePrice,
   harvestLevels,
   hiddenSentence,
-  readLevelFamilies,
+  readLevelMode,
   selectLevels,
-  writeLevelFamilies,
+  writeLevelMode,
   type LevelFamily,
+  type LevelMode,
 } from '@/lib/levels'
 import { Skeleton } from '@/components/ui/skeleton'
 import type { Book } from '@/App'
@@ -120,49 +123,14 @@ const LAST_FILLS_CAP = 10
 /** Whether the open position is drawn, remembered per browser. */
 const SHOW_OPEN_KEY = 'fd.desk.showOpen'
 
-/** Whether the higher timeframe's levels are drawn, remembered per viewer. */
-const SHOW_HTF_KEY = 'fd.desk.showHtf'
-
-const readShowHtf = (): boolean => {
-  try {
-    // Absent means ON. They are thin dashed lines behind everything else, and
-    // a level you did not know was there is the one that surprises you.
-    return localStorage.getItem(SHOW_HTF_KEY) !== '0'
-  } catch {
-    return true
-  }
-}
-const writeShowHtf = (on: boolean) => {
-  try {
-    localStorage.setItem(SHOW_HTF_KEY, on ? '1' : '0')
-  } catch {
-    /* private mode: the choice lasts the page */
-  }
-}
-
-/** Whether the spent levels — pools already swept, blocks already broken —
- *  are drawn as well as the live ones. */
-const SHOW_SPENT_KEY = 'fd.desk.levelsSpent'
-
-const readShowSpent = (): boolean => {
-  try {
-    // Absent means OFF, and this is the one level switch that defaults off.
-    // On the captured response of 2026-09-19 the route served 252 levels of
-    // which 197 are spent: drawing them all is not a chart, it is a wash. It
-    // is a VIEW and not a verdict — the count of what is hidden is on screen
-    // beside this switch, and one press brings every one of them back.
-    return localStorage.getItem(SHOW_SPENT_KEY) === '1'
-  } catch {
-    return false
-  }
-}
-const writeShowSpent = (on: boolean) => {
-  try {
-    localStorage.setItem(SHOW_SPENT_KEY, on ? '1' : '0')
-  } catch {
-    /* private mode: the choice lasts the page */
-  }
-}
+/**
+ * THE LEVEL SWITCHES USED TO LIVE HERE. There were three of them in this file
+ * — a master `fd.desk.showHtf`, a `fd.desk.levelsSpent`, and the per-family
+ * list in `fd.desk.levels` — and on 2026-09-19 they became one three-position
+ * control, `readLevelMode`/`writeLevelMode` in lib/levels.ts. Both old keys
+ * are still READ there, once, to place an existing viewer in the right
+ * position; neither is written again and neither is deleted.
+ */
 
 const readShowOpen = (): boolean => {
   try {
@@ -806,6 +774,22 @@ export function Desk({ book, ticks, streaming, theme }: {
     chartTf,
   )
 
+  /**
+   * The one level switch's position, owned HERE for the reason the timeframe
+   * is: the chart draws the lines and the panel in the rail reads them out,
+   * and the two must be in the same position. It used to live inside the
+   * chart because the family toggles only changed the chart; the panel
+   * listed every level whatever the switches said. Now that the switch also
+   * moves the panel's cap, holding it in the chart would mean either a state
+   * sync between siblings or the panel reading `localStorage` — which would
+   * not re-render when somebody presses the switch.
+   */
+  const [levelMode, setLevelMode] = useState<LevelMode>(readLevelMode)
+  const pickLevelMode = useCallback((next: LevelMode) => {
+    setLevelMode(next)
+    writeLevelMode(next)
+  }, [])
+
   const activeBroker = useMemo(() => {
     if (account == null) return null
     const run = sorted.find((r) => r.id === activeId)
@@ -914,6 +898,8 @@ export function Desk({ book, ticks, streaming, theme }: {
                 theme={theme}
                 htf={htf}
                 levels={priceLevels}
+                levelMode={levelMode}
+                onLevelMode={pickLevelMode}
                 tf={chartTf}
                 onTf={setChartTf}
                 now={now}
@@ -964,6 +950,7 @@ export function Desk({ book, ticks, streaming, theme }: {
                 htfError={htfError}
                 levels={priceLevels}
                 levelsError={priceLevelsError}
+                levelMode={levelMode}
               />
             </div>
           </div>
@@ -2513,6 +2500,7 @@ function Drilldown({
   htfError,
   levels,
   levelsError,
+  levelMode,
   error,
   now,
   openFill,
@@ -2534,6 +2522,8 @@ function Drilldown({
   /** The price-bar levels, the same response the chart is drawing from. */
   levels: PriceLevelsResponse | null
   levelsError: string | null
+  /** The one level switch, so the panel lists as much as the chart draws. */
+  levelMode: LevelMode
 }) {
   if (error) {
     return (
@@ -2583,7 +2573,7 @@ function Drilldown({
             carry. Under the higher timeframe because it is the finer read of
             the same idea: context to weigh the book against, never an
             instruction about it. */}
-        <LevelsCard data={levels} error={levelsError} />
+        <LevelsCard data={levels} error={levelsError} mode={levelMode} />
         <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 fd-label">
           <span className="text-muted-foreground fd-caption font-medium tracking-wide uppercase">guards</span>
           <GuardChips run={run} />
@@ -2933,6 +2923,8 @@ function RunChart({
   theme,
   htf,
   levels,
+  levelMode: mode,
+  onLevelMode,
   tf,
   onTf,
   now,
@@ -2954,6 +2946,10 @@ function RunChart({
   /** The price-bar levels, the same response the panel reads out — computed
    *  by the route for `tf` below, not for the book's own timeframe. */
   levels: PriceLevelsResponse | null
+  /** The one level switch, owned by the page for the same reason `tf` is: the
+   *  panel in the rail has to be in the position the chart is in. */
+  levelMode: LevelMode
+  onLevelMode: (next: LevelMode) => void
   /** The timeframe on screen. Owned by the page so the levels can be fetched
    *  for it once and read by the chart and the panel together. */
   tf: Timeframe
@@ -3114,7 +3110,6 @@ function RunChart({
   const indicators = ownTf ? runIndicators : EMPTY_INDICATORS
 
   const [showOpen, setShowOpen] = useState(readShowOpen)
-  const [showHtf, setShowHtf] = useState(readShowHtf)
 
   /**
    * Every level the desk already computes, as lines.
@@ -3164,52 +3159,40 @@ function RunChart({
     return dailyLevels(out, htf)
   }, [htf])
 
-  /**
-   * Which families of level are drawn, and the master switch over all of them.
-   *
-   * Two controls rather than one, and they do different jobs. `showHtf` is
-   * the one that has always been here — it remembers, per viewer, that
-   * somebody wanted this overlay off entirely — and the family switches are
-   * new, for the reader who wants the week's extremes without the H4 swings.
-   * The families are only offered while the master is on, because a switch
-   * that cannot change what is on screen teaches a reader that none of them
-   * can.
+  /*
+   * THE ONE CONTROL OVER EVERY LEVEL ON THE CHART arrives as `mode` from the
+   * page above. Seven states became three: there used to be a master `levels
+   * on/off`, a switch per family and a `spent on/off` beside them, and the
+   * owner's instruction on 2026-09-19 was to merge them into one, where on
+   * shows everything. `off` draws nothing — including the H4 structure the
+   * master used to gate — `live` is the view the header had by default, and
+   * `everything` drops the distance window and the spent filter and draws all
+   * 252 of the captured response. The argument for three positions rather
+   * than two is written on `LevelMode` in lib/levels.ts.
    */
-  const [families, setFamilies] = useState<Set<LevelFamily>>(readLevelFamilies)
-
-  /**
-   * Whether the spent levels are drawn too.
-   *
-   * Its own switch rather than a sixth family, because SPENT is not a family
-   * — a swept pool and a broken block come from two different rules — and
-   * because state and provenance are two separate questions a reader asks.
-   */
-  const [showSpent, setShowSpent] = useState(readShowSpent)
 
   /** Every level `/api/paper/levels` sent, in this client's words. */
   const deskLevels = useMemo(() => harvestLevels(levels), [levels])
 
   /**
-   * The window onto them: still live, near the close, family switched on.
+   * The window onto them, as the switch has it.
    *
    * A VIEW, NOT A VERDICT — the rule is written where the filter is, in
    * `lib/levels.ts`, and the count of everything outside the window is on
-   * screen beside the switches so the choice is auditable. Nothing here
-   * ranks, scores or scores-by-another-name.
+   * screen beside the switch so the choice is auditable, with `everything`
+   * one press away. Nothing here ranks, scores or scores-by-another-name.
    */
-  const selection = useMemo(
-    () => selectLevels(deskLevels, { families, showSpent }),
-    [deskLevels, families, showSpent],
-  )
+  const selection = useMemo(() => selectLevels(deskLevels, { mode }), [deskLevels, mode])
 
   /**
-   * Every family that is in play, for the switches, and how many of each is
+   * Every family that is in play, for the legend, and how many of each is
    * actually on the chart.
    *
-   * TWO COUNTS AND NOT ONE. A switch exists while the response HAS levels of
-   * that family — turning `gaps` off and having its switch disappear because
-   * the window hid the last one is a control that vanishes under the pointer
-   * — and the number beside it is what is drawn, which is usually smaller.
+   * TWO COUNTS AND NOT ONE. The legend lists a family while the response HAS
+   * levels of it — a colour key that vanished because the window hid the last
+   * gap would leave the reader with an unexplained hue on the next poll — and
+   * the number beside it is what is drawn, which at `live` is usually
+   * smaller.
    */
   const levelCounts = useMemo(() => {
     const counts = new Map<LevelFamily, number>()
@@ -3220,8 +3203,11 @@ function RunChart({
   }, [allLevels, deskLevels])
 
   const htfLevels = useMemo<ChartLevel[]>(() => {
-    if (!showHtf) return EMPTY_LEVELS
-    const fromHtf = allLevels.filter((level) => families.has(familyOf(level.kind ?? '')))
+    if (mode === 'off') return EMPTY_LEVELS
+    // The H4 structure and the prior day and week carry no state and no ATR
+    // distance of their own, so neither the spent filter nor the window has
+    // anything to say about them: they are drawn whenever anything is.
+    const fromHtf = allLevels
     const fromRoute: ChartLevel[] = selection.drawn.map((level) => ({
       label: level.label,
       // The level's price, or a band's edge nearer the close. Never the
@@ -3242,9 +3228,9 @@ function RunChart({
     // lines and four tags stacked 14px apart pretending to be four levels.
     // Nothing is dropped — the fold names all of them on one tag.
     return foldSamePrice([...fromHtf, ...fromRoute])
-  }, [allLevels, families, selection, showHtf])
+  }, [allLevels, mode, selection])
 
-  /** What is drawn, per family, for the switch titles. */
+  /** What is drawn, per family, for the legend. */
   const drawnCounts = useMemo(() => {
     const counts = new Map<LevelFamily, number>()
     for (const level of htfLevels) {
@@ -3254,10 +3240,23 @@ function RunChart({
     return counts
   }, [htfLevels])
 
-  /** "38 further levels, spent or further away, not drawn", or nothing to
-   *  say. Never silent about a level the route sent and the chart did not
-   *  draw — that is the debt the prompt block pays with the same sentence. */
-  const hidden = showHtf ? hiddenSentence(selection) : null
+  /**
+   * What the switch owes the reader about what it is doing, in both
+   * directions.
+   *
+   * At `live`: "237 further levels, spent or further away, not drawn" — never
+   * silent about a level the route sent and the chart did not draw, which is
+   * the debt the prompt block pays with the same sentence. At `everything`
+   * nothing is held back, so the debt is the other one: how many ARE drawn
+   * and that the tags have stopped sitting at their own prices. At `off` the
+   * switch says `off` and a count would be repeating it.
+   */
+  const hidden =
+    mode === 'off'
+      ? null
+      : mode === 'everything'
+        ? crowdedSentence(selection.drawn.length)
+        : hiddenSentence(selection)
 
   /**
    * The open position to draw, taken from whichever book is on screen.
@@ -3467,71 +3466,38 @@ function RunChart({
         >
           on chart {showOpen ? 'on' : 'off'}
         </button>
-        <button
-          type="button"
-          onClick={() => {
-            const next = !showHtf
-            setShowHtf(next)
-            writeShowHtf(next)
-          }}
-          aria-pressed={showHtf}
-          className={cn(
-            'hover:bg-accent focus-visible:ring-ring ml-1 rounded-sm border px-1.5 py-px fd-caption normal-case transition-colors focus-visible:ring-2 focus-visible:outline-none motion-reduce:transition-none',
-            showHtf ? 'border-primary/40 text-primary' : 'border-border text-muted-foreground',
-          )}
-          title={
-            showHtf
-              ? 'Hide every level from the chart — the H4 structure and the prior day and week'
-              : 'Draw the H4 swing highs, lows and break level, and the prior day and week extremes'
-          }
-        >
-          {/* It said "H4 levels" while the H4 swings were the only ones
-              drawn. The storage key is still `fd.desk.showHtf`: somebody who
-              switched these off in that version should stay switched off,
-              and renaming the key would silently turn them all back on. */}
-          levels {showHtf ? 'on' : 'off'}
-        </button>
-        {showHtf && (
-          <LevelToggles
-            on={families}
-            present={new Set(levelCounts.keys())}
-            counts={levelCounts}
-            drawn={drawnCounts}
-            onChange={(next) => {
-              setFamilies(next)
-              writeLevelFamilies(next)
-            }}
-          />
+        {/* ONE SWITCH. It replaced the master `levels on/off` that lived
+            here, the five family toggles and the `spent on/off`; the storage
+            keys of all three are still read once, by `readLevelMode`, so
+            nobody's saved choice is thrown away or comes back half-on. */}
+        <LevelSwitch
+          mode={mode}
+          // Both numbers count levels FROM THE ROUTE, never lines on the
+          // canvas: `htfLevels` has the H4 structure mixed in and has already
+          // folded prices together, so 14 beside 252 would be two units in
+          // one control.
+          total={deskLevels.length || undefined}
+          drawn={selection.drawn.length}
+          onChange={onLevelMode}
+        />
+        {/* THE COLOUR KEY SURVIVES THE MERGE. The switches were also, by
+            accident, the only thing on screen saying which hue was which kind
+            of level. Merging the control must not merge the meanings. */}
+        {mode !== 'off' && (
+          <LevelLegend present={new Set(levelCounts.keys())} counts={levelCounts} drawn={drawnCounts} />
         )}
-        {showHtf && selection.hiddenSpent + selection.hiddenFar + selection.drawn.length > 0 && (
-          <button
-            type="button"
-            onClick={() => {
-              const next = !showSpent
-              setShowSpent(next)
-              writeShowSpent(next)
-            }}
-            aria-pressed={showSpent}
-            className={cn(
-              'hover:bg-accent focus-visible:ring-ring ml-1 rounded-sm border px-1.5 py-px fd-caption normal-case transition-colors focus-visible:ring-2 focus-visible:outline-none motion-reduce:transition-none',
-              showSpent ? 'border-primary/40 text-primary' : 'border-border text-muted-foreground',
-            )}
-            title={
-              showSpent
-                ? 'Hide the spent levels — pools already swept and blocks already broken. They are drawn dotted and faded.'
-                : 'Draw the spent levels too: pools already swept and blocks already broken. On the response of 2026-09-19 that was 197 of 252 levels.'
-            }
-          >
-            spent {showSpent ? 'on' : 'off'}
-          </button>
-        )}
-        {/* NEVER SILENT ABOUT WHAT IS NOT DRAWN. A chart that looks complete
+        {/* NEVER SILENT ABOUT WHAT IS NOT DRAWN — and, at `everything`, never
+            silent about what the crowd costs. A chart that looks complete
             says the tape is tidier than it is; the count is the audit of the
-            window, and the two switches beside it undo it. */}
+            switch, and the switch beside it undoes it. */}
         {hidden && (
           <span
             className="text-muted-foreground/70 num ml-2 normal-case"
-            title={`Levels are drawn within ${LIVE_WINDOW_ATR} ATR(14) of the last close and only while they are live — a pool not yet swept, a block not yet broken, a gap not yet filled. The activity profile is exempt: ${PROFILE_NOTE}. It is a window onto the response, not a judgement about which levels matter: nothing here is ranked or scored.`}
+            title={
+              mode === 'everything'
+                ? `Every level on this response is drawn: spent ones dotted and faded, and no distance window. The lines are at their true prices; it is the TAGS that degrade — past ${TAGS_PER_PANE} in a pane they are spaced evenly instead, with a leader line back to the price each one names. Nothing here is ranked or scored.`
+                : `Levels are drawn within ${LIVE_WINDOW_ATR} ATR(14) of the last close and only while they are live — a pool not yet swept, a block not yet broken, a gap not yet filled. The activity profile is exempt: ${PROFILE_NOTE}. It is a window onto the response, not a judgement about which levels matter: nothing here is ranked or scored, and "everything" beside this count draws all of them.`
+            }
           >
             {hidden}
           </span>
@@ -3541,7 +3507,7 @@ function RunChart({
             fourteen, so the route answers with no ATR, no profile and only
             the period pools — honest on the wire and, unsaid, indistinguishable
             on screen from the levels having vanished. */}
-        {showHtf && levels && !levels.unavailable && levels.atr14 == null && (
+        {mode === 'live' && levels && !levels.unavailable && levels.atr14 == null && (
           <span
             className="text-caution ml-2 normal-case"
             title={`The window holds ${levels.window?.bars ?? 0} ${levels.timeframe} bars and ATR(14) needs 14, so this response carries no ATR and no activity profile — only the levels that need neither. Distances are in price alone and every live level is drawn, because a window measured in a unit the response does not have is not a window. Another timeframe's ATR is NOT borrowed to fill it: "3 ATR" computed on 15m bars would be a number that reads right on a daily chart and means nothing, which is what this desk refuses for indicators off the traded timeframe.`}

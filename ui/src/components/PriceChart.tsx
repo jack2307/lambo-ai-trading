@@ -631,11 +631,14 @@ export function PriceChart({
       htfLines.current.push(
         series.createPriceLine({
           price: level.price,
-          // The family's own hue, which is also the colour of the switch
-          // that turns it off. Grey for everything was fine while these were
-          // three H4 swings; with the prior day's and prior week's extremes
-          // beside them, eight identical dashes say nothing about which is
-          // which.
+          // The family's own hue, which is also the dot beside its name in
+          // the legend in the chart header. Grey for everything was fine
+          // while these were three H4 swings; with the prior day's and prior
+          // week's extremes beside them, eight identical dashes say nothing
+          // about which is which — and since the five family switches became
+          // one on 2026-09-19, this hue and the tag's own words are the only
+          // things left saying which KIND a line is. Merging the control did
+          // not merge the kinds.
           //
           // A SPENT LEVEL IS FADED BY THE SAME FUNCTION AND THE SAME WEIGHT
           // ITS BAND IS, so a broken block's line and its band cannot end up
@@ -722,7 +725,11 @@ export function PriceChart({
     }
     // Only when something actually moved. This runs on every frame of a
     // scroll, and re-rendering a dozen spans per frame for positions that
-    // are the same to within half a pixel is jank bought for nothing.
+    // are the same to within half a pixel is jank bought for nothing — at
+    // the level switch's `everything` position it is not a dozen but up to
+    // 245, the whole captured response folded onto distinct prices, so this
+    // guard is the difference between that position being crowded and it
+    // being unusable.
     setLayer((current) => (sameLayer(current, next) ? current : next))
   }, [htfLevels])
 

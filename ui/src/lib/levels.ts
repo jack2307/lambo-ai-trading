@@ -69,54 +69,168 @@ export function familyOf(kind: LevelKind): LevelFamily {
 
 export interface FamilyStyle {
   key: LevelFamily
-  /** What the toggle says. */
+  /** What the legend says. */
   label: string
   /** The CSS variable holding its hue, per theme. */
   hue: string
-  /** Shown on first load? Profile and liquidity only — everything at once is
-   *  a wall, and a wall is what a reader turns off entirely. */
-  onByDefault: boolean
 }
 
+/**
+ * THE FAMILIES ARE NO LONGER SELECTABLE, AND THEY ARE STILL DIFFERENT KINDS.
+ *
+ * Until 2026-09-19 each of these carried an `onByDefault` and had a switch of
+ * its own in the chart header; the one switch below replaced all five. What
+ * survives the merge is the part that was never a control: a value area and
+ * an order block come from different rules and are drawn in different hues,
+ * and `LevelLegend` prints this table beside the switch so the hue still
+ * names its kind. Merging the controls must not merge the meanings — a chart
+ * where four kinds of line share one colour and one name is a chart that has
+ * lost the distinction, not one that has simplified it.
+ */
 export const LEVEL_FAMILIES: FamilyStyle[] = [
-  { key: 'profile', label: 'profile', hue: 'var(--level-profile)', onByDefault: true },
-  { key: 'liquidity', label: 'liquidity', hue: 'var(--level-liquidity)', onByDefault: true },
-  { key: 'gaps', label: 'gaps', hue: 'var(--level-gaps)', onByDefault: false },
-  { key: 'blocks', label: 'blocks', hue: 'var(--level-blocks)', onByDefault: false },
-  { key: 'other', label: 'other', hue: 'var(--muted-foreground)', onByDefault: false },
+  { key: 'profile', label: 'profile', hue: 'var(--level-profile)' },
+  { key: 'liquidity', label: 'liquidity', hue: 'var(--level-liquidity)' },
+  { key: 'gaps', label: 'gaps', hue: 'var(--level-gaps)' },
+  { key: 'blocks', label: 'blocks', hue: 'var(--level-blocks)' },
+  { key: 'other', label: 'other', hue: 'var(--muted-foreground)' },
 ]
 
-const KEY = 'fd.desk.levels'
+/* ------------------------------------------------- the one level switch */
 
 /**
- * Which families this viewer has switched on.
+ * The one control over the level ladder, in three positions.
  *
- * Stored as the list that is ON rather than a map of every family, so a
- * family added later starts at its own default instead of inheriting a
- * `false` written before it existed. The failure that shape avoids is the one
- * where a new feature ships switched off for everybody who ever opened the
- * page, and nobody can tell because it looks like it is working.
+ * WHY ONE AND NOT FIVE. The header carried a master `levels on/off` plus a
+ * switch per family plus a `spent on/off` — seven states to think about
+ * before a single line is drawn, for a reader who wanted to see the levels.
+ * The owner's instruction on 2026-09-19 was to merge them: "gộp hết vào làm
+ * 1 đi, khi bật là sẽ hiển thị toàn bộ" — one control, and on shows
+ * everything.
+ *
+ * WHY THREE POSITIONS AND NOT TWO, which is the part of the instruction that
+ * needed a decision rather than an edit. "Everything" is literally 252
+ * levels on the captured response of 2026-09-19, 197 of them spent, and
+ * `stackTags` stops placing tags at their own prices past about 28 in a 400px
+ * pane — so a plain on/off either hides most of the response (and is not what
+ * was asked for) or degrades every tag on the chart (and is not a chart).
+ * Three positions keep both true without a second control:
+ *
+ *   off         nothing is drawn.
+ *   live        the levels still in play within `LIVE_WINDOW_ATR` of the
+ *               last close, every family, plus the activity profile at any
+ *               distance. 15 of 252 on the captured response.
+ *   everything  no distance window and no spent filter: all 252, degraded
+ *               tags and all, which is what "hiển thị toàn bộ" says.
+ *
+ * The count of what `live` is holding back is printed beside the switch and
+ * `everything` is one press away, so the middle position is a WINDOW the
+ * reader can see the edge of, not a filter that decided for them.
  */
-export function readLevelFamilies(): Set<LevelFamily> {
-  const fallback = () => new Set(LEVEL_FAMILIES.filter((f) => f.onByDefault).map((f) => f.key))
+export type LevelMode = 'off' | 'live' | 'everything'
+
+export interface LevelModeStyle {
+  key: LevelMode
+  /** What the position says on the switch. */
+  label: string
+}
+
+export const LEVEL_MODES: LevelModeStyle[] = [
+  { key: 'off', label: 'off' },
+  { key: 'live', label: 'live' },
+  // Named for what it does and not for how much it draws, with the crowding
+  // said out loud in the title and in `crowdedSentence` — a reader who picks
+  // this and gets a wall of tags must recognise the wall as the thing they
+  // asked for.
+  { key: 'everything', label: 'everything' },
+]
+
+/** Absent means `live`: the view the header had by default before the merge
+ *  — every family, live only, inside the distance window. */
+export const DEFAULT_LEVEL_MODE: LevelMode = 'live'
+
+const KEY = 'fd.desk.levels'
+/** The master switch as it was before the merge, read once for the migration
+ *  below and never written again. */
+const LEGACY_MASTER_KEY = 'fd.desk.showHtf'
+/** The spent switch as it was before the merge, same. */
+const LEGACY_SPENT_KEY = 'fd.desk.levelsSpent'
+
+function isMode(v: unknown): v is LevelMode {
+  return LEVEL_MODES.some((m) => m.key === v)
+}
+
+/**
+ * Which position this viewer left the switch in.
+ *
+ * THE KEY IS THE OLD ONE AND THE VALUE IS NOT. `fd.desk.levels` used to hold
+ * the JSON list of families that were ON — a list rather than a map of every
+ * family, so a family added later started at its own default instead of
+ * inheriting a `false` written before it existed. There are no families to
+ * switch any more, so the key now holds one of the three mode strings, and
+ * everything saved under the old shape has to land somewhere. Renaming the
+ * key instead would have been the same bug from the other side: a fresh
+ * default for everybody who had ever touched the control, silently.
+ *
+ * THE MIGRATION NEVER COMES BACK SHOWING LESS THAN THE VIEWER HAD ON. The new
+ * control cannot express "blocks only" or "spent, but still windowed", so
+ * every legacy state is mapped to the nearest position that hides nothing the
+ * viewer had asked to see:
+ *
+ *   a mode string            →  itself       already migrated, and then the
+ *                                            legacy keys are dead to it.
+ *   showHtf === '0'          →  off          they had the whole overlay off.
+ *   levelsSpent === '1'      →  everything   they had asked for the spent
+ *                                            ones; `live` would hide all 197
+ *                                            of them again, which is the
+ *                                            half-on failure this ordering
+ *                                            exists to avoid.
+ *   a non-empty family list  →  live         one family or four, they get all
+ *                                            of them: the control cannot say
+ *                                            "blocks only" any more, and the
+ *                                            honest direction to round in is
+ *                                            towards more drawn, not less.
+ *   an empty family list     →  off          nothing was drawn and nothing is
+ *                                            drawn. That state the new
+ *                                            control CAN express exactly.
+ *   anything else            →  live         a hand-edited value is a working
+ *                                            chart, never a blank one.
+ *
+ * Nothing is deleted from storage. The two legacy keys are left where they
+ * are, so a viewer who rolls back to the build before this one finds their
+ * old choices intact rather than reset.
+ */
+export function readLevelMode(): LevelMode {
   try {
     const raw = localStorage.getItem(KEY)
-    if (raw == null) return fallback()
+    // ALREADY MIGRATED, AND THEN THE LEGACY KEYS ARE NEVER CONSULTED AGAIN.
+    // This line has to come first: read `fd.desk.showHtf` ahead of it and a
+    // viewer who had the master off could never leave `off` — they would
+    // press `live`, it would be written, and the next reload would read that
+    // stale key and overrule them, with the control apparently ignoring them.
+    if (isMode(raw)) return raw
+    // The master beat the family list before the merge, so it beats it here.
+    if (localStorage.getItem(LEGACY_MASTER_KEY) === '0') return 'off'
+    if (localStorage.getItem(LEGACY_SPENT_KEY) === '1') return 'everything'
+    if (raw == null) return DEFAULT_LEVEL_MODE
     const parsed: unknown = JSON.parse(raw)
-    if (!Array.isArray(parsed)) return fallback()
-    const known = new Set(LEVEL_FAMILIES.map((f) => f.key))
-    return new Set(parsed.filter((k): k is LevelFamily => typeof k === 'string' && known.has(k as LevelFamily)))
+    if (isMode(parsed)) return parsed
+    if (Array.isArray(parsed)) {
+      const known = new Set(LEVEL_FAMILIES.map((f) => f.key))
+      const had = parsed.filter((k) => typeof k === 'string' && known.has(k as LevelFamily))
+      return had.length > 0 ? 'live' : 'off'
+    }
+    return DEFAULT_LEVEL_MODE
   } catch {
     // Private mode, blocked storage, or a value someone hand-edited into
-    // nonsense. The defaults are a working chart, so fall back to them
-    // rather than to nothing drawn.
-    return fallback()
+    // nonsense. The default is a working chart, so fall back to it rather
+    // than to nothing drawn.
+    return DEFAULT_LEVEL_MODE
   }
 }
 
-export function writeLevelFamilies(on: Set<LevelFamily>) {
+export function writeLevelMode(mode: LevelMode) {
   try {
-    localStorage.setItem(KEY, JSON.stringify([...on]))
+    localStorage.setItem(KEY, mode)
   } catch {
     /* private mode: the choice lasts the page */
   }
@@ -632,10 +746,13 @@ export const LIVE_WINDOW_ATR = 3
  * event that happened far from here; it is a fact about how far price has
  * travelled from its own recent centre, which is the thing the profile is
  * for. Hiding VAL for being 7.5 ATR away therefore answers a question nobody
- * asked, and it makes the profile switch lie: turning it on and being shown
- * one mark of three is the window contradicting the control.
+ * asked, and it made the profile's own switch lie: turning it on and being
+ * shown one mark of three was the window contradicting the control. The
+ * switch is gone — one control now — and the argument is untouched by that:
+ * it was never about which switch was on, it was about what kind of object
+ * the profile is.
  *
- * So the profile's three are drawn whenever their family is on, however far
+ * So the profile's three are drawn whenever anything is drawn, however far
  * away they are, and `PROFILE_NOTE` says on hover what they are. NOTHING ELSE
  * IS EXEMPT — a second family wanting this needs its own argument, made in
  * these terms: what kind of object is it, and is its distance a statement
@@ -647,20 +764,19 @@ function exemptFromWindow(level: DeskLevel): boolean {
 }
 
 /** What the profile's marks are, wherever one of them is shown. The same
- *  sentence on the chart tag, in the panel row and on the family switch, so
- *  the exemption is explained wherever a reader meets it. */
+ *  sentence on the chart tag, in the panel row and on the level switch's
+ *  title, so the exemption is explained wherever a reader meets it. */
 export const PROFILE_NOTE =
   "the activity profile is the window's own statistic — where these bars spent their time — and not a price the market turned at, so all three marks are drawn however far away they are"
 
 /**
- * Which levels to draw: the ones still live, near enough to the close, in a
- * family that is switched on.
+ * Which levels to draw, in the position the one switch is in.
  *
  * THIS IS A VIEW, NOT A VERDICT, and the distinction is the one thing not to
  * blur here. Filtering by DISTANCE and by STATE is the viewer choosing a
- * window onto the response — the reader can widen it, switch the spent ones
- * back on, and the counts below say exactly how much is outside it, so the
- * choice is auditable and reversible. RANKING the levels against each other,
+ * window onto the response — one press moves to `everything` and the window
+ * and the spent filter both come off, and the counts below say exactly how
+ * much is outside it, so the choice is auditable and reversible. RANKING the levels against each other,
  * scoring them, colouring one "stronger", or drawing a "confluence zone"
  * would be this screen deciding, and it is forbidden:
  * `docs/hypotheses/2026-09-18-smc-context.md` pre-commits against it, the
@@ -678,17 +794,25 @@ export const PROFILE_NOTE =
  */
 export interface LevelSelection {
   drawn: DeskLevel[]
-  /** In a family that is on, but outside the window or already spent. */
+  /** Outside the window or already spent — what `live` is holding back. */
   hidden: number
   hiddenSpent: number
   hiddenFar: number
-  /** Switched off by a family toggle. Counted separately because that switch
-   *  is already on screen saying so, so the sentence does not repeat it. */
-  hiddenFamily: number
+  /** Held back because the one switch is at `off`. Counted separately, and
+   *  never named in the sentence, because the switch beside it already says
+   *  `off` — a count repeating a control is noise. It exists so that drawn +
+   *  hidden + hiddenOff still accounts for every level on the response, which
+   *  is the invariant the counts are worth anything for. */
+  hiddenOff: number
   /**
-   * False when NO level on the response could be placed in the window, which
-   * on this route means `atr14` was null: every level is then drawn and the
-   * caller has to say why the window is not in force.
+   * Whether the distance window was actually in force on this pass.
+   *
+   * False in two different ways, and the caller says something different
+   * about each. At `everything` the window was DROPPED ON PURPOSE, which the
+   * switch itself announces. Otherwise it is false because no level on the
+   * response could be placed in the window at all, which on this route means
+   * `atr14` was null: every level is then drawn and the caller has to say why
+   * the window is not in force.
    *
    * It is a measured state and not an error. Ten trading days of 1d bars is
    * ten bars, fewer than the fourteen ATR(14) needs, so the route answers
@@ -704,34 +828,40 @@ export interface LevelSelection {
 
 export function selectLevels(
   levels: DeskLevel[],
-  options: { families: Set<LevelFamily>; showSpent: boolean; windowAtr?: number },
+  options: { mode: LevelMode; windowAtr?: number },
 ): LevelSelection {
   const windowAtr = options.windowAtr ?? LIVE_WINDOW_ATR
   const drawn: DeskLevel[] = []
   let hiddenSpent = 0
   let hiddenFar = 0
-  let hiddenFamily = 0
+  let hiddenOff = 0
   let windowed = false
+  // `everything` is the instruction taken literally: no window and no spent
+  // filter. It is not a wider window — a wider window would still be this
+  // screen choosing a number, and the whole point of the third position is
+  // that it chooses nothing.
+  const showSpent = options.mode === 'everything'
+  const windowInForce = options.mode === 'live'
   for (const level of levels) {
-    if (!options.families.has(level.family)) {
-      hiddenFamily += 1
+    if (options.mode === 'off') {
+      hiddenOff += 1
       continue
     }
-    const spentOut = level.spent && !options.showSpent
+    const spentOut = level.spent && !showSpent
     // A level whose distance cannot be measured — no close, or no ATR on the
     // response, which is the ordinary 1d case — is DRAWN, not dropped. The
     // window is a convenience and the level is a fact; hiding a fact because
     // the convenience is unavailable is the failure this file's first
     // paragraph is about. `windowed` below is how the caller knows to say so.
     const farOut =
-      level.distAtr != null && Math.abs(level.distAtr) > windowAtr && !exemptFromWindow(level)
-    if (level.distAtr != null) windowed = true
+      windowInForce && level.distAtr != null && Math.abs(level.distAtr) > windowAtr && !exemptFromWindow(level)
+    if (windowInForce && level.distAtr != null) windowed = true
     if (spentOut) hiddenSpent += 1
     else if (farOut) hiddenFar += 1
     if (spentOut || farOut) continue
     drawn.push(level)
   }
-  return { drawn, hidden: hiddenSpent + hiddenFar, hiddenSpent, hiddenFar, hiddenFamily, windowed }
+  return { drawn, hidden: hiddenSpent + hiddenFar, hiddenSpent, hiddenFar, hiddenOff, windowed }
 }
 
 /**
@@ -754,6 +884,35 @@ export function hiddenSentence(selection: LevelSelection, windowAtr = LIVE_WINDO
         ? 'already spent'
         : `further than ${windowAtr} ATR away`
   return `${n} further level${plural}, ${why}, not drawn`
+}
+
+/**
+ * How many tags a chart pane can place AT THEIR OWN PRICES.
+ *
+ * Measured, not chosen: `stackTags` is given a 400px pane and a 14px minimum
+ * gap by `PriceChart`, and 400/14 is 28. Past that the function takes its
+ * overflow branch and spreads every tag evenly across the pane — still
+ * ordered, still all present, no longer at the prices they label. That is the
+ * number the `everything` position crosses, so it is the number the sentence
+ * below quotes.
+ */
+export const TAGS_PER_PANE = 28
+
+/**
+ * What `everything` says about itself.
+ *
+ * THE COUNT IS THE POINT IN BOTH DIRECTIONS. At `live` the reader is owed the
+ * number of levels the window is holding back (`hiddenSentence`); at
+ * `everything` nothing is held back, so the same debt is paid the other way
+ * round — how many are on the chart, and that past `TAGS_PER_PANE` the tags
+ * are no longer at their own prices. A reader who chose this position and
+ * sees a wall must be able to read the wall as the thing they asked for
+ * rather than as a chart that broke. Below the cap it says nothing, because
+ * then nothing has degraded.
+ */
+export function crowdedSentence(drawn: number, tagsPerPane = TAGS_PER_PANE): string | null {
+  if (drawn <= tagsPerPane) return null
+  return `all ${drawn} drawn, spent and distant included — past ${tagsPerPane} tags the pane spaces them evenly, so a tag is no longer at its own price`
 }
 
 /* --------------------------------------- one price is one line, again */
