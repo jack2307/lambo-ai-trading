@@ -74,6 +74,27 @@ param(
     # holding something.
     [switch]$AllowOrphans,
 
+    # The weekend backstop's cut, as `--weekend-flat` wants it: HH:MM in UTC,
+    # or `off`.
+    #
+    # THE REGISTRY IS THE SOURCE. Left empty, this reads `[prices]
+    # weekend_flat` out of config\accounts.toml, the way start_pollers.ps1
+    # reads `fill_on_open`, and for the same reason: deploy\update.ps1 and
+    # start-desk.ps1 start things with no arguments, so a value that lives
+    # only in a switch is a value that quietly reverts the next time somebody
+    # else does the starting. With the key in the registry the November DST
+    # change is one edit in one file instead of the same number typed into
+    # every launcher that might pass it and the runbook that checks it.
+    #
+    # Given here it OVERRIDES the registry for this run, and says so on the
+    # screen - an override nobody can see is how a desk ends up running a
+    # value that is in no file.
+    #
+    # A registry with no key passes nothing and the executor keeps its own
+    # default, which is exactly how every registry written before the key
+    # existed behaves.
+    [string]$WeekendFlat = '',
+
     [string]$Python = 'C:\Python39\python.exe',
     [string]$Root = ''
 )
@@ -93,6 +114,39 @@ if (-not $Root) { $Root = (Get-Location).Path }
 # run named "xau-ema,eur-hours" and was skipped as an unknown market. Split
 # here so both forms mean the same thing.
 $Runs = @($Runs | ForEach-Object { $_ -split ',' } | Where-Object { $_ })
+
+# ---- the weekend backstop's cut, from the registry unless overridden ----
+#
+# Read through accounts.py, like start-desk.ps1 and start_pollers.ps1 do, so
+# there is one parser of that file and one place the key's shape is checked.
+# accounts.py REFUSES a malformed value, and that refusal is taken here rather
+# than swallowed: this runs before anything has been stopped, and a backstop
+# that silently reverted to a default because somebody typed `20.45` is the
+# exact failure docs/decisions/2026-09-19-weekend-flat-never-fires.md is about.
+#
+# An empty answer means the key is absent, which means pass nothing and let
+# the executor keep its own default. That is the only way an old registry
+# behaves as it did.
+$weekendFlat = ''
+$weekendFrom = ''
+if ($WeekendFlat) {
+    $weekendFlat = $WeekendFlat
+    $weekendFrom = 'the command line, OVERRIDING the registry'
+} else {
+    $pj = & $Python (Join-Path $Root 'py\live\accounts.py') '--prices' 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error "account registry [prices]: $pj"
+        exit 1
+    }
+    try { $weekendFlat = [string]($pj | ConvertFrom-Json).weekend_flat } catch { $weekendFlat = '' }
+    $weekendFrom = 'config\accounts.toml [prices] weekend_flat'
+}
+if ($weekendFlat) {
+    Write-Host "  weekend backstop: $weekendFlat UTC on Friday, from $weekendFrom" -ForegroundColor Cyan
+} else {
+    Write-Host '  weekend backstop: no [prices] weekend_flat in the registry - the executors keep' -ForegroundColor Yellow
+    Write-Host '  their own default. Add the key if the cut should be a decision this file records.' -ForegroundColor Yellow
+}
 
 # Paper market -> the symbol that market trades on a STANDARD account.
 #
@@ -383,6 +437,14 @@ try {
                       "--login=$($acct.login)", "--account=$($acct.id)", "--symbol=$sym",
                       "--lot-scale=$($acct.lot_scale)")
             if ($dry) { $argv += '--dry-run' }
+            # Passed only when the registry (or the override) names a value,
+            # so an old registry starts executors on exactly the command line
+            # it always did. With it passed, the value is ON THE COMMAND LINE
+            # and therefore visible to Get-CimInstance - which is what
+            # deploy\sunday-reopen.ps1's step 5 reads to prove the running
+            # processes agree with the file. Before this key it could only
+            # prove the flag existed in the source and infer the rest.
+            if ($weekendFlat) { $argv += "--weekend-flat=$weekendFlat" }
             # Passed only for an account the registry marks, and only when the
             # command line asked. The executor checks the registry again for
             # itself; this is not the permission, only one of the three checks

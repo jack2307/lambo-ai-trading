@@ -114,6 +114,40 @@ symbol_suffix = ".sc"
 # itself, so every launcher path (start-desk, update, by hand) agrees.
 fill_on_open = true
 
+# THE WEEKEND BACKSTOP'S CUT, AND THE ONE PLACE IT IS TYPED.
+#
+# The UTC time on FRIDAY from which every executor closes what it holds and
+# refuses to open, until the Sunday reopen at 21:00Z. The owner's rule of
+# 2026-09-19: the account NEVER holds a position over a weekend.
+# docs/decisions/2026-09-19-weekend-flat-never-fires.md is the whole story.
+#
+# WHY 20:45 AND NOT SOMETHING ROUNDER. It is 16:45 New York in summer, fifteen
+# minutes before Friday's close, and - this is the part that matters - it is
+# AFTER the engine's own guard has acted. `flat_before_weekend_hhmm = 1640`
+# flattens the paper book on the 20:30Z bar, which closes at 20:45Z, and the
+# mirror follows within a poll. So by the time this window opens the account
+# should already be flat and this should find nothing to close. That is the
+# intended order: the backstop checks layer one's work rather than forming a
+# second opinion about how much of Friday to give up.
+#
+# THE DATE IT HAS TO CHANGE: before Friday 2026-11-06, the first Friday after
+# New York leaves daylight saving on Sunday 1 November. The close moves to
+# 22:00Z; the engine's 1640 is anchored in New York and needs no edit, but
+# 1640 NY then falls at 21:40Z while this would still fire at 20:45Z - an hour
+# EARLIER than the engine's guard, which would make the backstop the operative
+# rule and cost about 75 minutes of Friday instead of 15. The fix is to type
+# 21:45 here. One edit, one file: start_executors.ps1 reads this key itself and
+# deploy/sunday-reopen.ps1 checks the running executors against it, so neither
+# carries a second copy of the number to forget.
+#
+# Absent means "pass nothing", so the executor keeps its own default (20:45)
+# and a registry written before this key existed behaves exactly as it did. An
+# empty string reads as absent too, NOT as off: disabling the backstop takes
+# the word `off`, typed, because a half-finished edit must not silently
+# disable it. Anything else refuses - accounts.py stops the launcher before it
+# has killed a single executor.
+weekend_flat = "20:45"
+
 [[account]]
 # Short, stable, and what you type at the launcher. It is also the name the
 # desk shows, so it is worth reading well.

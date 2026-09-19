@@ -63,15 +63,23 @@ param(
     # that is about to be traded and not of the desk in general.
     [string]$Market = 'xauusd',
 
-    # The executor's `--weekend-flat`, repeated here so step 1 asks the same
-    # question the executors will. It is a SEPARATE value from theirs and that
-    # is the honest shape of it: nothing on this machine can read a running
-    # process's argparse default, so this is a copy, and step 5 checks the copy
-    # against what the restarted executors actually report.
+    # The weekend backstop's cut. AN OVERRIDE, NOT THE SOURCE.
     #
-    # In New York WINTER this becomes 21:45 in both places on the same day -
-    # see the dated trap at the end of the decision note.
-    [string]$WeekendFlat = '20:45',
+    # Left empty - the normal case - this reads `[prices] weekend_flat` out of
+    # config\accounts.toml, the same key py\live\start_executors.ps1 passes to
+    # every executor it starts. That is what the key is for: step 1 then asks
+    # the same question the executors will, and step 5 compares the RUNNING
+    # PROCESSES against the registry rather than against a number somebody
+    # typed twice.
+    #
+    # It was a parameter default of '20:45' until that key existed, which was
+    # the November DST trap in miniature - the same value in the launcher, in
+    # the executor's argparse and here, none of the three able to see the
+    # others. The DST change is now one edit in config\accounts.toml.
+    #
+    # Given, it overrides the registry for this run, and every line below says
+    # which source the value came from.
+    [string]$WeekendFlat = '',
 
     # How old the last QUOTE CHANGE may be before this refuses to call the
     # market open. See Get-FeedVerdict for why 180 and why the exact number
@@ -135,6 +143,61 @@ function Get-WeekendCutMinute {
         throw "-WeekendFlat: '$Spec' is not a time of day"
     }
     return ($hour * 60 + $minute)
+}
+
+# Where the cut comes from, said out loud.
+#
+# The registry is the source and this is the only place that decides so. Three
+# answers, and each one carries WHERE it came from, because "20:45" on a screen
+# is worth very little without it: the whole defect this key closes was three
+# copies of that number in three files.
+#
+#   the override    -WeekendFlat was typed. Validated here, so a typo stops the
+#                   run rather than becoming a comparison nothing can satisfy.
+#   the registry    `[prices] weekend_flat`. The normal case, and the same
+#                   string start_executors.ps1 puts on every command line.
+#   the default     the key is absent, so the launcher passes nothing and the
+#                   executors keep argparse's own 20:45. Reported as the
+#                   executor's default and NOT as the registry's, because the
+#                   difference is exactly what a reader needs to know before
+#                   editing a file that has no such key in it.
+#
+# $Prices is the object parsed from `accounts.py --prices`, or $null when it
+# could not be read at all. Unresolved is set in that last case: the caller
+# refuses on it rather than quietly proceeding on a default, because a cut this
+# script cannot establish is a cut it cannot check the executors against.
+function Resolve-WeekendFlat {
+    param([string]$Override, $Prices, [string]$ExecutorDefault = '20:45')
+    $r = [pscustomobject]@{
+        Value        = $ExecutorDefault
+        Source       = ''
+        FromRegistry = $false
+        Unresolved   = $false
+    }
+    if ($Override) {
+        # Validated by the same function the window uses, so an override and a
+        # registry value cannot be held to different standards.
+        Get-WeekendCutMinute $Override | Out-Null
+        $r.Value = $Override
+        $r.Source = 'the -WeekendFlat override, ignoring the registry'
+        return $r
+    }
+    if ($null -eq $Prices) {
+        $r.Source = 'nowhere - config\accounts.toml could not be read'
+        $r.Unresolved = $true
+        return $r
+    }
+    $fromFile = ''
+    if ($null -ne $Prices.weekend_flat) { $fromFile = ([string]$Prices.weekend_flat).Trim() }
+    if ($fromFile) {
+        Get-WeekendCutMinute $fromFile | Out-Null
+        $r.Value = $fromFile
+        $r.Source = 'config\accounts.toml [prices] weekend_flat'
+        $r.FromRegistry = $true
+        return $r
+    }
+    $r.Source = "the executor's own default - config\accounts.toml [prices] has no weekend_flat"
+    return $r
 }
 
 # 21:00 UTC, the Sunday reopen, as minutes past midnight. The same constant as
@@ -446,14 +509,44 @@ if (-not $Restart) {
 # ---------------------------------------------------------------- 1, the clock
 Step '1. the clock - is the executors'' own weekend window in force?'
 
+# The registry FIRST, because the cut comes out of it and everything in this
+# step is measured against the cut. accounts.py refuses a malformed
+# weekend_flat, and that refusal is taken rather than swallowed: a cut this
+# script cannot establish is a cut it cannot hold the executors to.
+$prices = $null
+$pricesErr = ''
+$pj = & $Python (Join-Path $Root 'py\live\accounts.py') '--prices' 2>&1
+if ($LASTEXITCODE -ne 0) {
+    $pricesErr = ($pj | Out-String).Trim()
+} else {
+    try { $prices = $pj | ConvertFrom-Json } catch { $pricesErr = "could not parse accounts.py --prices: $($_.Exception.Message)" }
+}
+if ($pricesErr) {
+    Refuse "config\accounts.toml [prices] would not read: $pricesErr" @(
+        'The weekend cut lives in that file and nothing else on this machine knows it.',
+        'Fix the registry and run this again. Nothing has been read from the account yet.')
+}
+
+# Kept before $WeekendFlat is overwritten with the resolved value: step 5 has
+# to be able to say that a mismatch is the operator's override and not a fault.
+$weekendOverride = $WeekendFlat
+$flat = Resolve-WeekendFlat -Override $WeekendFlat -Prices $prices
+if ($flat.Unresolved) {
+    Refuse 'the weekend cut could not be established from the registry' @(
+        'Refusing rather than assuming 20:45: a cut this script cannot establish is a cut',
+        'it cannot check the running executors against, which is the only reason step 5 exists.')
+}
+$WeekendFlat = $flat.Value
 $cutMin = Get-WeekendCutMinute $WeekendFlat
 $nowUtc = (Get-Date).ToUniversalTime()
 $inWindow = Test-InWeekendWindow -NowUtc $nowUtc -CutMin $cutMin
 
 Note "now                $($nowUtc.ToString('ddd yyyy-MM-dd HH:mm:ss'))Z  (minute $($nowUtc.Hour * 60 + $nowUtc.Minute) of the UTC day)"
+Note "the cut comes from $($flat.Source)"
 if ($null -eq $cutMin) {
-    Warn "-WeekendFlat is '$WeekendFlat': the window is OFF in this script's copy of the rule."
-    Warn 'That is a statement about this script only. The executors keep their own default.'
+    Warn "the weekend backstop is '$WeekendFlat' - OFF. This script therefore has no weekend"
+    Warn 'window to refuse on, and the feed check below is the only thing between you and a'
+    Warn 'restart into a shut market. That is a real gap: read step 2 carefully.'
 } else {
     Note "Friday cut         $WeekendFlat UTC (minute $cutMin)"
 }
@@ -982,23 +1075,39 @@ foreach ($b in $launcherStarted) {
 
 # 5b - layer two, which is the whole point of the exercise.
 #
-# IT WILL NOT BE ON THE COMMAND LINE, and that is expected rather than a
-# failure. py\live\start_executors.ps1 builds `$argv` with --run, --terminal,
-# --login, --account, --symbol, --lot-scale and then only --dry-run and
-# --allow-real; it passes no weekend flag at all, so the executors run on
-# argparse's default of 20:45 UTC and the flag appears nowhere in
-# Get-CimInstance. Checking only the command line would therefore fail every
-# correct restart, which is worse than not checking.
+# THE STRONG CHECK IS THE COMMAND LINE, and it only became possible when the
+# cut moved into the registry. py\live\start_executors.ps1 now reads `[prices]
+# weekend_flat` itself and appends `--weekend-flat=<value>` to every `$argv`,
+# so the number the owner typed in one file is visible on every running
+# process and this can compare the two directly.
 #
-# So the proof is a chain, and every link is checked:
+# BEFORE THAT KEY IT COULD NOT. The launcher passed no weekend flag at all,
+# the executors ran on argparse's default, the flag appeared nowhere in
+# Get-CimInstance, and the best available proof was a chain of inference. That
+# chain is kept below, because it is still the only proof available when the
+# registry has NO key - which is how an older registry behaves on purpose:
+#
 #   1  the file on disk declares --weekend-flat, asked of the executor itself
 #      through --help, which reaches argparse without importing MetaTrader5;
-#   2  the process was started AFTER that file was last written, so it is
-#      running that file and not the one it was launched with in September;
-#   3  if a --weekend-flat IS on a command line, its value is read and compared
-#      with this script's -WeekendFlat, because two clocks that disagree about
-#      the cut is exactly the November DST trap.
+#   2  the process was created AFTER that file was last written, so it is
+#      running that file and not the one it was launched with in September.
+#
+# So: with a registry key, a missing or different value on a command line is a
+# FAILURE. Without one, the chain is all there is and the absence is reported
+# as the weaker evidence it is.
 Say ''
+if ($flat.FromRegistry) {
+    Note "expecting --weekend-flat=$WeekendFlat on every command line, from $($flat.Source)"
+} else {
+    Warn "the cut comes from $($flat.Source), so the launcher passed no flag and the"
+    Warn 'command lines cannot be checked against a file. Falling back to the weaker proof:'
+    Warn 'the source declares the flag, and each process is newer than the source.'
+}
+if ($weekendOverride) {
+    Warn "-WeekendFlat $weekendOverride was given. It changes what THIS SCRIPT expects and"
+    Warn 'nothing else: start_executors.ps1 was run without it and passed whatever the'
+    Warn 'registry says. A mismatch below is therefore between you and the file, not a fault.'
+}
 $helpText = ''
 try { $helpText = (& $Python (Join-Path $Root 'py\live\mt5_executor.py') '--help' 2>&1 | Out-String) } catch { $helpText = '' }
 if ($helpText -match '--weekend-flat') {
@@ -1006,9 +1115,14 @@ if ($helpText -match '--weekend-flat') {
     if ($helpText -match '--weekend-flat[\s\S]{0,400}?\(default:\s*([0-9]{2}:[0-9]{2})\)') { $declared = $Matches[1] }
     if ($declared) {
         Passes "mt5_executor.py on disk declares --weekend-flat, default $declared UTC"
-        if ($declared -ne $WeekendFlat) {
-            Warn "this script's -WeekendFlat is $WeekendFlat and the executor's default is $declared."
-            Warn 'Two clocks that disagree about the cut is the November DST trap. Decide which is right.'
+        # The default is only the operative value when nothing passes one. With
+        # a registry key the two are SUPPOSED to be able to differ - that is
+        # what the key buys, a cut that changes in November without touching
+        # Python - so comparing them here would manufacture a warning on a
+        # correct desk.
+        if (-not $flat.FromRegistry -and $declared -ne $WeekendFlat) {
+            Warn "nothing passes a value, and the executor's default $declared is not the $WeekendFlat"
+            Warn 'this run expects. Put the cut in config\accounts.toml [prices] weekend_flat.'
         }
     } else {
         Passes 'mt5_executor.py on disk declares --weekend-flat (its help text does not name a default)'
@@ -1035,10 +1149,21 @@ foreach ($p in $after) {
     } else {
         Fails "$runId started $($startedUtc.ToString('yyyy-MM-dd HH:mm:ss'))Z, BEFORE mt5_executor.py was last written $($execMtime.ToString('yyyy-MM-dd HH:mm:ss'))Z - this process survived the restart and is on the OLD code"
     }
-    if ($p.CommandLine -match '--weekend-flat[= ]([^\s]+)') {
-        $onLine = $Matches[1]
-        Note "$runId carries --weekend-flat $onLine explicitly"
-        if ($onLine -ne $WeekendFlat) { Warn "  and it is not this script's $WeekendFlat." }
+    # The direct check. `--weekend-flat=20:45` is how the launcher writes it;
+    # the space form is accepted too, because an executor started by hand is a
+    # thing that happens and reads identically to the terminal.
+    $onLine = ''
+    if ($p.CommandLine -match '--weekend-flat[= ]([^\s]+)') { $onLine = $Matches[1] }
+    if ($onLine) {
+        if ($onLine -eq $WeekendFlat) {
+            Passes "$runId carries --weekend-flat=$onLine, which is what the registry says"
+        } else {
+            Fails "$runId carries --weekend-flat=$onLine and the expected value is $WeekendFlat. The running process and the file disagree about when the account goes flat."
+        }
+    } elseif ($flat.FromRegistry) {
+        Fails "$runId carries NO --weekend-flat although config\accounts.toml sets it to $WeekendFlat. It is running on argparse's default, so the registry's value is not in force - the launcher on this box is older than the key."
+    } else {
+        Note "$runId carries no --weekend-flat, as expected with no key in the registry: it is on the executor's own default."
     }
 }
 
