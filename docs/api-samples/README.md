@@ -47,7 +47,7 @@ worth more than a sample of the happy path.
 
 | file | what it is |
 |---|---|
-| `paper-levels.json` | a real XAUUSD 15m response: the activity profile with POC/VAH/VAL, 12 unfilled fair value gaps, 76 order blocks, 155 liquidity pools, the session/day/week extremes |
+| `paper-levels.json` | a real XAUUSD 15m response: the activity profile with POC/VAH/VAL, 12 unfilled fair value gaps, 76 order blocks, 155 liquidity pools, the session/day/week extremes, and — added 2026-09-19 — `market_structure` (80 BOS/CHoCH events on the same swings), `dealing_range`, and `tested_as_a_rule` |
 | `paper-levels-unavailable.json` | the same market with no exported bars: every block `null`, one sentence, the export command in it |
 | `paper-levels-1h.json` | `?tf=1h`, the non-default path: `timeframe` and `bar_ms` say 1h, every `age_bars` counts 1h bars, `swing_ids` read `1h-…`, and `window` is **ten trading days = 230 bars** where those same ten days are 879 bars of 15m |
 | `paper-levels-4h-refused.json` | `?tf=4h` with 15m and 1h on disk: every block `null` and one sentence naming BOTH reasons neither file is rebucketed into 4h — the 21:00Z anchor and the trailing partial bucket. It names the 1h file, because the coarsest series that still fits is the one a resample would have read |
@@ -61,7 +61,33 @@ VPS that trades holds 1m, 5m, 15m, 1h, 4h and 1d for XAUUSD — the hourly
 so in production `?tf=4h` is ANSWERED rather than refused, and
 `paper-levels-4h-refused.json` pins the refusal, not the desk's capability.
 Their prices are a seeded walk; what they pin is what the ROUTE emits.
-Refresh with `cargo test -p fd-api --test levels -- --ignored`.
+Refresh with `cargo test -p fd-api --test levels -- --ignored`, which since
+2026-09-19 also rewrites `paper-levels-unavailable.json` — a response with no
+bars in it needs no store, so hand-editing it whenever the shape grows a
+field was a step that could only be forgotten.
+
+**`paper-levels.json` is the one file here that cannot be regenerated from a
+fixture**, because `py/live/smc_context_selftest.py` runs against it and that
+selftest exists precisely because an invented fixture agreed with a prose
+description and disagreed with the route in eight field names and two units.
+It is refreshed from a real store, TRUNCATED at the bar it already names:
+
+```
+FD_SAMPLE_BARS=<dir holding XAUUSD-15m.parquet> \
+  cargo test -p fd-api --test levels -- --ignored the_default_sample --nocapture
+```
+
+Truncating is what keeps the diff readable — the 2026-09-19 refresh moved
+1,540 lines, all of them the new fields and the order blocks' new state, and
+not one profile, gap, pool or extreme changed by a cent. A refresh that
+re-anchored to today's bar would have moved everything and hidden that. If
+the store no longer reaches back to the anchor the test says so and writes
+nothing: re-anchoring the sample is a decision, not a refresh.
+
+All four are written in the order the WIRE carries, not alphabetically. A
+`serde_json::Value` is a sorted map, so a sample round-tripped through one
+comes out in an order no client ever sees; the refreshers serialize the
+response struct directly.
 
 **Read `window` as two numbers and not one.** `days` is the span the window
 was cut to — ten trading days, measured in the stamps, the same span on every
@@ -93,6 +119,35 @@ in prose got the names right and the nesting wrong, and a client read
 while `extremes.day` is the last COMPLETE one, the same convention
 `/api/paper/htf` uses for "prior day", so a caption reading "today's high"
 over `day` is wrong by a day.
+
+**The 2026-09-19 block, and what the sample says about it.** `market_structure`
+carries a `label` (UP / DOWN / RANGE), the bar it last changed on, and the
+BOS and CHoCH events behind it, oldest first; `dealing_range` carries the last
+confirmed swing high, the last confirmed swing low, their midpoint, and where
+the last close sits in the range as a fraction that is **not clamped** (over
+1.0 is a close above the range, the same convention `/api/paper/htf` uses for
+`close_pct_of_prior_week_range`); order blocks gained a fourth state,
+`BREAKER`, with `breaker_retested_at_bar_ms` beside `broken_at_bar_ms`.
+Three numbers off this sample, none of them flattering:
+
+* **57 of the 62 broken order blocks are breakers** — 92%. On gold at 15m,
+  "broken then traded back into" is nearly a synonym for "broken".
+* **80 structure events in ten trading days, 42 of them CHoCH**, so the label
+  flipped about every twenty bars. A CHoCH punctuates; it does not announce.
+* **`tested_as_a_rule` is on every response, including the ones with no
+  bars**: 1,428 out-of-sample trades, profit factor 0.746, expectancy
+  -0.190R, at the 95th percentile of a null whose own p95 is 0.746. The
+  chain these fields belong to was traded and closed
+  (`docs/hypotheses/2026-09-13-ict-sweep-mss-fvg.md`).
+
+`market_structure.measured` carries the lag figures from
+`docs/decisions/2026-09-19-smc-structure-measured.md` in the same object as
+the markers, for the same reason `rule_measured` rides the HTF structure
+rows. Note that `unclassified_breaks` here — breaks the route declined to
+name because the label was still RANGE — is **not** the same quantity as
+that study's 43% flat rate: the study recomputes the label at every bar and
+this route seeds it once and then carries it by closes, so this field reads
+1 against 81 breaks where the study's reads 87 against 204.
 
 ### Orders resting at a price (stage 1 of `docs/plans/2026-09-18-staged-ai-entry.md`)
 
