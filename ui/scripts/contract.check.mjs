@@ -151,8 +151,21 @@ const CONTRACTS = [
       'profile.poc.age_bars': 'number',
       'profile.poc.state': 'string',
       'profile.poc.rule': 'string',
+      // THE ONE LEVEL THAT CARRIES BOTH A PRICE AND A BAND. The chart draws
+      // the POC's price and `levelBands` draws the bucket it sits in, so the
+      // far edge is dereferenced too — nothing read the band at all before
+      // the levels went on the chart on 2026-09-19.
+      'profile.poc.band_high': 'number|null',
       'profile.vah.price': 'number|null',
+      'profile.vah.kind': 'string',
+      'profile.vah.state': 'string',
+      'profile.vah.age_bars': 'number',
+      'profile.vah.formed_at_bar_ms': 'number',
+      'profile.vah.rule': 'string',
       'profile.val.price': 'number|null',
+      'profile.val.kind': 'string',
+      'profile.val.state': 'string',
+      'profile.val.age_bars': 'number',
       // THE NESTING THAT MATTERS. Each family is FLATTENED onto its level:
       // `kind` and the rest sit at the item's own top level, not under a
       // `level` key. Written as paths because nesting is the thing prose got
@@ -167,8 +180,19 @@ const CONTRACTS = [
       'fair_value_gaps[0].direction': 'string',
       'fair_value_gaps[0].filled_fraction': 'number',
       'fair_value_gaps[0].confirmed_at_bar_ms': 'number',
+      // The bar the gap formed on, which the panel prints and the age is
+      // counted from. `age_bars` alone cannot date it on screen.
+      'fair_value_gaps[0].formed_at_bar_ms': 'number',
       'order_blocks[0].kind': 'string',
       'order_blocks[0].band_low': 'number',
+      // A BAND IS TWO PRICES. The chart fills between them, so a route that
+      // stopped sending the far edge would draw a block as a line with
+      // nothing failing — which is what this file exists to prevent.
+      'order_blocks[0].band_high': 'number',
+      'order_blocks[0].price': 'null',
+      'order_blocks[0].age_bars': 'number',
+      'order_blocks[0].formed_at_bar_ms': 'number',
+      'order_blocks[0].rule': 'string',
       'order_blocks[0].state': 'string',
       'order_blocks[0].direction': 'string',
       'order_blocks[0].displacement_at_bar_ms': 'number',
@@ -183,12 +207,36 @@ const CONTRACTS = [
       'liquidity[0].spread_atr': 'number|null',
       'liquidity[0].state': 'string',
       'liquidity[0].rule': 'string',
+      // A POOL IS A PRICE AND A SPREAD. The line goes at the price and the
+      // band shows how far the swings in it are apart; the prior-day and
+      // prior-week pools are the ones with no band, which is why both edges
+      // are `number|null` here and neither is assumed from the other.
+      'liquidity[0].price': 'number|null',
+      'liquidity[0].band_low': 'number|null',
+      'liquidity[0].band_high': 'number|null',
+      'liquidity[0].age_bars': 'number',
+      'liquidity[0].formed_at_bar_ms': 'number',
       'extremes.session.high.kind': 'string',
       'extremes.session.high.state': 'string',
       'extremes.session.bars': 'number',
+      // The six period extremes are drawn and read out like every other
+      // level from 2026-09-19, so the fields a row needs are declared for
+      // one high and one low rather than for the price alone.
+      'extremes.session.high.price': 'number|null',
+      'extremes.session.high.age_bars': 'number',
+      'extremes.session.high.formed_at_bar_ms': 'number',
+      'extremes.session.high.rule': 'string',
+      'extremes.session.low.price': 'number|null',
+      'extremes.session.low.state': 'string',
+      'extremes.session.low.age_bars': 'number',
       'extremes.day.high.price': 'number|null',
+      'extremes.day.high.kind': 'string',
+      'extremes.day.high.state': 'string',
+      'extremes.day.high.age_bars': 'number',
       'extremes.day.low.price': 'number|null',
       'extremes.week.high.price': 'number|null',
+      'extremes.week.high.state': 'string',
+      'extremes.week.low.price': 'number|null',
       'extremes.week.start_bar_ms': 'number|null',
     },
     also: (doc, fail) => {
