@@ -1,0 +1,17 @@
+{
+  "atr14": null,
+  "bar_ms": 14400000,
+  "computed_at_bar_ms": null,
+  "computed_at_ms": 1789795824164,
+  "extremes": null,
+  "fair_value_gaps": null,
+  "last_close": null,
+  "liquidity": null,
+  "market": "xauusd",
+  "order_blocks": null,
+  "profile": null,
+  "source": null,
+  "timeframe": "4h",
+  "unavailable": "no 4h bars for xauusd: bars/XAUUSD-4h.parquet has not been exported yet (py/ingest/mt5_export.py --symbols XAUUSD --timeframes H4). The 1h bars on disk are NOT rebucketed to fill it, for two reasons. The broker anchors its higher-timeframe candles at the 21:00Z day roll (22:00Z outside US summer) and not at the epoch an ad-hoc resample buckets from: measured 2026-09-18, real H4 stamps fall on hours {1,2,5,6,9,10,13,14,17,18,21,22}Z against {0,4,8,12,16,20}Z for an epoch-anchored resample, not one hour in common. And fd_store::resample closes a bucket only when a row lands past it, so it emits the trailing PARTIAL bucket as an ordinary bar, which would put a still-forming candle in a response documented as closed bars only. A 4h order block off those candles is a level that never existed",
+  "window": null
+}

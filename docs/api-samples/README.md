@@ -49,6 +49,27 @@ worth more than a sample of the happy path.
 |---|---|
 | `paper-levels.json` | a real XAUUSD 15m response: the activity profile with POC/VAH/VAL, 12 unfilled fair value gaps, 76 order blocks, 155 liquidity pools, the session/day/week extremes |
 | `paper-levels-unavailable.json` | the same market with no exported bars: every block `null`, one sentence, the export command in it |
+| `paper-levels-1h.json` | `?tf=1h`, the non-default path: `timeframe` and `bar_ms` say 1h, every `age_bars` counts 1h bars, `swing_ids` read `1h-…`, and `window` is **ten trading days = 230 bars** where those same ten days are 879 bars of 15m |
+| `paper-levels-4h-refused.json` | `?tf=4h` with 15m and 1h on disk: every block `null` and one sentence naming BOTH reasons neither file is rebucketed into 4h — the 21:00Z anchor and the trailing partial bucket. It names the 1h file, because the coarsest series that still fits is the one a resample would have read |
+
+The last two are served by the real route from the **test fixture** rather
+than off the live store, and that is a fact about this desk rather than a
+shortcut: no market here has ever exported a bar longer than 15m (checked
+2026-09-19 — all 21 bar files in the store are 1m, 5m or 15m), so a coarse
+timeframe sampled off the live store is not a thing that can exist today.
+Their prices are a seeded walk; what they pin is what the ROUTE emits.
+Refresh with `cargo test -p fd-api --test levels -- --ignored`.
+
+**Read `window` as two numbers and not one.** `days` is the span the window
+was cut to — ten trading days, measured in the stamps, the same span on every
+timeframe — and `bars` is what that span came to on the series being read:
+879 on 15m, 230 on 1h, 10 on 1d. A client reading only one of them cannot
+tell "ten days of 4h" from "ten bars of 4h". Nothing else needs rescaling by
+the consumer either: `atr14` is the ATR(14) of the series asked for, and
+every `*_atr` beside it (`displacement_body_atr`, `spread_atr`, and the
+profile's `bucket_size_price` at a quarter of it) was measured against that
+same number — so a 4h order block is a 4h body over a 4h ATR and never a 15m
+one.
 
 **`paper-levels.json` is 120 KB where the other samples here are one or two,
 and that is the fact a consumer most needs from it.** The route does not cap
