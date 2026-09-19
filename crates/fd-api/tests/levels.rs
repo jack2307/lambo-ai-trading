@@ -443,8 +443,15 @@ async fn the_json_carries_the_registrations_list_field_for_field() {
     // on /api/paper/htf: a CHoCH marks a turn a median 5 bars in and is
     // ABSENT at half of them, and a reader must meet both facts at once.
     let measured = &ms["measured"];
-    assert_eq!(measured["choch_median_lag_bars"], 5.0);
-    assert_eq!(measured["choch_absent_at_turns_pct"], 50.0);
+    assert_eq!(measured["choch_median_lag_bars"], 7.0);
+    assert_eq!(measured["choch_absent_at_turns_pct"], 47.0);
+    // The zigzag row is pinned too, because it is the comparison that
+    // carries the meaning: on the fixture it missed 13% of turns and on
+    // the full export 1%, which is the difference between "both are
+    // imperfect" and "one sees every turn and the other sleeps through
+    // half". A refresh that quietly restored 13 would restore the wrong
+    // reading with it.
+    assert_eq!(measured["zigzag_missed_turns_pct"], 1.0);
     assert!(measured["source"].as_str().unwrap_or_default().contains("2026-09-19-smc-structure-measured"));
 
     let events = ms["events"].as_array().expect("a list");

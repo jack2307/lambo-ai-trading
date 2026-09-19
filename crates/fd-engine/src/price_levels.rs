@@ -1146,21 +1146,23 @@ pub struct StructureMeasured {
 
 /// The one instance. ASCII only, like every other string this route writes
 /// to be displayed.
+/// FROM THE FULL EXPORT, NOT THE FIXTURE. The first version of the note was
+/// measured on the 2,000-bar fixture, because a worktree has no `data/`; it
+/// was re-run the same day on the real 25,722-bar H1 export and four of these
+/// seven numbers moved. The one that matters moved furthest: the zigzag row
+/// missed 13% of 4xATR turns on the fixture and 1% on the full file, so a
+/// CHoCH being absent at half of them is not a worse score on one scale -
+/// the zigzag sees essentially every turn and this event does not.
 const STRUCTURE_MEASURED: StructureMeasured = StructureMeasured {
     source: "docs/decisions/2026-09-19-smc-structure-measured.md",
-    choch_median_lag_bars: 5.0,
-    choch_p90_lag_bars: 44.0,
-    fractal_label_median_lag_bars: 13.0,
-    zigzag_p90_lag_bars: 17.0,
-    choch_absent_at_turns_pct: 50.0,
-    zigzag_missed_turns_pct: 13.0,
-    broken_back_within_10_bars_pct: 38.0,
-    note: "A CHoCH marks a 4xATR turn a median 5 bars after it, against 13 for the fractal(2) label - and \
-           it is absent at half of those turns where the zigzag misses 13%, its p90 lag is 44 bars against \
-           the zigzag's 17, and the old direction breaks back through within 10 bars 38% of the time. What \
-           follows a BOS or a CHoCH is statistically indistinguishable from what follows any bar on that \
-           slice. These markers PUNCTUATE a structure row; they do not replace one, and anything on screen \
-           that lets them look like a faster structure label will mislead.",
+    choch_median_lag_bars: 7.0,
+    choch_p90_lag_bars: 37.0,
+    fractal_label_median_lag_bars: 12.0,
+    zigzag_p90_lag_bars: 15.0,
+    choch_absent_at_turns_pct: 47.0,
+    zigzag_missed_turns_pct: 1.0,
+    broken_back_within_10_bars_pct: 29.0,
+    note: "Measured on 25,722 H1 bars. A CHoCH marks a 4xATR turn a median 7 bars after it, against 12 for the fractal(2) label - but it is absent at 47% of those turns, where the zigzag row misses 1%, and its p90 lag is 37 bars against the zigzag's 15. Within 10 bars the old direction breaks back through 29% of the time. On bigger turns it gets WORSE, alone among the three: at 8xATR its median lag doubles to 17 bars while the other two improve. What follows a BOS or a CHoCH is indistinguishable from what follows any bar - the gap to baseline is 0.2 to 0.5 standard errors, and H4's sign is negative where H1's is positive. Its absence is not evidence that nothing turned. These markers PUNCTUATE a structure row; they do not replace one, and anything on screen that lets them look like a faster structure label will mislead."
 };
 
 /// The structure label as of the newest closed bar, and every event that got

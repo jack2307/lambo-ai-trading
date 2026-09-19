@@ -282,6 +282,11 @@ STATE_WORDS = {
     "untested": "UNTESTED",
     "tested": "TESTED",
     "broken": "BROKEN",
+    # A block that was broken and then traded back into. The word is two
+    # facts because the state is: on gold 15m 57 of 62 broken blocks are
+    # breakers, so calling it BREAKER alone would read as a rarer, more
+    # meaningful thing than the tape says it is.
+    "breaker": "BROKEN, BACK INSIDE",
     "resting": "RESTING",
     "swept": "SWEPT",
 }
@@ -509,7 +514,7 @@ def census(levels: list) -> dict:
     out = {"total": len(levels), "families": {}, "spent": {}}
     for lv in levels:
         out["families"][lv["family"]] = out["families"].get(lv["family"], 0) + 1
-        if lv["state"] in ("swept", "broken"):
+        if lv["state"] in ("swept", "broken", "breaker"):
             out["spent"][lv["family"]] = out["spent"].get(lv["family"], 0) + 1
     return out
 
