@@ -21,6 +21,25 @@
 //! these levels would smuggle back the claim those registrations refuted,
 //! inside a route whose whole purpose is to report facts a model can read.
 //!
+//! ## This whole family was tested as a mechanical rule and it lost
+//!
+//! Market structure, the dealing range, order blocks, breakers and the gaps
+//! below are the pieces of the ICT/SMC chain, and this desk did not merely
+//! decline to trade it — it TRADED it and kept the receipt.
+//! `docs/hypotheses/2026-09-13-ict-sweep-mss-fvg.md`: higher-timeframe gap →
+//! liquidity sweep → a displacement close through structure → a retrace into
+//! the impulse's gap, entered with the stop beyond the sweep. It passed its
+//! in-sample gate on the only three months of broker minutes available, and
+//! then, out of sample on four years of Dukascopy gold minutes: **1,428
+//! trades, profit factor 0.746, expectancy −0.190R, sitting at the 95th
+//! percentile of a matched null whose own p95 is 0.746.** Closed.
+//!
+//! So a `BOS` here is an event that happened and not a reason to be long.
+//! The functions below describe; what any of it means is the reader's, and
+//! the reader has the number above to hold that meaning against. The same
+//! sentence is on the wire — `/api/paper/levels` publishes it as
+//! `tested_as_a_rule`, because a reader of the JSON never opens this file.
+//!
 //! ## Units
 //!
 //! Every price is in the market's own quote units. Everything that is not a
@@ -29,6 +48,12 @@
 //! `*_ms` is UTC epoch milliseconds, `*_fraction` is 0..1. This desk spent
 //! 2026-09-17 removing five numbers whose units lived only in prose
 //! (`docs/decisions/2026-09-17-unit-carrying.md`).
+//!
+//! One `*_fraction` is deliberately outside 0..1 and says so where it is
+//! defined: [`DealingRange::close_fraction_of_range`], which is UNCLAMPED for
+//! the reason `htf::D1Dto::close_pct_of_prior_week_range` is — a close above
+//! the range's high is a fact, and clamping it at 1.0 would turn a breakout
+//! into a ceiling.
 //!
 //! ## ATR is passed in, never recomputed here
 //!
@@ -109,7 +134,10 @@ pub enum LevelKind {
 ///   property of the window, not something price tests.
 /// * fair value gaps — [`Self::Unfilled`] or [`Self::PartiallyFilled`]. A
 ///   fully filled gap is not reported at all.
-/// * order blocks — [`Self::Untested`], [`Self::Tested`], [`Self::Broken`].
+/// * order blocks — [`Self::Untested`], [`Self::Tested`], [`Self::Broken`],
+///   [`Self::Breaker`]. Four since 2026-09-19: a breaker is the fourth state
+///   of the same block and NOT a second list, so a reader counting blocks
+///   does not have to add two lists together.
 /// * liquidity — [`Self::Resting`] or [`Self::Swept`].
 /// * extremes — [`Self::Forming`] while the period is still running,
 ///   [`Self::Complete`] once it has ended.
@@ -124,6 +152,12 @@ pub enum LevelState {
     Untested,
     Tested,
     Broken,
+    /// A block that was [`Self::Broken`] and then traded back into from the
+    /// other side. The follow-on state of the same object, so a block is
+    /// never counted twice; the bar that broke it and the bar that came back
+    /// are both on the block ([`OrderBlock::broken_at_bar_ms`],
+    /// [`OrderBlock::breaker_retested_at_bar_ms`]).
+    Breaker,
     Resting,
     Swept,
 }
@@ -217,6 +251,16 @@ pub struct OrderBlock {
     pub tested_at_bar_ms: Option<i64>,
     /// First bar that CLOSED beyond the block's far edge, or `null`.
     pub broken_at_bar_ms: Option<i64>,
+    /// First bar AFTER the break that traded back into the band — what turns
+    /// a broken block into a BREAKER. `null` on every other state.
+    ///
+    /// A separate field from [`Self::tested_at_bar_ms`] and not the same
+    /// question asked twice: that one is price coming back to a block that
+    /// still holds, this one is price coming back to a block that did not.
+    /// Both stamps stay on the object when it becomes a breaker, so the whole
+    /// history — the displacement, the test, the break, the return — is
+    /// readable off one level.
+    pub breaker_retested_at_bar_ms: Option<i64>,
 }
 
 /// Swing highs or lows clustered within the equal-highs tolerance, or a
@@ -645,6 +689,20 @@ pub fn unfilled_fair_value_gaps(bars: &[Bar]) -> Vec<FairValueGap> {
 ///   above a bearish block's high). Close and not wick, because a wick through
 ///   a block and back is the thing the block is supposed to describe, and
 ///   calling that broken would empty the list on every volatile session.
+/// * `BREAKER` — broken, and then a later bar traded back INTO the band. The
+///   break was a close beyond the far edge, so price was outside on that
+///   side, so any return to the band is a return from the other side: that
+///   is the whole definition and it needs no extra test. A follow-on state
+///   of the same block rather than a second list, so a count of order blocks
+///   stays a count of order blocks.
+///
+///   **And it describes almost every broken block, which is worth knowing
+///   before anybody builds on the word.** On the ten trading days of XAUUSD
+///   15m in `docs/api-samples/paper-levels.json`, 57 of the 62 blocks that
+///   had broken were then traded back into: 92%. On this tape "breaker" is
+///   nearly a synonym for "broken", not a rare configuration, and a reader
+///   treating one as a find is reading a property of gold's mean reversion
+///   at 15m rather than a property of the block.
 /// * `TESTED` — a bar traded back inside the band without breaking it.
 /// * `UNTESTED` — neither.
 ///
@@ -688,18 +746,31 @@ pub fn order_blocks(bars: &[Bar], atr: &[f64], displacement_body_atr: f64) -> Ve
 
         let mut tested_at = None;
         let mut broken_at = None;
+        let mut breaker_at = None;
+        // The walk no longer stops at the break: a broken block has one more
+        // thing that can happen to it. Before the break it is looking for a
+        // test and for the break; after it, for the return that makes it a
+        // breaker, and then it stops because a second return is the same
+        // fact told twice.
         for after in &bars[(i + 1).min(bars.len())..] {
-            let broke = if up { after.close < low } else { after.close > high };
-            if broke && broken_at.is_none() {
-                broken_at = Some(after.time);
+            let inside = after.low <= high && after.high >= low;
+            if broken_at.is_none() {
+                let broke = if up { after.close < low } else { after.close > high };
+                if broke {
+                    broken_at = Some(after.time);
+                    continue;
+                }
+                if inside && tested_at.is_none() {
+                    tested_at = Some(after.time);
+                }
+            } else if inside {
+                breaker_at = Some(after.time);
                 break;
             }
-            let inside = after.low <= high && after.high >= low;
-            if inside && tested_at.is_none() {
-                tested_at = Some(after.time);
-            }
         }
-        let state = if broken_at.is_some() {
+        let state = if breaker_at.is_some() {
+            LevelState::Breaker
+        } else if broken_at.is_some() {
             LevelState::Broken
         } else if tested_at.is_some() {
             LevelState::Tested
@@ -717,8 +788,17 @@ pub fn order_blocks(bars: &[Bar], atr: &[f64], displacement_body_atr: f64) -> Ve
                 age_bars: last - j,
                 state,
                 rule: format!(
-                    "order block: last {} candle before a body > {displacement_body_atr} x ATR(14) at its own bar",
-                    if up { "down" } else { "up" }
+                    "order block: last {} candle before a body > {displacement_body_atr} x ATR(14) at its own bar{}",
+                    if up { "down" } else { "up" },
+                    // The breaker clause is appended only to the blocks that
+                    // ARE breakers, so a reader who has one in front of them
+                    // reads the rule that produced its state rather than a
+                    // paragraph about states it is not in.
+                    if breaker_at.is_some() {
+                        "; BREAKER: a bar CLOSED beyond the far edge and a later bar traded back into the band"
+                    } else {
+                        ""
+                    }
                 ),
             },
             // The direction of the IMPULSE, so a bullish block is the down
@@ -728,6 +808,7 @@ pub fn order_blocks(bars: &[Bar], atr: &[f64], displacement_body_atr: f64) -> Ve
             displacement_body_atr: body.abs() / a,
             tested_at_bar_ms: tested_at,
             broken_at_bar_ms: broken_at,
+            breaker_retested_at_bar_ms: breaker_at,
         });
     }
     // Oldest first, by the block's own bar rather than by the displacement
@@ -755,6 +836,25 @@ pub struct ConfirmedSwing {
 /// at `k + right` and never repaints. This turns its step series back into the
 /// list of distinct swings, keeping the confirmation bar, because a level
 /// nobody could see yet cannot have been swept.
+///
+/// **WHICH fractal rule, because this repository has two.**
+/// `fd_indicators::swing` is STRICT on both sides — a bar that TIES with a
+/// neighbour is not a swing, and its own source says so
+/// (`b.high < candidate.high` for every neighbour). It is the same rule
+/// `fd_api::htf::fractal_swings` uses, so the swings behind a structure
+/// event here and the swings behind an H4 structure row there are the same
+/// kind of object. It is NOT `py/research/bias_defs.py::fractal_structure`,
+/// which admits a FLAT TOP: a bar beaten by no neighbour that strictly beats
+/// at least one.
+///
+/// On the 2,000 H1 bars the 2026-09-18 study measured the two agree exactly
+/// — 272 swing highs, 278 lows, not one label differing — because an exact
+/// tie never occurs in that slice at two decimals. **That is a fact about
+/// those bars and not an equivalence.** A measured table produced with one
+/// rule describes a slightly different object from a marker produced with
+/// the other, and the only defence against nobody noticing when they diverge
+/// is that both files name their rule out loud. The `rule` strings on the
+/// wire say it too, for the reader who has neither file open.
 #[must_use]
 pub fn confirmed_swings(bars: &[Bar], left: usize, right: usize, high: bool) -> Vec<ConfirmedSwing> {
     let (highs, lows, high_at, low_at) = fd_indicators::swing(bars, left, right);
@@ -924,6 +1024,469 @@ pub fn period_pool(bars: &[Bar], period: Range<usize>, high: bool, kind: LevelKi
         // a client iterating the field must not have to test for null first.
         swing_ids: Vec::new(),
         spread_atr: None,
+    })
+}
+
+/* --------------------------------------------------- market structure */
+
+/// Which way the structure reads: the SPINE the other families hang off.
+///
+/// The same three words `/api/paper/htf` publishes on its structure rows and
+/// the same comparison behind them — `UP` needs a higher high AND a higher
+/// low, `DOWN` a lower high and a lower low, anything else is `RANGE`. It is
+/// a second copy of that comparison rather than a call into `htf.rs` for a
+/// reason of layering and not of taste: `htf` lives in `fd-api`, which
+/// depends on this crate, so this crate cannot reach it. What must not happen
+/// is a THIRD definition, and the guard against that is that the comparison
+/// below is the one written in
+/// `docs/decisions/2026-09-18-market-bias-definitions.md` and measured there.
+///
+/// **What the study measured it doing, on 25,708 H1 bars:** `fractal(2)`
+/// carries a median lag of 12 bars, misses 23% of turns entirely, and has 1%
+/// of its labels undone within three bars. Slow and sticky — which is what it
+/// was chosen for on the H4 row and is worth knowing here, because a label
+/// that lags twelve bars is a label about where price HAS been.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum StructureLabel {
+    Up,
+    Down,
+    Range,
+}
+
+/// A break of structure or a change of character.
+///
+/// Both are one bar CLOSING beyond one confirmed swing. The only difference
+/// is which way the structure was already pointing when it happened, which is
+/// why they are one enum on one event and not two lists.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum StructureEventKind {
+    /// Continuation: a close beyond the last confirmed swing high while the
+    /// structure was already `UP`, or beyond the last confirmed swing low
+    /// while it was already `DOWN`.
+    Bos,
+    /// The first crack: a close beyond the last confirmed swing on the side
+    /// OPPOSITE to the prevailing structure. It is the event that flips the
+    /// label, and the next break in the new direction is a `BOS`.
+    Choch,
+}
+
+/// One close through one confirmed swing.
+///
+/// Not a [`PriceLevel`]: a level is a price price can come back to and an
+/// event is something that happened at a bar. Forcing it into the level
+/// shape would have needed two more [`LevelState`] variants meaning "an
+/// event", and a client switching on state to draw a band would have drawn
+/// one across a moment.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct StructureEvent {
+    pub kind: StructureEventKind,
+    /// Which side the close broke: `BULLISH` through a swing HIGH, `BEARISH`
+    /// through a swing LOW. As everywhere else in this module the name says
+    /// where the event was and NOT what price will do next.
+    pub direction: Direction,
+    /// The swing price the close went beyond, in quote units.
+    pub broke_price: f64,
+    /// The swing it broke, by [`swing_id`], so the event can be joined to the
+    /// liquidity pool built out of the same swing and to `/api/paper/htf`.
+    pub broke_swing_id: String,
+    /// That swing's own bar. The id contains it; it is a field as well
+    /// because a reader dating the event on a chart should not have to parse
+    /// an id to do it.
+    pub broke_swing_bar_ms: i64,
+    /// The bar whose CLOSE did it — the event's own bar.
+    pub closed_at_bar_ms: i64,
+    /// That close, in quote units, so the break can be checked against
+    /// `broke_price` without fetching the bar.
+    pub close: f64,
+    /// Bars of this timeframe from `closed_at_bar_ms` to the newest closed
+    /// bar. `0` means it happened on the newest bar.
+    pub age_bars: usize,
+    /// Whether a LATER event has happened since. The newest event on the list
+    /// is the only one that is not superseded; it is a fact about position in
+    /// the list and not a judgement about importance.
+    pub superseded: bool,
+    /// The label the structure carried AFTER this event: unchanged by a
+    /// `BOS`, flipped by a `CHOCH`. Published so the state machine can be
+    /// replayed off the response instead of trusted.
+    pub structure_after: StructureLabel,
+    pub rule: String,
+}
+
+/// What the 2026-09-19 measurement found these markers doing, so a reader
+/// meets the numbers in the same object as the markers.
+///
+/// Same idea as `htf::RuleMeasuredDto` and the same reason: a rule published
+/// without its measured behaviour is a stronger claim than the measurement
+/// supports. Static, from
+/// `docs/decisions/2026-09-19-smc-structure-measured.md`.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
+pub struct StructureMeasured {
+    pub source: &'static str,
+    /// Bars from a 4 x ATR(14) turn to the CHoCH that marks it, median. It
+    /// is FASTER than the fractal label below, which is the one thing these
+    /// markers have going for them.
+    pub choch_median_lag_bars: f64,
+    /// And the tail of the same distribution, which is where the speed goes.
+    pub choch_p90_lag_bars: f64,
+    /// The `fractal(2)` LABEL's median lag at the same turns, for scale.
+    pub fractal_label_median_lag_bars: f64,
+    /// The live ATR-zigzag's p90 at the same turns — under half the CHoCH's.
+    pub zigzag_p90_lag_bars: f64,
+    /// Share of those turns with no CHoCH at all. Half of them.
+    pub choch_absent_at_turns_pct: f64,
+    /// The zigzag's own miss rate on the same turns, for the same scale.
+    pub zigzag_missed_turns_pct: f64,
+    /// Share of events where the old direction broke back through within ten
+    /// bars.
+    pub broken_back_within_10_bars_pct: f64,
+    pub note: &'static str,
+}
+
+/// The one instance. ASCII only, like every other string this route writes
+/// to be displayed.
+const STRUCTURE_MEASURED: StructureMeasured = StructureMeasured {
+    source: "docs/decisions/2026-09-19-smc-structure-measured.md",
+    choch_median_lag_bars: 5.0,
+    choch_p90_lag_bars: 44.0,
+    fractal_label_median_lag_bars: 13.0,
+    zigzag_p90_lag_bars: 17.0,
+    choch_absent_at_turns_pct: 50.0,
+    zigzag_missed_turns_pct: 13.0,
+    broken_back_within_10_bars_pct: 38.0,
+    note: "A CHoCH marks a 4xATR turn a median 5 bars after it, against 13 for the fractal(2) label - and \
+           it is absent at half of those turns where the zigzag misses 13%, its p90 lag is 44 bars against \
+           the zigzag's 17, and the old direction breaks back through within 10 bars 38% of the time. What \
+           follows a BOS or a CHoCH is statistically indistinguishable from what follows any bar on that \
+           slice. These markers PUNCTUATE a structure row; they do not replace one, and anything on screen \
+           that lets them look like a faster structure label will mislead.",
+};
+
+/// The structure label as of the newest closed bar, and every event that got
+/// it there.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct MarketStructure {
+    pub label: StructureLabel,
+    /// The bar the label last CHANGED on — the seeding bar, or the `CHOCH`
+    /// that flipped it. `null` while the label is still `RANGE`, which means
+    /// no swing pair has yet compared and no close has yet broken one.
+    pub label_since_bar_ms: Option<i64>,
+    pub rule: String,
+    /// Oldest first, like every other list on this route. Not by size, not by
+    /// recency of importance: those are rankings.
+    pub events: Vec<StructureEvent>,
+    /// Closes that broke a confirmed swing while the label was `RANGE` and
+    /// therefore produced NO event.
+    ///
+    /// **This number exists because the silence can be large and would
+    /// otherwise be invisible.** On the slice measured on 2026-09-19, 43% of
+    /// 204 level breaks landed on a bar whose prevailing structure was flat
+    /// — 204 breaks, 117 classified — and a reader seeing a short event list
+    /// with nothing beside it would conclude the tape was quiet.
+    ///
+    /// **It will usually be small HERE, and that is a difference of
+    /// definition rather than of tape.** That study recomputes the swing
+    /// comparison at every bar; this route seeds the label once and then
+    /// carries it by closes, so once seeded it is never `RANGE` again (see
+    /// [`market_structure`]). On the ten trading days in
+    /// `docs/api-samples/paper-levels.json` this field reads 1 against 81
+    /// breaks. The two numbers answer different questions and a reader
+    /// putting them in one sentence is comparing two objects.
+    pub unclassified_breaks: usize,
+    pub measured: StructureMeasured,
+}
+
+/// Market structure: the confirmed swings, walked forward, and the closes
+/// that broke them.
+///
+/// **One swing rule, the route's own.** The swings are
+/// [`confirmed_swings`]`(left, right)` — the same `fractal(2,2)` the liquidity
+/// pools are built from, so an event and a pool can name the same swing by
+/// the same [`swing_id`]. There is no second swing rule here.
+///
+/// **Close-based, never wick-based.** A wick through a swing and back is the
+/// thing a swing is supposed to describe, exactly as it is for
+/// [`order_blocks`]'s `BROKEN`, and the reason is written there: a
+/// wick-based rule empties the chart of structure on every volatile session.
+///
+/// **How the label moves.** It is `RANGE` until two swing highs and two swing
+/// lows have been confirmed, at which point the higher-high-and-higher-low
+/// comparison seeds it. From then on the CLOSES carry it: a `BOS` leaves it
+/// where it is and a `CHOCH` flips it. The seed is the same comparison
+/// `/api/paper/htf` makes; the carry is the SMC definition, and the two are
+/// separated here because a reader has to know which part is which. Letting
+/// the swing comparison keep overriding would mean the close after a `CHOCH`
+/// produced a second `CHOCH` instead of the `BOS` the definition asks for —
+/// the swing pair is still the old shape at that moment, which is precisely
+/// why the change of character is worth a name.
+///
+/// **A level is SPENT once broken.** The FIRST close beyond a swing is the
+/// event and there is never a second one, because price holding above an old
+/// swing high for forty bars would otherwise print forty `BOS` and a count
+/// of events would be a count of bars. The 2026-09-19 measurement pinned the
+/// same rule as a definition choice; this is that rule and not a second one.
+///
+/// **A break while the label is `RANGE` yields NO event, and is counted.**
+/// There is no prevailing structure for it to continue or to crack, so it is
+/// neither, and the swing is spent all the same. It is published as
+/// [`MarketStructure::unclassified_breaks`] rather than left to look like a
+/// quiet tape.
+///
+/// **How often this route is silent is NOT the measurement's 43%, and the
+/// difference is the definition and not the tape.** The 2026-09-19 study
+/// recomputes the swing comparison at EVERY bar, so its label is flat 43% of
+/// the time and 87 of its 204 breaks go unclassified. This route seeds once
+/// and then carries the label by closes, so after the seed it is never
+/// `RANGE` again: on the ten trading days in
+/// `docs/api-samples/paper-levels.json` that is ONE unclassified break out of
+/// 81. The carry is what the brief for this route asked for and it is what
+/// makes the close after a CHoCH a `BOS` in the new direction rather than a
+/// second CHoCH — but it means the study's flat-rate row and this field are
+/// not the same quantity, and neither is comparable to the other without
+/// this paragraph. Both are stated where they are produced, which is the
+/// same defence the two fractal rules get in [`confirmed_swings`].
+///
+/// **And the markers are not rare.** On those same ten days: 80 events, 42
+/// of them CHoCH, so the label flipped about every twenty bars. A CHoCH is
+/// punctuation on this timeframe, not an announcement.
+///
+/// **Causality is free here and it is worth saying why.** A `fractal(l,r)`
+/// swing high is only a swing because the `r` bars after it have LOWER highs,
+/// so the bar that confirms it cannot itself close above it. Admitting a
+/// swing at its confirmation bar and testing that same bar's close therefore
+/// cannot invent an event out of a bar the trader had not seen.
+#[must_use]
+pub fn market_structure(bars: &[Bar], timeframe: &str, left: usize, right: usize) -> MarketStructure {
+    let rule = format!(
+        "market structure on swings by fractal({left},{right}), STRICT on both sides (fd_indicators::swing, \
+         the same rule /api/paper/htf uses - a flat top is not a swing, unlike bias_defs.py's variant): the \
+         label is seeded by the same higher-high-and-higher-low comparison the fractal rule there makes, \
+         then carried by CLOSES - a BOS keeps it, a CHoCH flips it. Close-based, never wick-based. A swing \
+         is SPENT by the first close beyond it, and a break while the label is RANGE is no event at all \
+         and is counted in unclassified_breaks"
+    );
+    let mut out = MarketStructure {
+        label: StructureLabel::Range,
+        label_since_bar_ms: None,
+        rule,
+        events: Vec::new(),
+        unclassified_breaks: 0,
+        measured: STRUCTURE_MEASURED,
+    };
+    if bars.is_empty() {
+        return out;
+    }
+    let last = bars.len() - 1;
+    let highs = confirmed_swings(bars, left, right, true);
+    let lows = confirmed_swings(bars, left, right, false);
+
+    let (mut hi_cursor, mut lo_cursor) = (0usize, 0usize);
+    let (mut last_high, mut prior_high): (Option<ConfirmedSwing>, Option<ConfirmedSwing>) = (None, None);
+    let (mut last_low, mut prior_low): (Option<ConfirmedSwing>, Option<ConfirmedSwing>) = (None, None);
+    // The swing each side has already spent on an event, by its own bar
+    // index. A swing produces at most one.
+    let (mut spent_high, mut spent_low): (Option<usize>, Option<usize>) = (None, None);
+
+    for (i, bar) in bars.iter().enumerate() {
+        while hi_cursor < highs.len() && highs[hi_cursor].confirmed_at <= i {
+            prior_high = last_high;
+            last_high = Some(highs[hi_cursor]);
+            hi_cursor += 1;
+        }
+        while lo_cursor < lows.len() && lows[lo_cursor].confirmed_at <= i {
+            prior_low = last_low;
+            last_low = Some(lows[lo_cursor]);
+            lo_cursor += 1;
+        }
+
+        if out.label == StructureLabel::Range {
+            let higher_high = matches!((last_high, prior_high), (Some(a), Some(b)) if a.price > b.price);
+            let higher_low = matches!((last_low, prior_low), (Some(a), Some(b)) if a.price > b.price);
+            let lower_high = matches!((last_high, prior_high), (Some(a), Some(b)) if a.price < b.price);
+            let lower_low = matches!((last_low, prior_low), (Some(a), Some(b)) if a.price < b.price);
+            let seeded = if higher_high && higher_low {
+                StructureLabel::Up
+            } else if lower_high && lower_low {
+                StructureLabel::Down
+            } else {
+                StructureLabel::Range
+            };
+            if seeded != StructureLabel::Range {
+                out.label = seeded;
+                out.label_since_bar_ms = Some(bar.time);
+            }
+        }
+
+        let close = bar.close;
+        if !close.is_finite() {
+            continue;
+        }
+
+        // The high side first, then the low side, and at most one event per
+        // bar. Both can only be true at once when the last confirmed swing
+        // low sits ABOVE the last confirmed swing high — a whipsaw, rare and
+        // real — and the order is stated here rather than left to whichever
+        // branch happened to be written first.
+        let broke_high = last_high.filter(|s| Some(s.at) != spent_high && close > s.price);
+        let broke_low = last_low.filter(|s| Some(s.at) != spent_low && close < s.price);
+        let (swing, high) = match (broke_high, broke_low) {
+            (Some(s), _) => (s, true),
+            (None, Some(s)) => (s, false),
+            (None, None) => continue,
+        };
+        // SPENT by the first close beyond it, whichever way that close is
+        // classified — including not at all. A swing that stayed spendable
+        // through a flat stretch would produce a BOS naming a price broken
+        // twenty bars earlier, dated to a bar that broke nothing.
+        if high {
+            spent_high = Some(swing.at);
+        } else {
+            spent_low = Some(swing.at);
+        }
+        let kind = match (out.label, high) {
+            (StructureLabel::Up, true) | (StructureLabel::Down, false) => StructureEventKind::Bos,
+            (StructureLabel::Up, false) | (StructureLabel::Down, true) => StructureEventKind::Choch,
+            // No prevailing structure: nothing to continue and nothing to
+            // crack, so it is neither — counted, never guessed at.
+            (StructureLabel::Range, _) => {
+                out.unclassified_breaks += 1;
+                continue;
+            }
+        };
+        if kind == StructureEventKind::Choch {
+            out.label = if high { StructureLabel::Up } else { StructureLabel::Down };
+            out.label_since_bar_ms = Some(bar.time);
+        }
+
+        out.events.push(StructureEvent {
+            kind,
+            direction: if high { Direction::Bullish } else { Direction::Bearish },
+            broke_price: swing.price,
+            broke_swing_id: swing_id(timeframe, high, bars[swing.at].time),
+            broke_swing_bar_ms: bars[swing.at].time,
+            closed_at_bar_ms: bar.time,
+            close,
+            age_bars: last - i,
+            // Fixed below, once it is known whether anything came after.
+            superseded: false,
+            structure_after: out.label,
+            rule: match kind {
+                StructureEventKind::Bos => format!(
+                    "BOS: a bar CLOSED beyond the last confirmed swing {} while the structure was \
+                     already {} - continuation; swings by fractal({left},{right}), close-based",
+                    if high { "high" } else { "low" },
+                    if high { "UP" } else { "DOWN" }
+                ),
+                StructureEventKind::Choch => format!(
+                    "CHoCH: the first close beyond the last confirmed swing {} while the structure \
+                     was {} - the opposite side, so the label flips here; swings by \
+                     fractal({left},{right}), close-based",
+                    if high { "high" } else { "low" },
+                    if high { "DOWN" } else { "UP" }
+                ),
+            },
+        });
+    }
+
+    // Everything but the newest has been superseded. One pass at the end
+    // rather than a rewrite as each event lands, because "superseded" is a
+    // fact about the finished list.
+    let n = out.events.len();
+    for (k, event) in out.events.iter_mut().enumerate() {
+        event.superseded = k + 1 < n;
+    }
+    out
+}
+
+/* ----------------------------------------------------- dealing range */
+
+/// Where the last close sits relative to the range's midpoint.
+///
+/// A restatement of [`DealingRange::close_fraction_of_range`] in SMC's own
+/// vocabulary and nothing more: above the midpoint is `PREMIUM`, below it is
+/// `DISCOUNT`, exactly on it is `EQUILIBRIUM`. It is not advice — the same
+/// half of a range is where one reader sells and another buys — and the
+/// fraction beside it is what the word was computed from.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum RangeZone {
+    Premium,
+    Discount,
+    Equilibrium,
+}
+
+/// The last confirmed swing high to the last confirmed swing low, with its
+/// midpoint and where the last close sits in it.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct DealingRange {
+    /// Quote units, all three.
+    pub high: f64,
+    pub low: f64,
+    /// The midpoint, `(high + low) / 2`. The level itself and not a statistic
+    /// about the range, which is the same thing `htf`'s `prior_week_mid` is.
+    pub equilibrium: f64,
+    /// Which leg the range came from: the two swings by [`swing_id`], so the
+    /// range can be joined to the pools and the structure events built on the
+    /// same two swings.
+    pub high_swing_id: String,
+    pub low_swing_id: String,
+    pub high_bar_ms: i64,
+    pub low_bar_ms: i64,
+    /// `(close - low) / (high - low)` for the newest closed bar.
+    ///
+    /// **Deliberately NOT clamped.** Above 1.0 means the close has left the
+    /// range upward and below 0.0 downward, which is the most informative
+    /// thing this number ever says; the same choice, for the same reason, as
+    /// `close_pct_of_prior_week_range` on `/api/paper/htf`. Clamping would
+    /// turn a breakout into a ceiling.
+    pub close_fraction_of_range: f64,
+    pub close_zone: RangeZone,
+    pub rule: String,
+}
+
+/// The dealing range: the last confirmed swing high and the last confirmed
+/// swing low, whichever order they came in.
+///
+/// Same swings as everything else on this route, `fractal(left,right)`, so
+/// the range's two ends are levels that appear elsewhere on the response
+/// rather than a third view of the chart.
+///
+/// `None` when either end is missing, when the high is not above the low, or
+/// when there is no finite close to place in it. A zero-width or inverted
+/// range has no position in it to report, and a fraction with a zero or
+/// negative denominator would be a number that looks like a measurement.
+#[must_use]
+pub fn dealing_range(bars: &[Bar], timeframe: &str, left: usize, right: usize) -> Option<DealingRange> {
+    let high = *confirmed_swings(bars, left, right, true).last()?;
+    let low = *confirmed_swings(bars, left, right, false).last()?;
+    let close = bars.last().map(|b| b.close).filter(|v| v.is_finite())?;
+    if !(high.price.is_finite() && low.price.is_finite()) || high.price <= low.price {
+        return None;
+    }
+    let fraction = (close - low.price) / (high.price - low.price);
+    Some(DealingRange {
+        high: high.price,
+        low: low.price,
+        equilibrium: (high.price + low.price) / 2.0,
+        high_swing_id: swing_id(timeframe, true, bars[high.at].time),
+        low_swing_id: swing_id(timeframe, false, bars[low.at].time),
+        high_bar_ms: bars[high.at].time,
+        low_bar_ms: bars[low.at].time,
+        close_fraction_of_range: fraction,
+        close_zone: if fraction > 0.5 {
+            RangeZone::Premium
+        } else if fraction < 0.5 {
+            RangeZone::Discount
+        } else {
+            RangeZone::Equilibrium
+        },
+        rule: format!(
+            "dealing range: the last confirmed swing high to the last confirmed swing low, swings by \
+             fractal({left},{right}); equilibrium is the midpoint, above it is premium and below it is \
+             discount; close_fraction_of_range is (close - low) / (high - low) and is NOT clamped, so \
+             over 1.0 is a close above the range"
+        ),
     })
 }
 
@@ -1126,6 +1689,49 @@ mod tests {
     }
 
     #[test]
+    fn a_block_broken_and_then_traded_back_into_is_a_breaker_and_one_merely_broken_is_not() {
+        // Bar 1 is the down candle, bar 2 the displacement up, bar 4 closes
+        // at 93 — below the block's low of 96 — so the block breaks. Bar 5
+        // stays below it entirely (high 94 < 96, so no return). Bar 6 trades
+        // up to 97, back inside 96..100, and from the other side by
+        // construction: the break was a CLOSE below the band, so price was
+        // underneath it.
+        let broken_then_back = vec![
+            bar(0, 100.0, 100.5, 99.5, 100.0),
+            bar(1, 100.0, 100.0, 96.0, 97.0),
+            bar(2, 97.0, 106.0, 97.0, 105.0),
+            bar(3, 105.0, 105.5, 97.0, 98.0),
+            bar(4, 98.0, 98.0, 92.0, 93.0),
+            bar(5, 93.0, 94.0, 91.0, 92.0),
+            bar(6, 92.0, 97.0, 92.0, 96.5),
+        ];
+        let blocks = order_blocks(&broken_then_back, &flat_atr(broken_then_back.len(), 1.0), 1.0);
+        let b = blocks
+            .iter()
+            .find(|b| b.level.band_low == Some(96.0) && b.level.band_high == Some(100.0))
+            .expect("the 96..100 block");
+        assert_eq!(b.level.state, LevelState::Breaker);
+        assert_eq!(b.broken_at_bar_ms, Some(4 * M15), "the close that broke it is still on the block");
+        assert_eq!(b.breaker_retested_at_bar_ms, Some(6 * M15), "and the bar that came back");
+        // The whole history stays readable off the one object: the test
+        // BEFORE the break is not overwritten by the return after it.
+        assert_eq!(b.tested_at_bar_ms, Some(3 * M15));
+        assert!(b.level.rule.contains("BREAKER"), "the rule that produced the state: {}", b.level.rule);
+
+        // The same tape without the return: broken, and nothing more. A
+        // BREAKER is not what every broken block eventually becomes.
+        let merely_broken = &broken_then_back[..6];
+        let blocks = order_blocks(merely_broken, &flat_atr(merely_broken.len(), 1.0), 1.0);
+        let b = blocks
+            .iter()
+            .find(|b| b.level.band_low == Some(96.0) && b.level.band_high == Some(100.0))
+            .expect("the 96..100 block");
+        assert_eq!(b.level.state, LevelState::Broken);
+        assert_eq!(b.breaker_retested_at_bar_ms, None);
+        assert!(!b.level.rule.contains("BREAKER"), "{}", b.level.rule);
+    }
+
+    #[test]
     fn a_body_under_the_atr_threshold_is_not_a_displacement() {
         // The same shape with an ATR of 20: the 8-dollar body is now 0.4 ATR
         // and nothing here displaced anything. A fixed dollar threshold would
@@ -1282,6 +1888,186 @@ mod tests {
         assert_eq!(swept.swept_at_bar_ms, Some(9 * M15));
     }
 
+    /// A chart with the swings written out, so every assertion below can be
+    /// checked by reading the numbers rather than by trusting the function.
+    ///
+    /// Swing highs by fractal(2,2): bar 5 at 110, bar 11 at 115, bar 17 at
+    /// 120. Swing lows: bar 2 at 90, bar 8 at 95, bar 13 at 103, bar 20 at
+    /// 90. Higher high (115 > 110) with a higher low (95 > 90) seeds UP on
+    /// bar 13, which is the bar that CONFIRMS the swing high at bar 11.
+    ///
+    /// Then, in order: bar 14 WICKS to 117 through the 115 swing and closes
+    /// at 114, bar 15 CLOSES at 116 through it, bar 18 closes at 102 through
+    /// the 103 swing low the other way, and bar 23 closes at 89 through the
+    /// 90 swing low made after that.
+    fn structure_bars() -> Vec<Bar> {
+        vec![
+            bar(0, 99.0, 100.0, 98.0, 99.5),
+            bar(1, 99.5, 101.0, 99.0, 100.0),
+            bar(2, 100.0, 100.5, 90.0, 92.0),
+            bar(3, 92.0, 102.0, 91.5, 101.0),
+            bar(4, 101.0, 103.0, 99.0, 102.0),
+            bar(5, 102.0, 110.0, 101.0, 104.0),
+            bar(6, 104.0, 105.0, 99.0, 100.0),
+            bar(7, 100.0, 104.0, 98.0, 99.0),
+            bar(8, 99.0, 103.0, 95.0, 102.0),
+            bar(9, 102.0, 106.0, 100.0, 105.0),
+            bar(10, 105.0, 108.0, 101.0, 107.0),
+            bar(11, 107.0, 115.0, 105.0, 110.0),
+            bar(12, 110.0, 112.0, 104.0, 106.0),
+            bar(13, 106.0, 111.0, 103.0, 105.0),
+            bar(14, 105.0, 117.0, 104.0, 114.0),
+            bar(15, 114.0, 118.0, 113.0, 116.0),
+            bar(16, 116.0, 119.0, 115.0, 118.0),
+            bar(17, 118.0, 120.0, 112.0, 113.0),
+            bar(18, 113.0, 114.0, 100.0, 102.0),
+            bar(19, 102.0, 105.0, 98.0, 99.0),
+            bar(20, 99.0, 101.0, 90.0, 92.0),
+            bar(21, 92.0, 96.0, 91.0, 95.0),
+            bar(22, 95.0, 97.0, 92.0, 93.0),
+            bar(23, 93.0, 94.0, 88.0, 89.0),
+        ]
+    }
+
+    #[test]
+    fn a_close_through_the_swing_high_in_an_uptrend_is_a_bos_and_a_wick_through_is_not() {
+        // Only the bars up to and including the wick: 117 is through the 115
+        // swing high and the close at 114 is not. Wick-based would report a
+        // break here, which is the thing this rule refuses for the same
+        // reason the order block's BROKEN refuses it.
+        let wick_only = &structure_bars()[..15];
+        let s = market_structure(wick_only, "15m", 2, 2);
+        assert_eq!(s.label, StructureLabel::Up, "higher high and higher low: {s:?}");
+        assert_eq!(s.label_since_bar_ms, Some(13 * M15), "seeded on the bar that confirmed the 115 swing");
+        assert!(s.events.is_empty(), "a wick through a swing is not an event: {:?}", s.events);
+
+        // One more bar, and the close is through.
+        let closed_through = &structure_bars()[..16];
+        let s = market_structure(closed_through, "15m", 2, 2);
+        assert_eq!(s.events.len(), 1, "{:?}", s.events);
+        let e = &s.events[0];
+        assert_eq!(e.kind, StructureEventKind::Bos, "the structure was already UP: continuation");
+        assert_eq!(e.direction, Direction::Bullish);
+        assert_eq!(e.broke_price, 115.0);
+        assert_eq!(e.broke_swing_bar_ms, 11 * M15);
+        assert_eq!(e.broke_swing_id, swing_id("15m", true, 11 * M15), "joinable to the pool made of the same swing");
+        assert_eq!(e.closed_at_bar_ms, 15 * M15);
+        assert_eq!(e.close, 116.0);
+        assert_eq!(e.age_bars, 0, "it happened on the newest bar");
+        assert!(!e.superseded, "nothing has happened since");
+        assert_eq!(e.structure_after, StructureLabel::Up, "a BOS leaves the label where it was");
+        assert_eq!(s.label_since_bar_ms, Some(13 * M15), "and does not restamp it");
+    }
+
+    #[test]
+    fn the_first_close_through_the_opposite_swing_is_a_choch_and_the_next_one_is_a_bos() {
+        let s = market_structure(&structure_bars(), "15m", 2, 2);
+        let kinds: Vec<_> = s.events.iter().map(|e| (e.kind, e.direction, e.closed_at_bar_ms / M15)).collect();
+        assert_eq!(
+            kinds,
+            vec![
+                (StructureEventKind::Bos, Direction::Bullish, 15),
+                (StructureEventKind::Choch, Direction::Bearish, 18),
+                (StructureEventKind::Bos, Direction::Bearish, 23),
+            ],
+            "{:?}",
+            s.events
+        );
+
+        let choch = &s.events[1];
+        assert_eq!(choch.broke_price, 103.0, "the last confirmed swing LOW, the side opposite to UP");
+        assert_eq!(choch.broke_swing_id, swing_id("15m", false, 13 * M15));
+        assert_eq!(choch.structure_after, StructureLabel::Down, "the crack is what flips the label");
+        assert!(choch.superseded, "a later event has happened");
+        assert_eq!(s.label, StructureLabel::Down);
+        assert_eq!(s.label_since_bar_ms, Some(18 * M15), "the label is as old as the CHoCH that set it");
+
+        // The second break DOWN is a BOS and not a second CHoCH: the label
+        // is carried by the closes, so the swing pair still reading UP at
+        // that moment does not get to override it. That is the one place
+        // this rule and the swing comparison disagree, and it is the reason
+        // the change of character is worth a name at all.
+        let second = &s.events[2];
+        assert_eq!(second.broke_price, 90.0, "the swing low made AFTER the CHoCH");
+        assert_eq!(second.structure_after, StructureLabel::Down);
+
+        // ONE EVENT PER SWING. Bar 16 closes at 118, above the same 115
+        // swing high bar 15 already broke, and it is not a second BOS — a
+        // trend would otherwise report one on every bar and a count of
+        // events would be a count of bars.
+        assert!(
+            !s.events.iter().any(|e| e.closed_at_bar_ms == 16 * M15),
+            "the 115 swing was already spent: {:?}",
+            s.events
+        );
+    }
+
+    #[test]
+    fn a_break_with_no_prevailing_structure_is_counted_and_not_guessed_at() {
+        // One swing high at 106 (bar 2, confirmed bar 4) and no swing low at
+        // all, so the label never leaves RANGE. Bar 5 closes at 107, through
+        // the swing: a break, and neither a continuation nor a change of
+        // something that does not exist. Bar 6 closes higher still and is
+        // not a second anything, because the swing was spent by the first
+        // close beyond it.
+        let flat = vec![
+            bar(0, 100.0, 101.0, 99.0, 100.0),
+            bar(1, 100.0, 102.0, 98.0, 101.0),
+            bar(2, 101.0, 106.0, 100.0, 105.0),
+            bar(3, 105.0, 105.5, 100.0, 101.0),
+            bar(4, 101.0, 104.0, 99.0, 103.0),
+            bar(5, 103.0, 108.0, 102.0, 107.0),
+            bar(6, 107.0, 110.0, 106.0, 109.0),
+        ];
+        let s = market_structure(&flat, "15m", 2, 2);
+        assert_eq!(s.label, StructureLabel::Range, "no pair of highs and lows to compare: {s:?}");
+        assert!(s.events.is_empty(), "{:?}", s.events);
+        assert_eq!(s.unclassified_breaks, 1, "the silence is published rather than left to look like calm");
+        // And the measurement travels with the markers, so a reader meets
+        // the lag and the absence in the same object.
+        assert!(s.measured.choch_absent_at_turns_pct > 0.0);
+        assert!(s.measured.source.contains("2026-09-19-smc-structure-measured"));
+
+        // The classified tape reports zero rather than nothing: a count and
+        // an absence are different facts.
+        assert_eq!(market_structure(&structure_bars(), "15m", 2, 2).unclassified_breaks, 0);
+    }
+
+    #[test]
+    fn the_dealing_range_is_the_last_two_swings_and_its_fraction_is_not_clamped() {
+        // Swing high 105 at bar 2, swing low 90 at bar 5, and a close at 108
+        // — eighteen dollars up a fifteen-dollar range, which is 1.2 and not
+        // 1.0. Clamping would turn a breakout into a ceiling, which is the
+        // same choice `close_pct_of_prior_week_range` makes on /api/paper/htf.
+        let out_the_top = vec![
+            bar(0, 100.0, 101.0, 99.0, 100.0),
+            bar(1, 100.0, 102.0, 98.0, 101.0),
+            bar(2, 101.0, 105.0, 100.0, 104.0),
+            bar(3, 104.0, 104.5, 99.0, 100.0),
+            bar(4, 100.0, 102.0, 95.0, 96.0),
+            bar(5, 96.0, 99.0, 90.0, 92.0),
+            bar(6, 92.0, 97.0, 91.0, 96.0),
+            bar(7, 96.0, 110.0, 95.0, 108.0),
+        ];
+        let r = dealing_range(&out_the_top, "15m", 2, 2).expect("a range");
+        assert_eq!((r.high, r.low), (105.0, 90.0));
+        assert_eq!(r.equilibrium, 97.5, "the midpoint IS the level, not a statistic about it");
+        assert_eq!(r.high_swing_id, swing_id("15m", true, 2 * M15));
+        assert_eq!(r.low_swing_id, swing_id("15m", false, 5 * M15));
+        assert_eq!(r.high_bar_ms, 2 * M15);
+        assert_eq!(r.low_bar_ms, 5 * M15);
+        assert!((r.close_fraction_of_range - 1.2).abs() < 1e-9, "{}", r.close_fraction_of_range);
+        assert!(r.close_fraction_of_range > 1.0, "UNCLAMPED: a close above the range is a fact");
+        assert_eq!(r.close_zone, RangeZone::Premium);
+
+        // And below the range, the mirror: bar 23 closes at 89 under a 90
+        // swing low, so the fraction is negative rather than floored at 0.
+        let r = dealing_range(&structure_bars(), "15m", 2, 2).expect("a range");
+        assert_eq!((r.high, r.low), (120.0, 90.0));
+        assert!(r.close_fraction_of_range < 0.0, "{}", r.close_fraction_of_range);
+        assert_eq!(r.close_zone, RangeZone::Discount);
+    }
+
     #[test]
     fn an_empty_window_produces_nothing_rather_than_a_panic() {
         assert!(activity_profile(&[], 1.0, 0.7, 4.0).is_none());
@@ -1289,6 +2075,15 @@ mod tests {
         assert!(order_blocks(&[], &[], 1.0).is_empty());
         assert!(liquidity_pools(&[], &[], "15m", 2, 2, 0.1, true).is_empty());
         assert!(runs_split_by_gap(&[], 1).is_empty());
+        let s = market_structure(&[], "15m", 2, 2);
+        assert_eq!(s.label, StructureLabel::Range);
+        assert!(s.events.is_empty());
+        assert_eq!(s.unclassified_breaks, 0);
+        assert_eq!(s.label_since_bar_ms, None);
+        assert!(!s.rule.is_empty(), "even with nothing to report, the rule says what was looked for");
+        assert!(dealing_range(&[], "15m", 2, 2).is_none());
+        // One bar is not a swing and a range of one point is not a range.
+        assert!(dealing_range(&[bar(0, 100.0, 101.0, 99.0, 100.0)], "15m", 2, 2).is_none());
         assert_eq!(period_extremes(&[], 0..0, true, LevelKind::DayHigh, LevelKind::DayLow, "x").bars, 0);
     }
 }
