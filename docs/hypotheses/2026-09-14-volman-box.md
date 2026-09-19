@@ -128,3 +128,56 @@ percentile of its own sides permuted — the same entries faded would have
 been at the 99th, which is the closed family's finding on gold restated
 with a box-height stop: a tight box's break on 5-minute gold does not
 travel a box; it comes back. The confirmation is not opened.
+
+## Amendment, 2026-09-19: the "1st percentile / faded at the 99th" above is a compounded-dollar artefact, and the number in R is the 38th
+
+The status line at the head of this file already flags this. The note is
+written out here because the sentence it flags is still in the body, where a
+reader meets it first, and because the badge on the Desk chart quotes the
+corrected number.
+
+**What this file says**, in the closing paragraph of the primary result:
+
+> The breakout side on the box-2 row is at the 1st percentile of its own sides
+> permuted — the same entries faded would have been at the 99th …
+
+**What the decision says.** `docs/decisions/2026-09-14-volman-box.md` quotes
+the adversary, who re-implemented the rule:
+
+> The 1st percentile is an instrument artefact: *"Engine PF is gross win/loss
+> on `pnl_usd` with lots = 1% of compounding equity. At −0.14R/trade equity
+> runs $10,000 → $84, so the 3,460-trade PF is weighted 46.7% on Jun–Dec 2010
+> … Equal-weighted in R, b2 PF 0.695 sits at the **38th percentile** of a
+> coin-flip null … The full faded replay: PF(R) 0.731, −0.122R — **the fade
+> loses too**."*
+
+**Which is right: the decision.** The 1st percentile is a true reading of the
+receipt and a false reading of the market. It is produced by compounding: with
+lots sized at 1% of a decaying equity curve, the first six months of the
+sample carry 46.7% of the profit-factor weight and the last years carry almost
+none, so the statistic being permuted is dominated by a stub of the tape. Once
+each trade is equal-weighted in R — the unit the rest of this repository
+gates on — the same 3,460 entries sit at the 38th, which is a coin flip. The
+second half of the sentence follows it: a fade at the "99th" would be a real
+edge, and the faded replay in R loses 0.122R a trade.
+
+The adversary's own falsifiable form of this, recorded in the decision: *"an
+engine direction null on fixed lots or on R would put b2 between the 25th and
+50th, not the 1st"*, and it logged the compounding weight as an instrument
+fault because *"it touches every thousands-of-trades negative in this loop"*.
+So the correction is not local to this row.
+
+**What does not change.** The registration closes either way, and on the
+statistic that decided it: PF 0.639 against a gate of 1.2 on 3,460 trades, the
+8th percentile of random entries with the same stop and target, and nothing
+passing on the owner's last-year batch (fixed b2 697 trades PF 0.920 at the
+47th, b3 672 at PF 0.966). The reading in the paragraph above — *"a tight
+box's break on 5-minute gold does not travel a box"* — survives; what does not
+survive is the second half, that it reliably comes back.
+
+The sentence stays where it is. It is what the receipt said, and the artefact
+is only visible to a later reader if the number it produced is still legible.
+
+*Written 2026-09-19 by the records session, from
+`docs/decisions/2026-09-14-volman-box.md`. Nothing is recomputed. Raised as
+item 7 of `docs/research/VERDICTS.md` section 4.*
