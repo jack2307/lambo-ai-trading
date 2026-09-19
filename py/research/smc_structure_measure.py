@@ -115,12 +115,22 @@ def rel(path):
 
 
 def fingerprint_rows(bars):
-    """The bar digest under `bars_fingerprint`'s recipe, so it is comparable
-    with the study's table rather than merely similar to it.
+    """An OHLC-ONLY digest of the bars this run actually read.
 
-    Bit patterns, big-endian, time as int64 ms, then OHLC as float64, then the
-    absent-volume sentinel imported from that module - the fixture carries no
-    volume column and "no volume" must not collide with "volume 0"."""
+    Same packing as `bars_fingerprint.py` - big-endian bit patterns, time as
+    int64 ms, then OHLC as float64 - and the absent-volume sentinel imported
+    from that module, always, because `bias_measures.load` does not return
+    volume and this file only ever sees five columns.
+
+    WHICH MEANS IT IS NOT THAT MODULE'S DIGEST, and the first version of this
+    note wrongly said it was. The exported parquet carries a real volume
+    column with no nulls, so `bars_fingerprint.py` hashes six numbers per row
+    where this hashes five plus a sentinel, and the two digests differ on the
+    same file: `3aef507ac395d1f3` against `08c90946d8fa36de` on
+    XAUUSD-1h.parquet. They agree only on a volumeless source such as the
+    committed fixture. The canonical fingerprint for a registration is the
+    one `bars_fingerprint.py` prints; this one is a cheap self-check that the
+    bars in front of THIS run are the bars its table was computed on."""
     d = hashlib.sha256()
     for b in bars:
         ms = int((b[T] - dt.datetime(1970, 1, 1)).total_seconds() * 1000)
@@ -331,21 +341,59 @@ def pct(x, n):
     return "-" if not n else "%.0f%%" % (100.0 * x / n)
 
 
-def main():
-    bars, src = load_bars("1h")
+def pct2(x, n):
+    """Like `pct` but keeps a decimal below 1%.
+
+    Added 2026-09-19: the H4 tie-rule row is 10 differing labels in 6,732,
+    which `pct` renders as "0%" directly beside a sentence saying the two
+    rules are NOT the same object. A rounding that contradicts its own
+    paragraph is the same fault this file fixed in section 6's footnote."""
+    if not n:
+        return "-"
+    v = 100.0 * x / n
+    return ("%.2f%%" % v) if 0 < v < 1 else ("%.0f%%" % v)
+
+
+def report(tf, bar_hours):
+    """The whole battery on one timeframe.
+
+    Split out of `main` on 2026-09-19, when the real export arrived in the
+    worktree and H4 became measurable. The first version of this note had to
+    write "the H4 row does not exist and must not be guessed from the H1
+    one"; it exists now, and the bias study this is shaped after measured
+    both timeframes because its own two differed.
+    """
+    bars, src = load_bars(tf)
+    if bars is None:
+        print("# %s\n\nNo `%s`, and the committed fixture is H1 only, so nothing is\n"
+              "reported for this timeframe. An absent table is the honest output;\n"
+              "one resampled from 2,000 H1 bars would not be.\n" % (tf.upper(), src["path"]))
+        return
     a = atr(bars, 14)
     n_bars = len(bars)
 
+    print("# %s\n" % tf.upper())
     print("## Data\n")
     if src["kind"] == "fixture":
         print("`data/bars` is empty in this worktree (git-ignored, fetched not")
         print("committed), so this ran on the committed fixture slice.\n")
-    print("| file | bars | first | last | bar sha256 (first 16) | file sha256 (first 16) |")
+    print("| file | bars | first | last | OHLC digest (first 16) | file sha256 (first 16) |")
     print("|---|---|---|---|---|---|")
-    print("| `%s` | %s | %sZ | %sZ | `%s` | `%s` |" % (
+    # The FILE hash is printed only for the committed fixture. An export is
+    # rewritten on every run - `exported_at` alone changes - so its file hash
+    # would differ between two machines holding IDENTICAL bars and would move
+    # hourly on the VPS while nothing about the data did. The bar digest
+    # beside it is the one that means something, and `bars_fingerprint.py`
+    # exists because of exactly this distinction.
+    print("| `%s` | %s | %sZ | %sZ | `%s` | %s |" % (
         src["path"], "{:,}".format(n_bars), bars[0][T].strftime("%Y-%m-%dT%H:%M:%S"),
         bars[-1][T].strftime("%Y-%m-%dT%H:%M:%S"), fingerprint_rows(bars)[:16],
-        file_sha256(src["abs"])[:16] if src["kind"] == "fixture" else "n/a"))
+        "`%s`" % file_sha256(src["abs"])[:16] if src["kind"] == "fixture"
+        else "n/a - an export is rewritten every run"))
+    if src["kind"] != "fixture":
+        print("\nThe OHLC digest above excludes volume and is NOT the canonical")
+        print("fingerprint. For that: `py -3.9 py/research/bars_fingerprint.py %s`."
+              % src["path"])
     bad, tot = check_walk(bars, 2)
     print("\nSwing walk vs `bias_defs.fractal_structure(bars, 2)`: "
           "**%d label mismatches on %s bars**.\n" % (bad, "{:,}".format(tot)))
@@ -386,10 +434,13 @@ def main():
     # ------------------------------------------------------------ lag, missed
     print("## 3. Lag at a 4xATR turn, and 4. the turns with no CHoCH at all\n")
     series = choch_label_series(events, n_bars)
-    # The two STATE definitions are re-measured on this same slice rather than
-    # quoted from the 2026-09-18 table, which was computed on 25,708 bars. A
-    # lag of 5 against a lag of 12 read off two different samples is not a
-    # comparison; read off the same 2,000 bars it is.
+    # The two STATE definitions are re-measured on whatever bars this run
+    # read, rather than quoted from the 2026-09-18 table. A lag of 7 against a
+    # lag of 12 read off two different samples is not a comparison; read off
+    # the same bars it is. It earned its keep on 2026-09-19: on the 2,000-bar
+    # fixture `zigzag 3xATR` missed 13% of 4xATR turns and on the full file it
+    # misses 1%, so the contrast this table exists to draw moved by twelve
+    # points when the sample did.
     rows = [("CHoCH (this note)", series),
             ("fractal(2) label", fractal_structure(bars, 2)),
             ("zigzag 3xATR label", atr_zigzag(bars, 3.0))]
@@ -419,8 +470,13 @@ def main():
     print("| horizon | after BOS (n) | p25 | med | p75 | after CHoCH (n) | p25 | med | p75 "
           "| any bar (n) | p25 | med | p75 |")
     print("|---|---|---|---|---|---|---|---|---|---|---|---|---|")
-    for hours in (3, 5, 10, 24):
-        fwd = forward_map(bars, hours, 0.6)
+    # Horizons are 3, 5, 10 and 24 BARS expressed in wall-clock hours, so the
+    # H1 and H4 tables ask the same question of their own timeframe rather
+    # than asking H4 about three hours, which is less than one of its bars.
+    horizons = [n * bar_hours for n in (3, 5, 10, 24)]
+    tol = bar_hours * 0.6
+    for hours in horizons:
+        fwd = forward_map(bars, hours, tol)
         b = follow_through(bars, [(e[0], e[1]) for e in events if e[2] == "BOS"], a, fwd)
         c = follow_through(bars, [(e[0], e[1]) for e in events if e[2] == "CHoCH"], a, fwd)
         z = baseline_moves(bars, a, fwd)
@@ -430,8 +486,8 @@ def main():
     print()
     print("| horizon | SE of the BOS median | SE of the CHoCH median | BOS med - any-bar med |")
     print("|---|---|---|---|")
-    for hours in (3, 5, 10, 24):
-        fwd = forward_map(bars, hours, 0.6)
+    for hours in horizons:
+        fwd = forward_map(bars, hours, tol)
         b = follow_through(bars, [(e[0], e[1]) for e in events if e[2] == "BOS"], a, fwd)
         c = follow_through(bars, [(e[0], e[1]) for e in events if e[2] == "CHoCH"], a, fwd)
         z = baseline_moves(bars, a, fwd)
@@ -471,15 +527,37 @@ def main():
         nl = len(set(v[0] for v in walk[1] if v is not None))
         print("| %s | %s | %d | %d | %s | %d | %d |" % (
             name, src_name, nh, nl,
-            "-" if is_base else "%s (%s)" % (pct(diff, n_bars), "{:,}".format(diff)),
+            "-" if is_base else "%s (%s)" % (pct2(diff, n_bars), "{:,}".format(diff)),
             sum(1 for e in evs if e[2] == "BOS"),
             sum(1 for e in evs if e[2] == "CHoCH")))
-    print("\n*On THIS slice the two rules are the same object: an exact tie between a")
-    print("bar's extreme and a neighbour's never occurs in 2,000 H1 bars of gold at")
-    print("two decimals, so every count matches. That is a fact about these bars, not")
-    print("a proof that the rules are equivalent - a tie is possible and the wider")
-    print("file has twelve times as many chances to contain one. Re-run this section")
-    print("with FD_BARS set before concluding the choice does not matter.*")
+    # THE FOOTNOTE IS COMPUTED, NOT WRITTEN. The first version of this note
+    # hard-coded the sentence "on THIS slice the two rules are the same
+    # object", which was true of the 2,000-bar fixture and became false the
+    # moment the 25,722-bar export arrived - a paragraph contradicting the
+    # table directly above it. A prose claim about the data belongs to the
+    # data, so it is printed from the counts.
+    if diff == 0:
+        print("\n*On these %s bars the two rules are the same object: an exact tie"
+              % "{:,}".format(n_bars))
+        print("between a bar's extreme and a neighbour's never occurs, so every count")
+        print("matches. That is a fact about this sample and not an equivalence - a")
+        print("wider file has proportionally more chances to contain a tie, and on the")
+        print("25,722-bar H1 export it does.*")
+    else:
+        print("\n*The two rules are NOT the same object: they disagree on %s of %s"
+              % ("{:,}".format(diff), "{:,}".format(n_bars)))
+        print("labels (%s). The 2,000-bar H1 fixture this note was first measured on"
+              % pct2(diff, n_bars))
+        print("showed zero difference, and that version predicted a wider file would")
+        print("settle the question; it has. Every number above is the `bias_defs` rule.")
+        print("The route ships `htf.rs::fractal_swings`, so it is drawing a measurably")
+        print("different object and the two files should be reconciled deliberately.*")
+
+
+def main():
+    report("1h", 1)
+    print("\n---\n")
+    report("4h", 4)
 
 
 if __name__ == "__main__":
