@@ -45,6 +45,7 @@ import urllib.request
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import ai_trader as A  # noqa: E402
+import time
 
 fails = []
 
@@ -220,8 +221,14 @@ def detail(last_open: int, pending=None, open_pos=None) -> dict:
         "run": {"id": "r", "tf": "15m", "equity": 10_000.0, "net_usd": 0.0, "trades": 0,
                 "open": open_pos, "pending_order": pending, "last_bar_time": last_open,
                 "last_bar_close": LAST},
+        # `at` is WALL-CLOCK, as the poller writes it: the fast loop asks only
+        # while quotes are arriving, and it judges that against the clock the
+        # trader is running on, not against the synthetic bar time used here.
+        # A fixture stamped in T0's past would read as a shut market and every
+        # fast case below would be a pause instead of a question.
         "live": {"time": last_open + BAR, "open": LAST, "high": LAST + 0.4, "low": LAST - 0.3,
-                 "close": LAST + 0.1, "bid": LAST + 0.05, "ask": LAST + 0.25, "at": last_open + BAR + 90_000},
+                 "close": LAST + 0.1, "bid": LAST + 0.05, "ask": LAST + 0.25,
+                 "at": int(time.time() * 1000) - 5_000},
         "bars": bars(45, last_open),
         "series": {},
     }
@@ -441,6 +448,49 @@ api, calls, rows = drive("plan-trigger", [detail(T0), detail(T0, pending=PENDING
                          [LIMIT_REPLY, TRIGGER], polls=2, extra=["--dry-run"])
 check(not api.posts, "dry run posts nothing at all", str(api.posts))
 check(len(calls) == 1, "and, having posted no order, asks no fast question")
+
+# --- a shut market: the order rests, the model is not asked ---
+#
+# Gold's weekend, and any poller outage. The fast loop fires on a wall clock
+# while an order rests, and an order's expiry is counted in CLOSED BARS, so
+# an order left resting at the Friday close cannot expire until Sunday. With
+# no freshness gate this loop would ask about a frozen chart every minute for
+# forty-eight hours. The 15m decision needs no such gate - it fires on a new
+# closed bar, and the 21:00-22:00Z break has zero rows on this desk.
+def stale(last_open: int, pending=None, age_ms: int = 600_000) -> dict:
+    d = detail(last_open, pending=pending)
+    d["live"]["at"] = int(time.time() * 1000) - age_ms
+    return d
+
+
+def fresh(last_open: int, pending=None) -> dict:
+    d = detail(last_open, pending=pending)
+    d["live"]["at"] = int(time.time() * 1000) - 5_000
+    return d
+
+
+api, calls, rows = drive("plan-trigger",
+                         [fresh(T0), stale(T0, pending=PENDING), stale(T0, pending=PENDING),
+                          stale(T0, pending=PENDING)],
+                         [LIMIT_REPLY, WAIT, WAIT, WAIT], polls=4)
+paused = [r for r in rows if r.get("kind") == "trigger_paused"]
+checks = [r for r in rows if r.get("kind") == "trigger_check"]
+check(len(calls) == 1, "a stale feed draws NO fast call, however many polls", str(len(calls)))
+check(not checks, "and writes no trigger_check row", str(len(checks)))
+check(len(paused) == 1, "one trigger_paused row per stale spell, not one per poll", str(len(paused)))
+check(paused and paused[0].get("quote_age_ms", 0) >= 600_000,
+      "the paused row carries the quote age that decided it",
+      str(paused[0].get("quote_age_ms") if paused else None))
+check(not [p for p in api.posts if p[0] == "paper/pending/act"],
+      "and the resting order is left alone - not cancelled, not triggered", str(api.posts))
+
+# --- and it resumes the moment quotes come back ---
+api, calls, rows = drive("plan-trigger",
+                         [fresh(T0), stale(T0, pending=PENDING), fresh(T0, pending=PENDING)],
+                         [LIMIT_REPLY, TRIGGER], polls=3)
+check(len(calls) == 2, "the fast question is asked again once the feed returns", str(len(calls)))
+check(len([r for r in rows if r.get("kind") == "trigger_paused"]) == 1,
+      "the pause is recorded once and does not repeat after the feed returns")
 
 print()
 print(f"{'all checks passed' if not fails else str(len(fails)) + ' FAILED'}")

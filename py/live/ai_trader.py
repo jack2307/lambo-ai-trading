@@ -265,6 +265,26 @@ PROMPT_VARIANTS = tuple(VARIANTS)
 
 PROMPT_LAYOUT = "cache-v2"
 
+# How stale the quote may be before the fast loop stops asking.
+#
+# The 15-minute decision needs no such guard: it fires on a NEW CLOSED BAR,
+# and a shut market produces none. Measured on this desk 2026-09-18 over
+# every row on disk - the 21:00-22:00Z daily break has exactly ZERO rows of
+# any kind, every day, while its neighbours have forty to seventy.
+#
+# The fast loop has no such anchor. It fires while an order RESTS, on a wall
+# clock, and an order's expiry is counted in closed bars - so an order left
+# resting at the Friday close cannot expire until Sunday, and the loop would
+# ask the model about a frozen chart every sixty seconds for forty-eight
+# hours: about 2,880 calls, and 2,880 `trigger_check` rows drowning whatever
+# the campaign actually measured. A poller outage mid-week does the same
+# thing on a smaller scale.
+#
+# So the loop asks only while quotes are arriving. Three minutes is three
+# missed minute bars - long enough not to fire on a thin hour, short enough
+# that the weekend is caught in the first three minutes of it.
+FAST_STALE_MS = 180_000
+
 # ORDER IS DELIBERATE, AND IT IS NOT THE READING ORDER. Cost, not clarity,
 # decides it: DeepSeek serves an exact prefix of a previous request from cache
 # at one fiftieth of the fresh input price, and it is an EXACT prefix - the
@@ -1259,9 +1279,33 @@ def main() -> int:
             print(f"pending order from before this process started ({pending.get('side')} "
                   f"{pending.get('type')} at {pending.get('price')}); rule-only fill until it resolves",
                   flush=True)
+        # Quotes, not the clock, say whether there is anything to look at.
+        # `live.at` is when the poller last read a tick for this stream.
+        live_at = (detail.get("live") or {}).get("at")
+        quote_age_ms = None if not live_at else max(0, int(time.time() * 1000) - int(live_at))
+        feed_live = quote_age_ms is not None and quote_age_ms < FAST_STALE_MS
         if (pending and is_trigger and pending_plan is not None
                 and not (detail.get("run") or {}).get("open")
+                and not feed_live):
+            # Said once per stale spell, and written once, so a shut market
+            # leaves one row saying the order rested through it rather than
+            # one row a minute saying nothing happened.
+            if not pending_plan.get("stale_since"):
+                pending_plan["stale_since"] = int(time.time() * 1000)
+                age = "no quote at all" if quote_age_ms is None else f"{quote_age_ms / 1000:.0f}s old"
+                print(f"{dt.datetime.now(dt.timezone.utc):%H:%M:%SZ} fast loop paused: quote is {age}; "
+                      f"the order rests and fills by rule if the feed returns", flush=True)
+                log(args.run, {
+                    "at": int(time.time() * 1000), "bar_time": pending_plan["bar_time"], "model": args.model,
+                    "prompt_variant": args.prompt_variant, "prompt_layout": PROMPT_LAYOUT,
+                    "kind": "trigger_paused", "quote_age_ms": quote_age_ms, "pending": pending,
+                    "decision": {"side": "NONE", "reason": "[PAUSED] the feed is stale; the model was not asked"},
+                    "posted": False, "refused_locally": "", "dry_run": bool(args.dry_run),
+                })
+        elif (pending and is_trigger and pending_plan is not None
+                and not (detail.get("run") or {}).get("open")
                 and time.monotonic() - pending_plan["asked_at"] >= args.fast_poll):
+            pending_plan["stale_since"] = None
             pending_plan["asked_at"] = time.monotonic()
             try:
                 m1 = get_json(f"{args.api}/api/paper/m1?market={args.market}&n=60")
