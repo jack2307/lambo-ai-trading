@@ -47,6 +47,22 @@ What it does, every `--poll` seconds:
    book's disappears without a position; and hands over to step 3 the moment
    the book holds. The three-key lock above gates this exactly as it gates a
    market order, because it is checked before the loop that does either.
+6. Independently of the book and on its OWN wall clock: from Friday
+   `--weekend-flat` (20:45 UTC by default) until the Sunday reopen it closes
+   whatever this book holds on the account, refuses to open anything however
+   the book reads, and withdraws any pending order it placed. The owner's
+   rule, 2026-09-19: "nguyen tac la khong bao gio giu qua tuan" - the account
+   never holds a position over a weekend.
+
+   This is the SECOND layer. The engine's `flat_before_weekend_hhmm` guard
+   flattens the paper book and the mirror follows it, and it aims to have
+   done so before this window opens, so the backstop normally finds nothing
+   to close - which is the intended state, and it says so with a
+   `weekend-window` row rather than staying silent about it. It exists
+   because on 2026-09-18 the first layer could not fire at all: it is
+   bar-driven, the 20:45Z bar it needed never arrived, and fourteen books and
+   two real positions went into the weekend with nobody told. See
+   docs/decisions/2026-09-19-weekend-flat-never-fires.md.
 
 What it refuses, in code, before any order:
 
@@ -83,6 +99,10 @@ What it refuses, in code, before any order:
   written into the demo's history.
 * A `STOP` file at `data/paper/<run>/STOP` — closes any open position and
   exits. The kill switch.
+* Any opening order at all while the weekend backstop's window is open — see
+  step 6. Judged on THIS machine's UTC clock, so the refusal holds when the
+  terminal is unreachable, when the API is down and when the poller has
+  stopped feeding bars, which is the state that produced it.
 * The terminal path is required (`--terminal`), so the executor never
   attaches to whichever terminal happens to be running.
 
@@ -224,6 +244,14 @@ def close_comment(run: str, why: str) -> str:
         "side changed": "flip",
         "STOP file": "stop",
         "desk-wide STOP file": "stop",
+        # `wknd` and not `weekend`, counted against COMMENT_MAX = 25: the tag
+        # leaves a run id of 20 characters whole, where `weekend` leaves 17
+        # and puts `ai-xau-opus-ctx-b weekend` exactly ON the longest string
+        # this account has ever accepted. Sitting on a measured boundary is
+        # what cost this desk seven hours of closes that could not be sent.
+        # `ai-xau-ds-plan-trigger` is 22 and is still cut short - by `flat`
+        # and `flip` too, which is a pre-existing debt and not this one's.
+        "weekend backstop": "wknd",
     }.get(why, why)
     return f"{run} {short}"[:COMMENT_MAX]
 
@@ -275,6 +303,99 @@ def expiry_on_server(valid_until_utc_ms, server_offset_ms):
     if valid_until_utc_ms is None or server_offset_ms is None:
         return None
     return int((int(valid_until_utc_ms) + int(server_offset_ms)) // 1000)
+
+
+# ---- the weekend backstop's window, on this process's own UTC clock ----
+#
+# WHY UTC HERE AND NEW YORK IN THE ENGINE, which is the first question a
+# reader will have, because the two layers disagree on purpose.
+#
+# `Guards::past_weekend_cutoff` anchors `flat_before_weekend_hhmm` to New York
+# local time, and that is right for it: it reads the instant a BAR closes, and
+# the bar grid moves with the DST shift the broker follows, so 1640 NY needs
+# no second value for winter. It is also why it failed. It cannot fire without
+# a bar, and on 2026-09-18 the bar it needed never arrived - MetaTrader closes
+# a bar only on a tick after its boundary and the weekly close sends none, so
+# the newest closed bar the poller sees all weekend is 20:30Z.
+#
+# A backstop must not inherit that. It is asked precisely when the things the
+# first layer depends on are broken, so it depends on the fewest of them:
+#
+#   not the bar feed  - it is the wall clock, and the wall clock keeps running
+#                       when the poller is dead
+#   not the terminal  - `symbol_info_tick` is how this file measures the
+#                       server's clock, and over a weekend the last tick is
+#                       days old (`server_offset_ms` returns None for exactly
+#                       that reason). A backstop that needed the broker clock
+#                       would be unable to read it in the window where it is
+#                       needed.
+#   not a timezone table - no `zoneinfo`, no DST arithmetic, no third-party
+#                       package on the VPS's Python 3.9. `datetime.utcnow` and
+#                       two comparisons is the whole of it.
+#
+# THE PRICE OF THAT, STATED, because it is real and seasonal. 20:45Z is 16:45
+# New York in summer, fifteen minutes before Friday's 21:00Z close, so the
+# engine's 1640 has already flattened and this finds nothing. In New York
+# WINTER the close moves to 22:00Z and 1640 NY becomes 21:40Z, while 20:45Z
+# becomes 15:45 NY - so the backstop would fire an hour BEFORE the engine's
+# guard and become the operative rule, costing about seventy-five minutes of
+# Friday instead of fifteen. The honest fix at the DST change is one typed
+# value, `--weekend-flat 21:45`, and it is a decision rather than a table
+# because the whole point of this layer is that nothing it needs can be wrong
+# without somebody typing it.
+WEEKEND_REOPEN_MIN_UTC = 21 * 60
+
+
+def weekend_cut_minute(spec):
+    """`--weekend-flat` as minutes past midnight UTC, or None when it is off.
+
+    Exits rather than falling back on anything it cannot read. This flag is
+    the one that decides whether the account goes into a weekend holding a
+    position, and a mistyped value quietly becoming the default 20:45 is the
+    same class of failure the backstop exists to catch. Rule 3 of
+    docs/decisions/2026-09-17-unit-carrying.md: a conversion that cannot be
+    established refuses, it does not default.
+    """
+    s = str(spec or "").strip().lower()
+    if s in ("off", "none", ""):
+        return None
+    parts = s.split(":")
+    if len(parts) != 2:
+        raise SystemExit(f"--weekend-flat: {spec!r} is not HH:MM (UTC) or 'off'")
+    try:
+        hour, minute = int(parts[0]), int(parts[1])
+    except ValueError:
+        raise SystemExit(f"--weekend-flat: {spec!r} is not HH:MM (UTC) or 'off'")
+    if not (0 <= hour <= 23 and 0 <= minute <= 59):
+        raise SystemExit(f"--weekend-flat: {spec!r} is not a time of day")
+    return hour * 60 + minute
+
+
+def in_weekend_window(now_utc, cut_min) -> bool:
+    """Is `now_utc` inside the backstop's window? `cut_min` None means off.
+
+    Friday at or after the cut-off, the whole of Saturday, and Sunday up to
+    the reopen. `now_utc` is a UTC datetime read from this machine, per the
+    block above; nothing here asks the broker what time it is.
+
+    The Friday boundary is `>=` and the Sunday one is `<`, so the window is
+    half-open at both ends and a poll landing exactly on 21:00:00Z on Sunday
+    is out of it. Equality has to fall somewhere, and the side that lets the
+    week START is the one that costs nothing: a Sunday entry refused for one
+    poll is a missed trade, while a Friday close skipped for one poll is a
+    weekend hold, which is the thing this exists to prevent.
+    """
+    if cut_min is None:
+        return False
+    dow = now_utc.weekday()  # Monday 0 ... Friday 4, Saturday 5, Sunday 6
+    minute = now_utc.hour * 60 + now_utc.minute
+    if dow == 4:
+        return minute >= cut_min
+    if dow == 5:
+        return True
+    if dow == 6:
+        return minute < WEEKEND_REOPEN_MIN_UTC
+    return False
 
 
 def magic_for(run: str) -> int:
@@ -938,6 +1059,37 @@ def main() -> int:
     # before the loop, and this flag only changes what the loop does.
     ap.add_argument("--mirror-pending", action="store_true",
                     help="place the book's pending limit/stop order on the terminal too (default: off)")
+    # The weekend backstop. ON by default, at 20:45 UTC; `off` disables it.
+    #
+    # THE OWNER'S RULE, 2026-09-19: "nguyen tac la khong bao gio giu qua tuan,
+    # bat buoc phai xu ly lenh" - the account never holds a position over a
+    # weekend, and positions must be dealt with. This is the layer that makes
+    # that true of the ACCOUNT rather than of the book.
+    #
+    # LAYER ONE IS THE ENGINE'S, and it comes first: `flat_before_weekend_hhmm
+    # = 1640` flattens the paper book on the 20:30Z bar, which closes at
+    # 20:45Z, and the mirror follows it within a poll. So by the time this
+    # window opens the account should already be flat, this should find
+    # nothing to close, and that is the intended state - not a sign the
+    # backstop is inert. It writes `weekend-window` on entry either way,
+    # because "it ran and there was nothing to do" is the fact worth having.
+    #
+    # WHY THERE IS A LAYER TWO AT ALL, measured: layer one is bar-driven and
+    # on 2026-09-18 the bar never came. MetaTrader closes a bar only when a
+    # tick arrives after its boundary; the weekly close sends none, so the
+    # 20:45Z bar stayed forming until Sunday and the newest closed bar the
+    # poller saw all weekend was 20:30Z. Fourteen books and two real positions
+    # went into the weekend and nothing in the system said so. A guard that
+    # can fail silently needs one behind it that fails for different reasons.
+    #
+    # 20:45 UTC, and see `in_weekend_window` for why this clock and what it
+    # costs in New York winter. The default is deliberately the same instant
+    # the 20:30Z bar closes: it is the moment layer one is supposed to have
+    # acted, so the backstop is checking layer one's work rather than
+    # duplicating a judgement about how much of Friday to give up.
+    ap.add_argument("--weekend-flat", default="20:45", metavar="HH:MM",
+                    help="UTC time on FRIDAY from which this closes everything and refuses to "
+                         "open, until the Sunday reopen; 'off' disables it (default: 20:45)")
     # One of the three keys to a real account. On its own it does nothing:
     # the registry must also say `real_money = true` for --account, and the
     # terminal must hold exactly --login. See the module docstring.
@@ -975,6 +1127,11 @@ def main() -> int:
         return 0
 
     args = ap.parse_args()
+
+    # Parsed here, before the terminal is even opened, so a mistyped
+    # `--weekend-flat` kills the process on the launcher's screen rather than
+    # at 20:45 on a Friday with a position open.
+    weekend_cut = weekend_cut_minute(args.weekend_flat)
 
     # data/live/<account>/<run>/ - the live side, kept out of data/paper
     # entirely. The paper book is one thing that happened; what each account
@@ -1246,6 +1403,46 @@ def main() -> int:
                 "type_time": mt5.ORDER_TIME_GTC, "type_filling": mt5.ORDER_FILLING_IOC,
             }
             return send(req, f"close {why}")
+
+        def weekend_close(pos) -> bool:
+            """Close one position because the week is ending, and say so in the record.
+
+            THE CLOSE ITSELF IS `close()` ABOVE, unchanged and not
+            reimplemented. There is exactly one order-sending routine for an
+            exit in this file and this is not a second one - the 31-character
+            comment that made 1,389 closes fail is the standing argument for
+            that, and a backstop with its own copy of the request would be a
+            copy that has never been tested against a broker.
+
+            What is added is the row. `order` says what the terminal did;
+            `weekend-flat` says why the desk asked, and carries the numbers a
+            person reading a Monday morning log needs without joining two
+            lines: which book, which ticket, which way, how big, at what
+            quote, and what it came to.
+
+            `profit` is the terminal's own floating result for this position,
+            in the ACCOUNT's currency, and `currency` is beside it - USC on
+            the funded cent account, where a bare number is out by 100. Rules
+            1 and 5 of docs/decisions/2026-09-17-unit-carrying.md.
+
+            `price` is the QUOTE this close was sent at, not the fill: the
+            fill price the broker reported is on the `order` row written by
+            `send()` immediately before this one, and the two are kept apart
+            rather than one standing in for the other.
+            """
+            tick = mt5.symbol_info_tick(args.symbol)
+            is_long = pos.type == mt5.POSITION_TYPE_BUY
+            quote = getattr(tick, "bid" if is_long else "ask", None)
+            profit = getattr(pos, "profit", None)
+            ok = close(pos, "weekend backstop")
+            log(out, "weekend-flat", book=args.run, ticket=int(pos.ticket),
+                side="LONG" if is_long else "SHORT", lots=float(pos.volume),
+                price=quote, profit=None if profit is None else round(profit, 2),
+                currency=getattr(acc, "currency", None),
+                sent=bool(ok), dry_run=bool(args.dry_run),
+                reason="the weekend backstop closed a position the engine's bar-driven guard "
+                       "left open; this account never holds over a weekend")
+            return ok
 
         def nonlocal_blocked(why) -> None:
             nonlocal blocked
@@ -1910,6 +2107,12 @@ def main() -> int:
         standing_out = None  # working as designed: this trade is being sat out
         drift = None     # the account holds the right SIDE but not the right shape
         filled_ahead = 0  # polls the terminal has held the book's pending fill before the book did
+        weekend_on = False    # inside the backstop's window as of the last poll
+        weekend_told = set()  # book ids already refused in THIS window. A set and not a
+                              # flag because the rule is once per book per window: a
+                              # refusal repeated every fifteen seconds for fifty hours is
+                              # fifty hours of log that says one thing, and the one line
+                              # that mattered is lost in it.
 
         def drift_from_book(book_open: dict, held: list):
             """The account agrees with the book on side, but not on count or size.
@@ -2144,6 +2347,83 @@ def main() -> int:
                 standing_out = None
                 snapshot(positions(), None)
                 return 0
+            # ---- layer two: the weekend backstop, on this machine's UTC clock ----
+            #
+            # AFTER the kill switch and BEFORE everything else. After, because
+            # a STOP file closes and EXITS, which is the stronger of the two
+            # and must not be delayed by a window that only closes. Before
+            # `read_status`, because the state this was written for is the one
+            # where the feed has stopped: a backstop that needed the API to
+            # answer before it could flatten would be absent in exactly the
+            # case it exists for. The book is read below, inside the window,
+            # only to know whether there is a refusal worth recording.
+            now_utc = dt.datetime.now(tz=UTC)
+            in_window = in_weekend_window(now_utc, weekend_cut)
+            if in_window != weekend_on:
+                weekend_on = in_window
+                weekend_told = set()
+                # `positions_held` on the ENTRY row is the whole reason a row
+                # is written when there is nothing to do. Zero is the good
+                # outcome - it means layer one flattened on the 20:30Z bar as
+                # it is meant to - and it is only evidence of that if somebody
+                # wrote it down at the time.
+                log(out, "weekend-window", state="open" if in_window else "closed",
+                    at_utc=now_utc.strftime("%Y-%m-%dT%H:%M:%SZ"), weekday=now_utc.weekday(),
+                    cut_utc=args.weekend_flat, reopen_utc="21:00",
+                    positions_held=len(positions()),
+                    reason=("this account holds nothing from here to the Sunday reopen, "
+                            "whatever the book says" if in_window else
+                            "the market has reopened; the book is mirrored as usual again"))
+                if not in_window:
+                    standing_out = None
+            if weekend_on:
+                if args.mirror_pending:
+                    # Only reachable with the flag on, and then only for an
+                    # order placed before the window opened. A resting order
+                    # left over the weekend fills on Sunday's gap, which is
+                    # the one entry nobody chose - and the gap is why this
+                    # whole guard exists: median weekend gap over the last
+                    # twelve months is 13.55 points against a 12-point stop.
+                    for o in pending_orders():
+                        remove_pending(o, "weekend backstop")
+                for p in positions():
+                    weekend_close(p)
+                book_open = None
+                try:
+                    run = read_status(args.api, args.run)
+                    book_open = (run or {}).get("open")
+                except Exception as e:  # noqa: BLE001
+                    # Logged, not fatal, and deliberately not a `continue`:
+                    # the closes above have already happened, and what the
+                    # book thinks only decides whether a refusal is recorded.
+                    log(out, "api-unreachable", error=str(e)[:200])
+                if book_open is not None and args.run not in weekend_told:
+                    weekend_told.add(args.run)
+                    log(out, "weekend-refused", book=args.run, side=book_open.get("side"),
+                        lots=book_open.get("lots"), book_entry=book_open.get("entry_price"),
+                        at_utc=now_utc.strftime("%Y-%m-%dT%H:%M:%SZ"), cut_utc=args.weekend_flat,
+                        reason="the book is holding into the weekend and this account will not; "
+                               "nothing is opened until the Sunday reopen")
+                    print(f"WEEKEND: the book is {book_open.get('side')} and this account stays "
+                          f"flat until the Sunday reopen. Nothing was sent.", flush=True)
+                # WITHOUT THIS REFUSAL THE CLOSE ABOVE IS POINTLESS: the
+                # reconciler would read "book open, terminal flat" on the very
+                # next poll and buy it all back, every fifteen seconds, all
+                # weekend, paying the spread each time.
+                #
+                # Said once in the log and every poll in the snapshot, which is
+                # the split `standing_out` was made for - the desk needs to see
+                # WHY a mirrored book is flat, and the log does not need to say
+                # it twelve thousand times.
+                standing_out = (f"the weekend backstop is in force from Friday "
+                                f"{args.weekend_flat}Z until the Sunday reopen; this account "
+                                f"holds nothing over a weekend")
+                # The account is deliberately flat here, so any remembered
+                # shape mismatch describes a state that no longer exists.
+                drift = None
+                snapshot(positions(), book_open)
+                time.sleep(args.poll)
+                continue
             try:
                 run = read_status(args.api, args.run)
             except Exception as e:  # noqa: BLE001
