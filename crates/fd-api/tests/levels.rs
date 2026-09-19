@@ -205,12 +205,27 @@ fn state_with_files(files: &[(&str, &[Bar])]) -> Arc<AppState> {
 }
 
 async fn read(state: &Arc<AppState>, market: &str, tf: Option<&str>, days: Option<usize>) -> Result<Value, ApiError> {
-    levels(
-        State(Arc::clone(state)),
-        Query(LevelsQuery { market: market.to_string(), tf: tf.map(str::to_string), days }),
-    )
-    .await
-    .map(|Json(v)| serde_json::to_value(v).expect("json"))
+    serve(state, market, tf, days).await.map(|v| serde_json::to_value(v).expect("json"))
+}
+
+/// The response as the ROUTE built it, before `serde_json::Value` sorts its
+/// keys.
+///
+/// The samples are written from this and the assertions read [`read`]: a
+/// `Value` is a `BTreeMap` here, so anything round-tripped through one comes
+/// out alphabetical, and a sample in alphabetical order is not the bytes a
+/// client receives. `paper-levels.json` was captured off the live server
+/// with the fields in declaration order, and writing it any other way would
+/// have turned a one-block addition into a 7,600-line diff nobody could read.
+async fn serve(
+    state: &Arc<AppState>,
+    market: &str,
+    tf: Option<&str>,
+    days: Option<usize>,
+) -> Result<fd_api::levels::LevelsResponse, ApiError> {
+    levels(State(Arc::clone(state)), Query(LevelsQuery { market: market.to_string(), tf: tf.map(str::to_string), days }))
+        .await
+        .map(|Json(v)| v)
 }
 
 fn http_status(err: ApiError) -> u16 {
@@ -249,7 +264,17 @@ async fn a_market_with_no_stored_bars_says_so_rather_than_answering_an_empty_lis
     // which is a measurement; a missing file has measured nothing. A card
     // that cannot tell them apart renders "no gaps" over a market it has
     // never looked at.
-    for key in ["profile", "fair_value_gaps", "order_blocks", "liquidity", "extremes", "source", "window"] {
+    for key in [
+        "profile",
+        "fair_value_gaps",
+        "order_blocks",
+        "liquidity",
+        "market_structure",
+        "dealing_range",
+        "extremes",
+        "source",
+        "window",
+    ] {
         assert!(v[key].is_null(), "{key} must be null and not empty when there are no bars: {v}");
     }
     assert!(v["atr14"].is_null());
@@ -327,9 +352,28 @@ async fn the_json_carries_the_registrations_list_field_for_field() {
     for b in blocks {
         assert_carries_the_five(b, "order block");
         assert!(
-            ["UNTESTED", "TESTED", "BROKEN"].contains(&b["state"].as_str().unwrap_or_default()),
-            "an order block's state is one of three: {b}"
+            // FOUR since 2026-09-19. `BREAKER` is the follow-on state of a
+            // block that broke and was then traded back into, and it is a
+            // state rather than a second list precisely so this assertion
+            // stays one assertion and a count of blocks stays a count of
+            // blocks.
+            ["UNTESTED", "TESTED", "BROKEN", "BREAKER"].contains(&b["state"].as_str().unwrap_or_default()),
+            "an order block's state is one of four: {b}"
         );
+        // The stamps and the state are one fact, the way `swept` and
+        // `swept_at_bar_ms` are: a BREAKER without the bar it broke on would
+        // be a state nobody can date.
+        let broken = !b["broken_at_bar_ms"].is_null();
+        let retested = !b["breaker_retested_at_bar_ms"].is_null();
+        assert_eq!(broken, b["state"] == "BROKEN" || b["state"] == "BREAKER", "{b}");
+        assert_eq!(retested, b["state"] == "BREAKER", "{b}");
+        if retested {
+            assert!(
+                b["breaker_retested_at_bar_ms"].as_i64() > b["broken_at_bar_ms"].as_i64(),
+                "the return comes AFTER the break: {b}"
+            );
+            assert!(b["rule"].as_str().unwrap_or_default().contains("BREAKER"), "{b}");
+        }
     }
 
     // 4. Buy-side and sell-side liquidity with their swept state, and the
@@ -381,13 +425,116 @@ async fn the_json_carries_the_registrations_list_field_for_field() {
     assert_eq!(ex["day"]["bars"], BARS_PER_DAY as u64);
     assert_eq!(ex["session"]["bars"], BARS_PER_DAY as u64);
 
+    // 6. Market structure: the spine, added 2026-09-19. Events on the SAME
+    //    swings the pools above are built from, named by the same ids.
+    let ms = &v["market_structure"];
+    assert!(["UP", "DOWN", "RANGE"].contains(&ms["label"].as_str().expect("a label")), "{ms}");
+    let rule = ms["rule"].as_str().expect("a rule");
+    // WHICH fractal rule, on the wire. This repository has two — the strict
+    // one here and `bias_defs.py`'s, which admits a flat top — and they
+    // agree on the 2,000 H1 bars measured only because no tie occurs there.
+    // A marker that did not name its rule would be joinable by eye to a
+    // measured table about a slightly different object.
+    assert!(rule.contains("fractal(2,2)"), "the swing rule, with its half-widths: {rule}");
+    assert!(rule.contains("STRICT"), "and that it is the strict one: {rule}");
+    assert!(rule.contains("SPENT"), "and that a swing is spent by the first close beyond it: {rule}");
+    assert!(ms["unclassified_breaks"].as_u64().is_some(), "the silence is a number: {ms}");
+    // The measurement travels with the markers, the way `rule_measured` does
+    // on /api/paper/htf: a CHoCH marks a turn a median 5 bars in and is
+    // ABSENT at half of them, and a reader must meet both facts at once.
+    let measured = &ms["measured"];
+    assert_eq!(measured["choch_median_lag_bars"], 5.0);
+    assert_eq!(measured["choch_absent_at_turns_pct"], 50.0);
+    assert!(measured["source"].as_str().unwrap_or_default().contains("2026-09-19-smc-structure-measured"));
+
+    let events = ms["events"].as_array().expect("a list");
+    assert!(!events.is_empty(), "ten days of swings produce breaks: {ms}");
+    for (i, e) in events.iter().enumerate() {
+        let kind = e["kind"].as_str().unwrap_or_default();
+        assert!(["BOS", "CHOCH"].contains(&kind), "{e}");
+        let bullish = e["direction"] == "BULLISH";
+        // The break is CHECKABLE off the response: the close is beyond the
+        // price it broke, on the side the direction names. A wick-based rule
+        // would fail this line, which is the point of writing it.
+        let close = e["close"].as_f64().expect("close");
+        let broke = e["broke_price"].as_f64().expect("broke_price");
+        assert!(if bullish { close > broke } else { close < broke }, "{e}");
+        let id = e["broke_swing_id"].as_str().expect("a swing id");
+        assert!(id.starts_with(if bullish { "15m-hi-" } else { "15m-lo-" }), "{e}");
+        assert!(id.ends_with(&e["broke_swing_bar_ms"].as_i64().expect("a swing bar").to_string()), "{e}");
+        // Superseded is a fact about position in the list: everything but
+        // the newest, and the list is chronological like every other here.
+        assert_eq!(e["superseded"].as_bool().expect("superseded"), i + 1 < events.len(), "{e}");
+        assert!(["UP", "DOWN"].contains(&e["structure_after"].as_str().unwrap_or_default()), "{e}");
+        assert!(!e["rule"].as_str().unwrap_or_default().is_empty(), "{e}");
+        assert!(e["age_bars"].as_u64().is_some(), "{e}");
+    }
+    let stamps: Vec<i64> = events.iter().filter_map(|e| e["closed_at_bar_ms"].as_i64()).collect();
+    assert!(stamps.windows(2).all(|w| w[0] < w[1]), "oldest first, and one event per bar at most: {stamps:?}");
+    // The label the newest event left behind IS the published label: the
+    // state machine can be replayed off the response instead of trusted.
+    assert_eq!(ms["label"], events.last().expect("an event")["structure_after"]);
+
+    // 7. The dealing range, and its fraction recomputed from the response's
+    //    own numbers — a derived field nobody can check is a field that can
+    //    silently drift from what it claims to be.
+    let dr = &v["dealing_range"];
+    let (high, low) = (dr["high"].as_f64().expect("high"), dr["low"].as_f64().expect("low"));
+    assert!(high > low, "{dr}");
+    assert!((dr["equilibrium"].as_f64().expect("eq") - (high + low) / 2.0).abs() < 1e-9, "{dr}");
+    let close = v["last_close"].as_f64().expect("last_close");
+    let fraction = dr["close_fraction_of_range"].as_f64().expect("fraction");
+    assert!((fraction - (close - low) / (high - low)).abs() < 1e-9, "{dr}");
+    let zone = dr["close_zone"].as_str().expect("a zone");
+    assert_eq!(zone, if fraction > 0.5 { "PREMIUM" } else if fraction < 0.5 { "DISCOUNT" } else { "EQUILIBRIUM" });
+    assert!(dr["high_swing_id"].as_str().unwrap_or_default().starts_with("15m-hi-"), "{dr}");
+    assert!(dr["low_swing_id"].as_str().unwrap_or_default().starts_with("15m-lo-"), "{dr}");
+    assert!(dr["rule"].as_str().unwrap_or_default().contains("NOT clamped"), "{dr}");
+
+    // 8. The receipt, on the wire. The fixture's tail drifts up and never
+    //    comes back, so this response is as flattering as this family ever
+    //    looks; the numbers below are what happened when it was traded.
+    let tested = &v["tested_as_a_rule"];
+    assert_eq!(tested["out_of_sample_trades"], 1428);
+    assert_eq!(tested["profit_factor"], 0.746);
+    assert_eq!(tested["expectancy_r"], -0.190);
+    assert_eq!(
+        tested["null_p95_profit_factor"], tested["profit_factor"],
+        "the finding IS that they are the same number: as good as the least-losing coin flip"
+    );
+    assert!(tested["hypothesis"].as_str().unwrap_or_default().contains("2026-09-13-ict-sweep-mss-fvg"));
+
     // NOTHING that ranks, scores or votes. The registration forbids it in
     // advance (lines 68-72) and the cheapest way to keep that true through a
     // future edit is to fail here when a field with one of these names
     // appears.
-    let text = serde_json::to_string(&v).expect("json");
-    for banned in ["\"score\"", "\"composite\"", "\"confluence\"", "\"bias\"", "\"rank\"", "\"strength\""] {
-        assert!(!text.contains(banned), "the route carries no verdict, and {banned} is one");
+    assert_no_verdict(&v, "the default response");
+}
+
+/// The banned vocabulary, checked on a whole served response.
+///
+/// Extended on 2026-09-19 when market structure arrived, because that is the
+/// block a verdict would actually sneak into: an event stream is one short
+/// step from "signal", "trend" and "conviction", and BOS/CHoCH are exactly
+/// the fields somebody would hang one off. The check is on the serialized
+/// TEXT and the tokens carry their quotes, so it catches a field name and a
+/// string value alike while leaving prose free to use the word — the
+/// `market-bias-definitions.md` path on this route is not a `"bias"` field.
+fn assert_no_verdict(v: &Value, what: &str) {
+    let text = serde_json::to_string(v).expect("json");
+    for banned in [
+        "\"score\"",
+        "\"composite\"",
+        "\"confluence\"",
+        "\"bias\"",
+        "\"rank\"",
+        "\"strength\"",
+        "\"signal\"",
+        "\"trend\"",
+        "\"verdict\"",
+        "\"confidence\"",
+    ] {
+        assert!(!text.contains(banned), "{what} carries no verdict, and {banned} is one");
     }
 }
 
@@ -665,11 +812,20 @@ async fn the_route_carries_no_verdict_on_any_timeframe() {
     let state = state_with_files(&[("15m", &fixture()), ("1h", &hour), ("1d", &daily)]);
     for tf in [None, Some("15m"), Some("1h"), Some("1d"), Some("4h")] {
         let v = read(&state, "xauusd", tf, None).await.expect("200");
-        let text = serde_json::to_string(&v).expect("json");
-        for banned in ["\"score\"", "\"composite\"", "\"confluence\"", "\"bias\"", "\"rank\"", "\"strength\""] {
-            assert!(!text.contains(banned), "{tf:?} carries {banned}");
-        }
+        assert_no_verdict(&v, &format!("?tf={tf:?}"));
+        // Including the REFUSED one, which still carries the receipt: the
+        // 4h branch answers with every block null, and a reader who meets
+        // this route through a refusal is still meeting this route.
+        assert_eq!(v["tested_as_a_rule"]["profit_factor"], 0.746, "{tf:?}");
     }
+
+    // The market with no bars at all, for the same two reasons.
+    let nothing = state_with_files(&[]);
+    let v = read(&nothing, "xauusd", None, None).await.expect("200");
+    assert_no_verdict(&v, "the absent case");
+    assert!(v["market_structure"].is_null(), "null and not an empty event list: {v}");
+    assert!(v["dealing_range"].is_null());
+    assert_eq!(v["tested_as_a_rule"]["out_of_sample_trades"], 1428);
 }
 
 /// Refreshes the served samples in `docs/api-samples/`.
@@ -687,11 +843,74 @@ async fn the_route_carries_no_verdict_on_any_timeframe() {
 #[ignore = "writes docs/api-samples; run with --ignored to refresh"]
 async fn write_the_served_samples() {
     let state = state_with_files(&[("15m", &fixture()), ("1h", &series(3_600_000, 23, DAYS))]);
-    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("..").join("..").join("docs").join("api-samples");
+    let dir = samples_dir();
     for (name, tf) in [("paper-levels-1h.json", "1h"), ("paper-levels-4h-refused.json", "4h")] {
-        let v = read(&state, "xauusd", Some(tf), None).await.expect("200");
+        let v = serve(&state, "xauusd", Some(tf), None).await.expect("200");
         let path = dir.join(name);
         std::fs::write(&path, serde_json::to_string_pretty(&v).expect("json")).expect("write the sample");
         println!("wrote {}", path.display());
     }
+    // The absent case needs no store at all, so it is refreshed here rather
+    // than hand-edited whenever the response grows a field. Its `market` and
+    // its sentence are the same off any data root: there is nothing to read.
+    let v = serve(&state_with_files(&[]), "xauusd", None, None).await.expect("200");
+    let path = dir.join("paper-levels-unavailable.json");
+    std::fs::write(&path, serde_json::to_string_pretty(&v).expect("json")).expect("write the sample");
+    println!("wrote {}", path.display());
+}
+
+fn samples_dir() -> std::path::PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("..").join("..").join("docs").join("api-samples")
+}
+
+/// Refreshes `docs/api-samples/paper-levels.json`, the one sample here that
+/// is a REAL response.
+///
+/// ```text
+/// FD_SAMPLE_BARS=<dir holding XAUUSD-15m.parquet> \
+///   cargo test -p fd-api --test levels -- --ignored the_default_sample --nocapture
+/// ```
+///
+/// It cannot be written from [`fixture`] like the two above: this file is
+/// what `py/live/smc_context_selftest.py` runs against, and that selftest
+/// exists BECAUSE a hand-made fixture agreed with a prose description and
+/// disagreed with the route in eight field names and two units. A seeded
+/// walk would put the invented fixture back under it wearing the real one's
+/// name.
+///
+/// **It is truncated at the bar the committed sample already names**, so a
+/// refresh shows the fields that changed and not four more days of gold that
+/// also moved. That keeps the diff readable and keeps every number in the
+/// Python selftest's fixture describing the same bars it described before.
+/// If the store no longer reaches back that far, it says so and writes
+/// nothing rather than quietly re-anchoring the sample.
+///
+/// Skipped, loudly, without the env var: no store lives in this repository
+/// (`/data/*` is ignored), and a test that silently passed on a machine with
+/// no bars would make this refresh look like it had run.
+#[tokio::test]
+#[ignore = "needs a real store; run with --ignored and FD_SAMPLE_BARS to refresh"]
+async fn write_the_default_sample_from_a_real_store() {
+    let Ok(root) = std::env::var("FD_SAMPLE_BARS") else {
+        println!("FD_SAMPLE_BARS is unset: nothing refreshed. Point it at a directory holding XAUUSD-15m.parquet.");
+        return;
+    };
+    let path = samples_dir().join("paper-levels.json");
+    let committed: Value = sample("paper-levels.json");
+    let anchor = committed["computed_at_bar_ms"].as_i64().expect("the committed sample names its newest bar");
+
+    let all = fd_store::read_bars(&Path::new(&root).join("XAUUSD-15m.parquet")).expect("the stored 15m bars");
+    let bars: Vec<Bar> = all.into_iter().filter(|b| b.time <= anchor).collect();
+    assert!(!bars.is_empty(), "no bars at or before {anchor} in {root}");
+    assert_eq!(
+        bars.last().expect("bars").time,
+        anchor,
+        "the store does not hold the bar the committed sample was taken on; \
+         re-anchoring the sample is a decision, not a refresh"
+    );
+
+    let state = state_with_bars(Some(&bars));
+    let v = serve(&state, "xauusd", None, None).await.expect("200");
+    std::fs::write(&path, serde_json::to_string_pretty(&v).expect("json")).expect("write the sample");
+    println!("wrote {} from {} bars ending {anchor}", path.display(), bars.len());
 }

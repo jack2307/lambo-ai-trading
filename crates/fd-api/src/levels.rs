@@ -27,6 +27,20 @@
 //! importance, not by distance from price: those are rankings, and the caller
 //! that wants one applies its own and owns it.
 //!
+//! ## The receipt is on the wire, not only in this comment
+//!
+//! On 2026-09-19 this route grew the two pieces of the SMC vocabulary it was
+//! missing — market structure (BOS and CHoCH) and the dealing range — plus
+//! the breaker state on the order blocks. That is the whole of the chain
+//! `docs/hypotheses/2026-09-13-ict-sweep-mss-fvg.md` tested and closed:
+//! **1,428 out-of-sample trades, profit factor 0.746, expectancy -0.190R, at
+//! the 95th percentile of a null whose own p95 is 0.746** — as good as the
+//! least-losing coin flip. Every response carries those numbers as
+//! `tested_as_a_rule`, on the ABSENT path too, because a reader of the JSON
+//! never opens this file and a `BOS` field with nothing beside it reads like
+//! a recommendation. Describing what the bars did is the job; what it means
+//! is the reader's.
+//!
 //! ## One timeframe per response, and it is one the store HOLDS
 //!
 //! `?tf=` picks it and it defaults to `15m`, so every caller written before
@@ -89,8 +103,9 @@ use axum::Json;
 use axum::extract::{Query, State};
 use fd_core::types::Bar;
 use fd_engine::price_levels::{
-    BarProfile, FairValueGap, LevelKind, LiquidityPool, OrderBlock, PeriodExtremes, activity_profile,
-    bucket_size_price, liquidity_pools, order_blocks, period_extremes, period_pool, runs_split_by_gap,
+    BarProfile, DealingRange, FairValueGap, LevelKind, LiquidityPool, MarketStructure, OrderBlock, PeriodExtremes,
+    activity_profile, bucket_size_price, dealing_range, liquidity_pools, market_structure, order_blocks,
+    period_extremes, period_pool, runs_split_by_gap,
 };
 use fd_store::{read_bars, timeframe_ms};
 use serde::{Deserialize, Serialize};
@@ -268,6 +283,61 @@ pub struct ExtremesDto {
     pub week: PeriodExtremes,
 }
 
+/// What happened when this family of levels was traded as a mechanical rule.
+///
+/// **It is on every response, including the ones with no bars**, because it
+/// is a fact about the METHOD and not about today's tape. A reader meeting
+/// `market_structure` for the first time meets this in the same object.
+///
+/// The desk did not decline to trade the ICT/SMC chain on principle; it
+/// traded it, out of sample, and kept the receipt. Static text and static
+/// numbers: nothing here is computed from the bars, and if these figures ever
+/// change it is because a new registration closed and somebody edited this
+/// struct on purpose.
+#[derive(Debug, Serialize)]
+pub struct TestedAsARuleDto {
+    /// The chain, named in full, so a reader can tell whether what they are
+    /// about to build is the thing that was tested.
+    pub what: &'static str,
+    pub hypothesis: &'static str,
+    pub decision: &'static str,
+    pub sample: &'static str,
+    /// Trades in the out-of-sample run.
+    pub out_of_sample_trades: u32,
+    /// Gross profit over gross loss. Under 1.0 is a losing method.
+    pub profit_factor: f64,
+    /// Expectancy per trade in R — risk units, where 1R is the distance to
+    /// the stop.
+    pub expectancy_r: f64,
+    /// The 95th percentile of the matched null's profit factor. It is the
+    /// same number as `profit_factor`, which is the whole finding: the method
+    /// landed exactly where the least-losing coin flip did.
+    pub null_p95_profit_factor: f64,
+    pub note: &'static str,
+}
+
+/// The one instance of it, spelled out where a reader of the route will meet
+/// it.
+///
+/// ASCII only, like every other string this route writes to be displayed:
+/// the clients' encodings are not this crate's to know.
+const TESTED_AS_A_RULE: TestedAsARuleDto = TestedAsARuleDto {
+    what: "the full ICT/SMC chain as a mechanical entry: a higher-timeframe fair value gap, a liquidity \
+           sweep that closes back inside, a displacement close through structure, a retrace into the \
+           impulse's gap, stop beyond the sweep",
+    hypothesis: "docs/hypotheses/2026-09-13-ict-sweep-mss-fvg.md",
+    decision: "docs/decisions/2026-09-13-ict-sweep-mss-fvg.md",
+    sample: "four years of Dukascopy gold minutes, out of sample, pre-registered (batch ict-oos, 100 null seeds)",
+    out_of_sample_trades: 1_428,
+    profit_factor: 0.746,
+    expectancy_r: -0.190,
+    null_p95_profit_factor: 0.746,
+    note: "It passed its gate on the only three months of broker minutes available and then lost out of \
+           sample at the rate of noise traded at the same cost. Closed. Everything this route serves is \
+           a description of what the bars did; none of it is a signal, and the numbers here are what \
+           happened the last time this desk treated it as one.",
+};
+
 /// `GET /api/paper/levels?market=<id>&tf=<timeframe>&days=<n>`
 ///
 /// 200 whenever the market is known, so a card or a prompt block can say WHY
@@ -299,9 +369,31 @@ pub struct LevelsResponse {
     /// Equal-high and equal-low pools plus the prior day's and prior week's
     /// extremes, each with `swept` and the bar that swept it.
     pub liquidity: Option<Vec<LiquidityPool>>,
+    /// The label as of the newest closed bar and every BOS and CHoCH behind
+    /// it, oldest first. The events are on the SAME `fractal(2,2)` swings the
+    /// liquidity pools are built from and name them by the same `swing_id`,
+    /// so the two blocks can be joined rather than compared by eye.
+    ///
+    /// **`label` is an input to the event definitions, not a recommendation.**
+    /// A BOS is only a BOS because the structure was already pointing that
+    /// way, so the label has to be on the wire or no reader can check why an
+    /// event was called one thing and not the other. What it is worth is in
+    /// `tested_as_a_rule`.
+    pub market_structure: Option<MarketStructure>,
+    /// The last confirmed swing high to the last confirmed swing low, its
+    /// midpoint, and where the last close sits in it — unclamped, so a close
+    /// outside the range reads as a fraction outside 0..1.
+    ///
+    /// `null` when the window has not produced both a confirmed swing high
+    /// and a confirmed swing low above it, which on a short or a one-way
+    /// window is a real state and not an error.
+    pub dealing_range: Option<DealingRange>,
     pub extremes: Option<ExtremesDto>,
     pub source: Option<LevelsSourceDto>,
     pub window: Option<LevelsWindowDto>,
+    /// What happened when this family was traded as a rule. Constant, and
+    /// present even when every block above is `null`.
+    pub tested_as_a_rule: TestedAsARuleDto,
     /// Why there is nothing, or `null` when there is something.
     ///
     /// A sentence written to be displayed. **A prompt must not print it
@@ -604,9 +696,12 @@ pub async fn levels(
                 fair_value_gaps: None,
                 order_blocks: None,
                 liquidity: None,
+                market_structure: None,
+                dealing_range: None,
                 extremes: None,
                 source: None,
                 window: None,
+                tested_as_a_rule: TESTED_AS_A_RULE,
                 unavailable: Some(why),
             }));
         }
@@ -677,6 +772,14 @@ pub async fn levels(
     // are rankings, and this route does not rank.
     liquidity.sort_by_key(|p| p.level.formed_at_bar_ms);
 
+    // The SPINE, on the same swings the pools above are made of and with the
+    // same half-widths, so an event and a pool that name the same swing
+    // really are naming the same point. No second swing rule, and no ATR: a
+    // close is beyond a swing or it is not, and a threshold here would be a
+    // dial nobody measured.
+    let structure = market_structure(bars, &timeframe, SWING_LEFT, SWING_RIGHT);
+    let range = dealing_range(bars, &timeframe, SWING_LEFT, SWING_RIGHT);
+
     let none = 0..0;
     let extremes = ExtremesDto {
         session: period_extremes(
@@ -717,6 +820,8 @@ pub async fn levels(
         fair_value_gaps: Some(fd_engine::price_levels::unfilled_fair_value_gaps(bars)),
         order_blocks: Some(order_blocks(bars, &atr, DISPLACEMENT_BODY_ATR)),
         liquidity: Some(liquidity),
+        market_structure: Some(structure),
+        dealing_range: range,
         extremes: Some(extremes),
         window: Some(LevelsWindowDto {
             bars: bars.len(),
@@ -726,6 +831,7 @@ pub async fn levels(
             profile_days,
         }),
         source: Some(source),
+        tested_as_a_rule: TESTED_AS_A_RULE,
         unavailable: None,
     }))
 }
