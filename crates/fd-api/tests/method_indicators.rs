@@ -272,7 +272,58 @@ fn the_catalog_carries_what_each_definition_was_measured_at() {
         .expect("avwap week on H1");
     assert_eq!((week_h1.flips_per_100_bars, week_h1.undone_within_3_pct), (9.2, 53.0));
 
-    // Unmeasured is empty, and the route turns that into `null`. An SMA has
-    // never been measured this way and must not look as though it has.
+    // Unmeasured is empty, and the route leaves the field off entirely. An
+    // SMA has never been measured this way and must not look as though it
+    // has.
     assert!(fd_indicators::measured("sma").is_empty());
+}
+
+#[test]
+fn the_wire_shape_says_what_was_measured_and_stays_silent_otherwise() {
+    // The catalog's own serialisation, because the useful failure here is
+    // not "the number is wrong" but "the client cannot find it": a params
+    // list that arrives as `[["anchor",1.0]]` or a `measured: []` on an SMA
+    // both compile, both look fine in Rust, and both mislead the picker.
+    use fd_api::dto::{IndicatorInfo, MeasuredDto};
+    use std::collections::BTreeMap;
+
+    let row = |def: &'static fd_indicators::IndicatorDef| IndicatorInfo {
+        id: def.id.to_string(),
+        name: def.name.to_string(),
+        pane: "overlay",
+        params: def.params.iter().map(|(n, v)| ((*n).to_string(), *v)).collect::<BTreeMap<_, _>>(),
+        outputs: def.outputs.iter().map(|o| (*o).to_string()).collect(),
+        measured: {
+            let rows = fd_indicators::measured(def.id);
+            (!rows.is_empty()).then(|| rows.iter().map(MeasuredDto::from).collect::<Vec<_>>())
+        },
+    };
+
+    let avwap = serde_json::to_value(row(fd_indicators::definition("avwap").unwrap())).unwrap();
+    let measured = avwap["measured"].as_array().expect("avwap is measured");
+    assert_eq!(measured.len(), 3, "avwap day on H1 and H4, avwap week on H1");
+    let day_h1 = measured
+        .iter()
+        .find(|m| m["timeframe"] == "1h" && m["params"]["anchor"] == 1.0)
+        .expect("the day row, keyed by the parameter cell it describes");
+    assert_eq!(day_h1["flipsPer100Bars"], 19.7);
+    assert_eq!(day_h1["undoneWithin3Pct"], 57.0);
+    assert_eq!(day_h1["medianLagBars"], 3.0);
+    assert_eq!(day_h1["missedPct"], 2.0);
+    assert_eq!(day_h1["sampleBars"], 25_708);
+    assert_eq!(day_h1["definition"], "avwap day");
+    assert!(day_h1["source"].as_str().unwrap().starts_with("docs/decisions/"));
+    assert!(
+        day_h1["caution"].as_str().expect("the study's warning").contains("not to put this on a card"),
+        "the warning must reach the wire, or the picker offers it silently"
+    );
+    // The week row is measured too and is NOT under the same warning: the
+    // note names the day anchor, not the week, and inventing a warning it
+    // did not write would be as wrong as dropping the one it did.
+    let week_h1 = measured.iter().find(|m| m["params"]["anchor"] == 7.0).expect("the week row");
+    assert!(week_h1.get("caution").is_none());
+
+    // Silence, not an empty list, for anything unmeasured.
+    let sma = serde_json::to_value(row(fd_indicators::definition("sma").unwrap())).unwrap();
+    assert!(sma.get("measured").is_none(), "an unmeasured definition says nothing: {sma}");
 }
