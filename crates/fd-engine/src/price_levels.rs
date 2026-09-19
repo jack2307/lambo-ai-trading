@@ -40,6 +40,18 @@
 //! check, which is the same defect `htf.rs` guards with
 //! `the_threshold_uses_the_published_atr`.
 //!
+//! **So the thresholds scale with the caller's timeframe on their own, and a
+//! reader asking whether a 4h order block is measured against a 15m ATR has
+//! the answer here: it is not.** Nothing in this module knows what a
+//! timeframe is. It is handed a slice of bars and the ATR series OF THOSE
+//! BARS, so a displacement over `1 x ATR(14)` on a 4h call is a 4h body over
+//! a 4h ATR, the profile bucket is a quarter of that same 4h ATR, and two 4h
+//! swing highs are equal within a tenth of it. The only way to get a 15m
+//! number into a 4h answer is to pass a mismatched pair, which is why every
+//! function takes the bars and the ATR as one argument list rather than
+//! keeping either in state — and why `/api/paper/levels` computes exactly one
+//! ATR series per response and publishes it (`crates/fd-api/src/levels.rs`).
+//!
 //! ## Causality
 //!
 //! Every function here reads CLOSED bars and nothing else, and no level is
@@ -321,6 +333,15 @@ pub fn swing_id(timeframe: &str, high: bool, bar_ms: i64) -> String {
 /// (measured 2026-09-18, recorded in `htf.rs`). So a day boundary is a hole of
 /// about an hour, and a calendar rule for it would be wrong twice a year at
 /// the changeover while the hole is right whatever the clock did.
+///
+/// **A caller looking for trading DAYS may only use it on bars shorter than
+/// that hole.** At 1h the hole is one bar wide, so a 45-minute threshold
+/// splits at every bar and a threshold big enough not to cannot tell the day
+/// roll from one missing bar; at 4h and 1d the hole is inside a bar and the
+/// stamps step evenly straight across it. Above the hole a day has to be
+/// counted from the weekend instead — `fd_api::levels::trading_day_runs` does
+/// that, and it is documented there rather than here because this function's
+/// contract is gaps and nothing else.
 #[must_use]
 pub fn runs_split_by_gap(bars: &[Bar], gap_ms: i64) -> Vec<Range<usize>> {
     let mut out = Vec::new();

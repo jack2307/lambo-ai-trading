@@ -119,11 +119,87 @@ fn fixture() -> Vec<Bar> {
     bars
 }
 
+/// The same walk at another timeframe, without the hand-written tail.
+///
+/// `bars_per_day` is a fact about the timeframe and is passed in rather than
+/// divided out of `bar_ms`, because the broker's day is not a round number of
+/// bars everywhere: 24 hours with a one-hour hole in it is 23 bars of 1h and
+/// 6 bars of 4h, and dividing would say 24 and 6.
+fn series(bar_ms: i64, bars_per_day: usize, days: usize) -> Vec<Bar> {
+    let mut seed: u64 = 0xfeed_4321_8765_cbaf;
+    let mut next = move || {
+        seed = seed.wrapping_mul(6_364_136_223_846_793_005).wrapping_add(1_442_695_040_888_963_407);
+        (seed >> 40) as f64 / 16_777_216.0
+    };
+    let mut bars: Vec<Bar> = Vec::new();
+    let mut prev = 4300.0;
+    for d in 0..days {
+        // Five trading days then a weekend, so `htf::weeks_of` splits this
+        // series where it splits a real one.
+        let day_index = (d / 5) * 7 + (d % 5);
+        for i in 0..bars_per_day {
+            let close = prev + (next() - 0.5) * 8.0;
+            bars.push(Bar {
+                time: START + day_index as i64 * DAY + i as i64 * bar_ms,
+                open: prev,
+                high: prev.max(close) + next() * 3.0,
+                low: prev.min(close) - next() * 3.0,
+                close,
+                volume: None,
+            });
+            prev = close;
+        }
+    }
+
+    // The same tail `fixture` writes by hand — two down candles, an impulse
+    // of about 26, then a drift that never comes back — but as OFFSETS from
+    // where the walk happens to be, because this walk is thirty days long on
+    // the 1d call and would be nowhere near 4300 by the end. Planted for the
+    // same reason it is planted there: a gap and a displacement that a
+    // reader can see on the page, so the served sample of a non-default
+    // timeframe shows an order block rather than an empty list.
+    const TAIL: [(f64, f64, f64, f64); 8] = [
+        (0.0, 2.0, -2.0, -1.0),
+        (-1.0, 1.0, -3.0, -2.0),
+        (-2.0, 3.0, -3.0, 2.0),
+        (2.0, 30.0, 2.0, 28.0),
+        (28.0, 35.0, 20.0, 32.0),
+        (32.0, 38.0, 28.0, 36.0),
+        (36.0, 40.0, 30.0, 38.0),
+        (38.0, 42.0, 33.0, 40.0),
+    ];
+    let n = bars.len();
+    if n > TAIL.len() {
+        let base = bars[n - TAIL.len() - 1].close;
+        for (k, (open, high, low, close)) in TAIL.into_iter().enumerate() {
+            let b = &mut bars[n - TAIL.len() + k];
+            b.open = base + open;
+            b.high = base + high;
+            b.low = base + low;
+            b.close = base + close;
+        }
+    }
+    bars
+}
+
 fn state_with_bars(bars: Option<&[Bar]>) -> Arc<AppState> {
+    match bars {
+        Some(bars) => state_with_files(&[("15m", bars)]),
+        None => state_with_files(&[]),
+    }
+}
+
+/// A data root holding one exported file per timeframe named.
+///
+/// More than one is possible because the accepted set of `?tf=` is read off
+/// this directory rather than listed in the route: a test that asks for a
+/// timeframe the store does not hold is only testing the refusal if there is
+/// something else on disk that a resample could have been built from.
+fn state_with_files(files: &[(&str, &[Bar])]) -> Arc<AppState> {
     let dir = tempfile::tempdir().expect("temp dir");
     let root = dir.keep();
-    if let Some(bars) = bars {
-        write_bars(&root.join("bars").join("XAUUSD-15m.parquet"), bars).expect("write");
+    for (tf, bars) in files {
+        write_bars(&root.join("bars").join(format!("XAUUSD-{tf}.parquet")), bars).expect("write");
     }
     Arc::new(AppState::new(config(), root))
 }
@@ -362,6 +438,33 @@ async fn a_timeframe_nothing_stores_is_refused_rather_than_resampled() {
     assert!(why.contains("H4"), "the export hint names H4 and not our own spelling: {why}");
     assert!(v["profile"].is_null());
 
+    // BOTH reasons, named in the sentence and not only in a doc comment the
+    // caller cannot see. Each one alone is refutable — the anchor argument
+    // does not apply to H1, whose buckets really do line up with the epoch —
+    // so a refusal carrying one of them invites "but this timeframe is
+    // fine", which is true and is not permission.
+    assert!(why.contains("21:00Z"), "the anchor, by its value: {why}");
+    assert!(why.contains("epoch"), "and what it is not anchored to: {why}");
+    assert!(why.contains("PARTIAL"), "and the trailing partial bucket: {why}");
+    assert!(why.contains("15m"), "naming the file it declined to rebucket, which is on disk: {why}");
+    // It still says which timeframe is missing and how to export it: the
+    // sentence GREW, and the half a caller already reads must not have moved.
+    assert!(why.contains("no 4h bars for xauusd"), "{why}");
+    assert!(why.contains("mt5_export.py"), "{why}");
+
+    // With two finer series on disk the sentence names the one a resample
+    // would actually have read: `AppState::source_for` takes the COARSEST
+    // that still fits, so an operator holding 5m and 15m must not be told
+    // the route declined the 5m file.
+    let five = series(300_000, 120, DAYS);
+    let both = state_with_files(&[("5m", &five), ("15m", &fixture())]);
+    let why = read(&both, "xauusd", Some("4h"), None).await.expect("200")["unavailable"]
+        .as_str()
+        .expect("a sentence")
+        .to_string();
+    assert!(why.contains("The 15m bars on disk"), "{why}");
+    assert!(!why.contains("The 5m bars on disk"), "{why}");
+
     // A timeframe that is not a timeframe is a bad request, not an empty
     // answer: the caller has to change the call.
     let err = read(&state, "xauusd", Some("7s"), None).await.expect_err("400");
@@ -370,4 +473,225 @@ async fn a_timeframe_nothing_stores_is_refused_rather_than_resampled() {
     // An unknown market is a 404 from the config, as everywhere else.
     let err = read(&state, "nosuchmarket", None, None).await.expect_err("404");
     assert_eq!(http_status(err), 404);
+}
+
+/* ------------------------------------------- what `?tf=` added, 2026-09-19 */
+
+/// Every key path in a response, arrays folded onto their first element.
+///
+/// Paths and not values: the committed sample was served off the live store
+/// and this test serves a fixture, so no number can agree. What must agree is
+/// the SHAPE, which is the thing a client breaks on — the `exported_at_ms`
+/// miss this whole directory exists for was a nesting error, not a wrong
+/// number.
+fn key_paths(v: &Value, at: &str, out: &mut std::collections::BTreeSet<String>) {
+    match v {
+        Value::Object(map) => {
+            for (k, val) in map {
+                let path = format!("{at}.{k}");
+                out.insert(path.clone());
+                key_paths(val, &path, out);
+            }
+        }
+        Value::Array(items) => {
+            if let Some(first) = items.first() {
+                key_paths(first, &format!("{at}[]"), out);
+            }
+        }
+        _ => {}
+    }
+}
+
+fn paths_of(v: &Value) -> std::collections::BTreeSet<String> {
+    let mut out = std::collections::BTreeSet::new();
+    key_paths(v, "", &mut out);
+    out
+}
+
+fn sample(name: &str) -> Value {
+    let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("..").join("..").join("docs").join("api-samples").join(name);
+    serde_json::from_str(&std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("{}: {e}", path.display())))
+        .expect("the committed sample is json")
+}
+
+#[tokio::test]
+async fn a_caller_that_passes_no_tf_gets_the_response_the_committed_sample_pins() {
+    // `?tf=` must be invisible to everyone who does not pass it.
+    // `py/live/smc_context.py` calls this route with no `tf` and its selftest
+    // reads `docs/api-samples/paper-levels.json` as its fixture, so a field
+    // added, renamed or moved on the default path changes a REGISTERED
+    // campaign's prompt with nobody editing the book (`9a5dbfb`, again).
+    let state = state_with_bars(Some(&fixture()));
+    let served = read(&state, "xauusd", None, None).await.expect("levels");
+    assert_eq!(paths_of(&served), paths_of(&sample("paper-levels.json")), "the default response changed shape");
+
+    // And the absent case, which is a different set of paths on purpose:
+    // every block null rather than missing.
+    let nothing = state_with_bars(None);
+    let served = read(&nothing, "xauusd", None, None).await.expect("levels");
+    assert_eq!(paths_of(&served), paths_of(&sample("paper-levels-unavailable.json")));
+    // Its sentence is the whole content of that response, so it is pinned by
+    // value and not only by shape. It carries no resample clause: with no
+    // file on disk at all there is nothing a resample could have read.
+    assert_eq!(served["unavailable"], sample("paper-levels-unavailable.json")["unavailable"]);
+}
+
+#[tokio::test]
+async fn a_stored_timeframe_answers_in_its_own_bars_and_its_own_days() {
+    // 23 bars to a 1h trading day: 24 hours with the broker's one-hour hole
+    // in it. Ten trading days of them is 230 bars against 400 of 15m — the
+    // same span of clock, a different count of bars, which is the whole
+    // point of the window being a span.
+    const H1: i64 = 3_600_000;
+    const BARS_PER_DAY_1H: usize = 23;
+    let fifteen = fixture();
+    let hour = series(H1, BARS_PER_DAY_1H, DAYS);
+    let state = state_with_files(&[("15m", &fifteen), ("1h", &hour)]);
+
+    let v = read(&state, "xauusd", Some("1h"), None).await.expect("levels");
+    assert!(v["unavailable"].is_null(), "1h is on disk: {v}");
+    assert_eq!(v["timeframe"], "1h");
+    assert_eq!(v["bar_ms"], H1);
+    assert_eq!(v["source"]["file"], "bars/XAUUSD-1h.parquet", "not the 15m file, and not a resample of it");
+    assert_eq!(v["source"]["timeframe"], "1h");
+
+    // TEN TRADING DAYS, not ten bars and not four hundred.
+    assert_eq!(v["window"]["days"], DAYS as u64);
+    assert_eq!(v["window"]["bars"], (DAYS * BARS_PER_DAY_1H) as u64);
+    assert_eq!(v["extremes"]["day"]["bars"], BARS_PER_DAY_1H as u64, "one 1h trading day");
+    assert_eq!(v["extremes"]["week"]["bars"], (5 * BARS_PER_DAY_1H) as u64, "one broker week of them");
+
+    // Ages count THIS series' bars. Inside the session run there is no hole,
+    // so the age in bars and the distance in clock are the same fact stated
+    // twice and must agree through `bar_ms` — the arithmetic
+    // `smc_context_selftest` records getting wrong in the other direction
+    // ("a bar count divided out of a millisecond delta is out by half").
+    let end = v["computed_at_bar_ms"].as_i64().expect("a newest bar");
+    let high = &v["extremes"]["session"]["high"];
+    let age = high["age_bars"].as_i64().expect("age_bars");
+    assert!(age < BARS_PER_DAY_1H as i64, "a bar of the session in progress: {high}");
+    assert_eq!(age * H1, end - high["formed_at_bar_ms"].as_i64().expect("formed"), "ages are in 1h bars: {high}");
+
+    // The swing ids carry the timeframe they were measured on, which is what
+    // lets `/api/paper/htf` be joined to this response rather than guessed at.
+    let ids: Vec<&str> = v["liquidity"]
+        .as_array()
+        .expect("a list")
+        .iter()
+        .flat_map(|p| p["swing_ids"].as_array().unwrap().iter().filter_map(|i| i.as_str()))
+        .collect();
+    assert!(!ids.is_empty(), "ten days of 1h swings produce pools");
+    assert!(ids.iter().all(|id| id.starts_with("1h-")), "1h swings, not 15m ones: {ids:?}");
+
+    // The default is still the default with another file beside it.
+    let default = read(&state, "xauusd", None, None).await.expect("levels");
+    assert_eq!(default["timeframe"], "15m");
+    assert_eq!(default["window"]["bars"], (DAYS * BARS_PER_DAY) as u64);
+    assert_eq!(default["window"]["days"], DAYS as u64, "the same ten days, four hundred bars of them");
+}
+
+#[tokio::test]
+async fn ten_trading_days_of_daily_bars_is_ten_bars_and_the_response_says_which() {
+    // The reader this test protects is the one who cannot tell "10 days of
+    // 1d" from "10 bars of 1d". They are the same slice, and the response
+    // still distinguishes them: `days` is measured in the stamps, `bars` is
+    // counted, and both are published.
+    let daily = series(DAY, 1, 30);
+    let state = state_with_files(&[("1d", &daily)]);
+    let v = read(&state, "xauusd", Some("1d"), None).await.expect("levels");
+    assert_eq!(v["timeframe"], "1d");
+    assert_eq!(v["bar_ms"], DAY);
+    assert_eq!(v["window"]["days"], 10, "ten trading days, as on every other timeframe");
+    assert_eq!(v["window"]["bars"], 10, "which on 1d is ten bars");
+    assert_eq!(v["extremes"]["day"]["bars"], 1, "one bar IS one trading day here");
+
+    // And the price of the clock decision, pinned rather than discovered: ten
+    // 1d bars are fewer than ATR(14) needs, so the denominator is null and
+    // every ATR-derived block is empty. NULL and [] mean different things
+    // here and both are correct — there is no ATR to measure against, and the
+    // lists that do not need one were measured and found nothing. If a 1d
+    // export ever lands on this desk (none exists on 2026-09-19), the thing
+    // to revisit is ANALYSIS_DAYS, not the window being a span of clock.
+    assert!(v["atr14"].is_null(), "ATR(14) over ten bars is not a number: {v}");
+    assert!(v["profile"].is_null(), "and the bucket height derives from it");
+    assert_eq!(v["order_blocks"].as_array().expect("a list").len(), 0);
+}
+
+#[tokio::test]
+async fn an_unknown_timeframe_is_a_400_that_lists_what_this_market_has() {
+    // Two files on disk, so the list is a list and its order can be checked.
+    let state = state_with_files(&[("15m", &fixture()), ("1h", &series(3_600_000, 23, DAYS))]);
+
+    for asked in ["7s", "", "4hh", "M15"] {
+        let err = read(&state, "xauusd", Some(asked), None).await.expect_err("400");
+        let text = err.to_string();
+        assert_eq!(http_status(err), 400, "{asked}");
+        assert!(text.contains("15m, 1h"), "finest first, so a reader can scan it: {text}");
+        assert!(text.contains("never"), "and why the list is what it is: {text}");
+    }
+
+    // A market whose bars have never been exported says that rather than
+    // listing nothing and leaving a reader to wonder what an empty list is.
+    let empty = state_with_files(&[]);
+    let err = read(&empty, "xauusd", Some("7s"), None).await.expect_err("400");
+    assert!(err.to_string().contains("no exported bars at all"), "{err}");
+
+    // `.bak` files are not timeframes. The live store keeps
+    // `XAUUSD-15m.parquet.bak` beside the live file, and a looser suffix test
+    // would advertise a timeframe called `15m.parquet`.
+    let dir = tempfile::tempdir().expect("temp dir");
+    let root = dir.keep();
+    write_bars(&root.join("bars").join("XAUUSD-15m.parquet"), &fixture()).expect("write");
+    std::fs::copy(root.join("bars").join("XAUUSD-15m.parquet"), root.join("bars").join("XAUUSD-15m.parquet.bak"))
+        .expect("the backup the live store keeps");
+    let state = Arc::new(AppState::new(config(), root));
+    let err = read(&state, "xauusd", Some("7s"), None).await.expect_err("400");
+    // The whole sentence, by value: one timeframe listed once, and the text
+    // a client may be displaying pinned so a rewrite of it is a diff here.
+    assert_eq!(
+        err.to_string(),
+        "unknown timeframe \"7s\": xauusd has 15m. This route serves stored bars only and never \
+         resamples, so it can answer for a timeframe on disk and no other."
+    );
+}
+
+#[tokio::test]
+async fn the_route_carries_no_verdict_on_any_timeframe() {
+    // The guard the registration pre-commits to, re-run per timeframe:
+    // `?tf=` multiplied the number of responses this route can emit, and a
+    // banned field would only have to appear on one of them.
+    let hour = series(3_600_000, 23, DAYS);
+    let daily = series(DAY, 1, 30);
+    let state = state_with_files(&[("15m", &fixture()), ("1h", &hour), ("1d", &daily)]);
+    for tf in [None, Some("15m"), Some("1h"), Some("1d"), Some("4h")] {
+        let v = read(&state, "xauusd", tf, None).await.expect("200");
+        let text = serde_json::to_string(&v).expect("json");
+        for banned in ["\"score\"", "\"composite\"", "\"confluence\"", "\"bias\"", "\"rank\"", "\"strength\""] {
+            assert!(!text.contains(banned), "{tf:?} carries {banned}");
+        }
+    }
+}
+
+/// Refreshes the served samples in `docs/api-samples/`.
+///
+/// `cargo test -p fd-api --test levels -- --ignored --nocapture`, and ignored
+/// by default because a test that writes into the repository on every run
+/// makes `git status` a liar. The bars behind these two are the fixture
+/// above and NOT an export: this desk has never exported a 1h or 4h XAUUSD
+/// series (checked 2026-09-19 — 1m, 5m and 15m and nothing else), so a
+/// sample of a non-default timeframe off the live store is not a thing that
+/// can exist today. What they pin is what the ROUTE emits: the timeframe and
+/// `bar_ms` it carries, ages counted in its own bars, ten trading days of
+/// them, and the refusal's wording.
+#[tokio::test]
+#[ignore = "writes docs/api-samples; run with --ignored to refresh"]
+async fn write_the_served_samples() {
+    let state = state_with_files(&[("15m", &fixture()), ("1h", &series(3_600_000, 23, DAYS))]);
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("..").join("..").join("docs").join("api-samples");
+    for (name, tf) in [("paper-levels-1h.json", "1h"), ("paper-levels-4h-refused.json", "4h")] {
+        let v = read(&state, "xauusd", Some(tf), None).await.expect("200");
+        let path = dir.join(name);
+        std::fs::write(&path, serde_json::to_string_pretty(&v).expect("json")).expect("write the sample");
+        println!("wrote {}", path.display());
+    }
 }

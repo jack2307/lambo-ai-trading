@@ -27,6 +27,38 @@
 //! importance, not by distance from price: those are rankings, and the caller
 //! that wants one applies its own and owns it.
 //!
+//! ## One timeframe per response, and it is one the store HOLDS
+//!
+//! `?tf=` picks it and it defaults to `15m`, so every caller written before
+//! 2026-09-19 asks the same question and gets the same answer. The accepted
+//! set is not a list in this file: it is whatever the market has exported
+//! under `data/bars`, because this route REFUSES to resample (see
+//! [`stored_only`]) and can therefore only answer for a series that exists.
+//! On 2026-09-19 that is 1m, 5m and 15m for XAUUSD and nothing coarser —
+//! asking for `4h` gets the `unavailable` sentence naming 4h and both reasons
+//! the bars are not rebuilt from 15m, not a 4h order block that never
+//! existed. A spelling that is not a timeframe at all is a 400 listing what
+//! the market does have, because that one is fixed by changing the call and
+//! not by running an ingest.
+//!
+//! ## The window is a span of CLOCK, not a count of bars
+//!
+//! Ten trading days, on every timeframe: 879 bars of it on 15m, about 60 on
+//! 4h, 10 on 1d. The response states which by publishing both numbers —
+//! `window.days` is the trading days measured in the stamps and
+//! `window.bars` is what they came to — so "ten days of 4h" (`days: 10,
+//! bars: 60`) cannot be read as "ten bars of 4h" (`days: 2, bars: 10`).
+//!
+//! Clock rather than bars because the levels are CLOCK objects: the prior
+//! day's high and the prior week's high are named after spans of clock, and
+//! [`ANALYSIS_DAYS`] is ten because ten trading days is the smallest window
+//! holding a complete prior week. A fixed bar count would silently mean two
+//! weeks on 15m, two months on 4h and half a year on 1d — the prior-week
+//! level would be the same object in all three while the gaps and blocks
+//! around it came from different regimes, and nothing on the response would
+//! say so. See [`trading_day_runs`] for how a trading day is found once the
+//! bars grow longer than the hole that marks one.
+//!
 //! ## Units
 //!
 //! Every price is in the market's quote units. Everything else says what it
@@ -34,6 +66,15 @@
 //! this timeframe, `*_ms` in UTC epoch milliseconds, `*_fraction` in 0..1.
 //! `atr14` itself is published so every `*_atr` on the response has a visible
 //! denominator (`docs/decisions/2026-09-17-unit-carrying.md`).
+//!
+//! **Every threshold on this route is in ATR of the series being read, so
+//! they scale with `?tf=` on their own and none of them is a 15m number
+//! wearing a 4h label.** A 4h order block is the last down candle before a 4h
+//! body over one 4h ATR(14); the profile bucket is a quarter of a 4h ATR; two
+//! 4h swing highs are "equal" within a tenth of a 4h ATR. One ATR series is
+//! computed per response, published as `atr14`, and passed to every engine
+//! function that needs a threshold — so the denominator of every `*_atr` on
+//! the response is visible on the response, whatever `?tf=` was.
 //!
 //! ## Null is not zero, and an absent market is not an empty one
 //!
@@ -75,6 +116,12 @@ const DEFAULT_PROFILE_DAYS: usize = 5;
 /// in the registration's list, and a five-day window has no prior week in it
 /// at all. Ten trading days is two broker weeks, which is the smallest window
 /// in which "the last complete week" is a thing that exists.
+///
+/// **Trading DAYS on every timeframe, not bars** — ten of them is 879 bars of
+/// 15m and about sixty of 4h, and the response publishes both. The reason is
+/// the sentence above: this window is sized by what has to be INSIDE it, and
+/// "a complete prior week" is a span of clock. A bar count that produced two
+/// broker weeks on 15m would produce about half a year on 1d.
 const ANALYSIS_DAYS: usize = 10;
 
 /// A hard ceiling on the window a caller may ask for, so `?days=100000` reads
@@ -134,7 +181,26 @@ const SWING_RIGHT: usize = 2;
 /// hour-long hole. Forty-five minutes is under it and over the fifteen-minute
 /// spacing of the bars themselves, and it moves with the changeover the way a
 /// clock rule would not.
+///
+/// **It is only a threshold for bars SHORTER than the hole**, which is why
+/// [`trading_day_runs`] checks the timeframe before reaching for it: 45
+/// minutes is under the one-hour spacing of 1h bars, so on 1h this constant
+/// would call every single bar its own trading day. That is the bug `?tf=`
+/// would have shipped with had the day rule stayed a bare call to
+/// `runs_split_by_gap`.
 const DAY_GAP_MS: i64 = 45 * 60_000;
+
+/// The hole itself: one clock hour, from the same 2026-09-18 measurement.
+///
+/// Named separately from [`DAY_GAP_MS`] because it answers a different
+/// question — not "how big a gap counts" but "can a bar of this length show
+/// the gap at all". A bar as long as the hole or longer hides it: see
+/// [`trading_day_runs`].
+const DAILY_HOLE_MS: i64 = 60 * 60_000;
+
+/// One day of clock. The step the trading days are counted in where the hole
+/// cannot be seen, and nothing else.
+const DAY_MS: i64 = 86_400_000;
 
 /// ATR's period, everywhere on this route. One number, published as `atr14`.
 const ATR_PERIOD: usize = 14;
@@ -165,9 +231,14 @@ pub struct LevelsSourceDto {
 /// whether a level disappeared or merely fell out of the window.
 #[derive(Debug, Serialize)]
 pub struct LevelsWindowDto {
-    /// Bars in the analysis window.
+    /// Bars in the analysis window. The COUNT; `days` is the span, and the
+    /// two together say which of the two the window was cut by — see the
+    /// module doc. On 15m these are 879 and 10; on 4h the same ten days are
+    /// about sixty bars.
     pub bars: usize,
-    /// Trading-day runs in it, as the daily hole counts them.
+    /// Trading days in it, measured in the stamps by [`trading_day_runs`] and
+    /// never assumed from the bar count. This is the number the window was
+    /// asked for in ([`ANALYSIS_DAYS`]), or fewer when the store holds fewer.
     pub days: usize,
     pub start_bar_ms: i64,
     pub end_bar_ms: i64,
@@ -246,7 +317,13 @@ pub struct LevelsResponse {
 pub struct LevelsQuery {
     pub market: String,
     /// The stored timeframe. Defaults to `15m`, which is the timeframe the
-    /// books decide on.
+    /// books decide on, so a caller that never passes this sees the response
+    /// it saw before `?tf=` existed.
+    ///
+    /// Accepted: any timeframe the market has on disk. A timeframe that is
+    /// not exported answers 200 with `unavailable` naming it — the fix is an
+    /// ingest — and a string that is not a timeframe at all is a 400 listing
+    /// what the market does have, because the fix is a different call.
     pub tf: Option<String>,
     /// The PROFILE's window in trading days. Everything else uses
     /// [`ANALYSIS_DAYS`], which is not a dial: the prior week has to be in
@@ -273,17 +350,59 @@ pub struct LevelsQuery {
 /// It is a second copy rather than a call into `htf.rs` because the two
 /// routes own their own files: `htf` refuses a missing H4 with an export
 /// command naming H4, and this one names the timeframe it was asked for.
-fn stored_only(state: &AppState, market: &str, timeframe: &str) -> Result<(Vec<Bar>, LevelsSourceDto), String> {
+///
+/// `finer` is the stored series a resample would have been built from — the
+/// coarsest one still shorter than `timeframe` — or `None` when there is no
+/// such file. It is passed in rather than looked up here so the refusal can say WHICH
+/// file it is declining to rebucket: "we do not resample" is a policy, and
+/// "we are not turning the 15m file you can see on disk into 4h candles" is
+/// the answer to the question an operator staring at that file will actually
+/// ask. With nothing finer on disk there is nothing to resample from and the
+/// clause is left off rather than printed as boilerplate.
+fn stored_only(
+    state: &AppState,
+    market: &str,
+    timeframe: &str,
+    finer: Option<&str>,
+) -> Result<(Vec<Bar>, LevelsSourceDto), String> {
     let spec = state.config.market(market).map_err(|e| e.to_string())?;
     let name = format!("{}-{timeframe}.parquet", spec.bar_symbol);
     let path = state.data.join("bars").join(&name);
     if !path.exists() {
-        return Err(format!(
+        let mut why = format!(
             "no {timeframe} bars for {market}: bars/{name} has not been exported yet \
              (py/ingest/mt5_export.py --symbols {} --timeframes {})",
             spec.bar_symbol,
             mt5_name(timeframe)
-        ));
+        );
+        if let Some(finer) = finer {
+            // BOTH reasons, because each one alone is refutable and someone
+            // will refute it. The anchor argument does not apply to 1h — the
+            // server is a whole number of hours from UTC, so an epoch-anchored
+            // hour really is the broker's hour (`htf.rs` measured it: all
+            // 6,727 H4 stamps and all 1,122 D1 stamps carry minute 0 back to
+            // 2022) — and the partial-bucket argument applies to every
+            // timeframe including that one. Printing only the anchor would
+            // invite "but H1 is fine", which is true and is not permission.
+            //
+            // ASCII only, like the sentence it extends and like every other
+            // `unavailable` on this desk: this string is written to be
+            // DISPLAYED, by clients whose encoding this crate does not know.
+            // The em dashes elsewhere in this file are in comments, which
+            // only ever reach a reader of the source.
+            why.push_str(&format!(
+                ". The {finer} bars on disk are NOT rebucketed to fill it, for two reasons. The \
+                 broker anchors its higher-timeframe candles at the 21:00Z day roll (22:00Z \
+                 outside US summer) and not at the epoch an ad-hoc resample buckets from: measured \
+                 2026-09-18, real H4 stamps fall on hours {{1,2,5,6,9,10,13,14,17,18,21,22}}Z \
+                 against {{0,4,8,12,16,20}}Z for an epoch-anchored resample, not one hour in \
+                 common. And fd_store::resample closes a bucket only when a row lands past it, so \
+                 it emits the trailing PARTIAL bucket as an ordinary bar, which would put a \
+                 still-forming candle in a response documented as closed bars only. A {timeframe} \
+                 order block off those candles is a level that never existed"
+            ));
+        }
+        return Err(why);
     }
     let bars = read_bars(&path).map_err(|e| format!("bars/{name}: {e}"))?;
     if bars.is_empty() {
@@ -312,16 +431,100 @@ fn mt5_name(timeframe: &str) -> &str {
     }
 }
 
-/// The last `days` trading-day runs of a series, as an index range.
+/// The timeframes this market actually holds on disk, finest first.
 ///
-/// `None` when there are no bars. Fewer runs than asked for is not an error —
+/// The accepted set of `?tf=`, and it is read from the directory rather than
+/// listed in code for the reason the whole file refuses to resample: a
+/// timeframe this route can answer for is exactly a timeframe somebody
+/// exported. A hard-coded list would name `4h` as available on a desk whose
+/// store holds nothing coarser than 15m for anything (checked 2026-09-19:
+/// all 21 bar files are 1m, 5m or 15m, seven symbols of each).
+///
+/// Only exact `*.parquet` names count, which is not pedantry — the live store
+/// keeps `XAUUSD-15m.parquet.bak` beside the live file, and a suffix test
+/// looser than this one would advertise a timeframe named `15m.parquet`.
+/// Sorted by bar length so the sentence a caller reads is in an order they
+/// can scan, and de-duplicated so two files that resolve to the same
+/// timeframe cannot list it twice.
+fn stored_timeframes(state: &AppState, market: &str) -> Vec<String> {
+    let Ok(spec) = state.config.market(market) else {
+        return Vec::new();
+    };
+    let prefix = format!("{}-", spec.bar_symbol);
+    let Ok(dir) = std::fs::read_dir(state.data.join("bars")) else {
+        // No `bars` directory at all is "this market has nothing", not an
+        // error: the caller is already being told its timeframe is unknown.
+        return Vec::new();
+    };
+    let mut found: Vec<(i64, String)> = dir
+        .filter_map(|entry| {
+            let name = entry.ok()?.file_name().into_string().ok()?;
+            let tf = name.strip_prefix(&prefix)?.strip_suffix(".parquet")?;
+            Some((timeframe_ms(tf)?, tf.to_string()))
+        })
+        .collect();
+    found.sort();
+    found.dedup();
+    found.into_iter().map(|(_, tf)| tf).collect()
+}
+
+/// The trading days of a series, oldest first, as index ranges.
+///
+/// TWO rules, because the measured fact that finds a trading day stops being
+/// visible partway up the timeframe ladder, and one rule pretending otherwise
+/// would report a WEEK as a day.
+///
+/// * Bars shorter than the hole (1m, 5m, 15m, 30m): the hole itself,
+///   [`DAY_GAP_MS`]. Measured evidence, and it follows the 21:00Z/22:00Z
+///   changeover the way a clock rule cannot.
+/// * Bars as long as the hole or longer (1h, 4h, 1d): no gap rule can find
+///   it. At 1h the hole is exactly one bar wide, so the day boundary and a
+///   single missing bar leave the same two-hour gap and nothing in the stamps
+///   tells them apart. At 4h and 1d the hole is INSIDE a bar and the stamps
+///   are evenly spaced straight across it — real H4 stamps sit on
+///   {1,2,5,6,9,10,13,14,17,18,21,22}Z, six a day, four hours apart including
+///   over the roll (measured 2026-09-18, `htf.rs`). So the day is counted
+///   from the one hole that is visible on every timeframe, the WEEKEND, in
+///   steps of `DAY_MS` from the first bar of each week.
+///
+/// The anchor is re-taken at every week, which is what makes the second rule
+/// safe: the broker's roll moves by an hour twice a year and it moves at a
+/// weekend, so a changeover can never land inside a counted day. A single
+/// epoch anchor would put the changeover day itself an hour out, twice a
+/// year, and nothing on the response would say which day that was.
+///
+/// `weeks_of` is `htf.rs`'s weekend rule, the only one on this desk, and it
+/// reads nothing but the gap between consecutive stamps — so a 4h series
+/// splits on the same weekends a D1 series does.
+fn trading_day_runs(bars: &[Bar], bar_ms: i64) -> Vec<std::ops::Range<usize>> {
+    if bar_ms < DAILY_HOLE_MS {
+        return runs_split_by_gap(bars, DAY_GAP_MS);
+    }
+    let mut out = Vec::new();
+    for week in weeks_of(bars) {
+        let anchor = bars[week.start].time;
+        let mut start = week.start;
+        for i in week.clone() {
+            if (bars[i].time - anchor) / DAY_MS != (bars[start].time - anchor) / DAY_MS {
+                out.push(start..i);
+                start = i;
+            }
+        }
+        out.push(start..week.end);
+    }
+    out
+}
+
+/// The last `days` trading days of a series, as an index range.
+///
+/// `None` when there are no bars. Fewer days than asked for is not an error —
 /// a store holding three days answers with three, and `window.days` on the
 /// response says so rather than the request's number.
-fn last_days(bars: &[Bar], days: usize) -> Option<std::ops::Range<usize>> {
+fn last_days(bars: &[Bar], days: usize, bar_ms: i64) -> Option<std::ops::Range<usize>> {
     if bars.is_empty() || days == 0 {
         return None;
     }
-    let runs = runs_split_by_gap(bars, DAY_GAP_MS);
+    let runs = trading_day_runs(bars, bar_ms);
     let first = runs.len().saturating_sub(days);
     Some(runs[first].start..bars.len())
 }
@@ -337,9 +540,6 @@ pub async fn levels(
 ) -> Result<Json<LevelsResponse>, ApiError> {
     let market = query.market;
     let timeframe = query.tf.unwrap_or_else(|| "15m".to_string());
-    let Some(bar_ms) = timeframe_ms(&timeframe) else {
-        return Err(ApiError::BadRequest(format!("unknown timeframe {timeframe}")));
-    };
     let profile_days = query.days.unwrap_or(DEFAULT_PROFILE_DAYS).clamp(1, MAX_PROFILE_DAYS);
     // An unknown MARKET is a different failure from a missing FILE and gets a
     // different answer, which is the distinction `ApiError` is documented on:
@@ -347,9 +547,41 @@ pub async fn levels(
     // exist is fixed by changing the call. Folding both into `unavailable`
     // would tell an operator to export bars for a symbol this desk does not
     // have.
+    //
+    // It is checked BEFORE the timeframe so the 400 below can name the
+    // market's own stored timeframes: `?market=nosuch&tf=7s` that answered
+    // "nosuchmarket has no exported bars at all" would send an operator to
+    // run an ingest for a symbol this desk does not have.
     state.config.market(&market).map_err(|e| ApiError::NotFound(e.to_string()))?;
 
-    let (all, source) = match stored_only(&state, &market, &timeframe) {
+    // A spelling that is not a timeframe is a 400 and not an `unavailable`:
+    // no ingest fixes `?tf=7s`, only a different call does. The sentence
+    // carries what this market DOES have, because the caller cannot know it —
+    // the accepted set is whatever was exported, not a constant in this file.
+    let stored = stored_timeframes(&state, &market);
+    let Some(bar_ms) = timeframe_ms(&timeframe) else {
+        let has = if stored.is_empty() {
+            format!("{market} has no exported bars at all")
+        } else {
+            format!("{market} has {}", stored.join(", "))
+        };
+        return Err(ApiError::BadRequest(format!(
+            "unknown timeframe {timeframe:?}: {has}. This route serves stored bars only and never \
+             resamples, so it can answer for a timeframe on disk and no other."
+        )));
+    };
+    // What a resample WOULD have been built from, named in the refusal so it
+    // is clear the route saw the file and declined it rather than missed it.
+    //
+    // The COARSEST stored series still fine enough, because that is the one
+    // `AppState::source_for` would have picked — its own comment says why:
+    // "resampling a week of minutes into hours is not a better hour than the
+    // stored hourly series covering a year, it is a shorter one". Naming the
+    // finest would tell an operator holding 1m, 5m and 15m that the route
+    // declined the 1m file, which is not the file it declined.
+    let finer = stored.iter().rev().find(|tf| timeframe_ms(tf).is_some_and(|ms| ms < bar_ms));
+
+    let (all, source) = match stored_only(&state, &market, &timeframe, finer.map(String::as_str)) {
         Ok(pair) => pair,
         Err(why) => {
             // EVERY block null, not an empty list. An empty `fair_value_gaps`
@@ -379,7 +611,7 @@ pub async fn levels(
     // week's high" is a level that exists. `last_days` cannot return None
     // here — `stored_only` refused an empty file — and the fallback is named
     // rather than unwrapped so a future caller cannot inherit a panic.
-    let range = last_days(&all, ANALYSIS_DAYS).unwrap_or(0..all.len());
+    let range = last_days(&all, ANALYSIS_DAYS, bar_ms).unwrap_or(0..all.len());
     let bars = &all[range.clone()];
     let last = bars.len() - 1;
 
@@ -396,10 +628,11 @@ pub async fn levels(
     // changeover, and it is written against D1 bars but reads only the gap
     // between consecutive stamps, so a 15m series splits on the same weekend.
     let weeks = weeks_of(bars);
-    // Days are the same idea with the broker's one-hour daily hole. Not a
-    // second weekend rule: `runs_split_by_gap(bars, 2 days)` IS `weeks_of`,
-    // and the route calls `weeks_of` for weeks precisely so that stays true.
-    let day_runs = runs_split_by_gap(bars, DAY_GAP_MS);
+    // Days are the same idea with the broker's one-hour daily hole — where a
+    // bar is short enough to show it. Not a second weekend rule:
+    // `runs_split_by_gap(bars, 2 days)` IS `weeks_of`, and the route calls
+    // `weeks_of` for weeks precisely so that stays true.
+    let day_runs = trading_day_runs(bars, bar_ms);
 
     // The newest run is the one in progress; the one before it is the last
     // COMPLETE one. Same convention as `htf::d1_facts`, whose "prior day" is
@@ -410,7 +643,7 @@ pub async fn levels(
     let prior_day = day_runs.len().checked_sub(2).and_then(|i| day_runs.get(i)).cloned();
     let prior_week = weeks.len().checked_sub(2).and_then(|i| weeks.get(i)).cloned();
 
-    let profile = last_days(bars, profile_days)
+    let profile = last_days(bars, profile_days, bar_ms)
         .and_then(|r| {
             let window = &bars[r];
             atr14
@@ -518,9 +751,60 @@ mod tests {
                 bars.push(Bar::flat(day * 10 * 900_000 + i * 900_000, 100.0));
             }
         }
-        assert_eq!(last_days(&bars, 2), Some(4..12));
-        assert_eq!(last_days(&bars, 10), Some(0..12));
-        assert_eq!(last_days(&bars, 0), None);
-        assert_eq!(last_days(&[], 5), None);
+        assert_eq!(last_days(&bars, 2, 900_000), Some(4..12));
+        assert_eq!(last_days(&bars, 10, 900_000), Some(0..12));
+        assert_eq!(last_days(&bars, 0, 900_000), None);
+        assert_eq!(last_days(&[], 5, 900_000), None);
+    }
+
+    #[test]
+    fn a_four_hour_bar_hides_the_daily_hole_so_the_day_is_counted_from_the_week() {
+        // Two broker weeks of 4h bars: six a day, five days, then a weekend.
+        // Stamps are the broker's, 21:00Z onwards, so the series crosses the
+        // day roll the way the exported file does.
+        const H4: i64 = 4 * 3_600_000;
+        let mut bars: Vec<Bar> = Vec::new();
+        for week in 0..2i64 {
+            for day in 0..5i64 {
+                for i in 0..6i64 {
+                    bars.push(Bar::flat(week * 7 * DAY_MS + day * DAY_MS + i * H4, 100.0));
+                }
+            }
+        }
+
+        // The premise, asserted rather than asserted-in-prose: at 4h the gap
+        // ACROSS the day roll is the same four hours as the gap inside the
+        // session, so no threshold anywhere can separate the two and a
+        // gap-based day rule is not merely mistuned, it is impossible.
+        let inside: Vec<i64> =
+            bars.windows(2).map(|w| w[1].time - w[0].time).filter(|gap| *gap < 2 * DAY_MS).collect();
+        assert!(inside.iter().all(|gap| *gap == H4), "every non-weekend gap is one bar: {inside:?}");
+        assert_eq!(trading_day_runs(&bars, H4).len(), 10);
+        assert!(trading_day_runs(&bars, H4).iter().all(|r| r.len() == 6), "six 4h bars to a trading day");
+
+        // And the window is ten DAYS of them — sixty bars — rather than ten
+        // bars. This is the distinction the response publishes as `days`
+        // beside `bars`.
+        assert_eq!(last_days(&bars, 10, H4), Some(0..60));
+        assert_eq!(last_days(&bars, 2, H4), Some(48..60));
+    }
+
+    #[test]
+    fn an_hour_bar_is_as_long_as_the_hole_so_the_hole_rule_would_call_every_bar_a_day() {
+        // 45 minutes is under the one-hour spacing of 1h bars. Left to
+        // `DAY_GAP_MS`, a 1h series would report `window.days` equal to
+        // `window.bars` — ten days of levels labelled as two hundred and
+        // thirty — which is the bug this branch exists to prevent.
+        const H1: i64 = 3_600_000;
+        let mut bars: Vec<Bar> = Vec::new();
+        for day in 0..5i64 {
+            // 23 bars: the broker's day is 24 hours with the one-hour hole in
+            // it, which at 1h is one absent bar.
+            for i in 0..23i64 {
+                bars.push(Bar::flat(day * DAY_MS + i * H1, 100.0));
+            }
+        }
+        assert_eq!(runs_split_by_gap(&bars, DAY_GAP_MS).len(), bars.len(), "the premise, and it is the bug");
+        assert_eq!(trading_day_runs(&bars, H1).len(), 5);
     }
 }
