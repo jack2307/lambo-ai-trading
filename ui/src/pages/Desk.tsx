@@ -45,6 +45,7 @@ import { IndicatorPicker, useViewerIndicators } from '@/components/IndicatorPick
 import { LevelToggles } from '@/components/LevelToggles'
 import {
   LIVE_WINDOW_ATR,
+  PROFILE_NOTE,
   familyOf,
   foldSamePrice,
   harvestLevels,
@@ -782,12 +783,27 @@ export function Desk({ book, ticks, streaming, theme }: {
   // in the one place a reader compares them.
   const { htf, error: htfError } = useHtf(sorted.find((r) => r.id === activeId)?.market ?? '')
 
+  /**
+   * WHICH TIMEFRAME THE CHART IS ON, held here rather than inside `RunChart`.
+   *
+   * It lived in the chart while the chart was the only thing that cared. The
+   * levels route is single-timeframe — every `age_bars` and every `*_atr` on
+   * its response is in units of the series it was asked for — so the levels
+   * have to be fetched FOR the timeframe on screen, and that one fetch is
+   * shared by the chart and by the panel in the rail. Passing the timeframe
+   * down keeps the single fetch; reporting it back up from the chart would be
+   * a state sync, and reading `localStorage` here would not re-render when
+   * somebody picks a different one.
+   */
+  const [chartTf, setChartTf] = useState<Timeframe>(readTimeframe)
+
   // The price-bar levels, polled the same way and for the same reason: the
   // panel in the rail names a price and the chart draws a line at it, so the
   // two read ONE response. Both context reads are fetched here and handed
   // down rather than fetched where they are shown.
   const { levels: priceLevels, error: priceLevelsError } = usePriceLevels(
     sorted.find((r) => r.id === activeId)?.market ?? '',
+    chartTf,
   )
 
   const activeBroker = useMemo(() => {
@@ -898,6 +914,8 @@ export function Desk({ book, ticks, streaming, theme }: {
                 theme={theme}
                 htf={htf}
                 levels={priceLevels}
+                tf={chartTf}
+                onTf={setChartTf}
                 now={now}
               />
             </div>
@@ -2915,6 +2933,8 @@ function RunChart({
   theme,
   htf,
   levels,
+  tf,
+  onTf,
   now,
 }: {
   detail: PaperRunDetail | null
@@ -2931,8 +2951,13 @@ function RunChart({
   theme: 'light' | 'dark'
   /** The same facts the card shows, so the line and the number agree. */
   htf: HtfResponse | null
-  /** The price-bar levels, the same response the panel reads out. */
+  /** The price-bar levels, the same response the panel reads out — computed
+   *  by the route for `tf` below, not for the book's own timeframe. */
   levels: PriceLevelsResponse | null
+  /** The timeframe on screen. Owned by the page so the levels can be fetched
+   *  for it once and read by the chart and the panel together. */
+  tf: Timeframe
+  onTf: (next: Timeframe) => void
 }) {
   // `bars` arrives as `[ms, o, h, l, c]` and `PriceChart` takes milliseconds
   // and divides, so the tuple goes straight across. (`series` times are
@@ -2955,7 +2980,11 @@ function RunChart({
    * built elsewhere. The two cases are kept apart here rather than blended,
    * because a chart that silently degrades is one nobody knows to distrust.
    */
-  const [tf, setTf] = useState<Timeframe>(readTimeframe)
+  // The selection itself now lives on the page — see `chartTf` there — because
+  // the levels route has to be asked for THIS timeframe and one answer is
+  // shared with the panel beside the chart. Everything below reads `tf`
+  // exactly as it did when the state was here.
+  const setTf = onTf
   const runTf = detail?.run.tf ?? null
   const market = detail?.run.market ?? null
   const ownTf = runTf != null && tf === runTf
@@ -3202,6 +3231,10 @@ function RunChart({
       bandLow: level.bandLow,
       bandHigh: level.bandHigh,
       spent: level.spent,
+      // Only the profile carries one, and it is the argument for its
+      // exemption from the distance window — on the tag itself, because that
+      // is where a reader meets the exemption.
+      note: level.family === 'profile' ? PROFILE_NOTE : undefined,
     }))
     // ONE PRICE IS ONE LINE. `/api/paper/htf` and `/api/paper/levels` both
     // report the prior day's high and the levels route reports it twice more
@@ -3498,9 +3531,22 @@ function RunChart({
         {hidden && (
           <span
             className="text-muted-foreground/70 num ml-2 normal-case"
-            title={`Levels are drawn within ${LIVE_WINDOW_ATR} ATR(14) of the last close and only while they are live — a pool not yet swept, a block not yet broken, a gap not yet filled. It is a window onto the response, not a judgement about which levels matter: nothing here is ranked or scored.`}
+            title={`Levels are drawn within ${LIVE_WINDOW_ATR} ATR(14) of the last close and only while they are live — a pool not yet swept, a block not yet broken, a gap not yet filled. The activity profile is exempt: ${PROFILE_NOTE}. It is a window onto the response, not a judgement about which levels matter: nothing here is ranked or scored.`}
           >
             {hidden}
+          </span>
+        )}
+        {/* THE DEGENERATE TIMEFRAME, SAID OUT LOUD RATHER THAN LEFT TO LOOK
+            EMPTY. Ten trading days of 1d bars is ten bars and ATR(14) needs
+            fourteen, so the route answers with no ATR, no profile and only
+            the period pools — honest on the wire and, unsaid, indistinguishable
+            on screen from the levels having vanished. */}
+        {showHtf && levels && !levels.unavailable && levels.atr14 == null && (
+          <span
+            className="text-caution ml-2 normal-case"
+            title={`The window holds ${levels.window?.bars ?? 0} ${levels.timeframe} bars and ATR(14) needs 14, so this response carries no ATR and no activity profile — only the levels that need neither. Distances are in price alone and every live level is drawn, because a window measured in a unit the response does not have is not a window. Another timeframe's ATR is NOT borrowed to fill it: "3 ATR" computed on 15m bars would be a number that reads right on a daily chart and means nothing, which is what this desk refuses for indicators off the traded timeframe.`}
+          >
+            no ATR(14) on {levels.timeframe} — {levels.window?.bars ?? 0} bars, no distance window
           </span>
         )}
         <IndicatorPicker

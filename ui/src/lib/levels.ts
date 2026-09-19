@@ -577,18 +577,80 @@ export function censusOf(levels: DeskLevel[]): LevelCensus {
  *
  * WHAT IT COSTS AND WHAT IT BUYS, both counted on that response. Of its 252
  * levels, 197 are spent and 55 are live; inside ±3 ATR there are 13 live
- * levels at 12 distinct prices. Thirteen tags is a chart. The alternatives
- * were measured on the same file rather than imagined: ±6 ATR leaves 35, and
+ * levels at 12 distinct prices, and the profile's three marks are drawn
+ * beside them at whatever distance they sit (see `exemptFromWindow`), so the
+ * chart carries 15 levels on 14 lines. Fifteen tags is a chart. The alternatives
+ * were measured on the same file rather than imagined: ±6 ATR leaves 35 live
+ * levels, 36 drawn once the profile's marks are counted, and
  * a 400px pane holds 28 tags at `TAG_GAP`, so six ATR is already past the
  * point where `stackTags` stops placing tags and starts evenly spreading them
  * — legible, ordered, and no longer at their own prices. Drawing all 252 puts
  * 9 tags in the space of one.
  *
+ * ONE NUMBER FOR EVERY TIMEFRAME, AND IT NEEDS NO TUNING PER TIMEFRAME. The
+ * denominator is the SERIES' OWN ATR(14), which the route publishes as
+ * `atr14`, so the window widens with the chart by construction. Probed
+ * against the machine that trades on 2026-09-19, where 1h, 4h and 1d are
+ * exported beside the fine three:
+ *
+ *     tf     atr14    ±3 ATR is     levels on the response
+ *     15m     6.91      ±20.7       242 (11 gaps, 80 blocks, 151 pools)
+ *     1h     17.04      ±51.1        75 (5, 20, 50)
+ *     4h     39.15      ±117.5       26 (0, 8, 18)
+ *     1d      null      no window     5 (0, 0, 5 period pools)
+ *
+ * So the same rule that keeps 13 of 252 on a 15m chart has barely anything to
+ * hold back on 4h — which is the point: 26 levels is a different screen from
+ * 251, and a window tuned per timeframe would be tuning away the thing the
+ * reader came to see. THE "15 OF 252" ABOVE IS THE 15m CLAIM and no other:
+ * on the 1h response in `docs/api-samples/paper-levels-1h.json` the same
+ * window draws 6 of 66 (45 of them spent) — three live levels and the
+ * profile's three marks — though that file is served from the test fixture's
+ * seeded walk, so its counts pin the CODE and not the tape.
+ *
  * In ATR and not in points because the same rule has to read the same way in
- * a quiet week and a violent one; the route's own thresholds are in ATR for
- * that reason and this is the viewer's end of the same discipline.
+ * a quiet week and a violent one, and on gold and on the euro; the route's
+ * own thresholds are in ATR for that reason and this is the viewer's end of
+ * the same discipline.
  */
 export const LIVE_WINDOW_ATR = 3
+
+/**
+ * The one exemption from the distance window, and why it is not the ranking
+ * the rest of this file refuses.
+ *
+ * A RANKING IS A CLAIM ABOUT ONE LEVEL AGAINST ANOTHER INSIDE A CATEGORY:
+ * this pool matters more than that pool, this block is "stronger". Nothing
+ * here does that and nothing here may. This is a statement about a CATEGORY
+ * instead, and the statement is about what kind of object the thing is.
+ *
+ * The activity profile is not a family of competing levels. It is ONE object
+ * with three marks — the point of control and the two edges of the value
+ * area — describing the WHOLE window: where the last five trading days spent
+ * their time. Its distance from the last close is not a fact about how
+ * relevant it is, the way a distant order block's distance is a fact about an
+ * event that happened far from here; it is a fact about how far price has
+ * travelled from its own recent centre, which is the thing the profile is
+ * for. Hiding VAL for being 7.5 ATR away therefore answers a question nobody
+ * asked, and it makes the profile switch lie: turning it on and being shown
+ * one mark of three is the window contradicting the control.
+ *
+ * So the profile's three are drawn whenever their family is on, however far
+ * away they are, and `PROFILE_NOTE` says on hover what they are. NOTHING ELSE
+ * IS EXEMPT — a second family wanting this needs its own argument, made in
+ * these terms: what kind of object is it, and is its distance a statement
+ * about it or about the market. Decision by the coordinator, 2026-09-19, over
+ * my own call the other way.
+ */
+function exemptFromWindow(level: DeskLevel): boolean {
+  return level.family === 'profile'
+}
+
+/** What the profile's marks are, wherever one of them is shown. The same
+ *  sentence on the chart tag, in the panel row and on the family switch, so
+ *  the exemption is explained wherever a reader meets it. */
+export const PROFILE_NOTE =
+  "the activity profile is the window's own statistic — where these bars spent their time — and not a price the market turned at, so all three marks are drawn however far away they are"
 
 /**
  * Which levels to draw: the ones still live, near enough to the close, in a
@@ -623,8 +685,20 @@ export interface LevelSelection {
   /** Switched off by a family toggle. Counted separately because that switch
    *  is already on screen saying so, so the sentence does not repeat it. */
   hiddenFamily: number
-  /** False when the response carried no ATR, so no distance window could be
-   *  applied at all and everything live is drawn. The caller says so. */
+  /**
+   * False when NO level on the response could be placed in the window, which
+   * on this route means `atr14` was null: every level is then drawn and the
+   * caller has to say why the window is not in force.
+   *
+   * It is a measured state and not an error. Ten trading days of 1d bars is
+   * ten bars, fewer than the fourteen ATR(14) needs, so the route answers
+   * with `atr14: null`, no profile and no ATR-derived list — five period
+   * pools and nothing else. The screen must say that rather than look empty,
+   * and it must NOT borrow another timeframe's ATR to fill the gap: a
+   * distance in "ATR" that is 15m ATR on a daily chart is a number that reads
+   * right and means nothing, which is exactly what the Desk refuses for
+   * indicators off the traded timeframe.
+   */
   windowed: boolean
 }
 
@@ -644,11 +718,13 @@ export function selectLevels(
       continue
     }
     const spentOut = level.spent && !options.showSpent
-    // A level whose distance cannot be measured — no close or no ATR on the
-    // response — is DRAWN, not dropped. The window is a convenience and the
-    // level is a fact; hiding a fact because the convenience is unavailable
-    // is the failure this file's first paragraph is about.
-    const farOut = level.distAtr != null && Math.abs(level.distAtr) > windowAtr
+    // A level whose distance cannot be measured — no close, or no ATR on the
+    // response, which is the ordinary 1d case — is DRAWN, not dropped. The
+    // window is a convenience and the level is a fact; hiding a fact because
+    // the convenience is unavailable is the failure this file's first
+    // paragraph is about. `windowed` below is how the caller knows to say so.
+    const farOut =
+      level.distAtr != null && Math.abs(level.distAtr) > windowAtr && !exemptFromWindow(level)
     if (level.distAtr != null) windowed = true
     if (spentOut) hiddenSpent += 1
     else if (farOut) hiddenFar += 1

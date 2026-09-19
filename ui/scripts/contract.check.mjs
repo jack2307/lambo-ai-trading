@@ -265,6 +265,43 @@ const CONTRACTS = [
     },
   },
   {
+    sample: 'paper-levels-1h.json',
+    what: 'GET /api/paper/levels?tf=1h — the client now asks for the timeframe on screen',
+    paths: {
+      // THE THREE THAT MUST TRACK THE REQUEST. The chart follows its own
+      // timeframe from 2026-09-19, and every `age_bars` and `*_atr` on the
+      // response is in units of the series the route read — so a response
+      // that answered 1h with 15m's `bar_ms` would caption the panel in one
+      // unit and draw the chart in another, with nothing failing.
+      timeframe: 'string',
+      bar_ms: 'number',
+      atr14: 'number|null',
+      last_close: 'number|null',
+      'window.bars': 'number',
+      'window.days': 'number',
+      'source.timeframe': 'string',
+      'profile.poc.age_bars': 'number',
+      'liquidity[0].age_bars': 'number',
+      'liquidity[0].swept': 'boolean',
+      'fair_value_gaps[0].band_low': 'number',
+      'extremes.session.high.price': 'number|null',
+    },
+    also: (doc, fail) => {
+      if (doc.timeframe !== '1h') fail(`asked for 1h and the response says ${doc.timeframe}`)
+      if (doc.bar_ms !== 3_600_000) fail(`1h bar_ms is ${doc.bar_ms}, not 3600000`)
+      if (doc.source && doc.source.timeframe !== doc.timeframe) {
+        fail(`the file read is ${doc.source.timeframe} under a response saying ${doc.timeframe}`)
+      }
+      // Ten TRADING DAYS on every timeframe, which is a different number of
+      // bars on each: 879 on 15m, 230 here, 10 on 1d. A client reading only
+      // `bars` cannot tell "ten days of 1h" from "ten bars of 1h", and the
+      // panel prints both for that reason.
+      if (doc.window && doc.window.days !== 10) {
+        fail(`the analysis window is ${doc.window.days} trading days, not the documented 10`)
+      }
+    },
+  },
+  {
     sample: 'paper-levels-unavailable.json',
     what: 'GET /api/paper/levels — no exported bars, which is NOT an empty list',
     paths: {

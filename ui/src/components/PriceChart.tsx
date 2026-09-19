@@ -15,6 +15,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 import type { Bar, BacktestTrade, IndicatorPoint, OptionsFrame } from '@/lib/api'
 import { LEVEL_FAMILIES, familyOf, stackTags, type LevelFamily, type LevelKind } from '@/lib/levels'
+import { cn } from '@/lib/utils'
 import { LevelBands, SPENT_WEIGHT, withAlpha, type LevelBand } from './levelBands'
 import { TradeZones, type TradeZone } from './tradeZones'
 
@@ -54,6 +55,14 @@ export interface ChartLevel {
    * unreadable. It says what HAPPENED to the level; it does not rank it.
    */
   spent?: boolean
+  /**
+   * What KIND of thing this level is, on the tag's hover. The profile's three
+   * marks carry one (`PROFILE_NOTE`) because they are the window's own
+   * statistic and are drawn outside the distance window for that reason — a
+   * reader who notices the exemption should find the argument for it without
+   * leaving the chart.
+   */
+  note?: string
 }
 
 /**
@@ -83,6 +92,8 @@ interface PlacedLevelTag {
   moved: boolean
   /** Swept or broken: faded, like its line and its band. */
   spent: boolean
+  /** The level's own note, on hover. Empty for almost everything. */
+  note: string
 }
 
 interface TagLayer {
@@ -109,6 +120,7 @@ function sameLayer(a: TagLayer, b: TagLayer): boolean {
       tag.hue === other.hue &&
       tag.moved === other.moved &&
       tag.spent === other.spent &&
+      tag.note === other.note &&
       Math.abs(tag.y - other.y) <= 0.5 &&
       Math.abs(tag.drawnY - other.drawnY) <= 0.5
     )
@@ -705,6 +717,7 @@ export function PriceChart({
         drawnY: p.drawnY,
         moved: p.moved,
         spent: p.item.spent === true,
+        note: p.item.note ?? '',
       })),
     }
     // Only when something actually moved. This runs on every frame of a
@@ -852,9 +865,12 @@ export function PriceChart({
   return (
     <div className="relative h-full w-full">
       <div ref={container} className="h-full w-full" />
-      {/* The tag layer. `pointer-events-none` throughout: the chart owns the
-          crosshair, and a label that swallowed a drag would break the scroll
-          the reader was in the middle of. */}
+      {/* The tag layer. `pointer-events-none` throughout EXCEPT on a tag that
+          has something to say: the chart owns the crosshair, and a label that
+          swallowed a drag would break the scroll the reader was in the middle
+          of — but a tag whose `title` nobody can hover is a sentence written
+          and never shown. Only the tags carrying a note take the pointer, so
+          the chart's own dragging is untouched everywhere else. */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
         {layer.tags.map((tag) => (
           // `inset-0` rather than a bare `right-0`: an inline box with only
@@ -886,7 +902,11 @@ export function PriceChart({
               />
             )}
             <span
-              className="bg-card/85 absolute rounded-xs border-r-2 px-1 py-px fd-caption whitespace-nowrap"
+              title={tag.note || undefined}
+              className={cn(
+                'bg-card/85 absolute rounded-xs border-r-2 px-1 py-px fd-caption whitespace-nowrap',
+                tag.note && 'pointer-events-auto cursor-help',
+              )}
               style={{
                 right: layer.axis + 4,
                 top: tag.drawnY - TAG_GAP / 2,

@@ -25,6 +25,7 @@ import {
   KIND_WORDS,
   LEVEL_FAMILIES,
   LIVE_WINDOW_ATR,
+  PROFILE_NOTE,
   STATE_WORDS,
   censusOf,
   familyOf,
@@ -330,9 +331,11 @@ check('the window is three ATR', LIVE_WINDOW_ATR === 3, `${LIVE_WINDOW_ATR}`)
 // The measurement the constant's comment is written on. Widening it is
 // allowed; letting the comment claim a number the response does not produce
 // is not.
-check('13 live levels are inside it on the captured response', live.drawn.length === 13, `${live.drawn.length}`)
+// 15 is the 13 live levels inside the window plus the profile's three marks,
+// one of which (VAH at 1.77 ATR) was inside it anyway.
+check('15 levels are drawn on the captured response', live.drawn.length === 15, `${live.drawn.length}`)
 check('197 are held back for being spent', live.hiddenSpent === 197, `${live.hiddenSpent}`)
-check('42 more are held back for being further away', live.hiddenFar === 42, `${live.hiddenFar}`)
+check('40 more are held back for being further away', live.hiddenFar === 40, `${live.hiddenFar}`)
 check(
   'nothing is lost between drawn, hidden and switched off',
   live.drawn.length + live.hidden + live.hiddenFamily === levels.length,
@@ -344,10 +347,10 @@ check('the window was applied', live.windowed === true)
 // 400px pane holds 28 tags at a 14px gap, and `stackTags` stops placing them
 // at their own prices past that.
 const wider = selectLevels(levels, { families: EVERY_FAMILY, showSpent: false, windowAtr: 6 })
-check('six ATR would draw 35, which is past what the pane holds', wider.drawn.length === 35, `${wider.drawn.length}`)
+check('six ATR would draw 36, which is past what the pane holds', wider.drawn.length === 36, `${wider.drawn.length}`)
 
 const withSpent = selectLevels(levels, { families: EVERY_FAMILY, showSpent: true })
-check('the spent switch reveals them', withSpent.drawn.length === 99, `${withSpent.drawn.length}`)
+check('the spent switch reveals them', withSpent.drawn.length === 101, `${withSpent.drawn.length}`)
 check('and then nothing is hidden for being spent', withSpent.hiddenSpent === 0)
 
 const oneFamily = selectLevels(levels, { families: new Set(['profile']), showSpent: false })
@@ -357,17 +360,107 @@ check(
   `${oneFamily.hiddenFamily} / ${oneFamily.hiddenSpent}`,
 )
 
+/* ------------------------------------------- the one exemption, and why */
+
+/**
+ * THE PROFILE IS DRAWN WHATEVER ITS DISTANCE, and this is the check that says
+ * so. It is a statement about a CATEGORY — the activity profile is one object
+ * describing the whole window, so its distance from price is not a fact about
+ * its relevance — and not a ranking within one, which is what the rest of
+ * this file exists to refuse. Turning the profile switch on and being shown
+ * one mark of three was the window contradicting the switch.
+ */
+check(
+  'all three profile marks are drawn, at 1.8, 5.9 and 7.5 ATR away',
+  oneFamily.drawn.length === 3 && oneFamily.hiddenFar === 0,
+  `${oneFamily.drawn.length} drawn, ${oneFamily.hiddenFar} held back`,
+)
+check(
+  'and the ones far outside the window really are far outside it',
+  oneFamily.drawn.filter((l) => Math.abs(l.distAtr) > LIVE_WINDOW_ATR).length === 2,
+  oneFamily.drawn.map((l) => `${l.kind} ${l.distAtr.toFixed(2)}`).join(' '),
+)
+check(
+  'nothing else is exempt: a live pool past the window is still held back',
+  selectLevels(levels, { families: new Set(['liquidity']), showSpent: false }).hiddenFar > 0,
+)
+check(
+  'the note that explains the exemption says what the profile IS',
+  PROFILE_NOTE.includes("window's own statistic") && PROFILE_NOTE.includes('not a price the market turned at'),
+  PROFILE_NOTE,
+)
+
+/* ------------------------------------ the timeframe with no ATR at all */
+
+/**
+ * TEN TRADING DAYS OF 1d BARS IS TEN BARS, four short of what ATR(14) needs,
+ * so the live route answers `?tf=1d` with `atr14: null`, no profile, and five
+ * period pools. Every distance is then unmeasurable in ATR and the window
+ * cannot be applied at all — which must draw everything live and SAY so,
+ * never look like a market that went quiet.
+ *
+ * Built by blanking the two fields on the captured response rather than by
+ * hand, so the shape under test is a real one.
+ */
+console.log('\n-- a response with no ATR --')
+
+const thin = harvestLevels({ ...sample, atr14: null, profile: null })
+const thinPick = selectLevels(thin, { families: EVERY_FAMILY, showSpent: false })
+check('the profile is gone with it', thin.every((l) => l.family !== 'profile'))
+check('no level can be placed in ATR', thin.every((l) => l.distAtr === null))
+check('so the window says it was not applied', thinPick.windowed === false)
+check('nothing is held back for distance', thinPick.hiddenFar === 0, `${thinPick.hiddenFar}`)
+check(
+  'and every live level is drawn',
+  thinPick.drawn.length === thin.filter((l) => !l.spent).length,
+  `${thinPick.drawn.length} of ${thin.filter((l) => !l.spent).length}`,
+)
+check(
+  'the count still accounts for the spent ones',
+  hiddenSentence(thinPick) === '197 further levels, already spent, not drawn',
+  hiddenSentence(thinPick),
+)
+check(
+  'distance in price survives without an ATR to scale it',
+  thin.every((l) => typeof l.dist === 'number' && Number.isFinite(l.dist)),
+)
+
+/* ------------------------------ the same rules on a coarser timeframe */
+
+/**
+ * The 1h response is served by the route from the test fixture's seeded walk,
+ * so its PRICES mean nothing — what it pins is that the same code reads a
+ * non-default timeframe without a single number being rescaled by hand:
+ * `age_bars` counts 1h bars, `atr14` is the 1h ATR, and the window is that
+ * ATR times three. The counts are asserted so the comment in `levels.ts`
+ * quoting them cannot drift away from the file.
+ */
+console.log('\n-- the same window on 1h --')
+
+const hourly = JSON.parse(
+  readFileSync(fileURLToPath(new URL('../../docs/api-samples/paper-levels-1h.json', import.meta.url)), 'utf8'),
+)
+const hourlyLevels = harvestLevels(hourly)
+const hourlyPick = selectLevels(hourlyLevels, { families: EVERY_FAMILY, showSpent: false })
+check('the 1h response carries 66 levels', hourlyLevels.length === 66, `${hourlyLevels.length}`)
+check('45 of them are spent', censusOf(hourlyLevels).spent === 45, `${censusOf(hourlyLevels).spent}`)
+check('6 are drawn: three live and the profile', hourlyPick.drawn.length === 6, `${hourlyPick.drawn.length}`)
+check(
+  'the ATR the window uses is the 1h one the response published',
+  hourlyLevels.every((l) => l.distAtr == null || Math.abs(l.distAtr - l.dist / hourly.atr14) < 1e-9),
+)
+
 // THE SENTENCE ITSELF. It is the audit of the window and it is asserted
 // verbatim, because a count that quietly stops being printed is exactly the
 // silence this whole file is against.
 check(
   'the hidden count reads like the prompt block',
-  hiddenSentence(live) === '239 further levels, spent or further away, not drawn',
+  hiddenSentence(live) === '237 further levels, spent or further away, not drawn',
   hiddenSentence(live),
 )
 check(
   'with the spent ones on, it names distance alone',
-  hiddenSentence(withSpent) === '153 further levels, further than 3 ATR away, not drawn',
+  hiddenSentence(withSpent) === '151 further levels, further than 3 ATR away, not drawn',
   hiddenSentence(withSpent),
 )
 check(
@@ -391,7 +484,7 @@ console.log('\n-- one price is one line --')
     spent: l.spent,
   }))
   const folded = foldSamePrice(drawn)
-  check('13 levels are drawn as 12 lines', folded.length === 12, `${folded.length}`)
+  check('15 levels are drawn as 14 lines', folded.length === 14, `${folded.length}`)
   check(
     'the fold names every level at the price',
     folded.some((f) => f.label === 'equal highs · session high'),

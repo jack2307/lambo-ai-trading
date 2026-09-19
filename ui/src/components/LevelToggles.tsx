@@ -1,6 +1,6 @@
 import { useRef } from 'react'
 
-import { LEVEL_FAMILIES, type LevelFamily } from '@/lib/levels'
+import { LEVEL_FAMILIES, PROFILE_NOTE, type LevelFamily } from '@/lib/levels'
 import { cn } from '@/lib/utils'
 
 /**
@@ -91,9 +91,14 @@ export function LevelToggles({
               }
             }}
             title={
-              active
-                ? `Hide ${family.label} levels${n ? ` (${shownNow} of ${n} drawn; the rest are spent or outside the distance window)` : ''}`
-                : `Draw ${family.label} levels${n ? ` (${n} on this response)` : ''}`
+              // The profile's switch says why its count is never short: it is
+              // the one family the distance window does not apply to, and the
+              // switch is where a reader asks what the switch controls.
+              family.key === 'profile'
+                ? `${active ? 'Hide' : 'Draw'} the activity profile${n ? ` (${n} marks)` : ''} — ${PROFILE_NOTE}`
+                : active
+                  ? `Hide ${family.label} levels${n ? ` (${shownNow} of ${n} drawn; the rest are spent or outside the distance window)` : ''}`
+                  : `Draw ${family.label} levels${n ? ` (${n} on this response)` : ''}`
             }
             className={cn(
               'focus-visible:ring-ring inline-flex items-center gap-1 rounded-sm border px-1.5 py-px fd-caption transition-colors duration-100 focus-visible:ring-2 focus-visible:outline-none motion-reduce:transition-none',
