@@ -33,10 +33,13 @@ struct Fixture {
 
 /// Parse one of the fixtures. The last `#` comment line is the header.
 fn read_fixture(text: &str) -> Fixture {
+    // The LAST comment line, which is the column header: the provenance
+    // notes above it are prose, and scanning from the end finds the header
+    // without counting them.
     let header = text
         .lines()
-        .filter(|l| l.starts_with('#'))
-        .next_back()
+        .rev()
+        .find(|l| l.starts_with('#'))
         .expect("a header comment")
         .trim_start_matches('#')
         .trim();
