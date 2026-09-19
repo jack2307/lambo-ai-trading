@@ -56,13 +56,57 @@ export interface ChartLevel {
    */
   spent?: boolean
   /**
+   * An order block in its FOURTH state: broken, and then traded back into.
+   *
+   * Carried beside `spent` rather than instead of it because a breaker IS
+   * spent — it broke — and the two flags answer different questions: `spent`
+   * decides the weight, this decides the dash. It is not a new family and
+   * not a new list; `levelBands.LevelBand.breaker` carries the argument for
+   * why it is not drawn louder than a plain broken block either.
+   */
+  breaker?: boolean
+  /**
    * What KIND of thing this level is, on the tag's hover. The profile's three
    * marks carry one (`PROFILE_NOTE`) because they are the window's own
    * statistic and are drawn outside the distance window for that reason — a
    * reader who notices the exemption should find the argument for it without
-   * leaving the chart.
+   * leaving the chart. The dealing range's three carry `DEALING_RANGE_NOTE`
+   * for the same reason and by the same rule.
    */
   note?: string
+}
+
+/**
+ * A BOS or a CHoCH, as the chart draws it: a mark on the bar whose close did
+ * it, at the price of the swing it went beyond.
+ *
+ * A MARKER AND NOT A LINE, which is the whole reason this is a second type
+ * rather than another `ChartLevel`. A level applies until something happens
+ * to it, so it is drawn across the pane; an event happened ONCE, on one bar,
+ * and a dashed line across the chart would say the opposite. The library's
+ * `atPriceMiddle` position puts a marker at an exact price on an exact bar,
+ * which is the shape of the fact.
+ *
+ * THE TIME MUST ALREADY BE A BAR ON THE SERIES. The caller snaps it
+ * (`snapToBar` in lib/timeframes.ts) and drops what it cannot place, because
+ * a marker whose time is not a time on the series is one the chart discards
+ * silently — the failure this repo has now found three times.
+ */
+export interface ChartStructureEvent {
+  /** `BOS` or `CHoCH`, drawn as the marker's text when it carries one. */
+  label: string
+  /** The wire token lowercased: `bos` or `choch`. It picks the SHAPE, which
+   *  is how the two are told apart without reading the text. */
+  kind: string
+  /** A bar time on the series, in milliseconds. */
+  timeMs: number
+  /** The swing price the close went beyond. */
+  price: number
+  /**
+   * A later event has happened. Drawn small, faded and WITHOUT its text —
+   * see the markers effect for why that is the right kind of quiet.
+   */
+  superseded: boolean
 }
 
 /**
@@ -236,6 +280,16 @@ interface Props {
    */
   htfLevels?: ChartLevel[]
   /**
+   * The BOS and CHoCH marks, already snapped to bars that exist and already
+   * filtered by the caller for the position the level switch is in.
+   *
+   * Sent separately from `htfLevels` because they are not levels: see
+   * `ChartStructureEvent`. Absent or empty clears them, which is how a market
+   * with no structure events and a market whose events have all scrolled off
+   * the window both end up drawing nothing rather than the last market's.
+   */
+  structure?: ChartStructureEvent[]
+  /**
    * The position the book is holding right now.
    *
    * Drawn SOLID, where a pending entry is dotted: one is money already at
@@ -295,6 +349,7 @@ export function PriceChart({
   pending,
   pendingFill,
   htfLevels,
+  structure,
   open,
   openPnl = null,
   showOpen = true,
@@ -308,6 +363,13 @@ export function PriceChart({
   const pendingLines = useRef<IPriceLine[]>([])
   const htfLines = useRef<IPriceLine[]>([])
   const markers = useRef<ISeriesMarkersPluginApi<Time> | null>(null)
+  // A SECOND MARKER PLUGIN, not a second list in the first. `createSeriesMarkers`
+  // builds an independent primitive per call, so the two sets can be set and
+  // cleared on their own effects — which matters because they answer to
+  // different controls: the fills follow `showMarkers`, the structure marks
+  // follow the level switch, and merging them would make either control able
+  // to wipe the other's marks.
+  const structureMarkers = useRef<ISeriesMarkersPluginApi<Time> | null>(null)
   const zones = useRef<TradeZones | null>(null)
   const bands = useRef<LevelBands | null>(null)
 
@@ -414,6 +476,7 @@ export function PriceChart({
       overlays.current.clear()
       priceLines.current = []
       markers.current = null
+      structureMarkers.current = null
       zones.current = null
       bands.current = null
     }
@@ -626,7 +689,13 @@ export function PriceChart({
       // kind of object on screen from the price levels around it — it is the
       // same object with room in it.
       if (level.bandLow != null && level.bandHigh != null) {
-        drawnBands.push({ low: level.bandLow, high: level.bandHigh, color, spent: level.spent })
+        drawnBands.push({
+          low: level.bandLow,
+          high: level.bandHigh,
+          color,
+          spent: level.spent,
+          breaker: level.breaker,
+        })
       }
       htfLines.current.push(
         series.createPriceLine({
@@ -649,7 +718,13 @@ export function PriceChart({
           // must not compete with the book's own stop and target, which are
           // the levels that decide this trade. A spent one is dotted, which
           // is the same distinction the bands draw.
-          lineStyle: level.spent ? 1 : 2,
+          //
+          // A BREAKER TAKES THE THIRD PATTERN AND NOT A THIRD WEIGHT.
+          // `LargeDashed` (3) beside the plain spent `Dotted` (1), both at the
+          // same faded alpha, because 92% of the broken blocks on the captured
+          // response are breakers: a pattern says which of two things happened,
+          // a heavier line would say one of them was worth more.
+          lineStyle: level.breaker ? 3 : level.spent ? 1 : 2,
           axisLabelVisible: false,
           // NO TITLE HERE ON PURPOSE. The library draws its titles where the
           // price falls and lets two of them sit on top of each other, and
@@ -845,6 +920,68 @@ export function PriceChart({
     points.sort((a, b) => (a.time as number) - (b.time as number))
     markers.current.setMarkers(points)
   }, [trades, showMarkers, focus])
+
+  /**
+   * The BOS and CHoCH marks.
+   *
+   * WHERE THEY GO. On the bar whose CLOSE did it, at the price of the swing
+   * it went beyond — `atPriceMiddle`, which is the only marker position that
+   * takes a price. Not above or below the bar: the fact is "this close went
+   * past THAT price", and a marker floating over the candle would leave the
+   * price to be guessed from the y axis.
+   *
+   * HOW A BOS IS TOLD FROM A CHoCH WITHOUT READING ANYTHING. Shape, and only
+   * shape: a circle for a BOS, a square for a CHoCH. Colour cannot do it —
+   * they are one family and one hue — and the text cannot do it either,
+   * because most of these marks carry no text at all (below). The two shapes
+   * are also the two the trade fills do NOT use for an entry, which is an
+   * arrow; a circle is an exit mark, but an exit mark sits above or below its
+   * bar in win-teal or loss-amber and never at a price in steel.
+   *
+   * SUPERSEDED IS THE QUIET ONE, AND THE QUIET IS LAYERED THREE WAYS: no
+   * text, a third of the alpha, and under half the size. The counts are the
+   * argument — 79 of the 80 events on `docs/api-samples/paper-levels.json`
+   * are superseded, 82 of 83 on the live 15m store — so at one weight this is
+   * eighty labels across the pane, of which one describes the structure as it
+   * now stands. Dropping them instead would claim the tape had a single event
+   * in ten trading days, which is the opposite lie. Losing the TEXT is the
+   * same move the fills make when one trade is picked, and for the same
+   * reason: the label is the expensive part, and the mark is the cheap part
+   * that still says something happened here.
+   *
+   * NOTHING HERE RANKS THE EVENTS. Small means earlier, not weaker; the one
+   * full-strength mark is the one the route has not yet superseded, which is
+   * a fact about the list and not a verdict about the market. What a CHoCH is
+   * actually worth is `measuredCaveat`, printed in the levels panel where
+   * there is room for the sentence.
+   */
+  useEffect(() => {
+    const series = candles.current
+    if (!series) return
+    if (!structureMarkers.current) structureMarkers.current = createSeriesMarkers(series, [])
+
+    const events = structure ?? []
+    if (events.length === 0) {
+      structureMarkers.current.setMarkers([])
+      return
+    }
+
+    const hue = familyColor('structure')
+    const points: SeriesMarker<Time>[] = events.map((event) => ({
+      time: seconds(event.timeMs),
+      position: 'atPriceMiddle',
+      price: event.price,
+      // A CHoCH is the square. Anything the route grows later that is
+      // neither falls to the circle rather than going undrawn — the same
+      // rule `familyOf` keeps for a kind this client has not met.
+      shape: event.kind === 'choch' ? 'square' : 'circle',
+      color: event.superseded ? withAlpha(hue, 0.35) : hue,
+      size: event.superseded ? 0.6 : 1.5,
+      text: event.superseded ? '' : event.label,
+    }))
+    points.sort((a, b) => (a.time as number) - (b.time as number))
+    structureMarkers.current.setMarkers(points)
+  }, [structure])
 
   // Stop and target bands, one per trade.
   useEffect(() => {

@@ -121,8 +121,15 @@ for (const [theme, t] of [
   // distinguished by hue alone on a chart that shows all four at once. A
   // contrast check that only looked at each against its ground would have
   // passed them all.
+  // `structure` joined them on 2026-09-19 and is IN THIS LIST rather than
+  // exempted from it, which is the whole point of adding it: there was no
+  // free hue left, so it is separated by lightness at the end of the ladder,
+  // and a claim like that is worth nothing unless the same assertion that
+  // measured the other four measures it too. Its marks carry text (`BOS`,
+  // `CHoCH`) on the chart, so it needs the 4.5 the others need and not the
+  // 3.0 a bare line would.
   console.log(`\n-- ${theme.trim()}: level ladder families --`)
-  const families = ['profile', 'gaps', 'liquidity', 'blocks']
+  const families = ['profile', 'gaps', 'liquidity', 'blocks', 'structure']
   for (const family of families) {
     for (const [name, bg] of grounds.filter(([n]) => n !== 'sidebar')) {
       check(theme, `${family} on ${name}`, t[`level-${family}`], bg, TEXT)

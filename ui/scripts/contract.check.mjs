@@ -199,6 +199,59 @@ const CONTRACTS = [
       'order_blocks[0].displacement_body_atr': 'number',
       'order_blocks[0].tested_at_bar_ms': 'number|null',
       'order_blocks[0].broken_at_bar_ms': 'number|null',
+      // THE FOURTH STATE'S OWN STAMP, dereferenced since the chart started
+      // drawing a breaker with a dash of its own on 2026-09-19. A route that
+      // dropped it would leave a block labelled BROKEN, BACK INSIDE with no
+      // bar anywhere saying when it came back inside.
+      'order_blocks[0].breaker_retested_at_bar_ms': 'number|null',
+      // THE SPINE. Nothing dereferenced these until the chart drew them.
+      // Written out as paths for the reason the families above are: nesting
+      // is the thing prose got wrong three times in one day, and `measured`
+      // is a nested object whose numbers are printed one at a time.
+      'market_structure.label': 'string',
+      'market_structure.label_since_bar_ms': 'number|null',
+      'market_structure.rule': 'string',
+      'market_structure.events': 'array',
+      'market_structure.unclassified_breaks': 'number',
+      'market_structure.events[0].kind': 'string',
+      'market_structure.events[0].direction': 'string',
+      'market_structure.events[0].broke_price': 'number',
+      'market_structure.events[0].broke_swing_id': 'string',
+      'market_structure.events[0].broke_swing_bar_ms': 'number',
+      'market_structure.events[0].closed_at_bar_ms': 'number',
+      'market_structure.events[0].close': 'number',
+      'market_structure.events[0].age_bars': 'number',
+      // The flag the chart subordinates 79 of these 80 marks by. A route
+      // that stopped sending it would draw every event at full weight with
+      // nothing failing — the unreadable chart the flag exists to prevent.
+      'market_structure.events[0].superseded': 'boolean',
+      'market_structure.events[0].structure_after': 'string',
+      'market_structure.events[0].rule': 'string',
+      // THE CAVEAT'S OWN NUMBERS, which the panel prints as visible text
+      // beside the marks. The client says nothing rather than inventing them
+      // when they are missing, so this is what "nothing" would cost.
+      'market_structure.measured.source': 'string',
+      'market_structure.measured.choch_median_lag_bars': 'number',
+      'market_structure.measured.choch_p90_lag_bars': 'number',
+      'market_structure.measured.fractal_label_median_lag_bars': 'number',
+      'market_structure.measured.zigzag_p90_lag_bars': 'number',
+      'market_structure.measured.choch_absent_at_turns_pct': 'number',
+      'market_structure.measured.zigzag_missed_turns_pct': 'number',
+      'market_structure.measured.broken_back_within_10_bars_pct': 'number',
+      'market_structure.measured.note': 'string',
+      'dealing_range.high': 'number',
+      'dealing_range.low': 'number',
+      'dealing_range.equilibrium': 'number',
+      'dealing_range.high_swing_id': 'string',
+      'dealing_range.low_swing_id': 'string',
+      'dealing_range.high_bar_ms': 'number',
+      'dealing_range.low_bar_ms': 'number',
+      // UNCLAMPED, and the `also` below asserts the route has not quietly
+      // started clamping it: on the 1h response it is 5.15, and a client
+      // shown 1.0 would read a market pinned to the top of a range it left.
+      'dealing_range.close_fraction_of_range': 'number',
+      'dealing_range.close_zone': 'string',
+      'dealing_range.rule': 'string',
       'liquidity[0].kind': 'string',
       'liquidity[0].side': 'string',
       'liquidity[0].swept': 'boolean',
@@ -253,6 +306,49 @@ const CONTRACTS = [
       for (const g of doc.fair_value_gaps ?? []) {
         if (!(g.filled_fraction >= 0 && g.filled_fraction < 1)) {
           fail(`a fair value gap reports filled_fraction ${g.filled_fraction}; only unfilled gaps are served`)
+        }
+      }
+      // AT MOST ONE EVENT IS NOT SUPERSEDED, AND IT IS THE LAST ONE. The
+      // route's definition makes it so — superseded means a later event
+      // exists — and `liveStructureEvent` in lib/levels.ts returns a single
+      // event rather than a list because of it. If the route ever served two
+      // live events the chart would draw two full-weight marks and call both
+      // of them the structure as it stands, so the invariant is asserted
+      // here rather than trusted.
+      {
+        const events = doc.market_structure?.events ?? []
+        const live = events.filter((e) => e.superseded === false)
+        if (live.length > 1) fail(`${live.length} events are not superseded; at most one can be`)
+        if (live.length === 1 && events[events.length - 1] !== live[0]) {
+          fail('the event that is not superseded is not the last one in the list')
+        }
+      }
+      // THE RANGE FRACTION IS NOT CLAMPED, and a route that started clamping
+      // it would turn a breakout into a ceiling with nothing failing — the
+      // field's own comment says so. Only the ORDERING of the two prices is
+      // asserted, because that is what makes the fraction meaningful at all:
+      // a high at or below its low is a divide by zero wearing a range's name.
+      if (doc.dealing_range) {
+        const { high, low, equilibrium, close_fraction_of_range: f, close_zone: zone } = doc.dealing_range
+        if (!(high > low)) fail(`the dealing range has high ${high} and low ${low}`)
+        if (Math.abs(equilibrium - (high + low) / 2) > 1e-6) {
+          fail(`the equilibrium ${equilibrium} is not the midpoint of ${low}..${high}`)
+        }
+        if (doc.last_close != null && Math.abs(f - (doc.last_close - low) / (high - low)) > 1e-9) {
+          fail(`close_fraction_of_range ${f} is not (close - low) / (high - low) — has it been clamped?`)
+        }
+        if (!['PREMIUM', 'DISCOUNT', 'EQUILIBRIUM'].includes(zone)) fail(`close_zone is ${zone}`)
+      }
+      // A BREAKER IS A BROKEN BLOCK THAT CAME BACK, so it carries both
+      // stamps; nothing else carries the second one. The chart draws the two
+      // at one weight and two dashes, and that only says something true
+      // while the states mean what they say.
+      for (const b of doc.order_blocks ?? []) {
+        if (b.state === 'BREAKER' && (b.broken_at_bar_ms == null || b.breaker_retested_at_bar_ms == null)) {
+          fail(`a BREAKER block has broken_at ${b.broken_at_bar_ms} and retested_at ${b.breaker_retested_at_bar_ms}`)
+        }
+        if (b.state !== 'BREAKER' && b.breaker_retested_at_bar_ms != null) {
+          fail(`a ${b.state} block carries a breaker retest stamp`)
         }
       }
       // NO VERDICT. `docs/hypotheses/2026-09-18-smc-context.md` pre-commits

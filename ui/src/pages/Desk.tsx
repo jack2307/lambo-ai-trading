@@ -40,18 +40,29 @@ import { HtfCard } from '@/components/HtfCard'
 import { LevelsCard } from '@/components/LevelsCard'
 import { useHtf } from '@/lib/useHtf'
 import { usePriceLevels } from '@/lib/usePriceLevels'
-import { PriceChart, type ActiveIndicator, type ChartLevel, type ChartTrade } from '@/components/PriceChart'
+import {
+  PriceChart,
+  type ActiveIndicator,
+  type ChartLevel,
+  type ChartStructureEvent,
+  type ChartTrade,
+} from '@/components/PriceChart'
 import { IndicatorPicker, useViewerIndicators } from '@/components/IndicatorPicker'
 import { LevelLegend, LevelSwitch } from '@/components/LevelToggles'
 import {
+  DEALING_RANGE_NOTE,
   LIVE_WINDOW_ATR,
   PROFILE_NOTE,
   TAGS_PER_PANE,
   crowdedSentence,
+  dealingRangeMarks,
   familyOf,
   foldSamePrice,
+  harvestDealingRange,
   harvestLevels,
+  harvestStructure,
   hiddenSentence,
+  measuredCaveat,
   readLevelMode,
   selectLevels,
   writeLevelMode,
@@ -2795,6 +2806,7 @@ const EMPTY_INDICATORS: ActiveIndicator[] = []
 const EMPTY_BARS: Bar[] = []
 const EMPTY_SERIES: Record<string, IndicatorPoint[]> = {}
 const EMPTY_LEVELS: ChartLevel[] = []
+const EMPTY_STRUCTURE: ChartStructureEvent[] = []
 
 /**
  * The prior day's and the prior week's prices, appended to whatever the H4
@@ -3175,6 +3187,23 @@ function RunChart({
   const deskLevels = useMemo(() => harvestLevels(levels), [levels])
 
   /**
+   * The spine, off the same response: the structure events and the dealing
+   * range.
+   *
+   * NOT PART OF `deskLevels`, and the separation is the route's rather than
+   * a choice made here — they arrive on two single top-level fields and not
+   * in the five lists `harvestLevels` walks, so folding them in would mean
+   * inventing a state and an age for each. They are drawn in the structure
+   * family's hue beside the ladder; `lib/levels.ts` carries the argument.
+   */
+  const structureEvents = useMemo(() => harvestStructure(levels), [levels])
+  const dealingRange = useMemo(() => harvestDealingRange(levels), [levels])
+  /** The three marks the range is drawn as, or none at all when the route
+   *  sent `dealing_range: null` — which is a real state on a one-way window
+   *  and draws nothing rather than a range of zero width. */
+  const rangeMarks = useMemo(() => dealingRangeMarks(dealingRange), [dealingRange])
+
+  /**
    * The window onto them, as the switch has it.
    *
    * A VIEW, NOT A VERDICT — the rule is written where the filter is, in
@@ -3199,8 +3228,17 @@ function RunChart({
     const bump = (family: LevelFamily) => counts.set(family, (counts.get(family) ?? 0) + 1)
     for (const level of allLevels) bump(familyOf(level.kind ?? ''))
     for (const level of deskLevels) bump(level.family)
+    // THE LEGEND'S UNIT IS "THINGS WEARING THIS HUE", not "levels". The
+    // structure family is three range marks plus one mark per event, and a
+    // colour key that counted only the three would leave eighty steel marks
+    // on the chart unaccounted for by the one thing on screen that names the
+    // colour. The level SWITCH keeps counting levels off the route and says
+    // so where it is documented; these two numbers are deliberately not the
+    // same unit and are never added together.
+    for (const mark of rangeMarks) bump(familyOf(mark.kind))
+    for (const event of structureEvents) bump(familyOf(event.kind))
     return counts
-  }, [allLevels, deskLevels])
+  }, [allLevels, deskLevels, rangeMarks, structureEvents])
 
   const htfLevels = useMemo<ChartLevel[]>(() => {
     if (mode === 'off') return EMPTY_LEVELS
@@ -3217,18 +3255,77 @@ function RunChart({
       bandLow: level.bandLow,
       bandHigh: level.bandHigh,
       spent: level.spent,
+      // The fourth state of an order block, carried beside `spent` because a
+      // breaker IS spent. It changes the DASH and not the weight — 92% of the
+      // broken blocks on the captured response are breakers, so a louder one
+      // would light up almost every broken block while implying it had found
+      // something rare. See `LevelBand.breaker`.
+      breaker: level.state === 'breaker',
       // Only the profile carries one, and it is the argument for its
       // exemption from the distance window — on the tag itself, because that
       // is where a reader meets the exemption.
       note: level.family === 'profile' ? PROFILE_NOTE : undefined,
+    }))
+    // The dealing range's three marks, drawn whenever anything is drawn.
+    // EXEMPT FROM THE WINDOW THE WAY THE PROFILE IS, and for an argument of
+    // the same shape rather than by being waved through: a range is one
+    // object made of two prices, so a range with its far edge clipped off is
+    // not a smaller range but half of one, with an equilibrium that is no
+    // longer the middle of anything. `DEALING_RANGE_NOTE` is on all three
+    // tags, because the tag is where a reader meets the exemption.
+    const fromRange: ChartLevel[] = rangeMarks.map((mark) => ({
+      label: mark.label,
+      price: mark.price,
+      kind: mark.kind,
+      bandLow: mark.bandLow,
+      bandHigh: mark.bandHigh,
+      note: mark.note,
     }))
     // ONE PRICE IS ONE LINE. `/api/paper/htf` and `/api/paper/levels` both
     // report the prior day's high and the levels route reports it twice more
     // under two other names; unfolded, the chart drew four identical dashed
     // lines and four tags stacked 14px apart pretending to be four levels.
     // Nothing is dropped — the fold names all of them on one tag.
-    return foldSamePrice([...fromHtf, ...fromRoute])
-  }, [allLevels, mode, selection])
+    return foldSamePrice([...fromHtf, ...fromRange, ...fromRoute])
+  }, [allLevels, mode, rangeMarks, selection])
+
+  /**
+   * The structure marks the chart can actually place.
+   *
+   * TWO FILTERS, AND THEY ARE DIFFERENT KINDS OF THING.
+   *
+   * The first is the level switch, and it puts the events under exactly the
+   * rule the levels are under. At `live` only the event the route has NOT
+   * superseded is drawn — by the route's definition there is at most one, and
+   * "superseded" is the structure family's word for the same fact `spent` is
+   * for a pool: something later has happened to it. At `everything` the whole
+   * history is drawn, subordinated, which is what that position promises. At
+   * `off`, nothing.
+   *
+   * The second is not a choice at all: a marker whose time is not a time on
+   * the series is one the chart discards silently, so the stamp is snapped to
+   * a bar that exists and an event older than the loaded window is dropped
+   * rather than clamped to the first candle — the same rule and the same
+   * argument as `chartTrades` above, where a fill parked on the left edge
+   * would read as "this happened here".
+   */
+  const chartStructure = useMemo<ChartStructureEvent[]>(() => {
+    if (mode === 'off' || structureEvents.length === 0) return EMPTY_STRUCTURE
+    const wanted = mode === 'everything' ? structureEvents : structureEvents.filter((e) => !e.superseded)
+    return wanted.flatMap((event) => {
+      const timeMs = snapToBar(event.closedAtBarMs, bars)
+      if (timeMs == null) return []
+      return [
+        {
+          label: event.label,
+          kind: event.kind,
+          timeMs,
+          price: event.brokePrice,
+          superseded: event.superseded,
+        },
+      ]
+    })
+  }, [bars, mode, structureEvents])
 
   /** What is drawn, per family, for the legend. */
   const drawnCounts = useMemo(() => {
@@ -3237,8 +3334,32 @@ function RunChart({
       const family = familyOf(level.kind ?? '')
       counts.set(family, (counts.get(family) ?? 0) + 1)
     }
+    // The marks that are not lines are counted the same way, so the legend's
+    // "4/83" is the whole truth about how much steel is on the chart.
+    counts.set('structure', (counts.get('structure') ?? 0) + chartStructure.length)
     return counts
-  }, [htfLevels])
+  }, [chartStructure, htfLevels])
+
+  /**
+   * WHAT A CHoCH IS WORTH, WHEREVER ITS COLOUR IS NAMED.
+   *
+   * The sentence in full lives in the levels panel, which is where a reader
+   * goes for words; this is the same sentence hung on the legend's structure
+   * dot, because the chart header is where somebody first meets the marks and
+   * asks what they are. Built from the route's own `measured` block, and
+   * `null` when the route sent none — a caveat with invented numbers in it
+   * would be worse than the marks with no caveat at all.
+   */
+  const structureNote = useMemo(() => {
+    const caveat = measuredCaveat(levels?.market_structure?.measured)
+    const range = dealingRange ? ` The dealing range is drawn with it: ${DEALING_RANGE_NOTE}.` : ''
+    if (!caveat) {
+      return range
+        ? `BOS and CHoCH marks, and the dealing range.${range}`
+        : 'BOS and CHoCH marks: a circle where a close went beyond a swing in the direction the structure already had, a square where it went the other way.'
+    }
+    return `BOS (circle) and CHoCH (square) mark a bar that CLOSED beyond a confirmed swing. ${caveat}${range}`
+  }, [dealingRange, levels])
 
   /**
    * What the switch owes the reader about what it is doing, in both
@@ -3484,7 +3605,12 @@ function RunChart({
             accident, the only thing on screen saying which hue was which kind
             of level. Merging the control must not merge the meanings. */}
         {mode !== 'off' && (
-          <LevelLegend present={new Set(levelCounts.keys())} counts={levelCounts} drawn={drawnCounts} />
+          <LevelLegend
+            present={new Set(levelCounts.keys())}
+            counts={levelCounts}
+            drawn={drawnCounts}
+            structureNote={structureNote}
+          />
         )}
         {/* NEVER SILENT ABOUT WHAT IS NOT DRAWN — and, at `everything`, never
             silent about what the crowd costs. A chart that looks complete
@@ -3543,6 +3669,7 @@ function RunChart({
           openPnl={openPnl}
           showOpen={showOpen}
           htfLevels={htfLevels}
+          structure={chartStructure}
           // The account's record has no pending entry - a pending is a book
           // decision, and the mirror only ever learns about it as an order.
           pending={broker ? null : detail.run.pending}

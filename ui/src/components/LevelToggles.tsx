@@ -159,6 +159,7 @@ export function LevelLegend({
   present,
   counts,
   drawn,
+  structureNote,
 }: {
   /** Families the current response actually contains. */
   present: Set<LevelFamily>
@@ -173,6 +174,18 @@ export function LevelLegend({
    * accounts for.
    */
   drawn?: Map<LevelFamily, number>
+  /**
+   * What the structure family's marks are, and WHAT THEY ARE MEASURED TO BE
+   * WORTH — the route serves `market_structure.measured` for exactly that
+   * purpose and its own note says anything on screen that lets a CHoCH look
+   * like a faster structure label will mislead.
+   *
+   * It comes in from the caller rather than being built here because it is
+   * made of numbers off the response, and this component has never touched
+   * one. Absent, the structure dot gets the same plain title every other
+   * family gets; it never gets an invented caveat.
+   */
+  structureNote?: string | null
 }) {
   const shown = LEVEL_FAMILIES.filter((f) => present.has(f.key))
   if (shown.length === 0) return null
@@ -192,7 +205,11 @@ export function LevelLegend({
             title={
               family.key === 'profile'
                 ? `The activity profile${n ? ` (${n} marks)` : ''} — ${PROFILE_NOTE}`
-                : !n
+                : family.key === 'structure' && structureNote
+                  ? `${structureNote}${
+                      n ? ` ${shownNow} of ${n} structure marks are on the chart.` : ''
+                    }`
+                  : !n
                   ? `Levels in the ${family.label} family`
                   : // The reason the two numbers differ is only true while
                     // something IS being held back. At `everything` they are

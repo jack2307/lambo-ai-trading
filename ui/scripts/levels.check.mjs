@@ -21,6 +21,7 @@ import { fileURLToPath } from 'node:url'
 
 import {
   COLLAPSE_TOL_PRICE,
+  DEALING_RANGE_NOTE,
   DEFAULT_LEVEL_MODE,
   KIND_TAGS,
   KIND_WORDS,
@@ -32,10 +33,16 @@ import {
   TAGS_PER_PANE,
   censusOf,
   crowdedSentence,
+  dealingRangeMarks,
   familyOf,
   foldSamePrice,
+  harvestDealingRange,
   harvestLevels,
+  harvestStructure,
   hiddenSentence,
+  liveStructureEvent,
+  measuredCaveat,
+  rangeSentence,
   readLevelMode,
   selectLevels,
   stackTags,
@@ -170,6 +177,18 @@ const CASES = [
   // A break level IS the swing it hangs on, by construction. Naming it after
   // the break must not move it out of that swing's family and switch it off.
   ['h4_break', 'liquidity'],
+  // THE FIFTH FAMILY, AND THE THREE CASES THAT ONLY PASS BECAUSE IT IS
+  // TESTED FIRST. `dealing_range_high` contains "high",
+  // `dealing_range_equilibrium` contains "equilibrium", and both of those
+  // words are caught for liquidity further down `familyOf`. Tested in the
+  // obvious order, the two ends of the range would be coloured as pools of
+  // stops — the one thing they are not, because a range is the PAIR and
+  // neither end is a level on its own.
+  ['bos', 'structure'],
+  ['choch', 'structure'],
+  ['dealing_range_high', 'structure'],
+  ['dealing_range_low', 'structure'],
+  ['dealing_range_equilibrium', 'structure'],
   // An unfamiliar kind is drawn neutral and labelled with its raw string,
   // never dropped: a level the server believes in and the chart omits is the
   // worst outcome available here.
@@ -761,6 +780,300 @@ check(
     { label: 'session high', price: 4381.2, spent: false },
   ])[0].spent === false,
 )
+
+/* ------------------------------ the spine: structure and the range */
+
+/**
+ * THE FIFTH FAMILY, CHECKED ON THE SAME RESPONSE AS THE OTHER FOUR.
+ *
+ * Two things are being pinned here and they fail for different reasons.
+ *
+ * The first is ARITHMETIC ON THE RESPONSE — 80 events, 79 of them
+ * superseded, one dealing range whose fraction is 0.741 — and it fails when
+ * the route's shape moves, which is what the rest of this file is for.
+ *
+ * The second is the DISCIPLINE, and it is the one worth the lines. A CHoCH
+ * is the only thing on this route that looks like a signal, the route
+ * publishes a measurement saying what follows one is indistinguishable from
+ * what follows any bar, and the failure mode is not a wrong number on screen
+ * but a true one drawn in a way that reads as advice. So: the caveat is made
+ * of the SERVED figures and disappears rather than inventing any; a null
+ * range draws nothing rather than a range of no width; and none of the six
+ * forbidden words can reach the screen through this family's vocabulary.
+ */
+console.log('\n-- structure events, the dealing range, and the caveat --')
+
+const events = harvestStructure(sample)
+check('every event on the response is harvested', events.length === 80, `${events.length}`)
+check(
+  '79 of the 80 are superseded — which is why they cannot all be drawn alike',
+  events.filter((e) => e.superseded).length === 79,
+  `${events.filter((e) => e.superseded).length}`,
+)
+check(
+  'both kinds are present and both have a label of their own',
+  new Set(events.map((e) => e.label)).size === 2 &&
+    events.every((e) => e.label === 'BOS' || e.label === 'CHoCH'),
+  [...new Set(events.map((e) => e.label))].join(','),
+)
+check(
+  'every event carries a finite price to put a mark at',
+  events.every((e) => Number.isFinite(e.brokePrice) && Number.isFinite(e.closedAtBarMs)),
+)
+check(
+  'every direction has a word of our own, and it describes the BAR',
+  events.every((e) => e.directionWord.startsWith('closed ')),
+  [...new Set(events.map((e) => e.directionWord))].join(' | '),
+)
+
+/**
+ * AT MOST ONE LIVE EVENT, EVER. `superseded` means a later event exists, so
+ * only the last of the list can be clear of it — which is why
+ * `liveStructureEvent` returns one event and not a list, and why the chart
+ * can draw exactly one full-weight mark at `live` without choosing between
+ * candidates. Two live events would make that a choice, which is the thing
+ * this family is not allowed to make.
+ */
+{
+  const standing = liveStructureEvent(events)
+  check('there is exactly one event still standing', standing != null && standing === events[events.length - 1])
+  check(
+    'and it is the BOS at 4339.91 that left the label UP',
+    standing.label === 'BOS' && Math.abs(standing.brokePrice - 4339.91) < 1e-9 && standing.structureAfter === 'UP',
+    `${standing.label} ${standing.brokePrice} ${standing.structureAfter}`,
+  )
+  check(
+    'a response with no events has none standing, rather than a fabricated one',
+    liveStructureEvent([]) === null,
+  )
+  check(
+    'and a list where every event has been superseded also has none',
+    liveStructureEvent(events.map((e) => ({ ...e, superseded: true }))) === null,
+  )
+}
+
+check(
+  'no market_structure at all harvests to no events, not to a fake one',
+  harvestStructure({ ...sample, market_structure: null }).length === 0,
+)
+
+/**
+ * THE CAVEAT IS THE ROUTE'S OWN NUMBERS OR IT IS NOTHING.
+ *
+ * This is the assertion the whole family is allowed to exist under. The
+ * route's note says anything on screen that lets a CHoCH look like a faster
+ * structure label will mislead, and the counterweight is these figures
+ * printed beside the marks. Printed WRONG they would be worse than absent,
+ * so the sentence is checked to contain the served percentages verbatim and
+ * to vanish when the block does.
+ */
+{
+  const m = sample.market_structure.measured
+  const caveat = measuredCaveat(m)
+  check(
+    'the caveat quotes the served absent-at-turns percentage',
+    caveat.includes(`${m.choch_absent_at_turns_pct}%`),
+    caveat,
+  )
+  check('and the served p90 lag in bars', caveat.includes(`${m.choch_p90_lag_bars} bars`), caveat)
+  check(
+    'and the zigzag it is measured against, both numbers',
+    caveat.includes(`${m.zigzag_missed_turns_pct}%`) && caveat.includes(`${m.zigzag_p90_lag_bars}`),
+    caveat,
+  )
+  check(
+    'and it says the marks do not replace a structure row',
+    caveat.includes('do not replace one'),
+    caveat,
+  )
+  check('no measured block, no caveat — nothing is filled in', measuredCaveat(null) === null)
+  check(
+    'a measured block missing the two figures the sentence is built on says nothing',
+    measuredCaveat({ ...m, choch_absent_at_turns_pct: null, choch_p90_lag_bars: null }) === null,
+  )
+}
+
+/* ------------------------------------------------- the dealing range */
+
+const range = harvestDealingRange(sample)
+check('the range is the two confirmed swings', range.high === 4381.2 && range.low === 4323.37, `${range?.low}..${range?.high}`)
+check(
+  'the equilibrium is the route\'s own midpoint and not one derived here',
+  range.equilibrium === sample.dealing_range.equilibrium,
+  `${range.equilibrium}`,
+)
+check(
+  'the fraction is carried across unclamped, to the digit',
+  range.closeFraction === sample.dealing_range.close_fraction_of_range,
+  `${range.closeFraction}`,
+)
+
+/**
+ * `null` IS NOT AN EMPTY RANGE AND NOT A ZERO-WIDTH ONE.
+ *
+ * The route sends `dealing_range: null` whenever the window has not produced
+ * both a confirmed swing high and a confirmed swing low below it — a real
+ * state on a one-way window. Every path that could turn that into an object
+ * is checked, because the one that gets written by accident is `?? 0`, and a
+ * range of no width sitting at zero is a lie that draws.
+ */
+check('a null range harvests to null', harvestDealingRange({ ...sample, dealing_range: null }) === null)
+check('and draws nothing', dealingRangeMarks(null).length === 0)
+check('and says nothing', rangeSentence(null) === null)
+check(
+  'a range whose high is not above its low is not a range',
+  harvestDealingRange({ ...sample, dealing_range: { ...sample.dealing_range, high: 4323.37 } }) === null,
+)
+check(
+  'and neither is one with a price missing',
+  harvestDealingRange({ ...sample, dealing_range: { ...sample.dealing_range, equilibrium: null } }) === null,
+)
+
+/**
+ * THE THREE MARKS, AND WHERE THE BAND GOES.
+ *
+ * One band and not three: the band IS the range, so premium and discount are
+ * the two halves either side of the midpoint drawn through it. Three bands
+ * would treble the wash over the same prices, and no band at all would leave
+ * the two halves to a word the chart would have to assert.
+ */
+{
+  const marks = dealingRangeMarks(range)
+  check('the range draws as three marks', marks.length === 3, `${marks.length}`)
+  check(
+    'at the three prices the route sent and no fourth',
+    marks.map((m) => m.price).join(',') === [range.high, range.equilibrium, range.low].join(','),
+    marks.map((m) => m.price).join(','),
+  )
+  check(
+    'exactly one of them carries the band, and it spans low to high',
+    marks.filter((m) => m.bandLow != null).length === 1 &&
+      marks.find((m) => m.bandLow != null).bandLow === range.low &&
+      marks.find((m) => m.bandHigh != null).bandHigh === range.high,
+  )
+  check(
+    'all three land in the structure family and none in liquidity',
+    marks.every((m) => familyOf(m.kind) === 'structure'),
+    marks.map((m) => `${m.kind}:${familyOf(m.kind)}`).join(' '),
+  )
+  check(
+    'and every one of them carries the argument for its exemption from the window',
+    marks.every((m) => m.note.includes(DEALING_RANGE_NOTE)),
+  )
+}
+
+/**
+ * THE FRACTION IS NOT CLAMPED, AND THE SENTENCE SAYS SO WHEN IT MATTERS.
+ *
+ * The 1h response is the case that would otherwise pass silently: its close
+ * is at 514.7% of the range — price has left the range upward — and a reader
+ * shown "100%" would read a market pinned to a ceiling it is nowhere near.
+ */
+check(
+  'inside the range the sentence is just the percentage and the route\'s word',
+  rangeSentence(range) === 'the last close is at 74.1% of the range, which the route calls premium',
+  rangeSentence(range),
+)
+{
+  const hourlyRange = harvestDealingRange(hourly)
+  const sentence = rangeSentence(hourlyRange)
+  check(
+    'a close above the range says 514.7% and says which side',
+    sentence.includes('514.7%') && sentence.includes('above the range') && sentence.includes('not clamped'),
+    sentence,
+  )
+  check(
+    'and the harvested fraction is over 1, not clipped to it',
+    hourlyRange.closeFraction > 1,
+    `${hourlyRange.closeFraction}`,
+  )
+}
+check(
+  'a close below the range says which side too',
+  rangeSentence({ ...range, closeFraction: -0.2, zoneWord: 'DISCOUNT' }).includes('below the range'),
+  rangeSentence({ ...range, closeFraction: -0.2, zoneWord: 'DISCOUNT' }),
+)
+
+/* ------------------------------ the fourth state of an order block */
+
+/**
+ * A BREAKER IS A BLOCK, NOT A FIND.
+ *
+ * 57 of the 62 broken blocks on this response are breakers — 92% — and 62 of
+ * 65 on the live 15m store. The numbers are the argument for every styling
+ * decision around this state: same family, same list, same faded weight as
+ * any other spent block, and a dash pattern that says which of two things
+ * happened rather than which is worth more. If a future edit gives a breaker
+ * its own colour, its own list or a brighter line, this block is where the
+ * counts that refute it live.
+ */
+{
+  const blocks = levels.filter((l) => l.family === 'blocks')
+  const byState = new Map()
+  for (const b of blocks) byState.set(b.state, (byState.get(b.state) ?? 0) + 1)
+  check('the response carries 76 order blocks', blocks.length === 76, `${blocks.length}`)
+  check('57 of them are breakers', byState.get('breaker') === 57, `${byState.get('breaker')}`)
+  check(
+    'which is 92% of every block that ever broke — so a breaker is the ordinary case',
+    Math.round((100 * 57) / (57 + byState.get('broken'))) === 92,
+    `${byState.get('broken')} plain broken`,
+  )
+  check(
+    'a breaker is spent, by the same definition a broken block is',
+    blocks.filter((b) => b.state === 'breaker').every((b) => b.spent),
+  )
+  check(
+    'and it is still in the blocks family, not a fifth colour of its own',
+    blocks.filter((b) => b.state === 'breaker').every((b) => b.family === 'blocks'),
+  )
+  check(
+    'its word keeps BROKEN in it',
+    STATE_WORDS.breaker.includes('BROKEN'),
+    STATE_WORDS.breaker,
+  )
+}
+
+/* ------------------------------------------- no verdict, in the UI too */
+
+/**
+ * THE SIX WORDS, HELD ON THIS SIDE OF THE WIRE.
+ *
+ * `contract.check.mjs` fails if the ROUTE grows a score, a composite, a
+ * confluence, a rank or a strength. That check cannot see the screen, and
+ * the screen is where a verdict would actually be read: every string this
+ * family puts in front of a person is generated here, out of numbers that
+ * are honest on their own and would stop being honest the moment one of them
+ * was called a strength. "bias" is in the list as well, because the HTF word
+ * already lives under the same rule and a structure label is exactly the
+ * place somebody would reach for it.
+ *
+ * Checked against the STRINGS rather than the source, so a comment arguing
+ * about why there is no score does not fail the check that there is none.
+ */
+{
+  const banned = ['score', 'composite', 'confluence', 'bias', 'rank', 'strength']
+  const surfaces = [
+    PROFILE_NOTE,
+    DEALING_RANGE_NOTE,
+    measuredCaveat(sample.market_structure.measured),
+    rangeSentence(range),
+    rangeSentence(harvestDealingRange(hourly)),
+    ...dealingRangeMarks(range).map((m) => `${m.label} ${m.note}`),
+    ...events.map((e) => `${e.label} ${e.directionWord}`),
+    ...Object.values(KIND_WORDS),
+    ...Object.values(KIND_TAGS),
+    ...Object.values(STATE_WORDS),
+    ...LEVEL_FAMILIES.map((f) => f.label),
+    crowdedSentence(TAGS_PER_PANE + 1),
+    hiddenSentence(live),
+  ].filter((s) => typeof s === 'string')
+  for (const word of banned) {
+    const re = new RegExp(`\\b${word}`, 'i')
+    const hit = surfaces.find((s) => re.test(s))
+    check(`nothing this screen says contains "${word}"`, hit === undefined, hit)
+  }
+  check('and there were strings to check', surfaces.length > 40, `${surfaces.length}`)
+}
 
 console.log(failures === 0 ? '\nall level checks pass' : `\n${failures} FAILED`)
 process.exit(failures === 0 ? 0 : 1)

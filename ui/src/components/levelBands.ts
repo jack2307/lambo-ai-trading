@@ -48,10 +48,25 @@ export interface LevelBand {
    * viewer asks for the spent ones. Drawn fainter and dashed: the state is a
    * fact the route published and it is the difference between a level price
    * may still react at and one it has already been through. It is NOT a
-   * ranking — nothing here says the live ones are stronger, only that the
+   * ranking — nothing here says the live ones are worth more, only that the
    * spent ones already happened.
    */
   spent?: boolean
+  /**
+   * The FOURTH state of an order block: one that broke and was later traded
+   * back into. A breaker is spent — it broke — so it is drawn at the spent
+   * weight and differs only in its DASH: dash-dot instead of dash.
+   *
+   * SAME WEIGHT, ON PURPOSE, and this is the decision worth reading twice.
+   * On the live 15m store 62 of the 65 blocks that ever broke are breakers,
+   * and on `docs/api-samples/paper-levels.json` it is 57 of 62 — 92%. Drawing
+   * a breaker brighter, thicker or in a second colour would therefore light
+   * up almost every broken block on the chart while implying the desk had
+   * found something rare in it. What the dash-dot says is "this one broke and
+   * price came back", which is a different THING that happened, not a better
+   * one. `STATE_WORDS.breaker` carries the same argument for the word.
+   */
+  breaker?: boolean
 }
 
 export interface BandColors {
@@ -87,6 +102,19 @@ export function withAlpha(color: string, alpha: number): string {
  *  the price lines fade by the same amount as the bands. */
 export const SPENT_WEIGHT = 0.45
 
+/**
+ * The dash pattern a spent band's edges are stroked with, in device pixels
+ * per unit of `hr`.
+ *
+ * TWO PATTERNS AT ONE WEIGHT. A broken block and a breaker are both spent and
+ * both fade to `SPENT_WEIGHT`; what separates them is the rhythm of the dash,
+ * because the difference between them is what HAPPENED to the block and not
+ * how much it is worth. A dash-dot reads as "and then something else", which
+ * is exactly what a retest after a break is.
+ */
+export const SPENT_DASH = [2, 3]
+export const BREAKER_DASH = [5, 2, 1, 2]
+
 class BandsRenderer implements IPrimitivePaneRenderer {
   private readonly bands: LevelBand[]
   private readonly series: ISeriesApi<'Candlestick'>
@@ -114,7 +142,9 @@ class BandsRenderer implements IPrimitivePaneRenderer {
         // Scrolled or scaled out of the pane. Cheap to check, and the window
         // can hand this a dozen bands on every frame of a scroll.
         if (bottom < 0 || top > scope.bitmapSize.height) continue
-        const weight = band.spent ? SPENT_WEIGHT : 1
+        // A breaker counts as spent here even if the caller only set the one
+        // flag: it broke, and that is what the fade says.
+        const weight = band.spent || band.breaker ? SPENT_WEIGHT : 1
 
         ctx.save()
         ctx.fillStyle = withAlpha(band.color, this.colors.fill * weight)
@@ -126,7 +156,13 @@ class BandsRenderer implements IPrimitivePaneRenderer {
         ctx.lineWidth = Math.max(1, hr)
         // BOTH edges: they are two prices the route published, and which of
         // them price reaches first is the thing a reader is looking at.
-        ctx.setLineDash(band.spent ? [2 * hr, 3 * hr] : [])
+        //
+        // A breaker's dash-dot is chosen off `breaker` rather than off
+        // `spent` alone, and a band that somehow arrives marked `breaker`
+        // without `spent` still gets the pattern: a block cannot be a breaker
+        // without having broken, so the pattern is the truer of the two flags.
+        const dash = band.breaker ? BREAKER_DASH : band.spent ? SPENT_DASH : null
+        ctx.setLineDash(dash ? dash.map((n) => n * hr) : [])
         for (const y of [top, bottom]) {
           ctx.beginPath()
           ctx.moveTo(0, y)

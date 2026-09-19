@@ -271,6 +271,25 @@
     --level-gaps: #386394;
     --level-liquidity: #783a66;
     --level-blocks: #4e3f32;
+    /*
+     * THE FIFTH FAMILY HAS NO FREE HUE LEFT, AND SAYS SO.
+     *
+     * Structure — the BOS and CHoCH marks and the dealing range — joined the
+     * ladder on 2026-09-19 and there was no unused hue to give it: the four
+     * above took the last of them, and the paragraph at the top of this
+     * comment accounts for every other colour on the desk. So it is separated
+     * by LIGHTNESS instead, at the end of the ladder the other four leave
+     * open — the darkest rung on light and the palest on dark. Measured: 1.21
+     * from blocks, its nearest neighbour, in both themes, against the 1.15
+     * the contrast check demands, and 11.9 on this card and 11.7 on dark's.
+     *
+     * IT IS ALSO THE ONE FAMILY THAT IS NOT A DASHED LINE. The events are
+     * markers with a shape — a circle for a BOS, a square for a CHoCH — and
+     * the range is a band with its midpoint drawn through it, so SHAPE
+     * carries the distinction the hue cannot, which is the same job the tag's
+     * own word (POC, FVG, BSL) does for the other four.
+     */
+    --level-structure: #233842;
 
     --bias-wash-weak: 5%;
     --bias-wash-strong: 8%;
@@ -353,6 +372,11 @@
     --level-gaps: #6f99c8;
     --level-liquidity: #cd98bd;
     --level-blocks: #c9b9ab;
+    /* Structure, re-solved against the dark card. The light block carries the
+     * argument; the direction reverses here, because the rung the other four
+     * leave open on a near-black ground is the PALE one — 1.21 above blocks
+     * in luminance, where on light it sits 1.21 below them. */
+    --level-structure: #b8d2e0;
 
     --bias-wash-weak: 8%;
     --bias-wash-strong: 13%;

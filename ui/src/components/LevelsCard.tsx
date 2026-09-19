@@ -3,12 +3,18 @@ import { useEffect, useMemo, useState } from 'react'
 import type { PriceLevelsResponse } from '@/lib/api'
 import { clock, since } from '@/lib/format'
 import {
+  DEALING_RANGE_NOTE,
   LEVEL_FAMILIES,
   LIVE_WINDOW_ATR,
   PROFILE_NOTE,
   TAGS_PER_PANE,
   censusOf,
+  harvestDealingRange,
   harvestLevels,
+  harvestStructure,
+  liveStructureEvent,
+  measuredCaveat,
+  rangeSentence,
   type DeskLevel,
   type LevelMode,
 } from '@/lib/levels'
@@ -191,6 +197,7 @@ export function LevelsCard({
         <div className="flex flex-col gap-1.5">
           <Census census={census} data={data} mode={mode} />
           <Thin data={data} />
+          <Structure data={data} mode={mode} />
           <Side title="above the last close" rows={sides.above} data={data} mode={mode} />
           <Side title="below the last close" rows={sides.below} data={data} mode={mode} />
           {sides.straddling.length > 0 && (
@@ -244,6 +251,157 @@ function Thin({ data }: { data: PriceLevelsResponse }) {
     </p>
   )
 }
+
+/**
+ * THE SPINE, AND THE MEASUREMENT THAT KEEPS IT HONEST.
+ *
+ * The chart puts a circle or a square on a bar; this says what it was and
+ * what it is worth, and the second half is the part that must not be
+ * dropped. `market_structure.measured` is served for exactly one reason —
+ * the route's own note says anything on screen that lets a CHoCH look like a
+ * faster structure label will mislead — and a caveat that lived only in a
+ * tooltip on the chart would be a caveat nobody reads. So the numbers are
+ * VISIBLE TEXT here: a CHoCH is absent at 47% of real turns on the live
+ * store (50% on the captured response) and its p90 lag is 37 bars, against
+ * the zigzag's 1% missed. Every one of those figures comes off the response;
+ * `measuredCaveat` returns null rather than inventing any of them.
+ *
+ * THE DEALING RANGE IS HERE AND NOT WITH THE SIDES, because it is not a
+ * level: it is one object made of two prices with a midpoint between them,
+ * and listing its high under "above the last close" and its low under
+ * "below" would take the object apart into two facts that are only true
+ * together. `null` draws and says nothing at all — never a range of zero
+ * width, which is what the route's `dealing_range: null` would become the
+ * moment anything here reached for a `?? 0`.
+ *
+ * NO VERDICT, the same pre-commitment the rest of this panel lives under and
+ * a sharper temptation on this block: a CHoCH is the one thing the route
+ * serves that LOOKS like a signal. The words below say which bar closed
+ * beyond which swing and how long ago, and the measurement says what
+ * followed. Nothing is ordered, weighted or called a chance of anything.
+ */
+function Structure({ data, mode }: { data: PriceLevelsResponse; mode: LevelMode }) {
+  const ms = data.market_structure
+  const events = useMemo(() => harvestStructure(data), [data])
+  const range = useMemo(() => harvestDealingRange(data), [data])
+  const live = useMemo(() => liveStructureEvent(events), [events])
+  const caveat = measuredCaveat(ms?.measured)
+
+  // Both absent is a real answer on a thin window — ten 1d bars produce no
+  // confirmed swings — and it renders as nothing rather than as a heading
+  // with dashes under it.
+  if (!ms && !range) return null
+
+  const superseded = events.filter((e) => e.superseded).length
+  // WHAT THE CHART IS DOING WITH THEM, in the position the switch is in, so
+  // a reader who counts one mark on screen against 80 here knows why. The
+  // three sentences are three different facts and a single one would be
+  // wrong in two of the positions.
+  const chartDoes =
+    mode === 'off'
+      ? 'The chart is drawing none of them: the level switch is off.'
+      : mode === 'everything'
+        ? `The chart marks all ${events.length}, the superseded ones small, faded and unlabelled.`
+        : `The chart marks only the event that has not been superseded${
+            live ? '' : ' — and there is none on this response'
+          }; "everything" draws the other ${superseded}.`
+
+  return (
+    <div className="border-border/40 border-t pt-1.5">
+      <p className="text-muted-foreground/50 fd-caption">
+        market structure and the dealing range
+      </p>
+
+      {ms && (
+        <p className="text-muted-foreground/70 fd-caption leading-snug">
+          the label is <span className="num">{ms.label}</span>
+          {ms.label_since_bar_ms != null && (
+            <span className="text-muted-foreground/50"> since {clock(ms.label_since_bar_ms)}Z</span>
+          )}
+          {'. '}
+          {live ? (
+            <span title={live.rule}>
+              the last event is a <span className="num">{live.label}</span> that {live.directionWord} at{' '}
+              <span className="num">{quote(live.brokePrice)}</span>
+              {live.ageBars != null && <span className="num"> {live.ageBars} bars ago</span>}, leaving the
+              label <span className="num">{live.structureAfter}</span>.
+            </span>
+          ) : (
+            <span>no event on this window is still the latest one.</span>
+          )}{' '}
+          <span
+            tabIndex={0}
+            role="note"
+            className="focus-visible:ring-ring cursor-help underline decoration-dotted underline-offset-2 focus-visible:ring-2 focus-visible:outline-none"
+            title={`${events.length} events in this window, ${superseded} of them superseded — superseded means a later event has happened, which is a fact about position in the list and not about importance. ${chartDoes} ${
+              ms.unclassified_breaks > 0
+                ? `${ms.unclassified_breaks} further break${ms.unclassified_breaks === 1 ? ' was' : 's were'} named as neither, having happened while the label was RANGE.`
+                : 'No break on this window went unnamed.'
+            } ${ms.rule}`}
+          >
+            <span className="num">{events.length}</span> events
+          </span>
+          {superseded > 0 && (
+            <span className="text-muted-foreground/50">
+              {' '}
+              (<span className="num">{superseded}</span> superseded)
+            </span>
+          )}
+          {ms.unclassified_breaks > 0 && (
+            <span className="text-muted-foreground/50">
+              , <span className="num">{ms.unclassified_breaks}</span> break
+              {ms.unclassified_breaks === 1 ? '' : 's'} named as neither
+            </span>
+          )}
+          .
+        </p>
+      )}
+
+      {/* THE CAVEAT IS TEXT, NOT A TOOLTIP. It is the one thing on this panel
+          that argues against the thing above it, and a reader who never
+          hovers must still meet it. The route's own note — written for a
+          human, and longer than a line — is the hover. */}
+      {caveat && (
+        <p
+          className="text-caution fd-caption leading-snug"
+          tabIndex={0}
+          role="note"
+          title={`${ms?.measured.note ?? ''} Measured in ${ms?.measured.source ?? 'a decision record'}.`}
+        >
+          {caveat}
+        </p>
+      )}
+
+      {range ? (
+        <p className="text-muted-foreground/70 fd-caption leading-snug">
+          <span
+            tabIndex={0}
+            role="note"
+            className="focus-visible:ring-ring cursor-help underline decoration-dotted underline-offset-2 focus-visible:ring-2 focus-visible:outline-none"
+            title={`${DEALING_RANGE_NOTE}. Premium is the half above the equilibrium and discount the half below it — the route's own words for the two halves, and a restatement of where the close sits rather than advice about it. ${range.rule}`}
+          >
+            dealing range
+          </span>{' '}
+          <span className="num">
+            {quote(range.low)}–{quote(range.high)}
+          </span>
+          , equilibrium <span className="num">{quote(range.equilibrium)}</span>
+          {rangeSentence(range) && <span className="text-muted-foreground/50">; {rangeSentence(range)}</span>}.
+        </p>
+      ) : (
+        // NULL IS NOT AN EMPTY RANGE, and the difference is worth a sentence:
+        // the window has not produced both a confirmed swing high and a
+        // confirmed swing low under it, which is a real state on a one-way
+        // window and not a range of zero width at the last close.
+        <p className="text-muted-foreground/50 fd-caption leading-snug">
+          no dealing range on this window — the route reports one only once it has both a confirmed swing
+          high and a confirmed swing low below it, so nothing is drawn rather than a range of no width.
+        </p>
+      )}
+    </div>
+  )
+}
+
 
 /**
  * How many levels there are, and how many are already spent.

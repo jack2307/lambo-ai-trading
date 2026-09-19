@@ -10,11 +10,14 @@
  */
 
 import type {
+  PriceDealingRange,
   PriceFairValueGap,
   PriceLevel,
   PriceLevelsResponse,
   PriceLiquidityPool,
+  PriceMarketStructure,
   PriceOrderBlock,
+  PriceStructureEvent,
 } from '@/lib/api'
 
 /**
@@ -28,8 +31,8 @@ import type {
  */
 export type LevelKind = string
 
-/** The four colour families, plus the fallback for a kind we do not know. */
-export type LevelFamily = 'profile' | 'gaps' | 'liquidity' | 'blocks' | 'other'
+/** The five colour families, plus the fallback for a kind we do not know. */
+export type LevelFamily = 'profile' | 'gaps' | 'liquidity' | 'blocks' | 'structure' | 'other'
 
 /**
  * Which family a kind belongs to.
@@ -43,6 +46,14 @@ export type LevelFamily = 'profile' | 'gaps' | 'liquidity' | 'blocks' | 'other'
  */
 export function familyOf(kind: LevelKind): LevelFamily {
   const k = kind.toLowerCase()
+  // STRUCTURE IS TESTED FIRST, and the ordering is load-bearing rather than
+  // stylistic. `dealing_range_high` contains "high" and
+  // `dealing_range_equilibrium` contains "equilibrium", and both of those
+  // words are caught further down for the liquidity family — so tested last,
+  // the two ends of the range would be coloured as pools of stops, which is
+  // the one thing they are not: they are the two prices that DEFINE the
+  // range, and the object is the pair.
+  if (k === 'bos' || k === 'choch' || k.startsWith('dealing_range')) return 'structure'
   if (k === 'poc' || k === 'vah' || k === 'val' || k.startsWith('profile')) return 'profile'
   if (k === 'fvg' || k.includes('gap') || k.includes('imbalance')) return 'gaps'
   if (k === 'bsl' || k === 'ssl' || k.includes('liquidity') || k.includes('equal')) return 'liquidity'
@@ -92,6 +103,12 @@ export const LEVEL_FAMILIES: FamilyStyle[] = [
   { key: 'liquidity', label: 'liquidity', hue: 'var(--level-liquidity)' },
   { key: 'gaps', label: 'gaps', hue: 'var(--level-gaps)' },
   { key: 'blocks', label: 'blocks', hue: 'var(--level-blocks)' },
+  // Added 2026-09-19 with the marks themselves. It is a family and not a
+  // sixth control for the reason the other four are not controls any more:
+  // one switch draws the lot. What it gets is a hue and a line in the legend,
+  // so a reader meeting a steel-coloured square on the chart can find out
+  // what produced it.
+  { key: 'structure', label: 'structure', hue: 'var(--level-structure)' },
   { key: 'other', label: 'other', hue: 'var(--muted-foreground)' },
 ]
 
@@ -766,10 +783,18 @@ export const LIVE_WINDOW_ATR = 3
  *
  * So the profile's three are drawn whenever anything is drawn, however far
  * away they are, and `PROFILE_NOTE` says on hover what they are. NOTHING ELSE
- * IS EXEMPT — a second family wanting this needs its own argument, made in
- * these terms: what kind of object is it, and is its distance a statement
- * about it or about the market. Decision by the coordinator, 2026-09-19, over
- * my own call the other way.
+ * IN THE LADDER IS EXEMPT — a second family wanting this needs its own
+ * argument, made in these terms: what kind of object is it, and is its
+ * distance a statement about it or about the market. Decision by the
+ * coordinator, 2026-09-19, over my own call the other way.
+ *
+ * THE DEALING RANGE IS THE SECOND OBJECT TO CLEAR THAT BAR, later the same
+ * day, and it is not handled here because it never enters the ladder: it
+ * arrives on its own top-level field rather than as a `PriceLevel`, so
+ * `harvestLevels` does not see it and `selectLevels` is never asked. The
+ * argument it had to make is written on `DEALING_RANGE_NOTE`, in the terms
+ * above: it is ONE object made of two prices, and half of a range is not a
+ * smaller range, it is a different object.
  */
 function exemptFromWindow(level: DeskLevel): boolean {
   return level.family === 'profile'
@@ -1019,4 +1044,313 @@ export function foldSamePrice<T extends FoldableLevel>(levels: T[]): T[] {
       spent: group.every((m) => m.spent === true),
     }
   })
+}
+
+/* ------------------------------------ the spine: structure and the range */
+
+/**
+ * BOS, CHoCH AND THE DEALING RANGE ARE NOT IN THE LADDER, AND THIS IS WHY
+ * THEY GET THEIR OWN HALF OF THE FILE.
+ *
+ * Everything above is a `PriceLevel` off one of five list-shaped fields: a
+ * kind, a price or a band, a state, an age. `market_structure` and
+ * `dealing_range` are two SINGLE top-level objects with none of that shape —
+ * an event has no state and no band, a range has no age and no kind — so
+ * folding them into `harvestLevels` would mean inventing four fields apiece
+ * and then writing code that skips them. They are harvested separately and
+ * drawn in the same family's hue, which is the honest arrangement: same
+ * colour because the same rule produced them, different code because they
+ * are differently shaped facts.
+ *
+ * NOTHING HERE RANKS, SCORES OR ADVISES, and the temptation is sharper on
+ * this half than on the other: a CHoCH is the one object on the route that
+ * LOOKS like a signal. What it is worth was measured and served beside it —
+ * see `measuredCaveat` — and the measurement is that what follows one is
+ * indistinguishable from what follows any bar. So these are marks on the
+ * chart saying a close went beyond a swing, and never more than that.
+ */
+
+/** Which way the close broke, in words that describe the BAR and not the
+ *  next one. Not "bullish"/"bearish": the route's own doc says the direction
+ *  says where the event was, not what price will do next, and those two
+ *  words invite exactly the second reading. */
+const STRUCTURE_DIRECTION_WORDS: Record<string, string> = {
+  bullish: 'closed up through a swing high',
+  bearish: 'closed down through a swing low',
+}
+
+/** What the marker says when it says anything. `CHoCH` and not `CHOCH`: it
+ *  is the spelling every SMC text uses and the one the owner reads. */
+const STRUCTURE_LABELS: Record<string, string> = { bos: 'BOS', choch: 'CHoCH' }
+
+/** A structure event, in this screen's words. */
+export interface DeskStructureEvent {
+  /** The wire token, lowercased: `bos` or `choch`. */
+  kind: string
+  /** `BOS` or `CHoCH` — what a marker is labelled with. */
+  label: string
+  directionWord: string
+  /** The swing price the close went beyond. The marker sits HERE and not at
+   *  `close`: the level that broke is the thing worth pointing at, and the
+   *  close that did it is a candle the reader can already see. */
+  brokePrice: number
+  brokeSwingId: string
+  brokeSwingBarMs: number | null
+  /** The bar whose close did it. The marker's x. */
+  closedAtBarMs: number
+  close: number
+  ageBars: number | null
+  /**
+   * A later event has happened. The route's own word, and a fact about
+   * POSITION IN THE LIST — not about importance, and emphatically not a
+   * ranking: on the captured response 79 of 80 events are superseded, so a
+   * screen drawing them all at one weight is 80 marks of which 79 are
+   * history, and a screen dropping them claims the tape had one event in
+   * ten days.
+   */
+  superseded: boolean
+  structureAfter: string
+  rule: string
+}
+
+/**
+ * Every structure event on one response, oldest first, as the route sent
+ * them.
+ *
+ * An event with no finite `broke_price` or no bar to sit on is dropped
+ * rather than drawn at zero — the same rule `toDeskLevel` keeps for a level
+ * with no location.
+ */
+export function harvestStructure(res: PriceLevelsResponse | null): DeskStructureEvent[] {
+  const events = res?.market_structure?.events
+  if (!Array.isArray(events)) return []
+  const out: DeskStructureEvent[] = []
+  for (const raw of events as (PriceStructureEvent | null)[]) {
+    if (!raw || typeof raw !== 'object') continue
+    const price = finite(raw.broke_price)
+    const at = finite(raw.closed_at_bar_ms)
+    if (price == null || at == null) continue
+    const kind = normalise(raw.kind)
+    out.push({
+      kind,
+      label: STRUCTURE_LABELS[kind] ?? kind.toUpperCase(),
+      directionWord: STRUCTURE_DIRECTION_WORDS[normalise(raw.direction)] ?? '',
+      brokePrice: price,
+      brokeSwingId: typeof raw.broke_swing_id === 'string' ? raw.broke_swing_id : '',
+      brokeSwingBarMs: finite(raw.broke_swing_bar_ms),
+      closedAtBarMs: at,
+      close: finite(raw.close) ?? price,
+      ageBars: finite(raw.age_bars),
+      superseded: raw.superseded === true,
+      structureAfter: String(raw.structure_after ?? ''),
+      rule: typeof raw.rule === 'string' ? raw.rule : '',
+    })
+  }
+  return out
+}
+
+/**
+ * The one event that has not been superseded, if there is one.
+ *
+ * THERE CAN ONLY EVER BE ONE, by the route's own definition — `superseded`
+ * means a later event exists, so at most the last of the list is clear of
+ * it — and a singular return says so rather than leaving every caller to
+ * rediscover it from a list of length one. `null` when the route served no
+ * events at all.
+ */
+export function liveStructureEvent(events: DeskStructureEvent[]): DeskStructureEvent | null {
+  const live = events.filter((e) => !e.superseded)
+  return live.length === 0 ? null : live[live.length - 1]
+}
+
+/**
+ * WHAT THESE MARKS ARE WORTH, IN THE ROUTE'S OWN MEASURED NUMBERS.
+ *
+ * This is the sentence the whole structure family exists under. The route
+ * publishes `market_structure.measured` for exactly one purpose — so that
+ * nothing on screen can make a CHoCH look like a faster structure label than
+ * it is — and its own note says anything that does will mislead. Two marks
+ * on a chart are a strong-looking thing; the honest counterweight is the
+ * measurement printed beside them, not a smaller font.
+ *
+ * EVERY FIGURE IS THE SERVED ONE. Nothing is rounded into a nicer number,
+ * nothing is carried over from the last response, and when the route sends
+ * no `measured` block this returns `null` and the caller says nothing at
+ * all — a caveat with invented numbers in it is worse than the marks alone.
+ */
+export function measuredCaveat(
+  measured: PriceMarketStructure['measured'] | null | undefined,
+): string | null {
+  if (!measured || typeof measured !== 'object') return null
+  const absent = finite(measured.choch_absent_at_turns_pct)
+  const p90 = finite(measured.choch_p90_lag_bars)
+  const missed = finite(measured.zigzag_missed_turns_pct)
+  const zigzagP90 = finite(measured.zigzag_p90_lag_bars)
+  if (absent == null || p90 == null) return null
+  const against =
+    missed == null || zigzagP90 == null
+      ? ''
+      : `, against the zigzag's ${missed}% missed and a p90 lag of ${zigzagP90}`
+  return (
+    `measured: a CHoCH is ABSENT at ${absent}% of real turns and its p90 lag is ${p90} bars` +
+    `${against}. These marks punctuate a structure row; they do not replace one.`
+  )
+}
+
+/* ----------------------------------------------------- the dealing range */
+
+/**
+ * The dealing range, in this screen's words.
+ *
+ * `null` MEANS NULL. The route sends `dealing_range: null` whenever the
+ * window has not produced both a confirmed swing high and a confirmed swing
+ * low below it — a real state on a one-way window and not an error — and a
+ * null range draws nothing and says nothing. It must never become a range of
+ * zero width sitting on the last close, which is the shape a `?? 0` would
+ * quietly have produced.
+ */
+export interface DeskDealingRange {
+  high: number
+  low: number
+  /** The midpoint. A price the route published, not one derived here. */
+  equilibrium: number
+  highSwingId: string
+  lowSwingId: string
+  highBarMs: number | null
+  lowBarMs: number | null
+  /**
+   * `(close - low) / (high - low)`, UNCLAMPED, exactly as served. Over 1 is
+   * a close above the range and under 0 is a close below it, and clamping
+   * either turns a breakout into a ceiling — the route's own field comment
+   * says so in those words. `null` only when the response carried no finite
+   * number, which is not the same as 0.
+   */
+  closeFraction: number | null
+  /** The route's word for the half the close is in: `PREMIUM`, `DISCOUNT` or
+   *  `EQUILIBRIUM`. A restatement of the fraction and not advice — the same
+   *  half of a range is where one reader sells and another buys. */
+  zoneWord: string
+  rule: string
+}
+
+/**
+ * The served range, or `null`.
+ *
+ * Three ways to come back with nothing, and all three are states rather than
+ * failures: the route sent none; the prices are not all finite; or the high
+ * is not above the low, which is not a range and would divide by zero on the
+ * fraction. Nothing is guessed at from the rest of the response.
+ */
+export function harvestDealingRange(res: PriceLevelsResponse | null): DeskDealingRange | null {
+  const raw: PriceDealingRange | null | undefined = res?.dealing_range
+  if (!raw || typeof raw !== 'object') return null
+  const high = finite(raw.high)
+  const low = finite(raw.low)
+  const eq = finite(raw.equilibrium)
+  if (high == null || low == null || eq == null) return null
+  if (!(high > low)) return null
+  return {
+    high,
+    low,
+    equilibrium: eq,
+    highSwingId: typeof raw.high_swing_id === 'string' ? raw.high_swing_id : '',
+    lowSwingId: typeof raw.low_swing_id === 'string' ? raw.low_swing_id : '',
+    highBarMs: finite(raw.high_bar_ms),
+    lowBarMs: finite(raw.low_bar_ms),
+    closeFraction: finite(raw.close_fraction_of_range),
+    zoneWord: String(raw.close_zone ?? ''),
+    rule: typeof raw.rule === 'string' ? raw.rule : '',
+  }
+}
+
+/**
+ * Why the range is drawn however far away it is.
+ *
+ * The argument `exemptFromWindow` demands of anything claiming the profile's
+ * exemption, made in its terms. A distance window asks "is this price near
+ * enough to be worth drawing", which is a sensible question about one pool
+ * of stops and a nonsense one about a range: the range is ONE object whose
+ * identity is the pair of prices, and clipping the far edge off it does not
+ * leave a smaller range — it leaves a line with no partner and a midpoint
+ * that is no longer the middle of anything on screen.
+ */
+export const DEALING_RANGE_NOTE =
+  'the dealing range is one object made of two prices — the last confirmed swing high and the confirmed swing low under it — so clipping either end at a distance window does not leave a smaller range, it leaves half of one; all three marks are drawn however far away they are'
+
+/**
+ * Where the close sits in the range, said in full.
+ *
+ * THE FRACTION IS NOT CLAMPED AND THE SENTENCE SAYS SO WHEN IT MATTERS. On
+ * the captured 1h response the close is at 514.7% of the range — price has
+ * left the range upward — and a reader shown "100%" would read a market
+ * pinned to the top of a range it is nowhere near. Inside the range the
+ * percentage stands alone; outside it, the sentence names which side.
+ */
+export function rangeSentence(range: DeskDealingRange | null): string | null {
+  if (!range) return null
+  const zone = range.zoneWord ? range.zoneWord.toLowerCase() : null
+  if (range.closeFraction == null) {
+    return zone ? `the last close is in the ${zone} half` : null
+  }
+  const pct = 100 * range.closeFraction
+  const where =
+    pct > 100
+      ? ' — above the range, and the fraction is not clamped'
+      : pct < 0
+        ? ' — below the range, and the fraction is not clamped'
+        : ''
+  return `the last close is at ${pct.toFixed(1)}% of the range${zone ? `, which the route calls ${zone}` : ''}${where}`
+}
+
+/** One of the three things the range is drawn as. Shaped like the chart's
+ *  own level so the caller hands it straight on without a second mapping. */
+export interface RangeMark {
+  label: string
+  price: number
+  kind: string
+  bandLow: number | null
+  bandHigh: number | null
+  note: string
+}
+
+/**
+ * The range as three things to draw: the two prices that define it and the
+ * midpoint between them.
+ *
+ * A BAND AND TWO LINES, NOT THREE LINES. The band carries the WHOLE range
+ * and its two edges are the high and the low, so premium and discount are
+ * the two halves either side of the midpoint drawn through it — legible as
+ * areas, which is what they are, instead of as a word the chart would
+ * otherwise have to assert. The band rides on the equilibrium mark alone
+ * because a band is drawn once per level, and hanging it on all three would
+ * stack three identical fills and treble the wash.
+ *
+ * ORDERED HIGH, EQUILIBRIUM, LOW. `stackTags` re-sorts by pixel anyway; this
+ * is so a reader stepping through the array reads it the way the chart looks.
+ */
+export function dealingRangeMarks(range: DeskDealingRange | null): RangeMark[] {
+  if (!range) return []
+  const note = [
+    DEALING_RANGE_NOTE,
+    rangeSentence(range),
+    'premium is the half above the equilibrium and discount the half below it',
+    range.rule ? `rule: ${range.rule}` : null,
+  ]
+    .filter(Boolean)
+    .join(' · ')
+  return [
+    { label: 'range high', price: range.high, kind: 'dealing_range_high', bandLow: null, bandHigh: null, note },
+    {
+      label: 'equilibrium',
+      price: range.equilibrium,
+      kind: 'dealing_range_equilibrium',
+      // The band IS the range: low to high, both of them prices the route
+      // published, so the fill sits between the two edges the other two
+      // marks label and nothing is drawn at a price nobody sent.
+      bandLow: range.low,
+      bandHigh: range.high,
+      note,
+    },
+    { label: 'range low', price: range.low, kind: 'dealing_range_low', bandLow: null, bandHigh: null, note },
+  ]
 }
