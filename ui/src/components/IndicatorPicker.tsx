@@ -4,6 +4,7 @@ import { api, type IndicatorInfo, type IndicatorPoint } from '@/lib/api'
 import type { ActiveIndicator } from '@/components/PriceChart'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
+import { verdictFor } from '@/lib/verdicts'
 
 /**
  * The viewer's own indicators on the Desk chart.
@@ -33,95 +34,15 @@ import { cn } from '@/lib/utils'
 
 /* ------------------------------------------------------------ verdicts */
 
-/**
- * STUB. `ui/src/lib/verdicts.ts` is being written by another session this
- * round and lands first; when it does, this whole block is deleted and
- * replaced by one line:
- *
- *     import { verdictFor, type Verdict } from '@/lib/verdicts'
- *
- * The interface below is the agreed shape, copied exactly, so the swap is a
- * deletion and not a rewrite. The five entries are the registrations this
- * session could read receipts for in `docs/decisions/`; the real table has
- * about forty.
+/*
+ * The real table landed with `ui/src/lib/verdicts.ts` (merge 159d109): 39
+ * constructs read out of the closed registrations, checked by
+ * `ui/scripts/verdicts.check.mjs`, which fails the build when a badge cites a
+ * file that is not on disk or prints a number that file does not contain.
+ * The stub that stood here through the parallel build is gone; its five
+ * entries are among the thirty-nine, and the interface was agreed in advance
+ * so the swap was a deletion.
  */
-export interface Verdict {
-  id: string
-  kind: 'indicator' | 'strategy'
-  status: 'killed' | 'open' | 'parked' | 'untested'
-  line: string
-  detail: string
-  registration: string | null
-}
-
-/**
- * What was measured when somebody tried to TRADE these lines as a rule.
- *
- * Every figure here is copied from a closed registration in `docs/decisions/`,
- * with the file named in `registration` so it can be checked. Nothing is
- * inferred and nothing is rounded into a kinder shape: `keltner` reads 1.052
- * because that is the number in the table, and it sits at the 78th percentile
- * of its own null, which is the reason it failed rather than a detail about
- * how it failed.
- */
-const STUB_VERDICTS: Verdict[] = [
-  {
-    id: 'ema',
-    kind: 'indicator',
-    status: 'killed',
-    line: 'killed out of sample · PF 0.379 over 5,766 trades, 0th percentile',
-    detail:
-      'Trend pullback — the first close back through EMA20 in the direction of a rising EMA200 — replayed at profit factor 0.379 over 5,766 gold trades, the 0th percentile of its count-matched null, losing 0.39R a time. BTC 0.511 on 2,931 trades, also 0th. Closed on both primaries 2026-09-13.',
-    registration: 'docs/decisions/2026-09-13-trend-pullback.md',
-  },
-  {
-    id: 'keltner',
-    kind: 'indicator',
-    status: 'killed',
-    line: 'killed out of sample · PF 1.052 over 533 trades, 78th percentile',
-    detail:
-      'Keltner break, all day, Vantage xauusd 15m over the last year: 533 trades, walk-forward PF 1.052, expectancy 0.028R — against a null whose own p50 is 0.965 and p95 1.210. The 78th percentile is inside the noise, which is the whole finding: the profit factor above 1 is what luck looks like here.',
-    registration: 'docs/decisions/2026-09-13-recent-year-screen.md',
-  },
-  {
-    id: 'macd',
-    kind: 'indicator',
-    status: 'killed',
-    line: 'killed out of sample · PF 1.010 over 923 trades, 66th percentile',
-    detail:
-      'MACD cross, all day, Vantage xauusd 15m over the last year: 923 trades, walk-forward PF 1.010, 66th percentile of its null (p50 0.965, p95 1.210). The Asian-session row reached the 98th on 300 trades but its direction null reads only the 93rd, and the screen expected eight or nine passes by luck out of about 170 rows.',
-    registration: 'docs/decisions/2026-09-13-recent-year-screen.md',
-  },
-  {
-    id: 'rsi',
-    kind: 'indicator',
-    status: 'killed',
-    line: 'killed out of sample · PF 1.110 over 198 trades, 74th percentile',
-    detail:
-      'RSI(2) pullback, New York hours, Vantage xauusd 15m over the last year: 198 trades, walk-forward PF 1.110, 74th percentile of its null. One of about 170 rows in a screen where a single row passed and eight or nine passes were expected from luck alone.',
-    registration: 'docs/decisions/2026-09-13-recent-year-screen.md',
-  },
-  {
-    id: 'donchian',
-    kind: 'indicator',
-    status: 'killed',
-    line: 'killed out of sample · PF 0.979 over 519 trades, 58th percentile',
-    detail:
-      'Donchian breakout, all day, Vantage xauusd 15m over the last year: 519 trades, walk-forward PF 0.979 — it loses money before the null is even consulted, and the null puts it at the 58th. Breakouts were closed as a family on this desk before the screen ran.',
-    registration: 'docs/decisions/2026-09-13-recent-year-screen.md',
-  },
-]
-
-/**
- * The registration against an indicator id, or `null`.
- *
- * `null` MEANS NO REGISTRATION, and renders as nothing at all. It must never
- * become a badge saying "untested" in a reassuring grey, because an absence
- * of evidence drawn in the same slot as evidence reads as evidence.
- */
-export function verdictFor(id: string): Verdict | null {
-  return STUB_VERDICTS.find((v) => v.id === id) ?? null
-}
 
 /* ------------------------------------------------------------- storage */
 
