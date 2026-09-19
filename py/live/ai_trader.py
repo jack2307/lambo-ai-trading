@@ -1471,12 +1471,18 @@ def main() -> int:
             ctx_smc = smc_context.gather(args.api, args.market, last_time, last_close, atr_now)
             smc_block = "\n\n" + smc_context.block(ctx_smc)
             smc_state = ctx_smc["state"]
-            if smc_state == "stale" and ctx_smc.get("behind_bars") is not None:
-                smc_state = f"stale {ctx_smc['behind_bars']:.1f} bars"
+            if smc_state == "stale" and ctx_smc.get("behind_min") is not None:
+                # MINUTES, not bars. The gap is clock time and the store holds
+                # 879 bars across 1,308 bar-lengths of it, so a bar count
+                # divided out of a millisecond delta is out by half. See
+                # smc_context.STALE_AFTER_BARS for the measurement.
+                smc_state = f"stale {ctx_smc['behind_min']:.0f}m"
             elif smc_state == "ok":
-                # How many levels the model was actually shown, because "ok"
-                # over two levels and "ok" over forty are not the same bar and
-                # the disagreement analysis has to be able to tell them apart.
+                # How many levels the route FOUND, not how many were shown.
+                # The block shows at most twelve and the live response of
+                # 2026-09-19 carried 252; "ok" over a tape with three levels
+                # and "ok" over one with 252 are not the same bar, and the
+                # disagreement analysis has to be able to tell them apart.
                 smc_state = f"ok {len(ctx_smc.get('levels') or [])} levels"
         # The plan block is static text, so it lands in the cached prefix
         # with the rules it amends - before the blocks that change hourly.

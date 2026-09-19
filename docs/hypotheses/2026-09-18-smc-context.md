@@ -3,13 +3,19 @@
 **Registered:** 2026-09-18, **before the route it reads exists** and before
 either book has seen a bar. Everything below is a pre-commitment; nothing in
 it may be changed by what the books turn out to say.
-**Status:** BUILT 2026-09-19 on branch `agent/smc-prompt`, NOT started. The
-block, the prompt variant and the three-file wiring exist and their selftests
-pass; `/api/paper/levels` is still d1's and still not on `main`, so the block
-was written against the contract and tested against a mocked route. The books
-are started by a5 in a quiet window after the route is deployed. What was
-built, and the two places it departs from the lines above, are recorded in
-"What is now built" at the foot of this file.
+**Status:** BUILT 2026-09-19 on branch `agent/smc-prompt`, RECONCILED the same
+day against the route as it actually shipped, NOT started. The block, the
+prompt variant and the three-file wiring exist; the selftest now runs against
+d1's own captured responses — `docs/api-samples/paper-levels.json`, 252 levels
+off the live store, and `paper-levels-unavailable.json` — rather than against
+a fixture invented from prose, and that reconciliation found two unit bugs a
+hand-made fixture could not have caught. The books are started by a5 in a
+quiet window once the route is deployed to the VPS. What was built and the
+three places it departs from the lines below are in "What is now built" at
+the foot of this file; what the shipped route then changed — including the
+two unit bugs and four paragraphs of that section it corrects — is in
+"Reconciled with the route as shipped" after it, which is the one to read for
+what the code does today.
 **Books:** `ai-xau-ds-ctx` (base, already running, untouched) as control,
 against `ai-xau-ds-ctx-smc` (variant `smc-context`), with its own coin
 `ai-xau-ds-ctx-smc-coin` and **seed 43** — distinct from 23, 29, 37 and 41.
@@ -209,6 +215,12 @@ Written after the code and before any bar. The claim, the falsifier and the
 three stages above are untouched: they were pre-committed and nothing here
 may move them.
 
+> **Written before the route shipped, and four of its paragraphs are now
+> wrong.** They are left exactly as written rather than edited, because what
+> this session assumed from a prose brief is part of the record. The
+> corrections are in "Reconciled with the route as shipped" below, which is
+> the section to read for what the code does today.
+
 **The files.** `py/live/smc_context.py` (the block), the `smc-context` entry
 in `py/live/ai_trader.py`'s `VARIANTS` with a `{smc_block}` slot beside the
 HTF and OTL slots, the launcher row in `py/live/start_ai_traders.ps1`, the
@@ -282,6 +294,98 @@ do not touch the claim.
 `/api/paper/levels` does not exist yet. Until it does, every decision this
 book would make carries `smc: unavailable` — a recorded result, but not the
 experiment, which is why a5 starts it only after the route is deployed.
+
+Written by Claude Opus 5 (trader session, worktree `fd-wt-smc`, branch
+`agent/smc-prompt`), 2026-09-19.
+
+## Reconciled with the route as shipped (2026-09-19, later the same day)
+
+`/api/paper/levels` landed on `main` with two captured samples and the DTO
+doc comments. The samples are the contract now; the prose brief the section
+above was written from is superseded wherever they disagree, and they
+disagreed in eight field names, in the grouping, in being single-timeframe,
+and in two units. The claim, the falsifier and the three stages are still
+untouched.
+
+**The selftest's fixtures are now the route's own responses**, not a
+paraphrase of them: `docs/api-samples/paper-levels.json` (120 KB, 252 levels
+off the live store) and `paper-levels-unavailable.json`. That change is worth
+more than the renames, because everything passed against the invented fixture
+and two of the bugs below are ones an invented fixture cannot contain.
+
+**Two unit bugs, both found by rendering the real response.**
+
+- **Staleness was measured with `htf_context`'s arithmetic and this route is
+  not `htf`.** `htf` compares an H4 bar to a 15m decision bar, where the
+  newest closed H4 bar is always at least one whole H4 bar behind, so it
+  measures from that bar's close. This route runs ON the decision timeframe:
+  its `computed_at_bar_ms` and the decision bar are the same series and on a
+  healthy desk the same bar. The close-to-start formula reported a perfectly
+  current response as **minus one bar behind**. It is start to start now.
+- **A millisecond gap divided by `bar_ms` is not a bar count.** The market is
+  shut about a third of the time: the sample's window holds **879 stored bars
+  across 1,308 bar-lengths of clock**, and the route's own `age_bars` counts
+  the 879. The block had derived "swept N bars ago" that way and printed a
+  pool as *swept 675 bars ago when it was 594 bars old* — swept before it
+  existed. Sweeps are a UTC stamp now, and the staleness tolerance is stated
+  in **minutes of clock** rather than dressed up as bars.
+
+**The staleness tolerance is now the measured daily hole plus two bars**, 90
+minutes on 15m, and this is a correction to the section above rather than a
+rename. `htf.rs` measured hour 21Z holding exactly zero 15m bars against
+332–348 in every neighbouring hour, so an export exactly ONE stored bar
+behind at the daily roll is over an hour of clock behind. A flat two-bar
+tolerance in clock would have withheld the block once a night. There is a
+test for that case.
+
+**What the real response changed in the block.**
+
+- **Single timeframe.** `timeframe` and `bar_ms` are top-level and no level
+  carries its own, so the timeframe is named once in the header and ages are
+  bare bar counts. The third departure bullet above — that the route serves
+  every timeframe at once — is simply wrong and the per-line timeframe it
+  justified is gone. The route is called `?market=<id>`, as that bullet said.
+- **Swing ids are not printed at all.** They are all this response's own 15m
+  swings, so nothing the model can see in this prompt joins to them, and each
+  is another crate's string. What is printed is how many swings a pool is
+  made of and how far apart they sit in ATR, which are numbers. The `SWING_ID`
+  and timeframe-token parsers the section above describes are deleted with
+  the multi-timeframe contract that needed them.
+- **`direction` is rendered as what happened, never as BULLISH or BEARISH.**
+  The engine's own doc comment says the name "says which side of price the
+  imbalance is on and NOT what price will do next". Printing the word invites
+  exactly the reading forty closed registrations refuted, so a gap reads
+  "left by an up move" and a block "before a down move".
+- **A census in the header, which is new and is not a ranking.** The route
+  caps and ranks nothing on purpose, and the sample carries 252 levels of
+  which **135 of 155 liquidity pools are already swept and 62 of 76 order
+  blocks already broken**. A model shown the nearest twelve with no idea they
+  were twelve of 252, most of them spent, would read a tidy tape. Two header
+  lines say how many there were, by family, with the spent count.
+- **The POC is measured from its price, not its bucket.** It is the one level
+  carrying both, and the bucket is an artefact of the histogram's resolution.
+
+**The cap stays at six a side and the measured length changes.** On the real
+response the block is **35 lines** — 12 of header and census, 9 a side, 5 for
+the three bands the live close happens to sit inside — against `htf_context`'s
+43, `otl_context`'s 17 and the prompt's forty bars. At twelve a side the same
+response renders 47, which is longer than the bars it sits in front of. The
+selftest pins the ceiling and pins that a nine-level tape is no shorter, so
+the cost does not move with the thing being measured.
+
+**Still not started.** The route is on `main`; nothing has been launched, no
+book created, and nothing deployed. Until the route is on the VPS every
+decision would carry `smc: unavailable`, which is a recorded result and not
+the experiment.
+
+**One thing in the samples that is still ambiguous, for d1.** The prior day's
+high appears **twice** at the same price: once as a `PRIOR_DAY_HIGH`
+liquidity pool carrying `swept` and the bar that swept it, and once as
+`extremes.day.high` carrying `COMPLETE`. Both are real and they say different
+things, so the block prints both rather than picking — but on the live sample
+that spends two of the six slots above the close on one price. Deduplicating
+would be this block deciding which of two route facts matters, which the
+registration forbids it from doing, so it is raised here instead.
 
 Written by Claude Opus 5 (trader session, worktree `fd-wt-smc`, branch
 `agent/smc-prompt`), 2026-09-19.

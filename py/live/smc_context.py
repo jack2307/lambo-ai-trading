@@ -3,6 +3,7 @@
 
     py -3.9 py/live/smc_context.py                  # fetch once and print the block
     py -3.9 py/live/smc_context.py --market xauusd --api http://127.0.0.1:8138
+    py -3.9 py/live/smc_context.py --sample docs/api-samples/paper-levels.json
 
 One job: ask `GET /api/paper/levels` for the levels it computes from CLOSED
 bars and render them as a block a model can read. It decides nothing and it
@@ -23,36 +24,60 @@ the different question registered at docs/hypotheses/2026-09-18-smc-context.md:
 whether a model that can SEE these levels decides differently. That can be true
 whether or not they predict anything.
 
+THE ROUTE IS SINGLE-TIMEFRAME AND THE BLOCK SAYS SO ONCE. `timeframe` and
+`bar_ms` are on the response and no level carries its own, so every `age_bars`
+on it is bars of that one timeframe. The block names it in the header and then
+prints bare bar counts. This file used to name a timeframe per line, which was
+right while the contract was expected to be multi-timeframe and became noise
+the moment the real one landed (2026-09-19); the per-line naming is gone and
+the header carries the timeframe once.
+
 AGE AND STATE ARE THE CONTENT, NOT DECORATION. An UNTESTED order block four
 bars old and an UNTESTED order block two hundred bars old are different facts,
 and a block that printed only the price would be saying they are the same one.
-Both numbers are on every line, with the timeframe whose bars they are counted
-in, because "4 bars" means forty minutes on 15m and sixteen hours on 4h.
+Both are on every line. The live sample makes the point at scale: of 155
+liquidity pools 135 are already SWEPT and of 76 order blocks 62 are BROKEN, so
+a reader given prices alone would be looking at a tape of 252 live levels when
+in fact most of them are spent.
 
-STALENESS IS MEASURED AGAINST THE BAR BEING DECIDED, NOT THE WALL CLOCK. Same
-reason as `htf_context`: a wall-clock threshold cannot tell a stopped export
-from a weekend, and on Monday morning the newest closed bar is correctly
-Friday's. The caller passes the timestamp of the bar it is deciding on, and
-staleness is the gap between that and the newest closed bar behind the FINEST
-timeframe the route reports provenance for - the one that must be current. A
-coarse timeframe lagging is normal; the fine one lagging is a stopped export.
+STALENESS IS MEASURED AGAINST THE BAR BEING DECIDED, NOT AGAINST NOW. Same
+reason as `htf_context`: a threshold against the current time cannot tell a
+stopped export from a weekend, and on Monday morning the newest closed bar is
+correctly Friday's. The caller passes the timestamp of the bar it is deciding
+on and staleness is the gap between that and `computed_at_bar_ms` - start to
+start, since both are bars of the same series, and reported in minutes of
+clock rather than in bars. See `STALE_AFTER_BARS` for the two measurements
+that forced both of those choices.
 
 THE ROUTE'S OWN TEXT NEVER REACHES THE PROMPT, IN ANY STATE. This is the
 lesson of `9a5dbfb`, pre-committed in the registration rather than discovered
-here: `htf_context` printed the route's `unavailable` sentence verbatim, and
-that sentence is a join written in another crate - so adding a timeframe to
-the route would have changed the wording inside a REGISTERED campaign's prompt
-with nobody editing the book and no diff to notice.
+here, and the route's own doc comment on `unavailable` now says the same thing
+from the other side: `htf_context` printed a route's `unavailable` sentence
+verbatim, and that sentence is a join written in another crate, so adding a
+timeframe to the route would have changed the wording inside a REGISTERED
+campaign's prompt with nobody editing the book and no diff to notice.
 
-It costs more here than it did there, and the cost is deliberate. The route
-carries **the name of the rule that produced each level**, and that name is a
-string another crate owns, so it is RECORDED in `gather` and never rendered. A
-level's `kind` and `state` are likewise mapped through this file's own
-vocabulary (`KIND_WORDS`, `STATE_WORDS`); anything outside it renders as "not
-in this block's vocabulary" rather than echoing what the wire said. The one
-route string that does influence the text is a swing id, and only through a
-strict `SWING_ID` pattern whose parts are re-rendered in our words - a marker
-fed through it does not match and does not print.
+It costs more here than it did there, and the cost is deliberate:
+
+* the `rule` string - "order block: last down candle before a body > 1 x
+  ATR(14) at its own bar" and the like - is exactly the field the registration
+  asked the route for, and it is another crate's prose. RECORDED in `gather`
+  for the operator, never rendered.
+* `kind`, `state`, `side` and `direction` go through this file's own
+  vocabularies below. Anything outside them renders in this file's words
+  ("not in this block's vocabulary"), never as the wire's token.
+* `swing_ids` are not printed at all. They exist to join a pool to the swing
+  `/api/paper/htf` reports, and on this response they are all this response's
+  own 15m swings - nothing the model can see in this prompt joins to them, the
+  forming bar already dates the pool, and each is another crate's string. What
+  IS printed is how many swings a pool is made of and how far apart they sit
+  in ATR, which are numbers.
+
+`direction` is rendered as what it is - which way the move that left the level
+went - and never as BULLISH or BEARISH. The engine's own doc comment says the
+name "says which side of price the imbalance is on and NOT what price will do
+next"; printing the word in a prompt would invite exactly that reading, which
+is the refuted claim wearing the route's label.
 
 FAILING IS A RESULT, NOT AN EXCEPTION. Unreachable, thin or stale, the block
 says which and the caller puts that in the prompt and in the record. A silent
@@ -60,14 +85,22 @@ fallback to "no levels" would put context-absent decisions into a
 context-present book, and the experiment would be measuring a mixture with
 nothing to separate it. This is the rule `otl_context` and `htf_context` run
 under and it is written here for the same reason.
+
+The route's own distinction between `null` and `[]` is kept and mapped onto
+the four registered states: `null` blocks mean there were no bars to look at
+and are UNAVAILABLE, empty lists mean the window produced nothing and are
+THIN. Its module doc insists the two must render differently, and they do -
+what this file adds is that neither is silently an `ok` with an empty list
+under it.
 """
 from __future__ import annotations
 
 import argparse
 import datetime as dt
+import io
 import json
-import re
 import sys
+import textwrap
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -80,21 +113,42 @@ for _stream in (sys.stdout, sys.stderr):
 
 REQUEST_TIMEOUT_S = 6.0
 
-# How far the newest closed bar behind these levels may sit behind the bar
-# being decided before this is called stale, in bars of that same timeframe.
+# HOW STALE THESE LEVELS MAY BE, AND WHY THE TOLERANCE IS IN MILLISECONDS
+# WHILE THE THING IT TOLERATES IS COUNTED IN BARS.
 #
-# Two, and the same two `htf_context` uses, for the same arithmetic: one is
-# normal and unavoidable (the newest CLOSED bar is always at least one behind
-# the bar being decided), two is that plus one missed export cycle. Past that
-# the export has stopped and the model should be told rather than left to read
-# levels that formed three days ago as if they were this morning's.
+# Two facts, both measured against the real response of 2026-09-19 rather
+# than reasoned out, and both of which broke the first version of this.
+#
+# ONE: this route runs on the DECISION timeframe. `htf_context` compares an
+# H4 bar to a 15m decision bar, where the newest closed H4 bar is always at
+# least one whole H4 bar behind, so it measures from that bar's close. Here
+# `computed_at_bar_ms` and the caller's decision bar are the same series and
+# on a healthy desk they are the SAME BAR. Measuring from the close reported
+# a perfectly current response as minus one bar behind, which is nonsense
+# wearing a unit. The gap is start to start.
+#
+# TWO: a gap in milliseconds DIVIDED BY `bar_ms` IS NOT A BAR COUNT, because
+# the market is shut about a third of the time. Measured on the sample: the
+# analysis window holds 879 stored bars across a span of 1,308 bar-lengths of
+# clock, a factor of 1.49, and the route's own `age_bars` counts the 879. So
+# the tolerance is expressed in clock time, which is what this can actually
+# measure, and never dressed up as bars.
+#
+# The number: the daily hole plus two bars. `htf.rs` measured hour 21Z
+# holding exactly ZERO 15m bars against 332-348 in every neighbouring hour
+# (2026-09-18), so an export exactly one stored bar behind at the daily roll
+# is over an hour of clock behind while being one bar behind, and a two-bar
+# tolerance in clock alone would call it stopped once a night. Two bars past
+# the hole is 90 minutes on 15m: an export slightly behind stays inside it,
+# one that has stopped does not.
+DAILY_HOLE_MS = 60 * 60 * 1000
 STALE_AFTER_BARS = 2.0
 
 # The states a caller must be able to tell apart, worst first. `thin` is the
-# one that would otherwise hide: the route answered for this market and
-# computed no levels at all, because a warmup is not met. That is a different
-# condition from having no bars for the market, and the two are not reported
-# the same way.
+# one that would otherwise hide: the route answered for this market and there
+# is nothing to place, because a warmup is not met. That is a different
+# condition from having no bars at all, and the route separates them on
+# purpose - `null` blocks with a sentence versus empty lists.
 STATES = ("unavailable", "stale", "thin", "ok")
 
 # HOW MANY LEVELS THE BLOCK SHOWS, AND WHY THE NUMBER IS FIXED.
@@ -102,88 +156,85 @@ STATES = ("unavailable", "stale", "thin", "ok")
 # Six per side. The registration pre-commits "a fixed maximum count, stated in
 # the block itself", because a prompt whose length depends on how many order
 # blocks happen to be unfilled is a prompt whose token cost and whose
-# legibility vary with the thing being measured.
+# legibility vary with the thing being measured. The route makes that concrete
+# rather than hypothetical: it deliberately caps and ranks nothing, and the
+# live sample of 2026-09-19 carries 252 levels - 155 liquidity pools, 76 order
+# blocks, 12 gaps, 3 profile levels, 6 period extremes. Uncapped, this block
+# would be 260 lines in front of forty bars.
 #
 # Six because of what the block sits in front of. The prompt ends with the
-# forty 15m bars the model actually decides on (`--bars` default 40), and the
-# two context blocks already beside this one measure 43 lines (`htf_context`
-# on the selftest's fixture) and 17 (`otl_context` on its own). At six a side
-# this one measures 30 lines on a full book with something straddling the
-# close and 27 without - measured by `smc_context_selftest.py`, which pins
-# the ceiling - so it is the smaller of the two big blocks and the bars stay
-# the longest thing in the prompt. At twelve a side the arithmetic is 9 header
-# lines plus 2 x (2 + 12 + 1) plus a straddling section: 42, level with the
-# htf block and longer than the forty bars it sits in front of.
+# forty 15m bars the model decides on (`--bars` default 40), and the two
+# context blocks already beside this one measure 43 lines (`htf_context` on
+# its fixture) and 17 (`otl_context` on its own). At six a side this one
+# measures 35 lines on the real sample - 12 of header and census, 9 a side,
+# and 5 for the three bands the live close happens to sit inside - measured
+# by `smc_context_selftest.py` against `docs/api-samples/paper-levels.json`,
+# which pins the ceiling. At twelve a side the same response renders 47 lines
+# - measured by raising the constant, not estimated - which is longer than
+# the htf block and longer than the forty bars it sits in front of.
 #
-# Levels beyond the cap are COUNTED on their own line rather than dropped
-# silently: "9 further levels above are not shown" is a fact about the market,
-# and a truncated list that looked complete would tell the model the tape is
-# tidier than it is.
+# Levels beyond the cap are COUNTED and never dropped silently, and the header
+# carries a census of the whole response for the same reason: 252 levels of
+# which 135 are swept pools and 62 broken blocks is the single most useful
+# fact about how messy this tape is, and a model shown twelve of them without
+# it would think the tape is tidy.
 MAX_PER_SIDE = 6
 
-# THE GROUPS THIS BLOCK READS, AND THE WORD IT CALLS EACH ONE BY.
+# A level's `kind`, in this file's vocabulary, keyed on the route's
+# SCREAMING_SNAKE token lowercased. A kind outside this table renders by its
+# FAMILY's word - which this file also chose - and never by the wire's string.
 #
-# Our words, never the route's, for the reason in the module docstring. The
-# aliases exist because this was written against the contract before the route
-# was on `main`: a group the route names differently is read, a group nobody
-# named is simply absent, and neither can put another crate's prose in the
-# prompt.
-GROUPS = (
-    ("profile", ("profile", "activity_profile", "volume_profile"), "activity profile level"),
-    ("fvg", ("fvg", "fvgs", "fair_value_gaps"), "fair value gap"),
-    ("order_blocks", ("order_blocks", "order_block", "obs"), "order block"),
-    ("liquidity_buy", ("liquidity_buy", "buyside_liquidity", "buy_side_liquidity", "bsl"),
-     "buy-side liquidity"),
-    ("liquidity_sell", ("liquidity_sell", "sellside_liquidity", "sell_side_liquidity", "ssl"),
-     "sell-side liquidity"),
-    ("extremes", ("extremes", "session_extremes", "range_extremes"), "session/day/week extreme"),
-)
-
-# A level's `kind`, in this file's vocabulary. A kind outside it is rendered by
-# its GROUP's word - which this file chose - and never by the wire's string.
+# The period-extreme wording carries the route's own definitions, because they
+# are not the ones a reader would assume: "session" is the trading-day run IN
+# PROGRESS and "day" the last COMPLETE one, both split by the measured 45
+# minute hole between runs rather than by a clock. A line reading "day high"
+# with no more would be read as today's.
 KIND_WORDS = {
-    "poc": "point of control", "vah": "value area high", "val": "value area low",
-    "fvg": "fair value gap", "bisi": "fair value gap (up)", "sibi": "fair value gap (down)",
-    "ob": "order block", "order_block": "order block",
-    "bullish_ob": "bullish order block", "bearish_ob": "bearish order block",
-    "bsl": "buy-side liquidity", "buyside_liquidity": "buy-side liquidity",
-    "ssl": "sell-side liquidity", "sellside_liquidity": "sell-side liquidity",
-    "equal_highs": "equal highs", "equal_lows": "equal lows",
-    "session_high": "session high", "session_low": "session low",
-    "day_high": "day high", "day_low": "day low",
-    "week_high": "week high", "week_low": "week low",
-    "prior_day_high": "prior day high", "prior_day_low": "prior day low",
-    "prior_week_high": "prior week high", "prior_week_low": "prior week low",
+    "poc": "point of control",
+    "vah": "value area high",
+    "val": "value area low",
+    "fair_value_gap": "fair value gap",
+    "order_block": "order block",
+    "equal_highs": "equal highs",
+    "equal_lows": "equal lows",
+    "prior_day_high": "prior day high",
+    "prior_day_low": "prior day low",
+    "prior_week_high": "prior week high",
+    "prior_week_low": "prior week low",
+    "session_high": "high of the trading day in progress",
+    "session_low": "low of the trading day in progress",
+    "day_high": "high of the last complete trading day",
+    "day_low": "low of the last complete trading day",
+    "week_high": "high of the last complete week",
+    "week_low": "low of the last complete week",
 }
 
-# A level's `state`, likewise. The contract names untested / tested / broken
-# for order blocks and `swept` for liquidity; the rest are here because a
-# route that grows one should not silently print it.
+# A level's `state`. The route's closed set, documented on `LevelState`:
+# profile levels are CURRENT, gaps UNFILLED or PARTIALLY_FILLED, blocks
+# UNTESTED / TESTED / BROKEN, pools RESTING or SWEPT, extremes FORMING or
+# COMPLETE.
 STATE_WORDS = {
-    "untested": "UNTESTED", "tested": "TESTED", "broken": "BROKEN",
-    "unfilled": "UNFILLED", "partial": "PARTIALLY FILLED", "filled": "FILLED",
-    "mitigated": "MITIGATED", "intact": "INTACT",
-    "swept": "SWEPT", "unswept": "NOT SWEPT",
+    "current": "CURRENT",
+    "forming": "STILL FORMING",
+    "complete": "COMPLETE",
+    "unfilled": "UNFILLED",
+    "partially_filled": "PARTLY FILLED",
+    "untested": "UNTESTED",
+    "tested": "TESTED",
+    "broken": "BROKEN",
+    "resting": "RESTING",
+    "swept": "SWEPT",
 }
 UNKNOWN_STATE = "state not in this block's vocabulary"
 
-# The one route string allowed to shape the text, and only through this.
-#
-# The contract says liquidity references HTF swing ids like `h4-hi-<bar_ms>`,
-# which is the handle tying a level to the swing the `htf-context` block
-# prints. It is worth carrying, and it is carried by PARSING it and
-# re-rendering its three parts in our words - never by printing it. A marker
-# fed through the field does not match this pattern and reaches nothing.
-SWING_ID = re.compile(r"^(1m|5m|15m|h1|h4|d1|w1)-(hi|lo)-(\d{10,16})$")
-SWING_TF = {"1m": "1m", "5m": "5m", "15m": "15m", "h1": "H1", "h4": "H4", "d1": "D1", "w1": "W1"}
+# Which side of the book a pool sits on, in words rather than the wire's token.
+SIDE_WORDS = {"buy_side": "buy-side liquidity", "sell_side": "sell-side liquidity"}
 
-# A timeframe token, validated before it is printed, for the same reason and
-# by the same means. `tf` is another crate's string too, and it names the
-# bars an age is counted in - "4 bars" is forty minutes on 15m and sixteen
-# hours on 4h, so it has to be on the line, and it gets there only by
-# matching a shape this file fixed. An unrecognised token is dropped and the
-# age prints without it, which loses a fact rather than importing prose.
-TF_TOKEN = re.compile(r"^\d{1,3}(m|h|d|w)$")
+# Which way the move that left a gap or a block went. NOT "bullish" and NOT
+# "bearish": see the module docstring. This says what happened, which is a
+# fact, rather than naming a bias, which would be the refuted claim.
+DIRECTION_WORDS = {"bullish": "left by an up move", "bearish": "left by a down move"}
+OB_DIRECTION_WORDS = {"bullish": "before an up move", "bearish": "before a down move"}
 
 
 def _unit(market: str) -> str:
@@ -228,65 +279,7 @@ def _norm(s) -> str:
     return str(s or "").strip().lower().replace("-", "_").replace(" ", "_")
 
 
-def _swing_words(ref) -> str | None:
-    """`h4-hi-1758232800000` -> "the H4 swing high from 2026-09-18 12:00Z".
-
-    Parsed and re-rendered rather than printed: see SWING_ID. Anything that is
-    not exactly that shape returns None and nothing is said about it, which is
-    the safe direction - an unreadable handle is less than no handle.
-    """
-    m = SWING_ID.match(str(ref or "").strip().lower())
-    if not m:
-        return None
-    tf, side, stamp = m.group(1), m.group(2), int(m.group(3))
-    return (f"the {SWING_TF[tf]} swing {'high' if side == 'hi' else 'low'} "
-            f"from {_u(stamp)}")
-
-
-def _groups(doc: dict) -> list:
-    """`[(group_key, group_word, [raw levels])]`, from wherever the route put them.
-
-    The contract groups the levels by kind; whether that mapping sits under a
-    `levels` key or at the top of the document is not something this file
-    should care about, and reading both costs one line.
-    """
-    holder = doc.get("levels") if isinstance(doc.get("levels"), dict) else doc
-    out = []
-    for key, aliases, word in GROUPS:
-        rows = None
-        for alias in aliases:
-            v = holder.get(alias)
-            if isinstance(v, list):
-                rows = v
-                break
-        out.append((key, word, rows or []))
-    return out
-
-
-def _provenance(doc: dict) -> dict:
-    """`{tf: {"bar_ms":, "computed_at_bar_ms":, ...}}`, per timeframe."""
-    prov = doc.get("provenance")
-    return prov if isinstance(prov, dict) else {}
-
-
-def _base_tf(prov: dict):
-    """The FINEST timeframe the route reported, and its bar duration in ms.
-
-    Staleness is judged on this one. A 1d level being a day old is what a 1d
-    level is; the 15m provenance falling behind is the export having stopped,
-    and that is the failure this is looking for.
-    """
-    best = (None, None)
-    for tf, p in prov.items():
-        if not isinstance(p, dict):
-            continue
-        ms = _f(p.get("bar_ms"))
-        if ms and (best[1] is None or ms < best[1]):
-            best = (tf, ms)
-    return best
-
-
-def _level(raw, group_word: str, close: float, prov: dict):
+def _level(raw, family: str, family_word: str, close: float):
     """One wire level, in this file's own words and measured from the close.
 
     Returns None for anything carrying neither a price nor a two-price band:
@@ -296,60 +289,71 @@ def _level(raw, group_word: str, close: float, prov: dict):
     if not isinstance(raw, dict):
         return None
     price = _f(raw.get("price"))
-    lo = hi = None
-    band = raw.get("band")
-    if isinstance(band, (list, tuple)) and len(band) == 2:
-        a, b = _f(band[0]), _f(band[1])
-        if a is not None and b is not None:
-            lo, hi = min(a, b), max(a, b)
+    lo, hi = _f(raw.get("band_low")), _f(raw.get("band_high"))
+    if lo is not None and hi is not None:
+        lo, hi = min(lo, hi), max(lo, hi)
+    else:
+        # The route sends both or neither. One alone is not a band and is not
+        # guessed at from the other.
+        lo = hi = None
     if lo is None and price is None:
         return None
 
     # Distance is to the NEARER EDGE of a band, and zero when the last close
     # is inside it. A band's midpoint would be a number the route never said
     # and the price never has to reach.
-    if lo is not None:
-        dist = (lo - close) if close < lo else ((hi - close) if close > hi else 0.0)
-    else:
+    #
+    # The POC is the one level that carries BOTH a price and a band - the
+    # bucket it sits in - and the price is the one to measure from, because
+    # the bucket is an artefact of the histogram's resolution and the price is
+    # the level. So a price wins wherever there is one.
+    if price is not None:
         dist = price - close
-
-    tf = raw.get("tf") or raw.get("timeframe")
-    tf = str(tf).strip() if tf else None
-    tf_word = tf.lower() if tf and TF_TOKEN.match(tf.lower()) else None
-    # `formed_at_bar_ms` / `formed_bar_ms` only, and deliberately NOT `bar_ms`:
-    # everywhere else in this repository `bar_ms` is a bar's DURATION, and
-    # reading a duration as a timestamp is a unit bug that would render an age
-    # of fifty thousand years without anything complaining.
-    formed = raw.get("formed_at_bar_ms")
-    if formed is None:
-        formed = raw.get("formed_bar_ms")
-    formed = None if _f(formed) is None else int(_f(formed))
-    age_bars = _f(raw.get("age_bars"))
+    else:
+        dist = (lo - close) if close < lo else ((hi - close) if close > hi else 0.0)
 
     kind = _norm(raw.get("kind"))
-    word = KIND_WORDS.get(kind, group_word)
+    word = KIND_WORDS.get(kind, family_word)
     st = raw.get("state")
     state_word = STATE_WORDS.get(_norm(st)) if st is not None else None
     if st is not None and state_word is None:
         state_word = UNKNOWN_STATE
+    side_word = SIDE_WORDS.get(_norm(raw.get("side"))) if raw.get("side") is not None else None
+    dmap = OB_DIRECTION_WORDS if family == "order block" else DIRECTION_WORDS
+    dir_word = dmap.get(_norm(raw.get("direction"))) if raw.get("direction") is not None else None
 
-    filled = _f(raw.get("filled_frac"))
-    if filled is None:
-        filled = _f(raw.get("fraction_filled"))
-    swept = raw.get("swept")
-    swept = bool(swept) if isinstance(swept, bool) else None
-    swept_bar = raw.get("swept_by_bar_ms")
-    if swept_bar is None:
-        swept_bar = raw.get("swept_at_bar_ms")
-    swept_bar = None if _f(swept_bar) is None else int(_f(swept_bar))
+    age = raw.get("age_bars")
+    age = None if _f(age) is None else int(_f(age))
+    # `formed_at_bar_ms` and NOT `bar_ms`: on this route `bar_ms` is the
+    # timeframe's LENGTH and lives at the top level. Reading a duration as a
+    # timestamp would render an age of fifty thousand years with nothing
+    # complaining, so the duration's name is never looked for on a level.
+    formed = _f(raw.get("formed_at_bar_ms"))
+    swings = raw.get("swing_ids")
+    swings = len(swings) if isinstance(swings, list) else None
+    # WHEN A POOL WAS SWEPT, AS A UTC STAMP AND NOT AS A BAR COUNT.
+    #
+    # A bar count would read better beside the bar-counted ages on the same
+    # line, and it is not available: the route publishes the sweep's
+    # TIMESTAMP and only the forming bar's age in bars, and a bar count
+    # derived here would have to be `(newest - swept_at) / bar_ms`, which is
+    # clock time wearing a bar's name. Tried, and it printed "swept 675 bars
+    # ago" on a pool 594 bars old - swept before it existed - because the
+    # store holds 879 bars across 1,308 bar-lengths of clock. The stamp is
+    # longer and it is true.
+    swept_at = _f(raw.get("swept_at_bar_ms"))
 
     return {
-        "word": word, "price": price, "lo": lo, "hi": hi,
+        "family": family, "word": word, "price": price, "lo": lo, "hi": hi,
         "dist": dist, "dist_abs": abs(dist),
-        "state_word": state_word, "age_bars": age_bars, "tf": tf, "tf_word": tf_word,
-        "formed_at_bar_ms": formed,
-        "filled_frac": filled, "swept": swept, "swept_by_bar_ms": swept_bar,
-        "swing": _swing_words(raw.get("ref") or raw.get("swing_id")),
+        "state": _norm(st) if st is not None else None, "state_word": state_word,
+        "side_word": side_word, "direction_word": dir_word,
+        "age_bars": age, "formed_at_bar_ms": None if formed is None else int(formed),
+        "filled_fraction": _f(raw.get("filled_fraction")),
+        "swept": raw.get("swept") if isinstance(raw.get("swept"), bool) else None,
+        "swept_at_bar_ms": None if swept_at is None else int(swept_at),
+        "swings": swings, "spread_atr": _f(raw.get("spread_atr")),
+        "displacement_body_atr": _f(raw.get("displacement_body_atr")),
         # RECORDED AND NEVER RENDERED. The rule's name is a string another
         # crate owns; putting it in the prompt would make this book's wording
         # depend on a file nobody editing this book would think to read. The
@@ -358,9 +362,67 @@ def _level(raw, group_word: str, close: float, prov: dict):
     }
 
 
+def _harvest(doc: dict, close: float) -> list:
+    """Every level on the response, in this file's words.
+
+    The route groups by family in five differently shaped fields - `profile`
+    is an object with three optional levels, `extremes` an object of three
+    periods each with a high and a low, and the other three are plain lists -
+    so each is unpacked where it is rather than through one generic walk that
+    would have to guess.
+    """
+    out = []
+
+    def take(raw, family, word):
+        lv = _level(raw, family, word, close)
+        if lv is not None:
+            out.append(lv)
+
+    prof = doc.get("profile")
+    if isinstance(prof, dict):
+        for key in ("poc", "vah", "val"):
+            take(prof.get(key), "profile level", "activity profile level")
+
+    for field, family in (("fair_value_gaps", "fair value gap"),
+                          ("order_blocks", "order block"),
+                          ("liquidity", "liquidity pool")):
+        rows = doc.get(field)
+        if isinstance(rows, list):
+            for raw in rows:
+                take(raw, family, family)
+
+    ext = doc.get("extremes")
+    if isinstance(ext, dict):
+        for period in ("session", "day", "week"):
+            p = ext.get(period)
+            if not isinstance(p, dict):
+                continue
+            for end in ("high", "low"):
+                take(p.get(end), "period extreme", "period extreme")
+    return out
+
+
+def census(levels: list) -> dict:
+    """How many of each family there are, and how many are already spent.
+
+    A COUNT, not a ranking: the registration forbids this block from scoring
+    or ordering by anything but distance, and it does not forbid it from
+    saying how big the thing it is sampling from is. On the live sample that
+    is the difference between "here are twelve levels" and "here are twelve of
+    252, and 135 of the pools have already been swept".
+    """
+    out = {"total": len(levels), "families": {}, "spent": {}}
+    for lv in levels:
+        out["families"][lv["family"]] = out["families"].get(lv["family"], 0) + 1
+        if lv["state"] in ("swept", "broken"):
+            out["spent"][lv["family"]] = out["spent"].get(lv["family"], 0) + 1
+    return out
+
+
 def gather(api: str = "http://127.0.0.1:8138", market: str = "xauusd",
            bar_time: int | None = None, last_close: float | None = None,
-           atr: float | None = None, timeout: float = REQUEST_TIMEOUT_S) -> dict:
+           atr: float | None = None, timeout: float = REQUEST_TIMEOUT_S,
+           doc: dict | None = None) -> dict:
     """Ask the route, and work out which of the four states this is.
 
     Never raises. Always returns a dict carrying `state` (one of `STATES`),
@@ -371,69 +433,79 @@ def gather(api: str = "http://127.0.0.1:8138", market: str = "xauusd",
     staleness cannot be judged and `state` will not be `stale`, which the
     block says out loud rather than implying freshness.
 
-    `last_close` is passed by the caller rather than read off the route ON
-    PURPOSE. The prompt already ends with forty bars and says "the last
-    close"; a distance measured from a different number than the one the model
-    can see on the last line would be wrong in the one way nobody would catch.
-    The route's own value is the fallback for the command line below.
+    `last_close` and `atr` are passed by the caller rather than read off the
+    response ON PURPOSE, even though the response carries both. The prompt
+    already ends with forty bars and the block says "the last close"; a
+    distance measured from a different number than the one the model can see
+    on that last line would be wrong in the one way nobody would catch. The
+    ATR is the one the desk block quotes 1R against, so "0.68 ATR" here and
+    "1R is 1.2 x ATR" there are one unit. The route's `last_close` and `atr14`
+    are the fallback, which is what the command line below uses.
 
-    `atr` is the volatility scale the distances are also quoted in - the
-    caller passes the ATR(14) the desk sizes on, so "0.5 ATR" here and "1R is
-    1.2 x ATR" in the desk block are the same unit. Without it the distances
-    are still printed in price and the block says the scale was missing rather
-    than quietly dropping half of each number.
+    `doc` bypasses the fetch with a response already in hand - the command
+    line's `--sample`, and the selftest's real captured response.
     """
     out = {
         "state": "unavailable", "market": market, "why": None,
         "unavailable": None, "bar_time": bar_time, "last_close": last_close,
         "atr": atr, "levels": [], "above": [], "below": [], "straddling": [],
-        "provenance": {}, "base_tf": None, "base_bar_ms": None,
-        "behind_bars": None, "staleness_checked": bar_time is not None,
+        "timeframe": None, "bar_ms": None, "computed_at_bar_ms": None,
+        "behind_ms": None, "behind_min": None, "tolerance_min": None,
+        "staleness_checked": bar_time is not None,
+        "census": {"total": 0, "families": {}, "spent": {}},
     }
-    url = f"{api.rstrip('/')}/api/paper/levels?market={urllib.parse.quote(market)}"
-    try:
-        with urllib.request.urlopen(url, timeout=timeout) as r:
-            doc = json.loads(r.read().decode("utf-8", "replace"))
-    except Exception as exc:  # noqa: BLE001 - any failure is the same state
-        out["why"] = f"{type(exc).__name__}: {exc}"
-        return out
+    if doc is None:
+        url = f"{api.rstrip('/')}/api/paper/levels?market={urllib.parse.quote(market)}"
+        try:
+            with urllib.request.urlopen(url, timeout=timeout) as r:
+                doc = json.loads(r.read().decode("utf-8", "replace"))
+        except Exception as exc:  # noqa: BLE001 - any failure is the same state
+            out["why"] = f"{type(exc).__name__}: {exc}"
+            return out
     if not isinstance(doc, dict):
         out["why"] = "the route did not answer with an object"
         return out
 
-    # Recorded for the operator, never rendered. See the module docstring.
+    # Recorded for the operator, never rendered. See the module docstring and
+    # the route's own doc comment on the field, which says the same thing.
     out["unavailable"] = doc.get("unavailable")
-    prov = _provenance(doc)
-    out["provenance"] = prov
-    groups = _groups(doc)
-    if out["unavailable"] and not any(rows for _, _, rows in groups):
-        out["why"] = "the route has no bars for this market"
-        return out
-    if not prov and not any(rows for _, _, rows in groups):
-        out["why"] = "the route returned neither levels nor provenance"
+    out["timeframe"] = doc.get("timeframe")
+    bar_ms = _f(doc.get("bar_ms"))
+    out["bar_ms"] = bar_ms
+    started = _f(doc.get("computed_at_bar_ms"))
+    out["computed_at_bar_ms"] = None if started is None else int(started)
+
+    # NULL BLOCKS ARE NOT EMPTY LISTS. The route's module doc is explicit:
+    # `null` means there were no bars to look at, an empty list means this
+    # market has no gaps today, and the two must render differently. So the
+    # test is on the blocks being absent, not on the level count.
+    blocks = [doc.get(k) for k in ("profile", "fair_value_gaps", "order_blocks",
+                                   "liquidity", "extremes")]
+    if all(b is None for b in blocks):
+        out["why"] = out["unavailable"] or "the route returned no levels and gave no reason"
         return out
 
-    tf, bar_ms = _base_tf(prov)
-    out["base_tf"], out["base_bar_ms"] = tf, bar_ms
-    if bar_time is not None and bar_ms:
-        # The gap from the newest CLOSED bar behind the levels to the bar being
-        # decided, in bars of that timeframe. A bar is not knowable until it
-        # closes, so the close is `start + bar_ms` - measuring from the start
-        # would overstate freshness by one whole bar.
-        p = prov.get(tf) or {}
-        start = _f(p.get("computed_at_bar_ms"))
-        if start is not None:
-            behind = (bar_time - (start + bar_ms)) / float(bar_ms)
-            out["behind_bars"] = behind
-            if behind > STALE_AFTER_BARS:
-                out["state"] = "stale"
-                out["why"] = (f"the newest closed {tf} bar behind these levels is {behind:.1f} "
-                              f"{tf} bars behind the bar being decided; the export that writes "
-                              f"those bars has probably stopped")
-                return out
+    if bar_time is not None and bar_ms and started is not None:
+        # Start to start and in CLOCK TIME, never divided into bars - see the
+        # two measured facts above STALE_AFTER_BARS.
+        behind_ms = bar_time - started
+        tol_ms = DAILY_HOLE_MS + STALE_AFTER_BARS * bar_ms
+        out["behind_ms"] = behind_ms
+        out["behind_min"] = behind_ms / 60000.0
+        out["tolerance_min"] = tol_ms / 60000.0
+        if behind_ms > tol_ms:
+            tf = out["timeframe"] or "base"
+            out["state"] = "stale"
+            out["why"] = (f"the newest closed {tf} bar behind these levels opened "
+                          f"{behind_ms / 60000.0:.0f} minutes before the bar being decided, past "
+                          f"the {tol_ms / 60000.0:.0f} minute tolerance (the measured one-hour "
+                          f"daily hole plus two {tf} bars); the export that writes those bars "
+                          f"has probably stopped")
+            return out
 
     close = last_close if last_close is not None else _f(doc.get("last_close"))
     out["last_close"] = close
+    out["atr"] = atr if atr is not None else _f(doc.get("atr14"))
     if close is None:
         # The route answered and the levels cannot be placed. Thin rather than
         # unavailable: the distinction is what tells an operator whether to
@@ -442,39 +514,25 @@ def gather(api: str = "http://127.0.0.1:8138", market: str = "xauusd",
         out["why"] = "no last close to measure distance from, so no level can be ordered"
         return out
 
-    levels = []
-    for _key, word, rows in groups:
-        for raw in rows:
-            lv = _level(raw, word, close, prov)
-            if lv is not None:
-                levels.append(lv)
+    levels = _harvest(doc, close)
     if not levels:
         out["state"] = "thin"
-        out["why"] = "the route computed no levels for this market yet (warmup not met)"
+        out["why"] = "the route answered with no levels in the window yet (warmup not met)"
         return out
-
-    # Ages the route did not state, from the bar it formed on and that
-    # timeframe's own bar length. Left as None when neither is knowable, and
-    # the line then says the age was not reported rather than printing a zero.
-    for lv in levels:
-        if lv["age_bars"] is None and lv["formed_at_bar_ms"] is not None and bar_time is not None:
-            p = prov.get(lv["tf"]) if lv["tf"] else None
-            ms = _f((p or {}).get("bar_ms")) or bar_ms
-            if ms:
-                lv["age_bars"] = (bar_time - lv["formed_at_bar_ms"]) / float(ms)
 
     levels.sort(key=lambda l: l["dist_abs"])
     out["levels"] = levels
     out["above"] = [l for l in levels if l["dist"] > 0]
     out["below"] = [l for l in levels if l["dist"] < 0]
     out["straddling"] = [l for l in levels if l["dist"] == 0]
+    out["census"] = census(levels)
     out["state"] = "ok"
     return out
 
 
 def _line(lv: dict, unit: str, atr) -> str:
     """One level, with a unit on every number in it."""
-    where = (f"{lv['lo']:.2f} to {lv['hi']:.2f} {unit}" if lv["lo"] is not None
+    where = (f"{lv['lo']:.2f} to {lv['hi']:.2f} {unit}" if lv["price"] is None
              else f"{lv['price']:.2f} {unit}")
     d = lv["dist"]
     if d == 0:
@@ -483,21 +541,59 @@ def _line(lv: dict, unit: str, atr) -> str:
         scale = (f" ({abs(d) / atr:.2f} ATR)" if atr
                  else " (no ATR scale this bar, so distance is in price only)")
         gap = f"{d:+.2f} {unit} away{scale}"
-    if lv["age_bars"] is None:
-        age = "age not reported"
-    else:
-        age = f"{lv['age_bars']:.0f} bars old" + (f" ({lv['tf_word']})" if lv["tf_word"] else "")
-    head = lv["word"] + (f" {lv['state_word']}" if lv["state_word"] else "")
+    age = "age not reported" if lv["age_bars"] is None else f"{lv['age_bars']} bars old"
+
+    head = lv["word"]
+    if lv["side_word"]:
+        head += f" ({lv['side_word']})"
+    if lv["state_word"]:
+        head += f" {lv['state_word']}"
+    # Kept SHORT on purpose. Rendering the real response for the first time
+    # put these lines at 170 characters against 60-character bar rows, and a
+    # line a reader's eye cannot finish is a fact they do not have.
     extra = []
-    if lv["filled_frac"] is not None:
-        extra.append(f"{100 * lv['filled_frac']:.0f}% filled")
+    if lv["direction_word"]:
+        extra.append(lv["direction_word"])
+    if lv["filled_fraction"] is not None:
+        extra.append(f"{100 * lv['filled_fraction']:.0f}% filled")
     if lv["swept"] is True:
-        extra.append("SWEPT on the bar opening " + _u(lv["swept_by_bar_ms"]))
-    elif lv["swept"] is False:
-        extra.append("not swept")
-    if lv["swing"]:
-        extra.append("at " + lv["swing"])
+        extra.append("swept " + _u(lv["swept_at_bar_ms"])
+                     if lv["swept_at_bar_ms"] is not None else "swept")
+    if lv["swings"]:
+        # A pool of one is a lone swing and a pool of four is four prices
+        # stacked at the same level. The route reports both as pools - 95 of
+        # the sample's 155 are pools of one - and which it is changes what the
+        # level means, so the count is on the line. The ids themselves are
+        # not: see the module docstring.
+        extra.append("1 swing" if lv["swings"] == 1 else f"{lv['swings']} swings")
+    if lv["spread_atr"] is not None:
+        extra.append(f"spread {lv['spread_atr']:.2f} ATR")
+    if lv["displacement_body_atr"] is not None:
+        extra.append(f"made by a {lv['displacement_body_atr']:.2f} ATR body")
     return f"    {head}: {where}, {gap}, {age}" + ("; " + "; ".join(extra) if extra else "")
+
+
+def _census_lines(c: dict) -> list:
+    """The census, wrapped into the header.
+
+    WHY IT IS HERE AT ALL. The route caps and ranks nothing, on purpose, and
+    the live sample of 2026-09-19 carries 252 levels of which 135 pools are
+    already swept and 62 blocks already broken. A model shown the nearest
+    twelve with no idea that they were twelve of 252, most of them spent,
+    would read a tidy tape. The count is not a ranking and does not become
+    one; what it says is how big the thing the cap sampled from was.
+    """
+    if not c.get("total"):
+        return []
+    parts = []
+    for family, n in sorted(c["families"].items(), key=lambda kv: -kv[1]):
+        spent = c["spent"].get(family, 0)
+        parts.append(f"{n} {family}" + ("s" if n != 1 else "")
+                     + (f" ({spent} spent)" if spent else ""))
+    body = (f"The desk found {c['total']} levels in this window and ranks none of them: "
+            + ", ".join(parts)
+            + ". Spent means a pool already swept or a block already broken.")
+    return textwrap.wrap(body, width=94, initial_indent="  ", subsequent_indent="  ")
 
 
 def block(ctx: dict) -> str:
@@ -506,8 +602,9 @@ def block(ctx: dict) -> str:
     unit = _unit(ctx.get("market") or "")
     if ctx.get("state") == "unavailable":
         # IN OUR OWN WORDS, NEVER THE ROUTE'S, here and in every branch below.
-        # The route's `unavailable` field is a join written in another crate;
-        # printing it would let that crate edit a registered campaign's prompt.
+        # The route's `unavailable` field is a sentence written in another
+        # crate; printing it would let that crate edit a registered campaign's
+        # prompt. Its own doc comment says so at the field.
         return "\n".join([
             f"PRICE LEVELS for {market}: UNAVAILABLE for this bar.",
             "  The desk computed no structural levels for this market right now.",
@@ -527,17 +624,21 @@ def block(ctx: dict) -> str:
         ])
 
     close, atr = ctx.get("last_close"), ctx.get("atr")
+    tf = ctx.get("timeframe") or "the decision"
     L = [
-        f"PRICE LEVELS for {market} - computed by the desk from CLOSED bars, one implementation",
-        "shared with the screen. There is no score here, no ranking and no confluence count: a",
-        "level's AGE and its STATE are as much of the fact as its price, and what to make of them",
-        "is your job. It is context, like everything else in this section, and not a signal.",
+        f"PRICE LEVELS for {market} - computed by the desk from CLOSED {tf} bars, one",
+        "implementation shared with the screen. There is no score here, no ranking and no",
+        "confluence count: a level's AGE and its STATE are as much of the fact as its price,",
+        "and what to make of them is your job. It is context, like everything else in this",
+        "section, and not a signal.",
         "",
-        f"  Ordered by distance from the last close ({close:.2f} {unit}), NEAREST FIRST, above and below",
-        f"  listed separately. At most {MAX_PER_SIDE} are shown per side and the rest are counted, so this",
-        "  block's length does not depend on how busy the tape is. Distance to a band is to its nearer",
-        "  edge; ages are counted in bars of the timeframe named on the line.",
     ]
+    L.extend(_census_lines(ctx.get("census") or {}))
+    L.extend([
+        f"  Below are the nearest to the last close ({close:.2f} {unit}), NEAREST FIRST, above and",
+        f"  below listed separately, at most {MAX_PER_SIDE} a side so this block's length does not depend",
+        f"  on how busy the tape is. Ages are in {tf} bars. Distance to a band is to its nearer edge.",
+    ])
     if not ctx.get("staleness_checked"):
         L.append("  (how far these levels lag the bar you are deciding on was NOT checked this run)")
     if atr is None:
@@ -576,12 +677,18 @@ def main() -> int:
     ap.add_argument("--last-close", type=float, default=None,
                     help="the close distances are measured from; the route's own is the fallback")
     ap.add_argument("--atr", type=float, default=None,
-                    help="ATR(14) in price, so distances can also be quoted in ATR")
+                    help="ATR(14) in price; the route's own atr14 is the fallback")
+    ap.add_argument("--sample", default=None,
+                    help="render a saved response instead of fetching one "
+                         "(docs/api-samples/paper-levels.json)")
     args = ap.parse_args()
-    ctx = gather(args.api, args.market, args.bar_time, args.last_close, args.atr)
+    doc = None
+    if args.sample:
+        doc = json.loads(io.open(args.sample, encoding="utf-8").read())
+    ctx = gather(args.api, args.market, args.bar_time, args.last_close, args.atr, doc=doc)
     print(f"state={ctx['state']}  why={ctx.get('why')}")
     print(f"levels={len(ctx.get('levels') or [])}  above={len(ctx.get('above') or [])}  "
-          f"below={len(ctx.get('below') or [])}  behind_bars={ctx.get('behind_bars')}")
+          f"below={len(ctx.get('below') or [])}  behind_min={ctx.get('behind_min')}")
     print()
     print(block(ctx))
     return 0
