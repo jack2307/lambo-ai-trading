@@ -3,9 +3,13 @@
 **Registered:** 2026-09-18, **before the route it reads exists** and before
 either book has seen a bar. Everything below is a pre-commitment; nothing in
 it may be changed by what the books turn out to say.
-**Status:** registered, NOT built and NOT started. The block is written only
-once d1's `/api/paper/levels` is on `main`; the books are started by a5 in a
-quiet window after it is deployed.
+**Status:** BUILT 2026-09-19 on branch `agent/smc-prompt`, NOT started. The
+block, the prompt variant and the three-file wiring exist and their selftests
+pass; `/api/paper/levels` is still d1's and still not on `main`, so the block
+was written against the contract and tested against a mocked route. The books
+are started by a5 in a quiet window after the route is deployed. What was
+built, and the two places it departs from the lines above, are recorded in
+"What is now built" at the foot of this file.
 **Books:** `ai-xau-ds-ctx` (base, already running, untouched) as control,
 against `ai-xau-ds-ctx-smc` (variant `smc-context`), with its own coin
 `ai-xau-ds-ctx-smc-coin` and **seed 43** — distinct from 23, 29, 37 and 41.
@@ -198,3 +202,86 @@ Written by Claude Opus 5 (session `backcom-vantage`, 2026-09-18) before
 `/api/paper/levels` exists, so that the record of what was expected predates
 the first number. Scope set by a5 on the owner's instruction; the route is
 d1's.
+
+## What is now built (amendment, 2026-09-19)
+
+Written after the code and before any bar. The claim, the falsifier and the
+three stages above are untouched: they were pre-committed and nothing here
+may move them.
+
+**The files.** `py/live/smc_context.py` (the block), the `smc-context` entry
+in `py/live/ai_trader.py`'s `VARIANTS` with a `{smc_block}` slot beside the
+HTF and OTL slots, the launcher row in `py/live/start_ai_traders.ps1`, the
+book in `py/live/start_ai_runs.py`, and `py/live/smc_context_selftest.py`.
+`py/live/prompt_variant_selftest.py` pins the variant list at eight.
+The three-file rule is covered: `campaign_wiring_selftest.py` passes, which
+is what would have caught the 2026-09-18 pair that logged `HTTP 404` for half
+an hour while reporting nothing wrong.
+
+**What the block shows.** One header saying what it is and what it is not,
+then the levels the route served, in this file's own words: activity profile
+(POC, value area high and low), unfilled fair value gaps with the fraction
+filled, order blocks with UNTESTED / TESTED / BROKEN, buy- and sell-side
+liquidity with `swept` and the bar that swept it, and session / day / week
+extremes. Each line carries the price or the two-price band in the market's
+quote units, the distance from the last close in **both** price and ATR(14),
+the **age in bars** of the timeframe named on the line, and the **state**.
+Ordering is nearest-first by distance from the last close, **above and below
+listed separately**, with a third short section for a band the last close is
+inside; the distance to a band is to its nearer edge.
+
+**The cap: six a side, stated in the block.** The prompt ends with the forty
+15m bars the model decides on. Measured: `htf_context` renders 43 lines on
+its fixture and `otl_context` 17; at six a side this block renders 30 on a
+full book and 27 with nothing straddling, and the selftest pins that ceiling
+and pins that flooding the route with 120 levels does not lengthen it. At
+twelve a side the arithmetic is 42 lines — level with the HTF block and
+longer than the bars it sits in front of. Levels past the cap are **counted
+on their own line**, not dropped silently: how many there are is itself a
+fact about the tape.
+
+**Failure states.** `ok` / `stale` / `thin` / `unavailable`, and every one of
+them renders a block that says which. Staleness is judged against the bar
+being decided, not the wall clock, on the finest timeframe the route reports
+provenance for — the same rule and the same two-bar threshold as
+`htf_context`, because a wall-clock threshold cannot tell a stopped export
+from a weekend. There is no fallback to the base prompt on any of them, and
+every decision row carries `smc` (`ok <n> levels`, `thin`, `stale <n> bars`,
+`unavailable`, or `n/a`) so stage 1 can count only the warm `ok` bars.
+
+**The route's own strings reach nothing.** Stricter than `htf_context` had to
+be, because this route carries *the name of the rule that produced each
+level* and that name is another crate's prose. It is recorded in `gather` and
+never rendered. `kind` and `state` are mapped through this file's own
+vocabulary and anything outside it renders as "not in this block's
+vocabulary". The two exceptions are parsed, not printed: a swing id matching
+`(h4|d1|…)-(hi|lo)-<ms>` is re-rendered as "the H4 swing high from
+2026-09-18 12:00Z", and a timeframe token matching `\d{1,3}[mhdw]` is
+re-rendered lowercase. The selftest feeds a marker through every one of those
+fields, in all four states, and checks it appears nowhere.
+
+**Two departures from the lines at the head of this file, recorded rather
+than quietly applied.** They were set by a5 in the build instruction and they
+do not touch the claim.
+
+- **The book ids are `ai-xau-ds-smc` and `ai-xau-ds-smc-coin`**, not
+  `ai-xau-ds-ctx-smc` / `-ctx-smc-coin`. The control is unchanged:
+  `ai-xau-ds-ctx`, same model, same bars.
+- **The seed is 53, not 43.** 43 had been taken by `ai-xau-ds-plan` on
+  2026-09-18, between this registration being written and the code being
+  written. Two books on one seed share a coin's luck on every bar where both
+  traded, which is the one thing a control may not do.
+- **The route is called as `?market=xauusd`, with no `&tf=15m`.** The
+  contract a5 handed over serves every timeframe at once and carries
+  provenance per timeframe, so the block shows levels from all of them and
+  names each one's timeframe on its own line. That is more than this file
+  said it would show, not less, and it is why an age has to carry a
+  timeframe: "4 bars" is forty minutes on 15m and sixteen hours on 4h.
+
+**Nothing is started.** No process was launched, no book was created, and
+`/api/paper/levels` does not exist yet. Until it does, every decision this
+book would make carries `smc: unavailable` — a recorded result, but not the
+experiment, which is why a5 starts it only after the route is deployed.
+
+Written by Claude Opus 5 (trader session, worktree `fd-wt-smc`, branch
+`agent/smc-prompt`), 2026-09-19.

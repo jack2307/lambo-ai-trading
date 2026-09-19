@@ -110,6 +110,27 @@ BOOKS = [
      "AI trader - deepseek-flash, prompt htf-context (base + H4/D1 facts block)"),
     ("ai-xau-ds-ctx-htf-filter", "ai-xau-ds-ctx-htf-filter-coin",
      "AI trader - deepseek-flash, prompt htf-filter (htf-context + one structure-only rule)"),
+    # deepseek-flash again, with one more block ADDED to the prompt: the
+    # structural price levels GET /api/paper/levels computes from closed bars
+    # - activity profile, unfilled fair value gaps, order blocks, buy- and
+    # sell-side liquidity, session/day/week extremes - each with its price or
+    # band, its AGE and its STATE, nearest first and capped. `ai-xau-ds-ctx`
+    # keeps running unchanged and is the control.
+    #
+    # The same second-book rule as every pair above, and for the same second
+    # reason the -otl and -htf books needed one: this book's bars divide into
+    # ones where the route answered and ones where it did not, the `smc`
+    # field on every decision row records which, and only a book of its own
+    # can carry that distinction in its record.
+    #
+    # Registered before its first bar - and before the route existed - at
+    # docs/hypotheses/2026-09-18-smc-context.md, which states the kill
+    # condition in advance (a disagreement rate under 10% over the first 100
+    # shared warm `ok` bars closes the claim and stops both books) and states
+    # that this is the THIRD variant on one control, so a positive result is
+    # to be read against three tests and not one.
+    ("ai-xau-ds-smc", "ai-xau-ds-smc-coin",
+     "AI trader - deepseek-flash, prompt smc-context (base + structural price levels block)"),
     # deepseek-flash a fifth and sixth time, for the staged-entry pair
     # (docs/plans/2026-09-18-staged-ai-entry.md, stages 1 and 2).
     # `ai-xau-ds-ctx` is the control for the first and keeps running unchanged.

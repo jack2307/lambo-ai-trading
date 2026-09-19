@@ -37,19 +37,27 @@ def check(ok: bool, what: str) -> None:
         fails.append(what)
 
 
+# Every block defaults to the empty string, so a variant that adds nothing
+# renders byte-identical to what it rendered before that block existed. That
+# is the property the whole file rests on: `smc_block` was added on
+# 2026-09-18 and base did not move by a byte.
 def render(variant: str, otl_block: str = "", htf_block: str = "",
-           htf_rule_block: str = "", plan_block: str = "") -> str:
+           htf_rule_block: str = "", plan_block: str = "", smc_block: str = "") -> str:
     return A.PROMPT.format(coin_clause=A.COIN_CLAUSE[A.VARIANTS[variant]["coin"]],
                            otl_block=otl_block, htf_block=htf_block,
                            htf_rule_block=htf_rule_block, plan_block=plan_block,
-                           **FIELDS)
+                           smc_block=smc_block, **FIELDS)
 
 
 base, nocoin = render("base"), render("no-coin-penalty")
 
+# `smc-context` is pinned here with the rest so that removing it is a failure
+# and not a quiet deletion; what it renders is checked in
+# `smc_context_selftest.py`, beside the block it prints.
 check(tuple(A.PROMPT_VARIANTS) == ("base", "no-coin-penalty", "otl-context",
-                                   "htf-context", "htf-filter", "plan", "plan-trigger"),
-      "the variants are the seven the registrations name")
+                                   "htf-context", "htf-filter", "smc-context",
+                                   "plan", "plan-trigger"),
+      "the variants are the eight the registrations name")
 check(PENALTY in base, "base still carries the penalty clause")
 check(PENALTY not in nocoin, "no-coin-penalty does not carry it")
 check("measured against a" in nocoin and "random side" in nocoin,
@@ -345,7 +353,7 @@ check(A.VARIANTS["plan-trigger"]["trigger"] and not A.VARIANTS["plan"]["trigger"
       "only plan-trigger runs the fast loop")
 check(A.VARIANTS["plan"]["plan"] and A.VARIANTS["plan-trigger"]["plan"]
       and not any(A.VARIANTS[v]["plan"] for v in ("base", "no-coin-penalty", "otl-context",
-                                                    "htf-context", "htf-filter")),
+                                                    "htf-context", "htf-filter", "smc-context")),
       "no existing book starts answering with a plan because these were added")
 check(not any(A.VARIANTS[v]["trigger"] for v in A.VARIANTS if v != "plan-trigger"),
       "no existing book starts a fast loop because these were added")

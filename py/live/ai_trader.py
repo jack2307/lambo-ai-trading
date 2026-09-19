@@ -66,6 +66,9 @@ import otl_context  # noqa: E402
 # broken import should stop a process at start, not at the first bar it was
 # needed on.
 import htf_context  # noqa: E402
+# Structural price levels, used by the `smc-context` variant only. Imported
+# unconditionally for the same reason as the two lines above.
+import smc_context  # noqa: E402
 
 # Output is UTF-8, and undisplayable characters are replaced rather than fatal.
 #
@@ -168,14 +171,31 @@ COIN_CLAUSE = {
 # thinking off. Stage 2, registered at docs/hypotheses/2026-09-18-plan-trigger.md.
 # The comparison is against `plan`, whose orders fill by rule alone: does a
 # model at the trigger add anything, or only cost?
+#
+# `smc` adds the structural price levels block to MARKET CONTEXT and adds
+# nothing else - the BASE coin clause again, for the reason `otl` gives. It is
+# the THIRD variant on the same control, after `otl-context` and
+# `htf-context`, and its registration
+# (docs/hypotheses/2026-09-18-smc-context.md) says so out loud before any of
+# the three reports: three variants each given a 10% disagreement gate are
+# three chances at a false positive, and the 2026-09-18 bias study measured
+# the largest z across 34 tests at +1.98 where noise alone predicts +1.94.
+#
+# It is a different claim from the registrations that tested levels of this
+# family as mechanical rules and closed - the full ICT chain at PF 0.75-0.77
+# over 613-1,428 out-of-sample trades, and yesterday's high and low at the
+# 1st-6th percentile of its own null. Those asked whether the levels predict
+# price. This asks whether a model that can see them decides differently,
+# which can be true whether or not they predict anything.
 VARIANTS = {
-    "base":            {"coin": "base",            "otl": False, "htf": False, "htf_rule": False, "plan": False, "trigger": False},
-    "no-coin-penalty": {"coin": "no-coin-penalty", "otl": False, "htf": False, "htf_rule": False, "plan": False, "trigger": False},
-    "otl-context":     {"coin": "base",            "otl": True,  "htf": False, "htf_rule": False, "plan": False, "trigger": False},
-    "htf-context":     {"coin": "base",            "otl": False, "htf": True,  "htf_rule": False, "plan": False, "trigger": False},
-    "htf-filter":      {"coin": "base",            "otl": False, "htf": True,  "htf_rule": True,  "plan": False, "trigger": False},
-    "plan":            {"coin": "base",            "otl": False, "htf": False, "htf_rule": False, "plan": True,  "trigger": False},
-    "plan-trigger":    {"coin": "base",            "otl": False, "htf": False, "htf_rule": False, "plan": True,  "trigger": True},
+    "base":            {"coin": "base",            "otl": False, "htf": False, "htf_rule": False, "smc": False, "plan": False, "trigger": False},
+    "no-coin-penalty": {"coin": "no-coin-penalty", "otl": False, "htf": False, "htf_rule": False, "smc": False, "plan": False, "trigger": False},
+    "otl-context":     {"coin": "base",            "otl": True,  "htf": False, "htf_rule": False, "smc": False, "plan": False, "trigger": False},
+    "htf-context":     {"coin": "base",            "otl": False, "htf": True,  "htf_rule": False, "smc": False, "plan": False, "trigger": False},
+    "htf-filter":      {"coin": "base",            "otl": False, "htf": True,  "htf_rule": True,  "smc": False, "plan": False, "trigger": False},
+    "smc-context":     {"coin": "base",            "otl": False, "htf": False, "htf_rule": False, "smc": True,  "plan": False, "trigger": False},
+    "plan":            {"coin": "base",            "otl": False, "htf": False, "htf_rule": False, "smc": False, "plan": True,  "trigger": False},
+    "plan-trigger":    {"coin": "base",            "otl": False, "htf": False, "htf_rule": False, "smc": False, "plan": True,  "trigger": True},
 }
 
 # The whole of what `htf-filter` adds to `htf-context`, quoted here in full so
@@ -312,7 +332,7 @@ Answer with JSON and nothing else:
 
 "NONE" is a real answer and is often the right one. If you propose a trade, the stop must be on the
 losing side of the last close and the target on the winning side, or it will be refused.
-{plan_block}{htf_rule_block}{htf_block}{otl_block}
+{plan_block}{htf_rule_block}{htf_block}{otl_block}{smc_block}
 
 MARKET CONTEXT — computed from the same bars, for convenience; none of it is a signal
 {context}
@@ -1429,6 +1449,35 @@ def main() -> int:
         # variant two prompts sharing one book id.
         if VARIANTS[args.prompt_variant]["htf_rule"]:
             htf_rule_block = "\n" + HTF_RULE + "\n"
+
+        # The structural levels block, fetched per decision for the reason the
+        # two blocks above are: levels computed from bars three days old
+        # describe a different market, and `smc_context` judges that against
+        # THIS bar rather than a wall clock, which cannot tell a stopped
+        # export from a weekend.
+        #
+        # `last_close` and `atr_now` are handed over rather than left to the
+        # route. The prompt ends with forty bars and the block says "the last
+        # close": a distance measured from a number the model cannot see on
+        # that last line would be wrong in the one way nobody would catch.
+        # `atr_now` is the same ATR(14) the desk block quotes 1R against, so
+        # "0.48 ATR" there and "1R is 1.2 x ATR" here are one unit.
+        #
+        # An absent, thin or stale route does NOT fall back to the base
+        # prompt, for the reason the two above give: the block says which it
+        # is and `smc` below records it.
+        smc_state, smc_block = "n/a", ""
+        if VARIANTS[args.prompt_variant]["smc"]:
+            ctx_smc = smc_context.gather(args.api, args.market, last_time, last_close, atr_now)
+            smc_block = "\n\n" + smc_context.block(ctx_smc)
+            smc_state = ctx_smc["state"]
+            if smc_state == "stale" and ctx_smc.get("behind_bars") is not None:
+                smc_state = f"stale {ctx_smc['behind_bars']:.1f} bars"
+            elif smc_state == "ok":
+                # How many levels the model was actually shown, because "ok"
+                # over two levels and "ok" over forty are not the same bar and
+                # the disagreement analysis has to be able to tell them apart.
+                smc_state = f"ok {len(ctx_smc.get('levels') or [])} levels"
         # The plan block is static text, so it lands in the cached prefix
         # with the rules it amends - before the blocks that change hourly.
         plan_block = ("\n" + PLAN_BLOCK + "\n") if is_plan else ""
@@ -1437,6 +1486,7 @@ def main() -> int:
             market=args.market, tf=args.tf, n=len(shown), bars=rows,
             plan_block=plan_block,
             otl_block=otl_block, htf_block=htf_block, htf_rule_block=htf_rule_block,
+            smc_block=smc_block,
             coin_clause=COIN_CLAUSE[VARIANTS[args.prompt_variant]["coin"]],
             position=describe_position(detail),
             desk=desk_block(detail, limits, atr_now, args.run),
@@ -1715,6 +1765,13 @@ def main() -> int:
             # first analysis this book gets is disagreement rate, and a bar
             # whose facts were absent cannot be counted in it.
             "htf": htf_state,
+            # Which bars had the structural levels, and in what condition:
+            # `ok <n> levels`, `thin`, `stale <n> bars`, `unavailable`, or
+            # `n/a` for the variants that never ask. Same rule as `htf`
+            # above: stage 1 of this registration counts only the bars where
+            # the block read `ok`, and a row that did not say so cannot be
+            # separated out afterwards.
+            "smc": smc_state,
             "prompt": prompt, "response": text, "latency_ms": ms,
             # What the call actually spent. `cost_usd` is null for a plan: that
             # call is not free, it draws on a quota, and printing $0.00 beside
