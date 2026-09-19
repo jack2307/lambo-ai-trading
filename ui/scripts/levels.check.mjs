@@ -21,19 +21,25 @@ import { fileURLToPath } from 'node:url'
 
 import {
   COLLAPSE_TOL_PRICE,
+  DEFAULT_LEVEL_MODE,
   KIND_TAGS,
   KIND_WORDS,
   LEVEL_FAMILIES,
+  LEVEL_MODES,
   LIVE_WINDOW_ATR,
   PROFILE_NOTE,
   STATE_WORDS,
+  TAGS_PER_PANE,
   censusOf,
+  crowdedSentence,
   familyOf,
   foldSamePrice,
   harvestLevels,
   hiddenSentence,
+  readLevelMode,
   selectLevels,
   stackTags,
+  writeLevelMode,
 } from '../src/lib/levels.ts'
 
 let failures = 0
@@ -174,10 +180,145 @@ for (const [kind, want] of CASES) {
   check(`${kind} -> ${want}`, got === want, `got ${got}`)
 }
 
-console.log('\n-- defaults --')
-const on = LEVEL_FAMILIES.filter((f) => f.onByDefault).map((f) => f.key)
-check('profile and liquidity are on by default', on.join(',') === 'profile,liquidity', on.join(','))
-check('every family has a hue', LEVEL_FAMILIES.every((f) => f.hue.startsWith('var(--')))
+console.log('\n-- the one switch, its positions and its defaults --')
+
+/**
+ * THE FIVE FAMILY SWITCHES ARE GONE and this is where that is asserted
+ * rather than assumed. Until 2026-09-19 each family carried an `onByDefault`
+ * and `LEVEL_FAMILIES.filter(f => f.onByDefault)` was the chart's opening
+ * view — profile and liquidity on, gaps and blocks off. One switch cannot
+ * express a per-family default, so the flag was removed rather than left
+ * lying around for a reader to trust; the default is now the switch's own
+ * position and it is checked below. What the families KEPT is their hues,
+ * because they are still different kinds of level.
+ */
+check(
+  'no family carries a default of its own any more',
+  LEVEL_FAMILIES.every((f) => !('onByDefault' in f)),
+  LEVEL_FAMILIES.filter((f) => 'onByDefault' in f).map((f) => f.key).join(','),
+)
+check('every family still has a hue of its own', LEVEL_FAMILIES.every((f) => f.hue.startsWith('var(--')))
+check(
+  'no two families share a hue — a merged switch must not merge the meanings',
+  new Set(LEVEL_FAMILIES.map((f) => f.hue)).size === LEVEL_FAMILIES.length,
+  LEVEL_FAMILIES.map((f) => `${f.key}:${f.hue}`).join(' '),
+)
+check(
+  'the switch has exactly three positions, in the order off, live, everything',
+  LEVEL_MODES.map((m) => m.key).join(',') === 'off,live,everything',
+  LEVEL_MODES.map((m) => m.key).join(','),
+)
+check('a fresh viewer lands on live', DEFAULT_LEVEL_MODE === 'live', DEFAULT_LEVEL_MODE)
+
+/* ------------------------------------------------------ the migration */
+
+/**
+ * NOBODY'S SAVED STATE THROWS, AND NOBODY'S COMES BACK HALF-ON.
+ *
+ * `fd.desk.levels` held a JSON list of the families that were on;
+ * `fd.desk.showHtf` was the master and `fd.desk.levelsSpent` the spent
+ * switch. None of those three states is expressible in three positions, so
+ * every one of them has to land somewhere, and the direction they round in
+ * is the thing this block pins: NEVER towards drawing less than the viewer
+ * had switched on. Somebody who had the spent levels on and comes back to a
+ * chart with 197 of them silently gone would have no way of telling that
+ * from the tape having changed.
+ *
+ * A stub rather than a real `localStorage`, because `readLevelMode` reads it
+ * at call time and node has none. The throwing case is the one that matters
+ * most — private mode, blocked storage — and it is here too.
+ */
+console.log('\n-- migrating what viewers already had --')
+
+const storage = (entries) => ({
+  getItem: (k) => (k in entries ? entries[k] : null),
+  setItem: (k, v) => {
+    entries[k] = v
+  },
+})
+const modeFrom = (entries) => {
+  globalThis.localStorage = storage(entries)
+  return readLevelMode()
+}
+
+const MIGRATIONS = [
+  ['nothing saved at all', {}, 'live'],
+  ['a viewer already on the new control', { 'fd.desk.levels': 'everything' }, 'everything'],
+  ['off stays off', { 'fd.desk.levels': 'off' }, 'off'],
+  // The instruction's own example: the control cannot say "blocks only", so
+  // it says everything that is live rather than picking one of the four.
+  ['only blocks were on', { 'fd.desk.levels': '["blocks"]' }, 'live'],
+  ['the old default, profile and liquidity', { 'fd.desk.levels': '["profile","liquidity"]' }, 'live'],
+  ['all four families were on', { 'fd.desk.levels': '["profile","liquidity","gaps","blocks"]' }, 'live'],
+  // An empty list drew nothing, and `off` draws nothing. This one the new
+  // control CAN express exactly, so it is not rounded up.
+  ['every family had been switched off', { 'fd.desk.levels': '[]' }, 'off'],
+  ['a list of families this client no longer knows', { 'fd.desk.levels': '["unicorns"]' }, 'off'],
+  // The master beat everything else before the merge and it still does.
+  ['the master was off', { 'fd.desk.showHtf': '0', 'fd.desk.levels': '["profile"]' }, 'off'],
+  // THE LEGACY KEYS LOSE TO THE NEW ONE, and these two are the reason the
+  // order in `readLevelMode` is what it is. Read the old master first and a
+  // viewer who had it off could press `live`, have it saved, and find the
+  // control back at `off` on the next load with nothing explaining why.
+  ['the master was off and they have since chosen live', { 'fd.desk.showHtf': '0', 'fd.desk.levels': 'live' }, 'live'],
+  ['spent was on and they have since chosen live', { 'fd.desk.levelsSpent': '1', 'fd.desk.levels': 'live' }, 'live'],
+  ['the master was off and spent was on', { 'fd.desk.showHtf': '0', 'fd.desk.levelsSpent': '1' }, 'off'],
+  // Spent on is the case that must NOT land on `live`: that would hide the
+  // 197 levels the viewer had explicitly asked to see.
+  ['spent was on', { 'fd.desk.levelsSpent': '1', 'fd.desk.levels': '["profile"]' }, 'everything'],
+  ['spent was on and the families were never touched', { 'fd.desk.levelsSpent': '1' }, 'everything'],
+  ['spent was explicitly off', { 'fd.desk.levelsSpent': '0', 'fd.desk.levels': '["gaps"]' }, 'live'],
+  // Hand-edited nonsense is a working chart, not an empty one.
+  ['a value somebody hand-edited', { 'fd.desk.levels': 'not json at all' }, 'live'],
+  ['an object where a list was', { 'fd.desk.levels': '{"profile":true}' }, 'live'],
+]
+for (const [what, entries, want] of MIGRATIONS) {
+  const got = modeFrom(entries)
+  check(`${what} -> ${want}`, got === want, `got ${got}`)
+}
+
+check(
+  'storage that throws is a working chart, not a blank one',
+  (() => {
+    globalThis.localStorage = {
+      getItem() {
+        throw new Error('blocked')
+      },
+      setItem() {
+        throw new Error('blocked')
+      },
+    }
+    return readLevelMode() === DEFAULT_LEVEL_MODE
+  })(),
+)
+check(
+  'and writing into storage that throws does not take the page down',
+  (() => {
+    try {
+      writeLevelMode('everything')
+      return true
+    } catch {
+      return false
+    }
+  })(),
+)
+
+// THE KEY IS THE OLD ONE AND THE LEGACY KEYS ARE LEFT ALONE. Renaming
+// `fd.desk.levels` would have reset every viewer who ever touched the
+// control; deleting the other two would strand anyone who rolls back.
+{
+  const entries = { 'fd.desk.levels': '["blocks"]', 'fd.desk.showHtf': '0', 'fd.desk.levelsSpent': '1' }
+  globalThis.localStorage = storage(entries)
+  writeLevelMode('live')
+  check('the position is written back under the old key', entries['fd.desk.levels'] === 'live', entries['fd.desk.levels'])
+  check(
+    'and the two switches it replaced are left where they are',
+    entries['fd.desk.showHtf'] === '0' && entries['fd.desk.levelsSpent'] === '1',
+    JSON.stringify(entries),
+  )
+  check('what was written back reads back the same', readLevelMode() === 'live')
+}
+delete globalThis.localStorage
 
 /* ------------------------------------------------------- the vocabulary */
 
@@ -322,10 +463,26 @@ check(
   )
 }
 
-console.log('\n-- what is drawn and what is counted --')
+console.log('\n-- what each of the three positions draws --')
 
-const EVERY_FAMILY = new Set(LEVEL_FAMILIES.map((f) => f.key))
-const live = selectLevels(levels, { families: EVERY_FAMILY, showSpent: false })
+/**
+ * THE THREE POSITIONS, COUNTED ON THE REAL RESPONSE. This is the block the
+ * merge is worth anything by: one control, and a reader has to be able to
+ * say what each press does. Every number here was measured on
+ * `docs/api-samples/paper-levels.json` and every one of them is quoted in a
+ * comment in `lib/levels.ts`.
+ */
+const off = selectLevels(levels, { mode: 'off' })
+const live = selectLevels(levels, { mode: 'live' })
+const all = selectLevels(levels, { mode: 'everything' })
+
+check('off draws nothing at all', off.drawn.length === 0, `${off.drawn.length}`)
+check('and says so as 252 held back by the switch', off.hiddenOff === 252, `${off.hiddenOff}`)
+check(
+  'off holds nothing back for distance or state — the switch is the only reason',
+  off.hidden === 0 && off.hiddenSpent === 0 && off.hiddenFar === 0,
+)
+check('and the window is not in force when nothing is drawn', off.windowed === false)
 
 check('the window is three ATR', LIVE_WINDOW_ATR === 3, `${LIVE_WINDOW_ATR}`)
 // The measurement the constant's comment is written on. Widening it is
@@ -333,31 +490,51 @@ check('the window is three ATR', LIVE_WINDOW_ATR === 3, `${LIVE_WINDOW_ATR}`)
 // is not.
 // 15 is the 13 live levels inside the window plus the profile's three marks,
 // one of which (VAH at 1.77 ATR) was inside it anyway.
-check('15 levels are drawn on the captured response', live.drawn.length === 15, `${live.drawn.length}`)
+check('live draws 15 of the 252', live.drawn.length === 15, `${live.drawn.length}`)
 check('197 are held back for being spent', live.hiddenSpent === 197, `${live.hiddenSpent}`)
 check('40 more are held back for being further away', live.hiddenFar === 40, `${live.hiddenFar}`)
 check(
-  'nothing is lost between drawn, hidden and switched off',
-  live.drawn.length + live.hidden + live.hiddenFamily === levels.length,
-  `${live.drawn.length} + ${live.hidden} + ${live.hiddenFamily} vs ${levels.length}`,
+  'nothing is lost between drawn, hidden and held back by the switch',
+  live.drawn.length + live.hidden + live.hiddenOff === levels.length,
+  `${live.drawn.length} + ${live.hidden} + ${live.hiddenOff} vs ${levels.length}`,
 )
 check('the window was applied', live.windowed === true)
 
-// Six ATR was the alternative, and this is why it is not the default: a
-// 400px pane holds 28 tags at a 14px gap, and `stackTags` stops placing them
-// at their own prices past that.
-const wider = selectLevels(levels, { families: EVERY_FAMILY, showSpent: false, windowAtr: 6 })
-check('six ATR would draw 36, which is past what the pane holds', wider.drawn.length === 36, `${wider.drawn.length}`)
-
-const withSpent = selectLevels(levels, { families: EVERY_FAMILY, showSpent: true })
-check('the spent switch reveals them', withSpent.drawn.length === 101, `${withSpent.drawn.length}`)
-check('and then nothing is hidden for being spent', withSpent.hiddenSpent === 0)
-
-const oneFamily = selectLevels(levels, { families: new Set(['profile']), showSpent: false })
+// THE POSITION THE OWNER ASKED FOR IN SO MANY WORDS: "khi bật là sẽ hiển thị
+// toàn bộ". No distance window, no spent filter, nothing held back for any
+// reason — and 252 is nine times what the pane can label, which is why it is
+// the third position and not the second.
+check('everything draws all 252', all.drawn.length === 252, `${all.drawn.length}`)
+check('everything holds nothing back, for any reason', all.hidden === 0 && all.hiddenOff === 0)
 check(
-  'a family switched off is counted apart from the window',
-  oneFamily.hiddenFamily === 249 && oneFamily.hiddenSpent === 0,
-  `${oneFamily.hiddenFamily} / ${oneFamily.hiddenSpent}`,
+  'everything draws every spent level the response carries',
+  all.drawn.filter((l) => l.spent).length === 197,
+  `${all.drawn.filter((l) => l.spent).length}`,
+)
+check(
+  'and every level live draws, everything draws too — the positions nest',
+  live.drawn.every((l) => all.drawn.includes(l)),
+)
+check(
+  'the window is not in force at everything, and it is dropped rather than widened',
+  all.windowed === false,
+)
+check(
+  'so the distance window is nowhere in the everything set',
+  all.drawn.some((l) => l.distAtr != null && Math.abs(l.distAtr) > LIVE_WINDOW_ATR),
+)
+
+// Six ATR was the alternative to the third position — a wider window instead
+// of no window — and this is why it is not one: a 400px pane holds 28 tags
+// at a 14px gap, and `stackTags` stops placing them at their own prices past
+// that, so six ATR is already degraded and still is not "everything".
+const wider = selectLevels(levels, { mode: 'live', windowAtr: 6 })
+check('six ATR would draw 36, which is past what the pane holds', wider.drawn.length === 36, `${wider.drawn.length}`)
+check('the pane holds 28 tags', TAGS_PER_PANE === 28, `${TAGS_PER_PANE}`)
+check(
+  'and the window option cannot reach everything, because spent is not a distance',
+  selectLevels(levels, { mode: 'live', windowAtr: Infinity }).drawn.length === 55,
+  `${selectLevels(levels, { mode: 'live', windowAtr: Infinity }).drawn.length}`,
 )
 
 /* ------------------------------------------- the one exemption, and why */
@@ -367,22 +544,28 @@ check(
  * so. It is a statement about a CATEGORY — the activity profile is one object
  * describing the whole window, so its distance from price is not a fact about
  * its relevance — and not a ranking within one, which is what the rest of
- * this file exists to refuse. Turning the profile switch on and being shown
- * one mark of three was the window contradicting the switch.
+ * this file exists to refuse. Turning the profile's own switch on and being
+ * shown one mark of three was the window contradicting the switch. That
+ * switch is gone — there is one now — and the exemption is untouched by
+ * that: it was never about which switch was on.
  */
+const profileDrawn = live.drawn.filter((l) => l.family === 'profile')
 check(
-  'all three profile marks are drawn, at 1.8, 5.9 and 7.5 ATR away',
-  oneFamily.drawn.length === 3 && oneFamily.hiddenFar === 0,
-  `${oneFamily.drawn.length} drawn, ${oneFamily.hiddenFar} held back`,
+  'all three profile marks are drawn at live, at 1.8, 5.9 and 7.5 ATR away',
+  profileDrawn.length === 3,
+  `${profileDrawn.length} drawn`,
 )
 check(
-  'and the ones far outside the window really are far outside it',
-  oneFamily.drawn.filter((l) => Math.abs(l.distAtr) > LIVE_WINDOW_ATR).length === 2,
-  oneFamily.drawn.map((l) => `${l.kind} ${l.distAtr.toFixed(2)}`).join(' '),
+  'and two of the three are far outside the window that drew them anyway',
+  profileDrawn.filter((l) => Math.abs(l.distAtr) > LIVE_WINDOW_ATR).length === 2,
+  profileDrawn.map((l) => `${l.kind} ${l.distAtr.toFixed(2)}`).join(' '),
 )
 check(
-  'nothing else is exempt: a live pool past the window is still held back',
-  selectLevels(levels, { families: new Set(['liquidity']), showSpent: false }).hiddenFar > 0,
+  'nothing else is exempt: every one of the 40 held back for distance is from another family',
+  live.hiddenFar === 40 &&
+    levels.filter(
+      (l) => l.family !== 'profile' && !l.spent && l.distAtr != null && Math.abs(l.distAtr) > LIVE_WINDOW_ATR,
+    ).length === 40,
 )
 check(
   'the note that explains the exemption says what the profile IS',
@@ -405,7 +588,7 @@ check(
 console.log('\n-- a response with no ATR --')
 
 const thin = harvestLevels({ ...sample, atr14: null, profile: null })
-const thinPick = selectLevels(thin, { families: EVERY_FAMILY, showSpent: false })
+const thinPick = selectLevels(thin, { mode: 'live' })
 check('the profile is gone with it', thin.every((l) => l.family !== 'profile'))
 check('no level can be placed in ATR', thin.every((l) => l.distAtr === null))
 check('so the window says it was not applied', thinPick.windowed === false)
@@ -441,7 +624,7 @@ const hourly = JSON.parse(
   readFileSync(fileURLToPath(new URL('../../docs/api-samples/paper-levels-1h.json', import.meta.url)), 'utf8'),
 )
 const hourlyLevels = harvestLevels(hourly)
-const hourlyPick = selectLevels(hourlyLevels, { families: EVERY_FAMILY, showSpent: false })
+const hourlyPick = selectLevels(hourlyLevels, { mode: 'live' })
 check('the 1h response carries 66 levels', hourlyLevels.length === 66, `${hourlyLevels.length}`)
 check('45 of them are spent', censusOf(hourlyLevels).spent === 45, `${censusOf(hourlyLevels).spent}`)
 check('6 are drawn: three live and the profile', hourlyPick.drawn.length === 6, `${hourlyPick.drawn.length}`)
@@ -458,10 +641,20 @@ check(
   hiddenSentence(live) === '237 further levels, spent or further away, not drawn',
   hiddenSentence(live),
 )
+// The branch that names distance alone. Before the merge it was reached by
+// the `spent on` switch with the window still in force — a view that drew
+// 101 of the 252 and that the one control deliberately cannot express any
+// more, because `everything` means everything. The branch itself is still
+// live code and still reachable, on any response with nothing spent on it,
+// so it keeps its verbatim test built that way.
+const noneSpent = selectLevels(
+  levels.filter((l) => !l.spent),
+  { mode: 'live' },
+)
 check(
-  'with the spent ones on, it names distance alone',
-  hiddenSentence(withSpent) === '151 further levels, further than 3 ATR away, not drawn',
-  hiddenSentence(withSpent),
+  'on a response with nothing spent, the count names distance alone',
+  hiddenSentence(noneSpent) === '40 further levels, further than 3 ATR away, not drawn',
+  hiddenSentence(noneSpent),
 )
 check(
   'a single hidden level is not pluralised',
@@ -469,6 +662,23 @@ check(
   hiddenSentence({ hidden: 1, hiddenSpent: 1, hiddenFar: 0 }),
 )
 check('nothing hidden says nothing', hiddenSentence({ hidden: 0, hiddenSpent: 0, hiddenFar: 0 }) === null)
+
+// THE OTHER HALF OF THE DEBT, which `everything` owes. `hiddenSentence` says
+// nothing there because nothing is hidden, and a position that draws 252
+// tags into a pane that can place 28 must not be silent about it — a reader
+// who chose the wall has to be able to read it as the wall they asked for.
+check(
+  'everything says what it is doing to the tags',
+  crowdedSentence(all.drawn.length) ===
+    'all 252 drawn, spent and distant included — past 28 tags the pane spaces them evenly, so a tag is no longer at its own price',
+  crowdedSentence(all.drawn.length),
+)
+check(
+  'and says nothing while the pane can still place them',
+  crowdedSentence(TAGS_PER_PANE) === null && crowdedSentence(live.drawn.length) === null,
+  `${crowdedSentence(live.drawn.length)}`,
+)
+check('one more than the pane holds is already worth saying', crowdedSentence(TAGS_PER_PANE + 1) !== null)
 
 console.log('\n-- one price is one line --')
 
@@ -495,6 +705,28 @@ console.log('\n-- one price is one line --')
     folded.find((f) => f.label === 'equal highs · session high')?.bandLow != null,
   )
   check('nothing is invented', folded.every((f) => drawn.some((d) => d.price === f.price)))
+}
+
+// AND AT `everything`, WHICH IS THE NUMBER OF LINES THE OWNER WILL ACTUALLY
+// SEE. 252 levels fold onto 245 distinct prices — seven duplicate prices in
+// the whole response, so the fold is not what makes this position legible
+// and nothing should be tempted to lean on it for that. 245 lines against
+// the 28 tags a pane can place is the crowd `crowdedSentence` names.
+{
+  const folded = foldSamePrice(
+    all.drawn.map((l) => ({
+      label: l.label,
+      price: l.anchor,
+      bandLow: l.bandLow,
+      bandHigh: l.bandHigh,
+      spent: l.spent,
+    })),
+  )
+  check('all 252 are drawn as 245 lines', folded.length === 245, `${folded.length}`)
+  check(
+    'and the fold still loses no level: every line names at least one',
+    folded.length <= all.drawn.length && folded.every((f) => f.label.length > 0),
+  )
 }
 
 // The tolerance that was tried and measured wrong, kept as a case: a
