@@ -113,6 +113,130 @@ const CONTRACTS = [
     },
   },
   {
+    sample: 'paper-levels.json',
+    what: 'GET /api/paper/levels — the price-bar levels, every family present',
+    paths: {
+      market: 'string',
+      timeframe: 'string',
+      bar_ms: 'number',
+      computed_at_bar_ms: 'number|null',
+      last_close: 'number|null',
+      // The denominator of every `*_atr` below. A ratio whose denominator is
+      // missing from the wire cannot be checked by anybody.
+      atr14: 'number|null',
+      unavailable: 'string|null',
+      'source.file': 'string',
+      'source.bars': 'number',
+      'source.timeframe': 'string',
+      'window.bars': 'number',
+      'window.days': 'number',
+      'window.profile_days': 'number',
+      'profile.measure': 'string',
+      'profile.bucket_size_price': 'number',
+      'profile.buckets_per_atr': 'number',
+      'profile.value_area_pct': 'number',
+      'profile.activity_total_bar_buckets': 'number',
+      'profile.activity_in_value_area_bar_buckets': 'number',
+      'profile.poc.kind': 'string',
+      'profile.poc.price': 'number|null',
+      'profile.poc.band_low': 'number|null',
+      'profile.poc.formed_at_bar_ms': 'number',
+      'profile.poc.age_bars': 'number',
+      'profile.poc.state': 'string',
+      'profile.poc.rule': 'string',
+      'profile.vah.price': 'number|null',
+      'profile.val.price': 'number|null',
+      // THE NESTING THAT MATTERS. Each family is FLATTENED onto its level:
+      // `kind` and the rest sit at the item's own top level, not under a
+      // `level` key. Written as paths because nesting is the thing prose got
+      // wrong three times in one day.
+      'fair_value_gaps[0].kind': 'string',
+      'fair_value_gaps[0].price': 'null',
+      'fair_value_gaps[0].band_low': 'number',
+      'fair_value_gaps[0].band_high': 'number',
+      'fair_value_gaps[0].age_bars': 'number',
+      'fair_value_gaps[0].state': 'string',
+      'fair_value_gaps[0].rule': 'string',
+      'fair_value_gaps[0].direction': 'string',
+      'fair_value_gaps[0].filled_fraction': 'number',
+      'fair_value_gaps[0].confirmed_at_bar_ms': 'number',
+      'order_blocks[0].kind': 'string',
+      'order_blocks[0].band_low': 'number',
+      'order_blocks[0].state': 'string',
+      'order_blocks[0].direction': 'string',
+      'order_blocks[0].displacement_at_bar_ms': 'number',
+      'order_blocks[0].displacement_body_atr': 'number',
+      'order_blocks[0].tested_at_bar_ms': 'number|null',
+      'order_blocks[0].broken_at_bar_ms': 'number|null',
+      'liquidity[0].kind': 'string',
+      'liquidity[0].side': 'string',
+      'liquidity[0].swept': 'boolean',
+      'liquidity[0].swept_at_bar_ms': 'number|null',
+      'liquidity[0].swing_ids': 'array',
+      'liquidity[0].spread_atr': 'number|null',
+      'liquidity[0].state': 'string',
+      'liquidity[0].rule': 'string',
+      'extremes.session.high.kind': 'string',
+      'extremes.session.high.state': 'string',
+      'extremes.session.bars': 'number',
+      'extremes.day.high.price': 'number|null',
+      'extremes.day.low.price': 'number|null',
+      'extremes.week.high.price': 'number|null',
+      'extremes.week.start_bar_ms': 'number|null',
+    },
+    also: (doc, fail) => {
+      // `swept` and `swept_at_bar_ms` are ONE fact. A renderer will test
+      // whichever is handier, and the two disagreeing shows up as a level
+      // drawn struck-through with no bar beside it.
+      for (const p of doc.liquidity ?? []) {
+        if (p.swept !== (p.swept_at_bar_ms !== null)) {
+          fail(`a liquidity pool has swept=${p.swept} and swept_at_bar_ms=${p.swept_at_bar_ms}`)
+        }
+      }
+      // A filled gap is not a gap. The route drops them, so a 1.0 here means
+      // the rule moved and every caption reading "unfilled" became wrong.
+      for (const g of doc.fair_value_gaps ?? []) {
+        if (!(g.filled_fraction >= 0 && g.filled_fraction < 1)) {
+          fail(`a fair value gap reports filled_fraction ${g.filled_fraction}; only unfilled gaps are served`)
+        }
+      }
+      // NO VERDICT. `docs/hypotheses/2026-09-18-smc-context.md` pre-commits
+      // the route to carrying none, and the book that reads it must not read
+      // one. Cheaper to fail here than to notice a "score" inside a prompt.
+      const text = JSON.stringify(doc)
+      for (const banned of ['"score"', '"composite"', '"confluence"', '"rank"', '"strength"']) {
+        if (text.includes(banned)) fail(`the levels route grew ${banned}; the registration forbids a verdict`)
+      }
+    },
+  },
+  {
+    sample: 'paper-levels-unavailable.json',
+    what: 'GET /api/paper/levels — no exported bars, which is NOT an empty list',
+    paths: {
+      unavailable: 'string',
+      profile: 'null',
+      fair_value_gaps: 'null',
+      order_blocks: 'null',
+      liquidity: 'null',
+      extremes: 'null',
+      source: 'null',
+      window: 'null',
+      // Known without a bar, so still answered: a card can label itself.
+      market: 'string',
+      timeframe: 'string',
+      bar_ms: 'number',
+    },
+    also: (doc, fail) => {
+      // The distinction the whole branch exists for. `[]` says "this window
+      // has no unfilled gaps", which is a measurement; `null` says nothing
+      // was measured. A client that cannot tell them apart renders "no gaps"
+      // over a market it has never looked at.
+      for (const key of ['fair_value_gaps', 'order_blocks', 'liquidity']) {
+        if (Array.isArray(doc[key])) fail(`${key} is [] with no bars; it must be null`)
+      }
+    },
+  },
+  {
     sample: 'chart-bars-4h-forming.json',
     what: 'GET /api/chart/bars — file-backed 4h with a partial bar',
     paths: {

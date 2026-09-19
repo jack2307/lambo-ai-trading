@@ -1,0 +1,4142 @@
+{
+  "market": "xauusd",
+  "timeframe": "15m",
+  "bar_ms": 900000,
+  "computed_at_bar_ms": 1789650000000,
+  "computed_at_ms": 1789793717463,
+  "last_close": 4366.25,
+  "atr14": 12.462559658037966,
+  "profile": {
+    "measure": "TIME_AT_PRICE",
+    "poc": {
+      "kind": "POC",
+      "price": 4292.819338418426,
+      "band_low": 4291.261518461171,
+      "band_high": 4294.377158375681,
+      "formed_at_bar_ms": 1789129800000,
+      "age_bars": 370,
+      "state": "CURRENT",
+      "rule": "activity profile over 429 bars, time-at-price, bucket = ATR(14)/4, value area 70% by the classic walk"
+    },
+    "vah": {
+      "kind": "VAH",
+      "price": 4344.227397007832,
+      "band_low": null,
+      "band_high": null,
+      "formed_at_bar_ms": 1789104600000,
+      "age_bars": 398,
+      "state": "CURRENT",
+      "rule": "activity profile over 429 bars, time-at-price, bucket = ATR(14)/4, value area 70% by the classic walk"
+    },
+    "val": {
+      "kind": "VAL",
+      "price": 4272.567678974114,
+      "band_low": null,
+      "band_high": null,
+      "formed_at_bar_ms": 1789389000000,
+      "age_bars": 278,
+      "state": "CURRENT",
+      "rule": "activity profile over 429 bars, time-at-price, bucket = ATR(14)/4, value area 70% by the classic walk"
+    },
+    "bucket_size_price": 3.1156399145094915,
+    "buckets_per_atr": 4.0,
+    "buckets": 54,
+    "window_bars": 429,
+    "window_start_bar_ms": 1789077600000,
+    "window_end_bar_ms": 1789650000000,
+    "value_area_pct": 0.7,
+    "activity_total_bar_buckets": 1711.0,
+    "activity_in_value_area_bar_buckets": 1227.0
+  },
+  "fair_value_gaps": [
+    {
+      "kind": "FAIR_VALUE_GAP",
+      "price": null,
+      "band_low": 4409.86,
+      "band_high": 4464.42,
+      "formed_at_bar_ms": 1788525000000,
+      "age_bars": 820,
+      "state": "PARTIALLY_FILLED",
+      "rule": "fvg: 3-bar imbalance, bar[i-1].low > bar[i+1].high",
+      "direction": "BEARISH",
+      "filled_fraction": 0.7164589442815223,
+      "confirmed_at_bar_ms": 1788525900000
+    },
+    {
+      "kind": "FAIR_VALUE_GAP",
+      "price": null,
+      "band_low": 4415.04,
+      "band_high": 4423.66,
+      "formed_at_bar_ms": 1789023600000,
+      "age_bars": 484,
+      "state": "PARTIALLY_FILLED",
+      "rule": "fvg: 3-bar imbalance, bar[i-1].low > bar[i+1].high",
+      "direction": "BEARISH",
+      "filled_fraction": 0.03828306264500365,
+      "confirmed_at_bar_ms": 1789024500000
+    },
+    {
+      "kind": "FAIR_VALUE_GAP",
+      "price": null,
+      "band_low": 4407.71,
+      "band_high": 4408.92,
+      "formed_at_bar_ms": 1789027200000,
+      "age_bars": 480,
+      "state": "UNFILLED",
+      "rule": "fvg: 3-bar imbalance, bar[i-1].low > bar[i+1].high",
+      "direction": "BEARISH",
+      "filled_fraction": 0.0,
+      "confirmed_at_bar_ms": 1789028100000
+    },
+    {
+      "kind": "FAIR_VALUE_GAP",
+      "price": null,
+      "band_low": 4398.39,
+      "band_high": 4403.98,
+      "formed_at_bar_ms": 1789029000000,
+      "age_bars": 478,
+      "state": "PARTIALLY_FILLED",
+      "rule": "fvg: 3-bar imbalance, bar[i-1].low > bar[i+1].high",
+      "direction": "BEARISH",
+      "filled_fraction": 0.729874776386491,
+      "confirmed_at_bar_ms": 1789029900000
+    },
+    {
+      "kind": "FAIR_VALUE_GAP",
+      "price": null,
+      "band_low": 4385.42,
+      "band_high": 4387.2,
+      "formed_at_bar_ms": 1789135200000,
+      "age_bars": 364,
+      "state": "UNFILLED",
+      "rule": "fvg: 3-bar imbalance, bar[i-1].low > bar[i+1].high",
+      "direction": "BEARISH",
+      "filled_fraction": 0.0,
+      "confirmed_at_bar_ms": 1789136100000
+    },
+    {
+      "kind": "FAIR_VALUE_GAP",
+      "price": null,
+      "band_low": 4294.16,
+      "band_high": 4295.98,
+      "formed_at_bar_ms": 1789623000000,
+      "age_bars": 30,
+      "state": "UNFILLED",
+      "rule": "fvg: 3-bar imbalance, bar[i-1].high < bar[i+1].low",
+      "direction": "BULLISH",
+      "filled_fraction": 0.0,
+      "confirmed_at_bar_ms": 1789623900000
+    },
+    {
+      "kind": "FAIR_VALUE_GAP",
+      "price": null,
+      "band_low": 4298.11,
+      "band_high": 4304.26,
+      "formed_at_bar_ms": 1789623900000,
+      "age_bars": 29,
+      "state": "UNFILLED",
+      "rule": "fvg: 3-bar imbalance, bar[i-1].high < bar[i+1].low",
+      "direction": "BULLISH",
+      "filled_fraction": 0.0,
+      "confirmed_at_bar_ms": 1789624800000
+    },
+    {
+      "kind": "FAIR_VALUE_GAP",
+      "price": null,
+      "band_low": 4315.59,
+      "band_high": 4316.15,
+      "formed_at_bar_ms": 1789641000000,
+      "age_bars": 10,
+      "state": "UNFILLED",
+      "rule": "fvg: 3-bar imbalance, bar[i-1].high < bar[i+1].low",
+      "direction": "BULLISH",
+      "filled_fraction": 0.0,
+      "confirmed_at_bar_ms": 1789641900000
+    },
+    {
+      "kind": "FAIR_VALUE_GAP",
+      "price": null,
+      "band_low": 4318.47,
+      "band_high": 4323.97,
+      "formed_at_bar_ms": 1789641900000,
+      "age_bars": 9,
+      "state": "PARTIALLY_FILLED",
+      "rule": "fvg: 3-bar imbalance, bar[i-1].high < bar[i+1].low",
+      "direction": "BULLISH",
+      "filled_fraction": 0.10909090909097524,
+      "confirmed_at_bar_ms": 1789642800000
+    },
+    {
+      "kind": "FAIR_VALUE_GAP",
+      "price": null,
+      "band_low": 4328.76,
+      "band_high": 4343.69,
+      "formed_at_bar_ms": 1789645500000,
+      "age_bars": 5,
+      "state": "UNFILLED",
+      "rule": "fvg: 3-bar imbalance, bar[i-1].high < bar[i+1].low",
+      "direction": "BULLISH",
+      "filled_fraction": 0.0,
+      "confirmed_at_bar_ms": 1789646400000
+    },
+    {
+      "kind": "FAIR_VALUE_GAP",
+      "price": null,
+      "band_low": 4353.18,
+      "band_high": 4353.33,
+      "formed_at_bar_ms": 1789646400000,
+      "age_bars": 4,
+      "state": "UNFILLED",
+      "rule": "fvg: 3-bar imbalance, bar[i-1].high < bar[i+1].low",
+      "direction": "BULLISH",
+      "filled_fraction": 0.0,
+      "confirmed_at_bar_ms": 1789647300000
+    },
+    {
+      "kind": "FAIR_VALUE_GAP",
+      "price": null,
+      "band_low": 4355.32,
+      "band_high": 4360.46,
+      "formed_at_bar_ms": 1789647300000,
+      "age_bars": 3,
+      "state": "PARTIALLY_FILLED",
+      "rule": "fvg: 3-bar imbalance, bar[i-1].high < bar[i+1].low",
+      "direction": "BULLISH",
+      "filled_fraction": 0.2801556420232506,
+      "confirmed_at_bar_ms": 1789648200000
+    }
+  ],
+  "order_blocks": [
+    {
+      "kind": "ORDER_BLOCK",
+      "price": null,
+      "band_low": 4460.18,
+      "band_high": 4464.48,
+      "formed_at_bar_ms": 1788504300000,
+      "age_bars": 843,
+      "state": "BROKEN",
+      "rule": "order block: last down candle before a body > 1 x ATR(14) at its own bar",
+      "direction": "BULLISH",
+      "displacement_at_bar_ms": 1788507000000,
+      "displacement_body_atr": 1.8829028103944407,
+      "tested_at_bar_ms": 1788513300000,
+      "broken_at_bar_ms": 1788525000000
+    },
+    {
+      "kind": "ORDER_BLOCK",
+      "price": null,
+      "band_low": 4474.44,
+      "band_high": 4479.73,
+      "formed_at_bar_ms": 1788511500000,
+      "age_bars": 835,
+      "state": "TESTED",
+      "rule": "order block: last up candle before a body > 1 x ATR(14) at its own bar",
+      "direction": "BEARISH",
+      "displacement_at_bar_ms": 1788512400000,
+      "displacement_body_atr": 1.1090302960234009,
+      "tested_at_bar_ms": 1788517800000,
+      "broken_at_bar_ms": null
+    },
+    {
+      "kind": "ORDER_BLOCK",
+      "price": null,
+      "band_low": 4465.5,
+      "band_high": 4469.63,
+      "formed_at_bar_ms": 1788515100000,
+      "age_bars": 831,
+      "state": "BROKEN",
+      "rule": "order block: last down candle before a body > 1 x ATR(14) at its own bar",
+      "direction": "BULLISH",
+      "displacement_at_bar_ms": 1788516000000,
+      "displacement_body_atr": 1.0706874786758307,
+      "tested_at_bar_ms": 1788516900000,
+      "broken_at_bar_ms": 1788523200000
+    },
+    {
+      "kind": "ORDER_BLOCK",
+      "price": null,
+      "band_low": 4464.62,
+      "band_high": 4470.42,
+      "formed_at_bar_ms": 1788523200000,
+      "age_bars": 822,
+      "state": "BROKEN",
+      "rule": "order block: last down candle before a body > 1 x ATR(14) at its own bar",
+      "direction": "BULLISH",
+      "displacement_at_bar_ms": 1788524100000,
+      "displacement_body_atr": 1.2992668494400883,
+      "tested_at_bar_ms": null,
+      "broken_at_bar_ms": 1788525000000
+    },
+    {
+      "kind": "ORDER_BLOCK",
+      "price": null,
+      "band_low": 4464.42,
+      "band_high": 4476.21,
+      "formed_at_bar_ms": 1788524100000,
+      "age_bars": 821,
+      "state": "UNTESTED",
+      "rule": "order block: last up candle before a body > 1 x ATR(14) at its own bar",
+      "direction": "BEARISH",
+      "displacement_at_bar_ms": 1788525000000,
+      "displacement_body_atr": 6.297611155970551,
+      "tested_at_bar_ms": null,
+      "broken_at_bar_ms": null
+    },
+    {
+      "kind": "ORDER_BLOCK",
+      "price": null,
+      "band_low": 4380.16,
+      "band_high": 4409.86,
+      "formed_at_bar_ms": 1788525900000,
+      "age_bars": 819,
+      "state": "BROKEN",
+      "rule": "order block: last down candle before a body > 1 x ATR(14) at its own bar",
+      "direction": "BULLISH",
+      "displacement_at_bar_ms": 1788527700000,
+      "displacement_body_atr": 1.1910124382321337,
+      "tested_at_bar_ms": 1788528600000,
+      "broken_at_bar_ms": 1788893100000
+    },
+    {
+      "kind": "ORDER_BLOCK",
+      "price": null,
+      "band_low": 4413.25,
+      "band_high": 4434.7,
+      "formed_at_bar_ms": 1788529500000,
+      "age_bars": 815,
+      "state": "BROKEN",
+      "rule": "order block: last down candle before a body > 1 x ATR(14) at its own bar",
+      "direction": "BULLISH",
+      "displacement_at_bar_ms": 1788530400000,
+      "displacement_body_atr": 1.25248345239255,
+      "tested_at_bar_ms": 1788531300000,
+      "broken_at_bar_ms": 1788741900000
+    },
+    {
+      "kind": "ORDER_BLOCK",
+      "price": null,
+      "band_low": 4429.49,
+      "band_high": 4431.82,
+      "formed_at_bar_ms": 1788552900000,
+      "age_bars": 789,
+      "state": "BROKEN",
+      "rule": "order block: last down candle before a body > 1 x ATR(14) at its own bar",
+      "direction": "BULLISH",
+      "displacement_at_bar_ms": 1788732000000,
+      "displacement_body_atr": 1.0464253068601388,
+      "tested_at_bar_ms": null,
+      "broken_at_bar_ms": 1788732900000
+    },
+    {
+      "kind": "ORDER_BLOCK",
+      "price": null,
+      "band_low": 4418.47,
+      "band_high": 4425.16,
+      "formed_at_bar_ms": 1788741000000,
+      "age_bars": 776,
+      "state": "BROKEN",
+      "rule": "order block: last up candle before a body > 1 x ATR(14) at its own bar",
+      "direction": "BEARISH",
+      "displacement_at_bar_ms": 1788741900000,
+      "displacement_body_atr": 1.4571867871635855,
+      "tested_at_bar_ms": 1788748200000,
+      "broken_at_bar_ms": 1788823800000
+    },
+    {
+      "kind": "ORDER_BLOCK",
+      "price": null,
+      "band_low": 4394.42,
+      "band_high": 4402.53,
+      "formed_at_bar_ms": 1788755400000,
+      "age_bars": 760,
+      "state": "BROKEN",
+      "rule": "order block: last down candle before a body > 1 x ATR(14) at its own bar",
+      "direction": "BULLISH",
+      "displacement_at_bar_ms": 1788758100000,
+      "displacement_body_atr": 1.1084854801478279,
+      "tested_at_bar_ms": 1788759000000,
+      "broken_at_bar_ms": 1788759900000
+    },
+    {
+      "kind": "ORDER_BLOCK",
+      "price": null,
+      "band_low": 4401.95,
+      "band_high": 4411.65,
+      "formed_at_bar_ms": 1788758100000,
+      "age_bars": 757,
+      "state": "BROKEN",
+      "rule": "order block: last up candle before a body > 1 x ATR(14) at its own bar",
+      "direction": "BEARISH",
+      "displacement_at_bar_ms": 1788759900000,
+      "displacement_body_atr": 1.2009155247065195,
+      "tested_at_bar_ms": 1788765300000,
+      "broken_at_bar_ms": 1788768000000
+    },
+    {
+      "kind": "ORDER_BLOCK",
+      "price": null,
+      "band_low": 4391.27,
+      "band_high": 4399.15,
+      "formed_at_bar_ms": 1788763500000,
+      "age_bars": 751,
+      "state": "BROKEN",
+      "rule": "order block: last down candle before a body > 1 x ATR(14) at its own bar",
+      "direction": "BULLISH",
+      "displacement_at_bar_ms": 1788764400000,
+      "displacement_body_atr": 1.0501598243648278,
+      "tested_at_bar_ms": 1788765300000,
+      "broken_at_bar_ms": 1788779700000
+    },
+    {
+      "kind": "ORDER_BLOCK",
+      "price": null,
+      "band_low": 4394.58,
+      "band_high": 4402.19,
+      "formed_at_bar_ms": 1788765300000,
+      "age_bars": 749,
+      "state": "BROKEN",
+      "rule": "order block: last down candle before a body > 1 x ATR(14) at its own bar",
+      "direction": "BULLISH",
+      "displacement_at_bar_ms": 1788767100000,
+      "displacement_body_atr": 1.238802797988897,
+      "tested_at_bar_ms": 1788776100000,
+      "broken_at_bar_ms": 1788777900000
+    },
+    {
+      "kind": "ORDER_BLOCK",
+      "price": null,
+      "band_low": 4394.28,
+      "band_high": 4398.02,
+      "formed_at_bar_ms": 1788785100000,
+      "age_bars": 727,
+      "state": "BROKEN",
+      "rule": "order block: last down candle before a body > 1 x ATR(14) at its own bar",
+      "direction": "BULLISH",
+      "displacement_at_bar_ms": 1788786000000,
+      "displacement_body_atr": 1.0355035418883072,
+      "tested_at_bar_ms": 1788852600000,
+      "broken_at_bar_ms": 1788853500000
+    },
+    {
+      "kind": "ORDER_BLOCK",
+      "price": null,
+      "band_low": 4404.5,
+      "band_high": 4409.15,
+      "formed_at_bar_ms": 1788804000000,
+      "age_bars": 706,
+      "state": "BROKEN",
+      "rule": "order block: last down candle before a body > 1 x ATR(14) at its own bar",
+      "direction": "BULLISH",
+      "displacement_at_bar_ms": 1788818400000,
+      "displacement_body_atr": 1.5052328704025095,
+      "tested_at_bar_ms": 1788820200000,
+      "broken_at_bar_ms": 1788848100000
+    },
+    {
+      "kind": "ORDER_BLOCK",
+      "price": null,
+      "band_low": 4409.08,
+      "band_high": 4412.65,
+      "formed_at_bar_ms": 1788822900000,
+      "age_bars": 699,
+      "state": "BROKEN",
+      "rule": "order block: last down candle before a body > 1 x ATR(14) at its own bar",
+      "direction": "BULLISH",
+      "displacement_at_bar_ms": 1788823800000,
+      "displacement_body_atr": 3.0809457724339517,
+      "tested_at_bar_ms": 1788847200000,
+      "broken_at_bar_ms": 1788848100000
+    },
+    {
+      "kind": "ORDER_BLOCK",
+      "price": null,
+      "band_low": 4433.46,
+      "band_high": 4440.72,
+      "formed_at_bar_ms": 1788831900000,
+      "age_bars": 689,
+      "state": "TESTED",
+      "rule": "order block: last up candle before a body > 1 x ATR(14) at its own bar",
+      "direction": "BEARISH",
+      "displacement_at_bar_ms": 1788832800000,
+      "displacement_body_atr": 1.1296686987778006,
+      "tested_at_bar_ms": 1788837300000,
+      "broken_at_bar_ms": null
+    },
+    {
+      "kind": "ORDER_BLOCK",
+      "price": null,
+      "band_low": 4432.28,
+      "band_high": 4436.56,
+      "formed_at_bar_ms": 1788841800000,
+      "age_bars": 678,
+      "state": "TESTED",
+      "rule": "order block: last up candle before a body > 1 x ATR(14) at its own bar",
+      "direction": "BEARISH",
+      "displacement_at_bar_ms": 1788843600000,
+      "displacement_body_atr": 1.2051892366688783,
+      "tested_at_bar_ms": 1788960600000,
+      "broken_at_bar_ms": null
+    },
+    {
+      "kind": "ORDER_BLOCK",
+      "price": null,
+      "band_low": 4418.13,
+      "band_high": 4426.98,
+      "formed_at_bar_ms": 1788845400000,
+      "age_bars": 674,
+      "state": "BROKEN",
+      "rule": "order block: last up candle before a body > 1 x ATR(14) at its own bar",
+      "direction": "BEARISH",
+      "displacement_at_bar_ms": 1788848100000,
+      "displacement_body_atr": 1.3330974104678495,
+      "tested_at_bar_ms": null,
+      "broken_at_bar_ms": 1788959700000
+    },
+    {
+      "kind": "ORDER_BLOCK",
+      "price": null,
+      "band_low": 4392.51,
+      "band_high": 4399.36,
+      "formed_at_bar_ms": 1788858900000,
+      "age_bars": 659,
+      "state": "BROKEN",
+      "rule": "order block: last down candle before a body > 1 x ATR(14) at its own bar",
+      "direction": "BULLISH",
+      "displacement_at_bar_ms": 1788859800000,
+      "displacement_body_atr": 1.0177821688970536,
+      "tested_at_bar_ms": 1788861600000,
+      "broken_at_bar_ms": 1788868800000
+    },
+    {
+      "kind": "ORDER_BLOCK",
+      "price": null,
+      "band_low": 4397.74,
+      "band_high": 4406.55,
+      "formed_at_bar_ms": 1788867900000,
+      "age_bars": 649,
+      "state": "BROKEN",
+      "rule": "order block: last up candle before a body > 1 x ATR(14) at its own bar",
+      "direction": "BEARISH",
+      "displacement_at_bar_ms": 1788868800000,
+      "displacement_body_atr": 1.719552256139403,
+      "tested_at_bar_ms": 1788869700000,
+      "broken_at_bar_ms": 1788871500000
+    },
+    {
+      "kind": "ORDER_BLOCK",
+      "price": null,
+      "band_low": 4390.42,
+      "band_high": 4406.67,
+      "formed_at_bar_ms": 1788868800000,
+      "age_bars": 648,
+      "state": "BROKEN",
+      "rule": "order block: last down candle before a body > 1 x ATR(14) at its own bar",
+      "direction": "BULLISH",
+      "displacement_at_bar_ms": 1788869700000,
+      "displacement_body_atr": 1.1088182364127122,
+      "tested_at_bar_ms": 1788870600000,
+      "broken_at_bar_ms": 1788883200000
+    },
+    {
+      "kind": "ORDER_BLOCK",
+      "price": null,
+      "band_low": 4395.33,
+      "band_high": 4408.23,
+      "formed_at_bar_ms": 1788870600000,
+      "age_bars": 646,
+      "state": "BROKEN",
+      "rule": "order block: last down candle before a body > 1 x ATR(14) at its own bar",
+      "direction": "BULLISH",
+      "displacement_at_bar_ms": 1788871500000,
+      "displacement_body_atr": 1.5162547522829217,
+      "tested_at_bar_ms": 1788872400000,
+      "broken_at_bar_ms": 1788876000000
+    },
+    {
+      "kind": "ORDER_BLOCK",
+      "price": null,
+      "band_low": 4381.39,
+      "band_high": 4385.69,
+      "formed_at_bar_ms": 1788892200000,
+      "age_bars": 622,
+      "state": "BROKEN",
+      "rule": "order block: last up candle before a body > 1 x ATR(14) at its own bar",
+      "direction": "BEARISH",
+      "displacement_at_bar_ms": 1788893100000,
+      "displacement_body_atr": 1.0270757510878175,
+      "tested_at_bar_ms": 1788921900000,
+      "broken_at_bar_ms": 1788930000000
+    },
+    {
+      "kind": "ORDER_BLOCK",
+      "price": null,
+      "band_low": 4356.79,
+      "band_high": 4359.94,
+      "formed_at_bar_ms": 1788910200000,
+      "age_bars": 606,
+      "state": "BROKEN",
+      "rule": "order block: last up candle before a body > 1 x ATR(14) at its own bar",
+      "direction": "BEARISH",
+      "displacement_at_bar_ms": 1788911100000,
+      "displacement_body_atr": 1.1945063585175397,
+      "tested_at_bar_ms": null,
+      "broken_at_bar_ms": 1788914700000
+    },
+    {
+      "kind": "ORDER_BLOCK",
+      "price": null,
+      "band_low": 4341.31,
+      "band_high": 4350.19,
+      "formed_at_bar_ms": 1788912900000,
+      "age_bars": 603,
+      "state": "BROKEN",
+      "rule": "order block: last down candle before a body > 1 x ATR(14) at its own bar",
+      "direction": "BULLISH",
+      "displacement_at_bar_ms": 1788913800000,
+      "displacement_body_atr": 1.0292230582646567,
+      "tested_at_bar_ms": null,
+      "broken_at_bar_ms": 1789043400000
+    },
+    {
+      "kind": "ORDER_BLOCK",
+      "price": null,
+      "band_low": 4383.34,
+      "band_high": 4388.63,
+      "formed_at_bar_ms": 1788930900000,
+      "age_bars": 583,
+      "state": "BROKEN",
+      "rule": "order block: last down candle before a body > 1 x ATR(14) at its own bar",
+      "direction": "BULLISH",
+      "displacement_at_bar_ms": 1788931800000,
+      "displacement_body_atr": 1.4754768436336603,
+      "tested_at_bar_ms": 1788948000000,
+      "broken_at_bar_ms": 1789037100000
+    },
+    {
+      "kind": "ORDER_BLOCK",
+      "price": null,
+      "band_low": 4403.41,
+      "band_high": 4415.34,
+      "formed_at_bar_ms": 1788954300000,
+      "age_bars": 557,
+      "state": "BROKEN",
+      "rule": "order block: last up candle before a body > 1 x ATR(14) at its own bar",
+      "direction": "BEARISH",
+      "displacement_at_bar_ms": 1788955200000,
+      "displacement_body_atr": 1.193858965625077,
+      "tested_at_bar_ms": 1788958800000,
+      "broken_at_bar_ms": 1788959700000
+    },
+    {
+      "kind": "ORDER_BLOCK",
+      "price": null,
+      "band_low": 4393.67,
+      "band_high": 4400.26,
+      "formed_at_bar_ms": 1788956100000,
+      "age_bars": 555,
+      "state": "BROKEN",
+      "rule": "order block: last down candle before a body > 1 x ATR(14) at its own bar",
+      "direction": "BULLISH",
+      "displacement_at_bar_ms": 1788958800000,
+      "displacement_body_atr": 1.7957265150302788,
+      "tested_at_bar_ms": null,
+      "broken_at_bar_ms": 1788966000000
+    },
+    {
+      "kind": "ORDER_BLOCK",
+      "price": null,
+      "band_low": 4410.89,
+      "band_high": 4430.29,
+      "formed_at_bar_ms": 1788959700000,
+      "age_bars": 551,
+      "state": "BROKEN",
+      "rule": "order block: last up candle before a body > 1 x ATR(14) at its own bar",
+      "direction": "BEARISH",
+      "displacement_at_bar_ms": 1788960600000,
+      "displacement_body_atr": 1.3487774931283218,
+      "tested_at_bar_ms": 1788961500000,
+      "broken_at_bar_ms": 1789019100000
+    },
+    {
+      "kind": "ORDER_BLOCK",
+      "price": null,
+      "band_low": 4409.91,
+      "band_high": 4426.08,
+      "formed_at_bar_ms": 1788963300000,
+      "age_bars": 547,
+      "state": "BROKEN",
+      "rule": "order block: last up candle before a body > 1 x ATR(14) at its own bar",
+      "direction": "BEARISH",
+      "displacement_at_bar_ms": 1788966000000,
+      "displacement_body_atr": 2.2378813703885503,
+      "tested_at_bar_ms": 1788972300000,
+      "broken_at_bar_ms": 1789018200000
+    },
+    {
+      "kind": "ORDER_BLOCK",
+      "price": null,
+      "band_low": 4392.34,
+      "band_high": 4398.48,
+      "formed_at_bar_ms": 1788999300000,
+      "age_bars": 511,
+      "state": "BROKEN",
+      "rule": "order block: last down candle before a body > 1 x ATR(14) at its own bar",
+      "direction": "BULLISH",
+      "displacement_at_bar_ms": 1789000200000,
+      "displacement_body_atr": 1.2484373118675098,
+      "tested_at_bar_ms": 1789001100000,
+      "broken_at_bar_ms": 1789036200000
+    },
+    {
+      "kind": "ORDER_BLOCK",
+      "price": null,
+      "band_low": 4405.63,
+      "band_high": 4413.76,
+      "formed_at_bar_ms": 1789014600000,
+      "age_bars": 494,
+      "state": "BROKEN",
+      "rule": "order block: last down candle before a body > 1 x ATR(14) at its own bar",
+      "direction": "BULLISH",
+      "displacement_at_bar_ms": 1789016400000,
+      "displacement_body_atr": 1.4962305543370278,
+      "tested_at_bar_ms": 1789020900000,
+      "broken_at_bar_ms": 1789029000000
+    },
+    {
+      "kind": "ORDER_BLOCK",
+      "price": null,
+      "band_low": 4423.78,
+      "band_high": 4431.24,
+      "formed_at_bar_ms": 1789019100000,
+      "age_bars": 489,
+      "state": "TESTED",
+      "rule": "order block: last up candle before a body > 1 x ATR(14) at its own bar",
+      "direction": "BEARISH",
+      "displacement_at_bar_ms": 1789020000000,
+      "displacement_body_atr": 1.855782119905844,
+      "tested_at_bar_ms": 1789021800000,
+      "broken_at_bar_ms": null
+    },
+    {
+      "kind": "ORDER_BLOCK",
+      "price": null,
+      "band_low": 4415.98,
+      "band_high": 4434.76,
+      "formed_at_bar_ms": 1789020000000,
+      "age_bars": 488,
+      "state": "BROKEN",
+      "rule": "order block: last down candle before a body > 1 x ATR(14) at its own bar",
+      "direction": "BULLISH",
+      "displacement_at_bar_ms": 1789021800000,
+      "displacement_body_atr": 1.1064133368104152,
+      "tested_at_bar_ms": 1789022700000,
+      "broken_at_bar_ms": 1789023600000
+    },
+    {
+      "kind": "ORDER_BLOCK",
+      "price": null,
+      "band_low": 4413.26,
+      "band_high": 4426.94,
+      "formed_at_bar_ms": 1789021800000,
+      "age_bars": 486,
+      "state": "TESTED",
+      "rule": "order block: last up candle before a body > 1 x ATR(14) at its own bar",
+      "direction": "BEARISH",
+      "displacement_at_bar_ms": 1789023600000,
+      "displacement_body_atr": 1.421295467645465,
+      "tested_at_bar_ms": 1789024500000,
+      "broken_at_bar_ms": null
+    },
+    {
+      "kind": "ORDER_BLOCK",
+      "price": null,
+      "band_low": 4408.92,
+      "band_high": 4415.37,
+      "formed_at_bar_ms": 1789026300000,
+      "age_bars": 481,
+      "state": "UNTESTED",
+      "rule": "order block: last up candle before a body > 1 x ATR(14) at its own bar",
+      "direction": "BEARISH",
+      "displacement_at_bar_ms": 1789029000000,
+      "displacement_body_atr": 1.2212775058212637,
+      "tested_at_bar_ms": null,
+      "broken_at_bar_ms": null
+    },
+    {
+      "kind": "ORDER_BLOCK",
+      "price": null,
+      "band_low": 4390.0,
+      "band_high": 4400.05,
+      "formed_at_bar_ms": 1789034400000,
+      "age_bars": 472,
+      "state": "BROKEN",
+      "rule": "order block: last up candle before a body > 1 x ATR(14) at its own bar",
+      "direction": "BEARISH",
+      "displacement_at_bar_ms": 1789036200000,
+      "displacement_body_atr": 1.3078202339241074,
+      "tested_at_bar_ms": 1789039800000,
+      "broken_at_bar_ms": 1789134300000
+    },
+    {
+      "kind": "ORDER_BLOCK",
+      "price": null,
+      "band_low": 4379.92,
+      "band_high": 4388.75,
+      "formed_at_bar_ms": 1789038900000,
+      "age_bars": 467,
+      "state": "BROKEN",
+      "rule": "order block: last up candle before a body > 1 x ATR(14) at its own bar",
+      "direction": "BEARISH",
+      "displacement_at_bar_ms": 1789040700000,
+      "displacement_body_atr": 1.1964026098721354,
+      "tested_at_bar_ms": 1789130700000,
+      "broken_at_bar_ms": 1789131600000
+    },
+    {
+      "kind": "ORDER_BLOCK",
+      "price": null,
+      "band_low": 4369.93,
+      "band_high": 4377.82,
+      "formed_at_bar_ms": 1789041600000,
+      "age_bars": 464,
+      "state": "BROKEN",
+      "rule": "order block: last up candle before a body > 1 x ATR(14) at its own bar",
+      "direction": "BEARISH",
+      "displacement_at_bar_ms": 1789042500000,
+      "displacement_body_atr": 1.296535526648765,
+      "tested_at_bar_ms": 1789043400000,
+      "broken_at_bar_ms": 1789130700000
+    },
+    {
+      "kind": "ORDER_BLOCK",
+      "price": null,
+      "band_low": 4336.49,
+      "band_high": 4354.95,
+      "formed_at_bar_ms": 1789044300000,
+      "age_bars": 461,
+      "state": "BROKEN",
+      "rule": "order block: last down candle before a body > 1 x ATR(14) at its own bar",
+      "direction": "BULLISH",
+      "displacement_at_bar_ms": 1789046100000,
+      "displacement_body_atr": 1.0870342106259203,
+      "tested_at_bar_ms": 1789047000000,
+      "broken_at_bar_ms": 1789065000000
+    },
+    {
+      "kind": "ORDER_BLOCK",
+      "price": null,
+      "band_low": 4361.32,
+      "band_high": 4366.84,
+      "formed_at_bar_ms": 1789060500000,
+      "age_bars": 443,
+      "state": "BROKEN",
+      "rule": "order block: last up candle before a body > 1 x ATR(14) at its own bar",
+      "direction": "BEARISH",
+      "displacement_at_bar_ms": 1789063200000,
+      "displacement_body_atr": 1.0343014463407911,
+      "tested_at_bar_ms": 1789129800000,
+      "broken_at_bar_ms": 1789130700000
+    },
+    {
+      "kind": "ORDER_BLOCK",
+      "price": null,
+      "band_low": 4315.95,
+      "band_high": 4326.78,
+      "formed_at_bar_ms": 1789094700000,
+      "age_bars": 409,
+      "state": "BROKEN",
+      "rule": "order block: last up candle before a body > 1 x ATR(14) at its own bar",
+      "direction": "BEARISH",
+      "displacement_at_bar_ms": 1789096500000,
+      "displacement_body_atr": 1.0788673237675332,
+      "tested_at_bar_ms": 1789099200000,
+      "broken_at_bar_ms": 1789100100000
+    },
+    {
+      "kind": "ORDER_BLOCK",
+      "price": null,
+      "band_low": 4300.82,
+      "band_high": 4308.36,
+      "formed_at_bar_ms": 1789098300000,
+      "age_bars": 405,
+      "state": "BROKEN",
+      "rule": "order block: last down candle before a body > 1 x ATR(14) at its own bar",
+      "direction": "BULLISH",
+      "displacement_at_bar_ms": 1789099200000,
+      "displacement_body_atr": 1.7199931539726148,
+      "tested_at_bar_ms": 1789129800000,
+      "broken_at_bar_ms": 1789377300000
+    },
+    {
+      "kind": "ORDER_BLOCK",
+      "price": null,
+      "band_low": 4333.54,
+      "band_high": 4339.38,
+      "formed_at_bar_ms": 1789103700000,
+      "age_bars": 399,
+      "state": "BROKEN",
+      "rule": "order block: last down candle before a body > 1 x ATR(14) at its own bar",
+      "direction": "BULLISH",
+      "displacement_at_bar_ms": 1789106400000,
+      "displacement_body_atr": 1.3064539879730297,
+      "tested_at_bar_ms": 1789123500000,
+      "broken_at_bar_ms": 1789127100000
+    },
+    {
+      "kind": "ORDER_BLOCK",
+      "price": null,
+      "band_low": 4324.85,
+      "band_high": 4334.83,
+      "formed_at_bar_ms": 1789128000000,
+      "age_bars": 372,
+      "state": "BROKEN",
+      "rule": "order block: last down candle before a body > 1 x ATR(14) at its own bar",
+      "direction": "BULLISH",
+      "displacement_at_bar_ms": 1789128900000,
+      "displacement_body_atr": 1.6474372951103218,
+      "tested_at_bar_ms": 1789129800000,
+      "broken_at_bar_ms": 1789360200000
+    },
+    {
+      "kind": "ORDER_BLOCK",
+      "price": null,
+      "band_low": 4387.2,
+      "band_high": 4402.47,
+      "formed_at_bar_ms": 1789134300000,
+      "age_bars": 365,
+      "state": "UNTESTED",
+      "rule": "order block: last up candle before a body > 1 x ATR(14) at its own bar",
+      "direction": "BEARISH",
+      "displacement_at_bar_ms": 1789135200000,
+      "displacement_body_atr": 1.2223584932388858,
+      "tested_at_bar_ms": null,
+      "broken_at_bar_ms": null
+    },
+    {
+      "kind": "ORDER_BLOCK",
+      "price": null,
+      "band_low": 4331.89,
+      "band_high": 4338.27,
+      "formed_at_bar_ms": 1789343100000,
+      "age_bars": 329,
+      "state": "BROKEN",
+      "rule": "order block: last down candle before a body > 1 x ATR(14) at its own bar",
+      "direction": "BULLISH",
+      "displacement_at_bar_ms": 1789344000000,
+      "displacement_body_atr": 1.2049816544239198,
+      "tested_at_bar_ms": 1789344900000,
+      "broken_at_bar_ms": 1789347600000
+    },
+    {
+      "kind": "ORDER_BLOCK",
+      "price": null,
+      "band_low": 4329.58,
+      "band_high": 4344.66,
+      "formed_at_bar_ms": 1789347600000,
+      "age_bars": 324,
+      "state": "BROKEN",
+      "rule": "order block: last down candle before a body > 1 x ATR(14) at its own bar",
+      "direction": "BULLISH",
+      "displacement_at_bar_ms": 1789350300000,
+      "displacement_body_atr": 1.1046051266253887,
+      "tested_at_bar_ms": 1789353000000,
+      "broken_at_bar_ms": 1789356600000
+    },
+    {
+      "kind": "ORDER_BLOCK",
+      "price": null,
+      "band_low": 4348.2,
+      "band_high": 4354.06,
+      "formed_at_bar_ms": 1789352100000,
+      "age_bars": 319,
+      "state": "BROKEN",
+      "rule": "order block: last up candle before a body > 1 x ATR(14) at its own bar",
+      "direction": "BEARISH",
+      "displacement_at_bar_ms": 1789353900000,
+      "displacement_body_atr": 1.4589145729900086,
+      "tested_at_bar_ms": 1789552800000,
+      "broken_at_bar_ms": 1789563600000
+    },
+    {
+      "kind": "ORDER_BLOCK",
+      "price": null,
+      "band_low": 4309.69,
+      "band_high": 4316.04,
+      "formed_at_bar_ms": 1789374600000,
+      "age_bars": 294,
+      "state": "BROKEN",
+      "rule": "order block: last up candle before a body > 1 x ATR(14) at its own bar",
+      "direction": "BEARISH",
+      "displacement_at_bar_ms": 1789377300000,
+      "displacement_body_atr": 1.918430010928118,
+      "tested_at_bar_ms": 1789404300000,
+      "broken_at_bar_ms": 1789526700000
+    },
+    {
+      "kind": "ORDER_BLOCK",
+      "price": null,
+      "band_low": 4285.08,
+      "band_high": 4296.68,
+      "formed_at_bar_ms": 1789387200000,
+      "age_bars": 280,
+      "state": "BROKEN",
+      "rule": "order block: last up candle before a body > 1 x ATR(14) at its own bar",
+      "direction": "BEARISH",
+      "displacement_at_bar_ms": 1789389900000,
+      "displacement_body_atr": 1.274158928243489,
+      "tested_at_bar_ms": 1789398000000,
+      "broken_at_bar_ms": 1789402500000
+    },
+    {
+      "kind": "ORDER_BLOCK",
+      "price": null,
+      "band_low": 4308.2,
+      "band_high": 4315.47,
+      "formed_at_bar_ms": 1789408800000,
+      "age_bars": 256,
+      "state": "BROKEN",
+      "rule": "order block: last up candle before a body > 1 x ATR(14) at its own bar",
+      "direction": "BEARISH",
+      "displacement_at_bar_ms": 1789413300000,
+      "displacement_body_atr": 1.1239179322268513,
+      "tested_at_bar_ms": 1789437600000,
+      "broken_at_bar_ms": 1789526700000
+    },
+    {
+      "kind": "ORDER_BLOCK",
+      "price": null,
+      "band_low": 4282.86,
+      "band_high": 4291.88,
+      "formed_at_bar_ms": 1789415100000,
+      "age_bars": 249,
+      "state": "BROKEN",
+      "rule": "order block: last down candle before a body > 1 x ATR(14) at its own bar",
+      "direction": "BULLISH",
+      "displacement_at_bar_ms": 1789416900000,
+      "displacement_body_atr": 1.0395015241668015,
+      "tested_at_bar_ms": 1789426800000,
+      "broken_at_bar_ms": 1789458300000
+    },
+    {
+      "kind": "ORDER_BLOCK",
+      "price": null,
+      "band_low": 4287.68,
+      "band_high": 4292.31,
+      "formed_at_bar_ms": 1789456500000,
+      "age_bars": 207,
+      "state": "BROKEN",
+      "rule": "order block: last up candle before a body > 1 x ATR(14) at its own bar",
+      "direction": "BEARISH",
+      "displacement_at_bar_ms": 1789457400000,
+      "displacement_body_atr": 1.1587168223049165,
+      "tested_at_bar_ms": 1789458300000,
+      "broken_at_bar_ms": 1789479900000
+    },
+    {
+      "kind": "ORDER_BLOCK",
+      "price": null,
+      "band_low": 4271.34,
+      "band_high": 4279.25,
+      "formed_at_bar_ms": 1789474500000,
+      "age_bars": 187,
+      "state": "BROKEN",
+      "rule": "order block: last down candle before a body > 1 x ATR(14) at its own bar",
+      "direction": "BULLISH",
+      "displacement_at_bar_ms": 1789476300000,
+      "displacement_body_atr": 1.2232413510559792,
+      "tested_at_bar_ms": 1789482600000,
+      "broken_at_bar_ms": 1789584300000
+    },
+    {
+      "kind": "ORDER_BLOCK",
+      "price": null,
+      "band_low": 4288.36,
+      "band_high": 4298.33,
+      "formed_at_bar_ms": 1789479900000,
+      "age_bars": 181,
+      "state": "BROKEN",
+      "rule": "order block: last up candle before a body > 1 x ATR(14) at its own bar",
+      "direction": "BEARISH",
+      "displacement_at_bar_ms": 1789481700000,
+      "displacement_body_atr": 1.23375768448094,
+      "tested_at_bar_ms": 1789486200000,
+      "broken_at_bar_ms": 1789495200000
+    },
+    {
+      "kind": "ORDER_BLOCK",
+      "price": null,
+      "band_low": 4286.25,
+      "band_high": 4291.66,
+      "formed_at_bar_ms": 1789488000000,
+      "age_bars": 172,
+      "state": "BROKEN",
+      "rule": "order block: last down candle before a body > 1 x ATR(14) at its own bar",
+      "direction": "BULLISH",
+      "displacement_at_bar_ms": 1789488900000,
+      "displacement_body_atr": 1.0865415558959155,
+      "tested_at_bar_ms": 1789489800000,
+      "broken_at_bar_ms": 1789513200000
+    },
+    {
+      "kind": "ORDER_BLOCK",
+      "price": null,
+      "band_low": 4304.46,
+      "band_high": 4310.4,
+      "formed_at_bar_ms": 1789497900000,
+      "age_bars": 161,
+      "state": "BROKEN",
+      "rule": "order block: last up candle before a body > 1 x ATR(14) at its own bar",
+      "direction": "BEARISH",
+      "displacement_at_bar_ms": 1789498800000,
+      "displacement_body_atr": 1.108935193135045,
+      "tested_at_bar_ms": null,
+      "broken_at_bar_ms": 1789525800000
+    },
+    {
+      "kind": "ORDER_BLOCK",
+      "price": null,
+      "band_low": 4281.75,
+      "band_high": 4286.19,
+      "formed_at_bar_ms": 1789517700000,
+      "age_bars": 143,
+      "state": "BROKEN",
+      "rule": "order block: last up candle before a body > 1 x ATR(14) at its own bar",
+      "direction": "BEARISH",
+      "displacement_at_bar_ms": 1789519500000,
+      "displacement_body_atr": 1.0641163059648338,
+      "tested_at_bar_ms": null,
+      "broken_at_bar_ms": 1789520400000
+    },
+    {
+      "kind": "ORDER_BLOCK",
+      "price": null,
+      "band_low": 4275.47,
+      "band_high": 4285.14,
+      "formed_at_bar_ms": 1789519500000,
+      "age_bars": 141,
+      "state": "BROKEN",
+      "rule": "order block: last down candle before a body > 1 x ATR(14) at its own bar",
+      "direction": "BULLISH",
+      "displacement_at_bar_ms": 1789520400000,
+      "displacement_body_atr": 1.587431869533368,
+      "tested_at_bar_ms": 1789521300000,
+      "broken_at_bar_ms": 1789584300000
+    },
+    {
+      "kind": "ORDER_BLOCK",
+      "price": null,
+      "band_low": 4280.04,
+      "band_high": 4289.05,
+      "formed_at_bar_ms": 1789523100000,
+      "age_bars": 137,
+      "state": "BROKEN",
+      "rule": "order block: last down candle before a body > 1 x ATR(14) at its own bar",
+      "direction": "BULLISH",
+      "displacement_at_bar_ms": 1789524000000,
+      "displacement_body_atr": 1.3961711282896494,
+      "tested_at_bar_ms": 1789583400000,
+      "broken_at_bar_ms": 1789584300000
+    },
+    {
+      "kind": "ORDER_BLOCK",
+      "price": null,
+      "band_low": 4320.77,
+      "band_high": 4324.48,
+      "formed_at_bar_ms": 1789534800000,
+      "age_bars": 124,
+      "state": "BROKEN",
+      "rule": "order block: last down candle before a body > 1 x ATR(14) at its own bar",
+      "direction": "BULLISH",
+      "displacement_at_bar_ms": 1789536600000,
+      "displacement_body_atr": 1.1131277628984158,
+      "tested_at_bar_ms": 1789538400000,
+      "broken_at_bar_ms": 1789581600000
+    },
+    {
+      "kind": "ORDER_BLOCK",
+      "price": null,
+      "band_low": 4346.5,
+      "band_high": 4353.52,
+      "formed_at_bar_ms": 1789557300000,
+      "age_bars": 99,
+      "state": "BROKEN",
+      "rule": "order block: last up candle before a body > 1 x ATR(14) at its own bar",
+      "direction": "BEARISH",
+      "displacement_at_bar_ms": 1789559100000,
+      "displacement_body_atr": 1.1477633311914284,
+      "tested_at_bar_ms": 1789560000000,
+      "broken_at_bar_ms": 1789563600000
+    },
+    {
+      "kind": "ORDER_BLOCK",
+      "price": null,
+      "band_low": 4337.86,
+      "band_high": 4345.72,
+      "formed_at_bar_ms": 1789560900000,
+      "age_bars": 95,
+      "state": "BROKEN",
+      "rule": "order block: last down candle before a body > 1 x ATR(14) at its own bar",
+      "direction": "BULLISH",
+      "displacement_at_bar_ms": 1789563600000,
+      "displacement_body_atr": 1.1499541283038655,
+      "tested_at_bar_ms": 1789565400000,
+      "broken_at_bar_ms": 1789581600000
+    },
+    {
+      "kind": "ORDER_BLOCK",
+      "price": null,
+      "band_low": 4343.79,
+      "band_high": 4357.2,
+      "formed_at_bar_ms": 1789563600000,
+      "age_bars": 92,
+      "state": "BROKEN",
+      "rule": "order block: last up candle before a body > 1 x ATR(14) at its own bar",
+      "direction": "BEARISH",
+      "displacement_at_bar_ms": 1789565400000,
+      "displacement_body_atr": 1.3699228077389278,
+      "tested_at_bar_ms": 1789566300000,
+      "broken_at_bar_ms": 1789580700000
+    },
+    {
+      "kind": "ORDER_BLOCK",
+      "price": null,
+      "band_low": 4343.46,
+      "band_high": 4349.99,
+      "formed_at_bar_ms": 1789579800000,
+      "age_bars": 74,
+      "state": "BROKEN",
+      "rule": "order block: last down candle before a body > 1 x ATR(14) at its own bar",
+      "direction": "BULLISH",
+      "displacement_at_bar_ms": 1789580700000,
+      "displacement_body_atr": 1.9286615243679301,
+      "tested_at_bar_ms": null,
+      "broken_at_bar_ms": 1789581600000
+    },
+    {
+      "kind": "ORDER_BLOCK",
+      "price": null,
+      "band_low": 4342.67,
+      "band_high": 4364.53,
+      "formed_at_bar_ms": 1789580700000,
+      "age_bars": 73,
+      "state": "BROKEN",
+      "rule": "order block: last up candle before a body > 1 x ATR(14) at its own bar",
+      "direction": "BEARISH",
+      "displacement_at_bar_ms": 1789581600000,
+      "displacement_body_atr": 4.076198715827242,
+      "tested_at_bar_ms": 1789645500000,
+      "broken_at_bar_ms": 1789647300000
+    },
+    {
+      "kind": "ORDER_BLOCK",
+      "price": null,
+      "band_low": 4306.27,
+      "band_high": 4324.1,
+      "formed_at_bar_ms": 1789582500000,
+      "age_bars": 71,
+      "state": "BROKEN",
+      "rule": "order block: last up candle before a body > 1 x ATR(14) at its own bar",
+      "direction": "BEARISH",
+      "displacement_at_bar_ms": 1789583400000,
+      "displacement_body_atr": 1.306180729040606,
+      "tested_at_bar_ms": 1789584300000,
+      "broken_at_bar_ms": 1789629300000
+    },
+    {
+      "kind": "ORDER_BLOCK",
+      "price": null,
+      "band_low": 4277.08,
+      "band_high": 4289.24,
+      "formed_at_bar_ms": 1789605900000,
+      "age_bars": 49,
+      "state": "TESTED",
+      "rule": "order block: last down candle before a body > 1 x ATR(14) at its own bar",
+      "direction": "BULLISH",
+      "displacement_at_bar_ms": 1789606800000,
+      "displacement_body_atr": 1.3190379864555744,
+      "tested_at_bar_ms": 1789610400000,
+      "broken_at_bar_ms": null
+    },
+    {
+      "kind": "ORDER_BLOCK",
+      "price": null,
+      "band_low": 4285.48,
+      "band_high": 4294.16,
+      "formed_at_bar_ms": 1789622100000,
+      "age_bars": 31,
+      "state": "UNTESTED",
+      "rule": "order block: last down candle before a body > 1 x ATR(14) at its own bar",
+      "direction": "BULLISH",
+      "displacement_at_bar_ms": 1789623000000,
+      "displacement_body_atr": 1.1030397890775876,
+      "tested_at_bar_ms": null,
+      "broken_at_bar_ms": null
+    },
+    {
+      "kind": "ORDER_BLOCK",
+      "price": null,
+      "band_low": 4305.73,
+      "band_high": 4315.19,
+      "formed_at_bar_ms": 1789626600000,
+      "age_bars": 26,
+      "state": "TESTED",
+      "rule": "order block: last down candle before a body > 1 x ATR(14) at its own bar",
+      "direction": "BULLISH",
+      "displacement_at_bar_ms": 1789628400000,
+      "displacement_body_atr": 1.2622376386132703,
+      "tested_at_bar_ms": 1789632900000,
+      "broken_at_bar_ms": null
+    },
+    {
+      "kind": "ORDER_BLOCK",
+      "price": null,
+      "band_low": 4311.56,
+      "band_high": 4319.21,
+      "formed_at_bar_ms": 1789635600000,
+      "age_bars": 16,
+      "state": "BROKEN",
+      "rule": "order block: last up candle before a body > 1 x ATR(14) at its own bar",
+      "direction": "BEARISH",
+      "displacement_at_bar_ms": 1789636500000,
+      "displacement_body_atr": 1.0414879604136962,
+      "tested_at_bar_ms": 1789639200000,
+      "broken_at_bar_ms": 1789641900000
+    },
+    {
+      "kind": "ORDER_BLOCK",
+      "price": null,
+      "band_low": 4323.37,
+      "band_high": 4328.76,
+      "formed_at_bar_ms": 1789644600000,
+      "age_bars": 6,
+      "state": "UNTESTED",
+      "rule": "order block: last down candle before a body > 1 x ATR(14) at its own bar",
+      "direction": "BULLISH",
+      "displacement_at_bar_ms": 1789645500000,
+      "displacement_body_atr": 2.485736661449537,
+      "tested_at_bar_ms": null,
+      "broken_at_bar_ms": null
+    },
+    {
+      "kind": "ORDER_BLOCK",
+      "price": null,
+      "band_low": 4353.33,
+      "band_high": 4381.2,
+      "formed_at_bar_ms": 1789647300000,
+      "age_bars": 3,
+      "state": "TESTED",
+      "rule": "order block: last up candle before a body > 1 x ATR(14) at its own bar",
+      "direction": "BEARISH",
+      "displacement_at_bar_ms": 1789648200000,
+      "displacement_body_atr": 1.6976512671242339,
+      "tested_at_bar_ms": 1789649100000,
+      "broken_at_bar_ms": null
+    },
+    {
+      "kind": "ORDER_BLOCK",
+      "price": null,
+      "band_low": 4360.46,
+      "band_high": 4381.07,
+      "formed_at_bar_ms": 1789648200000,
+      "age_bars": 2,
+      "state": "TESTED",
+      "rule": "order block: last down candle before a body > 1 x ATR(14) at its own bar",
+      "direction": "BULLISH",
+      "displacement_at_bar_ms": 1789649100000,
+      "displacement_body_atr": 1.0316699681459611,
+      "tested_at_bar_ms": 1789650000000,
+      "broken_at_bar_ms": null
+    }
+  ],
+  "liquidity": [
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4470.805,
+      "band_low": 4470.25,
+      "band_high": 4471.36,
+      "formed_at_bar_ms": 1788475500000,
+      "age_bars": 875,
+      "state": "SWEPT",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1788492600000,
+      "swing_ids": [
+        "15m-lo-1788489900000",
+        "15m-lo-1788475500000"
+      ],
+      "spread_atr": 0.15595591437787024
+    },
+    {
+      "kind": "EQUAL_HIGHS",
+      "price": 4482.915,
+      "band_low": 4482.59,
+      "band_high": 4483.24,
+      "formed_at_bar_ms": 1788480000000,
+      "age_bars": 870,
+      "state": "SWEPT",
+      "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "BUY_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1788507000000,
+      "swing_ids": [
+        "15m-hi-1788487200000",
+        "15m-hi-1788480000000"
+      ],
+      "spread_atr": 0.09166062215676984
+    },
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4472.8,
+      "band_low": 4472.8,
+      "band_high": 4472.8,
+      "formed_at_bar_ms": 1788481800000,
+      "age_bars": 868,
+      "state": "SWEPT",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1788484500000,
+      "swing_ids": [
+        "15m-lo-1788481800000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_HIGHS",
+      "price": 4487.17,
+      "band_low": 4487.17,
+      "band_high": 4487.17,
+      "formed_at_bar_ms": 1788482700000,
+      "age_bars": 867,
+      "state": "SWEPT",
+      "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "BUY_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1788507900000,
+      "swing_ids": [
+        "15m-hi-1788482700000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4467.07,
+      "band_low": 4467.07,
+      "band_high": 4467.07,
+      "formed_at_bar_ms": 1788486300000,
+      "age_bars": 863,
+      "state": "SWEPT",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1788493500000,
+      "swing_ids": [
+        "15m-lo-1788486300000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_HIGHS",
+      "price": 4480.89,
+      "band_low": 4480.89,
+      "band_high": 4480.89,
+      "formed_at_bar_ms": 1788489900000,
+      "age_bars": 859,
+      "state": "SWEPT",
+      "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "BUY_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1788507000000,
+      "swing_ids": [
+        "15m-hi-1788489900000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4465.49,
+      "band_low": 4465.49,
+      "band_high": 4465.49,
+      "formed_at_bar_ms": 1788494400000,
+      "age_bars": 854,
+      "state": "SWEPT",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1788503400000,
+      "swing_ids": [
+        "15m-lo-1788494400000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_HIGHS",
+      "price": 4475.54,
+      "band_low": 4474.87,
+      "band_high": 4476.21,
+      "formed_at_bar_ms": 1788496200000,
+      "age_bars": 852,
+      "state": "RESTING",
+      "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "BUY_SIDE",
+      "swept": false,
+      "swept_at_bar_ms": null,
+      "swing_ids": [
+        "15m-hi-1788496200000",
+        "15m-hi-1788524100000"
+      ],
+      "spread_atr": 0.09729331926628251
+    },
+    {
+      "kind": "EQUAL_HIGHS",
+      "price": 4477.61,
+      "band_low": 4477.61,
+      "band_high": 4477.61,
+      "formed_at_bar_ms": 1788499800000,
+      "age_bars": 848,
+      "state": "SWEPT",
+      "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "BUY_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1788507000000,
+      "swing_ids": [
+        "15m-hi-1788499800000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4460.18,
+      "band_low": 4460.18,
+      "band_high": 4460.18,
+      "formed_at_bar_ms": 1788504300000,
+      "age_bars": 843,
+      "state": "SWEPT",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1788525000000,
+      "swing_ids": [
+        "15m-lo-1788504300000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_HIGHS",
+      "price": 4490.64,
+      "band_low": 4490.64,
+      "band_high": 4490.64,
+      "formed_at_bar_ms": 1788507900000,
+      "age_bars": 839,
+      "state": "RESTING",
+      "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "BUY_SIDE",
+      "swept": false,
+      "swept_at_bar_ms": null,
+      "swing_ids": [
+        "15m-hi-1788507900000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4463.86,
+      "band_low": 4463.86,
+      "band_high": 4463.86,
+      "formed_at_bar_ms": 1788513300000,
+      "age_bars": 833,
+      "state": "SWEPT",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1788525000000,
+      "swing_ids": [
+        "15m-lo-1788513300000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_HIGHS",
+      "price": 4476.4,
+      "band_low": 4476.4,
+      "band_high": 4476.4,
+      "formed_at_bar_ms": 1788518700000,
+      "age_bars": 827,
+      "state": "RESTING",
+      "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "BUY_SIDE",
+      "swept": false,
+      "swept_at_bar_ms": null,
+      "swing_ids": [
+        "15m-hi-1788518700000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4365.5,
+      "band_low": 4365.5,
+      "band_high": 4365.5,
+      "formed_at_bar_ms": 1788526800000,
+      "age_bars": 818,
+      "state": "SWEPT",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1788893100000,
+      "swing_ids": [
+        "15m-lo-1788526800000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4417.395,
+      "band_low": 4417.2,
+      "band_high": 4417.59,
+      "formed_at_bar_ms": 1788533100000,
+      "age_bars": 811,
+      "state": "SWEPT",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1788741900000,
+      "swing_ids": [
+        "15m-lo-1788533100000",
+        "15m-lo-1788732000000"
+      ],
+      "spread_atr": 0.05207319102773774
+    },
+    {
+      "kind": "EQUAL_HIGHS",
+      "price": 4448.95,
+      "band_low": 4448.95,
+      "band_high": 4448.95,
+      "formed_at_bar_ms": 1788534900000,
+      "age_bars": 809,
+      "state": "RESTING",
+      "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "BUY_SIDE",
+      "swept": false,
+      "swept_at_bar_ms": null,
+      "swing_ids": [
+        "15m-hi-1788534900000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4431.97,
+      "band_low": 4431.63,
+      "band_high": 4432.31,
+      "formed_at_bar_ms": 1788537600000,
+      "age_bars": 806,
+      "state": "SWEPT",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1788843600000,
+      "swing_ids": [
+        "15m-lo-1788840900000",
+        "15m-lo-1788537600000"
+      ],
+      "spread_atr": 0.09552220753895085
+    },
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4411.905,
+      "band_low": 4411.83,
+      "band_high": 4411.98,
+      "formed_at_bar_ms": 1788544800000,
+      "age_bars": 798,
+      "state": "SWEPT",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1788802200000,
+      "swing_ids": [
+        "15m-lo-1788798600000",
+        "15m-lo-1788544800000"
+      ],
+      "spread_atr": 0.028477036595929043
+    },
+    {
+      "kind": "EQUAL_HIGHS",
+      "price": 4426.68,
+      "band_low": 4426.68,
+      "band_high": 4426.68,
+      "formed_at_bar_ms": 1788545700000,
+      "age_bars": 797,
+      "state": "SWEPT",
+      "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "BUY_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1788548400000,
+      "swing_ids": [
+        "15m-hi-1788545700000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_HIGHS",
+      "price": 4438.39,
+      "band_low": 4438.39,
+      "band_high": 4438.39,
+      "formed_at_bar_ms": 1788550200000,
+      "age_bars": 792,
+      "state": "SWEPT",
+      "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "BUY_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1788831900000,
+      "swing_ids": [
+        "15m-hi-1788550200000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_HIGHS",
+      "price": 4435.16,
+      "band_low": 4435.16,
+      "band_high": 4435.16,
+      "formed_at_bar_ms": 1788734700000,
+      "age_bars": 783,
+      "state": "SWEPT",
+      "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "BUY_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1788830100000,
+      "swing_ids": [
+        "15m-hi-1788734700000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_HIGHS",
+      "price": 4434.28,
+      "band_low": 4434.01,
+      "band_high": 4434.76,
+      "formed_at_bar_ms": 1788738300000,
+      "age_bars": 779,
+      "state": "RESTING",
+      "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "BUY_SIDE",
+      "swept": false,
+      "swept_at_bar_ms": null,
+      "swing_ids": [
+        "15m-hi-1788738300000",
+        "15m-hi-1788960600000",
+        "15m-hi-1789020000000"
+      ],
+      "spread_atr": 0.09049182144032769
+    },
+    {
+      "kind": "EQUAL_HIGHS",
+      "price": 4429.1900000000005,
+      "band_low": 4428.84,
+      "band_high": 4429.54,
+      "formed_at_bar_ms": 1788741900000,
+      "age_bars": 775,
+      "state": "RESTING",
+      "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "BUY_SIDE",
+      "swept": false,
+      "swept_at_bar_ms": null,
+      "swing_ids": [
+        "15m-hi-1789022700000",
+        "15m-hi-1788741900000"
+      ],
+      "spread_atr": 0.08465579412839003
+    },
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4389.360000000001,
+      "band_low": 4389.14,
+      "band_high": 4389.58,
+      "formed_at_bar_ms": 1788743700000,
+      "age_bars": 773,
+      "state": "SWEPT",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1788883200000,
+      "swing_ids": [
+        "15m-lo-1788878700000",
+        "15m-lo-1788743700000"
+      ],
+      "spread_atr": 0.041830330276010186
+    },
+    {
+      "kind": "EQUAL_HIGHS",
+      "price": 4417.045,
+      "band_low": 4416.82,
+      "band_high": 4417.27,
+      "formed_at_bar_ms": 1788745500000,
+      "age_bars": 771,
+      "state": "SWEPT",
+      "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "BUY_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1788823800000,
+      "swing_ids": [
+        "15m-hi-1788745500000",
+        "15m-hi-1788796800000"
+      ],
+      "spread_atr": 0.07841816625466506
+    },
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4403.030000000001,
+      "band_low": 4402.92,
+      "band_high": 4403.14,
+      "formed_at_bar_ms": 1788746400000,
+      "age_bars": 770,
+      "state": "SWEPT",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1788848100000,
+      "swing_ids": [
+        "15m-lo-1788746400000",
+        "15m-lo-1788804900000"
+      ],
+      "spread_atr": 0.04483709138290772
+    },
+    {
+      "kind": "EQUAL_HIGHS",
+      "price": 4419.23,
+      "band_low": 4419.0,
+      "band_high": 4419.61,
+      "formed_at_bar_ms": 1788749100000,
+      "age_bars": 767,
+      "state": "SWEPT",
+      "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "BUY_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789007400000,
+      "swing_ids": [
+        "15m-hi-1788749100000",
+        "15m-hi-1789002000000",
+        "15m-hi-1788792300000"
+      ],
+      "spread_atr": 0.08497072888124949
+    },
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4394.42,
+      "band_low": 4394.42,
+      "band_high": 4394.42,
+      "formed_at_bar_ms": 1788755400000,
+      "age_bars": 760,
+      "state": "SWEPT",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1788759900000,
+      "swing_ids": [
+        "15m-lo-1788755400000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_HIGHS",
+      "price": 4412.936666666667,
+      "band_low": 4412.78,
+      "band_high": 4413.18,
+      "formed_at_bar_ms": 1788759000000,
+      "age_bars": 756,
+      "state": "SWEPT",
+      "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "BUY_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1788954300000,
+      "swing_ids": [
+        "15m-hi-1788939900000",
+        "15m-hi-1788872400000",
+        "15m-hi-1788759000000"
+      ],
+      "spread_atr": 0.06060916920450282
+    },
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4385.3150000000005,
+      "band_low": 4385.29,
+      "band_high": 4385.34,
+      "formed_at_bar_ms": 1788760800000,
+      "age_bars": 754,
+      "state": "SWEPT",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1788883200000,
+      "swing_ids": [
+        "15m-lo-1788760800000",
+        "15m-lo-1788869700000"
+      ],
+      "spread_atr": 0.0050846906515374
+    },
+    {
+      "kind": "EQUAL_HIGHS",
+      "price": 4423.83,
+      "band_low": 4423.83,
+      "band_high": 4423.83,
+      "formed_at_bar_ms": 1788769800000,
+      "age_bars": 744,
+      "state": "SWEPT",
+      "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "BUY_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1788823800000,
+      "swing_ids": [
+        "15m-hi-1788769800000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4380.905,
+      "band_low": 4380.69,
+      "band_high": 4381.12,
+      "formed_at_bar_ms": 1788780600000,
+      "age_bars": 732,
+      "state": "SWEPT",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1788893100000,
+      "swing_ids": [
+        "15m-lo-1788883200000",
+        "15m-lo-1788780600000"
+      ],
+      "spread_atr": 0.04358493182540111
+    },
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4401.08,
+      "band_low": 4401.08,
+      "band_high": 4401.08,
+      "formed_at_bar_ms": 1788789600000,
+      "age_bars": 722,
+      "state": "SWEPT",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1788848100000,
+      "swing_ids": [
+        "15m-lo-1788789600000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4408.86,
+      "band_low": 4408.86,
+      "band_high": 4408.86,
+      "formed_at_bar_ms": 1788795000000,
+      "age_bars": 716,
+      "state": "SWEPT",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1788803100000,
+      "swing_ids": [
+        "15m-lo-1788795000000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_HIGHS",
+      "price": 4415.33,
+      "band_low": 4415.03,
+      "band_high": 4415.58,
+      "formed_at_bar_ms": 1788800400000,
+      "age_bars": 710,
+      "state": "RESTING",
+      "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "BUY_SIDE",
+      "swept": false,
+      "swept_at_bar_ms": null,
+      "swing_ids": [
+        "15m-hi-1788800400000",
+        "15m-hi-1788954300000",
+        "15m-hi-1789026300000",
+        "15m-hi-1789012800000"
+      ],
+      "spread_atr": 0.07111344485459214
+    },
+    {
+      "kind": "EQUAL_HIGHS",
+      "price": 4414.49,
+      "band_low": 4414.49,
+      "band_high": 4414.49,
+      "formed_at_bar_ms": 1788818400000,
+      "age_bars": 704,
+      "state": "SWEPT",
+      "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "BUY_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1788823800000,
+      "swing_ids": [
+        "15m-hi-1788818400000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4406.22,
+      "band_low": 4406.22,
+      "band_high": 4406.22,
+      "formed_at_bar_ms": 1788821100000,
+      "age_bars": 701,
+      "state": "SWEPT",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1788848100000,
+      "swing_ids": [
+        "15m-lo-1788821100000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_HIGHS",
+      "price": 4427.98,
+      "band_low": 4427.98,
+      "band_high": 4427.98,
+      "formed_at_bar_ms": 1788823800000,
+      "age_bars": 698,
+      "state": "SWEPT",
+      "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "BUY_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1788826500000,
+      "swing_ids": [
+        "15m-hi-1788823800000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_HIGHS",
+      "price": 4430.13,
+      "band_low": 4430.13,
+      "band_high": 4430.13,
+      "formed_at_bar_ms": 1788826500000,
+      "age_bars": 695,
+      "state": "SWEPT",
+      "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "BUY_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1788829200000,
+      "swing_ids": [
+        "15m-hi-1788826500000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4415.17,
+      "band_low": 4415.17,
+      "band_high": 4415.17,
+      "formed_at_bar_ms": 1788828300000,
+      "age_bars": 693,
+      "state": "SWEPT",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1788847200000,
+      "swing_ids": [
+        "15m-lo-1788828300000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_HIGHS",
+      "price": 4440.39,
+      "band_low": 4440.06,
+      "band_high": 4440.72,
+      "formed_at_bar_ms": 1788831900000,
+      "age_bars": 689,
+      "state": "SWEPT",
+      "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "BUY_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1788840000000,
+      "swing_ids": [
+        "15m-hi-1788837300000",
+        "15m-hi-1788831900000"
+      ],
+      "spread_atr": 0.08791933342131364
+    },
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4421.24,
+      "band_low": 4421.24,
+      "band_high": 4421.24,
+      "formed_at_bar_ms": 1788835500000,
+      "age_bars": 685,
+      "state": "SWEPT",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1788844500000,
+      "swing_ids": [
+        "15m-lo-1788835500000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_HIGHS",
+      "price": 4442.95,
+      "band_low": 4442.95,
+      "band_high": 4442.95,
+      "formed_at_bar_ms": 1788840000000,
+      "age_bars": 680,
+      "state": "RESTING",
+      "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "BUY_SIDE",
+      "swept": false,
+      "swept_at_bar_ms": null,
+      "swing_ids": [
+        "15m-hi-1788840000000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "PRIOR_WEEK_HIGH",
+      "price": 4442.95,
+      "band_low": null,
+      "band_high": null,
+      "formed_at_bar_ms": 1788840000000,
+      "age_bars": 680,
+      "state": "RESTING",
+      "rule": "prior week high: the last complete broker week's high",
+      "side": "BUY_SIDE",
+      "swept": false,
+      "swept_at_bar_ms": null,
+      "swing_ids": [],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4398.22,
+      "band_low": 4398.22,
+      "band_high": 4398.22,
+      "formed_at_bar_ms": 1788849000000,
+      "age_bars": 670,
+      "state": "SWEPT",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1788852600000,
+      "swing_ids": [
+        "15m-lo-1788849000000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_HIGHS",
+      "price": 4409.360000000001,
+      "band_low": 4409.31,
+      "band_high": 4409.41,
+      "formed_at_bar_ms": 1788850800000,
+      "age_bars": 668,
+      "state": "SWEPT",
+      "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "BUY_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1788939000000,
+      "swing_ids": [
+        "15m-hi-1788880500000",
+        "15m-hi-1788850800000"
+      ],
+      "spread_atr": 0.010066317041407301
+    },
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4388.139999999999,
+      "band_low": 4387.87,
+      "band_high": 4388.41,
+      "formed_at_bar_ms": 1788854400000,
+      "age_bars": 664,
+      "state": "SWEPT",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789036200000,
+      "swing_ids": [
+        "15m-lo-1788854400000",
+        "15m-lo-1789032600000"
+      ],
+      "spread_atr": 0.07434171526937848
+    },
+    {
+      "kind": "EQUAL_HIGHS",
+      "price": 4398.59,
+      "band_low": 4398.59,
+      "band_high": 4398.59,
+      "formed_at_bar_ms": 1788856200000,
+      "age_bars": 662,
+      "state": "SWEPT",
+      "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "BUY_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1788858900000,
+      "swing_ids": [
+        "15m-hi-1788856200000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4391.145,
+      "band_low": 4390.89,
+      "band_high": 4391.64,
+      "formed_at_bar_ms": 1788859800000,
+      "age_bars": 658,
+      "state": "SWEPT",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1788998400000,
+      "swing_ids": [
+        "15m-lo-1788957000000",
+        "15m-lo-1788859800000",
+        "15m-lo-1788865200000",
+        "15m-lo-1788970500000"
+      ],
+      "spread_atr": 0.0631088805650268
+    },
+    {
+      "kind": "EQUAL_HIGHS",
+      "price": 4406.803333333333,
+      "band_low": 4406.49,
+      "band_high": 4407.18,
+      "formed_at_bar_ms": 1788862500000,
+      "age_bars": 655,
+      "state": "SWEPT",
+      "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "BUY_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789002000000,
+      "swing_ids": [
+        "15m-hi-1788991200000",
+        "15m-hi-1788862500000",
+        "15m-hi-1788968700000"
+      ],
+      "spread_atr": 0.10175752000270026
+    },
+    {
+      "kind": "EQUAL_HIGHS",
+      "price": 4407.88,
+      "band_low": 4407.88,
+      "band_high": 4407.88,
+      "formed_at_bar_ms": 1788867000000,
+      "age_bars": 650,
+      "state": "SWEPT",
+      "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "BUY_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1788870600000,
+      "swing_ids": [
+        "15m-hi-1788867000000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4390.13,
+      "band_low": 4389.8,
+      "band_high": 4390.46,
+      "formed_at_bar_ms": 1788874200000,
+      "age_bars": 642,
+      "state": "SWEPT",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789032600000,
+      "swing_ids": [
+        "15m-lo-1788998400000",
+        "15m-lo-1788874200000"
+      ],
+      "spread_atr": 0.10222935804372542
+    },
+    {
+      "kind": "EQUAL_HIGHS",
+      "price": 4403.67,
+      "band_low": 4403.67,
+      "band_high": 4403.67,
+      "formed_at_bar_ms": 1788886800000,
+      "age_bars": 628,
+      "state": "SWEPT",
+      "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "BUY_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1788933600000,
+      "swing_ids": [
+        "15m-hi-1788886800000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4358.71,
+      "band_low": 4358.24,
+      "band_high": 4359.18,
+      "formed_at_bar_ms": 1788893100000,
+      "age_bars": 621,
+      "state": "SWEPT",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789143300000,
+      "swing_ids": [
+        "15m-lo-1788893100000",
+        "15m-lo-1789138800000"
+      ],
+      "spread_atr": 0.06799428072189678
+    },
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4345.86,
+      "band_low": 4345.86,
+      "band_high": 4345.86,
+      "formed_at_bar_ms": 1788900300000,
+      "age_bars": 613,
+      "state": "SWEPT",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1788912000000,
+      "swing_ids": [
+        "15m-lo-1788900300000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_HIGHS",
+      "price": 4359.11,
+      "band_low": 4359.11,
+      "band_high": 4359.11,
+      "formed_at_bar_ms": 1788904800000,
+      "age_bars": 612,
+      "state": "SWEPT",
+      "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "BUY_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1788910200000,
+      "swing_ids": [
+        "15m-hi-1788904800000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4350.49,
+      "band_low": 4350.49,
+      "band_high": 4350.49,
+      "formed_at_bar_ms": 1788906600000,
+      "age_bars": 610,
+      "state": "SWEPT",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1788911100000,
+      "swing_ids": [
+        "15m-lo-1788906600000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_HIGHS",
+      "price": 4360.129999999999,
+      "band_low": 4359.94,
+      "band_high": 4360.32,
+      "formed_at_bar_ms": 1788910200000,
+      "age_bars": 606,
+      "state": "SWEPT",
+      "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "BUY_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789573500000,
+      "swing_ids": [
+        "15m-hi-1788910200000",
+        "15m-hi-1789564500000"
+      ],
+      "spread_atr": 0.04449814372997925
+    },
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4340.89,
+      "band_low": 4340.53,
+      "band_high": 4341.31,
+      "formed_at_bar_ms": 1788912900000,
+      "age_bars": 603,
+      "state": "SWEPT",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789123500000,
+      "swing_ids": [
+        "15m-lo-1789112700000",
+        "15m-lo-1789119000000",
+        "15m-lo-1788912900000"
+      ],
+      "spread_atr": 0.09808188109081989
+    },
+    {
+      "kind": "EQUAL_HIGHS",
+      "price": 4378.14,
+      "band_low": 4378.14,
+      "band_high": 4378.14,
+      "formed_at_bar_ms": 1788918300000,
+      "age_bars": 597,
+      "state": "SWEPT",
+      "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "BUY_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1788921900000,
+      "swing_ids": [
+        "15m-hi-1788918300000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4367.26,
+      "band_low": 4367.26,
+      "band_high": 4367.26,
+      "formed_at_bar_ms": 1788921000000,
+      "age_bars": 594,
+      "state": "SWEPT",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789042500000,
+      "swing_ids": [
+        "15m-lo-1788921000000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_HIGHS",
+      "price": 4384.39,
+      "band_low": 4384.39,
+      "band_high": 4384.39,
+      "formed_at_bar_ms": 1788921900000,
+      "age_bars": 593,
+      "state": "SWEPT",
+      "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "BUY_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1788930000000,
+      "swing_ids": [
+        "15m-hi-1788921900000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4370.59,
+      "band_low": 4370.59,
+      "band_high": 4370.59,
+      "formed_at_bar_ms": 1788926400000,
+      "age_bars": 588,
+      "state": "SWEPT",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789041600000,
+      "swing_ids": [
+        "15m-lo-1788926400000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4386.23,
+      "band_low": 4386.23,
+      "band_high": 4386.23,
+      "formed_at_bar_ms": 1788948000000,
+      "age_bars": 564,
+      "state": "SWEPT",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1788966000000,
+      "swing_ids": [
+        "15m-lo-1788948000000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4409.91,
+      "band_low": 4409.91,
+      "band_high": 4409.91,
+      "formed_at_bar_ms": 1788963300000,
+      "age_bars": 547,
+      "state": "SWEPT",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1788966000000,
+      "swing_ids": [
+        "15m-lo-1788963300000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_HIGHS",
+      "price": 4431.93,
+      "band_low": 4431.93,
+      "band_high": 4431.93,
+      "formed_at_bar_ms": 1788966000000,
+      "age_bars": 544,
+      "state": "SWEPT",
+      "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "BUY_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789020000000,
+      "swing_ids": [
+        "15m-hi-1788966000000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4375.215,
+      "band_low": 4375.13,
+      "band_high": 4375.3,
+      "formed_at_bar_ms": 1788966900000,
+      "age_bars": 543,
+      "state": "SWEPT",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789040700000,
+      "swing_ids": [
+        "15m-lo-1788966900000",
+        "15m-lo-1789038000000"
+      ],
+      "spread_atr": 0.020825392848345115
+    },
+    {
+      "kind": "EQUAL_HIGHS",
+      "price": 4420.8,
+      "band_low": 4420.54,
+      "band_high": 4421.06,
+      "formed_at_bar_ms": 1788974100000,
+      "age_bars": 535,
+      "state": "SWEPT",
+      "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "BUY_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789018200000,
+      "swing_ids": [
+        "15m-hi-1788974100000",
+        "15m-hi-1789009200000"
+      ],
+      "spread_atr": 0.07275426528782414
+    },
+    {
+      "kind": "EQUAL_HIGHS",
+      "price": 4421.54,
+      "band_low": 4421.54,
+      "band_high": 4421.54,
+      "formed_at_bar_ms": 1788976800000,
+      "age_bars": 532,
+      "state": "SWEPT",
+      "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "BUY_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789018200000,
+      "swing_ids": [
+        "15m-hi-1788976800000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4395.67,
+      "band_low": 4395.67,
+      "band_high": 4395.67,
+      "formed_at_bar_ms": 1788982200000,
+      "age_bars": 526,
+      "state": "SWEPT",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1788984900000,
+      "swing_ids": [
+        "15m-lo-1788982200000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4393.48,
+      "band_low": 4393.48,
+      "band_high": 4393.48,
+      "formed_at_bar_ms": 1788984900000,
+      "age_bars": 523,
+      "state": "SWEPT",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1788996600000,
+      "swing_ids": [
+        "15m-lo-1788984900000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4406.92,
+      "band_low": 4406.92,
+      "band_high": 4406.92,
+      "formed_at_bar_ms": 1789011900000,
+      "age_bars": 497,
+      "state": "SWEPT",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789014600000,
+      "swing_ids": [
+        "15m-lo-1789011900000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4405.63,
+      "band_low": 4405.63,
+      "band_high": 4405.63,
+      "formed_at_bar_ms": 1789014600000,
+      "age_bars": 494,
+      "state": "SWEPT",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789025400000,
+      "swing_ids": [
+        "15m-lo-1789014600000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4410.89,
+      "band_low": 4410.89,
+      "band_high": 4410.89,
+      "formed_at_bar_ms": 1789020900000,
+      "age_bars": 487,
+      "state": "SWEPT",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789024500000,
+      "swing_ids": [
+        "15m-lo-1789020900000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4404.02,
+      "band_low": 4404.02,
+      "band_high": 4404.02,
+      "formed_at_bar_ms": 1789025400000,
+      "age_bars": 482,
+      "state": "SWEPT",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789028100000,
+      "swing_ids": [
+        "15m-lo-1789025400000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_HIGHS",
+      "price": 4400.18,
+      "band_low": 4400.18,
+      "band_high": 4400.18,
+      "formed_at_bar_ms": 1789035300000,
+      "age_bars": 471,
+      "state": "SWEPT",
+      "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "BUY_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789133400000,
+      "swing_ids": [
+        "15m-hi-1789035300000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_HIGHS",
+      "price": 4390.69,
+      "band_low": 4390.69,
+      "band_high": 4390.69,
+      "formed_at_bar_ms": 1789039800000,
+      "age_bars": 466,
+      "state": "SWEPT",
+      "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "BUY_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789131600000,
+      "swing_ids": [
+        "15m-hi-1789039800000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4324.110000000001,
+      "band_low": 4324.06,
+      "band_high": 4324.16,
+      "formed_at_bar_ms": 1789043400000,
+      "age_bars": 462,
+      "state": "SWEPT",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789581600000,
+      "swing_ids": [
+        "15m-lo-1789043400000",
+        "15m-lo-1789567200000"
+      ],
+      "spread_atr": 0.010726173894974458
+    },
+    {
+      "kind": "EQUAL_HIGHS",
+      "price": 4376.735,
+      "band_low": 4376.32,
+      "band_high": 4377.15,
+      "formed_at_bar_ms": 1789049700000,
+      "age_bars": 455,
+      "state": "SWEPT",
+      "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "BUY_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789647300000,
+      "swing_ids": [
+        "15m-hi-1789049700000",
+        "15m-hi-1789140600000"
+      ],
+      "spread_atr": 0.06228814411577274
+    },
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4352.285,
+      "band_low": 4351.95,
+      "band_high": 4352.62,
+      "formed_at_bar_ms": 1789052400000,
+      "age_bars": 452,
+      "state": "SWEPT",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789149600000,
+      "swing_ids": [
+        "15m-lo-1789143300000",
+        "15m-lo-1789052400000"
+      ],
+      "spread_atr": 0.0532997891182743
+    },
+    {
+      "kind": "EQUAL_HIGHS",
+      "price": 4372.18,
+      "band_low": 4372.18,
+      "band_high": 4372.18,
+      "formed_at_bar_ms": 1789054200000,
+      "age_bars": 450,
+      "state": "SWEPT",
+      "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "BUY_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789130700000,
+      "swing_ids": [
+        "15m-hi-1789054200000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4354.12,
+      "band_low": 4354.12,
+      "band_high": 4354.12,
+      "formed_at_bar_ms": 1789056000000,
+      "age_bars": 448,
+      "state": "SWEPT",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789062300000,
+      "swing_ids": [
+        "15m-lo-1789056000000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_HIGHS",
+      "price": 4367.6,
+      "band_low": 4367.48,
+      "band_high": 4367.72,
+      "formed_at_bar_ms": 1789059600000,
+      "age_bars": 444,
+      "state": "SWEPT",
+      "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "BUY_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789647300000,
+      "swing_ids": [
+        "15m-hi-1789581600000",
+        "15m-hi-1789059600000"
+      ],
+      "spread_atr": 0.01465560425295201
+    },
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4314.0233333333335,
+      "band_low": 4313.74,
+      "band_high": 4314.58,
+      "formed_at_bar_ms": 1789066800000,
+      "age_bars": 436,
+      "state": "SWEPT",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789083900000,
+      "swing_ids": [
+        "15m-lo-1789079400000",
+        "15m-lo-1789066800000",
+        "15m-lo-1789073100000"
+      ],
+      "spread_atr": 0.10823861942845878
+    },
+    {
+      "kind": "EQUAL_HIGHS",
+      "price": 4324.74,
+      "band_low": 4324.74,
+      "band_high": 4324.74,
+      "formed_at_bar_ms": 1789077600000,
+      "age_bars": 428,
+      "state": "SWEPT",
+      "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "BUY_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789086600000,
+      "swing_ids": [
+        "15m-hi-1789077600000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_HIGHS",
+      "price": 4320.51,
+      "band_low": 4320.51,
+      "band_high": 4320.51,
+      "formed_at_bar_ms": 1789082100000,
+      "age_bars": 423,
+      "state": "SWEPT",
+      "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "BUY_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789084800000,
+      "swing_ids": [
+        "15m-hi-1789082100000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4311.24,
+      "band_low": 4311.24,
+      "band_high": 4311.24,
+      "formed_at_bar_ms": 1789083900000,
+      "age_bars": 421,
+      "state": "SWEPT",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789096500000,
+      "swing_ids": [
+        "15m-lo-1789083900000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_HIGHS",
+      "price": 4340.16,
+      "band_low": 4339.91,
+      "band_high": 4340.41,
+      "formed_at_bar_ms": 1789088400000,
+      "age_bars": 416,
+      "state": "SWEPT",
+      "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "BUY_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789645500000,
+      "swing_ids": [
+        "15m-hi-1789642800000",
+        "15m-hi-1789088400000"
+      ],
+      "spread_atr": 0.05804054016849478
+    },
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4320.76,
+      "band_low": 4320.6,
+      "band_high": 4320.92,
+      "formed_at_bar_ms": 1789089300000,
+      "age_bars": 415,
+      "state": "SWEPT",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789581600000,
+      "swing_ids": [
+        "15m-lo-1789533900000",
+        "15m-lo-1789089300000"
+      ],
+      "spread_atr": 0.04575467877869474
+    },
+    {
+      "kind": "EQUAL_HIGHS",
+      "price": 4334.965,
+      "band_low": 4334.58,
+      "band_high": 4335.35,
+      "formed_at_bar_ms": 1789092900000,
+      "age_bars": 411,
+      "state": "SWEPT",
+      "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "BUY_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789642800000,
+      "swing_ids": [
+        "15m-hi-1789092900000",
+        "15m-hi-1789631100000"
+      ],
+      "spread_atr": 0.08207943525599858
+    },
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4300.82,
+      "band_low": 4300.82,
+      "band_high": 4300.82,
+      "formed_at_bar_ms": 1789098300000,
+      "age_bars": 405,
+      "state": "SWEPT",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789129800000,
+      "swing_ids": [
+        "15m-lo-1789098300000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_HIGHS",
+      "price": 4360.9,
+      "band_low": 4360.88,
+      "band_high": 4360.92,
+      "formed_at_bar_ms": 1789106400000,
+      "age_bars": 396,
+      "state": "SWEPT",
+      "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "BUY_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789580700000,
+      "swing_ids": [
+        "15m-hi-1789573500000",
+        "15m-hi-1789106400000"
+      ],
+      "spread_atr": 0.004338927157541895
+    },
+    {
+      "kind": "EQUAL_HIGHS",
+      "price": 4356.17,
+      "band_low": 4356.17,
+      "band_high": 4356.17,
+      "formed_at_bar_ms": 1789110000000,
+      "age_bars": 392,
+      "state": "SWEPT",
+      "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "BUY_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789114500000,
+      "swing_ids": [
+        "15m-hi-1789110000000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_HIGHS",
+      "price": 4357.62,
+      "band_low": 4357.24,
+      "band_high": 4358.0,
+      "formed_at_bar_ms": 1789114500000,
+      "age_bars": 387,
+      "state": "SWEPT",
+      "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "BUY_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789573500000,
+      "swing_ids": [
+        "15m-hi-1789114500000",
+        "15m-hi-1789570800000"
+      ],
+      "spread_atr": 0.08030941775207769
+    },
+    {
+      "kind": "EQUAL_HIGHS",
+      "price": 4349.95,
+      "band_low": 4349.95,
+      "band_high": 4349.95,
+      "formed_at_bar_ms": 1789121700000,
+      "age_bars": 379,
+      "state": "SWEPT",
+      "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "BUY_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789129800000,
+      "swing_ids": [
+        "15m-hi-1789121700000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4292.969999999999,
+      "band_low": 4292.86,
+      "band_high": 4293.08,
+      "formed_at_bar_ms": 1789129800000,
+      "age_bars": 370,
+      "state": "SWEPT",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789426800000,
+      "swing_ids": [
+        "15m-lo-1789424100000",
+        "15m-lo-1789129800000"
+      ],
+      "spread_atr": 0.030025881680456126
+    },
+    {
+      "kind": "PRIOR_WEEK_LOW",
+      "price": 4293.08,
+      "band_low": null,
+      "band_high": null,
+      "formed_at_bar_ms": 1789129800000,
+      "age_bars": 370,
+      "state": "SWEPT",
+      "rule": "prior week low: the last complete broker week's low",
+      "side": "SELL_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789377300000,
+      "swing_ids": [],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_HIGHS",
+      "price": 4402.47,
+      "band_low": 4402.47,
+      "band_high": 4402.47,
+      "formed_at_bar_ms": 1789134300000,
+      "age_bars": 365,
+      "state": "RESTING",
+      "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "BUY_SIDE",
+      "swept": false,
+      "swept_at_bar_ms": null,
+      "swing_ids": [
+        "15m-hi-1789134300000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_HIGHS",
+      "price": 4370.42,
+      "band_low": 4370.42,
+      "band_high": 4370.42,
+      "formed_at_bar_ms": 1789147800000,
+      "age_bars": 350,
+      "state": "SWEPT",
+      "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "BUY_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789647300000,
+      "swing_ids": [
+        "15m-hi-1789147800000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4344.17,
+      "band_low": 4344.17,
+      "band_high": 4344.17,
+      "formed_at_bar_ms": 1789150500000,
+      "age_bars": 347,
+      "state": "SWEPT",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789155900000,
+      "swing_ids": [
+        "15m-lo-1789150500000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_HIGHS",
+      "price": 4353.595,
+      "band_low": 4353.52,
+      "band_high": 4353.67,
+      "formed_at_bar_ms": 1789154100000,
+      "age_bars": 343,
+      "state": "SWEPT",
+      "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "BUY_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789563600000,
+      "swing_ids": [
+        "15m-hi-1789557300000",
+        "15m-hi-1789154100000"
+      ],
+      "spread_atr": 0.02120252459092115
+    },
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4342.82,
+      "band_low": 4342.77,
+      "band_high": 4342.87,
+      "formed_at_bar_ms": 1789155900000,
+      "age_bars": 341,
+      "state": "SWEPT",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789578000000,
+      "swing_ids": [
+        "15m-lo-1789155900000",
+        "15m-lo-1789572600000"
+      ],
+      "spread_atr": 0.010715978848254926
+    },
+    {
+      "kind": "EQUAL_HIGHS",
+      "price": 4351.4,
+      "band_low": 4351.4,
+      "band_high": 4351.4,
+      "formed_at_bar_ms": 1789156800000,
+      "age_bars": 340,
+      "state": "SWEPT",
+      "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "BUY_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789350300000,
+      "swing_ids": [
+        "15m-hi-1789156800000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4323.1759999999995,
+      "band_low": 4322.79,
+      "band_high": 4323.37,
+      "formed_at_bar_ms": 1789336800000,
+      "age_bars": 336,
+      "state": "RESTING",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": false,
+      "swept_at_bar_ms": null,
+      "swing_ids": [
+        "15m-lo-1789530300000",
+        "15m-lo-1789545600000",
+        "15m-lo-1789336800000",
+        "15m-lo-1789364700000",
+        "15m-lo-1789644600000"
+      ],
+      "spread_atr": 0.057074033835913446
+    },
+    {
+      "kind": "EQUAL_HIGHS",
+      "price": 4342.41,
+      "band_low": 4342.41,
+      "band_high": 4342.41,
+      "formed_at_bar_ms": 1789340400000,
+      "age_bars": 332,
+      "state": "SWEPT",
+      "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "BUY_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789344000000,
+      "swing_ids": [
+        "15m-hi-1789340400000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_HIGHS",
+      "price": 4347.52,
+      "band_low": 4347.52,
+      "band_high": 4347.52,
+      "formed_at_bar_ms": 1789344000000,
+      "age_bars": 328,
+      "state": "SWEPT",
+      "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "BUY_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789350300000,
+      "swing_ids": [
+        "15m-hi-1789344000000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4329.86,
+      "band_low": 4329.86,
+      "band_high": 4329.86,
+      "formed_at_bar_ms": 1789344000000,
+      "age_bars": 328,
+      "state": "SWEPT",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789347600000,
+      "swing_ids": [
+        "15m-lo-1789344000000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4326.25,
+      "band_low": 4326.25,
+      "band_high": 4326.25,
+      "formed_at_bar_ms": 1789348500000,
+      "age_bars": 323,
+      "state": "SWEPT",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789360200000,
+      "swing_ids": [
+        "15m-lo-1789348500000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_HIGHS",
+      "price": 4355.264999999999,
+      "band_low": 4355.2,
+      "band_high": 4355.33,
+      "formed_at_bar_ms": 1789350300000,
+      "age_bars": 321,
+      "state": "SWEPT",
+      "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "BUY_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789563600000,
+      "swing_ids": [
+        "15m-hi-1789350300000",
+        "15m-hi-1789353000000"
+      ],
+      "spread_atr": 0.012917393661786052
+    },
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4327.15,
+      "band_low": 4327.15,
+      "band_high": 4327.15,
+      "formed_at_bar_ms": 1789356600000,
+      "age_bars": 314,
+      "state": "SWEPT",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789360200000,
+      "swing_ids": [
+        "15m-lo-1789356600000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4321.8150000000005,
+      "band_low": 4321.5,
+      "band_high": 4322.13,
+      "formed_at_bar_ms": 1789361100000,
+      "age_bars": 309,
+      "state": "SWEPT",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789581600000,
+      "swing_ids": [
+        "15m-lo-1789538400000",
+        "15m-lo-1789361100000"
+      ],
+      "spread_atr": 0.08985514862229693
+    },
+    {
+      "kind": "EQUAL_HIGHS",
+      "price": 4338.92,
+      "band_low": 4338.76,
+      "band_high": 4339.08,
+      "formed_at_bar_ms": 1789365600000,
+      "age_bars": 304,
+      "state": "SWEPT",
+      "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "BUY_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789551900000,
+      "swing_ids": [
+        "15m-hi-1789365600000",
+        "15m-hi-1789543800000"
+      ],
+      "spread_atr": 0.04614832233999522
+    },
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4307.855,
+      "band_low": 4307.78,
+      "band_high": 4307.93,
+      "formed_at_bar_ms": 1789371900000,
+      "age_bars": 297,
+      "state": "SWEPT",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789409700000,
+      "swing_ids": [
+        "15m-lo-1789407000000",
+        "15m-lo-1789371900000"
+      ],
+      "spread_atr": 0.015529946079143571
+    },
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4278.31,
+      "band_low": 4278.31,
+      "band_high": 4278.31,
+      "formed_at_bar_ms": 1789380000000,
+      "age_bars": 288,
+      "state": "SWEPT",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789389000000,
+      "swing_ids": [
+        "15m-lo-1789380000000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_HIGHS",
+      "price": 4297.283333333334,
+      "band_low": 4296.87,
+      "band_high": 4297.56,
+      "formed_at_bar_ms": 1789383600000,
+      "age_bars": 284,
+      "state": "SWEPT",
+      "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "BUY_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789620300000,
+      "swing_ids": [
+        "15m-hi-1789383600000",
+        "15m-hi-1789616700000",
+        "15m-hi-1789388100000"
+      ],
+      "spread_atr": 0.06398237538374024
+    },
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4253.57,
+      "band_low": 4253.57,
+      "band_high": 4253.57,
+      "formed_at_bar_ms": 1789390800000,
+      "age_bars": 276,
+      "state": "SWEPT",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789585200000,
+      "swing_ids": [
+        "15m-lo-1789390800000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_HIGHS",
+      "price": 4282.95,
+      "band_low": 4282.95,
+      "band_high": 4282.95,
+      "formed_at_bar_ms": 1789395300000,
+      "age_bars": 271,
+      "state": "SWEPT",
+      "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "BUY_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789398000000,
+      "swing_ids": [
+        "15m-hi-1789395300000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4263.855,
+      "band_low": 4263.62,
+      "band_high": 4264.09,
+      "formed_at_bar_ms": 1789395300000,
+      "age_bars": 271,
+      "state": "SWEPT",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789461900000,
+      "swing_ids": [
+        "15m-lo-1789459200000",
+        "15m-lo-1789395300000"
+      ],
+      "spread_atr": 0.0576137444986703
+    },
+    {
+      "kind": "EQUAL_HIGHS",
+      "price": 4298.19,
+      "band_low": 4298.19,
+      "band_high": 4298.19,
+      "formed_at_bar_ms": 1789399800000,
+      "age_bars": 266,
+      "state": "SWEPT",
+      "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "BUY_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789402500000,
+      "swing_ids": [
+        "15m-hi-1789399800000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_HIGHS",
+      "price": 4317.7266666666665,
+      "band_low": 4317.39,
+      "band_high": 4318.11,
+      "formed_at_bar_ms": 1789404300000,
+      "age_bars": 261,
+      "state": "SWEPT",
+      "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "BUY_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789628400000,
+      "swing_ids": [
+        "15m-hi-1789440300000",
+        "15m-hi-1789404300000",
+        "15m-hi-1789608600000"
+      ],
+      "spread_atr": 0.050668402698871684
+    },
+    {
+      "kind": "EQUAL_HIGHS",
+      "price": 4315.47,
+      "band_low": 4315.47,
+      "band_high": 4315.47,
+      "formed_at_bar_ms": 1789408800000,
+      "age_bars": 256,
+      "state": "SWEPT",
+      "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "BUY_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789439400000,
+      "swing_ids": [
+        "15m-hi-1789408800000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4282.34,
+      "band_low": 4282.34,
+      "band_high": 4282.34,
+      "formed_at_bar_ms": 1789416000000,
+      "age_bars": 248,
+      "state": "SWEPT",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789457400000,
+      "swing_ids": [
+        "15m-lo-1789416000000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_HIGHS",
+      "price": 4302.75,
+      "band_low": 4302.75,
+      "band_high": 4302.75,
+      "formed_at_bar_ms": 1789423200000,
+      "age_bars": 244,
+      "state": "SWEPT",
+      "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "BUY_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789434900000,
+      "swing_ids": [
+        "15m-hi-1789423200000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4287.07,
+      "band_low": 4287.07,
+      "band_high": 4287.07,
+      "formed_at_bar_ms": 1789427700000,
+      "age_bars": 239,
+      "state": "SWEPT",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789430400000,
+      "swing_ids": [
+        "15m-lo-1789427700000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4283.21,
+      "band_low": 4283.21,
+      "band_high": 4283.21,
+      "formed_at_bar_ms": 1789432200000,
+      "age_bars": 234,
+      "state": "SWEPT",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789457400000,
+      "swing_ids": [
+        "15m-lo-1789432200000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4294.25,
+      "band_low": 4294.25,
+      "band_high": 4294.25,
+      "formed_at_bar_ms": 1789436700000,
+      "age_bars": 229,
+      "state": "SWEPT",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789450200000,
+      "swing_ids": [
+        "15m-lo-1789436700000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4285.74,
+      "band_low": 4285.48,
+      "band_high": 4286.0,
+      "formed_at_bar_ms": 1789453800000,
+      "age_bars": 210,
+      "state": "RESTING",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": false,
+      "swept_at_bar_ms": null,
+      "swing_ids": [
+        "15m-lo-1789622100000",
+        "15m-lo-1789453800000"
+      ],
+      "spread_atr": 0.053693685037410746
+    },
+    {
+      "kind": "EQUAL_HIGHS",
+      "price": 4295.59,
+      "band_low": 4295.47,
+      "band_high": 4295.71,
+      "formed_at_bar_ms": 1789455600000,
+      "age_bars": 208,
+      "state": "SWEPT",
+      "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "BUY_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789479900000,
+      "swing_ids": [
+        "15m-hi-1789455600000",
+        "15m-hi-1789476300000"
+      ],
+      "spread_atr": 0.029924130883011105
+    },
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4261.31,
+      "band_low": 4261.31,
+      "band_high": 4261.31,
+      "formed_at_bar_ms": 1789461900000,
+      "age_bars": 201,
+      "state": "SWEPT",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789584300000,
+      "swing_ids": [
+        "15m-lo-1789461900000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_HIGHS",
+      "price": 4277.44,
+      "band_low": 4277.44,
+      "band_high": 4277.44,
+      "formed_at_bar_ms": 1789466400000,
+      "age_bars": 196,
+      "state": "SWEPT",
+      "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "BUY_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789469100000,
+      "swing_ids": [
+        "15m-hi-1789466400000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_HIGHS",
+      "price": 4286.73,
+      "band_low": 4286.73,
+      "band_high": 4286.73,
+      "formed_at_bar_ms": 1789472700000,
+      "age_bars": 189,
+      "state": "SWEPT",
+      "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "BUY_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789476300000,
+      "swing_ids": [
+        "15m-hi-1789472700000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4271.34,
+      "band_low": 4271.34,
+      "band_high": 4271.34,
+      "formed_at_bar_ms": 1789474500000,
+      "age_bars": 187,
+      "state": "SWEPT",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789583400000,
+      "swing_ids": [
+        "15m-lo-1789474500000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_HIGHS",
+      "price": 4300.46,
+      "band_low": 4300.46,
+      "band_high": 4300.46,
+      "formed_at_bar_ms": 1789480800000,
+      "age_bars": 180,
+      "state": "SWEPT",
+      "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "BUY_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789495200000,
+      "swing_ids": [
+        "15m-hi-1789480800000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4274.045,
+      "band_low": 4273.99,
+      "band_high": 4274.1,
+      "formed_at_bar_ms": 1789483500000,
+      "age_bars": 177,
+      "state": "RESTING",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": false,
+      "swept_at_bar_ms": null,
+      "swing_ids": [
+        "15m-lo-1789613100000",
+        "15m-lo-1789483500000"
+      ],
+      "spread_atr": 0.008710819020816218
+    },
+    {
+      "kind": "EQUAL_HIGHS",
+      "price": 4299.04,
+      "band_low": 4298.92,
+      "band_high": 4299.11,
+      "formed_at_bar_ms": 1789491600000,
+      "age_bars": 168,
+      "state": "SWEPT",
+      "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "BUY_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789623900000,
+      "swing_ids": [
+        "15m-hi-1789511400000",
+        "15m-hi-1789621200000",
+        "15m-hi-1789491600000"
+      ],
+      "spread_atr": 0.01956839961944907
+    },
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4290.335,
+      "band_low": 4290.32,
+      "band_high": 4290.35,
+      "formed_at_bar_ms": 1789491600000,
+      "age_bars": 168,
+      "state": "SWEPT",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789622100000,
+      "swing_ids": [
+        "15m-lo-1789491600000",
+        "15m-lo-1789619400000"
+      ],
+      "spread_atr": 0.003120214576704826
+    },
+    {
+      "kind": "EQUAL_HIGHS",
+      "price": 4310.67,
+      "band_low": 4310.67,
+      "band_high": 4310.67,
+      "formed_at_bar_ms": 1789498800000,
+      "age_bars": 160,
+      "state": "SWEPT",
+      "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "BUY_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789525800000,
+      "swing_ids": [
+        "15m-hi-1789498800000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4291.86,
+      "band_low": 4291.86,
+      "band_high": 4291.86,
+      "formed_at_bar_ms": 1789504200000,
+      "age_bars": 154,
+      "state": "SWEPT",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789510500000,
+      "swing_ids": [
+        "15m-lo-1789504200000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4275.47,
+      "band_low": 4275.47,
+      "band_high": 4275.47,
+      "formed_at_bar_ms": 1789519500000,
+      "age_bars": 141,
+      "state": "SWEPT",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789583400000,
+      "swing_ids": [
+        "15m-lo-1789519500000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_HIGHS",
+      "price": 4293.6,
+      "band_low": 4293.6,
+      "band_high": 4293.6,
+      "formed_at_bar_ms": 1789521300000,
+      "age_bars": 139,
+      "state": "SWEPT",
+      "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "BUY_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789524000000,
+      "swing_ids": [
+        "15m-hi-1789521300000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4280.545,
+      "band_low": 4280.04,
+      "band_high": 4281.05,
+      "formed_at_bar_ms": 1789523100000,
+      "age_bars": 137,
+      "state": "SWEPT",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789613100000,
+      "swing_ids": [
+        "15m-lo-1789523100000",
+        "15m-lo-1789610400000"
+      ],
+      "spread_atr": 0.0751449110455141
+    },
+    {
+      "kind": "EQUAL_HIGHS",
+      "price": 4341.02,
+      "band_low": 4341.02,
+      "band_high": 4341.02,
+      "formed_at_bar_ms": 1789528500000,
+      "age_bars": 131,
+      "state": "SWEPT",
+      "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "BUY_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789552800000,
+      "swing_ids": [
+        "15m-hi-1789528500000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_HIGHS",
+      "price": 4333.7,
+      "band_low": 4333.7,
+      "band_high": 4333.7,
+      "formed_at_bar_ms": 1789537500000,
+      "age_bars": 121,
+      "state": "SWEPT",
+      "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "BUY_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789542000000,
+      "swing_ids": [
+        "15m-hi-1789537500000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4335.45,
+      "band_low": 4335.45,
+      "band_high": 4335.45,
+      "formed_at_bar_ms": 1789561800000,
+      "age_bars": 94,
+      "state": "SWEPT",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789566300000,
+      "swing_ids": [
+        "15m-lo-1789561800000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4341.75,
+      "band_low": 4341.75,
+      "band_high": 4341.75,
+      "formed_at_bar_ms": 1789578000000,
+      "age_bars": 76,
+      "state": "SWEPT",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789581600000,
+      "swing_ids": [
+        "15m-lo-1789578000000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "PRIOR_DAY_HIGH",
+      "price": 4367.48,
+      "band_low": null,
+      "band_high": null,
+      "formed_at_bar_ms": 1789581600000,
+      "age_bars": 72,
+      "state": "SWEPT",
+      "rule": "prior day high: the last complete trading day's high",
+      "side": "BUY_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789647300000,
+      "swing_ids": [],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4235.18,
+      "band_low": 4235.18,
+      "band_high": 4235.18,
+      "formed_at_bar_ms": 1789585200000,
+      "age_bars": 68,
+      "state": "RESTING",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": false,
+      "swept_at_bar_ms": null,
+      "swing_ids": [
+        "15m-lo-1789585200000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "PRIOR_DAY_LOW",
+      "price": 4235.18,
+      "band_low": null,
+      "band_high": null,
+      "formed_at_bar_ms": 1789585200000,
+      "age_bars": 68,
+      "state": "RESTING",
+      "rule": "prior day low: the last complete trading day's low",
+      "side": "SELL_SIDE",
+      "swept": false,
+      "swept_at_bar_ms": null,
+      "swing_ids": [],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_HIGHS",
+      "price": 4276.36,
+      "band_low": 4276.23,
+      "band_high": 4276.49,
+      "formed_at_bar_ms": 1789587900000,
+      "age_bars": 65,
+      "state": "SWEPT",
+      "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "BUY_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789603200000,
+      "swing_ids": [
+        "15m-hi-1789597800000",
+        "15m-hi-1789587900000"
+      ],
+      "spread_atr": 0.01787234891507319
+    },
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4257.35,
+      "band_low": 4257.23,
+      "band_high": 4257.47,
+      "formed_at_bar_ms": 1789589700000,
+      "age_bars": 63,
+      "state": "RESTING",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": false,
+      "swept_at_bar_ms": null,
+      "swing_ids": [
+        "15m-lo-1789589700000",
+        "15m-lo-1789596900000"
+      ],
+      "spread_atr": 0.016035642717250893
+    },
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4258.85,
+      "band_low": 4258.85,
+      "band_high": 4258.85,
+      "formed_at_bar_ms": 1789599600000,
+      "age_bars": 56,
+      "state": "RESTING",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": false,
+      "swept_at_bar_ms": null,
+      "swing_ids": [
+        "15m-lo-1789599600000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4266.35,
+      "band_low": 4266.35,
+      "band_high": 4266.35,
+      "formed_at_bar_ms": 1789603200000,
+      "age_bars": 52,
+      "state": "RESTING",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": false,
+      "swept_at_bar_ms": null,
+      "swing_ids": [
+        "15m-lo-1789603200000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4277.08,
+      "band_low": 4277.08,
+      "band_high": 4277.08,
+      "formed_at_bar_ms": 1789605900000,
+      "age_bars": 49,
+      "state": "SWEPT",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": true,
+      "swept_at_bar_ms": 1789613100000,
+      "swing_ids": [
+        "15m-lo-1789605900000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_LOWS",
+      "price": 4305.09,
+      "band_low": 4305.09,
+      "band_high": 4305.09,
+      "formed_at_bar_ms": 1789637400000,
+      "age_bars": 14,
+      "state": "RESTING",
+      "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "SELL_SIDE",
+      "swept": false,
+      "swept_at_bar_ms": null,
+      "swing_ids": [
+        "15m-lo-1789637400000"
+      ],
+      "spread_atr": null
+    },
+    {
+      "kind": "EQUAL_HIGHS",
+      "price": 4381.2,
+      "band_low": 4381.2,
+      "band_high": 4381.2,
+      "formed_at_bar_ms": 1789647300000,
+      "age_bars": 3,
+      "state": "RESTING",
+      "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
+      "side": "BUY_SIDE",
+      "swept": false,
+      "swept_at_bar_ms": null,
+      "swing_ids": [
+        "15m-hi-1789647300000"
+      ],
+      "spread_atr": null
+    }
+  ],
+  "extremes": {
+    "session": {
+      "high": {
+        "kind": "SESSION_HIGH",
+        "price": 4381.2,
+        "band_low": null,
+        "band_high": null,
+        "formed_at_bar_ms": 1789647300000,
+        "age_bars": 3,
+        "state": "FORMING",
+        "rule": "session: the trading-day run in progress, split by the broker's daily hole"
+      },
+      "low": {
+        "kind": "SESSION_LOW",
+        "price": 4257.47,
+        "band_low": null,
+        "band_high": null,
+        "formed_at_bar_ms": 1789596900000,
+        "age_bars": 59,
+        "state": "FORMING",
+        "rule": "session: the trading-day run in progress, split by the broker's daily hole"
+      },
+      "start_bar_ms": 1789596000000,
+      "end_bar_ms": 1789650000000,
+      "bars": 61
+    },
+    "day": {
+      "high": {
+        "kind": "DAY_HIGH",
+        "price": 4367.48,
+        "band_low": null,
+        "band_high": null,
+        "formed_at_bar_ms": 1789581600000,
+        "age_bars": 72,
+        "state": "COMPLETE",
+        "rule": "day: the last COMPLETE trading-day run, split by the broker's daily hole"
+      },
+      "low": {
+        "kind": "DAY_LOW",
+        "price": 4235.18,
+        "band_low": null,
+        "band_high": null,
+        "formed_at_bar_ms": 1789585200000,
+        "age_bars": 68,
+        "state": "COMPLETE",
+        "rule": "day: the last COMPLETE trading-day run, split by the broker's daily hole"
+      },
+      "start_bar_ms": 1789509600000,
+      "end_bar_ms": 1789591500000,
+      "bars": 92
+    },
+    "week": {
+      "high": {
+        "kind": "WEEK_HIGH",
+        "price": 4442.95,
+        "band_low": null,
+        "band_high": null,
+        "formed_at_bar_ms": 1788840000000,
+        "age_bars": 680,
+        "state": "COMPLETE",
+        "rule": "week: the last COMPLETE broker week, split by the weekend hole (htf::weeks_of)"
+      },
+      "low": {
+        "kind": "WEEK_LOW",
+        "price": 4293.08,
+        "band_low": null,
+        "band_high": null,
+        "formed_at_bar_ms": 1789129800000,
+        "age_bars": 370,
+        "state": "COMPLETE",
+        "rule": "week: the last COMPLETE broker week, split by the weekend hole (htf::weeks_of)"
+      },
+      "start_bar_ms": 1788732000000,
+      "end_bar_ms": 1789159500000,
+      "bars": 450
+    }
+  },
+  "source": {
+    "file": "bars/XAUUSD-15m.parquet",
+    "bars": 100586,
+    "timeframe": "15m"
+  },
+  "window": {
+    "bars": 879,
+    "days": 10,
+    "start_bar_ms": 1788472800000,
+    "end_bar_ms": 1789650000000,
+    "profile_days": 5
+  },
+  "unavailable": null
+}

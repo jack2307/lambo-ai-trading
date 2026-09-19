@@ -1,0 +1,17 @@
+{
+  "market": "xauusd",
+  "timeframe": "15m",
+  "bar_ms": 900000,
+  "computed_at_bar_ms": null,
+  "computed_at_ms": 1789793717474,
+  "last_close": null,
+  "atr14": null,
+  "profile": null,
+  "fair_value_gaps": null,
+  "order_blocks": null,
+  "liquidity": null,
+  "extremes": null,
+  "source": null,
+  "window": null,
+  "unavailable": "no 15m bars for xauusd: bars/XAUUSD-15m.parquet has not been exported yet (py/ingest/mt5_export.py --symbols XAUUSD --timeframes M15)"
+}
