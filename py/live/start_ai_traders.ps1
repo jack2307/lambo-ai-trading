@@ -214,6 +214,34 @@ $campaigns = @(
     # traded, which is the one thing a control may not do.
     @{ model = 'deepseek-flash'; run = 'ai-xau-ds-ctx-htf'; control = 'ai-xau-ds-ctx-htf-coin'; seed = 37; log = 'ai_trader_ds_htf'; promptVariant = 'htf-context' },
     @{ model = 'deepseek-flash'; run = 'ai-xau-ds-ctx-htf-filter'; control = 'ai-xau-ds-ctx-htf-filter-coin'; seed = 41; log = 'ai_trader_ds_htf_filter'; promptVariant = 'htf-filter' },
+    # THE STRUCTURAL LEVELS BOOK. Registered at
+    # docs/hypotheses/2026-09-18-smc-context.md before the route it reads
+    # existed and before the book saw a bar. `ai-xau-ds-ctx` above is its
+    # control and keeps running unchanged, same model, same bars.
+    #
+    # It is the base prompt plus ONE block: the levels GET /api/paper/levels
+    # computes from closed bars - activity profile, unfilled fair value gaps,
+    # order blocks, buy- and sell-side liquidity, session/day/week extremes -
+    # each with its price or band, its AGE and its STATE, nearest first, six a
+    # side. No score, no ranking, no confluence count; the registration
+    # pre-commits that if the route ever grows a verdict this book must not
+    # read it.
+    #
+    # THE THIRD VARIANT ON ONE CONTROL, after -otl and -htf, and the
+    # registration says so before any of them reports: three books each given
+    # a 10% disagreement gate are three chances at a false positive.
+    #
+    # It needs a route that did not exist when the block was written. Until
+    # /api/paper/levels is deployed every decision carries `smc: unavailable`,
+    # which is a recorded result and not a silent one - but it is not the
+    # experiment, so the book is not started until the route is on the box.
+    #
+    # Seed 53: distinct from 7, 11, 17, 23, 29, 31, 37, 41, 43 and 47. The
+    # registration named 43, which by then belonged to ai-xau-ds-plan; two
+    # books sharing a seed share a coin's luck on every bar where both traded,
+    # which is the one thing a control may not do, so the number moved and the
+    # registration records the change.
+    @{ model = 'deepseek-flash'; run = 'ai-xau-ds-smc'; control = 'ai-xau-ds-smc-coin'; seed = 53; log = 'ai_trader_ds_smc'; promptVariant = 'smc-context' },
     # THE STAGED-ENTRY PAIR, stages 1 and 2 of
     # docs/plans/2026-09-18-staged-ai-entry.md. Registered at
     # docs/hypotheses/2026-09-18-plan-entry.md and 2026-09-18-plan-trigger.md
