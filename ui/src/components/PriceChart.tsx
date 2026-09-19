@@ -15,6 +15,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 import type { Bar, BacktestTrade, IndicatorPoint, OptionsFrame } from '@/lib/api'
 import { LEVEL_FAMILIES, familyOf, stackTags, type LevelFamily, type LevelKind } from '@/lib/levels'
+import { LevelBands, SPENT_WEIGHT, withAlpha, type LevelBand } from './levelBands'
 import { TradeZones, type TradeZone } from './tradeZones'
 
 /**
@@ -29,8 +30,30 @@ import { TradeZones, type TradeZone } from './tradeZones'
  */
 export interface ChartLevel {
   label: string
+  /**
+   * Where the line and the tag go. For a level that IS a band, this is the
+   * band edge nearer the last close — a price the route published — and
+   * never the midpoint, which is a number it never sent and price never has
+   * to reach.
+   */
   price: number
   kind?: LevelKind
+  /**
+   * The two prices of a level that is a RANGE: a fair value gap, an order
+   * block, the spread of an equal-highs pool. Both or neither, the way the
+   * route sends them; one alone is not a band and is not guessed at from the
+   * other. Drawn by `levelBands`, behind the candles.
+   */
+  bandLow?: number | null
+  bandHigh?: number | null
+  /**
+   * A pool already swept or a block already broken. Drawn dashed and faded
+   * when the viewer has asked to see the spent ones, because a level price
+   * has already been through reads differently from one it has not — and
+   * showing them at full weight is what makes a chart of 251 levels
+   * unreadable. It says what HAPPENED to the level; it does not rank it.
+   */
+  spent?: boolean
 }
 
 /**
@@ -58,6 +81,8 @@ interface PlacedLevelTag {
   y: number
   drawnY: number
   moved: boolean
+  /** Swept or broken: faded, like its line and its band. */
+  spent: boolean
 }
 
 interface TagLayer {
@@ -83,6 +108,7 @@ function sameLayer(a: TagLayer, b: TagLayer): boolean {
       tag.label === other.label &&
       tag.hue === other.hue &&
       tag.moved === other.moved &&
+      tag.spent === other.spent &&
       Math.abs(tag.y - other.y) <= 0.5 &&
       Math.abs(tag.drawnY - other.drawnY) <= 0.5
     )
@@ -271,6 +297,7 @@ export function PriceChart({
   const htfLines = useRef<IPriceLine[]>([])
   const markers = useRef<ISeriesMarkersPluginApi<Time> | null>(null)
   const zones = useRef<TradeZones | null>(null)
+  const bands = useRef<LevelBands | null>(null)
 
   // Create the chart once; data arrives through the effects below.
   useEffect(() => {
@@ -354,6 +381,20 @@ export function PriceChart({
     })
     candles.current.attachPrimitive(zones.current)
 
+    // The level bands, attached after the trade zones so a stop band sits on
+    // top of the context it was chosen against rather than under it.
+    //
+    // HALF THE TRADE BANDS' FILL, and the number is not a guess. A trade has
+    // one stop band and at most one target band on screen; the level window
+    // can put a dozen gaps and blocks up at once, and at 0.13 apiece two
+    // overlapping bands are darker than an unlit candle — at which point the
+    // context is louder than the data it is context for.
+    bands.current = new LevelBands({
+      fill: alpha('--band-fill', 0.13) * 0.5,
+      edge: alpha('--band-edge', 0.55) * 0.7,
+    })
+    candles.current.attachPrimitive(bands.current)
+
     return () => {
       instance.remove()
       chart.current = null
@@ -362,6 +403,7 @@ export function PriceChart({
       priceLines.current = []
       markers.current = null
       zones.current = null
+      bands.current = null
     }
   }, [])
 
@@ -562,8 +604,18 @@ export function PriceChart({
     if (!series) return
     for (const line of htfLines.current) series.removePriceLine(line)
     htfLines.current = []
+    const drawnBands: LevelBand[] = []
     for (const level of htfLevels ?? []) {
       if (!Number.isFinite(level.price)) continue
+      const color = familyColor(familyOf(level.kind ?? ''))
+      // A LEVEL IS A PRICE OR A BAND, and the route says which by sending
+      // both edges or neither. The band goes behind the candles as a band and
+      // still gets its edge line and its tag, so a gap is not a different
+      // kind of object on screen from the price levels around it — it is the
+      // same object with room in it.
+      if (level.bandLow != null && level.bandHigh != null) {
+        drawnBands.push({ low: level.bandLow, high: level.bandHigh, color, spent: level.spent })
+      }
       htfLines.current.push(
         series.createPriceLine({
           price: level.price,
@@ -572,12 +624,17 @@ export function PriceChart({
           // three H4 swings; with the prior day's and prior week's extremes
           // beside them, eight identical dashes say nothing about which is
           // which.
-          color: familyColor(familyOf(level.kind ?? '')),
+          //
+          // A SPENT LEVEL IS FADED BY THE SAME FUNCTION AND THE SAME WEIGHT
+          // ITS BAND IS, so a broken block's line and its band cannot end up
+          // saying different things about one level.
+          color: level.spent ? withAlpha(color, SPENT_WEIGHT) : color,
           lineWidth: 1,
           // Dashed and one pixel: this is context from a slower chart, and it
           // must not compete with the book's own stop and target, which are
-          // the levels that decide this trade.
-          lineStyle: 2,
+          // the levels that decide this trade. A spent one is dotted, which
+          // is the same distinction the bands draw.
+          lineStyle: level.spent ? 1 : 2,
           axisLabelVisible: false,
           // NO TITLE HERE ON PURPOSE. The library draws its titles where the
           // price falls and lets two of them sit on top of each other, and
@@ -588,6 +645,10 @@ export function PriceChart({
         }),
       )
     }
+    // Set in one call whether there are bands or not: a response that loses
+    // its last gap must clear the primitive, and a `setBands` skipped on the
+    // empty case would leave the previous market's bands behind the candles.
+    bands.current?.setBands(drawnBands)
   }, [htfLevels])
 
   /**
@@ -643,6 +704,7 @@ export function PriceChart({
         y: p.y,
         drawnY: p.drawnY,
         moved: p.moved,
+        spent: p.item.spent === true,
       })),
     }
     // Only when something actually moved. This runs on every frame of a
@@ -799,7 +861,15 @@ export function PriceChart({
           // absolutely-positioned children is zero-high and sits on the line
           // box's baseline, which would offset every tag by a constant
           // nobody would be able to see was there.
-          <span key={tag.label} className="absolute inset-0">
+          //
+          // KEYED ON THE PRICE AS WELL AS THE LABEL. While the levels were
+          // five H4 and daily prices every label on the chart was unique; the
+          // levels route serves 78 equal-lows pools on one response, and a
+          // key of `equal lows` alone makes React treat six tags at six
+          // different prices as one — five of them simply never rendered,
+          // which is the silent-level failure this whole layer exists to
+          // prevent.
+          <span key={`${tag.label}@${tag.y.toFixed(1)}`} className="absolute inset-0">
             {tag.moved && (
               // Back to the price it actually sits at. A tag that had to be
               // pushed clear of its neighbour is no longer ON its own line,
@@ -822,6 +892,10 @@ export function PriceChart({
                 top: tag.drawnY - TAG_GAP / 2,
                 borderColor: tag.hue,
                 color: tag.hue,
+                // A spent level's tag fades with its line and its band. The
+                // three parts of one level must never disagree about what
+                // state it is in.
+                opacity: tag.spent ? SPENT_WEIGHT : 1,
               }}
             >
               {tag.label}
