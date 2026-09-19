@@ -133,6 +133,19 @@ const CASES = [
   ['day_high', 'liquidity'],
   ['week_low', 'liquidity'],
   ['session_extreme', 'liquidity'],
+  // The five the route has served since the HTF card shipped and the chart
+  // never plotted. The MIDPOINT is not an extreme and matches none of the
+  // words above, so it earns its own case: it is produced by the same two
+  // prices as the week's high and low, and in `other` it would be off by
+  // default — served every poll, never drawn, with nothing saying so.
+  ['prior_day_high', 'liquidity'],
+  ['prior_day_low', 'liquidity'],
+  ['prior_week_high', 'liquidity'],
+  ['prior_week_low', 'liquidity'],
+  ['prior_week_mid', 'liquidity'],
+  // A break level IS the swing it hangs on, by construction. Naming it after
+  // the break must not move it out of that swing's family and switch it off.
+  ['h4_break', 'liquidity'],
   // An unfamiliar kind is drawn neutral and labelled with its raw string,
   // never dropped: a level the server believes in and the chart omits is the
   // worst outcome available here.

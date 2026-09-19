@@ -44,6 +44,18 @@ export function familyOf(kind: LevelKind): LevelFamily {
   // Session, day and week extremes are where stops rest, which is what the
   // liquidity family IS. They are not a fifth colour.
   if (k.includes('high') || k.includes('low') || k.includes('extreme')) return 'liquidity'
+  // The prior week's MIDPOINT is produced by the same two prices as the
+  // prior week's high and low — one range, one producer — so it wears their
+  // colour. It matches nothing above because it is not itself an extreme,
+  // and without this line `prior_week_mid` lands in `other`, which is off by
+  // default: a level the route sends every poll, never drawn, with nothing
+  // on screen to say it exists.
+  if (k.includes('mid') || k.includes('equilibrium')) return 'liquidity'
+  // A break level is not an independent price: by construction it IS the
+  // swing high or low the structure label hangs on (see `htfLevels` in
+  // Desk.tsx). Same price, same producer, same family — naming it after the
+  // break must not move it into a colour that is switched off.
+  if (k.includes('break')) return 'liquidity'
   return 'other'
 }
 

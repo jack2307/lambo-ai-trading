@@ -84,6 +84,13 @@ const CONTRACTS = [
       'h4.last_close': 'number|null',
       'd1.prior_day_high': 'number|null',
       'd1.prior_day_low': 'number|null',
+      // The chart plots these three as price lines from 2026-09-19. They
+      // were served and read by nothing before that, so nothing would have
+      // noticed the route renaming them; a level that stops arriving must
+      // fail here rather than quietly stop being drawn.
+      'd1.prior_week_high': 'number|null',
+      'd1.prior_week_low': 'number|null',
+      'd1.prior_week_mid': 'number|null',
       'd1.close_pct_of_prior_week_range': 'number|null',
     },
     /** Asserted about the SHAPE of a container, never about its contents. */
