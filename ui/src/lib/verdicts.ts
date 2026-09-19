@@ -25,9 +25,11 @@ export interface Verdict {
 }
 
 /**
- * The twelve indicator ids, from `crates/fd-indicators/src/lib.rs`.
+ * The fifteen indicator ids, from `crates/fd-indicators/src/lib.rs` — the
+ * twelve raw ones and, since 2026-09-19, the three method-level definitions
+ * at the end of this list.
  *
- * ALL TWELVE RESOLVE TO A VERDICT AND NONE IS DELIBERATELY NULL — see
+ * ALL FIFTEEN RESOLVE TO A VERDICT AND NONE IS DELIBERATELY NULL — see
  * `DELIBERATE_NULLS` below, and the `sma` row, which resolves with status
  * `untested` rather than returning null because "we never asked" is itself
  * something the chart must say. A blank badge reads as approval.
