@@ -141,7 +141,21 @@ max_notional_pct_equity = 300.0
 # is closed at the close of the last bar ending at or after it and no entry is
 # taken. close-reopen-drift: "a 50-hour weekend hold is not representable
 # under these guards."
-flat_before_weekend_hhmm = 1655
+#
+# 1655 UNTIL 2026-09-19, AND IT COULD NEVER FIRE. The rule reads the instant a
+# bar CLOSES, and the last 15m bar this desk receives closes at 16:45 NY -
+# minute 1005 against a cut-off of 1015. MetaTrader closes a bar only on a
+# tick after its boundary and the weekly close sends none, so the 20:45Z bar
+# stays forming until Sunday and the poller never sees it. Measured
+# 2026-09-18: every run stopped at 20:30Z while the terminal's own export had
+# 20:45Z. Fourteen books and two real positions went into the weekend.
+#
+# 1640 fires on the 20:30Z bar, which is the last one that actually arrives,
+# and costs fifteen minutes of the week. Anchored in New York, so the winter
+# shift needs no second value. The owner's rule, 2026-09-19: "nguyen tac la
+# khong bao gio giu qua tuan" - never hold over the weekend.
+# docs/decisions/2026-09-19-weekend-flat-never-fires.md
+flat_before_weekend_hhmm = 1640
 # Flat from `before` minutes ahead of a scheduled event of impact ≥ min to
 # `after` minutes past it, over the calendar `search`/the API install; inert
 # with no calendar. fx-local-hours: "worst hold −3.12R / −$410 (2015-12-03,
