@@ -37,13 +37,20 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { HtfCard } from '@/components/HtfCard'
+import { LevelsCard } from '@/components/LevelsCard'
 import { useHtf } from '@/lib/useHtf'
+import { usePriceLevels } from '@/lib/usePriceLevels'
 import { PriceChart, type ActiveIndicator, type ChartLevel, type ChartTrade } from '@/components/PriceChart'
 import { IndicatorPicker, useViewerIndicators } from '@/components/IndicatorPicker'
 import { LevelToggles } from '@/components/LevelToggles'
 import {
+  LIVE_WINDOW_ATR,
   familyOf,
+  foldSamePrice,
+  harvestLevels,
+  hiddenSentence,
   readLevelFamilies,
+  selectLevels,
   writeLevelFamilies,
   type LevelFamily,
 } from '@/lib/levels'
@@ -67,6 +74,7 @@ import { toast } from 'sonner'
 import { ClaudeMark, DeepSeekMark, OpenAIMark } from '@/components/BrandMarks'
 import type { Consultation, Decision, Reasoning,
   HtfResponse,
+  PriceLevelsResponse,
 } from '@/lib/api'
 import { APP_BAR_H } from '@/components/AppBar'
 import { cn } from '@/lib/utils'
@@ -126,6 +134,30 @@ const readShowHtf = (): boolean => {
 const writeShowHtf = (on: boolean) => {
   try {
     localStorage.setItem(SHOW_HTF_KEY, on ? '1' : '0')
+  } catch {
+    /* private mode: the choice lasts the page */
+  }
+}
+
+/** Whether the spent levels — pools already swept, blocks already broken —
+ *  are drawn as well as the live ones. */
+const SHOW_SPENT_KEY = 'fd.desk.levelsSpent'
+
+const readShowSpent = (): boolean => {
+  try {
+    // Absent means OFF, and this is the one level switch that defaults off.
+    // On the captured response of 2026-09-19 the route served 252 levels of
+    // which 197 are spent: drawing them all is not a chart, it is a wash. It
+    // is a VIEW and not a verdict — the count of what is hidden is on screen
+    // beside this switch, and one press brings every one of them back.
+    return localStorage.getItem(SHOW_SPENT_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+const writeShowSpent = (on: boolean) => {
+  try {
+    localStorage.setItem(SHOW_SPENT_KEY, on ? '1' : '0')
   } catch {
     /* private mode: the choice lasts the page */
   }
@@ -750,6 +782,14 @@ export function Desk({ book, ticks, streaming, theme }: {
   // in the one place a reader compares them.
   const { htf, error: htfError } = useHtf(sorted.find((r) => r.id === activeId)?.market ?? '')
 
+  // The price-bar levels, polled the same way and for the same reason: the
+  // panel in the rail names a price and the chart draws a line at it, so the
+  // two read ONE response. Both context reads are fetched here and handed
+  // down rather than fetched where they are shown.
+  const { levels: priceLevels, error: priceLevelsError } = usePriceLevels(
+    sorted.find((r) => r.id === activeId)?.market ?? '',
+  )
+
   const activeBroker = useMemo(() => {
     if (account == null) return null
     const run = sorted.find((r) => r.id === activeId)
@@ -850,7 +890,16 @@ export function Desk({ book, ticks, streaming, theme }: {
                 Fills the column's height above xl and keeps a floor below it,
                 where the page scrolls instead. */}
             <div className="border-border min-h-[340px] shrink-0 border-b xl:min-h-0 xl:flex-1 xl:shrink">
-              <RunChart detail={live} live={livePrice} focus={focusFill} broker={activeBroker} theme={theme} htf={htf} now={now} />
+              <RunChart
+                detail={live}
+                live={livePrice}
+                focus={focusFill}
+                broker={activeBroker}
+                theme={theme}
+                htf={htf}
+                levels={priceLevels}
+                now={now}
+              />
             </div>
             {/* The fills have seven columns and the rail has 460px, so they
                 stay here where the width is. Capped at two fifths of the
@@ -895,6 +944,8 @@ export function Desk({ book, ticks, streaming, theme }: {
                 onOpenFill={openFill}
                 htf={htf}
                 htfError={htfError}
+                levels={priceLevels}
+                levelsError={priceLevelsError}
               />
             </div>
           </div>
@@ -2442,6 +2493,8 @@ function Drilldown({
   live,
   htf,
   htfError,
+  levels,
+  levelsError,
   error,
   now,
   openFill,
@@ -2460,6 +2513,9 @@ function Drilldown({
   /** Higher-timeframe facts, polled once by the page. */
   htf: HtfResponse | null
   htfError: string | null
+  /** The price-bar levels, the same response the chart is drawing from. */
+  levels: PriceLevelsResponse | null
+  levelsError: string | null
 }) {
   if (error) {
     return (
@@ -2503,6 +2559,13 @@ function Drilldown({
             higher timeframe is something to weigh what this run is doing
             against, not an instruction about it. */}
         <HtfCard market={run.market} data={htf} error={htfError} />
+        {/* The levels the chart is drawing, read out. The chart says WHERE
+            they are and this says WHAT they are — age, state, and how far
+            away in both units — which is the half a line on a canvas cannot
+            carry. Under the higher timeframe because it is the finer read of
+            the same idea: context to weigh the book against, never an
+            instruction about it. */}
+        <LevelsCard data={levels} error={levelsError} />
         <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 fd-label">
           <span className="text-muted-foreground fd-caption font-medium tracking-wide uppercase">guards</span>
           <GuardChips run={run} />
@@ -2851,6 +2914,7 @@ function RunChart({
   broker,
   theme,
   htf,
+  levels,
   now,
 }: {
   detail: PaperRunDetail | null
@@ -2867,6 +2931,8 @@ function RunChart({
   theme: 'light' | 'dark'
   /** The same facts the card shows, so the line and the number agree. */
   htf: HtfResponse | null
+  /** The price-bar levels, the same response the panel reads out. */
+  levels: PriceLevelsResponse | null
 }) {
   // `bars` arrives as `[ms, o, h, l, c]` and `PriceChart` takes milliseconds
   // and divides, so the tuple goes straight across. (`series` times are
@@ -3082,20 +3148,83 @@ function RunChart({
    */
   const [families, setFamilies] = useState<Set<LevelFamily>>(readLevelFamilies)
 
-  /** Only the families this response actually contains — see `LevelToggles`. */
+  /**
+   * Whether the spent levels are drawn too.
+   *
+   * Its own switch rather than a sixth family, because SPENT is not a family
+   * — a swept pool and a broken block come from two different rules — and
+   * because state and provenance are two separate questions a reader asks.
+   */
+  const [showSpent, setShowSpent] = useState(readShowSpent)
+
+  /** Every level `/api/paper/levels` sent, in this client's words. */
+  const deskLevels = useMemo(() => harvestLevels(levels), [levels])
+
+  /**
+   * The window onto them: still live, near the close, family switched on.
+   *
+   * A VIEW, NOT A VERDICT — the rule is written where the filter is, in
+   * `lib/levels.ts`, and the count of everything outside the window is on
+   * screen beside the switches so the choice is auditable. Nothing here
+   * ranks, scores or scores-by-another-name.
+   */
+  const selection = useMemo(
+    () => selectLevels(deskLevels, { families, showSpent }),
+    [deskLevels, families, showSpent],
+  )
+
+  /**
+   * Every family that is in play, for the switches, and how many of each is
+   * actually on the chart.
+   *
+   * TWO COUNTS AND NOT ONE. A switch exists while the response HAS levels of
+   * that family — turning `gaps` off and having its switch disappear because
+   * the window hid the last one is a control that vanishes under the pointer
+   * — and the number beside it is what is drawn, which is usually smaller.
+   */
   const levelCounts = useMemo(() => {
     const counts = new Map<LevelFamily, number>()
-    for (const level of allLevels) {
+    const bump = (family: LevelFamily) => counts.set(family, (counts.get(family) ?? 0) + 1)
+    for (const level of allLevels) bump(familyOf(level.kind ?? ''))
+    for (const level of deskLevels) bump(level.family)
+    return counts
+  }, [allLevels, deskLevels])
+
+  const htfLevels = useMemo<ChartLevel[]>(() => {
+    if (!showHtf) return EMPTY_LEVELS
+    const fromHtf = allLevels.filter((level) => families.has(familyOf(level.kind ?? '')))
+    const fromRoute: ChartLevel[] = selection.drawn.map((level) => ({
+      label: level.label,
+      // The level's price, or a band's edge nearer the close. Never the
+      // midpoint: see `DeskLevel.anchor`.
+      price: level.anchor,
+      kind: level.kind,
+      bandLow: level.bandLow,
+      bandHigh: level.bandHigh,
+      spent: level.spent,
+    }))
+    // ONE PRICE IS ONE LINE. `/api/paper/htf` and `/api/paper/levels` both
+    // report the prior day's high and the levels route reports it twice more
+    // under two other names; unfolded, the chart drew four identical dashed
+    // lines and four tags stacked 14px apart pretending to be four levels.
+    // Nothing is dropped — the fold names all of them on one tag.
+    return foldSamePrice([...fromHtf, ...fromRoute])
+  }, [allLevels, families, selection, showHtf])
+
+  /** What is drawn, per family, for the switch titles. */
+  const drawnCounts = useMemo(() => {
+    const counts = new Map<LevelFamily, number>()
+    for (const level of htfLevels) {
       const family = familyOf(level.kind ?? '')
       counts.set(family, (counts.get(family) ?? 0) + 1)
     }
     return counts
-  }, [allLevels])
+  }, [htfLevels])
 
-  const htfLevels = useMemo<ChartLevel[]>(() => {
-    if (!showHtf) return EMPTY_LEVELS
-    return allLevels.filter((level) => families.has(familyOf(level.kind ?? '')))
-  }, [allLevels, families, showHtf])
+  /** "38 further levels, spent or further away, not drawn", or nothing to
+   *  say. Never silent about a level the route sent and the chart did not
+   *  draw — that is the debt the prompt block pays with the same sentence. */
+  const hidden = showHtf ? hiddenSentence(selection) : null
 
   /**
    * The open position to draw, taken from whichever book is on screen.
@@ -3334,11 +3463,45 @@ function RunChart({
             on={families}
             present={new Set(levelCounts.keys())}
             counts={levelCounts}
+            drawn={drawnCounts}
             onChange={(next) => {
               setFamilies(next)
               writeLevelFamilies(next)
             }}
           />
+        )}
+        {showHtf && selection.hiddenSpent + selection.hiddenFar + selection.drawn.length > 0 && (
+          <button
+            type="button"
+            onClick={() => {
+              const next = !showSpent
+              setShowSpent(next)
+              writeShowSpent(next)
+            }}
+            aria-pressed={showSpent}
+            className={cn(
+              'hover:bg-accent focus-visible:ring-ring ml-1 rounded-sm border px-1.5 py-px fd-caption normal-case transition-colors focus-visible:ring-2 focus-visible:outline-none motion-reduce:transition-none',
+              showSpent ? 'border-primary/40 text-primary' : 'border-border text-muted-foreground',
+            )}
+            title={
+              showSpent
+                ? 'Hide the spent levels — pools already swept and blocks already broken. They are drawn dotted and faded.'
+                : 'Draw the spent levels too: pools already swept and blocks already broken. On the response of 2026-09-19 that was 197 of 252 levels.'
+            }
+          >
+            spent {showSpent ? 'on' : 'off'}
+          </button>
+        )}
+        {/* NEVER SILENT ABOUT WHAT IS NOT DRAWN. A chart that looks complete
+            says the tape is tidier than it is; the count is the audit of the
+            window, and the two switches beside it undo it. */}
+        {hidden && (
+          <span
+            className="text-muted-foreground/70 num ml-2 normal-case"
+            title={`Levels are drawn within ${LIVE_WINDOW_ATR} ATR(14) of the last close and only while they are live — a pool not yet swept, a block not yet broken, a gap not yet filled. It is a window onto the response, not a judgement about which levels matter: nothing here is ranked or scored.`}
+          >
+            {hidden}
+          </span>
         )}
         <IndicatorPicker
           offered={viewer.offered}

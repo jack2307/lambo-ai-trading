@@ -29,13 +29,23 @@ export function LevelToggles({
   present,
   onChange,
   counts,
+  drawn,
 }: {
   on: Set<LevelFamily>
   /** Families the current response actually contains. */
   present: Set<LevelFamily>
   onChange: (next: Set<LevelFamily>) => void
-  /** How many levels of each family, for the title. */
+  /** How many levels of each family the response carries, for the title. */
   counts?: Map<LevelFamily, number>
+  /**
+   * How many of them are actually on the chart, which is usually fewer: the
+   * viewer's distance window and the spent switch both sit between the two
+   * numbers. Kept apart from `counts` because "80 drawn" over a family the
+   * window is showing twelve of is the misreading this control would
+   * otherwise invite — and that difference is exactly what the hidden-count
+   * sentence beside this toolbar accounts for.
+   */
+  drawn?: Map<LevelFamily, number>
 }) {
   const items = useRef<(HTMLButtonElement | null)[]>([])
   const shown = LEVEL_FAMILIES.filter((f) => present.has(f.key))
@@ -60,6 +70,7 @@ export function LevelToggles({
       {shown.map((family, index) => {
         const active = on.has(family.key)
         const n = counts?.get(family.key)
+        const shownNow = drawn?.get(family.key) ?? 0
         return (
           <button
             key={family.key}
@@ -81,8 +92,8 @@ export function LevelToggles({
             }}
             title={
               active
-                ? `Hide ${family.label} levels${n ? ` (${n} drawn)` : ''}`
-                : `Draw ${family.label} levels${n ? ` (${n} available)` : ''}`
+                ? `Hide ${family.label} levels${n ? ` (${shownNow} of ${n} drawn; the rest are spent or outside the distance window)` : ''}`
+                : `Draw ${family.label} levels${n ? ` (${n} on this response)` : ''}`
             }
             className={cn(
               'focus-visible:ring-ring inline-flex items-center gap-1 rounded-sm border px-1.5 py-px fd-caption transition-colors duration-100 focus-visible:ring-2 focus-visible:outline-none motion-reduce:transition-none',
