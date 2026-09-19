@@ -62,6 +62,18 @@ export interface IndicatorInfo {
   name: string
   pane: 'overlay' | 'pane'
   params: Record<string, number | string>
+  /**
+   * The parameter names in the order the instance KEY is built from, which
+   * `params` cannot carry: the server holds them in a sorted map, and the
+   * key is built in the order the definition declares.
+   *
+   * macd declares fast, slow, signal, so its key is `macd_12_26_9`, while
+   * the sorted map reads fast, signal, slow. A key rebuilt from `params`
+   * asks for `macd_12_9_26`, the server answers on the other, and the series
+   * never renders - the chip, its pane and its legend all appear, and no
+   * line. Found 2026-09-19 on the owner's first MACD. Build keys from THIS.
+   */
+  paramOrder: string[]
   outputs: string[]
   /** Absent — never `[]` — for a definition nobody has measured. */
   measured?: MeasuredCell[]

@@ -500,7 +500,16 @@ function numericParams(def: IndicatorInfo): Record<string, number> {
  * screens must ask the same question the same way.
  */
 function instanceKey(def: IndicatorInfo, params: Record<string, number>): string {
-  const values = Object.keys(numericParams(def)).map((k) => params[k])
+  // `def.paramOrder`, NOT `Object.keys(def.params)`: the server serves the
+  // defaults in a sorted map and the key is built in the order the
+  // definition declares them. For macd those differ - fast, signal, slow
+  // against fast, slow, signal - so a key from the map asks for
+  // `macd_12_9_26` while the server answers on `macd_12_26_9`, and the line
+  // never arrives. The chip, the pane and the legend all render; only the
+  // data is missing, which is why it read as "nothing on the chart".
+  const numeric = numericParams(def)
+  const order = def.paramOrder.filter((name) => name in numeric)
+  const values = order.map((k) => params[k])
   return values.length ? `${def.id}_${values.join('_')}` : def.id
 }
 

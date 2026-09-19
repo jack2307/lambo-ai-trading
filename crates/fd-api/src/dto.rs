@@ -70,6 +70,22 @@ pub struct IndicatorInfo {
     /// `overlay` draws on the candles; `pane` gets its own strip.
     pub pane: &'static str,
     pub params: BTreeMap<String, f64>,
+    /// The parameter names IN THE ORDER THE KEY IS BUILT FROM, which a
+    /// `BTreeMap` cannot carry.
+    ///
+    /// `fd_indicators::indicator_key` walks `IndicatorDef::params` in its
+    /// declared order - macd is fast, slow, signal, so the key is
+    /// `macd_12_26_9` - and this map sorts them alphabetically into fast,
+    /// signal, slow. A client rebuilding the key from `params` alone
+    /// therefore asks for `macd_12_9_26`, the server answers on
+    /// `macd_12_26_9`, and the series silently never renders. Measured
+    /// 2026-09-19, on the owner's first use of the new picker: the chip drew
+    /// its pane, its legend and its parameters, and no line.
+    ///
+    /// The map stays because a lookup by name is what everything else wants;
+    /// the order rides beside it because the key depends on it. Build keys
+    /// from THIS.
+    pub param_order: Vec<String>,
     pub outputs: Vec<String>,
     /// What this desk MEASURED this definition doing, one row per timeframe
     /// and parameter cell, or absent for anything nobody measured.

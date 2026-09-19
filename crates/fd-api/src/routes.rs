@@ -94,6 +94,7 @@ pub async fn catalog(State(state): State<Arc<AppState>>) -> Result<Json<Catalog>
                 name: def.name.to_string(),
                 pane: if def.pane == Pane::Overlay { "overlay" } else { "pane" },
                 params: def.params.iter().map(|(name, value)| ((*name).to_string(), *value)).collect(),
+                param_order: def.params.iter().map(|(name, _)| (*name).to_string()).collect(),
                 outputs: def.outputs.iter().map(|o| (*o).to_string()).collect(),
                 measured,
             }

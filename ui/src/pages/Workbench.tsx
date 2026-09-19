@@ -151,7 +151,17 @@ export function Workbench({ catalog, market, onError }: Props) {
   const addIndicator = useCallback(() => {
     const def = catalog.indicators.find((i) => i.id === indicatorPick)
     if (!def) return
-    const numeric = Object.entries(def.params).filter(([, v]) => typeof v === 'number') as [string, number][]
+    // Ordered by `def.paramOrder`, not by the sorted map the catalogue
+    // serves: the key is built in the order the definition declares its
+    // parameters, and for macd the two orders differ. Same fault as the
+    // Desk picker's, found there first because nobody had added a
+    // multi-parameter indicator here.
+    const byName = Object.fromEntries(
+      Object.entries(def.params).filter(([, v]) => typeof v === 'number'),
+    ) as Record<string, number>
+    const numeric = def.paramOrder
+      .filter((name) => name in byName)
+      .map((name) => [name, byName[name]] as [string, number])
     const key = numeric.length ? `${def.id}_${numeric.map(([, v]) => v).join('_')}` : def.id
     setIndicators((current) => {
       if (current.some((entry) => entry.key === key)) return current

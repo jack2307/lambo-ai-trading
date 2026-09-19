@@ -295,6 +295,7 @@ fn the_wire_shape_says_what_was_measured_and_stays_silent_otherwise() {
         name: def.name.to_string(),
         pane: "overlay",
         params: def.params.iter().map(|(n, v)| ((*n).to_string(), *v)).collect::<BTreeMap<_, _>>(),
+        param_order: def.params.iter().map(|(n, _)| (*n).to_string()).collect(),
         outputs: def.outputs.iter().map(|o| (*o).to_string()).collect(),
         measured: {
             let rows = fd_indicators::measured(def.id);
@@ -329,4 +330,41 @@ fn the_wire_shape_says_what_was_measured_and_stays_silent_otherwise() {
     // Silence, not an empty list, for anything unmeasured.
     let sma = serde_json::to_value(row(fd_indicators::definition("sma").unwrap())).unwrap();
     assert!(sma.get("measured").is_none(), "an unmeasured definition says nothing: {sma}");
+}
+
+/// The KEY is built in the order a definition DECLARES its parameters, and
+/// for macd that is not their alphabetical order - which is the whole reason
+/// `IndicatorInfo::param_order` exists beside the sorted `params` map.
+///
+/// Measured 2026-09-19, on the owner's first use of the new picker: the
+/// client rebuilt the key from the sorted map, asked for `macd_12_9_26`, the
+/// server answered on `macd_12_26_9`, and the chip rendered with its pane,
+/// its legend and its parameter spinners - and no line. Nothing errored.
+#[test]
+fn the_key_follows_the_declared_order_and_macd_proves_it_matters() {
+    let def = fd_indicators::definition("macd").expect("macd is in the registry");
+
+    let declared: Vec<&str> = def.params.iter().map(|(name, _)| *name).collect();
+    assert_eq!(declared, vec!["fast", "slow", "signal"]);
+
+    let mut alphabetical = declared.clone();
+    alphabetical.sort_unstable();
+    assert_eq!(alphabetical, vec!["fast", "signal", "slow"]);
+    assert_ne!(
+        declared, alphabetical,
+        "if these ever agree, this test proves nothing - pin an indicator whose orders differ"
+    );
+
+    let values: Vec<f64> = def.params.iter().map(|(_, v)| *v).collect();
+    assert_eq!(fd_indicators::indicator_key(def, &values), "macd_12_26_9");
+
+    let sorted_values: Vec<f64> = alphabetical
+        .iter()
+        .map(|name| def.params.iter().find(|(n, _)| n == name).unwrap().1)
+        .collect();
+    assert_eq!(
+        fd_indicators::indicator_key(def, &sorted_values),
+        "macd_12_9_26",
+        "the key a client gets from the sorted map - the one the server never answers on"
+    );
 }
