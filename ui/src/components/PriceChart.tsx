@@ -977,7 +977,17 @@ export function PriceChart({
       shape: event.kind === 'choch' ? 'square' : 'circle',
       color: event.superseded ? withAlpha(hue, 0.35) : hue,
       size: event.superseded ? 0.6 : 1.5,
-      text: event.superseded ? '' : event.label,
+      // EVERY MARK SAYS WHAT IT IS. This read `event.superseded ? '' :
+      // event.label` for one release, on the argument that shape alone tells
+      // a BOS from a CHoCH and that eighty labels are a wall. The owner
+      // looked at it on 2026-09-19 and could not tell the marks apart:
+      // "khong hien len la Choch, BOS hay gi thi sao biet duoc". He is the
+      // reader, and a distinction only the author can see is not one. Shape
+      // still carries it for anyone who has learned the pair, and the alpha
+      // and the size still say which event is standing, but nothing on this
+      // chart is now unidentifiable without reading the source. The wall is
+      // real and it is answered where it belongs - by choosing what to draw.
+      text: event.label,
     }))
     points.sort((a, b) => (a.time as number) - (b.time as number))
     structureMarkers.current.setMarkers(points)
