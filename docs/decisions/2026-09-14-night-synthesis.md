@@ -117,3 +117,50 @@ test that cannot resolve a result is not one the result can pass.
   literature-backed, data-available claims on this feed is nearly empty,
   and that adding rows without a new reason is the search the nulls exist
   to catch.
+
+## Amendment, 2026-09-19: "zero survivors" is exact about strategies and imprecise as written
+
+The title and the outcome line of this record say zero survivors. On the seven
+registrations in the ledger above that is exact and nothing below changes it.
+But later the same night a registration that is not in that ledger passed its
+falsifier, and this record has never pointed at it.
+
+**What the other document says.** `docs/hypotheses/2026-09-14-pre-nfp-drift.md`
+was registered with three numbers before its test window was opened, and all
+three hold on that window: the 3.2nd percentile of a clock-matched Friday null
+against a gate of the 5th, a mean of −1.536 $/oz against a gate of −0.40, and
+35.6% of hours up against a gate of 42%, on n = 90 releases. Its own status line
+records the pass, and `docs/decisions/2026-09-14-pre-nfp-drift.md` opens: *"The
+claim survives its falsifier — the first registration in this loop to do so."*
+
+**Which is right.** Both, in different words, and the distinction is worth more
+than a corrected sentence:
+
+- **No tradable strategy survived, and that is what this record measured.** The
+  pre-NFP registration declares its own profit-factor gate **unreachable in
+  advance** — the effect is worth roughly $46 a year on a $10,000 account by the
+  decision's arithmetic, against a $0.28 spread — and states in the
+  registration, before the window was read, that *"no outcome of this
+  registration is a paper run or a strategy"*. Its decision adds that the
+  repository's own news guard blacks out 07:30–09:00 New York, so the hour it
+  names is one the bot already refuses to trade. On this record's own criterion
+  — a retail-tradable edge at Vantage cost — the count of survivors is still
+  zero, on 2026-09-14 and today.
+- **One registration did survive its falsifier**, and this file must not be
+  read as saying none ever has. It is a **sign claim**, not a strategy; the
+  registration says so in as many words ("this is a sign claim, not a
+  strategy") and that is the whole of the difference between the two sentences.
+
+The title stands as the record of what was measured on those seven. What is
+corrected here is the reading, not the number.
+
+**One other thing about the count.** "The running total is 25" is a count at
+2026-09-14 12:00, where this record's window closes. `2026-09-14-volman-box`
+closed on the afternoon of the same day and `2026-09-14-pre-nfp-drift` that
+night, which is why `2026-09-14-pre-nfp-drift.md` can say "twenty-six
+registrations closed before this one" without contradicting the 25 above. The
+arithmetic is set out in section 6 of `docs/research/VERDICTS.md`.
+
+*Written 2026-09-19 by the records session, from the two documents named.
+Nothing above is recomputed; every number is quoted from the file it is
+attributed to.*
