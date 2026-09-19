@@ -392,3 +392,60 @@ advisory, so no book's result moves. Both are stage 3-4 of
 `docs/plans/2026-09-18-staged-ai-entry.md`. If the split by `prompt_layout`
 shows a different entry rate, that is a finding about the order and belongs
 here, not hidden by pooling the two.
+
+## Amendment 2026-09-19 - "stable" in Finding 1 is about the statistic, and the structure LABEL is not anchor-stable
+
+This does not change Finding 1, the scoping decision, or the binding sentence
+`htf-filter` runs on. It records a distinction the bias study drew after this
+file was written, because this is the running registration that keys a rule on
+the structure label.
+
+**What this file says.** Finding 1's table gives `structure (fractal-2
+swings)` +0.552R on the epoch anchor, +0.597R on the broker anchor, verdict
+**stable**, while EMA and prior-day midpoint flip sign and Donchian collapses
+to +0.003R. The paragraph under Finding 2 reads that as the argument for the
+scoping: *"structure is the one definition whose sign and size held across the
+anchor correction, and a rule built on a definition that flips with the
+bucketing is measuring the bucketing."*
+
+**What the other document says.**
+`docs/decisions/2026-09-18-market-bias-definitions.md` corrects the way that
+finding has been quoted, in its own words and about itself:
+
+> **A correction to how the step-0 finding has been quoted, including by me.**
+> "Structure was the only anchor-robust definition" was about the *statistic*:
+> its WITH-minus-AGAINST return held at +0.552R → +0.597R … It was **not**
+> about the labels, and the labels are not robust — `fractal(2)` labels
+> **18.5%** of H4 bars differently between anchors, and Donchian, whose
+> statistic collapsed to +0.003R, is the **most label-stable** definition in
+> the table at **1.2%**.
+
+**Which is right: both, of different things, and the two are not the same
+property.** This file's "stable" is a true verdict on the WITH-minus-AGAINST
+statistic and is not a claim about the labels; the bias study measured the
+labels and they move. Label stability and statistic stability are independent,
+and on this pair of definitions they point opposite ways — the definition with
+the stable statistic has the least stable labels, and the one with the most
+stable labels has no statistic left.
+
+**Why it matters here and not only there.** `htf-filter`'s binding sentence
+keys on **the label** — *"do not propose LONG while the H4 swing structure
+label reads DOWN"* — and the argument recorded for choosing structure over the
+others is the *statistic's* stability. So the reason and the mechanism are
+about two different properties, and on the property the rule actually uses,
+structure is the **worst** of the four in the table: 18.5% of H4 bars carry a
+different label depending on where the day is cut, against Donchian's 1.2%.
+Since this book runs on the broker anchor and only the broker anchor, that is
+not a fault in the rule; it is a statement about how much of the rule is the
+bucketing, and it belongs in the file before the book's result is read.
+
+**What does not change.** Nothing that was pre-committed. Finding 1's numbers,
+Finding 3's bar on any with/against verdict from a one-regime sample, Finding
+4's prior that filtering is at least as likely to hurt, the binding sentence
+and the block's contents all stand exactly as registered. And the bias study's
+own conclusion still governs the whole of it: *"No definition tested carries
+usable directional information."*
+
+*Written 2026-09-19 by the records session, from
+`docs/decisions/2026-09-18-market-bias-definitions.md`. Nothing is
+recomputed. Raised as item 8 of `docs/research/VERDICTS.md` section 4.*
