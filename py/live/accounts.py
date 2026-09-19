@@ -81,7 +81,69 @@ def prices(path):
         "terminal": terminal,
         "symbol_suffix": str(table.get("symbol_suffix") or ""),
         "fill_on_open": bool(table.get("fill_on_open", False)),
+        "weekend_flat": weekend_flat(path, table),
     }
+
+
+def weekend_flat(path, table):
+    """`[prices] weekend_flat` as a string to hand the executor, or "" for absent.
+
+    The owner's rule of 2026-09-19 is that the account never holds a position
+    over a weekend, and the executor's `--weekend-flat` is the layer that makes
+    that true of the ACCOUNT rather than of the book
+    (docs/decisions/2026-09-19-weekend-flat-never-fires.md). It used to live
+    only in the executor's argparse default, which meant the November DST
+    change - 20:45 becomes 21:45 - had to be typed in every launcher that might
+    pass it and in the runbook that checks it, none of which can see each
+    other. This key is the one place it now lives.
+
+    ABSENT RETURNS "", MEANING "PASS NOTHING", so the executor keeps its own
+    default and a registry written before this key existed behaves exactly as
+    it did. Same rule `fill_on_open` follows, for the same reason.
+
+    AN EXPLICIT EMPTY STRING IS ALSO ABSENT, not `off`. The two readings are
+    ambiguous and only one of them is safe: read as `off`, a half-finished edit
+    would silently disable the backstop, which is the failure this whole note
+    is about. So disabling takes the word `off`, typed, and an empty value
+    leaves the backstop on.
+
+    IT REFUSES ON ANYTHING ELSE rather than falling back. A mistyped value
+    quietly becoming 20:45 is exactly the class of failure the backstop exists
+    to catch, and the launcher that calls this then stops before it has killed
+    anything. Rule 3 of docs/decisions/2026-09-17-unit-carrying.md.
+
+    This is a SECOND validator - `mt5_executor.weekend_cut_minute` is the
+    authority and checks the value again when it is handed one. Deliberate, and
+    the two are not redundant: this one refuses a bad REGISTRY before any
+    executor is stopped, and that one refuses a bad COMMAND LINE, which is a
+    path this file cannot see. If the accepted shape ever changes it changes in
+    both, and py/live/size_guard_selftest.py pins the executor's half.
+    """
+    raw = table.get("weekend_flat", None)
+    if raw is None:
+        return ""
+    if not isinstance(raw, str):
+        sys.exit(f"{path}: [prices] weekend_flat must be a string like \"20:45\" or \"off\", "
+                 f"not {type(raw).__name__} ({raw!r})")
+    s = raw.strip()
+    if s == "":
+        return ""
+    if s.lower() in ("off", "none"):
+        return s.lower()
+    parts = s.split(":")
+    bad = f"{path}: [prices] weekend_flat = {raw!r} is not HH:MM (UTC) or \"off\""
+    if len(parts) != 2:
+        sys.exit(bad)
+    try:
+        hour, minute = int(parts[0]), int(parts[1])
+    except ValueError:
+        sys.exit(bad)
+    if not (0 <= hour <= 23 and 0 <= minute <= 59):
+        sys.exit(f"{path}: [prices] weekend_flat = {raw!r} is not a time of day")
+    # Returned in the canonical HH:MM the executor prints and the runbook
+    # compares against, so "8:5" and "08:05" cannot read as two settings in two
+    # different logs.
+    return "%02d:%02d" % (hour, minute)
 
 
 def load(path):

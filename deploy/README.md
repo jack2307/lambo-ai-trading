@@ -109,8 +109,19 @@ them. It exists for one such change in particular: the weekend backstop
 restart. `docs/decisions/2026-09-19-weekend-flat-never-fires.md` is the whole
 story and this script is the second half of it.
 
+**Where the cut is typed.** `[prices] weekend_flat` in
+`config\accounts.toml`, currently `"20:45"`, and nowhere else.
+`start_executors.ps1` reads that key itself and passes
+`--weekend-flat=<value>` to every executor it starts; this script reads the
+same key for the value it then holds those processes to. So the November DST
+change — 20:45Z becomes 21:45Z once New York's close moves to 22:00Z, before
+Friday 6 November — is **one edit in one file**. An absent key means the
+executors keep their own argparse default and nothing is passed, which is how
+a registry written before the key behaves; a malformed one makes `accounts.py`
+refuse, and the launcher stops before it has killed a single executor.
+
 **What it refuses to do.** It will not act while the executors' own weekend
-window is in force — Friday from 20:45 UTC, all Saturday, Sunday before 21:00
+window is in force — Friday from the cut, all Saturday, Sunday before 21:00
 UTC — because a mirror started inside that window closes every position it
 finds into a shut market, fails, and retries at every poll until Monday. That
 refusal has **no override**. And it will not act on a clock alone: the reopen
@@ -138,8 +149,9 @@ layer two is in force — and it fails loudly, per book, rather than quietly.
 
 `deploy\sunday-reopen-selftest.ps1` drives the two refusals with injected
 clocks and quote ages, against the same table of instants as section 13 of
-`py\live\size_guard_selftest.py`. It touches no network, no process and no
-account.
+`py\live\size_guard_selftest.py`, and drives the registry key through the real
+`accounts.py` — present, absent, and malformed. It touches no network, no
+process and no account.
 
 ## Cutting over from the home desk
 

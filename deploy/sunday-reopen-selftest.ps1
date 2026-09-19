@@ -33,9 +33,22 @@
 #   5  ATR(14) on a series whose answer is known by hand.
 #   6  the gap is found in the bars: the most recent 48-hour hole, not the
 #      one-hour daily break, and signed the way price moved.
+#   7  THE CUT COMES FROM THE REGISTRY. `[prices] weekend_flat` is read, an
+#      absent key falls back to the executor's own default and says so, and a
+#      malformed one REFUSES - loudly, with a non-zero exit, before any
+#      executor is stopped. A backstop that silently reverts to a default is
+#      the failure the whole decision note is about, so "it refuses" is the
+#      property under test and not the parsing.
 
 param(
-    [string]$Script = ''
+    [string]$Script = '',
+    [string]$Python = 'C:\Python39\python.exe',
+    # Resolved in the body and NOT here. $PSScriptRoot is not reliably
+    # populated while defaults are being evaluated - py\live\start_executors.ps1
+    # carries the same note - and this file proved it the hard way: the default
+    # came out empty, Join-Path threw, and section 7b was skipped in silence
+    # while the run still printed "all green".
+    [string]$Root = ''
 )
 
 $ErrorActionPreference = 'Continue'
@@ -55,7 +68,21 @@ function Check {
 }
 function Section { param([string]$Name) Write-Host "`n== $Name" -ForegroundColor Cyan }
 
-if (-not $Script) { $Script = Join-Path $PSScriptRoot 'sunday-reopen.ps1' }
+$here = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Path }
+if (-not $Root) { $Root = Split-Path -Parent $here }
+if (-not $Script) { $Script = Join-Path $here 'sunday-reopen.ps1' }
+
+# EVERYTHING THIS FILE STILL NEEDS AFTER THE DOT-SOURCE IS COPIED ASIDE FIRST.
+#
+# Dot-sourcing a script runs its PARAM BLOCK in this scope, not only its
+# functions - so `. sunday-reopen.ps1 -DefineOnly` rebinds every parameter it
+# declares, and it declares `$Root = ''` and `$Python`. Measured here: section
+# 7b's `Join-Path $Root` threw "argument is an empty string", the section was
+# skipped, and the summary still printed "all green". It is the same class of
+# collision as `$sat` overwriting `$SAT` below, from a different direction, and
+# it is silent in exactly the same way.
+$script:RepoRoot = $Root
+$script:PythonExe = $Python
 if (-not (Test-Path $Script)) {
     Write-Host "no script at $Script" -ForegroundColor Red
     exit 2
@@ -322,7 +349,132 @@ Check 'a window with no hole reports Found = false rather than guessing' (
 Check 'a single bar does not throw' (-not (Get-WeekendGap -Bars @($bars[0])).Found)
 
 # ---------------------------------------------------------------------------
+Section '7a - where the cut comes from, with the registry injected'
+
+# The resolver, driven with the object `accounts.py --prices` would have
+# produced. No file, no Python: this is the decision, not the parsing.
+$regSet = Resolve-WeekendFlat -Override '' -Prices ([pscustomobject]@{ weekend_flat = '21:45' })
+Check 'a registry value is used' ($regSet.Value -eq '21:45') $regSet.Value
+Check '...and is reported as coming FROM the registry' $regSet.FromRegistry
+Check '...and the source names the file and the key' ($regSet.Source -like '*accounts.toml*weekend_flat*') $regSet.Source
+
+# ABSENT IS NOT OFF and is not an error: the launcher passes nothing and the
+# executor keeps argparse's own default, which is how every registry written
+# before this key existed behaves.
+$regNone = Resolve-WeekendFlat -Override '' -Prices ([pscustomobject]@{ terminal = 'x' })
+Check 'an absent key falls back to the executor default' ($regNone.Value -eq '20:45') $regNone.Value
+Check '...and does NOT claim to come from the registry' (-not $regNone.FromRegistry)
+Check "...and says so in words, so nobody edits a key that is not there" (
+    $regNone.Source -like "*executor's own default*") $regNone.Source
+
+$regEmpty = Resolve-WeekendFlat -Override '' -Prices ([pscustomobject]@{ weekend_flat = '' })
+Check 'an empty value reads as absent, not as off' (
+    ($regEmpty.Value -eq '20:45') -and (-not $regEmpty.FromRegistry)) $regEmpty.Value
+
+$regOff = Resolve-WeekendFlat -Override '' -Prices ([pscustomobject]@{ weekend_flat = 'off' })
+Check "the word 'off' is carried through" ($regOff.Value -eq 'off') $regOff.Value
+Check '...and turns the window off entirely' (
+    $null -eq (Get-WeekendCutMinute $regOff.Value))
+
+$regOver = Resolve-WeekendFlat -Override '22:00' -Prices ([pscustomobject]@{ weekend_flat = '20:45' })
+Check 'the override beats the registry' ($regOver.Value -eq '22:00') $regOver.Value
+Check '...and says it is ignoring the registry' ($regOver.Source -like '*override*') $regOver.Source
+
+# A registry that could not be read at all is a THIRD answer, and the caller
+# refuses on it. Defaulting to 20:45 here would mean checking the executors
+# against a number this script invented, which is the one thing step 5 must
+# never do.
+$regGone = Resolve-WeekendFlat -Override '' -Prices $null
+Check 'an unreadable registry is Unresolved rather than defaulted' $regGone.Unresolved
+
+# A malformed value must throw wherever it arrives from.
+foreach ($badVal in @('20.45', '2045', '25:00', 'saturday')) {
+    $threwReg = $false
+    try { Resolve-WeekendFlat -Override '' -Prices ([pscustomobject]@{ weekend_flat = $badVal }) | Out-Null } catch { $threwReg = $true }
+    Check "a registry value of '$badVal' throws rather than resolving" $threwReg
+    $threwOv = $false
+    try { Resolve-WeekendFlat -Override $badVal -Prices $null | Out-Null } catch { $threwOv = $true }
+    Check "an override of '$badVal' throws too - same standard for both" $threwOv
+}
+
+# ---------------------------------------------------------------------------
+Section '7b - the registry itself, through the real accounts.py'
+
+# WITHOUT A BOM, and this is not a detail. `Set-Content -Encoding UTF8` on
+# Windows PowerShell 5.1 writes EF BB BF at the start of the file and `tomli`
+# refuses it with "Invalid statement (at line 1, column 1)" - so every registry
+# written that way is unparseable, every case refuses, and the cases that
+# ASSERT a refusal pass while proving nothing. deploy\start-desk-selftest.ps1
+# learned this on 2026-09-18 by reading the bytes back.
+function Write-Registry { param([string]$Path, [string]$Body)
+    [System.IO.File]::WriteAllText($Path, $Body, (New-Object System.Text.UTF8Encoding($false)))
+}
+
+$accountsPy = Join-Path $script:RepoRoot 'py\live\accounts.py'
+# A SKIP IS COUNTED AND PRINTED, never silent. The first run of this section
+# skipped itself through a broken $Root and the summary still said "all green" -
+# which is a selftest lying in the one direction that matters.
+$script:Skipped = 0
+if (-not (Test-Path $script:PythonExe) -or -not (Test-Path $accountsPy)) {
+    $script:Skipped++
+    Write-Host "  SKIPPED: no $($script:PythonExe) or no $accountsPy on this machine." -ForegroundColor Yellow
+    Write-Host '  These checks need the real reader; the injected ones in 7a still ran.' -ForegroundColor Yellow
+} else {
+    $tmp = Join-Path ([System.IO.Path]::GetTempPath()) ("sunday-reopen-selftest-" + [guid]::NewGuid().ToString('N'))
+    New-Item -ItemType Directory -Force -Path $tmp | Out-Null
+    try {
+        function Read-Prices { param([string]$Body)
+            $p = Join-Path $tmp 'accounts.toml'
+            Write-Registry $p $Body
+            $out = & $script:PythonExe $accountsPy '--file' $p '--prices' 2>&1 | Out-String
+            return @{ text = $out; code = $LASTEXITCODE }
+        }
+        # A terminal is required by the reader, so every body below carries one.
+        $head = "[prices]`nterminal = 'C:\MT5-cent\terminal64.exe'`nsymbol_suffix = `".sc`"`n"
+
+        $r1 = Read-Prices ($head + "weekend_flat = `"20:45`"`n")
+        Check 'accounts.py --prices returns the key' (
+            ($r1.code -eq 0) -and ((($r1.text | ConvertFrom-Json).weekend_flat) -eq '20:45')) $r1.text
+
+        $r2 = Read-Prices $head
+        Check 'an absent key returns the empty string, meaning "pass nothing"' (
+            ($r2.code -eq 0) -and ((($r2.text | ConvertFrom-Json).weekend_flat) -eq '')) $r2.text
+
+        $r3 = Read-Prices ($head + "weekend_flat = `"off`"`n")
+        Check "'off' survives the round trip" (
+            ($r3.code -eq 0) -and ((($r3.text | ConvertFrom-Json).weekend_flat) -eq 'off')) $r3.text
+
+        # Canonicalised, so two spellings of one instant cannot read as two
+        # settings in two logs.
+        $r4 = Read-Prices ($head + "weekend_flat = `"8:5`"`n")
+        Check '"8:5" is canonicalised to "08:05"' (
+            ($r4.code -eq 0) -and ((($r4.text | ConvertFrom-Json).weekend_flat) -eq '08:05')) $r4.text
+
+        # THE PROPERTY THIS SECTION EXISTS FOR. A malformed value must stop the
+        # launcher, not become 20:45 behind everybody's back.
+        foreach ($badToml in @('weekend_flat = "20.45"', 'weekend_flat = "2045"',
+                               'weekend_flat = "25:00"', 'weekend_flat = "20:61"',
+                               'weekend_flat = 2045', 'weekend_flat = true')) {
+            $rb = Read-Prices ($head + $badToml + "`n")
+            Check "$badToml exits non-zero rather than falling back" ($rb.code -ne 0) "code $($rb.code): $($rb.text)"
+            Check "...and says which key and which value" (
+                ($rb.text -like '*weekend_flat*')) $rb.text
+        }
+
+        # And the reader still refuses what it always refused, so this key has
+        # not weakened the one next to it.
+        $rNoTerm = Read-Prices "[prices]`nweekend_flat = `"20:45`"`n"
+        Check 'a [prices] with no terminal still refuses' ($rNoTerm.code -ne 0) $rNoTerm.text
+    } finally {
+        Remove-Item -Recurse -Force $tmp -ErrorAction SilentlyContinue
+    }
+}
+
+# ---------------------------------------------------------------------------
 Write-Host ''
+if ($script:Skipped -gt 0) {
+    Write-Host "$($script:Skipped) section(s) were SKIPPED - the count below does not cover them." -ForegroundColor Yellow
+}
 if ($script:Fail -eq 0) {
     Write-Host "$($script:Ran) checks, all green." -ForegroundColor Green
     exit 0
