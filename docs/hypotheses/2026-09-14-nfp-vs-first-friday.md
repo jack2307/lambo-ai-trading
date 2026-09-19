@@ -128,3 +128,75 @@ No further data exists on this feed to grow them.
   carries that sentence and nothing more.
 - **Neither falls** → the parent's 90 observations were the only place this
   lives, which for a claim already worth $46 a year is the end of it.
+
+## Amendment, 2026-09-19: the cell table above, and the four numbers it may be replaced with
+
+The status line at the head of this file already says the table is wrong. This
+note records what the right counts are, so that a reader who finds the table
+first has somewhere to go, and so the wrong numbers are never retyped out of
+it.
+
+**What this file says**, under "The identification":
+
+|  | release | no release |
+|---|---|---|
+| **first Friday** | **A** — 158 days | **B** — 34 days |
+| **later Friday** | **C** — 33 days | **D** — 643 days |
+
+**Why it cannot be right, and this is arithmetic and not judgement.**
+158 + 34 + 33 + 643 = **868**, against **835** Fridays in
+2010-06 → 2026-05. A partition cannot have more members than the set it
+partitions. `docs/decisions/2026-09-14-nfp-vs-first-friday.md` gives the two
+causes: **D was written as *all* later Fridays**, including C's releases and
+the 40 busy days the same paragraph promises to exclude; and **C = 33 counted
+the eight non-Friday releases** that the instrument then splits off into its
+own cell. Its sentence: *"Neither 643 nor 'C's 33 releases' may ever be
+quoted."*
+
+**What the instrument actually produced**, from the decision's evidence block,
+reproduced digit for digit by data-integrity from the parquet and the CSV with
+a different target-minute construction:
+
+```
+cell                          n    mean $    median    up      sign p
+A  first Friday, release    153   -1.212    -0.873   35.3%     0.000
+B  first Friday, "quiet"     32   +0.922    -0.979   40.6%     0.377
+C  later Friday, release     25   -1.734    -1.395   20.0%     0.004
+D  later Friday, quiet      565   +0.010    +0.130   52.6%     0.239
+C' release, not a Friday      8   +0.590    -0.383   50.0%     1.000
+```
+
+153 + 32 + 25 + 565 + 8 = 783, which is the 97.51% coverage the decision
+states, the drops being Good Fridays, New Year's Days and three feed holes.
+**These five rows are the ones a later reader may quote. The table above is
+not.**
+
+**And the arithmetic is the smaller of the two faults.** The decision closes
+the registration on two things the corrected counts do not fix:
+
+1. **The falsifier tested the wrong comparison.** The claim says cell B is not
+   materially more negative than the quiet baseline **D**; condition 2 says
+   B's mean is above **C**. Only the second was run. Against D, B's mean is at
+   the 82nd percentile and its **median at the 1.4th–1.8th** — the mean is the
+   only statistic in the set that puts B above the baseline, and B's 26 days
+   on days 1–3 of a month read 34.6% up, which is cell A's 35.3% to within
+   noise. The run landed in the branch this file pre-declared as "both fall"
+   and its summary printed the other branch.
+2. **There is no cell B.** Of its 32 "quiet first Fridays", eleven carry an
+   08:30 print the five-name calendar cannot see, four are US market holidays,
+   six are quiet only because a shutdown removed the release, and **one** —
+   2024-03-01 — is an ordinary print-free first Friday. A control cell of one
+   is not a control cell.
+
+**Which is right.** The decision, on every point. This file's status line
+already concedes it and the body table is left standing so the error stays
+auditable. What survived is narrower than anything this registration asked
+for: **25 releases on a later Friday at the 0.2nd percentile of a
+day-of-month-matched control** — and the decision itself immediately qualifies
+that cell as 56% January and March, containing no April, June, August or
+September Friday ever, so a month-matched null puts its mean at the 16.2nd.
+
+*Written 2026-09-19 by the records session, from
+`docs/decisions/2026-09-14-nfp-vs-first-friday.md`. Nothing is recomputed;
+every figure above is quoted from that record. Raised as item 9 of
+`docs/research/VERDICTS.md` section 4.*
