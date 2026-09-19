@@ -312,37 +312,132 @@ check(abs(band["dist"] - (band["lo"] - CLOSE)) < 1e-9,
 check(S.MAX_PER_SIDE == 6, "the cap is six a side, as the block and the doc say")
 check(len(ctx["above"]) == 124 and len(ctx["below"]) == 125,
       f"the live tape has {len(ctx['above'])} above and {len(ctx['below'])} below the close")
+check(len(ctx["above_groups"]) == 120 and len(ctx["below_groups"]) == 122,
+      "which sit at fewer distinct prices than that, once the duplicates are collapsed")
 check(len(above) == S.MAX_PER_SIDE and len(below) == S.MAX_PER_SIDE,
       "and six a side are rendered")
-check("(118 further levels on this side are not shown" in text
-      and "(119 further levels on this side are not shown" in text,
-      "the levels beyond the cap are COUNTED, not dropped silently")
-check(str(S.MAX_PER_SIDE) in text and "a side" in text,
+check("(117 further levels, at 114 further prices, on this side are not shown" in text
+      and "(119 further levels, at 116 further prices, on this side are not shown" in text,
+      "the levels beyond the cap are COUNTED, and so are the prices, which now differ")
+check(str(S.MAX_PER_SIDE) in flat and "a side" in flat,
       "the cap is stated in the block itself, as the registration pre-commits")
-check("NEAREST FIRST" in text, "and so is the ordering rule")
+check("Nearest to the last close" in flat and "first, above and below listed separately" in flat,
+      "and so is the ordering rule")
 
 # THE CENSUS. The route ranks and caps nothing on purpose, so most of what it
 # serves is spent: 135 of 155 pools already swept, 62 of 76 blocks broken. A
 # model shown twelve levels with no idea they were twelve of 252, most of them
 # spent, would read a tidy tape. A count is not a ranking.
 check("252 levels" in flat, "the block says how many levels there were in all")
+check("7 of them sit at a price another level already names" in flat,
+      "and how many it folded into another line, the same honesty the cap's overflow owes")
 check("155 liquidity pools (135 spent)" in flat, "and how many pools are already swept")
 check("76 order blocks (62 spent)" in flat, "and how many blocks are already broken")
 check("ranks none of them" in flat, "and that neither the route nor the block ranks them")
 
 # A block whose length grew with the tape's mess would have a token cost that
 # varied with the thing being measured.
-# 35 lines on the busiest response this desk has captured: 12 of header and
+# 36 lines on the busiest response this desk has captured: 13 of header and
 # census, 9 a side, 5 for the three bands the close sits inside. Under
 # htf_context's 43 and under the forty bars that follow it, which is the
 # property the cap was chosen for. The ceiling is pinned so a later hand
 # cannot double it silently.
 lines = len(text.splitlines())
-check(lines <= 36, f"the whole block is {lines} lines against the prompt's forty bars")
+check(lines <= 38, f"the whole block is {lines} lines against the prompt's forty bars")
 small = gather(dict(REAL, liquidity=REAL["liquidity"][:3], order_blocks=[],
                     fair_value_gaps=[]))
 check(len(S.block(small).splitlines()) <= lines,
       "a quiet tape is not longer than a busy one, so 252 levels cost the same as 9")
+
+
+# ---- one price, one line, every fact kept ----
+#
+# THE CASE THIS EXISTS FOR, from the live route on 2026-09-19: three of the
+# six slots above the close were one number said three ways - an equal-highs
+# pool, the PRIOR_DAY_HIGH pool and `extremes.day.high`, all at 4381.20, all
+# +2.88 away, all 126 bars old - and the cap then hid 88 other levels behind
+# them. The captured sample has the two-way version of the same thing at
+# 4367.48; the third is added below so the three-way case is pinned rather
+# than remembered.
+#
+# NOT the ranking the registration forbids, and the comment on
+# `smc_context.COLLAPSE_TOL_PRICE` says so in those terms: ranking would be
+# choosing which of two facts matters, and this keeps both and only stops
+# repeating a price.
+check(len([l for l in ctx["levels"] if l["price"] == 4367.48]) == 2,
+      "the captured sample really does carry one price under two objects")
+pair = next(g for g in ctx["above_groups"] if len(g) > 1)
+check(len(pair) == 2 and {m["word"] for m in pair} == {
+          "prior day high", "high of the last complete trading day"},
+      "the prior day's high and the day extreme are one line, not two")
+pline = next(l for l in text.splitlines() if "4367.48" in l)
+check(pline.count("4367.48") == 1, f"the price is printed once: {pline.strip()[:70]}")
+check("prior day high SWEPT and high of the last complete trading day COMPLETE" in pline,
+      "both kinds and BOTH STATES are on it - they answer different questions")
+check("buy-side liquidity" in pline and "swept 2026-09-17 12:15Z" in pline,
+      "and every other fact the two carried survives: the side and the sweep with its stamp")
+check(pline.count("72 bars old") == 1, "an age the two agree on is hoisted and said once")
+
+three = copy.deepcopy(REAL)
+three["liquidity"].append(dict(three["liquidity"][0], kind="EQUAL_HIGHS", side="BUY_SIDE",
+                               price=4367.48, band_low=None, band_high=None,
+                               state="SWEPT", swept=True, swept_at_bar_ms=1789501500000,
+                               age_bars=444, swing_ids=["15m-hi-1", "15m-hi-2"],
+                               spread_atr=0.0131))
+tctx = gather(three)
+ttext3 = S.block(tctx)
+tgroup = next(g for g in tctx["above_groups"] if len(g) > 2)
+check(len(tgroup) == 3, "the live three-at-one-price case collapses to one line")
+tline = next(l for l in ttext3.splitlines() if "4367.48" in l)
+check(tline.count("4367.48") == 1, f"one price: {tline.strip()[:70]}")
+check("prior day high SWEPT" in tline and "high of the last complete trading day COMPLETE" in tline
+      and "equal highs SWEPT" in tline, "all three kinds, each with its own state")
+check("2 swings" in tline and "spread 0.01 ATR" in tline,
+      "and the pool facts only the third one carried")
+# Ages differ here - 72 and 444 bars - so they are NOT hoisted, because two
+# levels at one price need not have formed on the same bar.
+check("(72 bars old)" in tline and "(444 bars old)" in tline,
+      "ages that differ stay attached to their own member rather than being averaged away")
+check(len([l for l in ttext3.splitlines() if "4367.48" in l]) == 1,
+      "three objects at one price occupy ONE of the six slots above the close")
+check(tctx["census"]["collapsed"] == 8,
+      f"and the census counts the extra fold ({tctx['census']['collapsed']})")
+
+# THE TOLERANCE, which was measured wrong once and is pinned here. A
+# hundredth of an ATR is 0.125 USD/oz at the sample's ATR of 12.46, and it
+# folded the equal-highs pool at 4367.60 into the prior day's high at
+# 4367.48 - two levels the route calls separate, twelve cents apart, under
+# one price and one distance. The rule is the reader's instead: only levels
+# this block WOULD HAVE PRINTED IDENTICALLY are folded.
+check(S.COLLAPSE_TOL_PRICE == 0.005, "the tolerance is half of the last digit the block prints")
+check(any(l["price"] == 4367.60 for l in ctx["levels"]),
+      "the sample carries a level twelve cents from the collapsed pair")
+check("4367.60" in text and "4367.48" in text,
+      "and it keeps its own line, because a reader can tell twelve cents apart")
+check(0.01 * ATR > 20 * S.COLLAPSE_TOL_PRICE,
+      "a hundredth of an ATR would have been more than twenty times wider here")
+
+# LIKE WITH LIKE. A band and a price are not one level because the price sits
+# inside the band, and two bands agree only when BOTH edges do.
+p_at = {"price": 4367.48, "lo": None, "hi": None}
+b_over = {"price": None, "lo": 4360.0, "hi": 4370.0}
+b_same = {"price": None, "lo": 4360.0, "hi": 4370.0}
+b_wide = {"price": None, "lo": 4360.0, "hi": 4372.0}
+check(not S._same_place(p_at, b_over, 0.005), "a price inside a band is not the same level")
+check(S._same_place(b_over, b_same, 0.005), "two bands with both edges equal are")
+check(not S._same_place(b_over, b_wide, 0.005), "and two sharing only one edge are not")
+
+# A GROUP OF ONE MUST RENDER EXACTLY AS IT DID BEFORE COLLAPSING EXISTED, or
+# the collapse is silently reformatting lines it did not merge.
+solo = next(g for g in ctx["below_groups"] if len(g) == 1)
+check(S._group_line(solo, "USD/oz", ATR) == S._line(solo[0], "USD/oz", ATR),
+      "a level with nothing to collapse renders through the unchanged single-level path")
+
+# Collapsing never reaches across the close: two levels a cent apart in
+# DISTANCE on opposite sides are two prices two cents apart.
+check(all(all(m["dist"] > 0 for m in g) for g in ctx["above_groups"])
+      and all(all(m["dist"] < 0 for m in g) for g in ctx["below_groups"]),
+      "no group mixes a level above the close with one below it")
 
 
 # ---- a unit on every number ----
@@ -361,7 +456,7 @@ check("% filled" in text, "a gap's fill is a percentage of the gap")
 check(S._unit("xauusd") == H._unit("xauusd") and S._unit("eurusd") == H._unit("eurusd")
       and S._unit("btcusd") == H._unit("btcusd"),
       "this block names the market's units exactly as htf_context does")
-check("Ages are in 15m bars" in text,
+check("Ages are in 15m bars" in flat,
       "the timeframe is named ONCE, because the route serves one and no level carries its own")
 
 # The route's own definitions of session and day are not the ones a reader
@@ -452,11 +547,18 @@ check(both.index("SMC-LINE-ONE") < both.index("LAST 40 BARS"),
       "well ahead of the forty bars, which are the per-bar material")
 
 launcher = io.open(os.path.join(HERE, "start_ai_traders.ps1"), encoding="utf-8").read()
-check("'ai-xau-ds-smc'" in launcher and "'ai-xau-ds-smc-coin'" in launcher,
-      "the launcher names the book and its coin")
-check("seed = 53" in launcher, "with seed 53, which no other campaign uses")
-check("'ai_trader_ds_smc'" in launcher, "and log ai_trader_ds_smc")
-check("'smc-context'" in launcher, "and prompt variant smc-context")
+row = [l for l in launcher.splitlines() if "'ai-xau-ds-smc'" in l]
+check(len(row) == 1, "the launcher carries exactly one row for this book")
+check("'ai-xau-ds-smc-coin'" in row[0] and "seed = 53" in row[0]
+      and "'ai_trader_ds_smc'" in row[0] and "'smc-context'" in row[0],
+      "naming its coin, seed 53, log ai_trader_ds_smc and prompt variant smc-context")
+# COMMENTED, and this is an assertion rather than an observation. The books
+# and the trader exist only when the owner decides to spend on them; a
+# launcher row that starts a campaign nobody chose is how a desk acquires a
+# cost it cannot explain. Uncommenting it is a deliberate act and this test
+# is what makes it a visible one.
+check(row[0].strip().startswith("#"),
+      "and the row is COMMENTED, so nothing starts until someone decides it should")
 
 print()
 print(f"{'all checks passed' if not fails else str(len(fails)) + ' FAILED'}")

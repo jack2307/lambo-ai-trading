@@ -40,6 +40,15 @@ liquidity pools 135 are already SWEPT and of 76 order blocks 62 are BROKEN, so
 a reader given prices alone would be looking at a tape of 252 live levels when
 in fact most of them are spent.
 
+ONE PRICE IS ONE LINE, HOWEVER MANY LEVELS SIT ON IT. Live on 2026-09-19
+three of the six slots above the close were 4381.20 said three ways - an
+equal-highs pool, the prior day's high and the last complete day's high - and
+the cap hid 88 other levels behind them. Levels that this block would print
+at the same price are folded into one line carrying every fact all of them
+had, both states included when they disagree. It is the opposite of a
+ranking, which would choose one and drop the other; see `COLLAPSE_TOL_PRICE`,
+which also records the tolerance that was tried and measured too wide.
+
 STALENESS IS MEASURED AGAINST THE BAR BEING DECIDED, NOT AGAINST NOW. Same
 reason as `htf_context`: a threshold against the current time cannot tell a
 stopped export from a weekend, and on Monday morning the newest closed bar is
@@ -166,10 +175,10 @@ STATES = ("unavailable", "stale", "thin", "ok")
 # forty 15m bars the model decides on (`--bars` default 40), and the two
 # context blocks already beside this one measure 43 lines (`htf_context` on
 # its fixture) and 17 (`otl_context` on its own). At six a side this one
-# measures 35 lines on the real sample - 12 of header and census, 9 a side,
+# measures 36 lines on the real sample - 13 of header and census, 9 a side,
 # and 5 for the three bands the live close happens to sit inside - measured
 # by `smc_context_selftest.py` against `docs/api-samples/paper-levels.json`,
-# which pins the ceiling. At twelve a side the same response renders 47 lines
+# which pins the ceiling. At twelve a side the same response renders 48 lines
 # - measured by raising the constant, not estimated - which is longer than
 # the htf block and longer than the forty bars it sits in front of.
 #
@@ -179,6 +188,57 @@ STATES = ("unavailable", "stale", "thin", "ok")
 # fact about how messy this tape is, and a model shown twelve of them without
 # it would think the tape is tidy.
 MAX_PER_SIDE = 6
+
+# COLLAPSING LEVELS THAT SIT AT THE SAME PRICE, AND WHY THIS IS NOT THE
+# RANKING THE REGISTRATION FORBIDS.
+#
+# Read this before undoing it. The registration says "no level is ranked,
+# scored or recommended by the block". RANKING would be choosing which of two
+# facts matters and dropping the other. This does the opposite: it keeps
+# EVERY fact the constituents carried - each kind, each state, the sweep and
+# its stamp, the pool size, the spread - and stops repeating a PRICE. Nothing
+# is dropped, and one line naming three facts at one price carries strictly
+# more than three lines naming one price three times.
+#
+# WHY IT WAS NEEDED. Rendered against the live route on 2026-09-19, THREE of
+# the six slots above the close were one number said three ways:
+#
+#   equal highs (buy-side liquidity) SWEPT: 4381.20 USD/oz, +2.88 away ...
+#   prior day high (buy-side liquidity) SWEPT: 4381.20 USD/oz, +2.88 away ...
+#   high of the last complete trading day COMPLETE: 4381.20 USD/oz, +2.88 ...
+#
+# Half the above-side context was one price and the cap then hid 88 other
+# levels behind it. The route is right to serve all three - they are three
+# different questions that happen to have one answer today, and deduplicating
+# on the route would destroy that - so the block collapses them instead, and
+# prints BOTH states when they disagree, as SWEPT and COMPLETE do here
+# because they answer different questions. Decision by a5, 2026-09-19.
+#
+# THE TOLERANCE IS HALF OF THE LAST DIGIT THIS BLOCK PRINTS, and it is that
+# rather than a fraction of ATR because the fraction of ATR was tried and
+# measured wrong.
+#
+# A hundredth of an ATR was the first attempt - scale-free, an order of
+# magnitude tighter than the route's own equal-highs rule, and defensible on
+# paper. On the captured sample an ATR of 12.46 makes it 0.125 USD/oz, and it
+# folded an equal-highs pool at 4367.60 into the prior day's high at 4367.48:
+# two levels the route calls separate, twelve cents apart, printed under one
+# price with one distance. That is not "stop repeating a price", it is
+# inventing one.
+#
+# So the rule is the reader's: two levels are folded only when this block
+# WOULD HAVE PRINTED THE SAME PRICE TWICE. It prints two decimals, so the
+# tolerance is half of the second - 0.005 quote units - plus a relative floor
+# for float noise, since 4381.20 arriving from three code paths need not be
+# bit-identical. Nothing a reader could tell apart is ever merged, which is
+# the only tolerance that makes "nothing is dropped" literally true.
+#
+# LIKE WITH LIKE ONLY. A band and a price are not the same level just because
+# the price is inside the band, and two bands are the same only when BOTH
+# edges agree. A gap and the prior day's high inside it are two facts about
+# two different things.
+PRICE_DECIMALS = 2
+COLLAPSE_TOL_PRICE = 0.5 * 10.0 ** -PRICE_DECIMALS
 
 # A level's `kind`, in this file's vocabulary, keyed on the route's
 # SCREAMING_SNAKE token lowercased. A kind outside this table renders by its
@@ -402,6 +462,41 @@ def _harvest(doc: dict, close: float) -> list:
     return out
 
 
+def _same_place(a: dict, b: dict, tol: float) -> bool:
+    """Do these two levels name the same price? Like with like only.
+
+    A float floor under the tolerance whatever the caller passed, because two
+    levels that ARE the same price can still differ in the last bit when they
+    reach us down two code paths.
+    """
+    if (a["price"] is None) != (b["price"] is None):
+        return False  # a band and a price are not the same level
+    if a["price"] is not None:
+        t = max(tol, 1e-6 * max(abs(a["price"]), abs(b["price"])))
+        return abs(a["price"] - b["price"]) <= t
+    t = max(tol, 1e-6 * max(abs(a["lo"]), abs(b["hi"])))
+    return abs(a["lo"] - b["lo"]) <= t and abs(a["hi"] - b["hi"]) <= t
+
+
+def collapse(rows: list, tol: float) -> list:
+    """`[[level, ...], ...]`, nearest first, each inner list ONE price.
+
+    Compared against the group's FIRST member rather than its last, so a
+    chain of levels each within the tolerance of the one before cannot drift
+    a group wider than the tolerance. `rows` arrives nearest-first and groups
+    are created in that order, so the ordering rule survives untouched.
+    """
+    groups = []
+    for lv in rows:
+        for g in groups:
+            if _same_place(g[0], lv, tol):
+                g.append(lv)
+                break
+        else:
+            groups.append([lv])
+    return groups
+
+
 def census(levels: list) -> dict:
     """How many of each family there are, and how many are already spent.
 
@@ -525,7 +620,14 @@ def gather(api: str = "http://127.0.0.1:8138", market: str = "xauusd",
     out["above"] = [l for l in levels if l["dist"] > 0]
     out["below"] = [l for l in levels if l["dist"] < 0]
     out["straddling"] = [l for l in levels if l["dist"] == 0]
+    # Grouped per side rather than across all three, so a level above the
+    # close can never be folded into one below it however close the two are.
+    out["collapse_tol"] = COLLAPSE_TOL_PRICE
+    for key in ("above", "below", "straddling"):
+        out[key + "_groups"] = collapse(out[key], COLLAPSE_TOL_PRICE)
     out["census"] = census(levels)
+    out["census"]["collapsed"] = len(levels) - sum(
+        len(out[k + "_groups"]) for k in ("above", "below", "straddling"))
     out["state"] = "ok"
     return out
 
@@ -573,6 +675,81 @@ def _line(lv: dict, unit: str, atr) -> str:
     return f"    {head}: {where}, {gap}, {age}" + ("; " + "; ".join(extra) if extra else "")
 
 
+def _group_line(group: list, unit: str, atr) -> str:
+    """One price, and every fact the levels sitting at it carried.
+
+    A group of one delegates to `_line` unchanged, so a response with nothing
+    to collapse renders exactly as it did before collapsing existed - the
+    collapse can only ever alter a line it actually merged.
+
+    What is hoisted and what stays attached is decided by whether the
+    constituents AGREE. The state never hoists even when they do, because
+    the states are the whole reason the levels are separate objects: the
+    live case had one SWEPT and one COMPLETE at one price, which is two
+    answers to two questions and not a contradiction to resolve.
+    """
+    if len(group) == 1:
+        return _line(group[0], unit, atr)
+
+    lead = group[0]
+    where = (f"{lead['lo']:.2f} to {lead['hi']:.2f} {unit}" if lead["price"] is None
+             else f"{lead['price']:.2f} {unit}")
+    d = lead["dist"]
+    if d == 0:
+        gap = f"the last close is on it (0.00 {unit} away)"
+    else:
+        scale = (f" ({abs(d) / atr:.2f} ATR)" if atr
+                 else " (no ATR scale this bar, so distance is in price only)")
+        gap = f"{d:+.2f} {unit} away{scale}"
+
+    ages = {m["age_bars"] for m in group}
+    one_age = len(ages) == 1
+    labels = []
+    for m in group:
+        lab = m["word"] + (f" {m['state_word']}" if m["state_word"] else "")
+        if not one_age:
+            # Levels at one price can have formed on different bars - the
+            # prior day's high and an equal-highs pool need not be the same
+            # swing - so an age that is not shared goes on its own member
+            # rather than being averaged away.
+            lab += (" (age not reported)" if m["age_bars"] is None
+                    else f" ({m['age_bars']} bars old)")
+        labels.append(lab)
+    head = labels[0] if len(labels) == 1 else ", ".join(labels[:-1]) + " and " + labels[-1]
+    tail = f"    {head}: {where}, {gap}"
+    if one_age:
+        a = ages.pop()
+        tail += ", age not reported" if a is None else f", {a} bars old"
+
+    # Everything else, deduplicated and in a fixed order, so two levels that
+    # were both swept on the same bar say so once and two that differ say
+    # both. Order is the order the facts were added, not the order they
+    # happened to arrive in.
+    extra = []
+
+    def add(s):
+        if s and s not in extra:
+            extra.append(s)
+
+    sides = {m["side_word"] for m in group if m["side_word"]}
+    for s in sorted(sides):
+        add(s)
+    for m in group:
+        add(m["direction_word"])
+        if m["filled_fraction"] is not None:
+            add(f"{100 * m['filled_fraction']:.0f}% filled")
+        if m["swept"] is True:
+            add("swept " + _u(m["swept_at_bar_ms"]) if m["swept_at_bar_ms"] is not None
+                else "swept")
+        if m["swings"]:
+            add("1 swing" if m["swings"] == 1 else f"{m['swings']} swings")
+        if m["spread_atr"] is not None:
+            add(f"spread {m['spread_atr']:.2f} ATR")
+        if m["displacement_body_atr"] is not None:
+            add(f"made by a {m['displacement_body_atr']:.2f} ATR body")
+    return tail + ("; " + "; ".join(extra) if extra else "")
+
+
 def _census_lines(c: dict) -> list:
     """The census, wrapped into the header.
 
@@ -593,6 +770,12 @@ def _census_lines(c: dict) -> list:
     body = (f"The desk found {c['total']} levels in this window and ranks none of them: "
             + ", ".join(parts)
             + ". Spent means a pool already swept or a block already broken.")
+    if c.get("collapsed"):
+        # The same honesty the cap's overflow line owes. A reader who counted
+        # the census against the lines below would otherwise find levels
+        # missing with nothing saying where they went.
+        body += (f" {c['collapsed']} of them sit at a price another level already names and "
+                 f"are folded into its line rather than repeating it.")
     return textwrap.wrap(body, width=94, initial_indent="  ", subsequent_indent="  ")
 
 
@@ -625,20 +808,25 @@ def block(ctx: dict) -> str:
 
     close, atr = ctx.get("last_close"), ctx.get("atr")
     tf = ctx.get("timeframe") or "the decision"
-    L = [
-        f"PRICE LEVELS for {market} - computed by the desk from CLOSED {tf} bars, one",
-        "implementation shared with the screen. There is no score here, no ranking and no",
-        "confluence count: a level's AGE and its STATE are as much of the fact as its price,",
-        "and what to make of them is your job. It is context, like everything else in this",
-        "section, and not a signal.",
-        "",
-    ]
+    # Wrapped rather than hand-broken, because the collapse rule added two
+    # sentences to a header that was already five hand-broken lines and the
+    # block is 40 bars' worth of prompt away from being the longest thing in
+    # it. Wrapping the three paragraphs got the same words back in three
+    # fewer lines.
+    L = textwrap.wrap(
+        f"PRICE LEVELS for {market} - computed by the desk from CLOSED {tf} bars, one "
+        f"implementation shared with the screen. There is no score here, no ranking and no "
+        f"confluence count: a level's AGE and its STATE are as much of the fact as its price, "
+        f"and what to make of them is your job. It is context, like everything else in this "
+        f"section, and not a signal.", width=94)
+    L.append("")
     L.extend(_census_lines(ctx.get("census") or {}))
-    L.extend([
-        f"  Below are the nearest to the last close ({close:.2f} {unit}), NEAREST FIRST, above and",
-        f"  below listed separately, at most {MAX_PER_SIDE} a side so this block's length does not depend",
-        f"  on how busy the tape is. Ages are in {tf} bars. Distance to a band is to its nearer edge.",
-    ])
+    L.extend(textwrap.wrap(
+        f"Nearest to the last close ({close:.2f} {unit}) first, above and below listed "
+        f"separately, at most {MAX_PER_SIDE} a side so this block's length does not track the "
+        f"tape's. Ages are in {tf} bars; distance to a band is to its nearer edge; levels at the "
+        f"same price to the cent are ONE line naming all of them, carrying both states where "
+        f"they disagree.", width=94, initial_indent="  ", subsequent_indent="  "))
     if not ctx.get("staleness_checked"):
         L.append("  (how far these levels lag the bar you are deciding on was NOT checked this run)")
     if atr is None:
@@ -647,7 +835,7 @@ def block(ctx: dict) -> str:
     for title, key in (("ABOVE the last close", "above"),
                        ("BELOW the last close", "below"),
                        ("STRADDLING the last close", "straddling")):
-        rows = ctx.get(key) or []
+        rows = ctx.get(key + "_groups") or []
         if not rows:
             if key == "straddling":
                 continue
@@ -656,15 +844,24 @@ def block(ctx: dict) -> str:
             continue
         L.append("")
         L.append(f"  {title}, nearest first:")
-        for lv in rows[:MAX_PER_SIDE]:
-            L.append(_line(lv, unit, atr))
-        rest = len(rows) - MAX_PER_SIDE
-        if rest > 0:
+        for group in rows[:MAX_PER_SIDE]:
+            L.append(_group_line(group, unit, atr))
+        hidden = rows[MAX_PER_SIDE:]
+        if hidden:
             # Counted rather than dropped silently: a truncated list that
             # looked complete would tell the model the tape is tidier than it
             # is, and how many levels there are is itself a fact about it.
-            L.append(f"    ({rest} further level{'s' if rest != 1 else ''} on this side are not "
-                     f"shown, being further away)")
+            #
+            # LEVELS and PRICES are both counted when they differ, because
+            # the cap now hides GROUPS. "88 further prices" understates how
+            # much tape is behind them and "95 further levels" overstates how
+            # many places they are; on a tape this duplicated only both
+            # numbers are honest.
+            n_lv = sum(len(g) for g in hidden)
+            at = ("" if n_lv == len(hidden)
+                  else f", at {len(hidden)} further price{'s' if len(hidden) != 1 else ''},")
+            L.append(f"    ({n_lv} further level{'s' if n_lv != 1 else ''}{at} on this side "
+                     f"are not shown, being further away)")
     return "\n".join(L)
 
 

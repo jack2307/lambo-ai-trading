@@ -4,7 +4,8 @@
 either book has seen a bar. Everything below is a pre-commitment; nothing in
 it may be changed by what the books turn out to say.
 **Status:** BUILT 2026-09-19 on branch `agent/smc-prompt`, RECONCILED the same
-day against the route as it actually shipped, NOT started. The block, the
+day against the route as it actually shipped and then against its LIVE output,
+NOT started. The block, the
 prompt variant and the three-file wiring exist; the selftest now runs against
 d1's own captured responses — `docs/api-samples/paper-levels.json`, 252 levels
 off the live store, and `paper-levels-unavailable.json` — rather than against
@@ -14,8 +15,9 @@ quiet window once the route is deployed to the VPS. What was built and the
 three places it departs from the lines below are in "What is now built" at
 the foot of this file; what the shipped route then changed — including the
 two unit bugs and four paragraphs of that section it corrects — is in
-"Reconciled with the route as shipped" after it, which is the one to read for
-what the code does today.
+"Reconciled with the route as shipped" after it; the live rendering then
+forced one more change, in "One price, one line" at the very foot, which is
+the one to read for what the code does today.
 **Books:** `ai-xau-ds-ctx` (base, already running, untouched) as control,
 against `ai-xau-ds-ctx-smc` (variant `smc-context`), with its own coin
 `ai-xau-ds-ctx-smc-coin` and **seed 43** — distinct from 23, 29, 37 and 41.
@@ -386,6 +388,64 @@ things, so the block prints both rather than picking — but on the live sample
 that spends two of the six slots above the close on one price. Deduplicating
 would be this block deciding which of two route facts matters, which the
 registration forbids it from doing, so it is raised here instead.
+
+Written by Claude Opus 5 (trader session, worktree `fd-wt-smc`, branch
+`agent/smc-prompt`), 2026-09-19.
+
+## One price, one line (amendment, 2026-09-19, third pass)
+
+The ambiguity raised at the foot of the section above got worse when the
+block was rendered against the **live** route rather than the captured
+sample. Three of the six slots above the close were one number said three
+ways — an equal-highs pool, the `PRIOR_DAY_HIGH` pool and
+`extremes.day.high`, all at 4381.20, all +2.88 away, all 126 bars old — and
+the cap then hid 88 other levels behind them. Half the above-side context was
+one price.
+
+**a5's decision, 2026-09-19: collapse in the block, not on the route.** The
+route is right to serve all three; they are three different questions that
+happen to have one answer today, and deduplicating on the route would destroy
+that distinction for every other reader. So levels the block would print at
+the same price render as **one line carrying every fact the constituents
+had** — each kind, each state, the sweep with its stamp, the pool size, the
+spread. Where they disagree on a state, as SWEPT and COMPLETE do here because
+they answer different questions, **both states are on the line**.
+
+**This is not the ranking clause above.** That clause forbids the block from
+choosing which of two facts matters. This keeps both and stops repeating a
+price; one line naming three facts at one price carries strictly more than
+three lines naming one price three times. The code says so in those terms at
+`smc_context.COLLAPSE_TOL_PRICE`, so the next reader does not undo it as a
+violation.
+
+**The tolerance is half of the last digit the block prints — 0.005 quote
+units — and not a fraction of ATR, because the fraction of ATR was tried and
+measured wrong.** A hundredth of an ATR is 0.125 USD/oz at the sample's ATR
+of 12.46, and it folded an equal-highs pool at 4367.60 into the prior day's
+high at 4367.48: two levels the route calls separate, twelve cents apart,
+printed under one price and one distance. That is not "stop repeating a
+price", it is inventing one. The rule is the reader's instead — levels are
+folded only when the block **would have printed them identically** — with a
+relative floor for float noise, since one price arriving down three code
+paths need not be bit-identical. Like with like only: a price inside a band
+is not the same level, and two bands agree only when both edges do.
+
+**What it frees.** On the live shape, three objects at one price become one
+line: **two of the six slots above the close**, and the two levels that move
+up into them were previously among the 88 hidden. On the captured sample the
+two-way case at 4367.48 frees **one** slot, and seven levels response-wide
+are folded. The census counts them — "7 of them sit at a price another level
+already names and are folded into its line rather than repeating it" — the
+same honesty the cap's overflow line owes, and the overflow line now counts
+levels **and** prices when the two differ.
+
+The block is 36 lines on the captured sample, against `htf_context`'s 43 and
+the forty bars it precedes. The cap stays at six a side.
+
+**Still nothing started.** The launcher row for `ai-xau-ds-smc` is commented
+on `main`, deliberately, so the books and the trader exist only when the
+owner decides to spend on them. It was not uncommented, and the selftest now
+**asserts** it is commented rather than merely noting it.
 
 Written by Claude Opus 5 (trader session, worktree `fd-wt-smc`, branch
 `agent/smc-prompt`), 2026-09-19.
