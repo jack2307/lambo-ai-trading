@@ -82,12 +82,21 @@ pub async fn catalog(State(state): State<Arc<AppState>>) -> Result<Json<Catalog>
 
     let indicators = INDICATORS
         .iter()
-        .map(|def| IndicatorInfo {
-            id: def.id.to_string(),
-            name: def.name.to_string(),
-            pane: if def.pane == Pane::Overlay { "overlay" } else { "pane" },
-            params: def.params.iter().map(|(name, value)| ((*name).to_string(), *value)).collect(),
-            outputs: def.outputs.iter().map(|o| (*o).to_string()).collect(),
+        .map(|def| {
+            // THE MEASUREMENT TRAVELS WITH THE DEFINITION, so a viewer reads
+            // what a line costs in the menu where the line is chosen rather
+            // than in a note under a chart that already has it drawn. Empty
+            // becomes absent, never `[]` — see `IndicatorInfo::measured`.
+            let rows = fd_indicators::measured(def.id);
+            let measured = (!rows.is_empty()).then(|| rows.iter().map(MeasuredDto::from).collect::<Vec<_>>());
+            IndicatorInfo {
+                id: def.id.to_string(),
+                name: def.name.to_string(),
+                pane: if def.pane == Pane::Overlay { "overlay" } else { "pane" },
+                params: def.params.iter().map(|(name, value)| ((*name).to_string(), *value)).collect(),
+                outputs: def.outputs.iter().map(|o| (*o).to_string()).collect(),
+                measured,
+            }
         })
         .collect();
 

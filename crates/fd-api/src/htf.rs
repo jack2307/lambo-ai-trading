@@ -47,7 +47,7 @@ use std::sync::Arc;
 use axum::Json;
 use axum::extract::{Query, State};
 use fd_core::types::Bar;
-use fd_indicators::{IndicatorSpec, compute_indicators};
+use fd_indicators::{IndicatorSpec, ZigzagPivot as Pivot, compute_indicators, zigzag_pivots as live_zigzag_pivots};
 use fd_store::read_bars;
 use serde::{Deserialize, Serialize};
 
@@ -512,158 +512,22 @@ fn bars_since_extreme(bars: &[Bar], period: usize, high: bool) -> Option<usize> 
     Some(window.len() - 1 - at)
 }
 
-/// One confirmed zigzag pivot.
-struct Pivot {
-    /// The bar the extreme happened on.
-    at: usize,
-    /// The bar the reversal confirmed it on. Never earlier than `at`, and
-    /// unlike a fractal the distance is not a constant.
-    confirmed_at: usize,
-    price: f64,
-    high: bool,
-}
-
-/// A LIVE ATR-zigzag. Pivots oldest first, each with the bar that confirmed it.
-///
-/// The leg extends while price makes new extremes and reverses when price
-/// retraces `k` × ATR(14) from the leg's extreme. `atr` is the ATR series
-/// aligned to `bars` — passed in rather than recomputed so the threshold and
-/// the `atr14` this route publishes cannot come from two different numbers;
-/// `the_threshold_uses_the_published_atr` pins that.
-///
-/// # This is a PORT, not a reimplementation
-///
-/// The definition lives in `py/research/bias_defs.py::atr_zigzag`, which is
-/// what produced every number in
-/// `docs/decisions/2026-09-18-market-bias-definitions.md`. That file is the
-/// source of truth for the RULE; this is the source of truth for what the
-/// route serves, and `zigzag_labels_match_the_research_definition` holds
-/// them together on real bars.
-///
-/// Four things the study's prose did not pin. I had guessed three of them
-/// differently and the guesses were reasonable, which is the argument for
-/// having asked: each one silently changes the label series, and a wrong
-/// one would have reproduced the morning table while missing the aggregates.
-///
-/// * **Highs and lows, not closes.** A leg's extreme is the extreme price
-///   traded, which is what a chart reader points at. Using closes would
-///   ignore the wick that made the high and put the pivot on a different bar.
-/// * **ATR at the CURRENT bar, not at the pivot.** "ATR at the bar" read
-///   literally, and it is the honest reading: the threshold is how far price
-///   must come back *now*, judged by how much this market is moving *now*. It
-///   does mean the bar that ends a leg can be judged against a different ATR
-///   than the bar that started it, which is a real consequence and not a bug
-///   — a leg opened in a quiet tape and closed in a violent one should need a
-///   bigger retrace to call the turn.
-/// * **Confirmed on the bar whose extreme crosses the threshold**, using that
-///   bar's own low (in an up-leg) or high (in a down-leg); the label changes
-///   on that bar and is final at its close. A route recomputing this on
-///   CLOSED bars gets an identical series. One recomputing it INTRABAR would
-///   flip earlier, sometimes flip back, and would not reproduce the study's
-///   numbers - so this route must keep computing on closed bars only, which
-///   it does because every fact in this file does.
-/// * **Strictly greater, not greater-or-equal.** A retrace of exactly `k`
-///   ATRs does NOT turn the leg. One character, and it is the difference
-///   between this series and a different one.
-/// * **On a bar that could seed either direction, UP wins.** Not arbitrary
-///   to leave undecided: the two answers are opposite labels on the same bar.
-/// * **A warmup bar is skipped whole.** While ATR(14) is not finite the bar
-///   is not examined at all and `extreme` does not move - it is not merely
-///   the confirmation that is blocked. Measured on the 25,708-bar H1 file,
-///   that is RANGE on the first 13 bars and never again.
-/// * **The seed is the first bar's CLOSE**, and before a direction exists
-///   one scalar wanders up on a bar that closes at or above it and down
-///   otherwise. The first pivot this emits is therefore the seed reference
-///   the leg came from rather than a swing confirmed by a prior reversal,
-///   and it is emitted so that `break_level` is never null while the label
-///   is not RANGE.
-///
-/// # Why it cannot repaint
-///
-/// A pivot is appended only when the reversal that confirms it has already
-/// happened, and nothing ever pops one. The extreme of the leg IN PROGRESS is
-/// not a pivot and is not published as one. So the pivot list at bar `t` is a
-/// prefix of the list at any later bar, and the label at `t` is the leg in
-/// force at `t` forever after. That is the property the fractal rule was
-/// originally chosen for, kept.
-fn live_zigzag_pivots(bars: &[Bar], k: f64, atr: Option<&[f64]>) -> Vec<Pivot> {
-    let mut out: Vec<Pivot> = Vec::new();
-    if !(k.is_finite() && k > 0.0) || bars.is_empty() {
-        return out;
-    }
-
-    // Seeded from the FIRST BAR'S CLOSE, and the direction-0 branch below
-    // tracks one wandering scalar rather than a running high and a running
-    // low. That is not the shape I would have written; it is `atr_zigzag` in
-    // `py/research/bias_defs.py`, and matching it is the point - see the
-    // header note above.
-    let mut extreme = bars[0].close;
-    let mut extreme_at = 0usize;
-    let mut direction = 0i8;
-
-    for (t, bar) in bars.iter().enumerate() {
-        // SKIPPED ENTIRELY during the ATR warmup, so `extreme` does not drift
-        // before there is a threshold to judge it against. Continuing past the
-        // update rather than only past the test is one of the four places this
-        // could silently diverge.
-        let Some(a) = atr.and_then(|s| s.get(t)).copied().filter(|v| v.is_finite()) else { continue };
-        let thr = k * a;
-
-        match direction {
-            0 => {
-                // UP IS TESTED FIRST, and on a bar that satisfies both it wins.
-                // A tie is not hypothetical on a wide bar, and the two answers
-                // are opposite labels.
-                if bar.high - extreme > thr {
-                    out.push(Pivot { at: extreme_at, confirmed_at: t, price: extreme, high: false });
-                    direction = 1;
-                    extreme = bar.high;
-                    extreme_at = t;
-                } else if extreme - bar.low > thr {
-                    out.push(Pivot { at: extreme_at, confirmed_at: t, price: extreme, high: true });
-                    direction = -1;
-                    extreme = bar.low;
-                    extreme_at = t;
-                } else if bar.close >= extreme {
-                    if bar.high > extreme {
-                        extreme = bar.high;
-                        extreme_at = t;
-                    }
-                } else if bar.low < extreme {
-                    extreme = bar.low;
-                    extreme_at = t;
-                }
-            }
-            1 => {
-                // The leg extends BEFORE the reversal test, so one bar can make
-                // a new high and then give back `thr` from it and turn.
-                if bar.high > extreme {
-                    extreme = bar.high;
-                    extreme_at = t;
-                }
-                if extreme - bar.low > thr {
-                    out.push(Pivot { at: extreme_at, confirmed_at: t, price: extreme, high: true });
-                    direction = -1;
-                    extreme = bar.low;
-                    extreme_at = t;
-                }
-            }
-            _ => {
-                if bar.low < extreme {
-                    extreme = bar.low;
-                    extreme_at = t;
-                }
-                if bar.high - extreme > thr {
-                    out.push(Pivot { at: extreme_at, confirmed_at: t, price: extreme, high: false });
-                    direction = 1;
-                    extreme = bar.high;
-                    extreme_at = t;
-                }
-            }
-        }
-    }
-    out
-}
+// The live ATR-zigzag, and the pivot it yields.
+//
+// MOVED INTO `fd-indicators` ON 2026-09-19 AND CALLED FROM THERE. The code
+// that was here is unchanged, comments and all; only its address moved. The
+// reason is the one that made the four pinned choices worth writing down in
+// the first place: the chart now offers the same definition as an indicator
+// a viewer can draw, and two implementations of one definition is a desk
+// that will one day show two answers to one question - the H1 structure row
+// saying UP while the line the trader drew on the same candles says DOWN.
+//
+// Everything this file promised about it still holds and is still tested
+// here: `zigzag_labels_match_the_research_definition` pins it against
+// `py/research/bias_defs.py::atr_zigzag` on 2,000 real H1 bars, and
+// `a_live_zigzag_never_repaints` asserts the prefix property. Those tests
+// now exercise the shared function, which is the point of moving it.
+// (the import is at the top of the file, with the others)
 
 /// Structure from a live zigzag.
 ///

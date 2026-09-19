@@ -172,7 +172,220 @@ pub static INDICATORS: &[IndicatorDef] = &[
         params: &[("left", 3.0), ("right", 3.0)],
         outputs: &["high", "low", "highAt", "lowAt"],
     },
+    /* ------------------------------------------------------------------
+     * METHOD-LEVEL DEFINITIONS.
+     *
+     * The twelve above answer "what is this number now". The three below
+     * answer "which way is this market, and where does that answer change"
+     * — they carry a direction, so a trader runs a method on them rather
+     * than reading a value off them. All three were MEASURED on this desk
+     * before they were drawn: see [`MEASURED`], which the catalog serves
+     * beside each one, and
+     * `docs/decisions/2026-09-18-market-bias-definitions.md`.
+     * ------------------------------------------------------------------ */
+    IndicatorDef {
+        id: "supertrend",
+        name: "Supertrend",
+        pane: Pane::Overlay,
+        params: &[("period", 10.0), ("mult", 3.0)],
+        outputs: &["supertrend", "direction"],
+    },
+    IndicatorDef {
+        id: "zigzag",
+        name: "ZigZag (ATR, live)",
+        pane: Pane::Overlay,
+        params: &[("k", 3.0), ("atrPeriod", 14.0)],
+        outputs: &["zigzag", "direction"],
+    },
+    // `anchor` IS A NUMBER BECAUSE EVERY PARAMETER HERE IS, and the number
+    // chosen is the anchor's length in days: 1 = the session, 7 = the week.
+    // A string parameter would need a second kind of `params` map through
+    // the spec, the key builder, the catalog and the picker; a day count is
+    // the one encoding that reads correctly in the key it produces
+    // (`avwap_1`, `avwap_7`). Anything that is neither yields all-NaN
+    // rather than quietly falling back to the session — see [`Anchor`].
+    IndicatorDef {
+        id: "avwap",
+        name: "Anchored VWAP",
+        pane: Pane::Overlay,
+        params: &[("anchor", 1.0)],
+        outputs: &["avwap"],
+    },
 ];
+
+/// How a DEFINITION behaved on a measured sample. Not a property of it.
+///
+/// The idiom is `fd_api::htf::RuleMeasuredDto`'s, and the reason for keeping
+/// the measurement out of the definition is the same one: a definition does
+/// not go stale and a measurement does. So each row names the file it came
+/// from, the sample it was measured over and the timeframe it was measured
+/// on — a number measured on H1 is not a number about H4, and both are
+/// carried rather than one being generalised.
+// Serialize only: these are static rows this crate publishes, never
+// something a caller sends back. `Deserialize` would need owned strings and
+// an owned params list, which is a wire type's job — `fd_api::dto` has it.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Measured {
+    /// The study's own name for the cell, so a reader can find the row.
+    pub definition: &'static str,
+    /// The timeframe the numbers were measured ON. Not a recommendation of
+    /// what to draw it on.
+    pub timeframe: &'static str,
+    /// The parameter cell measured. These numbers describe THIS cell and no
+    /// other: `avwap` anchored on the week is a different row from `avwap`
+    /// anchored on the day, and on H1 they are 9.2 flips against 19.7.
+    pub params: &'static [(&'static str, f64)],
+    /// Label changes per 100 bars.
+    pub flips_per_100_bars: f64,
+    /// Share of those flips reversed within three bars. THE COST, and the
+    /// number most likely to be dropped from a summary.
+    pub undone_within_3_pct: f64,
+    /// Median bars from a reference (4×ATR, acausal) turn until the label
+    /// agrees.
+    pub median_lag_bars: f64,
+    /// Share of reference turns the label never agreed with before the next
+    /// one. Counted, never dropped — dropping them flatters a slow rule.
+    pub missed_pct: f64,
+    pub sample_bars: usize,
+    /// Where these came from, so they can be re-derived or contradicted.
+    pub source: &'static str,
+    /// The study's own warning about this cell, verbatim in substance.
+    /// Present only where the decision names the cell as one not to offer.
+    pub caution: Option<&'static str>,
+}
+
+const BIAS_NOTE: &str = "docs/decisions/2026-09-18-market-bias-definitions.md";
+/// 25,708 H1 bars and 6,728 H4 bars of XAUUSD, one broker year each.
+const H1_BARS: usize = 25_708;
+const H4_BARS: usize = 6_728;
+
+/// What the 2026-09-18 study measured, by indicator id.
+///
+/// AN INDICATOR MISSING FROM THIS TABLE IS UNMEASURED, and the catalog says
+/// `null` rather than an empty list: a blank where evidence goes is read as
+/// evidence, and an empty array reads as "measured, nothing found".
+///
+/// Anyone registering a new definition in [`INDICATORS`] adds nothing here
+/// until somebody measures it. That is the intended asymmetry.
+pub static MEASURED: &[(&str, &[Measured])] = &[
+    (
+        "supertrend",
+        &[
+            Measured {
+                definition: "supertrend(10,3)",
+                timeframe: "1h",
+                params: &[("period", 10.0), ("mult", 3.0)],
+                flips_per_100_bars: 2.5,
+                undone_within_3_pct: 2.0,
+                median_lag_bars: 13.0,
+                missed_pct: 19.0,
+                sample_bars: H1_BARS,
+                source: BIAS_NOTE,
+                caution: None,
+            },
+            Measured {
+                definition: "supertrend(10,3)",
+                timeframe: "4h",
+                params: &[("period", 10.0), ("mult", 3.0)],
+                flips_per_100_bars: 2.4,
+                undone_within_3_pct: 1.0,
+                median_lag_bars: 10.0,
+                missed_pct: 12.0,
+                sample_bars: H4_BARS,
+                source: BIAS_NOTE,
+                caution: None,
+            },
+        ],
+    ),
+    (
+        "zigzag",
+        &[
+            Measured {
+                definition: "zigzag 3xATR",
+                timeframe: "1h",
+                params: &[("k", 3.0), ("atrPeriod", 14.0)],
+                flips_per_100_bars: 6.1,
+                undone_within_3_pct: 16.0,
+                median_lag_bars: 6.0,
+                missed_pct: 1.0,
+                sample_bars: H1_BARS,
+                source: BIAS_NOTE,
+                caution: None,
+            },
+            Measured {
+                definition: "zigzag 3xATR",
+                timeframe: "4h",
+                params: &[("k", 3.0), ("atrPeriod", 14.0)],
+                flips_per_100_bars: 5.6,
+                undone_within_3_pct: 9.0,
+                median_lag_bars: 6.0,
+                missed_pct: 4.0,
+                sample_bars: H4_BARS,
+                source: BIAS_NOTE,
+                caution: None,
+            },
+        ],
+    ),
+    (
+        "avwap",
+        &[
+            // THE STUDY SAYS IN AS MANY WORDS NOT TO PUT THIS ONE ON A CARD.
+            // It is still offered, because a chart tool that hides what its
+            // owner measured is worse than one that shows it with the cost
+            // attached — but it is never offered silently.
+            Measured {
+                definition: "avwap day",
+                timeframe: "1h",
+                params: &[("anchor", 1.0)],
+                flips_per_100_bars: 19.7,
+                undone_within_3_pct: 57.0,
+                median_lag_bars: 3.0,
+                missed_pct: 2.0,
+                sample_bars: H1_BARS,
+                source: BIAS_NOTE,
+                caution: Some(
+                    "The study says not to put this on a card: it turns every 5 bars and 57% of \
+                     those turns are reversed within three. Three bars of lag is not speed, it is \
+                     noise with a direction attached.",
+                ),
+            },
+            Measured {
+                definition: "avwap day",
+                timeframe: "4h",
+                params: &[("anchor", 1.0)],
+                flips_per_100_bars: 34.3,
+                undone_within_3_pct: 72.0,
+                median_lag_bars: 2.0,
+                missed_pct: 0.0,
+                sample_bars: H4_BARS,
+                source: BIAS_NOTE,
+                caution: Some(
+                    "Worse on H4 than on H1: 34.3 flips per 100 bars and 72% of them undone \
+                     within three. The study names this one as not to be put on a card.",
+                ),
+            },
+            Measured {
+                definition: "avwap week",
+                timeframe: "1h",
+                params: &[("anchor", 7.0)],
+                flips_per_100_bars: 9.2,
+                undone_within_3_pct: 53.0,
+                median_lag_bars: 6.0,
+                missed_pct: 15.0,
+                sample_bars: H1_BARS,
+                source: BIAS_NOTE,
+                caution: None,
+            },
+        ],
+    ),
+];
+
+/// What the desk measured this definition doing, or an empty slice.
+#[must_use]
+pub fn measured(id: &str) -> &'static [Measured] {
+    MEASURED.iter().find(|(key, _)| *key == id).map_or(&[], |(_, rows)| *rows)
+}
 
 /// Look up a definition by id.
 #[must_use]
@@ -285,6 +498,15 @@ fn compute_one(def: &IndicatorDef, p: &[f64], source: Source, bars: &[Bar]) -> V
             let (high, low, high_at, low_at) = swing(bars, period("left"), period("right"));
             vec![("high", high), ("low", low), ("highAt", high_at), ("lowAt", low_at)]
         }
+        "supertrend" => {
+            let (line, direction) = supertrend(bars, period("period"), def.param(p, "mult"));
+            vec![("supertrend", line), ("direction", direction)]
+        }
+        "zigzag" => {
+            let (line, direction) = zigzag(bars, def.param(p, "k"), period("atrPeriod"));
+            vec![("zigzag", line), ("direction", direction)]
+        }
+        "avwap" => vec![("avwap", anchored_vwap(bars, Anchor::from_days(def.param(p, "anchor"))))],
         other => unreachable!("indicator {other} is registered but not implemented"),
     }
 }
@@ -637,6 +859,347 @@ pub fn keltner(bars: &[Bar], period: usize, atr_period: usize, mult: f64) -> (Ve
     (upper, middle, lower)
 }
 
+/* ---------------- method indicators ---------------- */
+
+/*
+ * THREE DEFINITIONS THAT WERE MEASURED BEFORE THEY WERE DRAWN.
+ *
+ * Each of the three below is a port of a function in
+ * `py/research/bias_defs.py`, the file every number in
+ * `docs/decisions/2026-09-18-market-bias-definitions.md` was produced by.
+ * The ports are pinned against that Python on real XAUUSD H1 bars, bar for
+ * bar, by `crates/fd-api/tests/method_indicators.rs`. A port that agrees
+ * with the prose and not with the function would carry numbers that were
+ * measured on something else, which is the failure mode this desk has
+ * already paid for once (see the zigzag's four pinned choices below).
+ */
+
+/// Supertrend: the ATR band in force, and which side of it price is on.
+///
+/// Port of `bias_defs.py::supertrend` (line 311), which produced the
+/// `supertrend(10,3)` row: on 25,708 H1 bars, 2.5 flips per 100 bars, 2% of
+/// them undone within three, 13 bars of median lag, 19% of turns missed. It
+/// is the slowest of the three and the least twitchy, and the study names it
+/// the best compromise if one definition has to serve both rows.
+///
+/// Returns `(line, direction)`. `direction` is `+1` / `-1` and is the series
+/// that was measured; `line` is the band in force under the same recursion —
+/// the lower band while up, the upper while down.
+///
+/// TWO THINGS THIS DOES NOT DO, both of them common elsewhere and both of
+/// them a different series:
+///
+/// * It does NOT reset the opposite band when direction flips, because the
+///   Python does not. TradingView's does. Resetting it moves the drawn line
+///   on the flip bar and would make this a lookalike rather than a port.
+/// * It does not examine a bar at all while ATR is in warmup, so both series
+///   are NaN there rather than carrying a direction seeded from nothing.
+#[must_use]
+pub fn supertrend(bars: &[Bar], period: usize, mult: f64) -> (Vec<f64>, Vec<f64>) {
+    let n = bars.len();
+    let (mut line, mut dir) = (nans(n), nans(n));
+    let a = atr(bars, period);
+    let (mut upper, mut lower) = (f64::NAN, f64::NAN);
+    // Seeded UP, exactly as the Python is: until a close breaks the lower
+    // band there has been no down-cross, and calling that FLAT would invent
+    // a third state this definition does not have (its measured mix is
+    // 52/48/0 — no flat bars at all once ATR is warm).
+    let mut direction = 1.0f64;
+    for t in 0..n {
+        if !a[t].is_finite() {
+            continue;
+        }
+        let bar = &bars[t];
+        let mid = (bar.high + bar.low) / 2.0;
+        let (basic_upper, basic_lower) = (mid + mult * a[t], mid - mult * a[t]);
+        if upper.is_finite() {
+            // `upper` is only finite because an earlier iteration set it, so
+            // `t >= 1` here and the previous close exists.
+            let prev_close = bars[t - 1].close;
+            if basic_upper < upper || prev_close > upper {
+                upper = basic_upper;
+            }
+            if basic_lower > lower || prev_close < lower {
+                lower = basic_lower;
+            }
+        } else {
+            upper = basic_upper;
+            lower = basic_lower;
+        }
+        if bar.close > upper {
+            direction = 1.0;
+        } else if bar.close < lower {
+            direction = -1.0;
+        }
+        dir[t] = direction;
+        line[t] = if direction > 0.0 { lower } else { upper };
+    }
+    (line, dir)
+}
+
+/// One confirmed zigzag pivot.
+///
+/// `at` is the bar the extreme happened on and `confirmed_at` the bar the
+/// reversal proved it. Unlike a fractal the distance between them is not a
+/// constant: it is however long price took to retrace `k` ATRs, which may be
+/// the next bar or twenty later. Nothing downstream may draw a pivot before
+/// `confirmed_at` — that is the whole difference between this and the
+/// zigzag on a retail chart.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ZigzagPivot {
+    pub at: usize,
+    pub confirmed_at: usize,
+    pub price: f64,
+    pub high: bool,
+}
+
+/// A LIVE ATR-zigzag. Pivots oldest first, each with the bar that confirmed it.
+///
+/// The leg extends while price makes new extremes and reverses when price
+/// retraces `k` × ATR from the leg's extreme. Port of
+/// `bias_defs.py::atr_zigzag` (line 130), the definition the H1 structure row
+/// runs and the one the study recommends: 6.1 flips per 100 H1 bars, 16%
+/// undone within three, median lag 6, and decisively **1% of turns missed**
+/// against `fractal(2)`'s 23%.
+///
+/// MOVED HERE FROM `fd_api::htf` ON 2026-09-19, unchanged, because a second
+/// implementation is a desk that will one day show two answers to one
+/// question. `htf.rs` now calls this, and
+/// `zigzag_labels_match_the_research_definition` still pins it against the
+/// Python on 2,000 real bars.
+///
+/// # Four things the study's prose did not pin
+///
+/// Each one silently changes the label series, and a wrong one still
+/// reproduces a morning's table while missing the aggregates. Three of the
+/// four were guessed wrong on the first port, and all three guesses were
+/// reasonable.
+///
+/// * **Highs and lows, not closes**, for both the extension of a leg and the
+///   reversal test.
+/// * **ATR at the CURRENT bar**, not at the pivot. The threshold therefore
+///   MOVES under an open leg: a leg opened in a quiet tape needs a bigger
+///   retrace to end it once volatility rises. That is a real consequence,
+///   not a bug, and freezing it at the pivot would give a different table.
+/// * **Strictly greater, not greater-or-equal.** A retrace of exactly `k`
+///   ATRs does not turn the leg. One character.
+/// * **On a bar that could seed either direction, UP wins**, and **a warmup
+///   bar is skipped whole** — while ATR is not finite the bar is not
+///   examined and `extreme` does not move. Measured on the 25,708-bar H1
+///   file: FLAT on the first 13 bars and never again.
+/// * **The seed is the first bar's CLOSE**, and before a direction exists one
+///   scalar wanders up on a bar that closes at or above it and down
+///   otherwise.
+///
+/// # Why it cannot repaint
+///
+/// A pivot is appended only when the reversal that confirms it has already
+/// happened, and nothing ever pops one. The extreme of the leg IN PROGRESS
+/// is not a pivot and is not published as one. So the pivot list at bar `t`
+/// is a prefix of the list at any later bar, and the label at `t` is the leg
+/// in force at `t` forever after.
+#[must_use]
+pub fn zigzag_pivots(bars: &[Bar], k: f64, atr: Option<&[f64]>) -> Vec<ZigzagPivot> {
+    let mut out: Vec<ZigzagPivot> = Vec::new();
+    if !(k.is_finite() && k > 0.0) || bars.is_empty() {
+        return out;
+    }
+
+    let mut extreme = bars[0].close;
+    let mut extreme_at = 0usize;
+    let mut direction = 0i8;
+
+    for (t, bar) in bars.iter().enumerate() {
+        // SKIPPED ENTIRELY during the ATR warmup, so `extreme` does not drift
+        // before there is a threshold to judge it against. Continuing past
+        // the update rather than only past the test is one of the four places
+        // this could silently diverge.
+        let Some(a) = atr.and_then(|s| s.get(t)).copied().filter(|v| v.is_finite()) else { continue };
+        let thr = k * a;
+
+        match direction {
+            0 => {
+                // UP IS TESTED FIRST, and on a bar that satisfies both it
+                // wins. A tie is not hypothetical on a wide bar, and the two
+                // answers are opposite labels.
+                if bar.high - extreme > thr {
+                    out.push(ZigzagPivot { at: extreme_at, confirmed_at: t, price: extreme, high: false });
+                    direction = 1;
+                    extreme = bar.high;
+                    extreme_at = t;
+                } else if extreme - bar.low > thr {
+                    out.push(ZigzagPivot { at: extreme_at, confirmed_at: t, price: extreme, high: true });
+                    direction = -1;
+                    extreme = bar.low;
+                    extreme_at = t;
+                } else if bar.close >= extreme {
+                    if bar.high > extreme {
+                        extreme = bar.high;
+                        extreme_at = t;
+                    }
+                } else if bar.low < extreme {
+                    extreme = bar.low;
+                    extreme_at = t;
+                }
+            }
+            1 => {
+                // The leg extends BEFORE the reversal test, so one bar can
+                // make a new high and then give back `thr` from it and turn.
+                if bar.high > extreme {
+                    extreme = bar.high;
+                    extreme_at = t;
+                }
+                if extreme - bar.low > thr {
+                    out.push(ZigzagPivot { at: extreme_at, confirmed_at: t, price: extreme, high: true });
+                    direction = -1;
+                    extreme = bar.low;
+                    extreme_at = t;
+                }
+            }
+            _ => {
+                if bar.low < extreme {
+                    extreme = bar.low;
+                    extreme_at = t;
+                }
+                if bar.high - extreme > thr {
+                    out.push(ZigzagPivot { at: extreme_at, confirmed_at: t, price: extreme, high: false });
+                    direction = 1;
+                    extreme = bar.high;
+                    extreme_at = t;
+                }
+            }
+        }
+    }
+    out
+}
+
+/// The zigzag as two chart series: the confirmed pivot level, and the leg.
+///
+/// THE LINE STEPS; IT IS NOT A POLYLINE BACK TO THE PIVOT'S OWN BAR, and the
+/// difference is the crate's invariant rather than a drawing preference.
+/// Joining pivot A at bar 40 to pivot B at bar 58 means writing a value into
+/// bars 40..58 at the moment B is confirmed — bar 65, say. Those bars already
+/// had values when the chart was 60 bars long, so the series would change
+/// under its own history: `every_indicator_is_causal` fails, and on a live
+/// chart the line would visibly redraw over bars the trader had already
+/// traded. What a trader can act on is the level of the last CONFIRMED pivot,
+/// which is what this holds until the next one replaces it.
+///
+/// `direction` is `+1` after a confirmed pivot low (the leg is up), `-1`
+/// after a confirmed pivot high, and NaN before the first pivot — the FLAT
+/// that the study measured on the first 13 bars of the H1 file and never
+/// again.
+#[must_use]
+pub fn zigzag(bars: &[Bar], k: f64, atr_period: usize) -> (Vec<f64>, Vec<f64>) {
+    let n = bars.len();
+    let (mut line, mut dir) = (nans(n), nans(n));
+    // The SAME ATR the `atr` indicator publishes. If the threshold came from
+    // a second computation the zigzag would be measured in a unit the reader
+    // cannot put on the chart.
+    let a = atr(bars, atr_period);
+    let pivots = zigzag_pivots(bars, k, Some(&a));
+
+    let mut next = 0usize;
+    let (mut price, mut leg) = (f64::NAN, f64::NAN);
+    for t in 0..n {
+        while next < pivots.len() && pivots[next].confirmed_at <= t {
+            price = pivots[next].price;
+            leg = if pivots[next].high { -1.0 } else { 1.0 };
+            next += 1;
+        }
+        line[t] = price;
+        dir[t] = leg;
+    }
+    (line, dir)
+}
+
+/// Where an anchored VWAP restarts.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Anchor {
+    /// The broker session — a new day on the server's clock.
+    Day,
+    /// The broker week — the Sunday reopen.
+    Week,
+}
+
+impl Anchor {
+    /// From the `anchor` parameter, read as a length in days.
+    ///
+    /// `None` for anything that is neither, and the series is then all NaN.
+    /// A fallback to `Day` would draw a session line for somebody who asked
+    /// for a month, and they would have no way to tell.
+    #[must_use]
+    pub fn from_days(days: f64) -> Option<Self> {
+        match days.round() as i64 {
+            1 => Some(Self::Day),
+            7 => Some(Self::Week),
+            _ => None,
+        }
+    }
+}
+
+/// The broker's clock, as `bias_defs.py::shift_hours` defines it: UTC+3 while
+/// New York is on daylight time, UTC+2 otherwise.
+///
+/// A fixed offset would be wrong for five months of the year and a UTC
+/// calendar day would cut the session in the middle of the New York
+/// afternoon. The switch is New York's because the broker's is.
+fn broker_offset_ms(utc_ms: i64) -> i64 {
+    const HOUR_MS: i64 = 3_600_000;
+    if fd_core::clock::new_york_is_dst(utc_ms) { 3 * HOUR_MS } else { 2 * HOUR_MS }
+}
+
+/// VWAP anchored at the session or the week open.
+///
+/// Port of `bias_defs.py::anchored_vwap` (line 335). Measured on 25,708 H1
+/// bars: the DAY anchor turns 19.7 times per 100 bars with **57% of those
+/// turns reversed within three**, which is why the study says not to put it
+/// on a card and why [`MEASURED`] carries that sentence to the picker. The
+/// WEEK anchor is 9.2 and 53%.
+///
+/// ⚠ **It is a typical-price mean, not a volume-weighted one.** The bar files
+/// carry tick counts, not traded volume, so weighting by them would be a
+/// units claim the data cannot support. Every bar counts once. The name is
+/// the study's; this sentence is what keeps it from being a lie.
+///
+/// The first bucket of a series is PARTIAL — the anchor it belongs to began
+/// before the first bar in hand. The Python does the same, so the two agree,
+/// and a chart that starts mid-session shows a mean of the part it has.
+///
+/// The week runs from the Sunday reopen, which is Monday 00:00 on the
+/// broker's clock in both seasons because the broker's offset tracks New
+/// York's daylight rule exactly as the reopen does. That is the same weekend
+/// hole `fd_api::htf::weeks_of` finds by looking for a gap of more than two
+/// days between daily bars — located here by the clock that makes it, since
+/// intraday bars have no gap that large to look for.
+#[must_use]
+pub fn anchored_vwap(bars: &[Bar], anchor: Option<Anchor>) -> Vec<f64> {
+    const DAY_MS: i64 = 86_400_000;
+    let mut out = nans(bars.len());
+    let Some(anchor) = anchor else { return out };
+    let mut key = i64::MIN;
+    let (mut total, mut count) = (0.0f64, 0.0f64);
+    for (i, bar) in bars.iter().enumerate() {
+        let server_ms = bar.time + broker_offset_ms(bar.time);
+        let day = server_ms.div_euclid(DAY_MS);
+        let bucket = match anchor {
+            // Epoch day 0 is a Thursday, so `+3` puts the week boundary on
+            // Monday — the ISO week the study's `isocalendar()` groups by.
+            Anchor::Week => (day + 3).div_euclid(7),
+            Anchor::Day => day,
+        };
+        if bucket != key {
+            key = bucket;
+            total = 0.0;
+            count = 0.0;
+        }
+        total += bar.hlc3();
+        count += 1.0;
+        out[i] = total / count;
+    }
+    out
+}
+
 /* ---------------- tests ---------------- */
 
 #[cfg(test)]
@@ -833,5 +1396,166 @@ mod tests {
         let atr = &series["atr_14.atr"];
         assert!(atr[0].is_nan() && atr[5].is_nan(), "early ATR must be NaN, not 0");
         assert!(atr[30].is_finite());
+    }
+
+    /* ---------------- the method-level three ---------------- */
+
+    /// One hourly bar per hour from a given UTC instant.
+    fn hourly(start_ms: i64, n: usize) -> Vec<Bar> {
+        (0..n)
+            .map(|i| {
+                let t = start_ms + i as i64 * 3_600_000;
+                // STRICTLY RISING, so the running mean is strictly below the
+                // newest bar's typical price on every bar except the one that
+                // restarts the anchor. That makes "the mean equals this bar"
+                // an exact test for a restart. A cycling price gives the same
+                // equality by coincidence a few bars in - it did, on the
+                // first draft of this test.
+                let p = 100.0 + i as f64;
+                Bar { time: t, open: p, high: p + 1.0, low: p - 1.0, close: p, volume: None }
+            })
+            .collect()
+    }
+
+    fn utc_ms(year: i64, month: u32, day: u32, hour: i64) -> i64 {
+        (fd_core::clock::days_from_civil(year, month, day) * 24 + hour) * 3_600_000
+    }
+
+    #[test]
+    fn the_avwap_day_rolls_on_the_brokers_clock_in_both_seasons() {
+        // THE BRANCH THE REAL-BAR FIXTURE CANNOT REACH. The 2,000 H1 bars
+        // `crates/fd-api/tests/method_indicators.rs` pins against the Python
+        // run May to September 2026 and are New York daylight time
+        // throughout, so they exercise the +3 offset only. Here is the +2.
+        //
+        // The boundary moves with the offset and that is the whole point of
+        // not using a UTC calendar day: in summer the broker's day rolls at
+        // 21:00 UTC, in winter at 22:00. Both verified against
+        // `bias_defs.py::shift_hours` on 2026-09-19.
+        let restarts = |bars: &[Bar]| -> Vec<usize> {
+            let vwap = anchored_vwap(bars, Some(Anchor::Day));
+            // A restart is a bar whose value equals its own typical price:
+            // the mean of one bar.
+            (0..bars.len()).filter(|&i| (vwap[i] - bars[i].hlc3()).abs() < 1e-12).collect()
+        };
+
+        // 2026-10-29 (summer): the day must roll at 21:00 UTC, bar 3 of four
+        // starting at 18:00.
+        let summer = hourly(utc_ms(2026, 10, 29, 18), 6);
+        assert_eq!(restarts(&summer), vec![0, 3], "summer rolls at 21:00 UTC");
+
+        // 2026-11-03 (winter, after the 2026-11-01 changeover): 22:00 UTC.
+        let winter = hourly(utc_ms(2026, 11, 3, 18), 6);
+        assert_eq!(restarts(&winter), vec![0, 4], "winter rolls at 22:00 UTC");
+    }
+
+    #[test]
+    fn the_avwap_week_starts_at_the_sunday_reopen() {
+        // The weekend hole, found by the clock that makes it. The broker week
+        // opens Sunday 17:00 New York, which is Monday 00:00 on the server's
+        // clock in both seasons - 21:00 UTC in summer, 22:00 in winter -
+        // because the broker's offset tracks New York's daylight rule.
+        // `fd_api::htf::weeks_of` gets the same boundary from a gap of more
+        // than two days between DAILY bars; intraday bars have no such gap to
+        // look for, so the clock is the only way to see it.
+        //
+        // 2026-11-08 is a Sunday. Bars every hour from Friday 2026-11-06 18:00
+        // UTC: the week must restart on the bar at Sunday 22:00 UTC and
+        // nowhere else, in particular NOT at Saturday or Sunday midnight UTC.
+        let bars = hourly(utc_ms(2026, 11, 6, 18), 60);
+        let vwap = anchored_vwap(&bars, Some(Anchor::Week));
+        let restarts: Vec<i64> = (0..bars.len())
+            .filter(|&i| (vwap[i] - bars[i].hlc3()).abs() < 1e-12)
+            .map(|i| bars[i].time)
+            .collect();
+        assert_eq!(restarts, vec![bars[0].time, utc_ms(2026, 11, 8, 22)]);
+    }
+
+    #[test]
+    fn an_unknown_avwap_anchor_draws_nothing() {
+        // A fallback to the session would put a line on the chart that
+        // answers a question nobody asked, and it would look exactly like the
+        // one that does.
+        let bars = hourly(utc_ms(2026, 6, 1, 0), 48);
+        assert!(Anchor::from_days(30.0).is_none());
+        assert!(anchored_vwap(&bars, Anchor::from_days(30.0)).iter().all(|v| v.is_nan()));
+        assert!(anchored_vwap(&bars, Anchor::from_days(1.0)).iter().all(|v| v.is_finite()));
+    }
+
+    #[test]
+    fn the_zigzag_line_never_repaints() {
+        // The property the whole crate is built on, asserted on the one
+        // series in it that a naive implementation WOULD repaint: a zigzag
+        // drawn back to the pivot's own bar rewrites bars the trader has
+        // already seen. `every_indicator_is_causal` covers this too; this
+        // says it in the place where somebody tempted to "join the pivots"
+        // will read it.
+        let bars = wavy(260);
+        let spec = IndicatorSpec::new("zigzag");
+        let whole = compute_indicators(&bars, std::slice::from_ref(&spec)).unwrap();
+        for cut in [120, 150, 180, 210] {
+            let early = compute_indicators(&bars[..cut], std::slice::from_ref(&spec)).unwrap();
+            for key in ["zigzag_3_14.zigzag", "zigzag_3_14.direction"] {
+                for i in 0..cut {
+                    assert!(
+                        fd_core::parity_eq(whole[key][i], early[key][i]),
+                        "{key} at {i} changed once bar {cut} printed: {} -> {}",
+                        early[key][i],
+                        whole[key][i]
+                    );
+                }
+            }
+        }
+        // And it is a step function, not a diagonal: between two confirmed
+        // pivots the level does not move.
+        let line = &whole["zigzag_3_14.zigzag"];
+        let steps = (1..line.len()).filter(|&i| line[i] != line[i - 1] && line[i].is_finite()).count();
+        assert!(steps > 0 && steps < line.len() / 8, "{steps} changes in {} bars is not a step line", line.len());
+    }
+
+    #[test]
+    fn the_supertrend_direction_is_two_valued_once_atr_is_warm() {
+        // 52/48/0 on the study's H1 file: this definition has no flat state.
+        // A third value here would mean the port had invented one.
+        let bars = wavy(260);
+        let out = compute_indicators(&bars, &[IndicatorSpec::new("supertrend")]).unwrap();
+        let dir = &out["supertrend_10_3.direction"];
+        assert!(dir[8].is_nan(), "ATR(10) is not warm at bar 8");
+        for (i, v) in dir.iter().enumerate().skip(9) {
+            assert!(*v == 1.0 || *v == -1.0, "direction at {i} is {v}");
+        }
+        // The line is the band in force, so it sits below price in an up-leg
+        // and above it in a down-leg. Stated as a test because a sign slip
+        // here draws a plausible-looking line on the wrong side.
+        let line = &out["supertrend_10_3.supertrend"];
+        for i in 9..bars.len() {
+            if dir[i] > 0.0 {
+                assert!(line[i] < bars[i].high, "up-leg band above the bar at {i}");
+            } else {
+                assert!(line[i] > bars[i].low, "down-leg band below the bar at {i}");
+            }
+        }
+    }
+
+    #[test]
+    fn every_measured_row_names_a_registered_indicator_and_its_own_sample() {
+        // The table is data the catalog serves; a row for an id nobody
+        // registered would be a measurement of nothing, shown to nobody, and
+        // discovered by nobody either.
+        for (id, rows) in MEASURED {
+            assert!(definition(id).is_some(), "MEASURED has a row for unregistered `{id}`");
+            assert!(!rows.is_empty(), "`{id}` has an empty measurement, which reads as measured-and-blank");
+            for row in *rows {
+                assert!(matches!(row.timeframe, "1h" | "4h"), "{id}: {}", row.timeframe);
+                assert!(row.sample_bars > 1_000, "{id}: a sample of {} is not a measurement", row.sample_bars);
+                assert!(row.source.starts_with("docs/decisions/"), "{id}: {}", row.source);
+                // Every parameter named must exist on the definition, or the
+                // picker cannot tell which cell the viewer is looking at.
+                for (name, _) in row.params {
+                    let def = definition(id).expect("registered");
+                    assert!(def.params.iter().any(|(n, _)| n == name), "{id} has no parameter {name}");
+                }
+            }
+        }
     }
 }

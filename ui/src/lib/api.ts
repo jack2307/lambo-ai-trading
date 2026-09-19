@@ -18,12 +18,53 @@ export interface MarketInfo {
   hasData: boolean
 }
 
+/**
+ * How a definition BEHAVED on a sample this desk measured. Not a property of
+ * the definition, and not a verdict on trading it.
+ *
+ * TWO KINDS OF EVIDENCE REACH THE PICKER AND THEY ARE NOT THE SAME THING.
+ * `verdictFor()` says what happened when a rule built on an indicator was
+ * registered and run — almost always "killed". This says what the LINE does:
+ * how often it changes its mind, how much of that it takes back, how late it
+ * is to a turn it eventually agrees with, and how many turns it sleeps
+ * through. Three definitions have it — `supertrend`, `zigzag` and `avwap`,
+ * from docs/decisions/2026-09-18-market-bias-definitions.md — and the rest
+ * serve no `measured` field at all, where the client must draw nothing
+ * rather than a blank that reads as approval.
+ *
+ * `timeframe` is load-bearing: a number measured on 25,708 H1 bars is not a
+ * number about H4, and the server sends both rows where both were measured
+ * rather than generalising one. So is `params` — `avwap` on the day anchor
+ * is 19.7 flips per 100 bars and on the week 9.2, and a client showing one
+ * for the other would be quoting a real measurement of a different line.
+ */
+export interface MeasuredCell {
+  /** The study's own name for the cell, e.g. `avwap day`. */
+  definition: string
+  /** The timeframe these numbers were measured ON. */
+  timeframe: string
+  /** The parameter cell they describe. */
+  params: Record<string, number>
+  flipsPer100Bars: number
+  /** Share of the definition's own flips reversed within three bars. */
+  undoneWithin3Pct: number
+  medianLagBars: number
+  /** Share of reference turns it never agreed with before the next one. */
+  missedPct: number
+  sampleBars: number
+  source: string
+  /** The study's own warning about this cell, where it wrote one. */
+  caution?: string
+}
+
 export interface IndicatorInfo {
   id: string
   name: string
   pane: 'overlay' | 'pane'
   params: Record<string, number | string>
   outputs: string[]
+  /** Absent — never `[]` — for a definition nobody has measured. */
+  measured?: MeasuredCell[]
 }
 
 export interface StrategyInfo {

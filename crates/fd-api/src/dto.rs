@@ -71,6 +71,80 @@ pub struct IndicatorInfo {
     pub pane: &'static str,
     pub params: BTreeMap<String, f64>,
     pub outputs: Vec<String>,
+    /// What this desk MEASURED this definition doing, one row per timeframe
+    /// and parameter cell, or absent for anything nobody measured.
+    ///
+    /// ABSENT AND AN EMPTY LIST ARE DIFFERENT ANSWERS and the route never
+    /// serves the second. `[]` reads as "measured, and there was nothing to
+    /// report"; nothing at all is "unmeasured", which is the honest answer
+    /// for eleven of the fourteen definitions here. The client then draws
+    /// nothing in that slot — a grey "untested" where evidence goes is
+    /// itself read as evidence.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub measured: Option<Vec<MeasuredDto>>,
+}
+
+/// How a definition BEHAVED on a measured sample. Not a property of it.
+///
+/// The wire copy of `fd_indicators::Measured`, separate for the reason every
+/// DTO here is: the crate's row is static data with borrowed names and a
+/// slice of parameter pairs, which would serialise as an array of
+/// two-element arrays. A client reading `params.anchor` should not have to
+/// know that.
+///
+/// Same idiom as [`crate::htf::RuleMeasuredDto`], which carries the H1
+/// structure row's numbers, and for the same reason: the parameters are a
+/// definition and these are a measurement of one definition on one file over
+/// one window. Definitions do not go stale and measurements do, so the
+/// measurement travels with its timeframe, its sample size and the path of
+/// the note it came from, and can be argued with.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MeasuredDto {
+    /// The study's own name for the cell — `"avwap day"`, `"supertrend(10,3)"`.
+    pub definition: String,
+    /// The timeframe the numbers were measured ON. A number measured on
+    /// 25,708 H1 bars is not a number about H4, so both rows are served
+    /// rather than one being generalised.
+    pub timeframe: String,
+    /// The parameter cell these numbers describe. `avwap` anchored on the
+    /// week is a different row from `avwap` anchored on the day — 9.2 flips
+    /// per 100 bars against 19.7 — so a client showing the numbers for the
+    /// viewer's own parameters matches on this.
+    pub params: BTreeMap<String, f64>,
+    pub flips_per_100_bars: f64,
+    /// Share of this definition's own flips reversed within three bars. THE
+    /// COST, and the number most likely to be left out of a summary: the
+    /// favourable figures travel on their own.
+    pub undone_within_3_pct: f64,
+    pub median_lag_bars: f64,
+    /// Share of reference turns the label never agreed with before the next
+    /// one. Counted, never dropped — dropping them flatters a slow rule by
+    /// deleting the turns it slept through.
+    pub missed_pct: f64,
+    pub sample_bars: usize,
+    pub source: String,
+    /// The study's own warning about this cell, where it wrote one. Present
+    /// on `avwap day`, which the note names as one not to put on a card.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub caution: Option<String>,
+}
+
+impl From<&fd_indicators::Measured> for MeasuredDto {
+    fn from(m: &fd_indicators::Measured) -> Self {
+        Self {
+            definition: m.definition.to_string(),
+            timeframe: m.timeframe.to_string(),
+            params: m.params.iter().map(|(k, v)| ((*k).to_string(), *v)).collect(),
+            flips_per_100_bars: m.flips_per_100_bars,
+            undone_within_3_pct: m.undone_within_3_pct,
+            median_lag_bars: m.median_lag_bars,
+            missed_pct: m.missed_pct,
+            sample_bars: m.sample_bars,
+            source: m.source.to_string(),
+            caution: m.caution.map(str::to_string),
+        }
+    }
 }
 
 #[derive(Debug, Serialize)]
