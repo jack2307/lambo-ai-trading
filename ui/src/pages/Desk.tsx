@@ -38,7 +38,15 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { HtfCard } from '@/components/HtfCard'
 import { useHtf } from '@/lib/useHtf'
-import { PriceChart, type ActiveIndicator, type ChartTrade } from '@/components/PriceChart'
+import { PriceChart, type ActiveIndicator, type ChartLevel, type ChartTrade } from '@/components/PriceChart'
+import { IndicatorPicker, useViewerIndicators } from '@/components/IndicatorPicker'
+import { LevelToggles } from '@/components/LevelToggles'
+import {
+  familyOf,
+  readLevelFamilies,
+  writeLevelFamilies,
+  type LevelFamily,
+} from '@/lib/levels'
 import { Skeleton } from '@/components/ui/skeleton'
 import type { Book } from '@/App'
 import { api, type BacktestTrade, type Bar, type BrokerEvent, type IndicatorPoint, type LiveBar, type PaperBroker, type PaperEvent, type PaperRun, type PaperRunDetail } from '@/lib/api'
@@ -2715,6 +2723,39 @@ function tokenValue(name: string): string {
 const EMPTY_INDICATORS: ActiveIndicator[] = []
 const EMPTY_BARS: Bar[] = []
 const EMPTY_SERIES: Record<string, IndicatorPoint[]> = {}
+const EMPTY_LEVELS: ChartLevel[] = []
+
+/**
+ * The prior day's and the prior week's prices, appended to whatever the H4
+ * structure produced.
+ *
+ * ABSENT IS ABSENT. Each of these five is `number | null` on the wire and
+ * null is the ordinary state, not an error: the week's three are null until
+ * the stored daily series covers a whole prior week, and they come back the
+ * moment it does. A null drawn as 0 would be a line at the bottom of every
+ * chart on the desk, in a colour that means "a level somebody watches".
+ *
+ * Separate from the H4 block, and not gated on it, because the two come from
+ * different timeframes in the same response: a market with a daily export and
+ * no four-hour one has these and nothing else, and folding them together
+ * would have lost all five to an early return.
+ */
+function dailyLevels(out: ChartLevel[], htf: HtfResponse | null): ChartLevel[] {
+  const d1 = htf?.d1
+  if (!d1) return out
+  const rows: [string, number | null, string][] = [
+    ['prior day high', d1.prior_day_high, 'prior_day_high'],
+    ['prior day low', d1.prior_day_low, 'prior_day_low'],
+    ['prior week high', d1.prior_week_high, 'prior_week_high'],
+    ['prior week low', d1.prior_week_low, 'prior_week_low'],
+    ['prior week mid', d1.prior_week_mid, 'prior_week_mid'],
+  ]
+  for (const [label, price, kind] of rows) {
+    if (price == null || !Number.isFinite(price)) continue
+    out.push({ label, price, kind })
+  }
+  return out
+}
 
 /**
  * Where these candles came from, said on the chart.
@@ -2774,8 +2815,13 @@ function ChartSource({
           ? `, exported ${since(data.source.exported_at_ms, now)} ago`
           : ''}
         {'. '}
-        Indicators are hidden: a 15-minute average is not a {tf} average, and drawing one here under its own
-        name would be wrong in a way nothing on screen could show.
+        {/* "Indicators are hidden" was true when the book's were the only
+            ones the chart could draw. It stopped being true the moment a
+            viewer could add their own, and a caption that says nothing is
+            drawn while lines are on screen is worse than no caption. */}
+        The book's own indicators are hidden: a 15-minute average is not a {tf} average, and drawing one here
+        under its own name would be wrong in a way nothing on screen could show. Lines you add yourself are
+        computed for {tf} and drawn dashed.
       </span>
       {behind > 0 && (
         <span className="text-lp">
@@ -2950,6 +2996,10 @@ function RunChart({
         // does not belong over them gets a pane of its own, numbered from 1.
         pane: entry.overlay ? 0 : active.filter((e) => e.pane > 0).length + 1,
         color: tokenValue(LINE_TOKENS[active.length % LINE_TOKENS.length]),
+        // Said explicitly although it is the default, because this is the
+        // set the whole distinction is about: these are the lines the bot
+        // READ, and the viewer's own are drawn beside them.
+        source: 'book',
       })
     }
     return active
@@ -2972,17 +3022,30 @@ function RunChart({
   const [showHtf, setShowHtf] = useState(readShowHtf)
 
   /**
-   * The H4 swings and the break level, as lines.
+   * Every level the desk already computes, as lines.
    *
-   * Only the levels that exist. `break_level` is null on a RANGE - a range has
-   * no single price whose break changes the label - and two swings can share a
+   * THE H4 SWINGS WERE THE ONLY ONES DRAWN UNTIL NOW. `/api/paper/htf` has
+   * also been sending the prior day's high and low and the prior week's high,
+   * low and midpoint on every poll since the HTF card shipped — five prices
+   * the desk computed, read into the card as figures, and threw away here.
+   * They are the levels a discretionary reader looks for first, and the chart
+   * was silently the one screen that did not have them.
+   *
+   * Only the levels that exist. A null is ABSENT, never drawn at zero: the
+   * prior week's numbers are null until the stored series is long enough, and
+   * a line at 0.00 under gold at 4,381 would be a level nobody could even
+   * read as a mistake. `break_level` is null on a RANGE — a range has no
+   * single price whose break changes the label — and two swings can share a
    * bar when one outside bar was both a fractal high and a fractal low, so
    * nothing here assumes distinct stamps or a full set.
+   *
+   * `kind` is carried beside the label because that is what `familyOf` reads
+   * to colour the line and to decide which switch turns it off.
    */
-  const htfLevels = useMemo(() => {
+  const allLevels = useMemo<ChartLevel[]>(() => {
+    const out: ChartLevel[] = []
     const st = htf?.h4?.structure
-    if (!showHtf || !st) return []
-    const out: { label: string; price: number }[] = []
+    if (!st) return dailyLevels(out, htf)
     const bl = st.break_level
     // THE BREAK LEVEL IS NOT AN INDEPENDENT PRICE. On UP it IS `last_low`; on
     // DOWN it IS `last_high` - by construction, because it points at whichever
@@ -2993,14 +3056,46 @@ function RunChart({
     const highIsBreak = bl != null && st.last_high != null && same(bl, st.last_high.price)
     const lowIsBreak = bl != null && st.last_low != null && same(bl, st.last_low.price)
     const side = (st.break_side ?? '').toLowerCase()
-    if (st.last_high && !highIsBreak) out.push({ label: 'H4 high', price: st.last_high.price })
-    if (st.last_low && !lowIsBreak) out.push({ label: 'H4 low', price: st.last_low.price })
+    if (st.last_high && !highIsBreak) out.push({ label: 'H4 high', price: st.last_high.price, kind: 'h4_high' })
+    if (st.last_low && !lowIsBreak) out.push({ label: 'H4 low', price: st.last_low.price, kind: 'h4_low' })
     if (bl != null) {
       const what = highIsBreak ? 'H4 high · breaks' : lowIsBreak ? 'H4 low · breaks' : 'H4 breaks'
-      out.push({ label: `${what} ${side}`.trim(), price: bl })
+      // The kind follows the SWING it is, not the word in the label: a break
+      // level is one of the two swings by construction, and `familyOf` must
+      // put it in their family rather than in the neutral one.
+      const kind = highIsBreak ? 'h4_high' : lowIsBreak ? 'h4_low' : 'h4_break'
+      out.push({ label: `${what} ${side}`.trim(), price: bl, kind })
     }
-    return out
-  }, [htf, showHtf])
+    return dailyLevels(out, htf)
+  }, [htf])
+
+  /**
+   * Which families of level are drawn, and the master switch over all of them.
+   *
+   * Two controls rather than one, and they do different jobs. `showHtf` is
+   * the one that has always been here — it remembers, per viewer, that
+   * somebody wanted this overlay off entirely — and the family switches are
+   * new, for the reader who wants the week's extremes without the H4 swings.
+   * The families are only offered while the master is on, because a switch
+   * that cannot change what is on screen teaches a reader that none of them
+   * can.
+   */
+  const [families, setFamilies] = useState<Set<LevelFamily>>(readLevelFamilies)
+
+  /** Only the families this response actually contains — see `LevelToggles`. */
+  const levelCounts = useMemo(() => {
+    const counts = new Map<LevelFamily, number>()
+    for (const level of allLevels) {
+      const family = familyOf(level.kind ?? '')
+      counts.set(family, (counts.get(family) ?? 0) + 1)
+    }
+    return counts
+  }, [allLevels])
+
+  const htfLevels = useMemo<ChartLevel[]>(() => {
+    if (!showHtf) return EMPTY_LEVELS
+    return allLevels.filter((level) => families.has(familyOf(level.kind ?? '')))
+  }, [allLevels, families, showHtf])
 
   /**
    * The open position to draw, taken from whichever book is on screen.
@@ -3080,6 +3175,53 @@ function RunChart({
     const exitTime = snapToBar(focus.exitTime, bars)
     return { ...focus, entryTime, exitTime: exitTime ?? entryTime }
   }, [focus, ownTf, bars])
+
+  /**
+   * THE VIEWER'S OWN LINES, and why they are allowed where the book's are not.
+   *
+   * The rule above stands: the run's `ema_21` is a fifteen-minute average and
+   * is hidden the moment the candles underneath stop being fifteen-minute
+   * ones. These are a different thing — asked for by the person looking, and
+   * computed by the server for `tf`, the timeframe actually on screen. There
+   * is no timeframe they could be mislabelled against, so they are drawn on
+   * all of them, dashed, under the word `yours`.
+   *
+   * `paneBase` is how many panes the book's indicators already hold. Without
+   * it the viewer's first pane would be the book's first pane, and an RSI
+   * somebody added would share a box with the MACD the bot trades.
+   */
+  const paneBase = useMemo(() => indicators.filter((e) => e.pane > 0).length, [indicators])
+  const viewer = useViewerIndicators(market, tf, theme, paneBase)
+
+  /**
+   * Drawn only when the server's answer is FOR the candles on screen.
+   *
+   * `/api/chart/indicators` echoes the timeframe it computed on. If that ever
+   * stops matching what was asked for — a normalisation, an older route, a
+   * reply that arrives after the selector moved — the lines are dropped and
+   * the caption says so, rather than a 4h RSI being drawn over 15m candles
+   * with nothing on screen able to show it.
+   */
+  const viewerOk = viewer.computedFor == null || viewer.computedFor === tf
+  const viewerIndicators = viewerOk ? viewer.indicators : EMPTY_INDICATORS
+  const chartIndicators = useMemo(
+    () => (viewerIndicators.length === 0 ? indicators : [...indicators, ...viewerIndicators]),
+    [indicators, viewerIndicators],
+  )
+
+  /**
+   * One series record for both sets.
+   *
+   * Safe to merge only because the viewer's keys carry the `you:` prefix
+   * (`IndicatorPicker`): with bare keys the book's `ema_21.ema` and a
+   * viewer's `ema_21.ema` would be one entry, and whichever was written last
+   * would be drawn twice under two different names.
+   */
+  const bookSeries = ownTf ? (detail?.series ?? EMPTY_SERIES) : EMPTY_SERIES
+  const chartSeries = useMemo(
+    () => ({ ...bookSeries, ...(viewerOk ? viewer.series : EMPTY_SERIES) }),
+    [bookSeries, viewer.series, viewerOk],
+  )
 
   if (!detail) {
     return (
@@ -3177,12 +3319,37 @@ function RunChart({
           )}
           title={
             showHtf
-              ? 'Hide the H4 structure levels from the chart'
-              : 'Draw the H4 swing highs, lows and break level'
+              ? 'Hide every level from the chart — the H4 structure and the prior day and week'
+              : 'Draw the H4 swing highs, lows and break level, and the prior day and week extremes'
           }
         >
-          H4 levels {showHtf ? 'on' : 'off'}
+          {/* It said "H4 levels" while the H4 swings were the only ones
+              drawn. The storage key is still `fd.desk.showHtf`: somebody who
+              switched these off in that version should stay switched off,
+              and renaming the key would silently turn them all back on. */}
+          levels {showHtf ? 'on' : 'off'}
         </button>
+        {showHtf && (
+          <LevelToggles
+            on={families}
+            present={new Set(levelCounts.keys())}
+            counts={levelCounts}
+            onChange={(next) => {
+              setFamilies(next)
+              writeLevelFamilies(next)
+            }}
+          />
+        )}
+        <IndicatorPicker
+          offered={viewer.offered}
+          chosen={viewer.indicators}
+          computedFor={viewer.computedFor}
+          timeframe={tf}
+          error={viewer.error}
+          onAdd={viewer.add}
+          onRemove={viewer.remove}
+          onParam={viewer.setParam}
+        />
         {showOpen && openPnl && (
           <span className={cn('num ml-2 normal-case', openPnl.positive ? 'text-lc' : 'text-lp')}>
             {broker ? 'account' : 'book'} P/L {openPnl.label}
@@ -3206,8 +3373,8 @@ function RunChart({
           pending={broker ? null : detail.run.pending}
           pendingFill={!broker && detail.run.pending ? pendingFill(detail.run.pending, live, detail.run.tf) : null}
           bars={bars}
-          indicators={indicators}
-          series={ownTf ? (detail.series ?? {}) : EMPTY_SERIES}
+          indicators={chartIndicators}
+          series={chartSeries}
           frame={null}
           showLevels={false}
           trades={chartTrades}
@@ -3218,20 +3385,55 @@ function RunChart({
         />
       </div>
       <p className="text-muted-foreground mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 fd-caption">
-        {indicators.length === 0 ? (
-          <span>This strategy reads no indicator — it trades the clock or the bar itself.</span>
-        ) : (
-          indicators.map((entry) => (
+        {/* THE WORD IS ON EVERY ENTRY, not on a heading over a group of them.
+            Two sets of lines in the same five hues are told apart here the
+            same way they are told apart on the chart: `book` is solid and is
+            what the bot read, `yours` is dashed and is what somebody added
+            to look at. A peer session spent today on a bug where two sources
+            of figures were separated only by a caption elsewhere on the
+            screen, and on screen they were identical. */}
+        {indicators.length === 0 && (
+          <span>
+            {/* `runIndicators`, not `indicators`: off the traded timeframe
+                the second is empty either way, and the caption used to say
+                the strategy reads none while `ChartSource` said in the same
+                paragraph that they were hidden. Both cannot be true. */}
+            {runIndicators.length === 0
+              ? 'This strategy reads no indicator — it trades the clock or the bar itself.'
+              : `The book's own indicators are drawn on ${runTf} only, so none of them is on screen.`}
+          </span>
+        )}
+        {chartIndicators.map((entry) => {
+          const mine = entry.source === 'viewer'
+          return (
             <span key={entry.key} className="num inline-flex items-center gap-1">
               <span
-                className="inline-block h-px w-3 align-middle"
-                style={{ backgroundColor: entry.color }}
+                className="inline-block h-0 w-3 border-t align-middle"
+                style={{ borderColor: entry.color, borderTopStyle: mine ? 'dashed' : 'solid' }}
                 aria-hidden
               />
-              {entry.key}
+              {/* The swatch is drawn in the line's own style so the chip can
+                  be matched to the curve, and the word is there for anyone
+                  who cannot separate a dash from a rule at three pixels. */}
+              <span className={mine ? 'text-muted-foreground/60' : 'text-foreground/70'}>
+                {mine ? 'yours' : 'book'}
+              </span>
+              {entry.name ?? entry.key}
               {entry.pane > 0 && <span className="text-muted-foreground/60">pane {entry.pane}</span>}
             </span>
-          ))
+          )
+        })}
+        {viewerIndicators.length > 0 && (
+          <span className="text-muted-foreground/70">
+            your lines are computed on {viewer.computedFor ?? tf}, the candles on screen — the bot read none of
+            them.
+          </span>
+        )}
+        {!viewerOk && (
+          <span className="text-caution">
+            your lines came back computed on {viewer.computedFor}, not {tf} — dropped rather than drawn over the
+            wrong candles.
+          </span>
         )}
         <span className="text-muted-foreground/70">
           {broker

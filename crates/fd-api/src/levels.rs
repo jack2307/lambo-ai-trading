@@ -1,0 +1,526 @@
+//! Price-bar levels, computed once so the model and the desk read the same
+//! marks.
+//!
+//! `GET /api/paper/levels?market=xauusd&tf=15m`. Everything here is derived
+//! from CLOSED stored bars of one timeframe and nothing else: no forming bar,
+//! no tick, no resample. Same discipline as [`crate::htf`] and for the same
+//! reason — a prompt and a Desk panel that each computed their own levels
+//! would eventually disagree, and the disagreement would surface as a model
+//! explaining a gap the screen does not show.
+//!
+//! ## It carries no verdict, and that is a pre-commitment
+//!
+//! No score, no composite, no ranking, no confluence count, no zone labelled
+//! with a word. `docs/hypotheses/2026-09-18-smc-context.md` was registered on
+//! 2026-09-18 — **before this route existed** — and lines 68-72 say so in
+//! advance, because the book that will read this route must be able to claim
+//! the route did not decide for it. The prior behind that is not neutral:
+//! every mechanical use of these levels this desk has tested has failed. The
+//! full ICT chain closed at PF 0.75-0.77 and −0.17 to −0.19R over four
+//! out-of-sample years; prior-day high and low closed at the 1st-6th
+//! percentile of a null gated to their own session, which is WORSE than
+//! random entry in the same hours; twenty-five more registrations tested the
+//! options tape's POC, value area and walls and none survived. A score here
+//! would smuggle that refuted claim back in under a new name.
+//!
+//! So the ordering of every list is chronological, oldest first. Not by
+//! importance, not by distance from price: those are rankings, and the caller
+//! that wants one applies its own and owns it.
+//!
+//! ## Units
+//!
+//! Every price is in the market's quote units. Everything else says what it
+//! is in its name — `*_atr` in ATR(14) of this timeframe, `*_bars` in bars of
+//! this timeframe, `*_ms` in UTC epoch milliseconds, `*_fraction` in 0..1.
+//! `atr14` itself is published so every `*_atr` on the response has a visible
+//! denominator (`docs/decisions/2026-09-17-unit-carrying.md`).
+//!
+//! ## Null is not zero, and an absent market is not an empty one
+//!
+//! When the stored bars are missing, every block is `null` and `unavailable`
+//! carries the reason and the export command. It is not an empty list: an
+//! empty list says "this market has no fair value gaps today", which is a
+//! measurement, and the two must render differently.
+
+use std::sync::Arc;
+
+use axum::Json;
+use axum::extract::{Query, State};
+use fd_core::types::Bar;
+use fd_engine::price_levels::{
+    BarProfile, FairValueGap, LevelKind, LiquidityPool, OrderBlock, PeriodExtremes, activity_profile,
+    bucket_size_price, liquidity_pools, order_blocks, period_extremes, period_pool, runs_split_by_gap,
+};
+use fd_store::{read_bars, timeframe_ms};
+use serde::{Deserialize, Serialize};
+
+use crate::error::ApiError;
+use crate::htf::weeks_of;
+use crate::paper::now_ms;
+use crate::state::AppState;
+
+/* --------------------------------------------------------- the dials */
+
+/// The profile's window, in TRADING DAYS of the market's own bars.
+///
+/// Days as the store counts them — runs of bars between the broker's daily
+/// hole — and not 5 × 86,400,000 ms, so a bank holiday or a half session
+/// shortens the window by the bars that are missing rather than silently
+/// including a sixth day to make the arithmetic come out.
+const DEFAULT_PROFILE_DAYS: usize = 5;
+
+/// How many trading days of bars everything else is computed over.
+///
+/// Larger than the profile window on purpose: the prior WEEK's extremes are
+/// in the registration's list, and a five-day window has no prior week in it
+/// at all. Ten trading days is two broker weeks, which is the smallest window
+/// in which "the last complete week" is a thing that exists.
+const ANALYSIS_DAYS: usize = 10;
+
+/// A hard ceiling on the window a caller may ask for, so `?days=100000` reads
+/// a hundred thousand day-runs' worth of bars into one response rather than
+/// answering. Sixty trading days is about a quarter, which is past anything
+/// anyone has asked an intraday profile for.
+const MAX_PROFILE_DAYS: usize = 60;
+
+/// Buckets per ATR(14) in the activity profile.
+///
+/// Four, so a typical bar of this timeframe spans several buckets and the
+/// histogram has shape rather than one spike per bar. The number is published
+/// on the response as `buckets_per_atr` beside the bucket height it produced,
+/// so the derivation can be checked instead of believed.
+const BUCKETS_PER_ATR: f64 = 4.0;
+
+/// The share of activity the value area encloses. The market-profile
+/// convention, unchanged, and named here rather than typed into a call.
+const VALUE_AREA_PCT: f64 = 0.70;
+
+/// A displacement is a bar whose body exceeds this many ATR(14) AT ITS OWN
+/// BAR.
+///
+/// One ATR. A body of a whole ATR is the smallest thing that is not an
+/// ordinary bar — the average bar's body is well under its true range — and a
+/// smaller threshold turns every candle into an impulse and every candle
+/// before it into an order block. NOT tuned: nothing here was fitted to a
+/// result, because fitting a level rule to a result is precisely the family
+/// of work this desk has forty closed registrations against.
+const DISPLACEMENT_BODY_ATR: f64 = 1.0;
+
+/// Two swing highs within this many ATR(14) of each other are "equal".
+///
+/// A tenth of an ATR. In ATR units and not dollars so the same rule reads the
+/// same way in a quiet week and a violent one; on XAUUSD 15m an ATR of about
+/// two dollars makes this about twenty cents, which is the order of a spread
+/// plus a tick and therefore the order of "the same price" as a stop sitting
+/// there would experience it.
+const EQUAL_TOLERANCE_ATR: f64 = 0.10;
+
+/// The fractal half-widths for the swings liquidity is built from.
+///
+/// `(2, 2)`: a swing high beats the two bars either side of it and is
+/// confirmed two bars later. The same half-width `htf.rs` uses on its H4 row,
+/// so the two routes' swings are the same KIND of object even where they run
+/// on different bars — which is the only reason [`fd_engine::swing_id`] joins
+/// anything.
+const SWING_LEFT: usize = 2;
+const SWING_RIGHT: usize = 2;
+
+/// The hole that separates one trading day from the next.
+///
+/// Forty-five minutes, which is a measured fact rather than a convention: the
+/// broker rolls its day at 21:00 UTC in US summer and 22:00 in winter, and
+/// hour 21Z holds exactly zero 15m bars against 332-348 in every neighbouring
+/// hour (measured 2026-09-18, recorded in `htf.rs`). So the boundary is an
+/// hour-long hole. Forty-five minutes is under it and over the fifteen-minute
+/// spacing of the bars themselves, and it moves with the changeover the way a
+/// clock rule would not.
+const DAY_GAP_MS: i64 = 45 * 60_000;
+
+/// ATR's period, everywhere on this route. One number, published as `atr14`.
+const ATR_PERIOD: usize = 14;
+
+/* ------------------------------------------------------- the response */
+
+/// Which file the bars came from, and how many were read.
+///
+/// The same three facts `HtfSourceDto` carries, and a separate type because
+/// the two routes are allowed to diverge — this one may one day read a second
+/// timeframe and `htf`'s may not. Named on the response because this route,
+/// like `htf`, REFUSES to resample: see [`stored_only`].
+#[derive(Debug, Serialize)]
+pub struct LevelsSourceDto {
+    /// The parquet the bars were read from, relative to the data root.
+    pub file: String,
+    /// Bars in the file, before the analysis window narrowed them.
+    pub bars: usize,
+    /// The stored timeframe of that file. Always equal to the timeframe asked
+    /// for; a mismatch is refused rather than resampled.
+    pub timeframe: String,
+}
+
+/// The slice of the file everything on this response was computed from.
+///
+/// Published because "the last ten trading days" is a different number of
+/// bars every week, and a reader comparing two responses needs to know
+/// whether a level disappeared or merely fell out of the window.
+#[derive(Debug, Serialize)]
+pub struct LevelsWindowDto {
+    /// Bars in the analysis window.
+    pub bars: usize,
+    /// Trading-day runs in it, as the daily hole counts them.
+    pub days: usize,
+    pub start_bar_ms: i64,
+    pub end_bar_ms: i64,
+    /// The profile's own, narrower, window in trading days — the one dial a
+    /// caller can turn, via `?days=`.
+    pub profile_days: usize,
+}
+
+/// Session, day and week extremes.
+///
+/// **`session` is the run IN PROGRESS and `day` is the last COMPLETE one**,
+/// which is the same convention `htf.rs` uses when it calls the bar before
+/// the newest one the "prior day". The two are separate fields rather than
+/// one labelled object because a forming extreme and a finished one are
+/// different facts and a reader must not have to infer which they are
+/// looking at; each also carries its own `state`, `FORMING` or `COMPLETE`.
+///
+/// **"Session" here means the broker's trading day, not Asia/London/NY.**
+/// Those three need clock boundaries this desk has never measured for this
+/// feed, and a guessed boundary is a level that would be wrong twice a year
+/// at the daylight-saving changeover with nothing saying so. The hole between
+/// runs is measured; a clock is not.
+#[derive(Debug, Serialize)]
+pub struct ExtremesDto {
+    pub session: PeriodExtremes,
+    pub day: PeriodExtremes,
+    pub week: PeriodExtremes,
+}
+
+/// `GET /api/paper/levels?market=<id>&tf=<timeframe>&days=<n>`
+///
+/// 200 whenever the market is known, so a card or a prompt block can say WHY
+/// it has nothing rather than decoding a status code.
+#[derive(Debug, Serialize)]
+pub struct LevelsResponse {
+    pub market: String,
+    /// The stored timeframe these levels are computed on. Every `age_bars`
+    /// and every `*_atr` on this response is in units of THIS timeframe.
+    pub timeframe: String,
+    /// That timeframe's length in ms, so a reader ageing a `*_bar_ms` never
+    /// has to reach for a sibling object to learn how long a bar is.
+    pub bar_ms: i64,
+    /// The newest CLOSED bar everything here describes.
+    pub computed_at_bar_ms: Option<i64>,
+    /// Wall clock when the response was computed. Its distance from
+    /// `computed_at_bar_ms` is how stale the levels are.
+    pub computed_at_ms: i64,
+    pub last_close: Option<f64>,
+    /// ATR(14) on this timeframe, in quote units. THE DENOMINATOR of every
+    /// `*_atr` field below, published so each of them can be checked.
+    pub atr14: Option<f64>,
+    pub profile: Option<BarProfile>,
+    /// Unfilled only, oldest first. An EMPTY list means the window has no
+    /// unfilled gaps, which is a measurement; `null` means there were no bars
+    /// to look at.
+    pub fair_value_gaps: Option<Vec<FairValueGap>>,
+    pub order_blocks: Option<Vec<OrderBlock>>,
+    /// Equal-high and equal-low pools plus the prior day's and prior week's
+    /// extremes, each with `swept` and the bar that swept it.
+    pub liquidity: Option<Vec<LiquidityPool>>,
+    pub extremes: Option<ExtremesDto>,
+    pub source: Option<LevelsSourceDto>,
+    pub window: Option<LevelsWindowDto>,
+    /// Why there is nothing, or `null` when there is something.
+    ///
+    /// A sentence written to be displayed. **A prompt must not print it
+    /// verbatim**: it is a join written in another crate, and `9a5dbfb` is
+    /// the receipt for what that costs — `htf_context` printed a route's
+    /// `unavailable` sentence into a registered campaign's prompt, so adding
+    /// a timeframe to the route would have changed the prompt's wording with
+    /// nobody editing the book. Read the field, say it in your own words.
+    pub unavailable: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct LevelsQuery {
+    pub market: String,
+    /// The stored timeframe. Defaults to `15m`, which is the timeframe the
+    /// books decide on.
+    pub tf: Option<String>,
+    /// The PROFILE's window in trading days. Everything else uses
+    /// [`ANALYSIS_DAYS`], which is not a dial: the prior week has to be in
+    /// view for the prior-week levels to exist at all, and letting a caller
+    /// shrink the window below that would make those levels vanish for a
+    /// reason the response could not state.
+    pub days: Option<usize>,
+}
+
+/* ------------------------------------------------ loading, and refusing */
+
+/// The stored series for a timeframe, and nothing else.
+///
+/// **This refuses where [`AppState::bars`] resamples**, exactly as
+/// `htf::stored_only` does, and the reason is worth repeating rather than
+/// cross-referencing because a reader here will not have `htf.rs` open:
+/// `AppState::bars` falls back to rebucketing a finer series when no file
+/// matches, anchored to the Unix epoch, and `fd_store::resample` emits the
+/// TRAILING PARTIAL BUCKET as an ordinary bar. A still-forming 15m candle
+/// indistinguishable from a closed one would make every level on this
+/// response repaint, four times an hour, invisibly — and "computed from
+/// closed bars only" is the property the whole file is documented on.
+///
+/// It is a second copy rather than a call into `htf.rs` because the two
+/// routes own their own files: `htf` refuses a missing H4 with an export
+/// command naming H4, and this one names the timeframe it was asked for.
+fn stored_only(state: &AppState, market: &str, timeframe: &str) -> Result<(Vec<Bar>, LevelsSourceDto), String> {
+    let spec = state.config.market(market).map_err(|e| e.to_string())?;
+    let name = format!("{}-{timeframe}.parquet", spec.bar_symbol);
+    let path = state.data.join("bars").join(&name);
+    if !path.exists() {
+        return Err(format!(
+            "no {timeframe} bars for {market}: bars/{name} has not been exported yet \
+             (py/ingest/mt5_export.py --symbols {} --timeframes {})",
+            spec.bar_symbol,
+            mt5_name(timeframe)
+        ));
+    }
+    let bars = read_bars(&path).map_err(|e| format!("bars/{name}: {e}"))?;
+    if bars.is_empty() {
+        return Err(format!("bars/{name} is empty"));
+    }
+    let source = LevelsSourceDto { file: format!("bars/{name}"), bars: bars.len(), timeframe: timeframe.to_string() };
+    Ok((bars, source))
+}
+
+/// The MT5 name for one of our timeframes, for the export hint in a refusal.
+///
+/// Exhaustive rather than a two-branch guess, for the reason `htf::mt5_name`
+/// records: the two-branch version was correct for its callers and silently
+/// wrong for the next one, and the sentence telling an operator how to fix a
+/// missing file read perfectly while naming the wrong timeframe.
+fn mt5_name(timeframe: &str) -> &str {
+    match timeframe {
+        "1m" => "M1",
+        "5m" => "M5",
+        "15m" => "M15",
+        "30m" => "M30",
+        "1h" => "H1",
+        "4h" => "H4",
+        "1d" => "D1",
+        other => other,
+    }
+}
+
+/// The last `days` trading-day runs of a series, as an index range.
+///
+/// `None` when there are no bars. Fewer runs than asked for is not an error —
+/// a store holding three days answers with three, and `window.days` on the
+/// response says so rather than the request's number.
+fn last_days(bars: &[Bar], days: usize) -> Option<std::ops::Range<usize>> {
+    if bars.is_empty() || days == 0 {
+        return None;
+    }
+    let runs = runs_split_by_gap(bars, DAY_GAP_MS);
+    let first = runs.len().saturating_sub(days);
+    Some(runs[first].start..bars.len())
+}
+
+/* ----------------------------------------------------------- the route */
+
+/// `GET /api/paper/levels?market=xauusd`
+///
+/// See [`LevelsResponse`]. 200 whenever the market is known.
+pub async fn levels(
+    State(state): State<Arc<AppState>>,
+    Query(query): Query<LevelsQuery>,
+) -> Result<Json<LevelsResponse>, ApiError> {
+    let market = query.market;
+    let timeframe = query.tf.unwrap_or_else(|| "15m".to_string());
+    let Some(bar_ms) = timeframe_ms(&timeframe) else {
+        return Err(ApiError::BadRequest(format!("unknown timeframe {timeframe}")));
+    };
+    let profile_days = query.days.unwrap_or(DEFAULT_PROFILE_DAYS).clamp(1, MAX_PROFILE_DAYS);
+    // An unknown MARKET is a different failure from a missing FILE and gets a
+    // different answer, which is the distinction `ApiError` is documented on:
+    // a missing file is fixed by running an ingest, a market that does not
+    // exist is fixed by changing the call. Folding both into `unavailable`
+    // would tell an operator to export bars for a symbol this desk does not
+    // have.
+    state.config.market(&market).map_err(|e| ApiError::NotFound(e.to_string()))?;
+
+    let (all, source) = match stored_only(&state, &market, &timeframe) {
+        Ok(pair) => pair,
+        Err(why) => {
+            // EVERY block null, not an empty list. An empty `fair_value_gaps`
+            // is a measurement — this window has none — and a market with no
+            // file has not been measured at all.
+            return Ok(Json(LevelsResponse {
+                market,
+                timeframe,
+                bar_ms,
+                computed_at_bar_ms: None,
+                computed_at_ms: now_ms(),
+                last_close: None,
+                atr14: None,
+                profile: None,
+                fair_value_gaps: None,
+                order_blocks: None,
+                liquidity: None,
+                extremes: None,
+                source: None,
+                window: None,
+                unavailable: Some(why),
+            }));
+        }
+    };
+
+    // The analysis window: the last two broker weeks of bars, so "the prior
+    // week's high" is a level that exists. `last_days` cannot return None
+    // here — `stored_only` refused an empty file — and the fallback is named
+    // rather than unwrapped so a future caller cannot inherit a panic.
+    let range = last_days(&all, ANALYSIS_DAYS).unwrap_or(0..all.len());
+    let bars = &all[range.clone()];
+    let last = bars.len() - 1;
+
+    // ONE ATR series, computed here and published as `atr14`, passed to every
+    // engine function that needs a threshold. A second ATR would make every
+    // `*_atr` on this response a ratio whose denominator is invisible, which
+    // is the defect `htf.rs` pins with `the_threshold_uses_the_published_atr`.
+    let atr = fd_indicators::atr(bars, ATR_PERIOD);
+    let atr14 = atr.iter().rev().copied().find(|v| v.is_finite());
+
+    // Weeks come from `htf::weeks_of` — THE weekend rule on this desk lives
+    // there and there is exactly one of it. It splits on the weekend HOLE
+    // rather than the calendar, so it is right through the daylight-saving
+    // changeover, and it is written against D1 bars but reads only the gap
+    // between consecutive stamps, so a 15m series splits on the same weekend.
+    let weeks = weeks_of(bars);
+    // Days are the same idea with the broker's one-hour daily hole. Not a
+    // second weekend rule: `runs_split_by_gap(bars, 2 days)` IS `weeks_of`,
+    // and the route calls `weeks_of` for weeks precisely so that stays true.
+    let day_runs = runs_split_by_gap(bars, DAY_GAP_MS);
+
+    // The newest run is the one in progress; the one before it is the last
+    // COMPLETE one. Same convention as `htf::d1_facts`, whose "prior day" is
+    // the bar before the newest for the same reason: a run of bars looks the
+    // same whether its day has ended or not, and only its position says
+    // which.
+    let session_run = day_runs.last().cloned();
+    let prior_day = day_runs.len().checked_sub(2).and_then(|i| day_runs.get(i)).cloned();
+    let prior_week = weeks.len().checked_sub(2).and_then(|i| weeks.get(i)).cloned();
+
+    let profile = last_days(bars, profile_days)
+        .and_then(|r| {
+            let window = &bars[r];
+            atr14
+                .and_then(|a| bucket_size_price(a, BUCKETS_PER_ATR))
+                .and_then(|size| activity_profile(window, size, VALUE_AREA_PCT, BUCKETS_PER_ATR))
+        });
+
+    let mut liquidity = liquidity_pools(bars, &atr, &timeframe, SWING_LEFT, SWING_RIGHT, EQUAL_TOLERANCE_ATR, true);
+    liquidity.extend(liquidity_pools(bars, &atr, &timeframe, SWING_LEFT, SWING_RIGHT, EQUAL_TOLERANCE_ATR, false));
+    // The prior day's and the prior week's extremes are in the registration's
+    // liquidity list beside the equal highs, and they carry the same
+    // `swept` pair. Their PRICES also appear in `extremes` — one number
+    // reported under two questions, deliberately, rather than two numbers a
+    // reader would have to reconcile.
+    for (period, high, kind, label) in [
+        (prior_day.clone(), true, LevelKind::PriorDayHigh, "prior day high: the last complete trading day's high"),
+        (prior_day.clone(), false, LevelKind::PriorDayLow, "prior day low: the last complete trading day's low"),
+        (prior_week.clone(), true, LevelKind::PriorWeekHigh, "prior week high: the last complete broker week's high"),
+        (prior_week.clone(), false, LevelKind::PriorWeekLow, "prior week low: the last complete broker week's low"),
+    ] {
+        if let Some(pool) = period.and_then(|p| period_pool(bars, p, high, kind, label)) {
+            liquidity.push(pool);
+        }
+    }
+    // Oldest first. NOT by distance from price and NOT by importance: those
+    // are rankings, and this route does not rank.
+    liquidity.sort_by_key(|p| p.level.formed_at_bar_ms);
+
+    let none = 0..0;
+    let extremes = ExtremesDto {
+        session: period_extremes(
+            bars,
+            session_run.unwrap_or(none.clone()),
+            false,
+            LevelKind::SessionHigh,
+            LevelKind::SessionLow,
+            "session: the trading-day run in progress, split by the broker's daily hole",
+        ),
+        day: period_extremes(
+            bars,
+            prior_day.unwrap_or(none.clone()),
+            true,
+            LevelKind::DayHigh,
+            LevelKind::DayLow,
+            "day: the last COMPLETE trading-day run, split by the broker's daily hole",
+        ),
+        week: period_extremes(
+            bars,
+            prior_week.unwrap_or(none),
+            true,
+            LevelKind::WeekHigh,
+            LevelKind::WeekLow,
+            "week: the last COMPLETE broker week, split by the weekend hole (htf::weeks_of)",
+        ),
+    };
+
+    Ok(Json(LevelsResponse {
+        market,
+        timeframe,
+        bar_ms,
+        computed_at_bar_ms: Some(bars[last].time),
+        computed_at_ms: now_ms(),
+        last_close: Some(bars[last].close).filter(|v| v.is_finite()),
+        atr14,
+        profile,
+        fair_value_gaps: Some(fd_engine::price_levels::unfilled_fair_value_gaps(bars)),
+        order_blocks: Some(order_blocks(bars, &atr, DISPLACEMENT_BODY_ATR)),
+        liquidity: Some(liquidity),
+        extremes: Some(extremes),
+        window: Some(LevelsWindowDto {
+            bars: bars.len(),
+            days: day_runs.len(),
+            start_bar_ms: bars[0].time,
+            end_bar_ms: bars[last].time,
+            profile_days,
+        }),
+        source: Some(source),
+        unavailable: None,
+    }))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_export_hint_names_the_timeframe_that_is_missing() {
+        // The two-branch version of this was right for its callers and
+        // silently wrong for the next one. Every timeframe this route can be
+        // asked for has a name here.
+        assert_eq!(mt5_name("15m"), "M15");
+        assert_eq!(mt5_name("1h"), "H1");
+        assert_eq!(mt5_name("1d"), "D1");
+    }
+
+    #[test]
+    fn the_window_is_counted_in_trading_days_and_not_in_milliseconds() {
+        // Three runs of four bars with an hour's hole between them. Asking
+        // for two days gets the last two runs; asking for ten gets all three
+        // rather than an error, because a store holding three days holds
+        // three days.
+        let mut bars: Vec<Bar> = Vec::new();
+        for day in 0..3i64 {
+            for i in 0..4i64 {
+                bars.push(Bar::flat(day * 10 * 900_000 + i * 900_000, 100.0));
+            }
+        }
+        assert_eq!(last_days(&bars, 2), Some(4..12));
+        assert_eq!(last_days(&bars, 10), Some(0..12));
+        assert_eq!(last_days(&bars, 0), None);
+        assert_eq!(last_days(&[], 5), None);
+    }
+}

@@ -4,10 +4,14 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
-description = "Options-derived levels: strike profile, max pain, break-even and whale models, level clustering"
+description = "Options-derived levels: strike profile, max pain, break-even and whale models, level clustering; and price-bar levels"
 
 [dependencies]
 fd-core = { workspace = true }
+# `price_levels` reads swings through `fd_indicators::swing`, the one crate
+# whose standing guarantee is causality (`every_indicator_is_causal`). A second
+# swing rule written here would be a second answer to one question.
+fd-indicators = { workspace = true }
 serde = { workspace = true }
 thiserror = { workspace = true }
 

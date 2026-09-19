@@ -43,6 +43,33 @@ The `forming: null` cases are here deliberately. That branch draws words rather
 than a candle, so nobody looks at it, which is exactly why a sample of it is
 worth more than a sample of the happy path.
 
+### Price-bar levels (`/api/paper/levels`, added 2026-09-19)
+
+| file | what it is |
+|---|---|
+| `paper-levels.json` | a real XAUUSD 15m response: the activity profile with POC/VAH/VAL, 12 unfilled fair value gaps, 76 order blocks, 155 liquidity pools, the session/day/week extremes |
+| `paper-levels-unavailable.json` | the same market with no exported bars: every block `null`, one sentence, the export command in it |
+
+**`paper-levels.json` is 120 KB where the other samples here are one or two,
+and that is the fact a consumer most needs from it.** The route does not cap
+its lists, deliberately rather than by oversight: 879 bars of XAUUSD hold
+about 150 confirmed swings, so buy-side liquidity is 73 pools, and choosing
+twenty of them to send would be a RANKING. Ranking these levels is what
+`docs/hypotheses/2026-09-18-smc-context.md` pre-commits the route not to do —
+every mechanical use of them this desk has tested lost out of sample — so the
+cap lives in the consumer, which owns its own choice. The prompt block in that
+registration states its own maximum count in its own text for this reason.
+
+Two things to read off the sample rather than assume. Every family is
+FLATTENED onto its level: `kind`, `price`, `band_low`, `band_high`,
+`formed_at_bar_ms`, `age_bars`, `state` and `rule` sit at the top of each gap,
+block and pool and **not** under a `level` key — the last contract agreed here
+in prose got the names right and the nesting wrong, and a client read
+`undefined` forever. And `extremes.session` is the trading-day run IN PROGRESS
+while `extremes.day` is the last COMPLETE one, the same convention
+`/api/paper/htf` uses for "prior day", so a caption reading "today's high"
+over `day` is wrong by a day.
+
 ### Orders resting at a price (stage 1 of `docs/plans/2026-09-18-staged-ai-entry.md`)
 
 | file | what it is |

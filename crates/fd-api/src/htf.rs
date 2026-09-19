@@ -244,11 +244,28 @@ pub struct RuleMeasuredDto {
     pub sample_bars: usize,
 }
 
-/// One swing point: its price and the bar it happened on.
+/// One swing point: its price, the bar it happened on, and a handle for it.
 #[derive(Debug, Serialize)]
 pub struct SwingDto {
     pub price: f64,
     pub bar_ms: i64,
+    /// A stable handle for this swing, `<timeframe>-<side>-<bar_ms>` — e.g.
+    /// `4h-hi-1757980800000`.
+    ///
+    /// ADDED 2026-09-19, additively; it changes no existing field. Until then
+    /// this object carried a price and a bar stamp and nothing to join on, so
+    /// when `/api/paper/levels` began reporting buy-side liquidity built out
+    /// of swing highs there was no way to say that one of its pools and one
+    /// of these swings were the same point. Both routes build the id with the
+    /// one function [`fd_engine::swing_id`], so the two spellings cannot
+    /// drift.
+    ///
+    /// **The timeframe is part of it, so ids from two timeframes never
+    /// compare equal** even when they are the same physical high seen on
+    /// different bars. That is the honest encoding — a 4h swing and a 15m
+    /// swing are different measurements of the market — and a client wanting
+    /// the looser join splits on `-` and compares the side and the stamp.
+    pub id: String,
 }
 
 /// Donchian(20) on an intraday timeframe, as a state rather than a channel.
@@ -659,9 +676,16 @@ fn live_zigzag_pivots(bars: &[Bar], k: f64, atr: Option<&[f64]>) -> Vec<Pivot> {
 /// in an up-leg, trading below the low the leg started from ends it. Same
 /// semantics as the fractal rule's break level and a different derivation, so
 /// a reader comparing the two rows is comparing like with like.
-fn structure_zigzag(bars: &[Bar], k: f64, atr: Option<&[f64]>) -> StructureDto {
+fn structure_zigzag(bars: &[Bar], k: f64, atr: Option<&[f64]>, timeframe: &str) -> StructureDto {
     let pivots = live_zigzag_pivots(bars, k, atr);
-    let dto = |p: &Pivot| SwingDto { price: p.price, bar_ms: bars[p.at].time };
+    // The id is built where the swing is built, by the one function both this
+    // route and `/api/paper/levels` call, so the two cannot spell the same
+    // swing two ways.
+    let dto = |p: &Pivot| SwingDto {
+        price: p.price,
+        bar_ms: bars[p.at].time,
+        id: fd_engine::swing_id(timeframe, p.high, bars[p.at].time),
+    };
     let nth = |high: bool, back: usize| -> Option<SwingDto> {
         pivots.iter().rev().filter(|p| p.high == high).nth(back - 1).map(dto)
     };
@@ -697,24 +721,28 @@ fn structure_zigzag(bars: &[Bar], k: f64, atr: Option<&[f64]>) -> StructureDto {
 }
 
 /// Structure by whichever rule this row runs.
-fn structure_of(bars: &[Bar], rule: StructureRule, atr: Option<&[f64]>) -> StructureDto {
+///
+/// `timeframe` is carried only so each [`SwingDto`] can be given its id; no
+/// rule below reads it, and the label on a set of bars is the same label
+/// whatever they are called.
+fn structure_of(bars: &[Bar], rule: StructureRule, atr: Option<&[f64]>, timeframe: &str) -> StructureDto {
     match rule {
-        StructureRule::Fractal(n) => structure_fractal(bars, n),
-        StructureRule::ZigzagAtr(k) => structure_zigzag(bars, k, atr),
+        StructureRule::Fractal(n) => structure_fractal(bars, n, timeframe),
+        StructureRule::ZigzagAtr(k) => structure_zigzag(bars, k, atr, timeframe),
     }
 }
 
-fn structure_fractal(bars: &[Bar], n: usize) -> StructureDto {
+fn structure_fractal(bars: &[Bar], n: usize, timeframe: &str) -> StructureDto {
     let highs = fractal_swings(bars, n, true);
     let lows = fractal_swings(bars, n, false);
-    let swing = |v: &[(usize, f64)], back: usize| -> Option<SwingDto> {
+    let swing = |v: &[(usize, f64)], back: usize, high: bool| -> Option<SwingDto> {
         let (i, price) = *v.get(v.len().checked_sub(back)?)?;
-        Some(SwingDto { price, bar_ms: bars[i].time })
+        Some(SwingDto { price, bar_ms: bars[i].time, id: fd_engine::swing_id(timeframe, high, bars[i].time) })
     };
-    let last_high = swing(&highs, 1);
-    let prior_high = swing(&highs, 2);
-    let last_low = swing(&lows, 1);
-    let prior_low = swing(&lows, 2);
+    let last_high = swing(&highs, 1, true);
+    let prior_high = swing(&highs, 2, true);
+    let last_low = swing(&lows, 1, false);
+    let prior_low = swing(&lows, 2, false);
 
     let higher_high = matches!((&last_high, &prior_high), (Some(a), Some(b)) if a.price > b.price);
     let higher_low = matches!((&last_low, &prior_low), (Some(a), Some(b)) if a.price > b.price);
@@ -778,7 +806,7 @@ fn structure_fractal(bars: &[Bar], n: usize) -> StructureDto {
 /// clock did.
 ///
 /// Returns the index ranges, oldest first.
-fn weeks_of(bars: &[Bar]) -> Vec<std::ops::Range<usize>> {
+pub(crate) fn weeks_of(bars: &[Bar]) -> Vec<std::ops::Range<usize>> {
     const TWO_DAYS_MS: i64 = 2 * 86_400_000;
     let mut out = Vec::new();
     let mut start = 0usize;
@@ -986,7 +1014,7 @@ fn trend_facts(all: &[Bar], timeframe: &str, bar_ms: i64, rule: StructureRule) -
         // whose threshold came from a second ATR would be measured in a unit
         // the response does not show, and a ratio whose denominator is
         // invisible cannot be checked.
-        structure: structure_of(bars, rule, atr_series),
+        structure: structure_of(bars, rule, atr_series, timeframe),
         ema21,
         ema55: last_finite(ema55_series),
         ema21_slope_sign: ema21_series.and_then(|s| slope_sign(s, 3)),
@@ -1183,7 +1211,7 @@ mod tests {
     fn higher_highs_and_higher_lows_are_up_and_the_last_low_is_the_break() {
         //                    0     1     2     3     4     5     6     7     8
         let bars = series(&[10.0, 12.0, 9.0, 14.0, 11.0, 16.0, 13.0, 18.0, 15.0]);
-        let s = structure_fractal(&bars, 1);
+        let s = structure_fractal(&bars, 1, "4h");
         assert!(matches!(s.label, Structure::Up), "{:?}", s.label);
         assert_eq!(s.rule, "fractal(1)");
         // Highs at 1, 3, 5, 7; lows at 2, 4, 6. Last high 18+1, prior 16+1.
@@ -1197,9 +1225,34 @@ mod tests {
     }
 
     #[test]
+    fn every_swing_carries_the_shared_id_so_the_levels_route_can_join_on_it() {
+        // Added 2026-09-19 with the field. `SwingDto` used to carry a price
+        // and a bar stamp and nothing to join on, so a buy-side liquidity
+        // pool on /api/paper/levels and a swing high here could be the same
+        // point with no way to say so.
+        let bars = series(&[10.0, 12.0, 9.0, 14.0, 11.0, 16.0, 13.0, 18.0, 15.0]);
+        let s = structure_fractal(&bars, 1, "4h");
+        let high = s.last_high.as_ref().expect("a swing high");
+        let low = s.last_low.as_ref().expect("a swing low");
+        // Built by the ONE function both routes call, not by a format string
+        // in each of them: two spellings of an id join nothing.
+        assert_eq!(high.id, fd_engine::swing_id("4h", true, high.bar_ms));
+        assert_eq!(low.id, fd_engine::swing_id("4h", false, low.bar_ms));
+        assert!(high.id.starts_with("4h-hi-"), "{}", high.id);
+        assert!(low.id.starts_with("4h-lo-"), "{}", low.id);
+        // The zigzag rule names them the same way, so the H1 row and the H4
+        // row are joinable objects and not two conventions.
+        let atr = vec![1.0; bars.len()];
+        let z = structure_zigzag(&bars, 0.5, Some(&atr), "1h");
+        if let Some(sw) = z.last_high.as_ref() {
+            assert_eq!(sw.id, fd_engine::swing_id("1h", true, sw.bar_ms));
+        }
+    }
+
+    #[test]
     fn lower_highs_and_lower_lows_are_down_and_the_last_high_is_the_break() {
         let bars = series(&[18.0, 16.0, 19.0, 14.0, 17.0, 12.0, 15.0, 10.0, 13.0]);
-        let s = structure_fractal(&bars, 1);
+        let s = structure_fractal(&bars, 1, "4h");
         assert!(matches!(s.label, Structure::Down), "{:?}", s.label);
         assert_eq!(s.break_level, s.last_high.as_ref().map(|x| x.price));
         assert!(matches!(s.break_side, Some(BreakSide::Above)));
@@ -1211,7 +1264,7 @@ mod tests {
         // range has no single price whose break changes the label. Inventing
         // one would be the card claiming a precision the rule does not have.
         let bars = series(&[10.0, 14.0, 9.0, 16.0, 6.0, 18.0, 12.0]);
-        let s = structure_fractal(&bars, 1);
+        let s = structure_fractal(&bars, 1, "4h");
         assert!(matches!(s.label, Structure::Range), "{:?}", s.label);
         assert_eq!(s.break_level, None);
         assert!(s.break_side.is_none());
@@ -1224,7 +1277,7 @@ mod tests {
         // bar 7 and a reader ageing it from the swing would think it fresher
         // than it is.
         let bars = series(&[10.0, 12.0, 9.0, 14.0, 11.0, 20.0, 13.0, 12.0]);
-        let s = structure_fractal(&bars, 2);
+        let s = structure_fractal(&bars, 2, "4h");
         assert_eq!(s.last_high.as_ref().map(|x| x.bar_ms), Some(5 * H));
         assert_eq!(s.confirmed_at_bar_ms, Some(7 * H), "confirmed two bars after the swing");
     }
@@ -1564,14 +1617,14 @@ mod tests {
         // What each bar said AT the time.
         let live: Vec<(String, Option<i64>, usize)> = (1..=bars.len())
             .map(|t| {
-                let s = structure_zigzag(&bars[..t], 3.0, Some(&atr[..t]));
+                let s = structure_zigzag(&bars[..t], 3.0, Some(&atr[..t]), "1h");
                 (format!("{:?}", s.label), s.confirmed_at_bar_ms, live_zigzag_pivots(&bars[..t], 3.0, Some(&atr[..t])).len())
             })
             .collect();
 
         // Now with the whole series in hand, ask again for each prefix.
         for t in 1..=bars.len() {
-            let s = structure_zigzag(&bars[..t], 3.0, Some(&atr[..t]));
+            let s = structure_zigzag(&bars[..t], 3.0, Some(&atr[..t]), "1h");
             let pivots = live_zigzag_pivots(&bars[..t], 3.0, Some(&atr[..t]));
             assert_eq!(format!("{:?}", s.label), live[t - 1].0, "label at bar {t} changed");
             assert_eq!(s.confirmed_at_bar_ms, live[t - 1].1, "confirming bar at {t} changed");
@@ -1667,18 +1720,18 @@ mod tests {
         let atr = flat_atr(bars.len(), 1.0);
 
         // One bar in: nothing has crossed, so no leg.
-        let early = structure_zigzag(&bars[..1], 3.0, Some(&atr[..1]));
+        let early = structure_zigzag(&bars[..1], 3.0, Some(&atr[..1]), "1h");
         assert!(matches!(early.label, Structure::Range));
         assert_eq!(early.break_level, None, "no leg, so nothing to break");
         assert_eq!(early.confirmed_at_bar_ms, None);
 
         // Bar 1 rises more than 3 ATRs off the seed close: an up-leg starts.
-        let up = structure_zigzag(&bars[..2], 3.0, Some(&atr[..2]));
+        let up = structure_zigzag(&bars[..2], 3.0, Some(&atr[..2]), "1h");
         assert!(matches!(up.label, Structure::Up), "{:?}", up.label);
         assert!(matches!(up.break_side, Some(BreakSide::Below)));
 
         // Bar 2 gives back more than 3 ATRs from 20.0: the leg turns down.
-        let down = structure_zigzag(&bars[..3], 3.0, Some(&atr[..3]));
+        let down = structure_zigzag(&bars[..3], 3.0, Some(&atr[..3]), "1h");
         assert!(matches!(down.label, Structure::Down), "{:?}", down.label);
         assert_eq!(down.break_level, Some(20.0), "trading above the pivot high ends it");
         assert!(matches!(down.break_side, Some(BreakSide::Above)));
@@ -1705,7 +1758,7 @@ mod tests {
         let p = live_zigzag_pivots(&both, 3.0, Some(&atr));
         assert_eq!(p.len(), 1);
         assert!(!p[0].high, "up won the tie, so the pivot is the low it rose from");
-        assert!(matches!(structure_zigzag(&both, 3.0, Some(&atr)).label, Structure::Up));
+        assert!(matches!(structure_zigzag(&both, 3.0, Some(&atr), "1h").label, Structure::Up));
     }
 
     #[test]
@@ -1718,7 +1771,7 @@ mod tests {
         let bars = hl(&[(10.0, 9.0), (50.0, 40.0), (12.0, 11.0), (16.0, 15.0)]);
         // No ATR at all: no pivots, ever.
         assert!(live_zigzag_pivots(&bars, 3.0, None).is_empty());
-        assert!(matches!(structure_zigzag(&bars, 3.0, None).label, Structure::Range));
+        assert!(matches!(structure_zigzag(&bars, 3.0, None, "1h").label, Structure::Range));
 
         // ATR finite only from bar 2. The spike at bar 1 must not have moved the
         // seed, so the first cross is judged against bar 0's close of 9.5.
@@ -1848,7 +1901,7 @@ mod tests {
         let specs = [IndicatorSpec::new("atr").with("period", 14.0)];
         let ind = compute_indicators(&bars, &specs).unwrap_or_default();
         let series = ind.get("atr_14").map(|s| &s[..]);
-        let same = structure_zigzag(&bars, ZIGZAG_K, series);
+        let same = structure_zigzag(&bars, ZIGZAG_K, series, "1h");
         assert_eq!(
             format!("{:?}", same.label),
             format!("{:?}", facts.structure.label),

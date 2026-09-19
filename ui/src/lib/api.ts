@@ -957,6 +957,20 @@ const post = <T,>(path: string, payload: unknown) =>
 export interface HtfLevel {
   price: number
   bar_ms: number
+  /**
+   * A stable handle, `<timeframe>-<side>-<bar_ms>` — e.g.
+   * `4h-hi-1757980800000`.
+   *
+   * OPTIONAL ON THE WIRE because this client may be talking to a server older
+   * than 2026-09-19, when the field was added. Absent reads as "this server
+   * cannot be joined against /api/paper/levels", not "this swing has no id".
+   *
+   * The timeframe is part of it, so a 4h swing and a 15m swing never compare
+   * equal even when they are the same physical high. Join on the whole string
+   * for "the same swing on the same timeframe"; split on `-` and compare the
+   * side and the stamp for the looser question.
+   */
+  id?: string
 }
 
 export interface HtfStructure {
@@ -1094,6 +1108,175 @@ export interface HtfResponse {
   unavailable_by_tf?: Record<string, string>
 }
 
+/* ------------------------------------------------------- price levels */
+
+/**
+ * `GET /api/paper/levels` — the price-bar levels, added 2026-09-19.
+ *
+ * Shapes taken from the served JSON in `docs/api-samples/paper-levels.json`
+ * rather than from a description of it. The last time two sides agreed a
+ * contract in prose, the field names were right and the NESTING was not, and
+ * the client read `undefined` forever without anything failing.
+ *
+ * **This route carries no verdict and this client must not add one.** No
+ * score, no ranking, no confluence count, no "bullish structure". That is a
+ * pre-commitment in `docs/hypotheses/2026-09-18-smc-context.md`, registered
+ * before the route existed, and it is there because every mechanical use of
+ * these levels this desk has tested has lost out of sample: the full ICT
+ * chain at PF 0.75-0.77 over four years, prior-day high and low at the
+ * 1st-6th percentile of their own session null. A panel that sorted these by
+ * "importance" would be inventing the claim back.
+ *
+ * Lists arrive oldest first. `null` means there were no bars; `[]` means the
+ * window has none of that thing, which is a measurement. Render them
+ * differently.
+ */
+export type PriceLevelKind =
+  | 'POC'
+  | 'VAH'
+  | 'VAL'
+  | 'FAIR_VALUE_GAP'
+  | 'ORDER_BLOCK'
+  | 'EQUAL_HIGHS'
+  | 'EQUAL_LOWS'
+  | 'PRIOR_DAY_HIGH'
+  | 'PRIOR_DAY_LOW'
+  | 'PRIOR_WEEK_HIGH'
+  | 'PRIOR_WEEK_LOW'
+  | 'SESSION_HIGH'
+  | 'SESSION_LOW'
+  | 'DAY_HIGH'
+  | 'DAY_LOW'
+  | 'WEEK_HIGH'
+  | 'WEEK_LOW'
+
+/**
+ * Which states a family can be in is fixed:
+ * profile `CURRENT`; gaps `UNFILLED` | `PARTIALLY_FILLED`; order blocks
+ * `UNTESTED` | `TESTED` | `BROKEN`; liquidity `RESTING` | `SWEPT`; extremes
+ * `FORMING` | `COMPLETE`.
+ */
+export type PriceLevelState =
+  | 'CURRENT'
+  | 'FORMING'
+  | 'COMPLETE'
+  | 'UNFILLED'
+  | 'PARTIALLY_FILLED'
+  | 'UNTESTED'
+  | 'TESTED'
+  | 'BROKEN'
+  | 'RESTING'
+  | 'SWEPT'
+
+/** The five things every level carries. A level is a PRICE or a BAND: one of
+ *  the two is null and a renderer must handle both rather than assume. */
+export interface PriceLevel {
+  kind: PriceLevelKind
+  price: number | null
+  band_low: number | null
+  band_high: number | null
+  formed_at_bar_ms: number
+  /** Bars of the response's `timeframe`, not minutes. `0` means it formed on
+   *  the newest closed bar — a measurement, not an absence. */
+  age_bars: number
+  state: PriceLevelState
+  /** The rule, with its parameters, in words. Show it: a level without its
+   *  rule is a stronger claim than the rule supports. */
+  rule: string
+}
+
+/** A gap is flattened onto its level, so `kind`, `state` and the rest sit at
+ *  this object's own top level and not under a `level` key. */
+export interface PriceFairValueGap extends PriceLevel {
+  direction: 'BULLISH' | 'BEARISH'
+  /** 0..1. Exactly 0 is untouched; 1 never appears, because a filled gap is
+   *  not reported at all. */
+  filled_fraction: number
+  /** The third of the three bars — when the gap became knowable.
+   *  `formed_at_bar_ms` is the middle one. */
+  confirmed_at_bar_ms: number
+}
+
+export interface PriceOrderBlock extends PriceLevel {
+  /** The direction of the IMPULSE: a `BULLISH` block is the down candle an up
+   *  move left behind. */
+  direction: 'BULLISH' | 'BEARISH'
+  displacement_at_bar_ms: number
+  /** The body that cleared the threshold, in ATR(14) at its own bar. The
+   *  denominator is the response's `atr14`. */
+  displacement_body_atr: number
+  tested_at_bar_ms: number | null
+  broken_at_bar_ms: number | null
+}
+
+export interface PriceLiquidityPool extends PriceLevel {
+  side: 'BUY_SIDE' | 'SELL_SIDE'
+  /** `swept` and `swept_at_bar_ms` are one fact: neither is set without the
+   *  other, so a renderer may test either. */
+  swept: boolean
+  swept_at_bar_ms: number | null
+  /** The swings this pool is made of, as `HtfLevel.id` spells them — ALWAYS
+   *  an array, empty for the prior-day and prior-week pools, which are period
+   *  extremes and not swings. */
+  swing_ids: string[]
+  /** How far the members are spread, in ATR(14). `null` for a pool of one. */
+  spread_atr: number | null
+}
+
+export interface PriceBarProfile {
+  /** `TIME_AT_PRICE`. Not volume — the bar feeds here have none worth
+   *  weighting by, and a caption calling this a volume profile would be
+   *  wrong about what was counted. */
+  measure: string
+  poc: PriceLevel | null
+  vah: PriceLevel | null
+  val: PriceLevel | null
+  /** Quote units, and equal to `atr14 / buckets_per_atr`. */
+  bucket_size_price: number
+  buckets_per_atr: number
+  buckets: number
+  window_bars: number
+  window_start_bar_ms: number
+  window_end_bar_ms: number
+  value_area_pct: number
+  /** Bar-buckets: one bar that traded through four buckets contributes 4. */
+  activity_total_bar_buckets: number
+  activity_in_value_area_bar_buckets: number
+}
+
+export interface PricePeriodExtremes {
+  high: PriceLevel | null
+  low: PriceLevel | null
+  start_bar_ms: number | null
+  end_bar_ms: number | null
+  bars: number
+}
+
+export interface PriceLevelsResponse {
+  market: string
+  timeframe: string
+  bar_ms: number
+  computed_at_bar_ms: number | null
+  computed_at_ms: number
+  last_close: number | null
+  /** Quote units. THE DENOMINATOR of every `*_atr` on this response — show it
+   *  wherever one of them is shown, or the ratio cannot be checked. */
+  atr14: number | null
+  profile: PriceBarProfile | null
+  fair_value_gaps: PriceFairValueGap[] | null
+  order_blocks: PriceOrderBlock[] | null
+  liquidity: PriceLiquidityPool[] | null
+  /** `session` is the trading-day run IN PROGRESS and `day` is the last
+   *  COMPLETE one — the same convention `/api/paper/htf` uses for "prior
+   *  day". A label saying "today's high" over `day` would be wrong. */
+  extremes: { session: PricePeriodExtremes; day: PricePeriodExtremes; week: PricePeriodExtremes } | null
+  source: { file: string; bars: number; timeframe: string } | null
+  window: { bars: number; days: number; start_bar_ms: number; end_bar_ms: number; profile_days: number } | null
+  /** A sentence to display when there are no bars. Everything above is null
+   *  when this is set. */
+  unavailable: string | null
+}
+
 export const api = {
   catalog: () => request<Catalog>('/api/chart/catalog'),
 
@@ -1140,6 +1323,19 @@ export const api = {
   /** Higher-timeframe context for one market. Read-only, and shown as context
    *  rather than as a signal. */
   htf: (market: string) => request<HtfResponse>(`/api/paper/htf?market=${encodeURIComponent(market)}`),
+
+  /**
+   * Price-bar levels for one market. Read-only, and facts rather than a
+   * signal — see [[PriceLevelsResponse]].
+   *
+   * NOT `levels` above: that one is `/api/chart/levels`, the OPTION tape's
+   * levels, and the two share a word and nothing else.
+   */
+  priceLevels: (market: string, tf = '15m', days?: number) =>
+    request<PriceLevelsResponse>(
+      `/api/paper/levels?market=${encodeURIComponent(market)}&tf=${encodeURIComponent(tf)}` +
+        (days ? `&days=${days}` : ''),
+    ),
 
   setGuards: (edit: GuardEdit) => post<GuardsView>('/api/paper/guards', edit),
 
