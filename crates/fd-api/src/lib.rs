@@ -9,6 +9,7 @@ pub mod dto;
 pub mod error;
 pub mod live;
 pub mod htf;
+pub mod levels;
 pub mod m1;
 pub mod paper;
 pub mod research;
@@ -69,6 +70,11 @@ pub fn router(state: Arc<AppState>, ui: Option<PathBuf>) -> Router {
         .route("/api/paper/open", post(paper::open_now))
         // Higher-timeframe facts, computed once for the model and the desk.
         .route("/api/paper/htf", get(htf::htf))
+        // Price-bar levels: profile, gaps, blocks, liquidity, extremes. Note
+        // `/api/chart/levels` above is a different thing entirely — that one
+        // is the OPTION tape's levels and this one is the price chart's.
+        // Sharing a word, not an implementation.
+        .route("/api/paper/levels", get(levels::levels))
         .route("/api/paper/stop", post(paper::stop))
         .route("/api/paper/status", get(paper::status))
         .route("/api/paper/accounts", get(paper::accounts))
