@@ -1,8 +1,12 @@
 # The weekend-flat guard cannot fire on this feed, and two real positions are open over the weekend
 
-Found 2026-09-19 04:06Z, while the market was shut. The fix below is
-**PROPOSED, not applied**: it changes a guard every live book runs under and
-the funded account mirrors, so it is the owner's.
+Found 2026-09-19 04:06Z, while the market was shut.
+
+**DECIDED by the owner the same morning:** *"nguyên tắc là không bao giờ giữ
+qua tuần, bắt buộc phải xử lý lệnh"* — the account never holds a position
+over the weekend, and positions must be dealt with. Both layers below are
+built and one of them is already in force; see the amendment at the end for
+what is live and what still waits on a restart.
 
 ## What happened
 
@@ -155,3 +159,59 @@ taken every Friday, for no expectancy** - which is the one bet a desk with a
 is the recommendation: `1640`. If the owner would rather hold, the honest
 version of that choice is to cut Friday's size, not to keep full size and
 call the stop protection.
+
+## Amendment 2026-09-19 11:35Z - what was built, what is live, what is owed
+
+The owner's rule is absolute, so one bar-driven guard is not enough: the
+whole finding above is that a bar-driven rule can fail silently. Two layers.
+
+**Layer one, the engine's guard — LIVE NOW, no restart needed.**
+`flat_before_weekend_hhmm` is `1640` in `config/default.toml` (88c85c4) and
+was put in force at 11:32Z through `POST /api/paper/guards`, which is the
+mechanism the desk already had for an owner-driven guard change: it persists
+to `config/guards.toml` and writes a `guards_changed` row on every book. In
+force across **27 runs**. The owner's earlier edit (`max_trades_per_day: 10`)
+was read first and sent back with it, because that route REPLACES the edit
+overlay rather than merging into it — posting the new value alone would have
+silently reverted the trade cap to the file's 4.
+
+**Layer two, a wall-clock backstop in the executor — BUILT, NOT YET
+RUNNING.** `--weekend-flat HH:MM`, default `20:45` UTC, `off` disables
+(d4a5066). From Friday's cut until the Sunday reopen at 21:00 UTC it closes
+every position through the existing close path and **refuses to open
+anything**; without that refusal the mirror would re-open on the next poll
+what it had just closed. It judges the window on the executor's own UTC
+clock — not the broker's, which returns nothing over a weekend, and not New
+York, which would need a timezone table the machine may not have. Rows:
+`weekend-window` on entry and exit (written even when there is nothing to
+close, because "the backstop ran and found nothing" is the fact worth
+having), `weekend-flat` per position closed with the profit in the account's
+own currency, `weekend-refused` once per book per window. The three-key
+real-money lock sits entirely ahead of it and is unchanged. 84 new checks,
+311 in the suite, green on the VPS's own Python.
+
+**What is owed: the executors have to be restarted for layer two to exist.**
+They are still on the code they were launched with — five of them, mirroring
+the funded account. The restart is deliberately NOT being done now:
+
+- it is Saturday, the market is shut, and the backstop would immediately try
+  to close the two open positions into a closed market, fail, and retry every
+  poll for two days;
+- `start_executors.ps1 -Live -AllowReal` sends real orders, and this repo's
+  own rule is that starting the mirrors is a decision somebody takes while
+  reading the output, not something a script does unattended.
+
+So: **restart the executors after the Sunday reopen (21:00Z), in a quiet
+window, and confirm they adopt the two open positions rather than re-entering
+them.** Until that happens only layer one is protecting next Friday, which is
+the layer that has just been shown to depend on a bar arriving.
+
+**A dated trap, for early November.** The default `20:45` UTC is 16:45 New
+York in summer — fifteen minutes before the close, and after the engine's
+`1640` has already acted, which is the intended order. When New York leaves
+daylight saving the close moves to 22:00Z: `1640` NY becomes 21:40Z while the
+backstop stays at 20:45Z, so the backstop would fire an HOUR before the
+engine's guard and become the operative rule, costing about 75 minutes of
+Friday instead of 15. The fix is one typed value, `--weekend-flat 21:45`, and
+it belongs in the diary for the DST change, not in a timezone table the
+backstop deliberately does without.
