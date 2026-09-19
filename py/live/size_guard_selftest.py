@@ -96,6 +96,18 @@ them coming back. Each section names the failure it pins.
      three-key lock still exiting 3 in front of all of it. Written before the
      flag is ever turned on, per the plan that introduced it.
 
+ 13  THE ACCOUNT MUST BE FLAT BEFORE A WEEKEND EVEN WHEN NO BAR ARRIVES. The
+     engine's `flat_before_weekend_hhmm` guard is bar-driven, and on
+     2026-09-18 the bar it needed never came - MetaTrader closes a bar only
+     on a tick after its boundary and the weekly close sends none, so the
+     newest closed bar the poller saw all weekend was 20:30Z. Fourteen books
+     and two real positions went into the weekend and nothing said so. The
+     backstop is `--weekend-flat`, judged on this process's own UTC clock so
+     that no bar, tick, broker clock or timezone table can make it miss; this
+     section owns that clock, which is the only way to ask about Friday
+     evening on a Tuesday afternoon. Every driver in sections 1-12 passes
+     `--weekend-flat=off` for the same reason in reverse - see WEEKEND_OFF.
+
 The provenance of every symbol number is marked. MEASURED means read from a
 terminal on the date given; DERIVED means computed from a measured value and
 said so. Nothing here is a guess presented as a measurement.
@@ -103,6 +115,7 @@ said so. Nothing here is a guess presented as a measurement.
 
 from __future__ import annotations
 
+import datetime as dt
 import json
 import os
 import shutil
@@ -223,6 +236,22 @@ sys.modules["MetaTrader5"] = MT5
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import mt5_executor as X  # noqa: E402
+
+# Every driver in sections 1-12 passes this, and section 13 is where the
+# backstop is switched back on with a clock it controls.
+#
+# `--weekend-flat` is ON by default and judges the clock this PROCESS is
+# running on, so without it the suite's answer would depend on the day of the
+# week it was run: from Friday 20:45Z to Sunday 21:00Z every section that
+# drives `main()` finds the window in force, the book refused and nothing
+# sent. That is not hypothetical - it is what happened the first time these
+# ran after the flag was added, on Saturday 2026-09-19, and section 9 alone
+# failed eleven checks and then raised on an empty `sent`.
+#
+# So the reconciler sections say so explicitly rather than being right five
+# days in seven. A test whose result depends on when it is run is a test that
+# will be believed on the day it is wrong.
+WEEKEND_OFF = "--weekend-flat=off"
 
 
 # ---------------------------------------------------------------------------
@@ -408,7 +437,8 @@ def drive(account, symbol: str = "XAUUSD.sc", margin=5.0, lots: float = 0.05, bo
 
         X.time.sleep = stop_after_one_poll
         sys.argv = ["mt5_executor.py", "--run=t", "--terminal=x", "--login=33705331",
-                    f"--symbol={symbol}", "--account=acct"] + list(extra or [])
+                    f"--symbol={symbol}", "--account=acct",
+                    WEEKEND_OFF] + list(extra or [])
         rc = X.main()
 
         out = tmp / "data" / "live" / "acct" / "t" / "executor.jsonl"
@@ -607,7 +637,7 @@ def stop_leaves_a_true_record() -> None:
             here.mkdir(parents=True, exist_ok=True)
             (here / "STOP").write_text("", encoding="utf-8")
             sys.argv = ["mt5_executor.py", "--run=t", "--terminal=x", "--login=33705331",
-                        "--symbol=XAUUSD.sc", "--account=acct"]
+                        "--symbol=XAUUSD.sc", "--account=acct", WEEKEND_OFF]
             rc = X.main()
             snap = here / "broker.json"
             return {"rc": rc, "sent": list(MT5.sent),
@@ -815,7 +845,7 @@ def drive_holding(held: list, lots: float = 0.05) -> dict:
 
         X.time.sleep = stop_after_one_poll
         sys.argv = ["mt5_executor.py", "--run=t", "--terminal=x", "--login=33705331",
-                    "--symbol=XAUUSD.sc", "--account=acct"]
+                    "--symbol=XAUUSD.sc", "--account=acct", WEEKEND_OFF]
         X.main()
         here = tmp / "data" / "live" / "acct" / "t"
         snap = here / "broker.json"
@@ -1297,7 +1327,8 @@ def the_close_request_can_actually_be_sent() -> None:
 
             X.time.sleep = stop_after_one_poll
             sys.argv = ['mt5_executor.py', '--run=t', '--terminal=x',
-                        '--login=33705331', '--symbol=XAUUSD.sc', '--account=acct']
+                        '--login=33705331', '--symbol=XAUUSD.sc', '--account=acct',
+                        WEEKEND_OFF]
             X.main()
             out = tmp / 'data' / 'live' / 'acct' / 't' / 'executor.jsonl'
             rows = [json.loads(l) for l in out.read_text(encoding='utf-8').splitlines()
@@ -1422,7 +1453,8 @@ def drive_status(status: dict, extra=None, orders=None, held=None, polls: int = 
 
         X.time.sleep = stop_after
         sys.argv = ["mt5_executor.py", "--run=t", "--terminal=x", "--login=33705331",
-                    "--symbol=XAUUSD.sc", "--account=acct"] + list(extra or [])
+                    "--symbol=XAUUSD.sc", "--account=acct",
+                    WEEKEND_OFF] + list(extra or [])
         rc = X.main()
         here = tmp / "data" / "live" / "acct" / "t"
         out, snap = here / "executor.jsonl", here / "broker.json"
@@ -1635,6 +1667,379 @@ def the_pending_order_is_mirrored_only_behind_the_flag() -> None:
           f"{[(r['kind'], r.get('action')) for r in dry['rows']]}")
 
 
+# ---------------------------------------------------------------------------
+# 13 - the weekend backstop, on a clock this test controls
+# ---------------------------------------------------------------------------
+
+# Friday 2026-09-18, the day the first layer failed to fire, and the three
+# days after it. Real dates rather than invented ones so the weekday
+# arithmetic below can be checked against a calendar by anyone who doubts it:
+# 18/09/2026 is a Friday, and the desk's own record of that evening is
+# docs/decisions/2026-09-19-weekend-flat-never-fires.md.
+FRI = (2026, 9, 18)
+SAT = (2026, 9, 19)
+SUN = (2026, 9, 20)
+MON = (2026, 9, 21)
+THU = (2026, 9, 17)
+NEXT_FRI = (2026, 9, 25)
+
+
+def at(day, hh: int, mm: int, ss: int = 0):
+    """A UTC instant on one of the days above."""
+    return dt.datetime(day[0], day[1], day[2], hh, mm, ss, tzinfo=dt.timezone.utc)
+
+
+class FrozenClock:
+    """`datetime` stopped at a given instant, advanced one step per poll.
+
+    The executor reads its own wall clock to decide the window, which is the
+    whole point of the backstop - it must not need a bar, a tick or a broker
+    to know it is Friday evening. That makes the SUITE's answer depend on when
+    it runs unless the clock is handed to it, so here it is handed to it.
+
+    Advanced by the `time.sleep` hook rather than per call, because one poll
+    makes several calls to `now()` - the window test, every `log()` stamp, the
+    history bounds - and they must all see the same instant, exactly as they
+    do in a real poll.
+    """
+
+    def __init__(self, instants):
+        self.instants = list(instants)
+        self.i = 0
+
+    def now(self, tz=None):
+        when = self.instants[min(self.i, len(self.instants) - 1)]
+        return when if tz is None else when.astimezone(tz)
+
+    def tick(self) -> None:
+        self.i += 1
+
+
+def drive_weekend(instants, held=None, book=BOOK, extra=None, orders=None,
+                  polls: int = None) -> dict:
+    """Poll `main()` once per instant, with a clock frozen at each in turn.
+
+    `held` is the account's positions, and a close REMOVES one - which the
+    other drivers in this file do not need and this section cannot do
+    without: the question "is it closed exactly once and not re-opened" is
+    only askable of a terminal whose positions go away when they are closed.
+    """
+    instants = list(instants)
+    polls = polls if polls is not None else len(instants)
+    tmp = Path(tempfile.mkdtemp(prefix="sgst-wknd-"))
+    real_root, real_status, real_sleep = X.ROOT, X.read_status, X.time.sleep
+    real_dt, real_send, real_positions = X.dt, MT5.order_send, MT5.positions_get
+    argv = sys.argv
+    live = list(held or [])
+    try:
+        MT5.sent = []
+        MT5.account = CENT
+        MT5.info = info_for("XAUUSD.sc")
+        MT5.margin = 5.0
+        MT5.price = SYMBOLS["XAUUSD.sc"][4]
+        MT5.orders = list(orders or [])
+        MT5.orders_get_calls = 0
+        MT5.deals = []
+        MT5.positions_get = lambda **kw: list(live)
+
+        def order_send(req):
+            MT5.sent.append(req)
+            if req.get("action") == MT5.TRADE_ACTION_REMOVE:
+                MT5.orders = [o for o in MT5.orders if o.ticket != req.get("order")]
+            if req.get("position") is not None:
+                live[:] = [p for p in live if p.ticket != req.get("position")]
+            return Obj(retcode=MT5.TRADE_RETCODE_DONE, comment="ok", order=1, deal=1,
+                       price=req.get("price"), volume=req.get("volume"))
+
+        MT5.order_send = order_send
+        clock = FrozenClock(instants)
+        # Only `datetime` is replaced; `timedelta` and `timezone` are the real
+        # ones, because `history_of` does arithmetic with them and a fake
+        # would be testing the fake.
+        X.dt = types.SimpleNamespace(datetime=clock, timedelta=dt.timedelta,
+                                     timezone=dt.timezone)
+        X.ROOT = tmp
+        X.read_status = lambda api, run: dict(RUN, open=book) if book is not None \
+            else dict(RUN, open=None)
+        n = {"polls": 0}
+
+        def stop_after(_):
+            n["polls"] += 1
+            clock.tick()
+            if n["polls"] >= polls:
+                raise KeyboardInterrupt
+
+        X.time.sleep = stop_after
+        sys.argv = ["mt5_executor.py", "--run=t", "--terminal=x", "--login=33705331",
+                    "--symbol=XAUUSD.sc", "--account=acct"] + list(extra or [])
+        rc = X.main()
+        here = tmp / "data" / "live" / "acct" / "t"
+        out, snap = here / "executor.jsonl", here / "broker.json"
+        rows = [json.loads(l) for l in out.read_text(encoding="utf-8").splitlines()
+                if l.strip()] if out.exists() else []
+        return {"rc": rc, "sent": list(MT5.sent), "rows": rows, "held": list(live),
+                "snapshot": json.loads(snap.read_text(encoding="utf-8")) if snap.exists() else None,
+                "orders_get_calls": MT5.orders_get_calls}
+    finally:
+        X.ROOT, X.read_status, X.time.sleep = real_root, real_status, real_sleep
+        X.dt, MT5.order_send, MT5.positions_get = real_dt, real_send, real_positions
+        sys.argv = argv
+        MT5.orders = []
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+def the_weekend_backstop_holds_without_a_bar() -> None:
+    """The account is flat before the weekend even when no bar arrives.
+
+    Layer one - `flat_before_weekend_hhmm` in the engine - is bar-driven, and
+    on 2026-09-18 the bar it needed never came: MetaTrader closes a bar only
+    on a tick after its boundary, the weekly close sends none, so the newest
+    closed bar the poller saw all weekend was 20:30Z. Fourteen books and two
+    real positions went into the weekend with nothing said
+    (docs/decisions/2026-09-19-weekend-flat-never-fires.md).
+
+    This layer runs on the executor's own UTC wall clock, so it is asked and
+    answered when the feed is dead, the API is down and the broker clock is
+    two days stale. These checks own that clock, which is the only way to
+    test a rule about Friday evening on a Tuesday afternoon.
+    """
+    section("the weekend backstop")
+
+    CUT = X.weekend_cut_minute("20:45")
+    check("--weekend-flat 20:45 is minute 1245 UTC", CUT == 1245, f"{CUT}")
+
+    # ---- the flag, and that it refuses rather than defaults ----
+    check("'off' disables it", X.weekend_cut_minute("off") is None)
+    check("'OFF' too, whatever the case", X.weekend_cut_minute("OFF") is None)
+    check("an empty value disables it", X.weekend_cut_minute("") is None)
+    check("00:00 is a time and not a falsy off", X.weekend_cut_minute("00:00") == 0)
+    for bad in ("2045", "20:45:00", "24:00", "20:60", "banana", "-1:00"):
+        raised = False
+        try:
+            X.weekend_cut_minute(bad)
+        except SystemExit:
+            raised = True
+        check(f"{bad!r} exits rather than quietly becoming the default", raised)
+
+    # ---- the window, minute by minute, in UTC ----
+    #
+    # Friday at or after the cut, all of Saturday, Sunday until the reopen.
+    # The two boundaries face opposite ways on purpose: Friday is `>=` and
+    # Sunday is `<`, so an equality lets the week start rather than lets a
+    # position ride.
+    for when, want, why in (
+            (at(THU, 20, 45), False, "Thursday at the same minute is a trading night"),
+            (at(THU, 23, 59), False, "Thursday midnight is not the weekend"),
+            (at(FRI, 0, 0), False, "Friday morning"),
+            (at(FRI, 20, 44), False, "Friday one minute before the cut"),
+            (at(FRI, 20, 44, 59), False, "...and 59 seconds, still before it"),
+            (at(FRI, 20, 45), True, "Friday exactly on the cut"),
+            (at(FRI, 20, 46), True, "Friday after the cut"),
+            (at(FRI, 23, 59), True, "Friday midnight"),
+            (at(SAT, 0, 0), True, "Saturday opens"),
+            (at(SAT, 12, 0), True, "Saturday midday"),
+            (at(SAT, 20, 44), True, "Saturday at a minute that is inside Friday's cut"),
+            (at(SAT, 23, 59), True, "Saturday closes"),
+            (at(SUN, 0, 0), True, "Sunday morning"),
+            (at(SUN, 20, 59), True, "Sunday one minute before the reopen"),
+            (at(SUN, 21, 0), False, "Sunday exactly at the reopen"),
+            (at(SUN, 21, 0, 30), False, "...and half a minute past it"),
+            (at(SUN, 23, 59), False, "Sunday night, the week is running"),
+            (at(MON, 0, 0), False, "Monday"),
+            (at(MON, 20, 45), False, "Monday at the same minute as the cut")):
+        got = X.in_weekend_window(when, CUT)
+        check(f"{when:%a %H:%M}Z {'in' if want else 'out'}: {why}", got == want, f"got {got}")
+
+    # Off is off on every one of them, which is the property the flag sells.
+    check("with the flag off no instant is in the window",
+          not any(X.in_weekend_window(at(d, h, 0), None)
+                  for d in (FRI, SAT, SUN, MON) for h in range(24)))
+
+    # A different cut moves the Friday boundary and nothing else.
+    early = X.weekend_cut_minute("16:00")
+    check("a 16:00 cut takes Friday from 16:00Z", X.in_weekend_window(at(FRI, 16, 0), early)
+          and not X.in_weekend_window(at(FRI, 15, 59), early))
+    check("...and leaves Saturday and the Sunday reopen exactly where they were",
+          X.in_weekend_window(at(SAT, 3, 0), early)
+          and not X.in_weekend_window(at(SUN, 21, 0), early))
+
+    # ---- a position held into the window is closed, once ----
+    pos = position(555, is_buy=True, lots=0.05)
+    r = drive_weekend([at(FRI, 20, 45), at(FRI, 20, 45, 15)], held=[pos])
+    closes = [q for q in r["sent"] if q.get("position") is not None]
+    opens = [q for q in r["sent"] if q.get("action") == MT5.TRADE_ACTION_DEAL
+             and q.get("position") is None]
+    check("a position held at the cut is closed", len(closes) == 1, f"{len(closes)} closes")
+    check("...exactly once, and not again on the next poll",
+          len(r["sent"]) == 1, f"sent {len(r['sent'])}")
+    check("...and NOT re-opened, though the book is still LONG",
+          not opens, f"{opens}")
+    check("...leaving the account flat", r["held"] == [], f"{r['held']}")
+
+    # ---- and it goes through the close path that already exists ----
+    #
+    # Not "a close was sent" but "the SAME close was sent". The field set is
+    # compared against the `book flat` close the reconciler has always sent,
+    # because a backstop with its own order-sending routine is a routine no
+    # broker has ever accepted - and this file's section 11 exists because
+    # the close path's one difference from the open path cost 1,389 failures.
+    flat = drive_weekend([at(MON, 12, 0)], held=[position(556)], book=None)
+    ordinary = [q for q in flat["sent"] if q.get("position") is not None]
+    check("the reconciler's own close still goes out on a weekday", len(ordinary) == 1,
+          f"{flat['sent']}")
+    if closes and ordinary:
+        check("the backstop's close carries exactly the reconciler's fields",
+              set(closes[0]) == set(ordinary[0]),
+              f"{sorted(set(closes[0]) ^ set(ordinary[0]))}")
+        check("...the same action, and a position ticket as an int",
+              closes[0].get("action") == MT5.TRADE_ACTION_DEAL
+              and isinstance(closes[0].get("position"), int))
+        check("...and closing a LONG sells at the bid",
+              closes[0].get("type") == MT5.ORDER_TYPE_SELL
+              and closes[0].get("price") == MT5.price - 0.2,
+              f"{closes[0].get('type')} at {closes[0].get('price')}")
+
+    # The comment is the field that decides whether a close leaves the
+    # terminal at all, so the weekend reason is measured against the same
+    # limit as every other reason.
+    for run in ("ai-xau-ds-ctx", "ai-xau-terra-ctx", "ai-xau-opus-ctx-b", "xau-ema"):
+        c = X.close_comment(run, "weekend backstop")
+        check(f"weekend close comment fits: {c!r} ({len(c)})", len(c) <= X.COMMENT_MAX)
+        check(f"...and is not cut mid-word: {c!r}", c == c.strip() and c.endswith("wknd"))
+    check("the run under test closes with 't wknd'",
+          X.close_comment("t", "weekend backstop") == "t wknd")
+
+    # ---- the rows ----
+    flat_rows = [q for q in r["rows"] if q["kind"] == "weekend-flat"]
+    check("one weekend-flat row for the one position closed", len(flat_rows) == 1,
+          f"{[q['kind'] for q in r['rows']]}")
+    if flat_rows:
+        row = flat_rows[0]
+        want = {"kind", "time", "book", "ticket", "side", "lots", "price", "profit",
+                "currency", "sent", "dry_run", "reason"}
+        check("weekend-flat carries exactly the fields the desk needs",
+              set(row) == want, f"{sorted(set(row) ^ want)}")
+        check("...the ticket, the side and the lots", row["ticket"] == 555
+              and row["side"] == "LONG" and row["lots"] == 0.05, f"{row}")
+        check("...the book it belongs to", row["book"] == "t", f"{row.get('book')}")
+        check("...the quote it was sent at", row["price"] == MT5.price - 0.2, f"{row['price']}")
+        # The unit-carrying rule, rule 1 and rule 5: money never travels
+        # without the name of what it is in. `profit` here is USC on this
+        # account, and a reader taking it for USD is out by a factor of 100.
+        check("...the profit the terminal reports", row["profit"] == 0.0, f"{row['profit']}")
+        check("...and the ACCOUNT's currency beside it, named", row["currency"] == "USC",
+              f"{row['currency']}")
+        check("...and it says the order actually went", row["sent"] is True
+              and row["dry_run"] is False, f"{row}")
+
+    win = [q for q in r["rows"] if q["kind"] == "weekend-window"]
+    check("the window opening is recorded", len(win) == 1 and win[0]["state"] == "open",
+          f"{win}")
+    check("...once, not once per poll", len(win) == 1, f"{len(win)} rows")
+    if win:
+        check("...naming the instant, the cut and the reopen",
+              win[0]["at_utc"] == "2026-09-18T20:45:00Z" and win[0]["cut_utc"] == "20:45"
+              and win[0]["reopen_utc"] == "21:00", f"{win[0]}")
+        check("...and how much it found to close", win[0]["positions_held"] == 1,
+              f"{win[0].get('positions_held')}")
+
+    # A window that finds nothing still says it ran. "The backstop fired and
+    # the account was already flat" is the evidence that layer one worked,
+    # and it only exists if it is written down at the time.
+    quiet = drive_weekend([at(SAT, 3, 0)], held=[], book=None)
+    qwin = [q for q in quiet["rows"] if q["kind"] == "weekend-window"]
+    check("a window with nothing to close still writes its row", len(qwin) == 1, f"{qwin}")
+    check("...saying the account was already flat",
+          bool(qwin) and qwin[0]["positions_held"] == 0, f"{qwin}")
+    check("...and nothing was sent", quiet["sent"] == [], f"{quiet['sent']}")
+
+    # ---- the refusal: once per book per window, not once per poll ----
+    many = drive_weekend([at(SAT, 1, 0), at(SAT, 1, 0, 15), at(SAT, 1, 0, 30),
+                          at(SAT, 1, 0, 45)], held=[])
+    refused = [q for q in many["rows"] if q["kind"] == "weekend-refused"]
+    check("four polls with the book open send nothing", many["sent"] == [], f"{many['sent']}")
+    check("...and record the refusal once, not four times", len(refused) == 1,
+          f"{len(refused)} rows")
+    if refused:
+        row = refused[0]
+        want = {"kind", "time", "book", "side", "lots", "book_entry", "at_utc",
+                "cut_utc", "reason"}
+        check("weekend-refused carries exactly its fields", set(row) == want,
+              f"{sorted(set(row) ^ want)}")
+        check("...naming the book and what it wanted",
+              row["book"] == "t" and row["side"] == "LONG" and row["lots"] == 0.05,
+              f"{row}")
+    check("the desk can see why the book is flat", bool(many["snapshot"])
+          and "weekend backstop" in str(many["snapshot"].get("standing_out")),
+          f"{(many['snapshot'] or {}).get('standing_out')}")
+    check("...and the snapshot keeps being written every poll",
+          bool(many["snapshot"]) and many["snapshot"].get("login") == 33705331)
+
+    # ---- the window closes, and the mirror goes back to work ----
+    over = drive_weekend([at(SUN, 20, 59), at(SUN, 21, 0)], held=[])
+    kinds = [q["kind"] for q in over["rows"]]
+    states = [q["state"] for q in over["rows"] if q["kind"] == "weekend-window"]
+    check("the window opens and then closes", states == ["open", "closed"], f"{states}")
+    check("...and the book is mirrored again at the reopen",
+          any(q.get("action") == MT5.TRADE_ACTION_DEAL and q.get("position") is None
+              for q in over["sent"]), f"{kinds}")
+
+    # A book refused in one window is refused again in the NEXT one. The
+    # bookkeeping that makes a refusal once-per-window must not make it
+    # once-ever.
+    twice = drive_weekend([at(SAT, 1, 0), at(SUN, 21, 0), at(NEXT_FRI, 20, 50)], held=[])
+    check("a new window refuses the same book again",
+          len([q for q in twice["rows"] if q["kind"] == "weekend-refused"]) == 2,
+          f"{[q['kind'] for q in twice['rows']]}")
+
+    # ---- a dry run closes nothing and still says what it would have done ----
+    dry = drive_weekend([at(SAT, 2, 0)], held=[position(557)], extra=["--dry-run"])
+    check("a dry run sends nothing in the window", dry["sent"] == [], f"{dry['sent']}")
+    dry_flat = [q for q in dry["rows"] if q["kind"] == "weekend-flat"]
+    check("...and still writes the weekend-flat row", len(dry_flat) == 1, f"{dry_flat}")
+    check("...marked as a dry run", bool(dry_flat) and dry_flat[0]["dry_run"] is True)
+
+    # ---- the pending order, which only exists behind --mirror-pending ----
+    #
+    # A resting order left over the weekend fills on Sunday's gap, and the
+    # gap is the whole argument for the guard: the median weekend gap over
+    # the last twelve months is 13.55 points against a 12-point stop.
+    rest = resting(9001, MT5.ORDER_TYPE_BUY_LIMIT, 4305.0)
+    with_flag = drive_weekend([at(SAT, 4, 0)], held=[], orders=[rest],
+                              extra=["--mirror-pending"])
+    check("with --mirror-pending the resting order is withdrawn",
+          [q.get("action") for q in with_flag["sent"]] == [MT5.TRADE_ACTION_REMOVE],
+          f"{with_flag['sent']}")
+    without = drive_weekend([at(SAT, 4, 0)], held=[], orders=[rest])
+    check("...and with the flag off the terminal is not even asked for orders",
+          without["orders_get_calls"] == 0 and without["sent"] == [],
+          f"{without['orders_get_calls']} calls, {without['sent']}")
+
+    # ---- the flag off changes nothing at all ----
+    #
+    # The string below is what the commit that added this would remove. With
+    # it passed, a Saturday poll must be indistinguishable from a Monday one:
+    # same requests, same row kinds, and not one row of the three new kinds.
+    weekday = drive_weekend([at(MON, 12, 0)], held=[])
+    saturday_off = drive_weekend([at(SAT, 12, 0)], held=[], extra=[WEEKEND_OFF])
+    check("off: the Saturday poll sends exactly what the Monday poll sends",
+          [dict(q) for q in saturday_off["sent"]] == [dict(q) for q in weekday["sent"]],
+          f"{saturday_off['sent']} vs {weekday['sent']}")
+    check("...including actually opening the book's position",
+          len(saturday_off["sent"]) == 1
+          and saturday_off["sent"][0].get("action") == MT5.TRADE_ACTION_DEAL,
+          f"{saturday_off['sent']}")
+    check("...and the same rows, kind for kind",
+          [q["kind"] for q in saturday_off["rows"]] == [q["kind"] for q in weekday["rows"]],
+          f"{[q['kind'] for q in saturday_off['rows']]}")
+    check("...with no row of any weekend kind",
+          not any(q["kind"].startswith("weekend") for q in saturday_off["rows"]),
+          f"{[q['kind'] for q in saturday_off['rows']]}")
+    check("...and nothing about the weekend in the snapshot",
+          "weekend" not in str((saturday_off["snapshot"] or {}).get("standing_out")),
+          f"{(saturday_off['snapshot'] or {}).get('standing_out')}")
+
+
 def main() -> int:
     the_ceiling_measures_one_currency()
     both_size_guards_fail_closed()
@@ -1649,6 +2054,7 @@ def main() -> int:
     the_launcher_can_ask_what_the_rule_is()
     the_close_request_can_actually_be_sent()
     the_pending_order_is_mirrored_only_behind_the_flag()
+    the_weekend_backstop_holds_without_a_bar()
     print(f"\n{'all checks passed' if not FAIL else str(FAIL) + ' CHECK(S) FAILED'}")
     return 1 if FAIL else 0
 
