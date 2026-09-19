@@ -5,6 +5,7 @@ import { clock, since } from '@/lib/format'
 import {
   LEVEL_FAMILIES,
   LIVE_WINDOW_ATR,
+  PROFILE_NOTE,
   censusOf,
   harvestLevels,
   type DeskLevel,
@@ -152,6 +153,7 @@ export function LevelsCard({
       ) : (
         <div className="flex flex-col gap-1.5">
           <Census census={census} data={data} />
+          <Thin data={data} />
           <Side title="above the last close" rows={sides.above} data={data} />
           <Side title="below the last close" rows={sides.below} data={data} />
           {sides.straddling.length > 0 && (
@@ -164,6 +166,45 @@ export function LevelsCard({
         </div>
       )}
     </section>
+  )
+}
+
+/**
+ * THE TIMEFRAME THAT IS TOO COARSE FOR ITS OWN WINDOW, said out loud.
+ *
+ * The analysis window is ten TRADING DAYS measured in the stamps, the same
+ * span on every timeframe, which is 879 bars of 15m, 230 of 1h — and ten bars
+ * of 1d. Ten is fewer than the fourteen ATR(14) needs, so the route answers
+ * with `atr14: null`, no activity profile, and only the levels that need
+ * neither: five period pools and nothing else. That is honest on the wire and
+ * it would read on screen as "the levels vanished", which is the one thing it
+ * does not mean.
+ *
+ * NO OTHER TIMEFRAME'S ATR IS BORROWED TO FILL IT, and nothing here should
+ * ever add that. A distance of "2.4 ATR" computed from 15m bars, printed on a
+ * daily chart, is a number that reads right and describes nothing — the same
+ * mislabelling the Desk refuses when it hides a run's indicators off the
+ * traded timeframe, and for the same reason: it would be visibly wrong to
+ * nobody, so it would be believed.
+ */
+function Thin({ data }: { data: PriceLevelsResponse }) {
+  const noAtr = data.atr14 == null
+  const noProfile = data.profile == null
+  if (!noAtr && !noProfile) return null
+
+  const bars = data.window?.bars ?? 0
+  const missing = noAtr && noProfile ? 'no ATR(14) and no activity profile' : noAtr ? 'no ATR(14)' : 'no activity profile'
+  const why =
+    bars > 0 && bars < 14
+      ? `this window is ${bars} ${data.timeframe} bars — ten trading days, the same ten days that are 879 bars of 15m — and ATR(14) needs 14`
+      : `the route reported none for this window of ${bars} ${data.timeframe} bars`
+
+  return (
+    <p className="text-caution fd-caption leading-snug">
+      {missing} on {data.timeframe}: {why}. The levels that need neither are below, and their
+      distances are in price alone — no timeframe's ATR is borrowed to make an ATR figure this
+      response does not have.
+    </p>
   )
 }
 
@@ -200,7 +241,7 @@ function Census({ census, data }: { census: ReturnType<typeof censusOf>; data: P
         tabIndex={0}
         role="note"
         className="focus-visible:ring-ring cursor-help underline decoration-dotted underline-offset-2 focus-visible:ring-2 focus-visible:outline-none"
-        title={`Spent means a pool already swept or a block already broken — ${census.spent} of the ${census.total}. The chart draws the live ones within ${LIVE_WINDOW_ATR} ATR of the last close; this list is every level, nearest first, spent ones included, so the two together account for all of them. Window: ${data.window?.bars ?? '—'} bars over ${data.window?.days ?? '—'} trading days, from ${data.source?.file ?? 'an unnamed file'}.`}
+        title={`Spent means a pool already swept or a block already broken — ${census.spent} of the ${census.total}. The chart draws the live ones within ${LIVE_WINDOW_ATR} ATR of the last close, plus the activity profile at any distance (${PROFILE_NOTE}); this list is every level, nearest first, spent ones included, so the two together account for all of them. Window: ${data.window?.bars ?? '—'} bars of ${data.timeframe} over ${data.window?.days ?? '—'} trading days, from ${data.source?.file ?? 'an unnamed file'}.`}
       >
         spent
       </span>{' '}
@@ -261,7 +302,12 @@ function Side({ title, rows, data }: { title: string; rows: DeskLevel[]; data: P
  */
 function Row({ level, data }: { level: DeskLevel; data: PriceLevelsResponse }) {
   const band = level.bandLow != null && level.bandHigh != null
-  const offChart = level.spent || (level.distAtr != null && Math.abs(level.distAtr) > LIVE_WINDOW_ATR)
+  // The profile's three marks are never off the chart however far away they
+  // are — they are the window's own statistic, not a level price came from,
+  // and `exemptFromWindow` in lib/levels.ts carries the argument.
+  const profile = level.family === 'profile'
+  const offChart =
+    !profile && (level.spent || (level.distAtr != null && Math.abs(level.distAtr) > LIVE_WINDOW_ATR))
 
   const extras = [
     level.sideWord,
@@ -282,6 +328,7 @@ function Row({ level, data }: { level: DeskLevel; data: PriceLevelsResponse }) {
     level.displacementBodyAtr != null ? `made by a ${level.displacementBodyAtr.toFixed(2)} ATR body` : null,
     level.formedAtBarMs != null ? `formed ${clock(level.formedAtBarMs)}Z` : null,
     level.rule ? `rule: ${level.rule}` : null,
+    profile ? PROFILE_NOTE : null,
     offChart
       ? level.spent
         ? 'spent, so the chart does not draw it unless the spent switch is on'
