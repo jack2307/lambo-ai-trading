@@ -165,3 +165,60 @@ in an hour it was right.
   consistency across twenty-seven exploratory cells goes in the record as
   another instance of the loop's one recurring finding: a real effect on the
   window that produced it and nothing on the window that did not.
+
+## Amendment, 2026-09-19: "it is not the maximum of any column" — of the column that decides, it is the maximum
+
+The status line at the head of this file already says so. The note is written
+out here because the sentence is still in the body under "The cell, chosen on
+principle and not on its number", which is the section whose whole purpose was
+to show the cell had not been picked for its number.
+
+**What this file says:**
+
+> It is the middle of the grid on both axes. It is not the maximum of any
+> column: the best gross is at z = 4.0 and the best t-statistic at z = 1.5.
+
+**What the decision says.** `docs/decisions/2026-09-15-pair-residual.md`, in
+the section it heads *"Fault 13: the registration checked every column except
+the one it gated"*: both of those statements are true and both are beside the
+point, because **conditions 2 and 3 of the falsifier are functions of the win
+rate alone**, and the win rate is the column that was not checked:
+
+```
+exploratory win rate, all 27 cells, ranked
+   dev  4h  z 2.0  k 16   57.59%   <-- the registered cell, rank 1 of 27
+   dev  4h  z 1.5  k 32   57.03%
+   dev  4h  z 2.0  k 32   56.98%
+   dev  4h  z 1.5  k 16   56.75%
+```
+
+Its own sentence for the record: *"the cell was the argmax of exactly the
+statistic the falsifier gates on, and the registration told the reader the
+opposite in the sentence that was supposed to prove it had not been
+cherry-picked … A cell is 'the middle' only of the statistic it is judged
+by."*
+
+**Which is right: the decision.** The registration's two examples — gross and
+the t-statistic — are columns the falsifier does not read. Condition 2 is a
+win rate of at least 53.5% and condition 3 is a sign test on the same wins, so
+the win-rate column is the gate, and on that column the cell ranks 1 of 27.
+The claim of principled selection does not survive it.
+
+**Two things the decision adds, in fairness to the record in both
+directions.** The damage is bounded: run on the test window, **nine of the 27
+cells pass all three conditions** (eight of the 25 unique), *"so this was not
+a lottery ticket"*. And the cell failed anyway for a different reason — the
+lookback and the hold are counted in **bars** on a tape with a daily break, so
+on the 1,257 of 1,706 trades where four hours really means four hours the cell
+reads **+0.287 bp at 52.51% won with an exact sign test of 0.0803**, failing
+conditions 2 and 3. Faults 12 and 13, both logged.
+
+**What does not change.** The three conditions as declared, the 27 cells and
+the multiplicity statement, and the economics paragraph that rules out a paper
+run in advance, all stand as registered. The body sentence stays where it is:
+the registration's error is the most useful thing in this file, and it is only
+useful while it is legible.
+
+*Written 2026-09-19 by the records session, from
+`docs/decisions/2026-09-15-pair-residual.md`. Nothing is recomputed. Raised as
+item 10 of `docs/research/VERDICTS.md` section 4.*

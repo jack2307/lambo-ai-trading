@@ -125,3 +125,43 @@ confirmation's 68 Fridays (95th of random holds on the fixed replay, 94th on
 the walk-forward, 91st on direction); the falsifier said the confirmation must
 agree, and it does not. The break rows keep their sign and rank on the second
 window and fail the same gate. Closed under this registration.
+
+## Amendment, 2026-09-19: the confirmation's 68 is 68 trades and 67 Fridays
+
+**What this file says**, under "Confirmation": the receipt row
+`close/fri-1630-1815` carries **68** trades, and the paragraph beneath it
+reads *"does not clear either null on the confirmation's 68 Fridays"*. The
+decision of the same name carries 68 in its title and in its outcome line.
+
+**What the other document says.**
+`docs/hypotheses/2026-09-13-friday-weekend-hold.md` says *"the **67** Vantage
+Fridays since 2025-04"*, and `docs/research/BACKLOG.md` says 67.
+
+**Which is right: both numbers, counting different things.** The resolution is
+already in `docs/decisions/2026-09-13-close-reopen-drift.md`, in a
+data-integrity caveat that has never been carried back here: *"the
+confirmation's 68 is **67 weekend holds plus an end-of-data stub**."* So the
+receipt's trade count is 68 and the number of Friday-into-Sunday holds is 67;
+the 68th row is the sample running out, not a weekend.
+
+The same decision uses 67 whenever it is talking about weekend holds rather
+than about the receipt — *"its confirmation miss on 67 weekend holds is a
+power problem"*, and *"It says 67 weekend holds could not confirm 336"* — and
+68 when quoting the row. Both are correct in their place; what is wrong is the
+word **Fridays** attached to 68, here and in the decision's title.
+
+**What does not change.** Nothing. The verdict rests on the null percentiles,
+not the count: 95th of random holds on the fixed replay, 94th on the
+walk-forward, 91st on direction, against a falsifier that required the
+confirmation to agree. The decision's own reopening condition says the extra
+row would not have mattered either way — *"68 could not decide; 100 more will
+not either"*.
+
+The line above is left as written. A record that quietly changes a count is a
+record whose counts cannot be checked.
+
+*Written 2026-09-19 by the records session, from
+`docs/decisions/2026-09-13-close-reopen-drift.md`,
+`docs/hypotheses/2026-09-13-friday-weekend-hold.md` and
+`docs/research/BACKLOG.md`. Nothing is recomputed. Raised as item 4 of
+`docs/research/VERDICTS.md` section 4.*

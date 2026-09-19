@@ -99,3 +99,31 @@ on a 61-trade row.
 Two more mechanisms since this note was written, both closed: VWAP fade
 (BTC), time-series momentum (parked on sizing), the closed families on
 15-minute bars, and the doji fade on three gold windows and BTC.
+
+## Amendment, 2026-09-19: what "zero survivors" covers, and what it does not
+
+The title says five hypotheses, zero survivors, and of the five in the ledger
+above that is exact. This note exists because the phrase has since been quoted
+as a statement about the whole loop, and as that it is no longer true as
+written.
+
+`docs/hypotheses/2026-09-14-pre-nfp-drift.md`, registered the following night,
+passed all three conditions it declared before its test window was opened —
+the 3.2nd percentile of a clock-matched null, −1.536 $/oz, 35.6% of hours up,
+n = 90 — and `docs/decisions/2026-09-14-pre-nfp-drift.md` records it as *"the
+first registration in this loop to"* survive its falsifier.
+
+It does not reopen anything in the ledger above and it is not a counterexample
+to what this night found. The same registration declares its profit-factor gate
+**unreachable in advance** (about $46 a year on a $10,000 account against a
+$0.28 spread), says "no outcome of this registration is a paper run or a
+strategy", and names itself a sign claim; its decision adds that the
+repository's news guard makes its hour untradeable anyway.
+
+So the precise statement, for anyone quoting this file: **no registration on
+this desk has produced a tradable strategy, and exactly one has survived its
+falsifier as a sign claim.** The title is left as it was written, because it
+was true of the five it counted.
+
+*Written 2026-09-19 by the records session, from the documents named. Nothing
+above is recomputed.*

@@ -226,3 +226,103 @@ sides are named so a later reader can decide which to believe.
 - It does not close anything that is still open. `swing` carries **open**
   because `ai-xau-ds-ctx-htf-filter` is running, and a running book with a
   guessed verdict is worse than no badge at all.
+
+---
+
+## 6. What was done about the ten, 2026-09-19
+
+Section 4 is a list of places the record disagrees with itself. On 2026-09-19
+each item was taken back to the files it names and either resolved or found
+unresolvable, and where one document was stale a **dated amendment** was added
+at the end of it. No claim, falsifier, sample size or pre-committed threshold
+was rewritten anywhere: the wrong line is left standing above the note that
+says it is wrong, because a corrected line nobody can audit is worth less than
+an error with its correction attached.
+
+| § 4 item | established | amended | commit |
+|---|---|---|---|
+| 1. options levels | No closed registration tested POC, value area, a gamma wall, whale support/resistance or max pain. Every one tested a price-bar construct; the five terms appear in `docs/hypotheses/` and `docs/decisions/` only in the two *context* registrations, both undecided. `2026-09-12-technical-baselines.md` and `2026-09-14-night-synthesis.md` are right; `2026-09-17-otl-context.md:13-15` overstates the record | `docs/hypotheses/2026-09-17-otl-context.md` | `0245e29` |
+| 2. the registration count | **Not a contradiction.** The four numbers are one running total read at four moments — see the arithmetic below | none needed | — |
+| 3. zero survivors | `2026-09-14-pre-nfp-drift` did survive its falsifier (3.2nd percentile, −1.536 $/oz, 35.6% up, n=90) and is a **sign claim, not a strategy** — its own profit-factor gate was declared unreachable in advance and the news guard forbids the hour. "Zero survivors" is exact about tradable strategies and imprecise as a statement about the loop | both syntheses, titles untouched | `a9a957d` |
+| 4. 68 vs 67 Fridays | Both right, counting different things: the decision's own data-integrity caveat says *"the confirmation's 68 is 67 weekend holds plus an end-of-data stub"*. 68 trades, 67 Fridays; the word "Fridays" attached to 68 is what is wrong | `docs/hypotheses/2026-09-13-close-reopen-drift.md` | `9415cab` |
+| 5. the doji's SURVIVES | The registration's 100% is the `doji/allday` row's null — a ~300-trade distribution applied to a 61-trade row. Matched to its own count the row is 90th, inside. The 99th direction null is unaffected | `docs/hypotheses/2026-09-13-doji.md` | `cc3649d` |
+| 6. the ORB's percentile | The 100% is a true reading of an **all-day** null, which is the wrong instrument; window-gated the row is 92nd. And **the 86th is not this row** — it is `orb/60m-expansion`. `orb/60m` carries two numbers, a before-and-after, not three | `docs/hypotheses/2026-09-13-orb-ny.md` | `cc3649d` |
+| 7. Volman's box | The 1st percentile is a compounded-dollar artefact: lots at 1% of a decaying equity curve put 46.7% of the profit-factor weight in the first six months of the tape. Equal-weighted in R the same entries are at the 38th, and the faded replay loses too (PF(R) 0.731, −0.122R) | `docs/hypotheses/2026-09-14-volman-box.md` | `cc3649d` |
+| 8. labels vs statistic | The bias study corrects itself in place, so nothing there is stale. What was never carried anywhere is that the correction lands on the **running** registration: `htf-filter` keys on the label, and the label is the property that moves (18.5% against Donchian's 1.2%) | `docs/hypotheses/2026-09-18-htf-context.md` | `d50bcf9` |
+| 9. the NFP cell table | 158 + 34 + 33 + 643 = 868 against 835 Fridays; D was written as *all* later Fridays and C counted the eight non-Friday releases. The five cells the instrument produced (153 / 32 / 25 / 565 / 8 = 783) are recorded as what may be quoted instead | `docs/hypotheses/2026-09-14-nfp-vs-first-friday.md` | `9415cab` |
+| 10. the pair residual | "Not the maximum of any column" is true of gross and of the t-statistic and false of the win rate, which is the column conditions 2 and 3 are both functions of — rank 1 of 27. The decision's fault 13 | `docs/hypotheses/2026-09-15-pair-residual.md` | `9415cab` |
+
+**Nothing was left unresolved.** Item 2 is the only one that needed no
+amendment, and it needed none because the disagreement is not there.
+
+### Item 2, worked out
+
+The four counts are monotone in time and each is consistent with the closures
+between it and the next:
+
+| document | says | closed since the previous line |
+|---|---|---|
+| `2026-09-14-night-synthesis.md` (window closes 12:00) | 25 | — |
+| `2026-09-14-pre-nfp-drift.md`, that night: "twenty-six registrations closed before this one" | 26 | `2026-09-14-volman-box`, **Date: 2026-09-14 (afternoon)** — after the synthesis window |
+| `docs/hypotheses/2026-09-15-pair-residual.md`, written at registration: "twenty-nine registrations have died" | 29 | `2026-09-14-pre-nfp-drift` itself (27), then `2026-09-14-nfp-vs-first-friday` (**Date: 2026-09-15, small hours**) and `2026-09-15-nfp-cross-asset` (morning) |
+| `2026-09-15-intraday-frontier.md`, "written after `venue-residual` and `quote-asymmetry` closed on the same day" | 32 | `2026-09-15-pair-residual` (afternoon), `-quote-asymmetry`, `-venue-residual` |
+
+So the two 2026-09-15 documents do **not** disagree with each other: the 29 is
+in a *registration*, written before the run that would become the thirtieth
+closure, and the 32 is in a record written that evening after three more. The
+one soft edge is the word "died" against "closed" — `2026-09-14-pre-nfp-drift`
+survived its falsifier, so a strict reading of "died" would make that line 28
+rather than 29. That is a one-unit ambiguity in a word, not a disagreement
+about a count, and it is the same imprecision item 3 is about.
+
+Section 4 item 2's sentence *"The two 2026-09-15 documents disagree with each
+other, not merely with the earlier one"* is therefore the stale line in this
+pass, and it is left standing above for the same reason every other one is.
+
+### Four further disagreements found while reading, not fixed here
+
+Listed so the next pass has them, in the order they were met. None is in the
+ten and none has been amended.
+
+1. **What the pre-NFP hour is worth: $60, $46 or $43.** The registration
+   estimates *"roughly $60 a year on a $10,000 account"* in advance from a
+   ~$12 daily range; the decision computes **$46** from the test window's
+   $30.45 mean 20-day range and repeats it four times, including in its
+   2026-09-15 small-hours amendment (*"still about $46 a year"*); and the
+   decision's **final** amendment, the same morning, says *"the size is still
+   about $43 a year at 1% risk — recomputed here with the short's sign and the
+   engine's own sizing"*. Section 3 above quotes $46. The $60 is an ex-ante
+   estimate and needs no reconciling; **$46 against $43 inside one document
+   does**, and the later number is the one with a stated method.
+2. **"Never run" against a receipt in which they ran.** Section 2 above lists
+   `level-reversion`, `maxpain-magnet`, `flow-momentum` and `flow-at-level` as
+   never run, quoting `2026-09-12-technical-baselines.md` ("all four returned
+   zero out-of-sample trades"). In
+   `docs/research/runs/2026-09-15-trail-exploratory/trail-off.txt` — the
+   exploratory sweep for `2026-09-16-trailing-stop`, which runs every method
+   at its defaults — `maxpain-magnet` shows **9** trades at PF 3.298,
+   `level-reversion` 12, `flow-momentum` 3, `flow-at-level` 2. It is not a
+   test of anything (no registration, no null, all four under the thirty-trade
+   floor, and the trailing-stop record never mentions them), but "never run"
+   is now a sentence about a different feed and should say so.
+3. **A closed record on the options features that this file does not
+   catalogue.** `docs/decisions/2026-09-12-logistic-does-not-generalise.md`
+   fitted a logistic model over the 24 options-flow features — which include
+   `max_pain`, `poc`, `w_sup` and `w_res`
+   (`crates/fd-indicators` has none of them; `crates/fd-features/src/lib.rs`
+   has all four) — and found gold's AUC falling 0.77 in sample to 0.52
+   walk-forward and BTC's 0.95 to 0.24. It appears in no section above. It
+   closes nothing about the levels, by its own words (*"the useful conclusion
+   is not that options flow fails"*), but it is the only closed record that
+   reads the option tape at all and the ledger should be able to point at it.
+4. **Which `2026-09-15-pair-residual.md`.** Item 2 of section 4 attributes
+   "twenty-nine registrations have died" to `2026-09-15-pair-residual.md`
+   without a directory, and that basename exists in both `docs/hypotheses/`
+   and `docs/decisions/`. The sentence is in the **hypothesis**, and which one
+   it is changes the reading, because a count in a registration is a count
+   before the run and a count in a decision is a count after it.
+
+*Written 2026-09-19 by the records session on branch
+`agent/record-amendments`. Every number in this section is quoted from the
+file it is attributed to; nothing is recomputed. `ui/scripts/verdicts.check.mjs`
+passes on the amended record.*
