@@ -11,10 +11,83 @@ import {
   type SeriesMarker,
   type Time,
 } from 'lightweight-charts'
-import { useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 import type { Bar, BacktestTrade, IndicatorPoint, OptionsFrame } from '@/lib/api'
+import { LEVEL_FAMILIES, familyOf, stackTags, type LevelFamily, type LevelKind } from '@/lib/levels'
 import { TradeZones, type TradeZone } from './tradeZones'
+
+/**
+ * A level the chart draws behind the candles: a price, a name, and the kind
+ * that produced it.
+ *
+ * `kind` is the route's own word — `prior_week_mid`, `h4_high` — and
+ * `familyOf` turns it into a colour and a switch. It is optional because a
+ * caller with nothing better to say should still get its level drawn, in the
+ * neutral family: a level the server believes in and the chart silently omits
+ * is the worst outcome available here (see `lib/levels.ts`).
+ */
+export interface ChartLevel {
+  label: string
+  price: number
+  kind?: LevelKind
+}
+
+/**
+ * The family's colour, resolved.
+ *
+ * The hues are declared once, in `LEVEL_FAMILIES`, as CSS references. This
+ * unwraps `var(--level-liquidity)` to ask the stylesheet rather than keeping
+ * a second copy of the mapping here — a copy is a thing that drifts, and the
+ * toggle's dot and the line it switches must be the same colour or the
+ * control does not obviously belong to the level.
+ */
+function familyColor(family: LevelFamily): string {
+  const hue = LEVEL_FAMILIES.find((f) => f.key === family)?.hue ?? 'var(--muted-foreground)'
+  return token(hue.slice(4, -1), '#9aa39a')
+}
+
+/** The least space two level tags may sit apart, and so their height. */
+const TAG_GAP = 14
+
+/** A level tag, placed: where its price is, and where the label is drawn. */
+interface PlacedLevelTag {
+  label: string
+  /** The family's CSS reference, used as written so the theme can move it. */
+  hue: string
+  y: number
+  drawnY: number
+  moved: boolean
+}
+
+interface TagLayer {
+  /** The price axis's width, so the tags can sit just clear of it. */
+  axis: number
+  tags: PlacedLevelTag[]
+}
+
+const EMPTY_TAGS: TagLayer = { axis: 0, tags: [] }
+
+/**
+ * Has anything moved enough to be worth a re-render?
+ *
+ * Half a pixel, the same threshold `stackTags` uses to decide a tag has
+ * moved at all. Below that the layer is identical on screen and the only
+ * thing a new object buys is a render per scroll frame.
+ */
+function sameLayer(a: TagLayer, b: TagLayer): boolean {
+  if (a.tags.length !== b.tags.length || Math.abs(a.axis - b.axis) > 0.5) return false
+  return a.tags.every((tag, i) => {
+    const other = b.tags[i]
+    return (
+      tag.label === other.label &&
+      tag.hue === other.hue &&
+      tag.moved === other.moved &&
+      Math.abs(tag.y - other.y) <= 0.5 &&
+      Math.abs(tag.drawnY - other.drawnY) <= 0.5
+    )
+  })
+}
 
 /**
  * A trade as the CHART needs it, which is not quite a `BacktestTrade`.
@@ -65,6 +138,30 @@ export interface ActiveIndicator {
   /** 0 draws over the candles; anything higher gets its own pane. */
   pane: number
   color: string
+  /**
+   * WHO ASKED FOR THIS LINE: the running book's strategy, or the viewer.
+   *
+   * The Desk draws both at once and they are not the same kind of fact. The
+   * book's indicators are what the bot actually read when it decided; the
+   * viewer's are a look, computed for whatever timeframe is on screen. So the
+   * two are separated ON THE DRAWING — solid against dashed, `book · …`
+   * against `yours · …` — and not only in the caption underneath, because a
+   * caption in another corner is how a peer session shipped cached and fresh
+   * figures that were identical on screen.
+   *
+   * Optional and defaulting to `book`, so the Workbench — one set, no
+   * ambiguity — draws exactly as it did before.
+   */
+  source?: 'book' | 'viewer'
+  /**
+   * What to call it on screen. Defaults to `key`.
+   *
+   * The Desk namespaces the viewer's keys (`you:ema_21`) so two sets cannot
+   * collide in one `series` record or in the handle map below — one handle
+   * would overwrite the other and the overwritten series would never be
+   * removed. That prefix is plumbing; this is the name.
+   */
+  name?: string
 }
 
 interface Props {
@@ -95,11 +192,11 @@ interface Props {
    */
   pendingFill?: number | null
   /**
-   * Higher-timeframe structure levels, already reduced to name/price pairs by
-   * the caller. Drawn thin and DASHED, so they read as context behind the
-   * book's own solid levels rather than as anything this run decided.
+   * Higher-timeframe levels, already reduced to name/price pairs by the
+   * caller. Drawn thin and DASHED, so they read as context behind the book's
+   * own solid levels rather than as anything this run decided.
    */
-  htfLevels?: { label: string; price: number }[]
+  htfLevels?: ChartLevel[]
   /**
    * The position the book is holding right now.
    *
@@ -353,30 +450,51 @@ export function PriceChart({
     for (const series of overlays.current.values()) instance.removeSeries(series)
     overlays.current.clear()
 
-    for (const indicator of indicators) {
+    indicators.forEach((indicator, index) => {
       for (const output of indicator.outputs) {
         const key = `${indicator.key}.${output}`
         const points = series[key]
         if (!points?.length) continue
 
         const isHistogram = output === 'histogram'
+        // The series' own name, with its owner in front of it. The library
+        // prints this beside the last-value label when one is shown, and it
+        // is the name anything else that reads the series gets — so the two
+        // sets cannot be confused by a caller that only has the handle. What
+        // separates them ON THE CANVAS is the line style below; this is the
+        // name, not the marking.
+        const shown = `${indicator.source === 'viewer' ? 'yours' : 'book'} · ${indicator.name ?? indicator.key}.${output}`
         const created = instance.addSeries(
           isHistogram ? HistogramSeries : LineSeries,
           isHistogram
-            ? { color: indicator.color, priceLineVisible: false, lastValueVisible: false }
+            ? { color: indicator.color, priceLineVisible: false, lastValueVisible: false, title: shown }
             : {
                 color: indicator.color,
                 lineWidth: 1,
+                // DASHED IS THE VIEWER'S. Two sets on one chart in the same
+                // five hues are two sets nobody can tell apart at a glance,
+                // and colour cannot carry it: the palette has five data hues
+                // (ui/DESIGN.md) and both sets cycle them, so the book's
+                // fifth line and the viewer's first are the same colour by
+                // construction. Style is a channel neither set shares.
+                lineStyle: indicator.source === 'viewer' ? 2 : 0,
                 priceLineVisible: false,
                 lastValueVisible: false,
-                title: key,
+                title: shown,
               },
           indicator.pane,
         )
         created.setData(points.map((point) => ({ time: point.time as unknown as Time, value: point.value })))
-        overlays.current.set(key, created)
+        // THE HANDLE IS KEYED ON THE POSITION, not on the series key. Two
+        // entries can legitimately resolve to the same key — a viewer
+        // editing one line's period onto another's, and, before the `you:`
+        // prefix existed, any indicator the book and the viewer shared. Two
+        // `set`s under one key leave the first series on the chart with
+        // nothing holding it: a line that can never be removed, which is the
+        // sort of thing that is only noticed weeks later as a mystery curve.
+        overlays.current.set(`${index}:${key}`, created)
       }
-    }
+    })
   }, [indicators, series])
 
   // The waiting trade. Its own effect and its own line handles, so it can
@@ -449,18 +567,111 @@ export function PriceChart({
       htfLines.current.push(
         series.createPriceLine({
           price: level.price,
-          color: token('--muted-foreground', '#9aa39a'),
+          // The family's own hue, which is also the colour of the switch
+          // that turns it off. Grey for everything was fine while these were
+          // three H4 swings; with the prior day's and prior week's extremes
+          // beside them, eight identical dashes say nothing about which is
+          // which.
+          color: familyColor(familyOf(level.kind ?? '')),
           lineWidth: 1,
           // Dashed and one pixel: this is context from a slower chart, and it
           // must not compete with the book's own stop and target, which are
           // the levels that decide this trade.
           lineStyle: 2,
           axisLabelVisible: false,
-          title: level.label,
+          // NO TITLE HERE ON PURPOSE. The library draws its titles where the
+          // price falls and lets two of them sit on top of each other, and
+          // the top one wins — a level the route published, drawn, and
+          // effectively unlabelled. The tags below are placed by `stackTags`
+          // instead, which exists for exactly this and is tested for it.
+          title: '',
         }),
       )
     }
   }, [htfLevels])
+
+  /**
+   * The level tags, placed so none covers another.
+   *
+   * Kept in React state and drawn as HTML over the canvas, because the
+   * placement is a pure function of the pixel positions and those are only
+   * knowable after the chart has scaled. `prior_day_high` and `prior_week_mid`
+   * can be thirteen dollars apart, which on a 380px pane showing a $200 range
+   * is twenty-five pixels — and on a quiet day they are four ticks and one
+   * pixel apart, which is the case that loses one of them.
+   *
+   * A tag that had to move gets a leader line back to its true price:
+   * a label a few pixels off its own line is a small untruth, and the line
+   * repairs it.
+   */
+  const [layer, setLayer] = useState<TagLayer>(EMPTY_TAGS)
+
+  const placeTags = useCallback(() => {
+    const series = candles.current
+    const instance = chart.current
+    const levels = htfLevels ?? []
+    if (!series || !instance || levels.length === 0) {
+      setLayer((current) => (current.tags.length === 0 ? current : EMPTY_TAGS))
+      return
+    }
+    // Pane 0 only: `priceToCoordinate` answers in the candles' own pane, and
+    // an indicator pane below it is somebody else's space.
+    const height = instance.paneSize(0).height
+    if (height <= TAG_GAP * 2) {
+      setLayer((current) => (current.tags.length === 0 ? current : EMPTY_TAGS))
+      return
+    }
+    const input = levels.flatMap((level) => {
+      if (!Number.isFinite(level.price)) return []
+      const y = series.priceToCoordinate(level.price)
+      // Off the top or bottom of the pane. The LINE is off-screen too, so
+      // there is nothing to label; clamping the tag to an edge would park it
+      // beside a price that is not there.
+      if (y == null || y < 0 || y > height) return []
+      return [{ y: y as number, item: level }]
+    })
+    const placed = stackTags(input, TAG_GAP, TAG_GAP / 2, height - TAG_GAP / 2)
+    const next: TagLayer = {
+      // The tags hang off the RIGHT of the plot, clear of the price axis.
+      // The left is taken: the library anchors a price line's own title
+      // there, and the open position's entry, stop and target all carry one
+      // — three labels this would have been drawn straight through.
+      axis: instance.priceScale('right').width(),
+      tags: placed.map((p) => ({
+        label: p.item.label,
+        hue: LEVEL_FAMILIES.find((f) => f.key === familyOf(p.item.kind ?? ''))?.hue ?? 'var(--muted-foreground)',
+        y: p.y,
+        drawnY: p.drawnY,
+        moved: p.moved,
+      })),
+    }
+    // Only when something actually moved. This runs on every frame of a
+    // scroll, and re-rendering a dozen spans per frame for positions that
+    // are the same to within half a pixel is jank bought for nothing.
+    setLayer((current) => (sameLayer(current, next) ? current : next))
+  }, [htfLevels])
+
+  /**
+   * When to place them again.
+   *
+   * There is no "the price scale moved" event, so this covers the three
+   * things that can move it: new data, a scroll or zoom, and a resize. An
+   * autoscale only ever happens because of one of those, so a tag cannot sit
+   * at a stale price without one of these firing.
+   */
+  useEffect(() => {
+    placeTags()
+    const instance = chart.current
+    if (!instance || !container.current) return
+    const onRange = () => placeTags()
+    instance.timeScale().subscribeVisibleLogicalRangeChange(onRange)
+    const observer = new ResizeObserver(() => placeTags())
+    observer.observe(container.current)
+    return () => {
+      instance.timeScale().unsubscribeVisibleLogicalRangeChange(onRange)
+      observer.disconnect()
+    }
+  }, [placeTags, bars, liveBar, indicators, series])
 
   // Options-derived levels, drawn as price lines on the candles.
   useEffect(() => {
@@ -576,5 +787,48 @@ export function PriceChart({
     )
   }, [trades, showZones, focus])
 
-  return <div ref={container} className="h-full w-full" />
+  return (
+    <div className="relative h-full w-full">
+      <div ref={container} className="h-full w-full" />
+      {/* The tag layer. `pointer-events-none` throughout: the chart owns the
+          crosshair, and a label that swallowed a drag would break the scroll
+          the reader was in the middle of. */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+        {layer.tags.map((tag) => (
+          // `inset-0` rather than a bare `right-0`: an inline box with only
+          // absolutely-positioned children is zero-high and sits on the line
+          // box's baseline, which would offset every tag by a constant
+          // nobody would be able to see was there.
+          <span key={tag.label} className="absolute inset-0">
+            {tag.moved && (
+              // Back to the price it actually sits at. A tag that had to be
+              // pushed clear of its neighbour is no longer ON its own line,
+              // and the leader says which line it belongs to.
+              <span
+                className="absolute w-px"
+                style={{
+                  right: layer.axis + 2,
+                  top: Math.min(tag.y, tag.drawnY),
+                  height: Math.abs(tag.drawnY - tag.y),
+                  backgroundColor: tag.hue,
+                  opacity: 0.6,
+                }}
+              />
+            )}
+            <span
+              className="bg-card/85 absolute rounded-xs border-r-2 px-1 py-px fd-caption whitespace-nowrap"
+              style={{
+                right: layer.axis + 4,
+                top: tag.drawnY - TAG_GAP / 2,
+                borderColor: tag.hue,
+                color: tag.hue,
+              }}
+            >
+              {tag.label}
+            </span>
+          </span>
+        ))}
+      </div>
+    </div>
+  )
 }
