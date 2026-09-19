@@ -380,7 +380,8 @@ export interface DeskLevel {
   sideWord: string | null
   directionWord: string | null
   /**
-   * A pool already swept or a block already broken — the census's own
+   * A pool already swept or a block already broken (`BROKEN` or `BREAKER`,
+   * which is a block that broke and came back) — the census's own
    * definition in `smc_context.census`, so the two agree on the word.
    * A partly filled gap is NOT spent: the route drops a gap once it fills,
    * so every gap it serves still has room in it.
@@ -463,6 +464,13 @@ export const STATE_WORDS: Record<string, string> = {
   untested: 'UNTESTED',
   tested: 'TESTED',
   broken: 'BROKEN',
+  // Added with the state itself, 2026-09-19. The word keeps BROKEN in it
+  // because that is what a breaker is — a block that broke and was later
+  // traded back into — and because 57 of the 62 broken blocks in
+  // `docs/api-samples/paper-levels.json` are breakers: a word that read like
+  // a rarer, better thing would be claiming something about the block that
+  // is true of nearly all of them.
+  breaker: 'BROKEN, BACK INSIDE',
   resting: 'RESTING',
   swept: 'SWEPT',
 }
@@ -585,7 +593,11 @@ function toDeskLevel(
     stateWord,
     sideWord: side,
     directionWord: direction,
-    spent: state === 'swept' || state === 'broken',
+    // A breaker is a block that has already broken, so it is spent by the
+    // same definition — `smc_context.census` counts it the same way, and the
+    // two must agree or the screen and the prompt would report different
+    // censuses of one response.
+    spent: state === 'swept' || state === 'broken' || state === 'breaker',
     swept: typeof extra.swept === 'boolean' ? extra.swept : null,
     sweptAtBarMs: finite(extra.swept_at_bar_ms),
     filledFraction: finite(extra.filled_fraction),

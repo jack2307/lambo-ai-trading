@@ -1,249 +1,233 @@
 {
-  "atr14": 7.768321981768565,
+  "market": "xauusd",
+  "timeframe": "1h",
   "bar_ms": 3600000,
   "computed_at_bar_ms": 1788991200000,
-  "computed_at_ms": 1789795824159,
-  "extremes": {
-    "day": {
-      "bars": 23,
-      "end_bar_ms": 1788904800000,
-      "high": {
-        "age_bars": 23,
-        "band_high": null,
-        "band_low": null,
-        "formed_at_bar_ms": 1788904800000,
-        "kind": "DAY_HIGH",
-        "price": 4295.959525167942,
-        "rule": "day: the last COMPLETE trading-day run, split by the broker's daily hole",
-        "state": "COMPLETE"
-      },
-      "low": {
-        "age_bars": 43,
-        "band_high": null,
-        "band_low": null,
-        "formed_at_bar_ms": 1788832800000,
-        "kind": "DAY_LOW",
-        "price": 4266.894631206989,
-        "rule": "day: the last COMPLETE trading-day run, split by the broker's daily hole",
-        "state": "COMPLETE"
-      },
-      "start_bar_ms": 1788825600000
+  "computed_at_ms": 1789804512145,
+  "last_close": 4332.082719802856,
+  "atr14": 7.768321981768565,
+  "profile": {
+    "measure": "TIME_AT_PRICE",
+    "poc": {
+      "kind": "POC",
+      "price": 4293.277591252447,
+      "band_low": 4292.306551004725,
+      "band_high": 4294.248631500168,
+      "formed_at_bar_ms": 1788566400000,
+      "age_bars": 114,
+      "state": "CURRENT",
+      "rule": "activity profile over 115 bars, time-at-price, bucket = ATR(14)/4, value area 70% by the classic walk"
     },
-    "session": {
-      "bars": 23,
-      "end_bar_ms": 1788991200000,
-      "high": {
-        "age_bars": 0,
-        "band_high": null,
-        "band_low": null,
-        "formed_at_bar_ms": 1788991200000,
-        "kind": "SESSION_HIGH",
-        "price": 4334.082719802856,
-        "rule": "session: the trading-day run in progress, split by the broker's daily hole",
-        "state": "FORMING"
-      },
-      "low": {
-        "age_bars": 10,
-        "band_high": null,
-        "band_low": null,
-        "formed_at_bar_ms": 1788955200000,
-        "kind": "SESSION_LOW",
-        "price": 4287.451313614845,
-        "rule": "session: the trading-day run in progress, split by the broker's daily hole",
-        "state": "FORMING"
-      },
-      "start_bar_ms": 1788912000000
+    "vah": {
+      "kind": "VAH",
+      "price": 4298.132792491052,
+      "band_low": null,
+      "band_high": null,
+      "formed_at_bar_ms": 1788566400000,
+      "age_bars": 114,
+      "state": "CURRENT",
+      "rule": "activity profile over 115 bars, time-at-price, bucket = ATR(14)/4, value area 70% by the classic walk"
     },
-    "week": {
-      "bars": 115,
-      "end_bar_ms": 1788386400000,
-      "high": {
-        "age_bars": 215,
-        "band_high": null,
-        "band_low": null,
-        "formed_at_bar_ms": 1788012000000,
-        "kind": "WEEK_HIGH",
-        "price": 4311.489968240261,
-        "rule": "week: the last COMPLETE broker week, split by the weekend hole (htf::weeks_of)",
-        "state": "COMPLETE"
-      },
-      "low": {
-        "age_bars": 199,
-        "band_high": null,
-        "band_low": null,
-        "formed_at_bar_ms": 1788073200000,
-        "kind": "WEEK_LOW",
-        "price": 4273.820799052715,
-        "rule": "week: the last COMPLETE broker week, split by the weekend hole (htf::weeks_of)",
-        "state": "COMPLETE"
-      },
-      "start_bar_ms": 1787961600000
-    }
+    "val": {
+      "kind": "VAL",
+      "price": 4272.885746050304,
+      "band_low": null,
+      "band_high": null,
+      "formed_at_bar_ms": 1788699600000,
+      "age_bars": 78,
+      "state": "CURRENT",
+      "rule": "activity profile over 115 bars, time-at-price, bucket = ATR(14)/4, value area 70% by the classic walk"
+    },
+    "bucket_size_price": 1.9420804954421413,
+    "buckets_per_atr": 4.0,
+    "buckets": 37,
+    "window_bars": 115,
+    "window_start_bar_ms": 1788566400000,
+    "window_end_bar_ms": 1788991200000,
+    "value_area_pct": 0.7,
+    "activity_total_bar_buckets": 426.0,
+    "activity_in_value_area_bar_buckets": 321.0
   },
   "fair_value_gaps": [
     {
-      "age_bars": 37,
-      "band_high": 4277.129843175411,
-      "band_low": 4275.903145492077,
-      "confirmed_at_bar_ms": 1788858000000,
-      "direction": "BULLISH",
-      "filled_fraction": 0.0,
-      "formed_at_bar_ms": 1788854400000,
       "kind": "FAIR_VALUE_GAP",
       "price": null,
+      "band_low": 4275.903145492077,
+      "band_high": 4277.129843175411,
+      "formed_at_bar_ms": 1788854400000,
+      "age_bars": 37,
+      "state": "UNFILLED",
       "rule": "fvg: 3-bar imbalance, bar[i-1].high < bar[i+1].low",
-      "state": "UNFILLED"
+      "direction": "BULLISH",
+      "filled_fraction": 0.0,
+      "confirmed_at_bar_ms": 1788858000000
     },
     {
-      "age_bars": 35,
-      "band_high": 4281.846662282944,
+      "kind": "FAIR_VALUE_GAP",
+      "price": null,
       "band_low": 4280.304075956345,
-      "confirmed_at_bar_ms": 1788865200000,
+      "band_high": 4281.846662282944,
+      "formed_at_bar_ms": 1788861600000,
+      "age_bars": 35,
+      "state": "PARTIALLY_FILLED",
+      "rule": "fvg: 3-bar imbalance, bar[i-1].high < bar[i+1].low",
       "direction": "BULLISH",
       "filled_fraction": 0.35296254634412333,
-      "formed_at_bar_ms": 1788861600000,
-      "kind": "FAIR_VALUE_GAP",
-      "price": null,
-      "rule": "fvg: 3-bar imbalance, bar[i-1].high < bar[i+1].low",
-      "state": "PARTIALLY_FILLED"
+      "confirmed_at_bar_ms": 1788865200000
     },
     {
-      "age_bars": 26,
-      "band_high": 4287.164140164852,
+      "kind": "FAIR_VALUE_GAP",
+      "price": null,
       "band_low": 4286.858032047749,
-      "confirmed_at_bar_ms": 1788897600000,
-      "direction": "BULLISH",
-      "filled_fraction": 0.0,
+      "band_high": 4287.164140164852,
       "formed_at_bar_ms": 1788894000000,
-      "kind": "FAIR_VALUE_GAP",
-      "price": null,
+      "age_bars": 26,
+      "state": "UNFILLED",
       "rule": "fvg: 3-bar imbalance, bar[i-1].high < bar[i+1].low",
-      "state": "UNFILLED"
+      "direction": "BULLISH",
+      "filled_fraction": 0.0,
+      "confirmed_at_bar_ms": 1788897600000
     },
     {
-      "age_bars": 5,
-      "band_high": 4294.082719802856,
+      "kind": "FAIR_VALUE_GAP",
+      "price": null,
       "band_low": 4293.082719802856,
-      "confirmed_at_bar_ms": 1788976800000,
+      "band_high": 4294.082719802856,
+      "formed_at_bar_ms": 1788973200000,
+      "age_bars": 5,
+      "state": "UNFILLED",
+      "rule": "fvg: 3-bar imbalance, bar[i-1].high < bar[i+1].low",
       "direction": "BULLISH",
       "filled_fraction": 0.0,
-      "formed_at_bar_ms": 1788973200000,
-      "kind": "FAIR_VALUE_GAP",
-      "price": null,
-      "rule": "fvg: 3-bar imbalance, bar[i-1].high < bar[i+1].low",
-      "state": "UNFILLED"
+      "confirmed_at_bar_ms": 1788976800000
     },
     {
-      "age_bars": 4,
-      "band_high": 4312.082719802856,
-      "band_low": 4295.082719802856,
-      "confirmed_at_bar_ms": 1788980400000,
-      "direction": "BULLISH",
-      "filled_fraction": 0.0,
-      "formed_at_bar_ms": 1788976800000,
       "kind": "FAIR_VALUE_GAP",
       "price": null,
+      "band_low": 4295.082719802856,
+      "band_high": 4312.082719802856,
+      "formed_at_bar_ms": 1788976800000,
+      "age_bars": 4,
+      "state": "UNFILLED",
       "rule": "fvg: 3-bar imbalance, bar[i-1].high < bar[i+1].low",
-      "state": "UNFILLED"
+      "direction": "BULLISH",
+      "filled_fraction": 0.0,
+      "confirmed_at_bar_ms": 1788980400000
     }
   ],
-  "last_close": 4332.082719802856,
+  "order_blocks": [
+    {
+      "kind": "ORDER_BLOCK",
+      "price": null,
+      "band_low": 4289.082719802856,
+      "band_high": 4293.082719802856,
+      "formed_at_bar_ms": 1788969600000,
+      "age_bars": 6,
+      "state": "UNTESTED",
+      "rule": "order block: last down candle before a body > 1 x ATR(14) at its own bar",
+      "direction": "BULLISH",
+      "displacement_at_bar_ms": 1788976800000,
+      "displacement_body_atr": 3.87496440220253,
+      "tested_at_bar_ms": null,
+      "broken_at_bar_ms": null,
+      "breaker_retested_at_bar_ms": null
+    }
+  ],
   "liquidity": [
     {
-      "age_bars": 225,
-      "band_high": 4291.3500943779945,
-      "band_low": 4291.0058315992355,
-      "formed_at_bar_ms": 1787976000000,
       "kind": "EQUAL_LOWS",
       "price": 4291.177962988615,
+      "band_low": 4291.0058315992355,
+      "band_high": 4291.3500943779945,
+      "formed_at_bar_ms": 1787976000000,
+      "age_bars": 225,
+      "state": "SWEPT",
       "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
       "side": "SELL_SIDE",
-      "spread_atr": 0.06932583509491258,
-      "state": "SWEPT",
       "swept": true,
       "swept_at_bar_ms": 1788267600000,
       "swing_ids": [
         "1h-lo-1788256800000",
         "1h-lo-1787976000000"
-      ]
+      ],
+      "spread_atr": 0.06932583509491258
     },
     {
-      "age_bars": 219,
-      "band_high": 4309.00435090065,
-      "band_low": 4309.00435090065,
-      "formed_at_bar_ms": 1787997600000,
       "kind": "EQUAL_HIGHS",
       "price": 4309.00435090065,
+      "band_low": 4309.00435090065,
+      "band_high": 4309.00435090065,
+      "formed_at_bar_ms": 1787997600000,
+      "age_bars": 219,
+      "state": "SWEPT",
       "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
       "side": "BUY_SIDE",
-      "spread_atr": null,
-      "state": "SWEPT",
       "swept": true,
       "swept_at_bar_ms": 1788008400000,
       "swing_ids": [
         "1h-hi-1787997600000"
-      ]
+      ],
+      "spread_atr": null
     },
     {
-      "age_bars": 218,
-      "band_high": 4301.683755874634,
-      "band_low": 4301.683755874634,
-      "formed_at_bar_ms": 1788001200000,
       "kind": "EQUAL_LOWS",
       "price": 4301.683755874634,
+      "band_low": 4301.683755874634,
+      "band_high": 4301.683755874634,
+      "formed_at_bar_ms": 1788001200000,
+      "age_bars": 218,
+      "state": "SWEPT",
       "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
       "side": "SELL_SIDE",
-      "spread_atr": null,
-      "state": "SWEPT",
       "swept": true,
       "swept_at_bar_ms": 1788022800000,
       "swing_ids": [
         "1h-lo-1788001200000"
-      ]
+      ],
+      "spread_atr": null
     },
     {
-      "age_bars": 215,
-      "band_high": 4311.489968240261,
-      "band_low": 4311.489968240261,
-      "formed_at_bar_ms": 1788012000000,
       "kind": "EQUAL_HIGHS",
       "price": 4311.489968240261,
+      "band_low": 4311.489968240261,
+      "band_high": 4311.489968240261,
+      "formed_at_bar_ms": 1788012000000,
+      "age_bars": 215,
+      "state": "SWEPT",
       "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
       "side": "BUY_SIDE",
-      "spread_atr": null,
-      "state": "SWEPT",
       "swept": true,
       "swept_at_bar_ms": 1788976800000,
       "swing_ids": [
         "1h-hi-1788012000000"
-      ]
+      ],
+      "spread_atr": null
     },
     {
-      "age_bars": 215,
-      "band_high": null,
-      "band_low": null,
-      "formed_at_bar_ms": 1788012000000,
       "kind": "PRIOR_WEEK_HIGH",
       "price": 4311.489968240261,
+      "band_low": null,
+      "band_high": null,
+      "formed_at_bar_ms": 1788012000000,
+      "age_bars": 215,
+      "state": "SWEPT",
       "rule": "prior week high: the last complete broker week's high",
       "side": "BUY_SIDE",
-      "spread_atr": null,
-      "state": "SWEPT",
       "swept": true,
       "swept_at_bar_ms": 1788976800000,
-      "swing_ids": []
+      "swing_ids": [],
+      "spread_atr": null
     },
     {
-      "age_bars": 209,
-      "band_high": 4301.818182051182,
-      "band_low": 4301.747449994087,
-      "formed_at_bar_ms": 1788033600000,
       "kind": "EQUAL_HIGHS",
       "price": 4301.771562412381,
+      "band_low": 4301.747449994087,
+      "band_high": 4301.818182051182,
+      "formed_at_bar_ms": 1788033600000,
+      "age_bars": 209,
+      "state": "SWEPT",
       "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
       "side": "BUY_SIDE",
-      "spread_atr": 0.013885050139597734,
-      "state": "SWEPT",
       "swept": true,
       "swept_at_bar_ms": 1788976800000,
       "swing_ids": [
@@ -251,854 +235,1121 @@
         "1h-hi-1788609600000",
         "1h-hi-1788382800000",
         "1h-hi-1788271200000"
-      ]
+      ],
+      "spread_atr": 0.013885050139597734
     },
     {
-      "age_bars": 199,
-      "band_high": 4274.1411009430885,
-      "band_low": 4273.820799052715,
-      "formed_at_bar_ms": 1788073200000,
       "kind": "EQUAL_LOWS",
       "price": 4273.980949997902,
+      "band_low": 4273.820799052715,
+      "band_high": 4274.1411009430885,
+      "formed_at_bar_ms": 1788073200000,
+      "age_bars": 199,
+      "state": "SWEPT",
       "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
       "side": "SELL_SIDE",
-      "spread_atr": 0.0637541145897621,
-      "state": "SWEPT",
       "swept": true,
       "swept_at_bar_ms": 1788742800000,
       "swing_ids": [
         "1h-lo-1788073200000",
         "1h-lo-1788699600000"
-      ]
+      ],
+      "spread_atr": 0.0637541145897621
     },
     {
-      "age_bars": 199,
-      "band_high": null,
-      "band_low": null,
-      "formed_at_bar_ms": 1788073200000,
       "kind": "PRIOR_WEEK_LOW",
       "price": 4273.820799052715,
+      "band_low": null,
+      "band_high": null,
+      "formed_at_bar_ms": 1788073200000,
+      "age_bars": 199,
+      "state": "SWEPT",
       "rule": "prior week low: the last complete broker week's low",
       "side": "SELL_SIDE",
-      "spread_atr": null,
-      "state": "SWEPT",
       "swept": true,
       "swept_at_bar_ms": 1788742800000,
-      "swing_ids": []
+      "swing_ids": [],
+      "spread_atr": null
     },
     {
-      "age_bars": 195,
-      "band_high": 4284.012442946434,
-      "band_low": 4284.012442946434,
-      "formed_at_bar_ms": 1788087600000,
       "kind": "EQUAL_HIGHS",
       "price": 4284.012442946434,
+      "band_low": 4284.012442946434,
+      "band_high": 4284.012442946434,
+      "formed_at_bar_ms": 1788087600000,
+      "age_bars": 195,
+      "state": "SWEPT",
       "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
       "side": "BUY_SIDE",
-      "spread_atr": null,
-      "state": "SWEPT",
       "swept": true,
       "swept_at_bar_ms": 1788105600000,
       "swing_ids": [
         "1h-hi-1788087600000"
-      ]
+      ],
+      "spread_atr": null
     },
     {
-      "age_bars": 195,
-      "band_high": 4276.309180140495,
-      "band_low": 4276.309180140495,
-      "formed_at_bar_ms": 1788087600000,
       "kind": "EQUAL_LOWS",
       "price": 4276.309180140495,
+      "band_low": 4276.309180140495,
+      "band_high": 4276.309180140495,
+      "formed_at_bar_ms": 1788087600000,
+      "age_bars": 195,
+      "state": "SWEPT",
       "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
       "side": "SELL_SIDE",
-      "spread_atr": null,
-      "state": "SWEPT",
       "swept": true,
       "swept_at_bar_ms": 1788699600000,
       "swing_ids": [
         "1h-lo-1788087600000"
-      ]
+      ],
+      "spread_atr": null
     },
     {
-      "age_bars": 192,
-      "band_high": 4277.181188702583,
-      "band_low": 4277.047738909721,
-      "formed_at_bar_ms": 1788098400000,
       "kind": "EQUAL_LOWS",
       "price": 4277.114463806152,
+      "band_low": 4277.047738909721,
+      "band_high": 4277.181188702583,
+      "formed_at_bar_ms": 1788098400000,
+      "age_bars": 192,
+      "state": "SWEPT",
       "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
       "side": "SELL_SIDE",
-      "spread_atr": 0.026372598356582466,
-      "state": "SWEPT",
       "swept": true,
       "swept_at_bar_ms": 1788699600000,
       "swing_ids": [
         "1h-lo-1788098400000",
         "1h-lo-1788678000000"
-      ]
+      ],
+      "spread_atr": 0.026372598356582466
     },
     {
-      "age_bars": 189,
-      "band_high": 4289.24262714386,
-      "band_low": 4289.24262714386,
-      "formed_at_bar_ms": 1788109200000,
       "kind": "EQUAL_HIGHS",
       "price": 4289.24262714386,
+      "band_low": 4289.24262714386,
+      "band_high": 4289.24262714386,
+      "formed_at_bar_ms": 1788109200000,
+      "age_bars": 189,
+      "state": "SWEPT",
       "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
       "side": "BUY_SIDE",
-      "spread_atr": null,
-      "state": "SWEPT",
       "swept": true,
       "swept_at_bar_ms": 1788148800000,
       "swing_ids": [
         "1h-hi-1788109200000"
-      ]
+      ],
+      "spread_atr": null
     },
     {
-      "age_bars": 184,
-      "band_high": 4279.053558588028,
-      "band_low": 4278.872153878212,
-      "formed_at_bar_ms": 1788127200000,
       "kind": "EQUAL_LOWS",
       "price": 4278.96285623312,
+      "band_low": 4278.872153878212,
+      "band_high": 4279.053558588028,
+      "formed_at_bar_ms": 1788127200000,
+      "age_bars": 184,
+      "state": "SWEPT",
       "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
       "side": "SELL_SIDE",
-      "spread_atr": 0.03532559106840614,
-      "state": "SWEPT",
       "swept": true,
       "swept_at_bar_ms": 1788678000000,
       "swing_ids": [
         "1h-lo-1788127200000",
         "1h-lo-1788660000000"
-      ]
+      ],
+      "spread_atr": 0.03532559106840614
     },
     {
-      "age_bars": 177,
-      "band_high": 4293.7065564394,
-      "band_low": 4293.333864033222,
-      "formed_at_bar_ms": 1788156000000,
       "kind": "EQUAL_HIGHS",
       "price": 4293.520210236311,
+      "band_low": 4293.333864033222,
+      "band_high": 4293.7065564394,
+      "formed_at_bar_ms": 1788156000000,
+      "age_bars": 177,
+      "state": "SWEPT",
       "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
       "side": "BUY_SIDE",
-      "spread_atr": 0.08144313262414764,
-      "state": "SWEPT",
       "swept": true,
       "swept_at_bar_ms": 1788228000000,
       "swing_ids": [
         "1h-hi-1788156000000",
         "1h-hi-1788166800000"
-      ]
+      ],
+      "spread_atr": 0.08144313262414764
     },
     {
-      "age_bars": 176,
-      "band_high": 4286.366059243679,
-      "band_low": 4286.366059243679,
-      "formed_at_bar_ms": 1788159600000,
       "kind": "EQUAL_LOWS",
       "price": 4286.366059243679,
+      "band_low": 4286.366059243679,
+      "band_high": 4286.366059243679,
+      "formed_at_bar_ms": 1788159600000,
+      "age_bars": 176,
+      "state": "SWEPT",
       "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
       "side": "SELL_SIDE",
-      "spread_atr": null,
-      "state": "SWEPT",
       "swept": true,
       "swept_at_bar_ms": 1788177600000,
       "swing_ids": [
         "1h-lo-1788159600000"
-      ]
+      ],
+      "spread_atr": null
     },
     {
-      "age_bars": 171,
-      "band_high": 4293.037644922733,
-      "band_low": 4292.6740899086,
-      "formed_at_bar_ms": 1788177600000,
       "kind": "EQUAL_HIGHS",
       "price": 4292.855867415667,
+      "band_low": 4292.6740899086,
+      "band_high": 4293.037644922733,
+      "formed_at_bar_ms": 1788177600000,
+      "age_bars": 171,
+      "state": "SWEPT",
       "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
       "side": "BUY_SIDE",
-      "spread_atr": 0.07195198608395181,
-      "state": "SWEPT",
       "swept": true,
       "swept_at_bar_ms": 1788228000000,
       "swing_ids": [
         "1h-hi-1788188400000",
         "1h-hi-1788177600000"
-      ]
+      ],
+      "spread_atr": 0.07195198608395181
     },
     {
-      "age_bars": 168,
-      "band_high": 4284.26405197382,
-      "band_low": 4283.963048458099,
-      "formed_at_bar_ms": 1788188400000,
       "kind": "EQUAL_LOWS",
       "price": 4284.11355021596,
+      "band_low": 4283.963048458099,
+      "band_high": 4284.26405197382,
+      "formed_at_bar_ms": 1788188400000,
+      "age_bars": 168,
+      "state": "RESTING",
       "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
       "side": "SELL_SIDE",
-      "spread_atr": 0.058481156328638956,
-      "state": "RESTING",
       "swept": false,
       "swept_at_bar_ms": null,
       "swing_ids": [
         "1h-lo-1788886800000",
         "1h-lo-1788188400000"
-      ]
+      ],
+      "spread_atr": 0.058481156328638956
     },
     {
-      "age_bars": 164,
-      "band_high": 4290.60185199976,
-      "band_low": 4290.60185199976,
-      "formed_at_bar_ms": 1788202800000,
       "kind": "EQUAL_HIGHS",
       "price": 4290.60185199976,
+      "band_low": 4290.60185199976,
+      "band_high": 4290.60185199976,
+      "formed_at_bar_ms": 1788202800000,
+      "age_bars": 164,
+      "state": "SWEPT",
       "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
       "side": "BUY_SIDE",
-      "spread_atr": null,
-      "state": "SWEPT",
       "swept": true,
       "swept_at_bar_ms": 1788224400000,
       "swing_ids": [
         "1h-hi-1788202800000"
-      ]
+      ],
+      "spread_atr": null
     },
     {
-      "age_bars": 162,
-      "band_high": 4283.177266895771,
-      "band_low": 4283.177266895771,
-      "formed_at_bar_ms": 1788210000000,
       "kind": "EQUAL_LOWS",
       "price": 4283.177266895771,
+      "band_low": 4283.177266895771,
+      "band_high": 4283.177266895771,
+      "formed_at_bar_ms": 1788210000000,
+      "age_bars": 162,
+      "state": "SWEPT",
       "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
       "side": "SELL_SIDE",
-      "spread_atr": null,
-      "state": "SWEPT",
       "swept": true,
       "swept_at_bar_ms": 1788645600000,
       "swing_ids": [
         "1h-lo-1788210000000"
-      ]
+      ],
+      "spread_atr": null
     },
     {
-      "age_bars": 152,
-      "band_high": 4299.473262608051,
-      "band_low": 4299.473262608051,
-      "formed_at_bar_ms": 1788249600000,
       "kind": "EQUAL_HIGHS",
       "price": 4299.473262608051,
+      "band_low": 4299.473262608051,
+      "band_high": 4299.473262608051,
+      "formed_at_bar_ms": 1788249600000,
+      "age_bars": 152,
+      "state": "SWEPT",
       "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
       "side": "BUY_SIDE",
-      "spread_atr": null,
-      "state": "SWEPT",
       "swept": true,
       "swept_at_bar_ms": 1788271200000,
       "swing_ids": [
         "1h-hi-1788249600000"
-      ]
+      ],
+      "spread_atr": null
     },
     {
-      "age_bars": 147,
-      "band_high": 4290.748524367809,
-      "band_low": 4290.494992017746,
-      "formed_at_bar_ms": 1788267600000,
       "kind": "EQUAL_LOWS",
       "price": 4290.621758192778,
+      "band_low": 4290.494992017746,
+      "band_high": 4290.748524367809,
+      "formed_at_bar_ms": 1788267600000,
+      "age_bars": 147,
+      "state": "SWEPT",
       "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
       "side": "SELL_SIDE",
-      "spread_atr": 0.04840269224188688,
-      "state": "SWEPT",
       "swept": true,
       "swept_at_bar_ms": 1788933600000,
       "swing_ids": [
         "1h-lo-1788919200000",
         "1h-lo-1788267600000"
-      ]
+      ],
+      "spread_atr": 0.04840269224188688
     },
     {
-      "age_bars": 142,
-      "band_high": 4304.828493177891,
-      "band_low": 4304.828493177891,
-      "formed_at_bar_ms": 1788285600000,
       "kind": "EQUAL_HIGHS",
       "price": 4304.828493177891,
+      "band_low": 4304.828493177891,
+      "band_high": 4304.828493177891,
+      "formed_at_bar_ms": 1788285600000,
+      "age_bars": 142,
+      "state": "SWEPT",
       "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
       "side": "BUY_SIDE",
-      "spread_atr": null,
-      "state": "SWEPT",
       "swept": true,
       "swept_at_bar_ms": 1788328800000,
       "swing_ids": [
         "1h-hi-1788285600000"
-      ]
+      ],
+      "spread_atr": null
     },
     {
-      "age_bars": 140,
-      "band_high": 4296.514465391636,
-      "band_low": 4296.103087902069,
-      "formed_at_bar_ms": 1788292800000,
       "kind": "EQUAL_LOWS",
       "price": 4296.3087766468525,
+      "band_low": 4296.103087902069,
+      "band_high": 4296.514465391636,
+      "formed_at_bar_ms": 1788292800000,
+      "age_bars": 140,
+      "state": "SWEPT",
       "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
       "side": "SELL_SIDE",
-      "spread_atr": 0.08471832175036771,
-      "state": "SWEPT",
       "swept": true,
       "swept_at_bar_ms": 1788372000000,
       "swing_ids": [
         "1h-lo-1788339600000",
         "1h-lo-1788292800000"
-      ]
+      ],
+      "spread_atr": 0.08471832175036771
     },
     {
-      "age_bars": 137,
-      "band_high": 4304.121965944767,
-      "band_low": 4304.121965944767,
-      "formed_at_bar_ms": 1788307200000,
       "kind": "EQUAL_HIGHS",
       "price": 4304.121965944767,
+      "band_low": 4304.121965944767,
+      "band_high": 4304.121965944767,
+      "formed_at_bar_ms": 1788307200000,
+      "age_bars": 137,
+      "state": "SWEPT",
       "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
       "side": "BUY_SIDE",
-      "spread_atr": null,
-      "state": "SWEPT",
       "swept": true,
       "swept_at_bar_ms": 1788328800000,
       "swing_ids": [
         "1h-hi-1788307200000"
-      ]
+      ],
+      "spread_atr": null
     },
     {
-      "age_bars": 136,
-      "band_high": 4295.519111633301,
-      "band_low": 4295.130086362362,
-      "formed_at_bar_ms": 1788310800000,
       "kind": "EQUAL_LOWS",
       "price": 4295.324598997831,
+      "band_low": 4295.130086362362,
+      "band_high": 4295.519111633301,
+      "formed_at_bar_ms": 1788310800000,
+      "age_bars": 136,
+      "state": "SWEPT",
       "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
       "side": "SELL_SIDE",
-      "spread_atr": 0.0786390773235302,
-      "state": "SWEPT",
       "swept": true,
       "swept_at_bar_ms": 1788372000000,
       "swing_ids": [
         "1h-lo-1788310800000",
         "1h-lo-1788321600000"
-      ]
+      ],
+      "spread_atr": 0.0786390773235302
     },
     {
-      "age_bars": 131,
-      "band_high": 4305.344559371471,
-      "band_low": 4305.344559371471,
-      "formed_at_bar_ms": 1788328800000,
       "kind": "EQUAL_HIGHS",
       "price": 4305.344559371471,
+      "band_low": 4305.344559371471,
+      "band_high": 4305.344559371471,
+      "formed_at_bar_ms": 1788328800000,
+      "age_bars": 131,
+      "state": "SWEPT",
       "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
       "side": "BUY_SIDE",
-      "spread_atr": null,
-      "state": "SWEPT",
       "swept": true,
       "swept_at_bar_ms": 1788976800000,
       "swing_ids": [
         "1h-hi-1788328800000"
-      ]
+      ],
+      "spread_atr": null
     },
     {
-      "age_bars": 125,
-      "band_high": 4296.688171923161,
-      "band_low": 4296.688171923161,
-      "formed_at_bar_ms": 1788350400000,
       "kind": "EQUAL_LOWS",
       "price": 4296.688171923161,
+      "band_low": 4296.688171923161,
+      "band_high": 4296.688171923161,
+      "formed_at_bar_ms": 1788350400000,
+      "age_bars": 125,
+      "state": "SWEPT",
       "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
       "side": "SELL_SIDE",
-      "spread_atr": null,
-      "state": "SWEPT",
       "swept": true,
       "swept_at_bar_ms": 1788364800000,
       "swing_ids": [
         "1h-lo-1788350400000"
-      ]
+      ],
+      "spread_atr": null
     },
     {
-      "age_bars": 118,
-      "band_high": 4294.100785732269,
-      "band_low": 4294.100785732269,
-      "formed_at_bar_ms": 1788375600000,
       "kind": "EQUAL_LOWS",
       "price": 4294.100785732269,
+      "band_low": 4294.100785732269,
+      "band_high": 4294.100785732269,
+      "formed_at_bar_ms": 1788375600000,
+      "age_bars": 118,
+      "state": "SWEPT",
       "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
       "side": "SELL_SIDE",
-      "spread_atr": null,
-      "state": "SWEPT",
       "swept": true,
       "swept_at_bar_ms": 1788386400000,
       "swing_ids": [
         "1h-lo-1788375600000"
-      ]
+      ],
+      "spread_atr": null
     },
     {
-      "age_bars": 114,
-      "band_high": 4291.853983998299,
-      "band_low": 4291.853983998299,
-      "formed_at_bar_ms": 1788566400000,
       "kind": "EQUAL_LOWS",
       "price": 4291.853983998299,
+      "band_low": 4291.853983998299,
+      "band_high": 4291.853983998299,
+      "formed_at_bar_ms": 1788566400000,
+      "age_bars": 114,
+      "state": "SWEPT",
       "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
       "side": "SELL_SIDE",
-      "spread_atr": null,
-      "state": "SWEPT",
       "swept": true,
       "swept_at_bar_ms": 1788584400000,
       "swing_ids": [
         "1h-lo-1788566400000"
-      ]
+      ],
+      "spread_atr": null
     },
     {
-      "age_bars": 112,
-      "band_high": 4300.067559301853,
-      "band_low": 4300.067559301853,
-      "formed_at_bar_ms": 1788573600000,
       "kind": "EQUAL_HIGHS",
       "price": 4300.067559301853,
+      "band_low": 4300.067559301853,
+      "band_high": 4300.067559301853,
+      "formed_at_bar_ms": 1788573600000,
+      "age_bars": 112,
+      "state": "SWEPT",
       "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
       "side": "BUY_SIDE",
-      "spread_atr": null,
-      "state": "SWEPT",
       "swept": true,
       "swept_at_bar_ms": 1788602400000,
       "swing_ids": [
         "1h-hi-1788573600000"
-      ]
+      ],
+      "spread_atr": null
     },
     {
-      "age_bars": 109,
-      "band_high": 4289.580262124538,
-      "band_low": 4289.580262124538,
-      "formed_at_bar_ms": 1788584400000,
       "kind": "EQUAL_LOWS",
       "price": 4289.580262124538,
+      "band_low": 4289.580262124538,
+      "band_high": 4289.580262124538,
+      "formed_at_bar_ms": 1788584400000,
+      "age_bars": 109,
+      "state": "SWEPT",
       "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
       "side": "SELL_SIDE",
-      "spread_atr": null,
-      "state": "SWEPT",
       "swept": true,
       "swept_at_bar_ms": 1788631200000,
       "swing_ids": [
         "1h-lo-1788584400000"
-      ]
+      ],
+      "spread_atr": null
     },
     {
-      "age_bars": 97,
-      "band_high": 4297.750998556614,
-      "band_low": 4297.645891189575,
-      "formed_at_bar_ms": 1788627600000,
       "kind": "EQUAL_HIGHS",
       "price": 4297.698444873095,
+      "band_low": 4297.645891189575,
+      "band_high": 4297.750998556614,
+      "formed_at_bar_ms": 1788627600000,
+      "age_bars": 97,
+      "state": "SWEPT",
       "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
       "side": "BUY_SIDE",
-      "spread_atr": 0.020066392071307095,
-      "state": "SWEPT",
       "swept": true,
       "swept_at_bar_ms": 1788930000000,
       "swing_ids": [
         "1h-hi-1788919200000",
         "1h-hi-1788627600000"
-      ]
+      ],
+      "spread_atr": 0.020066392071307095
     },
     {
-      "age_bars": 90,
-      "band_high": 4287.720440387726,
-      "band_low": 4287.720440387726,
-      "formed_at_bar_ms": 1788656400000,
       "kind": "EQUAL_HIGHS",
       "price": 4287.720440387726,
+      "band_low": 4287.720440387726,
+      "band_high": 4287.720440387726,
+      "formed_at_bar_ms": 1788656400000,
+      "age_bars": 90,
+      "state": "SWEPT",
       "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
       "side": "BUY_SIDE",
-      "spread_atr": null,
-      "state": "SWEPT",
       "swept": true,
       "swept_at_bar_ms": 1788868800000,
       "swing_ids": [
         "1h-hi-1788656400000"
-      ]
+      ],
+      "spread_atr": null
     },
     {
-      "age_bars": 86,
-      "band_high": 4285.907902777195,
-      "band_low": 4285.757229149342,
-      "formed_at_bar_ms": 1788670800000,
       "kind": "EQUAL_HIGHS",
       "price": 4285.832565963268,
+      "band_low": 4285.757229149342,
+      "band_high": 4285.907902777195,
+      "formed_at_bar_ms": 1788670800000,
+      "age_bars": 86,
+      "state": "SWEPT",
       "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
       "side": "BUY_SIDE",
-      "spread_atr": 0.030149825241731494,
-      "state": "SWEPT",
       "swept": true,
       "swept_at_bar_ms": 1788868800000,
       "swing_ids": [
         "1h-hi-1788670800000",
         "1h-hi-1788685200000"
-      ]
+      ],
+      "spread_atr": 0.030149825241731494
     },
     {
-      "age_bars": 76,
-      "band_high": 4281.460768640041,
-      "band_low": 4281.074455916882,
-      "formed_at_bar_ms": 1788706800000,
       "kind": "EQUAL_HIGHS",
       "price": 4281.302199502786,
+      "band_low": 4281.074455916882,
+      "band_high": 4281.460768640041,
+      "formed_at_bar_ms": 1788706800000,
+      "age_bars": 76,
+      "state": "SWEPT",
       "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
       "side": "BUY_SIDE",
-      "spread_atr": 0.08119168836245196,
-      "state": "SWEPT",
       "swept": true,
       "swept_at_bar_ms": 1788861600000,
       "swing_ids": [
         "1h-hi-1788760800000",
         "1h-hi-1788706800000",
         "1h-hi-1788724800000"
-      ]
+      ],
+      "spread_atr": 0.08119168836245196
     },
     {
-      "age_bars": 74,
-      "band_high": 4275.037354469299,
-      "band_low": 4275.037354469299,
-      "formed_at_bar_ms": 1788714000000,
       "kind": "EQUAL_LOWS",
       "price": 4275.037354469299,
+      "band_low": 4275.037354469299,
+      "band_high": 4275.037354469299,
+      "formed_at_bar_ms": 1788714000000,
+      "age_bars": 74,
+      "state": "SWEPT",
       "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
       "side": "SELL_SIDE",
-      "spread_atr": null,
-      "state": "SWEPT",
       "swept": true,
       "swept_at_bar_ms": 1788728400000,
       "swing_ids": [
         "1h-lo-1788714000000"
-      ]
+      ],
+      "spread_atr": null
     },
     {
-      "age_bars": 66,
-      "band_high": 4270.690981566906,
-      "band_low": 4270.690981566906,
-      "formed_at_bar_ms": 1788746400000,
       "kind": "EQUAL_LOWS",
       "price": 4270.690981566906,
+      "band_low": 4270.690981566906,
+      "band_high": 4270.690981566906,
+      "formed_at_bar_ms": 1788746400000,
+      "age_bars": 66,
+      "state": "SWEPT",
       "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
       "side": "SELL_SIDE",
-      "spread_atr": null,
-      "state": "SWEPT",
       "swept": true,
       "swept_at_bar_ms": 1788786000000,
       "swing_ids": [
         "1h-lo-1788746400000"
-      ]
+      ],
+      "spread_atr": null
     },
     {
-      "age_bars": 61,
-      "band_high": 4272.908086657524,
-      "band_low": 4272.908086657524,
-      "formed_at_bar_ms": 1788764400000,
       "kind": "EQUAL_LOWS",
       "price": 4272.908086657524,
+      "band_low": 4272.908086657524,
+      "band_high": 4272.908086657524,
+      "formed_at_bar_ms": 1788764400000,
+      "age_bars": 61,
+      "state": "SWEPT",
       "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
       "side": "SELL_SIDE",
-      "spread_atr": null,
-      "state": "SWEPT",
       "swept": true,
       "swept_at_bar_ms": 1788775200000,
       "swing_ids": [
         "1h-lo-1788764400000"
-      ]
+      ],
+      "spread_atr": null
     },
     {
-      "age_bars": 56,
-      "band_high": 4278.221519589424,
-      "band_low": 4277.963420391083,
-      "formed_at_bar_ms": 1788782400000,
       "kind": "EQUAL_HIGHS",
       "price": 4278.092469990253,
+      "band_low": 4277.963420391083,
+      "band_high": 4278.221519589424,
+      "formed_at_bar_ms": 1788782400000,
+      "age_bars": 56,
+      "state": "SWEPT",
       "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
       "side": "BUY_SIDE",
-      "spread_atr": 0.05354451929154236,
-      "state": "SWEPT",
       "swept": true,
       "swept_at_bar_ms": 1788854400000,
       "swing_ids": [
         "1h-hi-1788818400000",
         "1h-hi-1788782400000"
-      ]
+      ],
+      "spread_atr": 0.05354451929154236
     },
     {
-      "age_bars": 52,
-      "band_high": 4263.175343573093,
-      "band_low": 4263.175343573093,
-      "formed_at_bar_ms": 1788796800000,
       "kind": "EQUAL_LOWS",
       "price": 4263.175343573093,
+      "band_low": 4263.175343573093,
+      "band_high": 4263.175343573093,
+      "formed_at_bar_ms": 1788796800000,
+      "age_bars": 52,
+      "state": "RESTING",
       "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
       "side": "SELL_SIDE",
-      "spread_atr": null,
-      "state": "RESTING",
       "swept": false,
       "swept_at_bar_ms": null,
       "swing_ids": [
         "1h-lo-1788796800000"
-      ]
+      ],
+      "spread_atr": null
     },
     {
-      "age_bars": 43,
-      "band_high": 4266.894631206989,
-      "band_low": 4266.894631206989,
-      "formed_at_bar_ms": 1788832800000,
       "kind": "EQUAL_LOWS",
       "price": 4266.894631206989,
+      "band_low": 4266.894631206989,
+      "band_high": 4266.894631206989,
+      "formed_at_bar_ms": 1788832800000,
+      "age_bars": 43,
+      "state": "RESTING",
       "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
       "side": "SELL_SIDE",
-      "spread_atr": null,
-      "state": "RESTING",
       "swept": false,
       "swept_at_bar_ms": null,
       "swing_ids": [
         "1h-lo-1788832800000"
-      ]
+      ],
+      "spread_atr": null
     },
     {
-      "age_bars": 43,
-      "band_high": null,
-      "band_low": null,
-      "formed_at_bar_ms": 1788832800000,
       "kind": "PRIOR_DAY_LOW",
       "price": 4266.894631206989,
+      "band_low": null,
+      "band_high": null,
+      "formed_at_bar_ms": 1788832800000,
+      "age_bars": 43,
+      "state": "RESTING",
       "rule": "prior day low: the last complete trading day's low",
       "side": "SELL_SIDE",
-      "spread_atr": null,
-      "state": "RESTING",
       "swept": false,
       "swept_at_bar_ms": null,
-      "swing_ids": []
+      "swing_ids": [],
+      "spread_atr": null
     },
     {
-      "age_bars": 40,
-      "band_high": 4277.396829724312,
-      "band_low": 4277.396829724312,
-      "formed_at_bar_ms": 1788843600000,
       "kind": "EQUAL_HIGHS",
       "price": 4277.396829724312,
+      "band_low": 4277.396829724312,
+      "band_high": 4277.396829724312,
+      "formed_at_bar_ms": 1788843600000,
+      "age_bars": 40,
+      "state": "SWEPT",
       "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
       "side": "BUY_SIDE",
-      "spread_atr": null,
-      "state": "SWEPT",
       "swept": true,
       "swept_at_bar_ms": 1788854400000,
       "swing_ids": [
         "1h-hi-1788843600000"
-      ]
+      ],
+      "spread_atr": null
     },
     {
-      "age_bars": 38,
-      "band_high": 4268.7562799453735,
-      "band_low": 4268.7562799453735,
-      "formed_at_bar_ms": 1788850800000,
       "kind": "EQUAL_LOWS",
       "price": 4268.7562799453735,
+      "band_low": 4268.7562799453735,
+      "band_high": 4268.7562799453735,
+      "formed_at_bar_ms": 1788850800000,
+      "age_bars": 38,
+      "state": "RESTING",
       "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
       "side": "SELL_SIDE",
-      "spread_atr": null,
-      "state": "RESTING",
       "swept": false,
       "swept_at_bar_ms": null,
       "swing_ids": [
         "1h-lo-1788850800000"
-      ]
+      ],
+      "spread_atr": null
     },
     {
-      "age_bars": 28,
-      "band_high": 4292.1407771110535,
-      "band_low": 4292.1407771110535,
-      "formed_at_bar_ms": 1788886800000,
       "kind": "EQUAL_HIGHS",
       "price": 4292.1407771110535,
+      "band_low": 4292.1407771110535,
+      "band_high": 4292.1407771110535,
+      "formed_at_bar_ms": 1788886800000,
+      "age_bars": 28,
+      "state": "SWEPT",
       "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
       "side": "BUY_SIDE",
-      "spread_atr": null,
-      "state": "SWEPT",
       "swept": true,
       "swept_at_bar_ms": 1788897600000,
       "swing_ids": [
         "1h-hi-1788886800000"
-      ]
+      ],
+      "spread_atr": null
     },
     {
-      "age_bars": 23,
-      "band_high": null,
-      "band_low": null,
-      "formed_at_bar_ms": 1788904800000,
       "kind": "PRIOR_DAY_HIGH",
       "price": 4295.959525167942,
+      "band_low": null,
+      "band_high": null,
+      "formed_at_bar_ms": 1788904800000,
+      "age_bars": 23,
+      "state": "SWEPT",
       "rule": "prior day high: the last complete trading day's high",
       "side": "BUY_SIDE",
-      "spread_atr": null,
-      "state": "SWEPT",
       "swept": true,
       "swept_at_bar_ms": 1788912000000,
-      "swing_ids": []
+      "swing_ids": [],
+      "spread_atr": null
     },
     {
-      "age_bars": 17,
-      "band_high": 4298.615713655949,
-      "band_low": 4298.615713655949,
-      "formed_at_bar_ms": 1788930000000,
       "kind": "EQUAL_HIGHS",
       "price": 4298.615713655949,
+      "band_low": 4298.615713655949,
+      "band_high": 4298.615713655949,
+      "formed_at_bar_ms": 1788930000000,
+      "age_bars": 17,
+      "state": "SWEPT",
       "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
       "side": "BUY_SIDE",
-      "spread_atr": null,
-      "state": "SWEPT",
       "swept": true,
       "swept_at_bar_ms": 1788976800000,
       "swing_ids": [
         "1h-hi-1788930000000"
-      ]
+      ],
+      "spread_atr": null
     },
     {
-      "age_bars": 16,
-      "band_high": 4288.5620329380035,
-      "band_low": 4288.5620329380035,
-      "formed_at_bar_ms": 1788933600000,
       "kind": "EQUAL_LOWS",
       "price": 4288.5620329380035,
+      "band_low": 4288.5620329380035,
+      "band_high": 4288.5620329380035,
+      "formed_at_bar_ms": 1788933600000,
+      "age_bars": 16,
+      "state": "SWEPT",
       "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
       "side": "SELL_SIDE",
-      "spread_atr": null,
-      "state": "SWEPT",
       "swept": true,
       "swept_at_bar_ms": 1788955200000,
       "swing_ids": [
         "1h-lo-1788933600000"
-      ]
+      ],
+      "spread_atr": null
     },
     {
-      "age_bars": 12,
-      "band_high": 4295.465152263641,
-      "band_low": 4295.465152263641,
-      "formed_at_bar_ms": 1788948000000,
       "kind": "EQUAL_HIGHS",
       "price": 4295.465152263641,
+      "band_low": 4295.465152263641,
+      "band_high": 4295.465152263641,
+      "formed_at_bar_ms": 1788948000000,
+      "age_bars": 12,
+      "state": "SWEPT",
       "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
       "side": "BUY_SIDE",
-      "spread_atr": null,
-      "state": "SWEPT",
       "swept": true,
       "swept_at_bar_ms": 1788962400000,
       "swing_ids": [
         "1h-hi-1788948000000"
-      ]
+      ],
+      "spread_atr": null
     },
     {
-      "age_bars": 10,
-      "band_high": 4287.451313614845,
-      "band_low": 4287.451313614845,
-      "formed_at_bar_ms": 1788955200000,
       "kind": "EQUAL_LOWS",
       "price": 4287.451313614845,
+      "band_low": 4287.451313614845,
+      "band_high": 4287.451313614845,
+      "formed_at_bar_ms": 1788955200000,
+      "age_bars": 10,
+      "state": "RESTING",
       "rule": "equal lows within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
       "side": "SELL_SIDE",
-      "spread_atr": null,
-      "state": "RESTING",
       "swept": false,
       "swept_at_bar_ms": null,
       "swing_ids": [
         "1h-lo-1788955200000"
-      ]
+      ],
+      "spread_atr": null
     },
     {
-      "age_bars": 8,
-      "band_high": 4296.123252153397,
-      "band_low": 4296.123252153397,
-      "formed_at_bar_ms": 1788962400000,
       "kind": "EQUAL_HIGHS",
       "price": 4296.123252153397,
+      "band_low": 4296.123252153397,
+      "band_high": 4296.123252153397,
+      "formed_at_bar_ms": 1788962400000,
+      "age_bars": 8,
+      "state": "SWEPT",
       "rule": "equal highs within 0.1 x ATR(14) of each other, swings by fractal(2,2)",
       "side": "BUY_SIDE",
-      "spread_atr": null,
-      "state": "SWEPT",
       "swept": true,
       "swept_at_bar_ms": 1788976800000,
       "swing_ids": [
         "1h-hi-1788962400000"
-      ]
+      ],
+      "spread_atr": null
     }
   ],
-  "market": "xauusd",
-  "order_blocks": [
-    {
-      "age_bars": 6,
-      "band_high": 4293.082719802856,
-      "band_low": 4289.082719802856,
-      "broken_at_bar_ms": null,
-      "direction": "BULLISH",
-      "displacement_at_bar_ms": 1788976800000,
-      "displacement_body_atr": 3.87496440220253,
-      "formed_at_bar_ms": 1788969600000,
-      "kind": "ORDER_BLOCK",
-      "price": null,
-      "rule": "order block: last down candle before a body > 1 x ATR(14) at its own bar",
-      "state": "UNTESTED",
-      "tested_at_bar_ms": null
+  "market_structure": {
+    "label": "UP",
+    "label_since_bar_ms": 1788976800000,
+    "rule": "market structure on swings by fractal(2,2), STRICT on both sides (fd_indicators::swing, the same rule /api/paper/htf uses - a flat top is not a swing, unlike bias_defs.py's variant): the label is seeded by the same higher-high-and-higher-low comparison the fractal rule there makes, then carried by CLOSES - a BOS keeps it, a CHoCH flips it. Close-based, never wick-based. A swing is SPENT by the first close beyond it, and a break while the label is RANGE is no event at all and is counted in unclassified_breaks",
+    "events": [
+      {
+        "kind": "CHOCH",
+        "direction": "BEARISH",
+        "broke_price": 4301.683755874634,
+        "broke_swing_id": "1h-lo-1788001200000",
+        "broke_swing_bar_ms": 1788001200000,
+        "closed_at_bar_ms": 1788022800000,
+        "close": 4300.257556915283,
+        "age_bars": 212,
+        "superseded": true,
+        "structure_after": "DOWN",
+        "rule": "CHoCH: the first close beyond the last confirmed swing low while the structure was UP - the opposite side, so the label flips here; swings by fractal(2,2), close-based"
+      },
+      {
+        "kind": "CHOCH",
+        "direction": "BULLISH",
+        "broke_price": 4284.012442946434,
+        "broke_swing_id": "1h-hi-1788087600000",
+        "broke_swing_bar_ms": 1788087600000,
+        "closed_at_bar_ms": 1788109200000,
+        "close": 4286.407454967499,
+        "age_bars": 189,
+        "superseded": true,
+        "structure_after": "UP",
+        "rule": "CHoCH: the first close beyond the last confirmed swing high while the structure was DOWN - the opposite side, so the label flips here; swings by fractal(2,2), close-based"
+      },
+      {
+        "kind": "BOS",
+        "direction": "BULLISH",
+        "broke_price": 4289.24262714386,
+        "broke_swing_id": "1h-hi-1788109200000",
+        "broke_swing_bar_ms": 1788109200000,
+        "closed_at_bar_ms": 1788148800000,
+        "close": 4290.460929393768,
+        "age_bars": 179,
+        "superseded": true,
+        "structure_after": "UP",
+        "rule": "BOS: a bar CLOSED beyond the last confirmed swing high while the structure was already UP - continuation; swings by fractal(2,2), close-based"
+      },
+      {
+        "kind": "BOS",
+        "direction": "BULLISH",
+        "broke_price": 4290.60185199976,
+        "broke_swing_id": "1h-hi-1788202800000",
+        "broke_swing_bar_ms": 1788202800000,
+        "closed_at_bar_ms": 1788228000000,
+        "close": 4292.88089466095,
+        "age_bars": 158,
+        "superseded": true,
+        "structure_after": "UP",
+        "rule": "BOS: a bar CLOSED beyond the last confirmed swing high while the structure was already UP - continuation; swings by fractal(2,2), close-based"
+      },
+      {
+        "kind": "BOS",
+        "direction": "BULLISH",
+        "broke_price": 4301.818182051182,
+        "broke_swing_id": "1h-hi-1788271200000",
+        "broke_swing_bar_ms": 1788271200000,
+        "closed_at_bar_ms": 1788285600000,
+        "close": 4301.850639820099,
+        "age_bars": 142,
+        "superseded": true,
+        "structure_after": "UP",
+        "rule": "BOS: a bar CLOSED beyond the last confirmed swing high while the structure was already UP - continuation; swings by fractal(2,2), close-based"
+      },
+      {
+        "kind": "CHOCH",
+        "direction": "BEARISH",
+        "broke_price": 4296.688171923161,
+        "broke_swing_id": "1h-lo-1788350400000",
+        "broke_swing_bar_ms": 1788350400000,
+        "closed_at_bar_ms": 1788372000000,
+        "close": 4296.315598011017,
+        "age_bars": 119,
+        "superseded": true,
+        "structure_after": "DOWN",
+        "rule": "CHoCH: the first close beyond the last confirmed swing low while the structure was UP - the opposite side, so the label flips here; swings by fractal(2,2), close-based"
+      },
+      {
+        "kind": "BOS",
+        "direction": "BEARISH",
+        "broke_price": 4294.100785732269,
+        "broke_swing_id": "1h-lo-1788375600000",
+        "broke_swing_bar_ms": 1788375600000,
+        "closed_at_bar_ms": 1788566400000,
+        "close": 4294.076992034912,
+        "age_bars": 114,
+        "superseded": true,
+        "structure_after": "DOWN",
+        "rule": "BOS: a bar CLOSED beyond the last confirmed swing low while the structure was already DOWN - continuation; swings by fractal(2,2), close-based"
+      },
+      {
+        "kind": "BOS",
+        "direction": "BEARISH",
+        "broke_price": 4291.853983998299,
+        "broke_swing_id": "1h-lo-1788566400000",
+        "broke_swing_bar_ms": 1788566400000,
+        "closed_at_bar_ms": 1788588000000,
+        "close": 4291.591540336609,
+        "age_bars": 108,
+        "superseded": true,
+        "structure_after": "DOWN",
+        "rule": "BOS: a bar CLOSED beyond the last confirmed swing low while the structure was already DOWN - continuation; swings by fractal(2,2), close-based"
+      },
+      {
+        "kind": "BOS",
+        "direction": "BEARISH",
+        "broke_price": 4289.580262124538,
+        "broke_swing_id": "1h-lo-1788584400000",
+        "broke_swing_bar_ms": 1788584400000,
+        "closed_at_bar_ms": 1788634800000,
+        "close": 4287.744745254517,
+        "age_bars": 95,
+        "superseded": true,
+        "structure_after": "DOWN",
+        "rule": "BOS: a bar CLOSED beyond the last confirmed swing low while the structure was already DOWN - continuation; swings by fractal(2,2), close-based"
+      },
+      {
+        "kind": "BOS",
+        "direction": "BEARISH",
+        "broke_price": 4277.181188702583,
+        "broke_swing_id": "1h-lo-1788678000000",
+        "broke_swing_bar_ms": 1788678000000,
+        "closed_at_bar_ms": 1788699600000,
+        "close": 4276.738826274872,
+        "age_bars": 78,
+        "superseded": true,
+        "structure_after": "DOWN",
+        "rule": "BOS: a bar CLOSED beyond the last confirmed swing low while the structure was already DOWN - continuation; swings by fractal(2,2), close-based"
+      },
+      {
+        "kind": "BOS",
+        "direction": "BEARISH",
+        "broke_price": 4275.037354469299,
+        "broke_swing_id": "1h-lo-1788714000000",
+        "broke_swing_bar_ms": 1788714000000,
+        "closed_at_bar_ms": 1788742800000,
+        "close": 4273.9236035346985,
+        "age_bars": 67,
+        "superseded": true,
+        "structure_after": "DOWN",
+        "rule": "BOS: a bar CLOSED beyond the last confirmed swing low while the structure was already DOWN - continuation; swings by fractal(2,2), close-based"
+      },
+      {
+        "kind": "BOS",
+        "direction": "BEARISH",
+        "broke_price": 4272.908086657524,
+        "broke_swing_id": "1h-lo-1788764400000",
+        "broke_swing_bar_ms": 1788764400000,
+        "closed_at_bar_ms": 1788775200000,
+        "close": 4272.518228530884,
+        "age_bars": 58,
+        "superseded": true,
+        "structure_after": "DOWN",
+        "rule": "BOS: a bar CLOSED beyond the last confirmed swing low while the structure was already DOWN - continuation; swings by fractal(2,2), close-based"
+      },
+      {
+        "kind": "CHOCH",
+        "direction": "BULLISH",
+        "broke_price": 4277.396829724312,
+        "broke_swing_id": "1h-hi-1788843600000",
+        "broke_swing_bar_ms": 1788843600000,
+        "closed_at_bar_ms": 1788854400000,
+        "close": 4278.071618080139,
+        "age_bars": 37,
+        "superseded": true,
+        "structure_after": "UP",
+        "rule": "CHoCH: the first close beyond the last confirmed swing high while the structure was DOWN - the opposite side, so the label flips here; swings by fractal(2,2), close-based"
+      },
+      {
+        "kind": "BOS",
+        "direction": "BULLISH",
+        "broke_price": 4292.1407771110535,
+        "broke_swing_id": "1h-hi-1788886800000",
+        "broke_swing_bar_ms": 1788886800000,
+        "closed_at_bar_ms": 1788901200000,
+        "close": 4292.757745265961,
+        "age_bars": 24,
+        "superseded": true,
+        "structure_after": "UP",
+        "rule": "BOS: a bar CLOSED beyond the last confirmed swing high while the structure was already UP - continuation; swings by fractal(2,2), close-based"
+      },
+      {
+        "kind": "CHOCH",
+        "direction": "BEARISH",
+        "broke_price": 4290.494992017746,
+        "broke_swing_id": "1h-lo-1788919200000",
+        "broke_swing_bar_ms": 1788919200000,
+        "closed_at_bar_ms": 1788937200000,
+        "close": 4290.189098358154,
+        "age_bars": 15,
+        "superseded": true,
+        "structure_after": "DOWN",
+        "rule": "CHoCH: the first close beyond the last confirmed swing low while the structure was UP - the opposite side, so the label flips here; swings by fractal(2,2), close-based"
+      },
+      {
+        "kind": "CHOCH",
+        "direction": "BULLISH",
+        "broke_price": 4296.123252153397,
+        "broke_swing_id": "1h-hi-1788962400000",
+        "broke_swing_bar_ms": 1788962400000,
+        "closed_at_bar_ms": 1788976800000,
+        "close": 4320.082719802856,
+        "age_bars": 4,
+        "superseded": false,
+        "structure_after": "UP",
+        "rule": "CHoCH: the first close beyond the last confirmed swing high while the structure was DOWN - the opposite side, so the label flips here; swings by fractal(2,2), close-based"
+      }
+    ],
+    "unclassified_breaks": 1,
+    "measured": {
+      "source": "docs/decisions/2026-09-19-smc-structure-measured.md",
+      "choch_median_lag_bars": 5.0,
+      "choch_p90_lag_bars": 44.0,
+      "fractal_label_median_lag_bars": 13.0,
+      "zigzag_p90_lag_bars": 17.0,
+      "choch_absent_at_turns_pct": 50.0,
+      "zigzag_missed_turns_pct": 13.0,
+      "broken_back_within_10_bars_pct": 38.0,
+      "note": "A CHoCH marks a 4xATR turn a median 5 bars after it, against 13 for the fractal(2) label - and it is absent at half of those turns where the zigzag misses 13%, its p90 lag is 44 bars against the zigzag's 17, and the old direction breaks back through within 10 bars 38% of the time. What follows a BOS or a CHoCH is statistically indistinguishable from what follows any bar on that slice. These markers PUNCTUATE a structure row; they do not replace one, and anything on screen that lets them look like a faster structure label will mislead."
     }
-  ],
-  "profile": {
-    "activity_in_value_area_bar_buckets": 321.0,
-    "activity_total_bar_buckets": 426.0,
-    "bucket_size_price": 1.9420804954421413,
-    "buckets": 37,
-    "buckets_per_atr": 4.0,
-    "measure": "TIME_AT_PRICE",
-    "poc": {
-      "age_bars": 114,
-      "band_high": 4294.248631500168,
-      "band_low": 4292.306551004725,
-      "formed_at_bar_ms": 1788566400000,
-      "kind": "POC",
-      "price": 4293.277591252447,
-      "rule": "activity profile over 115 bars, time-at-price, bucket = ATR(14)/4, value area 70% by the classic walk",
-      "state": "CURRENT"
+  },
+  "dealing_range": {
+    "high": 4296.123252153397,
+    "low": 4287.451313614845,
+    "equilibrium": 4291.787282884121,
+    "high_swing_id": "1h-hi-1788962400000",
+    "low_swing_id": "1h-lo-1788955200000",
+    "high_bar_ms": 1788962400000,
+    "low_bar_ms": 1788955200000,
+    "close_fraction_of_range": 5.146646968218361,
+    "close_zone": "PREMIUM",
+    "rule": "dealing range: the last confirmed swing high to the last confirmed swing low, swings by fractal(2,2); equilibrium is the midpoint, above it is premium and below it is discount; close_fraction_of_range is (close - low) / (high - low) and is NOT clamped, so over 1.0 is a close above the range"
+  },
+  "extremes": {
+    "session": {
+      "high": {
+        "kind": "SESSION_HIGH",
+        "price": 4334.082719802856,
+        "band_low": null,
+        "band_high": null,
+        "formed_at_bar_ms": 1788991200000,
+        "age_bars": 0,
+        "state": "FORMING",
+        "rule": "session: the trading-day run in progress, split by the broker's daily hole"
+      },
+      "low": {
+        "kind": "SESSION_LOW",
+        "price": 4287.451313614845,
+        "band_low": null,
+        "band_high": null,
+        "formed_at_bar_ms": 1788955200000,
+        "age_bars": 10,
+        "state": "FORMING",
+        "rule": "session: the trading-day run in progress, split by the broker's daily hole"
+      },
+      "start_bar_ms": 1788912000000,
+      "end_bar_ms": 1788991200000,
+      "bars": 23
     },
-    "vah": {
-      "age_bars": 114,
-      "band_high": null,
-      "band_low": null,
-      "formed_at_bar_ms": 1788566400000,
-      "kind": "VAH",
-      "price": 4298.132792491052,
-      "rule": "activity profile over 115 bars, time-at-price, bucket = ATR(14)/4, value area 70% by the classic walk",
-      "state": "CURRENT"
+    "day": {
+      "high": {
+        "kind": "DAY_HIGH",
+        "price": 4295.959525167942,
+        "band_low": null,
+        "band_high": null,
+        "formed_at_bar_ms": 1788904800000,
+        "age_bars": 23,
+        "state": "COMPLETE",
+        "rule": "day: the last COMPLETE trading-day run, split by the broker's daily hole"
+      },
+      "low": {
+        "kind": "DAY_LOW",
+        "price": 4266.894631206989,
+        "band_low": null,
+        "band_high": null,
+        "formed_at_bar_ms": 1788832800000,
+        "age_bars": 43,
+        "state": "COMPLETE",
+        "rule": "day: the last COMPLETE trading-day run, split by the broker's daily hole"
+      },
+      "start_bar_ms": 1788825600000,
+      "end_bar_ms": 1788904800000,
+      "bars": 23
     },
-    "val": {
-      "age_bars": 78,
-      "band_high": null,
-      "band_low": null,
-      "formed_at_bar_ms": 1788699600000,
-      "kind": "VAL",
-      "price": 4272.885746050304,
-      "rule": "activity profile over 115 bars, time-at-price, bucket = ATR(14)/4, value area 70% by the classic walk",
-      "state": "CURRENT"
-    },
-    "value_area_pct": 0.7,
-    "window_bars": 115,
-    "window_end_bar_ms": 1788991200000,
-    "window_start_bar_ms": 1788566400000
+    "week": {
+      "high": {
+        "kind": "WEEK_HIGH",
+        "price": 4311.489968240261,
+        "band_low": null,
+        "band_high": null,
+        "formed_at_bar_ms": 1788012000000,
+        "age_bars": 215,
+        "state": "COMPLETE",
+        "rule": "week: the last COMPLETE broker week, split by the weekend hole (htf::weeks_of)"
+      },
+      "low": {
+        "kind": "WEEK_LOW",
+        "price": 4273.820799052715,
+        "band_low": null,
+        "band_high": null,
+        "formed_at_bar_ms": 1788073200000,
+        "age_bars": 199,
+        "state": "COMPLETE",
+        "rule": "week: the last COMPLETE broker week, split by the weekend hole (htf::weeks_of)"
+      },
+      "start_bar_ms": 1787961600000,
+      "end_bar_ms": 1788386400000,
+      "bars": 115
+    }
   },
   "source": {
-    "bars": 230,
     "file": "bars/XAUUSD-1h.parquet",
+    "bars": 230,
     "timeframe": "1h"
   },
-  "timeframe": "1h",
-  "unavailable": null,
   "window": {
     "bars": 230,
     "days": 10,
+    "start_bar_ms": 1787961600000,
     "end_bar_ms": 1788991200000,
-    "profile_days": 5,
-    "start_bar_ms": 1787961600000
-  }
+    "profile_days": 5
+  },
+  "tested_as_a_rule": {
+    "what": "the full ICT/SMC chain as a mechanical entry: a higher-timeframe fair value gap, a liquidity sweep that closes back inside, a displacement close through structure, a retrace into the impulse's gap, stop beyond the sweep",
+    "hypothesis": "docs/hypotheses/2026-09-13-ict-sweep-mss-fvg.md",
+    "decision": "docs/decisions/2026-09-13-ict-sweep-mss-fvg.md",
+    "sample": "four years of Dukascopy gold minutes, out of sample, pre-registered (batch ict-oos, 100 null seeds)",
+    "out_of_sample_trades": 1428,
+    "profit_factor": 0.746,
+    "expectancy_r": -0.19,
+    "null_p95_profit_factor": 0.746,
+    "note": "It passed its gate on the only three months of broker minutes available and then lost out of sample at the rate of noise traded at the same cost. Closed. Everything this route serves is a description of what the bars did; none of it is a signal, and the numbers here are what happened the last time this desk treated it as one."
+  },
+  "unavailable": null
 }

@@ -1206,8 +1206,14 @@ export type PriceLevelKind =
 /**
  * Which states a family can be in is fixed:
  * profile `CURRENT`; gaps `UNFILLED` | `PARTIALLY_FILLED`; order blocks
- * `UNTESTED` | `TESTED` | `BROKEN`; liquidity `RESTING` | `SWEPT`; extremes
- * `FORMING` | `COMPLETE`.
+ * `UNTESTED` | `TESTED` | `BROKEN` | `BREAKER`; liquidity `RESTING` |
+ * `SWEPT`; extremes `FORMING` | `COMPLETE`.
+ *
+ * `BREAKER` (2026-09-19) is a block that broke and was then traded back
+ * into — a fourth STATE of the same block and not a second list, so a panel
+ * counting blocks still counts each one once. It is not rare: 57 of the 62
+ * broken blocks in `docs/api-samples/paper-levels.json` are breakers, so
+ * styling it as a find would light up most of the chart.
  */
 export type PriceLevelState =
   | 'CURRENT'
@@ -1218,6 +1224,7 @@ export type PriceLevelState =
   | 'UNTESTED'
   | 'TESTED'
   | 'BROKEN'
+  | 'BREAKER'
   | 'RESTING'
   | 'SWEPT'
 
@@ -1260,6 +1267,90 @@ export interface PriceOrderBlock extends PriceLevel {
   displacement_body_atr: number
   tested_at_bar_ms: number | null
   broken_at_bar_ms: number | null
+  /** The bar that turned a broken block into a `BREAKER`: the first one
+   *  after the break that traded back into the band. `null` on every other
+   *  state, and never set without `broken_at_bar_ms`. */
+  breaker_retested_at_bar_ms: number | null
+}
+
+/** BOS or CHoCH: one bar CLOSING beyond one confirmed swing. Which of the
+ *  two it is depends only on which way the structure was already pointing. */
+export interface PriceStructureEvent {
+  kind: 'BOS' | 'CHOCH'
+  /** Which side the close broke: `BULLISH` through a swing HIGH. It says
+   *  where the event was, not what price will do next. */
+  direction: 'BULLISH' | 'BEARISH'
+  /** The swing price the close went beyond, in quote units. */
+  broke_price: number
+  /** The swing it broke, spelled as `HtfLevel.id` and as the pools'
+   *  `swing_ids` — the same swing, so the three can be joined. */
+  broke_swing_id: string
+  broke_swing_bar_ms: number
+  /** The bar whose close did it, and that close. */
+  closed_at_bar_ms: number
+  close: number
+  age_bars: number
+  /** Whether a later event has happened. A fact about position in the list,
+   *  not about importance. */
+  superseded: boolean
+  structure_after: 'UP' | 'DOWN' | 'RANGE'
+  rule: string
+}
+
+/**
+ * The spine: the structure label and the closes that moved it.
+ *
+ * `label` is an INPUT to the event definitions — a BOS is only a BOS because
+ * the structure was already pointing that way — and not a recommendation.
+ * What these markers are worth is `measured` and
+ * `PriceLevelsResponse.tested_as_a_rule`, and both belong on screen wherever
+ * the markers are: a CHoCH marks a 4×ATR turn a median 5 bars in, is absent
+ * at half of them, and its p90 lag is 44 bars. Anything that renders it as a
+ * faster structure row will mislead.
+ */
+export interface PriceMarketStructure {
+  label: 'UP' | 'DOWN' | 'RANGE'
+  /** The bar the label last changed on, or `null` while it is `RANGE`. */
+  label_since_bar_ms: number | null
+  rule: string
+  /** Oldest first, like every list here. */
+  events: PriceStructureEvent[]
+  /** Breaks that happened while the label was `RANGE` and were therefore
+   *  named as neither. Published so a short event list is not read as a
+   *  quiet tape — and NOT comparable to the 43% flat rate in the study,
+   *  which recomputes its label every bar where this route carries it. */
+  unclassified_breaks: number
+  measured: {
+    source: string
+    choch_median_lag_bars: number
+    choch_p90_lag_bars: number
+    fractal_label_median_lag_bars: number
+    zigzag_p90_lag_bars: number
+    choch_absent_at_turns_pct: number
+    zigzag_missed_turns_pct: number
+    broken_back_within_10_bars_pct: number
+    note: string
+  }
+}
+
+/** The last confirmed swing high to the last confirmed swing low. */
+export interface PriceDealingRange {
+  high: number
+  low: number
+  /** The midpoint. The level itself, not a statistic about the range. */
+  equilibrium: number
+  high_swing_id: string
+  low_swing_id: string
+  high_bar_ms: number
+  low_bar_ms: number
+  /** `(close - low) / (high - low)`, **unclamped**: over 1 is a close above
+   *  the range and under 0 below it. Do not clamp it for display — that
+   *  turns a breakout into a ceiling. */
+  close_fraction_of_range: number
+  /** A restatement of the fraction in SMC's words, not advice: the same half
+   *  of a range is where one reader sells and another buys. */
+  close_zone: 'PREMIUM' | 'DISCOUNT' | 'EQUILIBRIUM'
+  rule: string
 }
 
 export interface PriceLiquidityPool extends PriceLevel {
@@ -1319,12 +1410,37 @@ export interface PriceLevelsResponse {
   fair_value_gaps: PriceFairValueGap[] | null
   order_blocks: PriceOrderBlock[] | null
   liquidity: PriceLiquidityPool[] | null
+  market_structure: PriceMarketStructure | null
+  /** `null` when the window has not produced both a confirmed swing high and
+   *  a confirmed swing low below it — a real state on a one-way window, not
+   *  an error. */
+  dealing_range: PriceDealingRange | null
   /** `session` is the trading-day run IN PROGRESS and `day` is the last
    *  COMPLETE one — the same convention `/api/paper/htf` uses for "prior
    *  day". A label saying "today's high" over `day` would be wrong. */
   extremes: { session: PricePeriodExtremes; day: PricePeriodExtremes; week: PricePeriodExtremes } | null
   source: { file: string; bars: number; timeframe: string } | null
   window: { bars: number; days: number; start_bar_ms: number; end_bar_ms: number; profile_days: number } | null
+  /**
+   * What happened when this family was traded as a mechanical rule. Constant
+   * text and constant numbers, present even when every block above is null,
+   * because it is a fact about the METHOD and not about today's tape.
+   *
+   * Show it wherever the SMC fields are shown. The desk did not decline this
+   * chain on principle — it traded it out of sample and lost.
+   */
+  tested_as_a_rule: {
+    what: string
+    hypothesis: string
+    decision: string
+    sample: string
+    out_of_sample_trades: number
+    profit_factor: number
+    expectancy_r: number
+    /** The same number as `profit_factor`, which is the finding. */
+    null_p95_profit_factor: number
+    note: string
+  }
   /** A sentence to display when there are no bars. Everything above is null
    *  when this is set. */
   unavailable: string | null
