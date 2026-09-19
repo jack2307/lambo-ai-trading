@@ -204,3 +204,121 @@ advisory, so no book's result moves. Both are stage 3-4 of
 `docs/plans/2026-09-18-staged-ai-entry.md`. If the split by `prompt_layout`
 shows a different entry rate, that is a finding about the order and belongs
 here, not hidden by pooling the two.
+
+## Amendment, 2026-09-19: the twenty-five registrations did not test these levels
+
+**This corrects a sentence in this file's own justification, and the
+correction makes the caution stronger rather than weaker.** Nothing about the
+pre-commitments below changes; the falsifier, the thresholds and N = 60 stand
+exactly as registered.
+
+**What this file says**, at the head of "This is a new hypothesis, and it is
+not the old one wearing a new name":
+
+> Twenty-five registrations in `docs/decisions/` tested levels of exactly this
+> kind — POC, value area, gamma walls, whale support and resistance, max pain
+> — as **mechanical rules**, and not one survived out of sample.
+
+**What the record says.** Every closed registration on this desk was checked
+against that sentence on 2026-09-19, by reading what each one actually
+measured. Every one of them tests a construct drawn from the **price bars**:
+
+- *prior-day and session levels* — `2026-09-13-pdhl` (yesterday's high and
+  low), `2026-09-13-london-range`, `2026-09-13-orb-ny`, `2026-09-13-btc-us-open`
+  (opening ranges), `2026-09-13-gap-fade` (the weekend gap),
+  `2026-09-13-volcond-breakout` (a range break gated on ATR),
+  `2026-09-14-volman-box` (a tight price box);
+- *bar shape and price structure* — `2026-09-13-doji`, `-doji-btc`,
+  `-doji-2018`, `2026-09-13-ict-sweep-mss-fvg` (sweep, market-structure shift,
+  fair-value gap), `2026-09-13-trend-pullback`, `2026-09-13-volume-thrust`;
+- *the indicator grid* — `2026-09-12-technical-baselines`,
+  `2026-09-12-vantage-bars-baselines`, `2026-09-12-gold-intraday-batch-1`,
+  `2026-09-13-recent-year-screen`, `2026-09-13-m15-check`,
+  `2026-09-13-btc-m15-check` (EMA, RSI, MACD, Bollinger, Keltner, Donchian,
+  stochastic, RSI-2);
+- *a benchmark computed from the bars* — `2026-09-13-vwap-fade`;
+- *clocks and holds* — `2026-09-13-close-reopen-drift`,
+  `2026-09-13-friday-weekend-hold`, `2026-09-13-london-fix`,
+  `2026-09-13-btc-us-hours`, `2026-09-14-fx-local-hours`, `-fx-local-hours-sign`,
+  `2026-09-14-intraday-momentum`;
+- *trailing returns* — `2026-09-13-tsmom`, `-tsmom-2`, `-tsmom-silver`,
+  `2026-09-14-tsmom-eurusd`;
+- *the calendar* — `2026-09-14-pre-nfp-drift`, `2026-09-14-nfp-vs-first-friday`,
+  `2026-09-15-nfp-cross-asset`;
+- *cross-instrument and dealer-quote work* — `2026-09-15-pair-residual`,
+  `2026-09-15-quote-asymmetry`, `2026-09-15-venue-residual`;
+- *an exit rule* — `2026-09-16-trailing-stop`.
+
+**Not one of them reads the option tape.** POC, max pain, whale support and
+resistance, the gamma wall and the value area appear in no registration's
+entry rule and in no batch file under `docs/hypotheses/*.toml`. A search of
+`docs/hypotheses/` and `docs/decisions/` for those five terms returns exactly
+two files, and both of them are registrations of the *context* claim that have
+not been decided: this one and `2026-09-18-smc-context.md`.
+
+The four option-level strategy ids do appear once in a receipt, and the honest
+statement of it is small: the exploratory sweep for
+`2026-09-16-trailing-stop` ran every method at its defaults over the Vantage
+gold tape, and `maxpain-magnet` produced **9** trades, `level-reversion` 12,
+`flow-momentum` 3 and `flow-at-level` 2
+(`docs/research/runs/2026-09-15-trail-exploratory/trail-off.txt`). That is a
+side effect of sweeping a trailing stop across the whole strategy table, not a
+test of anything: the desk's own floor is thirty trades, no null was run
+against those rows, no registration named them, and the trailing-stop record
+does not mention them. `maxpain-magnet`'s PF of 3.298 on nine trades is the
+exact number this desk exists to not believe.
+
+**Which is right, and how that was established.** The record is, and the
+sentence above is wrong. Two documents already say so in the desk's own voice
+and neither has ever been contradicted by a receipt:
+
+- `docs/decisions/2026-09-12-technical-baselines.md`, of `level-reversion`,
+  `maxpain-magnet`, `flow-momentum` and `flow-at-level`: *"Those have never
+  been tested: the tape covers 114 of 70,080 bars (0.16%), and all four
+  returned zero out-of-sample trades. **Not rejected — unasked.**"*
+- `docs/decisions/2026-09-14-night-synthesis.md`: *"Options flow at levels,
+  the reason the project exists, still waiting on a tape long enough to
+  test."*
+
+**The one record that touches the option tape at all**, and it is not a
+mechanical level rule: `docs/decisions/2026-09-12-logistic-does-not-generalise.md`
+fitted a logistic model over the 24 options-flow features — which do include
+`max_pain`, `poc`, `w_sup` and `w_res`, per `crates/fd-features/src/lib.rs` —
+and found the in-sample score was memorisation (gold AUC 0.77 in sample,
+0.52 walk-forward on 974 labelled rows; BTC 0.95 → 0.24 on 169). It is not a
+registration, it predates the hypothesis discipline, it was run on about five
+days of gold tape and one of BTC, and its own reading is explicit: *"The
+useful conclusion is not that options flow fails — it is that this feature set
+is easily memorised."* It closes nothing about the levels.
+
+**Why the correction tightens this registration rather than loosening it.**
+The sentence as written claims a graveyard: twenty-five bodies, so the caution
+that follows it is a caution against repeating a known failure. The truth is
+worse for anyone hoping. **An untested construct is not a ruled-out one, and
+it is not a promising one either.** What actually stands behind this file is a
+tape too short to have answered the question in either direction, so the
+option levels here carry *no* out-of-sample evidence at all — not for them and
+not against them. That is a weaker prior than "they failed twenty-five times",
+and the pre-committed thresholds in this file are the only thing standing
+between it and a result read out of noise. Nothing in this correction licenses
+a wider grid, a second look, or a reading of a positive stage-one number as
+anything but what section "What settles it" says it is.
+
+**What does not change.** The paragraph the sentence sits in is still making a
+true and necessary distinction: *the old claim, that these levels predict price
+and should be traded, is not this claim.* That the old claim died on price
+levels rather than option levels does not make this file's claim about the
+**decision** any less separate from it. And the sentence in "What this does not
+say" — *"It does not revive the twenty-five closed registrations"* — is
+unaffected, since those twenty-five closed on constructs this file does not
+touch.
+
+The sentence is left standing above, uncorrected, because it is what this
+registration said before it ran and the record is worth more with the error
+visible than with it tidied.
+
+*Written 2026-09-19 by the records session. Established by reading every
+closed registration in `docs/decisions/` and every file in `docs/hypotheses/`,
+and by searching both trees plus `docs/research/runs/` for POC, value area,
+gamma wall, whale support/resistance and max pain. Raised as item 1 of
+`docs/research/VERDICTS.md` section 4.*
