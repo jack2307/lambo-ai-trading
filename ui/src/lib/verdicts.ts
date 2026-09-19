@@ -141,6 +141,49 @@ const INDICATORS: Verdict[] = [
       'Confirmed fractal swings are the fractal(k) family of the bias study, which measured them as labels and licensed no rule: fractal(2) on H4 is the best of its 34 tests at z = +1.98 against an expected largest-of-34 of +1.94, and it labels 18.5% of H4 bars differently between anchors (docs/decisions/2026-09-18-market-bias-definitions.md). As a rule it is registered and RUNNING: the ai-xau-ds-ctx-htf-filter book began at 2026-09-18T04:07:34Z. No verdict may be implied for it, in either direction, until that book is decided.',
     registration: 'docs/hypotheses/2026-09-18-htf-context.md',
   },
+  /*
+   * THE THREE METHOD-LEVEL DEFINITIONS, added 2026-09-19 with the indicators
+   * themselves. All three are `untested` and none is `killed`, and that is
+   * not a softening: nobody registered a rule on any of them, so there is
+   * nothing that was tried and closed. What there IS, and what no other row
+   * on this chart has, is a measurement of the definition itself — latency
+   * and whipsaw over 25,708 H1 bars — which the catalog now serves beside
+   * each one. The badge says which kind of evidence exists, because
+   * "measured, and it turns every five bars" and "traded, and it lost" are
+   * different facts and a reader must not take one for the other.
+   *
+   * The information column rides in every `detail`, because it is the same
+   * sentence for all three and it is the one that matters: the best of the
+   * study's 34 tests reached z = +1.98 where the expected largest of 34
+   * standard normals under pure noise is +1.94.
+   */
+  {
+    id: 'supertrend',
+    kind: 'indicator',
+    status: 'untested',
+    line: 'measured, never traded: 2.5 flips/100 bars, 19% missed',
+    detail:
+      'No registration in docs/hypotheses/ tests supertrend as a signal. What is measured is the definition: on 25,708 H1 XAUUSD bars, 2.5 label changes per 100 bars, 2% of them undone within three bars, 13 bars of median lag at a 4×ATR turn and 19% of turns never agreed with; on 6,728 H4 bars, 2.4 and 1% and 10 and 12%. It is the best-behaved of the seventeen and the study names it the choice if one definition must serve both rows — while also finding that no definition in the set carries information: the best of 34 tests reached z = +1.98 against an expected largest-of-34 of +1.94 under pure noise, and every candidate has a losing year (docs/decisions/2026-09-18-market-bias-definitions.md).',
+    registration: null,
+  },
+  {
+    id: 'zigzag',
+    kind: 'indicator',
+    status: 'untested',
+    line: 'measured, never traded: 6.1 flips/100, 16% undone in 3',
+    detail:
+      'The definition the H1 structure row runs, and the one the bias study recommends for it: on 25,708 H1 XAUUSD bars, 6.1 flips per 100 bars, 16% of them undone within three bars, 6 bars of median lag at a 4×ATR turn and 1% of turns missed against fractal(2)’s 23% — the one cell in the grid that is not on the frontier’s bad side. That is a statement about legibility, not about profit: the same study found no definition separated with-trend from against-trend, its best cell reaching z = +1.98 where noise alone produces +1.94 over 34 tests (docs/decisions/2026-09-18-market-bias-definitions.md). As a rule it is untested; structure as a rule is the open ai-xau-ds-ctx-htf-filter book, which runs fractal(2) on H4 and not this.',
+    registration: null,
+  },
+  {
+    id: 'avwap',
+    kind: 'indicator',
+    status: 'untested',
+    line: 'day anchor: 19.7 flips/100, 57% undone within 3 bars',
+    detail:
+      'Measured, and explicitly warned against on the day anchor: on 25,708 H1 XAUUSD bars it turns 19.7 times per 100 bars with 57% of those turns reversed within three, and on 6,728 H4 bars 34.3 and 72%. The study lists it among the definitions not to put on a card, beside zigzag 1.5×ATR and pdmid day, because a row that changes its mind that often is not faster, it is noise with a direction attached. The week anchor is 9.2 flips and 53% undone — not named in that list, and not much better. Untested as a rule: no registration in docs/hypotheses/ trades it (docs/decisions/2026-09-18-market-bias-definitions.md).',
+    registration: null,
+  },
 ]
 
 /**

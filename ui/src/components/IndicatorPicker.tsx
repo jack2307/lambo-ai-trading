@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
-import { api, type IndicatorInfo, type IndicatorPoint } from '@/lib/api'
+import { api, type IndicatorInfo, type IndicatorPoint, type MeasuredCell } from '@/lib/api'
 import type { ActiveIndicator } from '@/components/PriceChart'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
@@ -43,6 +43,158 @@ import { verdictFor } from '@/lib/verdicts'
  * entries are among the thirty-nine, and the interface was agreed in advance
  * so the swap was a deletion.
  */
+
+/* ------------------------------------------------------------ measured */
+
+/*
+ * THE SECOND KIND OF EVIDENCE, AND IT IS NOT THE VERDICT.
+ *
+ * A verdict says what happened when somebody registered a rule on an
+ * indicator and ran it. A measurement says what the LINE does: how often it
+ * changes its mind, how much of that it takes back within three bars, how
+ * late it is to a turn, how many turns it sleeps through. Three definitions
+ * carry one — `supertrend`, `zigzag` and `avwap` — because this desk spent
+ * 2026-09-18 measuring seventeen of them over 25,708 H1 and 6,728 H4 bars,
+ * and no chart anywhere shows a trader those numbers beside the line. This
+ * one does, in the menu where the line is chosen rather than in a caption
+ * under a chart that already has it drawn.
+ *
+ * Three rules hold the display honest:
+ *
+ *  - THE TIMEFRAME IS ALWAYS PRINTED. A number measured on H1 is not a
+ *    number about H4, and the Desk can be on 5m. The label never claims the
+ *    chart's timeframe; it names the one the study used.
+ *  - THE PARAMETERS MUST MATCH. `avwap` on the day anchor is 19.7 flips per
+ *    100 bars and on the week 9.2. A viewer who changed a period is told the
+ *    numbers do not describe their line rather than shown numbers about a
+ *    different one.
+ *  - THE CAUTION IS NOT OPTIONAL. Where the study wrote one — it wrote one
+ *    for the day-anchored VWAP, whose turns reverse 57% of the time within
+ *    three bars — it is rendered in the caution colour, in full, before the
+ *    line can be added.
+ */
+
+/** Does this measured cell describe the parameters actually in use? */
+function cellMatches(cell: MeasuredCell, params: Record<string, number>): boolean {
+  return Object.entries(cell.params).every(([name, value]) => {
+    const chosen = params[name]
+    // A parameter the viewer has not overridden is at the catalog default,
+    // and the catalog default is the cell that was measured; `undefined`
+    // therefore matches. An overridden one must match exactly.
+    return chosen === undefined || chosen === value
+  })
+}
+
+/**
+ * The row to show: the study's numbers for these parameters, preferring the
+ * timeframe on screen and otherwise saying plainly which one it used.
+ *
+ * Returns `null` when nothing was measured, and `'other-params'` when the
+ * definition was measured but not at the parameters in the box — a state
+ * that must be said out loud, because showing the measured row anyway is how
+ * a number stops describing the line it sits next to.
+ */
+function measuredFor(
+  info: IndicatorInfo | undefined,
+  timeframe: string,
+  params: Record<string, number>,
+): MeasuredCell | 'other-params' | null {
+  const rows = info?.measured
+  if (!rows || rows.length === 0) return null
+  const fitting = rows.filter((r) => cellMatches(r, params))
+  if (fitting.length === 0) return 'other-params'
+  return fitting.find((r) => r.timeframe === timeframe) ?? fitting[0]
+}
+
+/** `19.7 flips/100 · 57% undone ≤3 · lag 3 · 2% missed`, on one line. */
+function measuredLine(cell: MeasuredCell): string {
+  return (
+    `${cell.timeframe}: ${cell.flipsPer100Bars} flips/100 · ` +
+    `${cell.undoneWithin3Pct}% undone ≤3 · lag ${cell.medianLagBars} · ${cell.missedPct}% missed`
+  )
+}
+
+/** The whole of it, for the hover, including where it came from. */
+function measuredDetail(cell: MeasuredCell): string {
+  const sample = cell.sampleBars.toLocaleString('en-US')
+  const params = Object.entries(cell.params)
+    .map(([k, v]) => `${k} ${v}`)
+    .join(', ')
+  return (
+    `"${cell.definition}" (${params}) measured on ${sample} ${cell.timeframe} bars: ` +
+    `${cell.flipsPer100Bars} label changes per 100 bars, ${cell.undoneWithin3Pct}% of them reversed ` +
+    `within three bars, ${cell.medianLagBars} bars of median lag to a 4×ATR turn, ` +
+    `${cell.missedPct}% of turns never agreed with.\n\n${cell.source}` +
+    (cell.caution ? `\n\n${cell.caution}` : '')
+  )
+}
+
+/**
+ * The measurement under an indicator's name, wherever it is offered.
+ *
+ * Nothing is rendered for an unmeasured definition. The temptation is a grey
+ * "no measurement", and it is the same mistake as a blank verdict badge in
+ * the other direction: a row in the slot where evidence goes is read as
+ * evidence, and eleven of the fourteen definitions here have none.
+ */
+function Measured({
+  cell,
+  className,
+}: {
+  cell: MeasuredCell | 'other-params' | null
+  className?: string
+}) {
+  if (cell === null) return null
+  if (cell === 'other-params') {
+    return (
+      <span className={cn('text-muted-foreground/70 fd-caption', className)} title="The study measured this definition at its default parameters. These are not those, so its latency and whipsaw numbers do not describe this line.">
+        measured, but not at these parameters
+      </span>
+    )
+  }
+  return (
+    <span className={cn('flex flex-col items-start', className)}>
+      <span className="text-muted-foreground fd-caption num" title={measuredDetail(cell)}>
+        {measuredLine(cell)}
+      </span>
+      {/* THE STUDY'S OWN WARNING, IN FULL AND IN THE CAUTION COLOUR. It is
+          carried from the server as data (`caution`) rather than written
+          here, so it cannot drift from the note that says it. */}
+      {cell.caution && (
+        <span className="text-caution fd-caption" title={cell.source}>
+          ⚠ {cell.caution}
+        </span>
+      )}
+    </span>
+  )
+}
+
+/**
+ * The same fact on a chip, where there is room for one number.
+ *
+ * The one kept is the COST — the share of this line's own turns it takes
+ * back within three bars — because the two favourable numbers travel on
+ * their own and this is the one a summary drops. The rest is on hover.
+ */
+function MeasuredChip({ cell }: { cell: MeasuredCell | 'other-params' | null }) {
+  if (cell === null) return null
+  if (cell === 'other-params') {
+    return (
+      <span
+        className="text-muted-foreground/70"
+        title="Measured at other parameters; those numbers do not describe this line."
+      >
+        unmeasured params
+      </span>
+    )
+  }
+  return (
+    <span className={cn(cell.caution ? 'text-caution' : 'text-muted-foreground')} title={measuredDetail(cell)}>
+      {cell.caution ? '⚠ ' : ''}
+      {cell.undoneWithin3Pct}% undone ≤3 ({cell.timeframe})
+    </span>
+  )
+}
 
 /* ------------------------------------------------------------- storage */
 
@@ -420,6 +572,9 @@ export function IndicatorPicker({
                       {v.line}
                     </span>
                   )}
+                  {/* And what the LINE does, where it was measured. The
+                      menu is the last place the reader is still choosing. */}
+                  <Measured cell={measuredFor(info, timeframe, {})} />
                 </span>
               </SelectItem>
             )
@@ -451,6 +606,11 @@ export function IndicatorPicker({
           {pick}: {verdict.line}
         </span>
       )}
+      {/* The measurement for the highlighted choice, in the header, before
+          it is added — the same position and the same rule as the verdict
+          beside it. A viewer who never opens the menu twice still sees what
+          the line costs before the `+ add`. */}
+      {pick && <Measured cell={measuredFor(offered.find((i) => i.id === pick), timeframe, {})} className="max-w-[420px]" />}
       {chosen.map((entry, index) => {
         const v = verdictFor(entry.id)
         return (
@@ -494,6 +654,17 @@ export function IndicatorPicker({
                 {v.status}
               </span>
             )}
+            {/* On the chip there is room for the one number that is the
+                cost, with the rest on hover. The parameters here are the
+                viewer's OWN, so a period typed into the box above stops the
+                measurement claiming to describe this line. */}
+            <MeasuredChip
+              cell={measuredFor(
+                offered.find((i) => i.id === entry.id),
+                timeframe,
+                entry.params,
+              )}
+            />
             <button
               type="button"
               aria-label={`Remove ${entry.name ?? entry.key}`}
