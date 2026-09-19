@@ -241,7 +241,15 @@ $campaigns = @(
     # books sharing a seed share a coin's luck on every bar where both traded,
     # which is the one thing a control may not do, so the number moved and the
     # registration records the change.
-    @{ model = 'deepseek-flash'; run = 'ai-xau-ds-smc'; control = 'ai-xau-ds-smc-coin'; seed = 53; log = 'ai_trader_ds_smc'; promptVariant = 'smc-context' },
+    # REGISTERED, NOT STARTED, 2026-09-19. The block, the variant and the
+    # books are built and tested; what is missing is the decision to spend on
+    # them. Starting is three deliberate acts, in this order: create the books
+    # with `start_ai_runs.py --only=ai-xau-ds-smc`, uncomment this row, and
+    # restart the traders with -Detached. Left commented rather than left out
+    # so the id is reserved and the wiring stays visible; a launcher row that
+    # starts a campaign nobody decided on is how a desk acquires a cost it
+    # cannot explain. docs/hypotheses/2026-09-18-smc-context.md
+    # @{ model = 'deepseek-flash'; run = 'ai-xau-ds-smc'; control = 'ai-xau-ds-smc-coin'; seed = 53; log = 'ai_trader_ds_smc'; promptVariant = 'smc-context' },
     # THE STAGED-ENTRY PAIR, stages 1 and 2 of
     # docs/plans/2026-09-18-staged-ai-entry.md. Registered at
     # docs/hypotheses/2026-09-18-plan-entry.md and 2026-09-18-plan-trigger.md
