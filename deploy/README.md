@@ -94,6 +94,53 @@ It deliberately does **not** start the mirrors. Sending real orders after an
 unattended rebuild should be a decision someone makes while reading the
 output, not something a script did at three in the morning.
 
+## Sunday reopen
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File deploy\sunday-reopen.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File deploy\sunday-reopen.ps1 -Restart
+```
+
+**When.** After the Sunday reopen at 21:00 UTC, when a change to
+`mt5_executor.py` has to reach the running mirrors — they keep the Python they
+were launched with, and `update.ps1 -ServerOnly` says so and does not restart
+them. It exists for one such change in particular: the weekend backstop
+`--weekend-flat`, which is merged and does not exist until the executors
+restart. `docs/decisions/2026-09-19-weekend-flat-never-fires.md` is the whole
+story and this script is the second half of it.
+
+**What it refuses to do.** It will not act while the executors' own weekend
+window is in force — Friday from 20:45 UTC, all Saturday, Sunday before 21:00
+UTC — because a mirror started inside that window closes every position it
+finds into a shut market, fails, and retries at every poll until Monday. That
+refusal has **no override**. And it will not act on a clock alone: the reopen
+slips, and a holiday Sunday has a clock and no tape. So it also wants a quote
+that has *changed* within the last three minutes — `/api/paper/m1`'s
+`last_tick_ms`, which a duplicate does not advance, so a poller republishing a
+frozen weekend quote cannot satisfy it — on top of a live bar on
+`/api/paper/status`. `-AllowStaleFeed` overrides that second check and nothing
+else.
+
+Without `-Restart` it reports and stops: what the account holds, with each
+position's entry, stop and unrealised P&L **in the account's own currency**
+(USC on the cent account, where 100 USC is one dollar), which book each one
+belongs to, what the books themselves think they hold, and the weekend gap
+that has just happened — Friday's close against the first price of the new
+week, in points and in ATR units, against the stop the books size to.
+
+**`-Restart` sends real orders.** It re-launches through
+`start_executors.ps1 -Account vantage-cent -AllowReal -Live`, detached through
+`Win32_Process.Create` because a session-bound launch is why every AI trader
+died at 17:00Z on 2026-09-18. Afterwards it verifies that every executor came
+back, that the count matches the registry's mirrored books, that each one
+**adopted** the position it found rather than opening a second one, and that
+layer two is in force — and it fails loudly, per book, rather than quietly.
+
+`deploy\sunday-reopen-selftest.ps1` drives the two refusals with injected
+clocks and quote ages, against the same table of instants as section 13 of
+`py\live\size_guard_selftest.py`. It touches no network, no process and no
+account.
+
 ## Cutting over from the home desk
 
 The one rule: **two machines must never mirror one account.** Each launcher
