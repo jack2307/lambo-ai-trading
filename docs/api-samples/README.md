@@ -53,10 +53,13 @@ worth more than a sample of the happy path.
 | `paper-levels-4h-refused.json` | `?tf=4h` with 15m and 1h on disk: every block `null` and one sentence naming BOTH reasons neither file is rebucketed into 4h — the 21:00Z anchor and the trailing partial bucket. It names the 1h file, because the coarsest series that still fits is the one a resample would have read |
 
 The last two are served by the real route from the **test fixture** rather
-than off the live store, and that is a fact about this desk rather than a
-shortcut: no market here has ever exported a bar longer than 15m (checked
-2026-09-19 — all 21 bar files in the store are 1m, 5m or 15m), so a coarse
-timeframe sampled off the live store is not a thing that can exist today.
+than off the live store, and the reason is that the two stores differ.
+Checked 2026-09-19: this DEVELOPMENT store holds only 1m, 5m and 15m (21
+files, seven symbols of each), so a coarse sample cannot be taken here. The
+VPS that trades holds 1m, 5m, 15m, 1h, 4h and 1d for XAUUSD — the hourly
+`flowdesk-htf-export` task writes the coarse three there and nowhere else —
+so in production `?tf=4h` is ANSWERED rather than refused, and
+`paper-levels-4h-refused.json` pins the refusal, not the desk's capability.
 Their prices are a seeded walk; what they pin is what the ROUTE emits.
 Refresh with `cargo test -p fd-api --test levels -- --ignored`.
 

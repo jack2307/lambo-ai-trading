@@ -436,9 +436,14 @@ fn mt5_name(timeframe: &str) -> &str {
 /// The accepted set of `?tf=`, and it is read from the directory rather than
 /// listed in code for the reason the whole file refuses to resample: a
 /// timeframe this route can answer for is exactly a timeframe somebody
-/// exported. A hard-coded list would name `4h` as available on a desk whose
-/// store holds nothing coarser than 15m for anything (checked 2026-09-19:
-/// all 21 bar files are 1m, 5m or 15m, seven symbols of each).
+/// exported. A hard-coded list would name `4h` as available on a desk that
+/// has not exported it - and the two desks differ, which is the point.
+/// Checked 2026-09-19: the DEVELOPMENT store holds only 1m, 5m and 15m (21
+/// files, seven symbols of each), while the VPS that trades holds 1m, 5m,
+/// 15m, 1h, 4h and 1d for XAUUSD, because the hourly `flowdesk-htf-export`
+/// task writes the coarse three there and nowhere else. So `?tf=4h` is
+/// refused at home and answered in production, off the same code, which a
+/// list in the source could not have got right for both.
 ///
 /// Only exact `*.parquet` names count, which is not pedantry — the live store
 /// keeps `XAUUSD-15m.parquet.bak` beside the live file, and a suffix test
