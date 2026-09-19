@@ -2,7 +2,17 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { api, type IndicatorInfo, type IndicatorPoint, type MeasuredCell } from '@/lib/api'
 import type { ActiveIndicator } from '@/components/PriceChart'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { LevelSwitch } from '@/components/LevelToggles'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
+import { LIBRARY_COPY, LIBRARY_GROUPS, METHOD_IDS } from '@/lib/library'
+import { LEVEL_FAMILIES, type LevelFamily, type LevelMode } from '@/lib/levels'
 import { cn } from '@/lib/utils'
 import { verdictFor } from '@/lib/verdicts'
 
@@ -132,19 +142,38 @@ function measuredDetail(cell: MeasuredCell): string {
 /**
  * The measurement under an indicator's name, wherever it is offered.
  *
- * Nothing is rendered for an unmeasured definition. The temptation is a grey
- * "no measurement", and it is the same mistake as a blank verdict badge in
- * the other direction: a row in the slot where evidence goes is read as
- * evidence, and eleven of the fourteen definitions here have none.
+ * Nothing is rendered for an unmeasured definition WHERE THE SLOT IS
+ * INVISIBLE WHEN EMPTY. The temptation is a grey "no measurement", and in a
+ * dense menu it is the same mistake as a blank verdict badge in the other
+ * direction: a row in the slot where evidence goes is read as evidence, and
+ * twelve of the fifteen definitions here have none.
+ *
+ * `absent="say"` is for the library, where the slot is NOT invisible: the
+ * measurement has a column with a heading over it, and a blank cell under a
+ * heading is itself an answer — the reader takes it for a pass. There the
+ * absence is spelled out in words, which cannot be mistaken for evidence
+ * because it carries no number at all.
  */
 function Measured({
   cell,
   className,
+  absent = 'silent',
 }: {
   cell: MeasuredCell | 'other-params' | null
   className?: string
+  absent?: 'silent' | 'say'
 }) {
-  if (cell === null) return null
+  if (cell === null) {
+    if (absent === 'silent') return null
+    return (
+      <span
+        className={cn('text-muted-foreground/70 fd-caption', className)}
+        title="This desk measured seventeen definitions over 25,708 H1 and 6,728 H4 bars on 2026-09-18 and this was not one of them. There is no figure for how often this line changes its mind, how much of that it takes back, or how late it is to a turn — not a good one and not a bad one."
+      >
+        {LIBRARY_COPY.unmeasured}
+      </span>
+    )
+  }
   if (cell === 'other-params') {
     return (
       <span className={cn('text-muted-foreground/70 fd-caption', className)} title="The study measured this definition at its default parameters. These are not those, so its latency and whipsaw numbers do not describe this line.">
@@ -516,176 +545,446 @@ function instanceKey(def: IndicatorInfo, params: Record<string, number>): string
 /* ---------------------------------------------------------------- view */
 
 /**
- * Pick an indicator, set its periods, take it off again.
+ * ONE BUTTON, ONE POPUP, AND EVERYTHING ON THE CHART IS CHOSEN IN IT.
  *
- * The mechanics are the Workbench's — a select, an add, a chip per instance
- * with a remove — because that picker works and a second idiom for the same
- * job is a second thing to learn. The layout is the Desk's: one dense row in
- * the chart header, no cards.
+ * The owner's instruction on 2026-09-19, after saying the chart was drawing a
+ * mess he could not read: "Giờ tất cả đều qua luồng như này — CÓ nút thêm chỉ
+ * báo: chọn các chỉ báo có sẵn trong thư viện (dạng popup)". One flow. A
+ * button that adds an indicator, and behind it the library of what there is.
  *
- * WHAT IS DIFFERENT IS THE VERDICT. Every registered attempt to trade these
- * lines as a rule has been killed out of sample, and an indicator offered on
- * a chart with nothing beside it is an implicit recommendation. So the
- * measured outcome sits in the menu where the choice is made, with the whole
- * paragraph on hover — not in a footnote under the chart, where it would be
- * read after the line was already drawn and believed.
+ * WHAT WENT AWAY. A 130px select in the chart header that could show one
+ * entry at a time, beside a `+ add` that did nothing until something was
+ * picked, beside a three-position `levels` switch that belonged to a
+ * different control entirely. Three ways to put something on one canvas, two
+ * of them invisible until opened. The select is gone and the level switch has
+ * moved INSIDE the popup, which is the part of the instruction that needed
+ * doing rather than agreeing with: a library that lists the indicators and
+ * leaves the levels on a switch outside it is not one flow, it is two.
+ *
+ * WHAT DID NOT GO AWAY, and the reasons are at the top of this file and in
+ * `LevelToggles.tsx`. The viewer's lines are still `source: 'viewer'`, still
+ * dashed, still named `yours · …`; colour is still not the channel. And the
+ * `LevelLegend` stays OUTSIDE, on the chart, because merging the choice must
+ * not merge the meanings — a hue is unreadable in a popup that is shut.
+ *
+ * THE POPUP IS NOT A RECOMMENDATION. The entries are in the order the server
+ * serves them, which is the order the crate declares them; nothing is sorted
+ * by anything, nothing is preferred, and the only thing beside a name is what
+ * this desk actually found out — the verdict, where a registration exists,
+ * and what the LINE does, where somebody measured it. Thirty-one of the
+ * thirty-nine constructs in `verdicts.ts` are killed, and the moment of
+ * choosing is the last moment that fact can still change a mind.
  */
-export function IndicatorPicker({
+
+/** A number the catalog serves as a parameter default, printed as given. */
+function defaultsLine(def: IndicatorInfo): string {
+  const names = def.paramOrder.filter((n) => n in def.params)
+  return names.map((n) => `${n} ${def.params[n]}`).join(' · ')
+}
+
+/**
+ * The verdict, in the library's column.
+ *
+ * `null` is rendered as "no record on this desk" and never as a gap, which
+ * is the rule `verdictFor`'s own doc comment states: every one of the fifteen
+ * ids resolves today, so this branch is for the day the crate ships a
+ * sixteenth before this desk has written its row.
+ */
+function VerdictCell({ id }: { id: string }) {
+  const v = verdictFor(id)
+  if (!v) {
+    return (
+      <span
+        className="text-caution fd-caption"
+        title="This chart has no measured record for this construct at all. That is not a pass: it means nobody here has registered a rule on it or closed one."
+      >
+        {LIBRARY_COPY.noRecord}
+      </span>
+    )
+  }
+  return (
+    <span
+      className={cn('fd-caption', v.status === 'killed' ? 'text-caution' : 'text-muted-foreground')}
+      title={v.registration ? `${v.detail}\n\n${v.registration}` : v.detail}
+    >
+      {v.status} — {v.line}
+    </span>
+  )
+}
+
+/** One definition in the library: what it is, what it costs, and an add. */
+function LibraryRow({
+  def,
+  timeframe,
+  on,
+  onAdd,
+}: {
+  def: IndicatorInfo
+  timeframe: string
+  /** True when an instance of this definition is already drawn. */
+  on: boolean
+  onAdd: (id: string) => void
+}) {
+  const params = defaultsLine(def)
+  return (
+    <div className="border-border/60 flex items-start gap-2 border-b py-1.5 last:border-b-0">
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-baseline gap-x-2">
+          <span className="fd-body">{def.name}</span>
+          <span className="text-muted-foreground/70 num fd-caption">{def.id}</span>
+          <span
+            className="text-muted-foreground/70 num fd-caption"
+            title={
+              params
+                ? `${LIBRARY_COPY.paramsNote}. The instance key is built in this order — ${def.paramOrder.join(', ')} — because that is the order the server answers on.`
+                : 'This definition takes no numeric parameter.'
+            }
+          >
+            {params}
+          </span>
+          <span className="text-muted-foreground/50 fd-caption">
+            {def.pane === 'pane' ? 'own pane' : 'over the candles'}
+          </span>
+        </div>
+        <div className="mt-px flex flex-col items-start gap-px">
+          <VerdictCell id={def.id} />
+          <Measured cell={measuredFor(def, timeframe, {})} absent="say" />
+        </div>
+      </div>
+      <button
+        type="button"
+        disabled={on}
+        onClick={() => onAdd(def.id)}
+        className="hover:bg-accent focus-visible:ring-ring border-border text-muted-foreground mt-px shrink-0 rounded-sm border px-1.5 py-px fd-caption transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:opacity-40 motion-reduce:transition-none"
+        title={
+          on
+            ? `${def.name} is already on the chart at these settings. Change a period on its chip above and it becomes a different line, which can be added again.`
+            : `Draw ${def.name} on the ${timeframe} candles on screen, computed by the server for ${timeframe}, dashed and named "yours"`
+        }
+      >
+        {on ? 'on chart' : 'add'}
+      </button>
+    </div>
+  )
+}
+
+/** A heading with the kind of thing under it said once, not per row. */
+function GroupHead({ heading, blurb }: { heading: string; blurb: string }) {
+  return (
+    <div className="mb-1">
+      <h3 className="fd-label text-foreground">{heading}</h3>
+      <p className="text-muted-foreground/70 fd-caption">{blurb}</p>
+    </div>
+  )
+}
+
+export interface LibraryLevels {
+  mode: LevelMode
+  onMode: (next: LevelMode) => void
+  /** Every level on the response, for the switch's `everything` position. */
+  total?: number
+  /** How many of them the current position draws. */
+  drawn?: number
+  /** How many of each family the response carries, where one has arrived. */
+  counts?: Map<LevelFamily, number>
+}
+
+/**
+ * The chart's library, and the one button that opens it.
+ *
+ * `offered` and `chosen` are the viewer's own set, exactly as before.
+ * `book` is the RUN's set, listed read-only: a popup headed "on the chart
+ * now" that showed half of what is on the chart would be the same untruth
+ * the dashed/solid split exists to prevent, and these cannot be removed here
+ * because they are the record of what the bot read.
+ */
+export function IndicatorLibrary({
   offered,
   chosen,
+  book,
   computedFor,
   timeframe,
   error,
+  levels,
   onAdd,
   onRemove,
   onParam,
 }: {
   offered: IndicatorInfo[]
   chosen: ActiveIndicator[]
+  book: ActiveIndicator[]
   computedFor: string | null
   timeframe: string
   error: string | null
+  levels: LibraryLevels
   onAdd: (id: string) => void
   onRemove: (key: string) => void
   onParam: (key: string, param: string, value: number) => void
 }) {
-  const [pick, setPick] = useState('')
+  const [open, setOpen] = useState(false)
+  const [query, setQuery] = useState('')
 
-  if (offered.length === 0 && chosen.length === 0) {
-    // Nothing to offer yet, or a server that has no catalog route. Either way
-    // an empty select is a control that does nothing, so there is none.
-    return error ? <span className="text-caution ml-2 fd-caption normal-case">indicators: {error}</span> : null
+  /**
+   * A FILTER, AND IT WAS A CLOSE CALL. Fifteen definitions plus six families
+   * is twenty-one entries, which a list does not need a search box for — but
+   * each entry here is four lines tall, because a name without its verdict
+   * and its measurement is the implicit recommendation this file exists to
+   * refuse. Twenty-one four-line entries is three screens, and three screens
+   * is where a reader who came to add the MACD starts scrolling. It filters
+   * on the words already on screen — name, id, family label — and never on a
+   * hidden keyword list, so a reader can always see why something matched.
+   */
+  const q = query.trim().toLowerCase()
+  const matches = (...fields: string[]) =>
+    q === '' || fields.some((f) => f.toLowerCase().includes(q))
+
+  const groups = useMemo(() => {
+    const method = new Set(METHOD_IDS)
+    return {
+      readings: offered.filter((d) => !method.has(d.id)),
+      methods: offered.filter((d) => method.has(d.id)),
+    }
+  }, [offered])
+
+  const shown = {
+    readings: groups.readings.filter((d) => matches(d.name, d.id)),
+    methods: groups.methods.filter((d) => matches(d.name, d.id)),
+    families: LEVEL_FAMILIES.filter((f) => matches(f.label, f.note, 'levels', 'structure')),
   }
+  const nothing =
+    shown.readings.length === 0 && shown.methods.length === 0 && shown.families.length === 0
 
-  const verdict = pick ? verdictFor(pick) : null
+  /** Which definitions already have an instance drawn, for the row's state. */
+  const onChart = new Set(chosen.map((c) => c.id))
+
+  // How much is on, for the button — a reader should not have to open the
+  // popup to find out whether anything is. Levels count as one thing here
+  // because one switch draws them; the number beside `everything` inside is
+  // where the 252 lives, and putting it on the button would be two units in
+  // one count.
+  const onCount = chosen.length + (levels.mode === 'off' ? 0 : 1)
 
   return (
     <span className="ml-2 inline-flex flex-wrap items-center gap-1 align-middle normal-case">
-      <span className="text-muted-foreground/50 fd-caption">yours</span>
-      <Select value={pick} onValueChange={setPick}>
-        <SelectTrigger size="sm" className="h-5 w-[130px] fd-caption" aria-label="indicator to add">
-          <SelectValue placeholder="add a line…" />
-        </SelectTrigger>
-        <SelectContent className="max-w-[380px]">
-          {offered.map((info) => {
-            const v = verdictFor(info.id)
-            return (
-              <SelectItem key={info.id} value={info.id} title={v?.detail}>
-                <span className="flex flex-col items-start">
-                  <span>{info.name}</span>
-                  {/* Only when there IS a registration. No badge, no dash and
-                      no grey "untested" for the rest: a blank in the slot
-                      where evidence goes is read as evidence. */}
-                  {v && (
-                    <span className={cn('fd-caption', v.status === 'killed' ? 'text-caution' : 'text-muted-foreground')}>
-                      {v.line}
-                    </span>
-                  )}
-                  {/* And what the LINE does, where it was measured. The
-                      menu is the last place the reader is still choosing. */}
-                  <Measured cell={measuredFor(info, timeframe, {})} />
-                </span>
-              </SelectItem>
-            )
-          })}
-        </SelectContent>
-      </Select>
-      <button
-        type="button"
-        disabled={!pick}
-        onClick={() => {
-          if (pick) onAdd(pick)
-        }}
-        className="hover:bg-accent focus-visible:ring-ring border-border text-muted-foreground rounded-sm border px-1.5 py-px fd-caption transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:opacity-40 motion-reduce:transition-none"
-        title={
-          pick
-            ? `Draw ${pick} on the ${timeframe} candles on screen, computed for ${timeframe}`
-            : 'Pick an indicator first'
-        }
-      >
-        + add
-      </button>
-      {/* The verdict for the highlighted choice, in the header, before it is
-          added. `line` here, `detail` on hover — the agreed split. */}
-      {verdict && (
-        <span
-          className={cn('fd-caption', verdict.status === 'killed' ? 'text-caution' : 'text-muted-foreground')}
-          title={verdict.registration ? `${verdict.detail}\n\n${verdict.registration}` : verdict.detail}
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogTrigger
+          className={cn(
+            'hover:bg-accent focus-visible:ring-ring rounded-sm border px-1.5 py-px fd-caption transition-colors focus-visible:ring-2 focus-visible:outline-none motion-reduce:transition-none',
+            onCount > 0 ? 'border-primary/40 text-primary' : 'border-border text-muted-foreground',
+          )}
+          title="Open the library: every indicator this server can compute, the level ladder, and what this desk has measured about each of them"
         >
-          {pick}: {verdict.line}
-        </span>
-      )}
-      {/* The measurement for the highlighted choice, in the header, before
-          it is added — the same position and the same rule as the verdict
-          beside it. A viewer who never opens the menu twice still sees what
-          the line costs before the `+ add`. */}
-      {pick && <Measured cell={measuredFor(offered.find((i) => i.id === pick), timeframe, {})} className="max-w-[420px]" />}
-      {chosen.map((entry, index) => {
-        const v = verdictFor(entry.id)
-        return (
-          <span
-            // KEYED ON THE SLOT, NOT ON THE INSTANCE KEY. The key contains
-            // the periods, so typing `21` into a period box would change it
-            // twice, remount the chip twice, and take the caret out of the
-            // box after each digit.
-            key={`slot-${index}`}
-            className="num inline-flex items-center gap-1 rounded-sm border px-1 py-px fd-caption"
-            style={{ borderColor: entry.color, color: entry.color }}
-          >
-            {/* The word rides on the chip itself, not on a heading over the
-                row: this is the set that is drawn dashed and named `yours`
-                on the chart, and the reader must be able to tell from THIS
-                chip which lines it owns. */}
-            <span className="text-muted-foreground/70">yours</span>
-            {entry.name ?? entry.key}
-            {Object.entries(entry.params).map(([param, value]) => (
-              <input
-                key={param}
-                type="number"
-                value={value}
-                step="any"
-                aria-label={`${entry.name ?? entry.key} ${param}`}
-                title={`${param} — the period this line is drawn with, on the ${computedFor ?? timeframe} candles`}
-                onChange={(e) => {
-                  const next = Number(e.target.value)
-                  // An empty box is not zero. Sending 0 would ask the server
-                  // for a period of nothing and draw whatever it returns.
-                  if (e.target.value !== '' && Number.isFinite(next)) onParam(entry.key, param, next)
-                }}
-                className="border-border bg-background/40 w-11 rounded-sm border px-0.5 text-right"
-              />
-            ))}
-            {v && (
-              <span
-                className={v.status === 'killed' ? 'text-caution' : 'text-muted-foreground'}
-                title={v.registration ? `${v.detail}\n\n${v.registration}` : v.detail}
-              >
-                {v.status}
+          {LIBRARY_COPY.button}
+          {onCount > 0 && <span className="num text-muted-foreground/70"> {onCount}</span>}
+        </DialogTrigger>
+        <DialogContent aria-describedby="fd-library-what">
+          <DialogHeader>
+            <DialogTitle>{LIBRARY_COPY.title}</DialogTitle>
+            <DialogDescription id="fd-library-what">{LIBRARY_COPY.description}</DialogDescription>
+          </DialogHeader>
+
+          <div className="border-border flex items-center gap-2 border-b px-3 py-1.5">
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={LIBRARY_COPY.filter}
+              aria-label="Filter the library"
+              className="border-border bg-background/40 focus-visible:ring-ring w-40 rounded-sm border px-1.5 py-px fd-caption focus-visible:ring-2 focus-visible:outline-none"
+            />
+            {error && <span className="text-caution fd-caption">{error}</span>}
+            {computedFor && computedFor !== timeframe && (
+              <span className="text-caution fd-caption">
+                the server computed these for {computedFor}, not {timeframe}
               </span>
             )}
-            {/* On the chip there is room for the one number that is the
-                cost, with the rest on hover. The parameters here are the
-                viewer's OWN, so a period typed into the box above stops the
-                measurement claiming to describe this line. */}
-            <MeasuredChip
-              cell={measuredFor(
-                offered.find((i) => i.id === entry.id),
-                timeframe,
-                entry.params,
+          </div>
+
+          <div className="min-h-0 flex-1 overflow-y-auto px-3 py-2">
+            {/* WHAT IS ON, AT THE TOP, AND TAKEN OFF HERE TOO. A library
+                that can only add is a library a reader has to leave to undo
+                anything, which is the second flow the popup exists to
+                remove. */}
+            <section className="mb-3">
+              <h3 className="fd-label text-foreground mb-1">{LIBRARY_COPY.onChart}</h3>
+              <div className="flex flex-wrap items-center gap-1">
+                {levels.mode !== 'off' && (
+                  <span className="border-border num inline-flex items-center gap-1 rounded-sm border px-1 py-px fd-caption">
+                    <span className="text-muted-foreground/70">levels</span>
+                    {levels.mode}
+                    {levels.drawn != null && (
+                      <span className="text-muted-foreground/50">{levels.drawn}</span>
+                    )}
+                    <button
+                      type="button"
+                      aria-label="Draw no levels"
+                      className="hover:text-lp px-0.5"
+                      onClick={() => levels.onMode('off')}
+                    >
+                      ×
+                    </button>
+                  </span>
+                )}
+                {chosen.map((entry, index) => (
+                  <span
+                    // KEYED ON THE SLOT, NOT ON THE INSTANCE KEY. The key
+                    // contains the periods, so typing `21` into a period box
+                    // would change it twice, remount the chip twice, and take
+                    // the caret out of the box after each digit.
+                    key={`slot-${index}`}
+                    className="num inline-flex items-center gap-1 rounded-sm border px-1 py-px fd-caption"
+                    style={{ borderColor: entry.color, color: entry.color }}
+                  >
+                    {/* The word rides on the chip itself, not on a heading
+                        over the row: this is the set drawn dashed and named
+                        `yours` on the chart, and the reader must be able to
+                        tell from THIS chip which lines it owns. */}
+                    <span className="text-muted-foreground/70">yours</span>
+                    {entry.name ?? entry.key}
+                    {Object.entries(entry.params).map(([param, value]) => (
+                      <input
+                        key={param}
+                        type="number"
+                        value={value}
+                        step="any"
+                        aria-label={`${entry.name ?? entry.key} ${param}`}
+                        title={`${param} — the period this line is drawn with, on the ${computedFor ?? timeframe} candles`}
+                        onChange={(e) => {
+                          const next = Number(e.target.value)
+                          // An empty box is not zero. Sending 0 would ask the
+                          // server for a period of nothing and draw whatever
+                          // it returned.
+                          if (e.target.value !== '' && Number.isFinite(next)) {
+                            onParam(entry.key, param, next)
+                          }
+                        }}
+                        className="border-border bg-background/40 w-11 rounded-sm border px-0.5 text-right"
+                      />
+                    ))}
+                    <MeasuredChip
+                      cell={measuredFor(
+                        offered.find((i) => i.id === entry.id),
+                        timeframe,
+                        entry.params,
+                      )}
+                    />
+                    <button
+                      type="button"
+                      aria-label={`Remove ${entry.name ?? entry.key}`}
+                      className="hover:text-lp px-0.5"
+                      onClick={() => onRemove(entry.key)}
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+                {chosen.length === 0 && levels.mode === 'off' && (
+                  <span className="text-muted-foreground/70 fd-caption">
+                    {LIBRARY_COPY.onChartEmpty}
+                  </span>
+                )}
+              </div>
+              {book.length > 0 && (
+                <div className="mt-1 flex flex-wrap items-center gap-1">
+                  {book.map((entry) => (
+                    <span
+                      key={entry.key}
+                      className="num inline-flex items-center gap-1 rounded-sm border px-1 py-px fd-caption"
+                      style={{ borderColor: entry.color, color: entry.color }}
+                      title={LIBRARY_COPY.bookNote}
+                    >
+                      <span className="text-muted-foreground/70">book</span>
+                      {entry.name ?? entry.key}
+                    </span>
+                  ))}
+                  <span className="text-muted-foreground/70 fd-caption">
+                    {LIBRARY_COPY.bookNote}
+                  </span>
+                </div>
               )}
-            />
-            <button
-              type="button"
-              aria-label={`Remove ${entry.name ?? entry.key}`}
-              className="hover:text-lp px-0.5"
-              onClick={() => onRemove(entry.key)}
-            >
-              ×
-            </button>
-          </span>
-        )
-      })}
-      {error && <span className="text-caution fd-caption">{error}</span>}
+            </section>
+
+            {nothing && <p className="text-muted-foreground fd-caption">{LIBRARY_COPY.filterEmpty}</p>}
+
+            {LIBRARY_GROUPS.map((group) => {
+              if (group.key === 'levels') {
+                if (shown.families.length === 0) return null
+                return (
+                  <section key={group.key} className="mb-3">
+                    <GroupHead heading={group.heading} blurb={group.blurb} />
+                    <p className="text-muted-foreground/70 mb-1 fd-caption">
+                      {LIBRARY_COPY.levelsNote}
+                    </p>
+                    {/* THE SAME SWITCH, MOVED. Not a copy of it: the
+                        radiogroup, its roving tabindex and its titles are
+                        `LevelToggles.tsx`'s, so the control a reader learns
+                        here is the control that was in the header. */}
+                    <LevelSwitch
+                      mode={levels.mode}
+                      onChange={levels.onMode}
+                      total={levels.total}
+                      drawn={levels.drawn}
+                    />
+                    <ul className="mt-1.5">
+                      {shown.families.map((family) => {
+                        const n = levels.counts?.get(family.key)
+                        return (
+                          <li
+                            key={family.key}
+                            className="border-border/60 flex items-start gap-2 border-b py-1 last:border-b-0"
+                          >
+                            <span
+                              aria-hidden
+                              className="mt-1 size-1.5 shrink-0 rounded-full"
+                              style={{ backgroundColor: family.hue }}
+                            />
+                            <span className="min-w-0 flex-1">
+                              <span className="fd-body">{family.label}</span>
+                              {n != null && (
+                                <span className="text-muted-foreground/70 num fd-caption">
+                                  {' '}
+                                  {n} on this response
+                                </span>
+                              )}
+                              <span className="text-muted-foreground/70 block fd-caption">
+                                {family.note}
+                              </span>
+                            </span>
+                          </li>
+                        )
+                      })}
+                    </ul>
+                    <p className="text-muted-foreground/70 mt-1 fd-caption">
+                      {LIBRARY_COPY.familiesNote}
+                    </p>
+                  </section>
+                )
+              }
+              const defs = group.key === 'readings' ? shown.readings : shown.methods
+              if (defs.length === 0) return null
+              return (
+                <section key={group.key} className="mb-3">
+                  <GroupHead heading={group.heading} blurb={group.blurb} />
+                  {defs.map((def) => (
+                    <LibraryRow
+                      key={def.id}
+                      def={def}
+                      timeframe={timeframe}
+                      on={onChart.has(def.id)}
+                      onAdd={onAdd}
+                    />
+                  ))}
+                </section>
+              )
+            })}
+          </div>
+        </DialogContent>
+      </Dialog>
+      {/* THE FAILURE IS SAID IN THE HEADER TOO, not only behind a button.
+          A catalog that never answered leaves a library with nothing in it,
+          and a reader who has not opened it would otherwise see a working
+          control over an empty chart. */}
+      {error && <span className="text-caution fd-caption">indicators: {error}</span>}
     </span>
   )
 }

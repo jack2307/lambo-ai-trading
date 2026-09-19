@@ -47,8 +47,8 @@ import {
   type ChartStructureEvent,
   type ChartTrade,
 } from '@/components/PriceChart'
-import { IndicatorPicker, useViewerIndicators } from '@/components/IndicatorPicker'
-import { LevelLegend, LevelSwitch } from '@/components/LevelToggles'
+import { IndicatorLibrary, useViewerIndicators } from '@/components/IndicatorPicker'
+import { LevelLegend } from '@/components/LevelToggles'
 import {
   DEALING_RANGE_NOTE,
   LIVE_WINDOW_ATR,
@@ -3587,20 +3587,13 @@ function RunChart({
         >
           on chart {showOpen ? 'on' : 'off'}
         </button>
-        {/* ONE SWITCH. It replaced the master `levels on/off` that lived
-            here, the five family toggles and the `spent on/off`; the storage
-            keys of all three are still read once, by `readLevelMode`, so
-            nobody's saved choice is thrown away or comes back half-on. */}
-        <LevelSwitch
-          mode={mode}
-          // Both numbers count levels FROM THE ROUTE, never lines on the
-          // canvas: `htfLevels` has the H4 structure mixed in and has already
-          // folded prices together, so 14 beside 252 would be two units in
-          // one control.
-          total={deskLevels.length || undefined}
-          drawn={selection.drawn.length}
-          onChange={onLevelMode}
-        />
+        {/* THE ONE SWITCH IS NOW INSIDE THE LIBRARY, below. It replaced the
+            master `levels on/off` that lived here, the five family toggles
+            and the `spent on/off`; on 2026-09-19 it moved again, into the
+            popup, so that everything drawn on this canvas is chosen in one
+            place. The storage keys are untouched — `readLevelMode` still
+            reads all three, so nobody's saved choice is thrown away or comes
+            back half-on. */}
         {/* THE COLOUR KEY SURVIVES THE MERGE. The switches were also, by
             accident, the only thing on screen saying which hue was which kind
             of level. Merging the control must not merge the meanings. */}
@@ -3641,12 +3634,32 @@ function RunChart({
             no ATR(14) on {levels.timeframe} — {levels.window?.bars ?? 0} bars, no distance window
           </span>
         )}
-        <IndicatorPicker
+        {/* THE ONE WAY ANYTHING GETS ONTO THIS CHART. A button, and behind
+            it the library: the server's indicator definitions, the three
+            that carry a direction, and the level ladder with its switch. The
+            legend above stays where it is — the popup owns the CHOICE, and
+            a hue is unreadable in a dialog that is shut. */}
+        <IndicatorLibrary
           offered={viewer.offered}
           chosen={viewer.indicators}
+          // The run's own lines, listed read-only: a popup headed "on the
+          // chart now" that showed only half of what is on the chart would
+          // be the same untruth the dashed/solid split exists to prevent.
+          book={indicators}
           computedFor={viewer.computedFor}
           timeframe={tf}
           error={viewer.error}
+          levels={{
+            mode,
+            onMode: onLevelMode,
+            // Both numbers count levels FROM THE ROUTE, never lines on the
+            // canvas: `htfLevels` has the H4 structure mixed in and has
+            // already folded prices together, so 14 beside 252 would be two
+            // units in one control.
+            total: deskLevels.length || undefined,
+            drawn: selection.drawn.length,
+            counts: levelCounts,
+          }}
           onAdd={viewer.add}
           onRemove={viewer.remove}
           onParam={viewer.setParam}

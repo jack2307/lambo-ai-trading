@@ -48,6 +48,7 @@ import {
   stackTags,
   writeLevelMode,
 } from '../src/lib/levels.ts'
+import { LIBRARY_COPY, LIBRARY_GROUPS, LIBRARY_STRINGS } from '../src/lib/library.ts'
 
 let failures = 0
 const check = (name, ok, detail) => {
@@ -1064,8 +1065,22 @@ check(
     ...Object.values(KIND_TAGS),
     ...Object.values(STATE_WORDS),
     ...LEVEL_FAMILIES.map((f) => f.label),
+    // The one-clause description of what produces each family, added
+    // 2026-09-19 for the indicator library. It is the first place a family
+    // is described to somebody who has not seen it drawn, which makes it the
+    // likeliest place in the product for "strong" to appear.
+    ...LEVEL_FAMILIES.map((f) => f.note),
     crowdedSentence(TAGS_PER_PANE + 1),
     hiddenSentence(live),
+    // THE LIBRARY'S OWN COPY, checked here rather than in a file of its own.
+    // The level switch moved into the popup on 2026-09-19, so the popup IS
+    // this screen now: the prose that introduces the families, the headings
+    // over the three kinds of thing it offers, and the sentence that says a
+    // definition was never measured all reach a reader through the same
+    // control this block exists to guard. `src/lib/library.ts` keeps them
+    // out of the JSX for exactly this reason — a paragraph written inline in
+    // a component is a surface this check cannot see.
+    ...LIBRARY_STRINGS,
   ].filter((s) => typeof s === 'string')
   for (const word of banned) {
     const re = new RegExp(`\\b${word}`, 'i')
@@ -1073,6 +1088,22 @@ check(
     check(`nothing this screen says contains "${word}"`, hit === undefined, hit)
   }
   check('and there were strings to check', surfaces.length > 40, `${surfaces.length}`)
+  // EVERY SENTENCE IN THE LIBRARY, not most of them. `LIBRARY_STRINGS` is a
+  // hand-flattened list, and the failure it invites is a thirteenth line of
+  // copy added to `LIBRARY_COPY` and never added to the flattening — a
+  // string on screen that this guard silently stops covering. So the count
+  // is checked against the two tables it is built from rather than against a
+  // number written here, which would need updating for the same reason.
+  const libraryExpected = LIBRARY_GROUPS.length * 2 + Object.keys(LIBRARY_COPY).length
+  check(
+    'every string in the library is under the guard',
+    LIBRARY_STRINGS.length === libraryExpected,
+    `${LIBRARY_STRINGS.length} flattened, ${libraryExpected} in the tables`,
+  )
+  check(
+    'and none of them is empty',
+    LIBRARY_STRINGS.every((s) => typeof s === 'string' && s.length > 0),
+  )
 }
 
 console.log(failures === 0 ? '\nall level checks pass' : `\n${failures} FAILED`)

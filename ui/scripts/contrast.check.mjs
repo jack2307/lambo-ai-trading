@@ -67,6 +67,15 @@ for (const [theme, t] of [
     ['card', t.card],
     ['page', t.background],
     ['sidebar', t.sidebar],
+    // THE FOURTH SURFACE, added 2026-09-19 with the indicator library.
+    // --popover was until now only ever a select menu: a few short rows of
+    // foreground text, none of it data-coloured. The library puts a whole
+    // screen on it — verdict lines in the caution colour, measured rows in
+    // muted, a dot per level family — so every pair that carries meaning has
+    // to be measured against it too. It is a different colour from the card
+    // in light (#ffffff against #fbfcfa) and the same one in dark, and "the
+    // same as a ground that already passes" is not a measurement.
+    ['popover', t.popover],
   ]
 
   console.log(`\n-- ${theme.trim()}: text on every ground --`)

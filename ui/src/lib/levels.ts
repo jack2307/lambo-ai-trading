@@ -84,6 +84,21 @@ export interface FamilyStyle {
   label: string
   /** The CSS variable holding its hue, per theme. */
   hue: string
+  /**
+   * WHAT PRODUCED THE LEVELS IN THIS FAMILY, in one clause.
+   *
+   * Added 2026-09-19 with the indicator library, which is the first surface
+   * that offers the families to somebody who has not yet seen them drawn:
+   * the legend can get away with a single word because the lines are on the
+   * chart beside it, and a popup listing "blocks" with nothing else cannot.
+   *
+   * It says what the RULE is and never what the level is worth. These
+   * sentences go through `levels.check.mjs`'s six-word guard with everything
+   * else this screen says, for the obvious reason that a one-clause
+   * description of a level is exactly where somebody would reach for
+   * "strong".
+   */
+  note: string
 }
 
 /**
@@ -99,17 +114,47 @@ export interface FamilyStyle {
  * lost the distinction, not one that has simplified it.
  */
 export const LEVEL_FAMILIES: FamilyStyle[] = [
-  { key: 'profile', label: 'profile', hue: 'var(--level-profile)' },
-  { key: 'liquidity', label: 'liquidity', hue: 'var(--level-liquidity)' },
-  { key: 'gaps', label: 'gaps', hue: 'var(--level-gaps)' },
-  { key: 'blocks', label: 'blocks', hue: 'var(--level-blocks)' },
+  {
+    key: 'profile',
+    label: 'profile',
+    hue: 'var(--level-profile)',
+    note: "the window's own volume profile: the point of control and the two value-area edges",
+  },
+  {
+    key: 'liquidity',
+    label: 'liquidity',
+    hue: 'var(--level-liquidity)',
+    note: 'prices where stops rest — equal highs and lows, the prior day and week extremes, the trading day in progress, and the midpoint those same two prices define',
+  },
+  {
+    key: 'gaps',
+    label: 'gaps',
+    hue: 'var(--level-gaps)',
+    note: 'displacement the market left behind it: fair value gaps and imbalances, until price trades back through them',
+  },
+  {
+    key: 'blocks',
+    label: 'blocks',
+    hue: 'var(--level-blocks)',
+    note: 'the last opposing candle before a displacement — an order block, and the breaker it becomes once price closes through it',
+  },
   // Added 2026-09-19 with the marks themselves. It is a family and not a
   // sixth control for the reason the other four are not controls any more:
   // one switch draws the lot. What it gets is a hue and a line in the legend,
   // so a reader meeting a steel-coloured square on the chart can find out
   // what produced it.
-  { key: 'structure', label: 'structure', hue: 'var(--level-structure)' },
-  { key: 'other', label: 'other', hue: 'var(--muted-foreground)' },
+  {
+    key: 'structure',
+    label: 'structure',
+    hue: 'var(--level-structure)',
+    note: 'breaks of structure and changes of character, plus the dealing range the last two confirmed swings define',
+  },
+  {
+    key: 'other',
+    label: 'other',
+    hue: 'var(--muted-foreground)',
+    note: 'a kind the route sent that this chart does not recognise — drawn in grey under its raw name rather than dropped',
+  },
 ]
 
 /* ------------------------------------------------- the one level switch */
