@@ -688,7 +688,7 @@ server = "VantageMarkets-Live 21"
 # failed, Process create failed")` - MetaTrader5's `path=` launches a process,
 # so it wants the binary. The two accounts above always had the full path and
 # this one was written short.
-terminal = 'C:\MT5-v12	erminal64.exe'
+terminal = 'C:\MT5-v12\terminal64.exe'
 
 # A cent account, the same as 33705331: XAUUSD.sc at contract 1.0, tick 0.01,
 # tick value 1.0. MEASURED on the terminal 2026-09-21 right after login, with
