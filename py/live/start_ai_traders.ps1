@@ -68,7 +68,33 @@ if ($Detached) {
     if ($Only.Count) { $rest += @('-Only', ($Only -join ',')) }
     $logs = Join-Path $Root 'data\paper\logs'
     New-Item -ItemType Directory -Force -Path $logs | Out-Null
-    $out = Join-Path $logs 'start_ai_traders.out'
+
+    # ONE LOG PER RUN, AND THE REASON IS A DEADLOCK THIS SCRIPT BUILT ITSELF.
+    #
+    # This was a single fixed path, `start_ai_traders.out`. The inner shell
+    # redirects every stream into it with `*>`, and then starts the traders
+    # with Start-Process - which hands each child the parent's handles. So the
+    # eight traders held this file open for as long as they lived, and the
+    # NEXT -Detached run could not open it to redirect into. `cmd`/PowerShell
+    # fails the redirect before running a single line, the child dies at once,
+    # and `Win32_Process.Create` has already returned 0 with a pid - so the
+    # caller is told the launcher started.
+    #
+    # Measured 2026-09-21: this file was locked, its contents dated
+    # 2026-09-19 11:05, and every trader carried that same start time. Two
+    # attempts to restart them reported success and did nothing. The desk had
+    # no working way to restart its own traders for two days and nothing said
+    # so. A diagnostic spawning five shapes of detached process proved all
+    # five ran; the only thing that failed was opening this file.
+    #
+    # A timestamped name cannot collide with a handle an older generation is
+    # holding. The old ones are pruned rather than kept forever, and the
+    # newest is always the one this run reports.
+    $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
+    $out = Join-Path $logs "start_ai_traders-$stamp.out"
+    Get-ChildItem $logs -Filter 'start_ai_traders-*.out' -ErrorAction SilentlyContinue |
+        Sort-Object Name -Descending | Select-Object -Skip 20 |
+        ForEach-Object { Remove-Item $_.FullName -Force -ErrorAction SilentlyContinue }
     $inner = "Set-Location '$Root'; & powershell -NoProfile -ExecutionPolicy Bypass -File '$self' $($rest -join ' ') *> '$out'"
     # Built by concatenation rather than interpolation: PowerShell escapes a
     # quote inside a double-quoted string with a backtick, not a backslash,

@@ -79,6 +79,20 @@ numbers before moving on, and `tests/golden/` holds what it published.
   a config fault and not a flaky test. `cargo clean -p <crate>` for whatever
   failed, then re-run. Measured 2026-09-21: two crates, and the clean also
   freed 46 GiB.
+- **A launcher that redirects its own output into a fixed file cannot be run
+  twice.** `Start-Process` hands each child the parent's handles, so the
+  processes a launcher starts hold its log open for as long as they live; the
+  next run's redirect then fails before a single line executes, the child
+  dies instantly, and `Win32_Process.Create` has *already* returned 0 with a
+  pid, so the caller is told it started. Measured 2026-09-21:
+  `start_ai_traders.ps1 -Detached` reported success twice and did nothing,
+  its log frozen at 2026-09-19 11:05 alongside traders carrying that same
+  start time. The tell is a log whose timestamp does not move; the proof is
+  `[IO.File]::Open(path,'Open','Write','None')` throwing "used by another
+  process". Fixed there with a per-run timestamped name. **Any script that
+  spawns long-lived children must not redirect into a path it will reuse** -
+  this applies to ad-hoc deploy wrappers too, and one of them hit it the same
+  night.
 
 ## Toolchain
 
