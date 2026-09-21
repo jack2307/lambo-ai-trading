@@ -536,6 +536,18 @@ function accountTrades(broker: PaperBroker | null): ChartTrade[] {
       // account's own figure is on `BrokerFill.rebate`, and Analytics reads
       // it from there.
       rebateUsd: null,
+      // The broker's fill has no sizing basis to carry. These name the
+      // contract size and the spread a trade was SIZED under, which is a
+      // fact about the engine's arithmetic; this row is what the broker did,
+      // and it was never sized here. `null` says so, where a number copied
+      // out of today's config would be this row asserting a basis it never
+      // had — the exact failure the pair was added to stop
+      // (docs/decisions/2026-09-21-restated-pnl-contract-size.md).
+      contractSize: null,
+      spread: null,
+      // An exclusion is a property of a BOOK's record and this row is not in
+      // one: never excluded, because never counted there.
+      excludedReason: null,
       r: Number.NaN,
       mae: Number.NaN,
       mfe: Number.NaN,

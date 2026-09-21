@@ -182,10 +182,18 @@ interface Closed {
    * `ESTIMATED` when it came from a configured spread standing in for one
    * nobody recorded, `null` when the trade was not priced.
    *
-   * Every paper trade is EXACT: the engine charged the configured spread, so
-   * the credit is arithmetic on a known cost. On an ACCOUNT most are
-   * estimates, because the spread at a real fill was not recorded until
-   * 2026-09-21 and a stop the broker takes still leaves none.
+   * A paper trade is EXACT only if it RECORDED what it was charged. That
+   * used to be every one of them — "the engine charged the configured
+   * spread, so the credit is arithmetic on a known cost" — and the sentence
+   * survived about a day. It assumed the configured spread today is the one
+   * the trade paid, which is exactly the assumption that let a contract-size
+   * correction restate a stored P&L by three orders of magnitude
+   * (docs/decisions/2026-09-21-restated-pnl-contract-size.md). Trades closed
+   * before that fix carry no basis and are ESTIMATED.
+   *
+   * On an ACCOUNT most are estimates too, because the spread at a real fill
+   * was not recorded until 2026-09-21 and a stop the broker takes still
+   * leaves none.
    */
   rebateBasis: 'EXACT' | 'ESTIMATED' | null
   r: number | null
@@ -413,12 +421,21 @@ export function Analytics({ book, accounts }: { book: Book; accounts: BrokerAcco
               exitTime: fill.exitTime,
               holdMs: fill.holdMs,
               money: fill.pnlUsd,
-              // A paper book pays the spread the engine charged it, so a
-              // credit it could price is exact by construction. `null` when
-              // config/accounts.toml records no arrangement, which is not a
-              // rebate of nothing.
+              // A paper book pays the spread the engine charged it — but only
+              // a trade that RECORDED what it was charged can be called exact.
+              // This read `rebateUsd === null ? null : 'EXACT'` and was true
+              // for one day: from 2026-09-21 the engine carries the contract
+              // size and the spread each trade was sized under, and every
+              // trade closed before that carries neither. Calling those exact
+              // would put the confident word on precisely the trades whose
+              // basis is a guess at today's config — the restatement the
+              // carrying exists to stop
+              // (docs/decisions/2026-09-21-restated-pnl-contract-size.md).
+              // `null` still means no arrangement is recorded at all, which
+              // is not a rebate of nothing.
               rebate: fill.rebateUsd,
-              rebateBasis: fill.rebateUsd === null ? null : 'EXACT',
+              rebateBasis:
+                fill.rebateUsd === null ? null : fill.contractSize == null ? 'ESTIMATED' : 'EXACT',
               r: fill.r,
               mae: fill.mae,
               mfe: fill.mfe,
@@ -619,6 +636,33 @@ function TopStrip({
   dropped: number
 }) {
   const onAccount = typeof book === 'number'
+  /**
+   * What the books on screen are HOLDING OUT of the figures beside this.
+   *
+   * Without this the page is worse than it was before exclusions existed: a
+   * book whose only trade is excluded reads `0 closed, net $0` with nothing
+   * saying why, and `eur-hours` — which reported +$177.51 until 2026-09-21 —
+   * would simply go quiet. A number removed without its size is an assertion
+   * the reader cannot check, so the size is published here and the reason is
+   * one hover away. Paper only: `excluded` is a property of a book's own
+   * record, and an account's rows are what the broker did.
+   */
+  const heldOut = ((): { trades: number; net: number; reasons: string[] } | null => {
+    if (typeof book === 'number') return null
+    let trades = 0
+    let net = 0
+    const reasons = new Set<string>()
+    for (const run of runs) {
+      const x = run.excluded
+      if (!x) continue
+      trades += x.trades
+      net += x.net_usd
+      for (const f of x.fills ?? []) if (f.excludedReason) reasons.add(f.excludedReason)
+    }
+    return trades > 0 ? { trades, net, reasons: [...reasons] } : null
+  })()
+
+
 
   // The desk's age is the oldest book's start, not the newest: "uptime" is how
   // long this account has been running, and a book added yesterday does not
@@ -758,6 +802,20 @@ function TopStrip({
       <span className="num">
         {overall.trades} <span className="text-muted-foreground">closed</span>
       </span>
+      {/* HELD OUT, AND SAID SO. Excluded is not deleted: the trades are still
+          in each book's own fill list, and what they came to is printed here
+          so that a count which dropped is visibly a count that dropped.
+          Caution amber, this strip's existing word for "a caveat applies" -
+          no new colour. */}
+      {heldOut && (
+        <span
+          className="num text-caution"
+          title={`Held out of every figure on this strip, and still in each book's own fills: ${heldOut.reasons.join('; ')}. Registered in config/exclusions.toml before these figures were read.`}
+        >
+          {heldOut.trades} excluded{' '}
+          <span className="text-muted-foreground">{money.fmt(heldOut.net)} not counted</span>
+        </span>
+      )}
       <span className="num">
         win <span className="text-foreground">{overall.trades ? pct(overall.winRate) : '—'}</span>
       </span>

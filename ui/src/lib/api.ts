@@ -237,6 +237,36 @@ export interface BacktestTrade {
    * nothing.
    */
   rebateUsd: number | null
+  /**
+   * The contract size and the spread this trade was SIZED AND BOOKED UNDER,
+   * recorded on the trade so no later config correction can restate what it
+   * earned.
+   *
+   * `null` on every trade closed before 2026-09-21, and that absence is the
+   * whole reason the pair exists. A correction to EURUSD's contract size on
+   * 2026-09-16 (1.0 to 1000.0, commit cd92998) reached a position sized two
+   * hours earlier under the old value, and the book went on reporting
+   * +$176.85 for a move worth $0.18 — ~$296,000 of notional on a $100
+   * account, which it never held. A number and the unit that produced it
+   * travel together or one of them is a lie:
+   * docs/decisions/2026-09-21-restated-pnl-contract-size.md.
+   *
+   * Set and cleared TOGETHER. One present without the other is a figure
+   * priced half from the record and half from today's config, and
+   * `contract.check.mjs` fails on it.
+   */
+  contractSize: number | null
+  spread: number | null
+  /**
+   * Why this trade is held out of the book's counted figures, `null` when it
+   * is counted — which is all but a handful of trades.
+   *
+   * An excluded trade is NOT removed. It stays in this list, whole and
+   * unaltered, and `PaperRunStatus.excluded` carries what it came to. The
+   * registry is `config/exclusions.toml`, written before the figures it
+   * changes are read.
+   */
+  excludedReason: string | null
   r: number
   /**
    * Worst excursion while the trade was open, **in R** — the engine divides by
@@ -535,6 +565,17 @@ export interface PaperRun {
    * a rebate of zero.
    */
   rebate: null | PaperRebate
+  /**
+   * Trades this book is HOLDING OUT of `trades`, `net_usd` and
+   * `profit_factor`, or `null` when it counts everything it took.
+   *
+   * `null` rather than an empty object on purpose: "counts everything" and
+   * "is holding trades out" are different shapes so a client cannot render
+   * one as the other. The registry is `config/exclusions.toml`, and the
+   * excluded trades are still in `last_fills`, whole, each wearing its
+   * `excludedReason`.
+   */
+  excluded: null | PaperExcluded
   profit_factor: number | null
   skipped_by_guard: Record<string, number>
   closed_by_guard: Record<string, number>
@@ -721,6 +762,34 @@ export interface PaperBroker {
  * the same three sit on `BrokerAccountRebate` and `estimated` is usually the
  * large one, because the spread at a real fill was mostly never recorded.
  */
+/**
+ * What a book is holding out of its own figures, and what that came to.
+ *
+ * Excluded is not deleted. This desk keeps the trade and publishes the size
+ * of what it removed, because a figure taken out without its size is an
+ * assertion a reader cannot check — the same rule that put a pre-committed
+ * exclusion in the registrations when a stray process contaminated four
+ * books, rather than a quiet edit.
+ */
+export interface PaperExcluded {
+  /** Closed trades left out of the run's `trades`, `net_usd`, `profit_factor`. */
+  trades: number
+  /** What they came to, USD. Not inside `net_usd`. */
+  net_usd: number
+  /**
+   * The book's ledger equity with them taken back out, USD.
+   *
+   * NOT what the run is sizing from. `PaperRunStatus.equity` is the live
+   * ledger and still carries every trade, because that ledger is what the
+   * engine multiplies by the risk fraction for the next position. Restating
+   * a running book's equity changes what it DOES next, not just what it
+   * reports, so it is the owner's call; this is what it would become.
+   */
+  equity_usd: number
+  /** Each excluded trade, oldest first, each carrying `excludedReason`. */
+  fills: BacktestTrade[]
+}
+
 export interface PaperRebate {
   /** The share of the ROUND-TURN spread the terms grant — one spread per
    *  trade, not one per side. */
