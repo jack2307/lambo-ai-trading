@@ -120,7 +120,37 @@ activate_r = 1.0
 
 [trading.guards]
 max_concurrent_positions = 1
-max_trades_per_day = 4
+# 4 UNTIL 2026-09-21, RAISED TO 12 ON THE OWNER'S WORD: "mo cho no mo lenh
+# thoai mai di" - let it open positions freely.
+#
+# WHAT IT WAS COSTING. Over 233 closed trades on 27 books this cap refused 16
+# entries across six books, the hungriest being `ai-xau-ds-ctx` at 19 closed
+# and 9 refused - about five attempts a day against a cap of four. COOLDOWN
+# refused one more. Nothing else refused an entry at all. So this was the
+# only guard actually stopping the desk from trading, and 12 is high enough
+# that at the observed rate it will not bind.
+#
+# WHY 12 AND NOT 0. Zero turns it off, and off is not what "freely" needs to
+# mean here. This cap is also the circuit breaker on a runaway loop: on
+# 2026-09-18 an orphaned deploy process drove four books against a stale
+# server, and a book that has opened twelve positions in a day is either in
+# a market nobody planned for or in a loop. The cap is the difference between
+# noticing that on the twelfth trade and noticing it on the thousandth.
+#
+# THE BACKSTOP BELOW THIS ONE IS INERT, AND RAISING THIS MAKES THAT MATTER.
+# `daily_loss_limit_usd` is 300 and it is evaluated PER BOOK, against books
+# that run on 100 USD. A book cannot lose 300 in a day when it only has 100,
+# so the limit has never fired and cannot - DAILY_LOSS appears nowhere in
+# `skipped_by_guard` across all 233 trades. It was the natural companion to a
+# trade cap and it is not doing that job. Setting it to something a 100-dollar
+# book can actually reach is the owner's call and is not made here.
+#
+# RECEIPTS. Every backtest receipt produced with `--guards` before today was
+# measured at 4. This is an explicit, recorded amendment rather than a silent
+# edit, the same way `flat_before_weekend_hhmm` moved on 2026-09-19; a receipt
+# that needs the old behaviour re-runs with `max_trades_per_day = 4` set on
+# the run, which the API's guard edit already allows per book.
+max_trades_per_day = 12
 daily_loss_limit_usd = 300.0
 cooldown_ms = 1_800_000
 # The four below are the risk role's standing list (2026-09-13/14). Each is

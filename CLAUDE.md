@@ -69,6 +69,16 @@ numbers before moving on, and `tests/golden/` holds what it published.
   exporter handles both; do not call the terminal directly.
 - The MT5 terminal on this machine is a **live** account. Read-only calls
   only (`copy_rates_*`, `symbol_info`); no order function is ever imported.
+- Agent worktrees share `CARGO_TARGET_DIR=E:/rust/flowdesk/target` so three of
+  them cannot fill the disk — and that **bakes the worktree's path into test
+  binaries**, because several tests reach `config/` through
+  `env!("CARGO_MANIFEST_DIR")`. Delete the worktree and those binaries stay in
+  the shared target still naming a directory that is gone: the same test then
+  PASSES under `cargo test -p <crate>` and FAILS under `--workspace`, with
+  `config/default.toml … NotFound` pointing at some `fd-wt-*` path. It is not
+  a config fault and not a flaky test. `cargo clean -p <crate>` for whatever
+  failed, then re-run. Measured 2026-09-21: two crates, and the clean also
+  freed 46 GiB.
 
 ## Toolchain
 
