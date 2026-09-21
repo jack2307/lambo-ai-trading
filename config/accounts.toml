@@ -525,7 +525,25 @@ real_money = true
 # `-AllowReal` are both required, and neither is in this file.
 dry_run = false
 
-enabled = true
+# OFF SINCE 2026-09-21, on the owner's word: "ben 33705331 dung lun di".
+#
+# The money left. This account's balance is 382.57 USC - the funds moved to
+# 33708517 ("Lambo V12"), where the same DeepSeek book now runs at ten times
+# the size. An account holding under four dollars is not a desk, and leaving
+# it enabled would put an executor on it at every launcher run for nothing.
+#
+# NOT A JUDGEMENT ON WHAT RAN HERE. ai-xau-ds-ctx finished +204.03 USC over 9
+# closed trades and was the only one of the six books this account ever
+# carried to end in profit. Its record under data/live/vantage-cent/ stays
+# exactly where it is, as does every other book's, and a STOP file sits in
+# its directory so that the book cannot be mirrored here again without
+# someone removing it deliberately.
+#
+# Turning this back on means checking three things first: the balance, the
+# STOP file, and whether the terminal at C:\MT5-cent is still logged into
+# 33705331 - it is also the price feed's terminal, which is a tension this
+# file documents further up.
+enabled = false
 
 # The same five books the demo mirrors. The coin controls are not here and are
 # not coming here - see the demo's note above.
