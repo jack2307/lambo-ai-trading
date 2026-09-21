@@ -150,7 +150,7 @@ kèm bộ lọc nào.
 
 | Cần gì | Ở đâu |
 |---|---|
-| Giao diện | `http://127.0.0.1:8138` trong RDP |
+| Giao diện | `http://127.0.0.1:8138` trong RDP, hoặc cổng 8139 qua tunnel — xem §6 |
 | Lãi lỗ tiền thật | `data\live\vantage-v12\ai-xau-ds-ctx\broker.json` |
 | Nhật ký lệnh thật | cùng thư mục, `executor.jsonl` |
 | Quyết định của AI | `data\paper\<ten-so>\decisions.jsonl` |
@@ -160,7 +160,67 @@ kèm bộ lọc nào.
 
 ---
 
-## 6. Những việc còn treo
+## 6. Vào bàn từ máy ở nhà (Cloudflare Tunnel)
+
+Bàn phục vụ **hai cổng**, và khác nhau chỗ nào thì đó chính là toàn bộ lớp
+bảo vệ của nó:
+
+| Cổng | Ai dùng | Mật khẩu |
+|---|---|---|
+| **8138** | chín trader AI, executor, bốn poller — chúng gọi liên tục và **không mang mật khẩu** | không có, và không được thêm |
+| **8139** | `cloudflared`, tức là anh từ máy ở nhà | **mọi request đều phải có phiên đăng nhập** |
+
+> **Tunnel phải trỏ vào 8139, tuyệt đối không phải 8138.** Trỏ nhầm là mở
+> toàn bộ nút "Dừng sổ", "Tạm dừng" và "Xoá credential" ra internet.
+
+Vì sao phải hai cổng chứ không phải một cái khoá? Vì `cloudflared` chạy
+**ngay trên máy này**. Mọi request từ internet đi qua nó đều đến với địa chỉ
+`127.0.0.1`. Một luật kiểu "cho qua nếu là loopback" sẽ cho qua **tất cả**.
+
+### Đặt mật khẩu (làm một lần)
+
+```powershell
+cd C:\flowdesk
+.\fd-api.exe --set-password
+```
+
+Nó hỏi hai lần, không hiện chữ, tối thiểu **12 ký tự**, và từ chối nếu ngắn
+hơn. Kết quả ghi vào `config\local.toml` — cùng file đang giữ key DeepSeek,
+file này **không vào git**. Mật khẩu gốc **không được lưu ở đâu cả**, chỉ có
+muối ngẫu nhiên và một verifier PBKDF2.
+
+Nếu cần đặt bằng script: `$env:FD_AUTH_PASSWORD = '...'` rồi chạy lệnh trên,
+**xong nhớ `Remove-Item Env:FD_AUTH_PASSWORD`** — và nó đã nằm trong lịch sử
+PowerShell rồi.
+
+### Bật cổng 8139
+
+Thêm vào `config\local.toml`:
+
+```toml
+[auth]
+enabled = true
+```
+
+rồi khởi động lại `fd-api`. Hoặc chạy tay với `--auth`.
+
+**Chưa có mật khẩu mà bật thì nó TỪ CHỐI mở cổng** và in một dòng bắt đầu
+bằng `!!` ra console. Nó không bao giờ mở cổng đó ở trạng thái không khoá.
+8138 vẫn chạy bình thường trong mọi trường hợp.
+
+### Ba chuyện sẽ gặp
+
+- **Deploy là đăng xuất.** Phiên nằm trong RAM, không ghi đĩa. Khởi động lại
+  `fd-api` là mọi phiên mất. Đăng nhập lại, không có gì hỏng.
+- **Phiên sống 12 tiếng**, tính từ lúc đăng nhập, không gia hạn khi dùng.
+- **Gõ sai nhiều thì bị khoá.** Năm lần đầu miễn phí, sau đó chờ 5s, 10s,
+  20s... tối đa 15 phút, và **mật khẩu đúng cũng bị từ chối trong lúc đang
+  khoá**. Nếu anh bị khoá ngoài tunnel: vào RDP, dùng 8138, hoặc đợi hết 15
+  phút. Phiên đã đăng nhập từ trước **không bị ảnh hưởng**.
+
+---
+
+## 7. Những việc còn treo
 
 - **Ngưỡng lỗ ngày** đang là $300 tính **trên từng sổ**, mà mỗi sổ chỉ có
   $100 — nên nó **chưa bao giờ bắn được và không thể bắn**. Trần số lệnh đã

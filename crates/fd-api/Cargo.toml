@@ -22,8 +22,23 @@ futures-util = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
-# The research endpoint reads hypothesis batch files.
+# The research endpoint reads hypothesis batch files — and the authed
+# listener reads its `[auth]` section out of config/local.toml.
 toml = { workspace = true }
+# The authed listener: PBKDF2, the constant-time compare, session tokens.
+ring = { workspace = true }
+base64 = { workspace = true }
+subtle = { workspace = true }
+
+# `fd-api --set-password` turns the console's echo off while a password is
+# typed. Windows only because that is the only console API available without
+# a new dependency; everywhere else the command says it cannot and offers the
+# two ways round it. windows-sys is already in the tree under tokio and ring,
+# so this adds a direct dependency and no new crate.
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_System_Console"] }
 
 [dev-dependencies]
 tempfile = { workspace = true }
+tower = { workspace = true }
+http-body-util = { workspace = true }

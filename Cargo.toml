@@ -52,6 +52,22 @@ axum = { version = "0.8", features = ["json", "tokio", "http1"] }
 tower-http = { version = "0.6", features = ["fs", "cors", "trace", "set-header"] }
 tokio-stream = { version = "0.1", features = ["sync"] }
 criterion = { version = "0.5", features = ["html_reports"] }
+# The authed listener's password and its sessions. Both were already in the
+# tree under rustls; they are named here so fd-api uses those copies rather
+# than a second crypto stack arriving behind them. PBKDF2-HMAC-SHA256, the
+# constant-time comparison and the OS random source all come from `ring` —
+# no auth framework and no hand-rolled hash. See crates/fd-api/src/auth.rs.
+ring = "0.17"
+base64 = "0.22"
+# The session token's comparison. `ring::constant_time` is deprecated in 0.17
+# and says so with "no promises regarding side channels"; this crate's whole
+# purpose is the promise ring withdrew. Also already in the tree.
+subtle = "2.6"
+# Test-only: `ServiceExt::oneshot`, for driving the whole router the way a
+# request arrives rather than calling a handler directly. A guard that is
+# proved by calling the handler under it has not been proved at all.
+tower = { version = "0.5", features = ["util"] }
+http-body-util = "0.1"
 
 [profile.release]
 # The hot path is latency-sensitive: one codegen unit and fat LTO buy real

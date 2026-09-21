@@ -3,8 +3,17 @@
 //! One binary serves the JSON the browser reads and, in a release build, the
 //! built SPA beside it. That is the whole deployment: no process manager, no
 //! reverse proxy, nothing to keep in sync.
+//!
+//! It serves that on **two listeners**, and the difference between them is the
+//! only security boundary this process has. [`router`] is what 8138 serves:
+//! loopback, unauthenticated, the bus the desk's own Python processes talk
+//! over. [`authed_router`] is the same router with a password in front of it,
+//! for the port a Cloudflare tunnel is pointed at. Read [`auth`]'s header
+//! before changing either — the reason it is two ports and not one guard is
+//! not obvious, and the obvious alternative authenticates nobody.
 
 pub mod advisor;
+pub mod auth;
 pub mod dto;
 pub mod error;
 pub mod live;
@@ -136,4 +145,27 @@ pub fn router(state: Arc<AppState>, ui: Option<PathBuf>) -> Router {
         // the client is served from another port.
         None => api.layer(CorsLayer::permissive()),
     }
+}
+
+/// The same router, with a session required on every path.
+///
+/// **The same router.** [`router`] is called here rather than copied, because
+/// two lists of routes that are supposed to be identical are two lists that
+/// will stop being identical — and the way they stop is that a route added to
+/// one of them is reachable without a password on the other.
+///
+/// What is added: three public paths (`GET /login`, `POST /api/auth/login`,
+/// `POST /api/auth/logout`) and a layer over everything, including the SPA
+/// fallback and every path that does not exist, so a request without a session
+/// gets the same 401 whether it named a real route or a typo. See
+/// [`auth::guard`].
+pub fn authed_router(state: Arc<AppState>, ui: Option<PathBuf>, guard: Arc<auth::Auth>) -> Router {
+    let doors = Router::new()
+        .route("/login", get(auth::page))
+        .route("/api/auth/login", post(auth::login))
+        .route("/api/auth/logout", post(auth::logout))
+        .with_state(Arc::clone(&guard));
+    router(state, ui)
+        .merge(doors)
+        .layer(axum::middleware::from_fn_with_state(guard, auth::guard))
 }

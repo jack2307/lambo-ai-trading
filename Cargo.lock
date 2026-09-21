@@ -722,6 +722,7 @@ name = "fd-api"
 version = "0.1.0"
 dependencies = [
  "axum",
+ "base64",
  "fd-backtest",
  "fd-core",
  "fd-engine",
@@ -730,14 +731,19 @@ dependencies = [
  "fd-store",
  "fd-strategy",
  "futures-util",
+ "http-body-util",
+ "ring",
  "serde",
  "serde_json",
+ "subtle",
  "tempfile",
  "thiserror 2.0.20",
  "tokio",
  "tokio-stream",
  "toml",
+ "tower",
  "tower-http",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]

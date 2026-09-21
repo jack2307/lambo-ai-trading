@@ -21,6 +21,13 @@ numbers before moving on, and `tests/golden/` holds what it published.
   increases size.
 - A failing gate is the result. It is never re-tuned to pass.
 - Unverified formulas stay as swappable models, marked ⚠.
+- **`fd-api` serves two ports and the difference between them is the only
+  security boundary it has.** 8138 is loopback with no authentication, and the
+  desk's own processes depend on that; 8139 requires a session on every path
+  and is the only one a tunnel may point at. Never "authenticate unless the
+  peer is loopback": `cloudflared` runs on the same machine, so every request
+  off the internet wears a loopback address and such a rule authenticates
+  nobody while reading as safe. See `crates/fd-api/src/auth.rs`.
 
 ## Traps this codebase has already paid for
 
@@ -105,7 +112,9 @@ anything here; the workspace is portable and runs unchanged on Linux.
 ## Running it
 
 ```
-fd-api --port=8138                       # API; the UI proxies here
+fd-api --port=8138                       # API; the UI proxies here. NO AUTH, loopback, the desk's own bus
+fd-api --set-password                    # set the password for the authenticated listener (once)
+fd-api --auth                            # ALSO serve 8139, where every request needs a session — the tunnel's port
 cd ui && npx vite --port=5180            # UI at http://localhost:5180 (IPv6 bind)
 fd-ingest --bin collect --market=btc     # accumulate the options tape (Deribit websocket)
 fd-ingest --bin collect --market=gold    # same for OTL: polls every 10 min, also grows GC-1m bars

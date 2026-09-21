@@ -1,0 +1,254 @@
+<!doctype html>
+<!--
+  The sign-in page for the authed listener (8139, the one the Cloudflare
+  tunnel points at). It is also the body of every 401 that asked for HTML.
+
+  ONE FILE, NOTHING FETCHED. No external stylesheet, no script tag with a
+  src, no font from a CDN, no hashed bundle path. It has to render when the
+  SPA bundle has not loaded - which is exactly the case it exists for,
+  because an unauthenticated browser never gets the bundle - and when the
+  desk is offline behind a tunnel that will not reach a CDN either.
+
+  Colours are ui/DESIGN.md's tokens, copied rather than imported for the same
+  reason. Overview mode: one elevated card on the near-black ground, generous
+  radius, one accent and it is lime. The one gradient this screen is allowed
+  is the mint-into-lime wash at 324 degrees, backcom.io's own pairing, laid
+  UNDER the content. If a token changes in ui/src/index.css, change it here.
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Sign in · Backcom Desk</title>
+    <style>
+      :root {
+        color-scheme: dark light;
+        --background: #0a0a0a;
+        --card: #131413;
+        --elevated: #1a1c1a;
+        --border: #242724;
+        --foreground: #ffffff;
+        --muted-foreground: #9aa39a;
+        --primary: #8dff08;
+        --primary-foreground: #071400;
+        --brand-mint: #08ffb5;
+        --caution: #ffb020;
+        --shadow: 0 8px 32px -12px rgb(4 6 4 / 0.75);
+        --radius-md: 6.4px;
+        --radius-xl: 16px;
+      }
+      /* The desk follows the machine unless someone has chosen. So does this. */
+      @media (prefers-color-scheme: light) {
+        :root {
+          --background: #eef1eb;
+          --card: #fbfcfa;
+          --elevated: #ffffff;
+          --border: #ccd3c6;
+          --foreground: #0a0a0a;
+          --muted-foreground: #5c625c;
+          --primary: #457604;
+          --primary-foreground: #ffffff;
+          --brand-mint: #0aa878;
+          --caution: #8a5800;
+          --shadow: 0 8px 32px -12px rgb(40 50 38 / 0.18);
+        }
+      }
+      * { box-sizing: border-box; }
+      html, body { height: 100%; }
+      body {
+        margin: 0;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        background: var(--background);
+        color: var(--foreground);
+        font-family: 'Geist Variable', 'Geist', ui-sans-serif, system-ui, -apple-system,
+          'Segoe UI', Roboto, sans-serif;
+        font-size: 13px;
+        line-height: 1.5;
+        -webkit-font-smoothing: antialiased;
+      }
+      .card {
+        position: relative;
+        isolation: isolate;
+        overflow: hidden;
+        width: 100%;
+        max-width: 380px;
+        padding: 32px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-xl);
+        background: var(--elevated);
+        box-shadow: var(--shadow);
+      }
+      /* The screen's one gradient, under the content and off-axis. */
+      .card::before {
+        content: '';
+        position: absolute;
+        inset: -40% -20% auto -20%;
+        height: 180px;
+        z-index: -1;
+        background:
+          radial-gradient(60% 100% at 18% 0%, color-mix(in srgb, var(--brand-mint) 22%, transparent), transparent 70%),
+          radial-gradient(70% 100% at 86% 14%, color-mix(in srgb, var(--primary) 18%, transparent), transparent 72%);
+        transform: rotate(324deg);
+        pointer-events: none;
+      }
+      .mark {
+        display: block;
+        width: 26px;
+        height: 26px;
+        border-radius: 7px;
+        background: linear-gradient(324deg, var(--brand-mint), var(--primary));
+      }
+      h1 {
+        margin: 18px 0 2px;
+        font-size: 15px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+      }
+      .sub {
+        margin: 0 0 24px;
+        color: var(--muted-foreground);
+        font-size: 13px;
+      }
+      label {
+        display: block;
+        margin-bottom: 8px;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--muted-foreground);
+      }
+      input {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        background: var(--card);
+        color: var(--foreground);
+        font: inherit;
+        outline: none;
+      }
+      input:focus-visible,
+      button:focus-visible {
+        outline: 2px solid var(--primary);
+        outline-offset: 2px;
+      }
+      button {
+        width: 100%;
+        margin-top: 16px;
+        padding: 10px 12px;
+        border: 0;
+        border-radius: var(--radius-md);
+        background: var(--primary);
+        color: var(--primary-foreground);
+        font: inherit;
+        font-weight: 600;
+        cursor: pointer;
+        transition: transform 150ms ease, opacity 150ms ease;
+      }
+      button:active { transform: scale(0.985); }
+      button[disabled] { opacity: 0.55; cursor: progress; }
+      /* The server's sentence, verbatim and inline. Never a toast, never a
+         bare status code - DESIGN.md's error state. */
+      .say {
+        margin-top: 16px;
+        padding: 10px 12px;
+        border: 1px solid var(--border);
+        border-left: 2px solid var(--caution);
+        border-radius: var(--radius-md);
+        background: var(--card);
+        color: var(--foreground);
+        font-size: 13px;
+      }
+      .say[hidden] { display: none; }
+      .foot {
+        margin: 24px 0 0;
+        padding-top: 16px;
+        border-top: 1px solid var(--border);
+        color: var(--muted-foreground);
+        font-size: 11px;
+        line-height: 1.6;
+      }
+      noscript { display: block; margin-top: 16px; color: var(--caution); }
+    </style>
+  </head>
+  <body>
+    <main class="card">
+      <span class="mark" aria-hidden="true"></span>
+      <h1>Backcom Desk</h1>
+      <p class="sub">This desk is reachable from outside. Sign in to go on.</p>
+      <form id="f" autocomplete="on">
+        <label for="p">Password</label>
+        <input
+          id="p"
+          name="password"
+          type="password"
+          autocomplete="current-password"
+          autofocus
+          required
+        />
+        <button id="b" type="submit">Sign in</button>
+      </form>
+      <p class="say" id="say" role="alert" aria-live="polite" hidden></p>
+      <noscript>This page needs JavaScript to send the password.</noscript>
+      <p class="foot">
+        Sessions last 12 hours and do not survive a restart of the desk, so a
+        deploy signs you out. Repeated wrong answers get slower, then stop for
+        up to 15 minutes.
+      </p>
+    </main>
+    <script>
+      // Inline on purpose: see the comment at the top of this file.
+      (function () {
+        var form = document.getElementById('f')
+        var field = document.getElementById('p')
+        var button = document.getElementById('b')
+        var say = document.getElementById('say')
+
+        function tell(text) {
+          say.textContent = text
+          say.hidden = !text
+        }
+
+        form.addEventListener('submit', function (event) {
+          event.preventDefault()
+          tell('')
+          button.disabled = true
+          fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            // Same-origin by default, but said out loud because the whole
+            // point of the cookie is that it comes back.
+            credentials: 'same-origin',
+            body: JSON.stringify({ password: field.value }),
+          })
+            .then(function (response) {
+              return response
+                .json()
+                .catch(function () {
+                  return {}
+                })
+                .then(function (body) {
+                  if (response.ok) {
+                    // Straight back to wherever they were headed. `replace`
+                    // so the back button does not land on this page again.
+                    window.location.replace(window.location.pathname === '/login' ? '/' : window.location.href)
+                    return
+                  }
+                  button.disabled = false
+                  field.select()
+                  tell(body.error || 'Sign-in failed (' + response.status + ').')
+                })
+            })
+            .catch(function (e) {
+              button.disabled = false
+              tell('Could not reach the desk: ' + e.message)
+            })
+        })
+      })()
+    </script>
+  </body>
+</html>
