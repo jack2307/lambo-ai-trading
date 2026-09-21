@@ -120,22 +120,33 @@ activate_r = 1.0
 
 [trading.guards]
 max_concurrent_positions = 1
-# 4 UNTIL 2026-09-21, RAISED TO 12 ON THE OWNER'S WORD: "mo cho no mo lenh
-# thoai mai di" - let it open positions freely.
+# 4 UNTIL 2026-09-21, NOW 20, ON THE OWNER'S WORD: "mo cho no mo lenh thoai
+# mai di" - let it open positions freely.
 #
-# WHAT IT WAS COSTING. Over 233 closed trades on 27 books this cap refused 16
-# entries across six books, the hungriest being `ai-xau-ds-ctx` at 19 closed
-# and 9 refused - about five attempts a day against a cap of four. COOLDOWN
-# refused one more. Nothing else refused an entry at all. So this was the
-# only guard actually stopping the desk from trading, and 12 is high enough
-# that at the observed rate it will not bind.
+# READ THIS BEFORE TRUSTING THE NUMBER ABOVE IT: THIS FILE WAS NOT THE CAP.
+# `config/guards.toml` carried `max_trades_per_day = 10` from the desk, and
+# `AppState::guards_for` applies that overlay ON TOP of this file, so the cap
+# actually in force was 10 while this line read 4. The first version of this
+# comment, written the same day, said the desk had been refused "against a
+# cap of four" and that was wrong. The overlay was cleared on 2026-09-21 so
+# that this file governs again; `GET /api/paper/guards` shows `configured`,
+# `edited` and `effective` separately, and `effective` is the only one that
+# decides anything.
 #
-# WHY 12 AND NOT 0. Zero turns it off, and off is not what "freely" needs to
-# mean here. This cap is also the circuit breaker on a runaway loop: on
-# 2026-09-18 an orphaned deploy process drove four books against a stale
-# server, and a book that has opened twelve positions in a day is either in
-# a market nobody planned for or in a loop. The cap is the difference between
-# noticing that on the twelfth trade and noticing it on the thousandth.
+# WHAT IT WAS COSTING, at the cap that was really running. Over 233 closed
+# trades on 27 books, DAILY_TRADE_CAP refused 16 entries across six books and
+# COOLDOWN refused one; nothing else refused an entry at all. So this was the
+# only guard stopping the desk from trading. The hungriest book,
+# `ai-xau-ds-ctx`, closed 19 and was refused 9 - it wanted more than TEN in a
+# day, nine times over about five days. So 12 would have been a change of
+# two against a book that had already cleared ten.
+#
+# WHY 20 AND NOT 0. Zero turns it off, and off is not what "freely" has to
+# mean. This cap is also the circuit breaker on a runaway loop: on 2026-09-18
+# an orphaned deploy process drove four books against a stale server. A 15m
+# book sees about 96 bars in a day, so 20 is loose enough that the observed
+# appetite never reaches it and tight enough that a book opening a position
+# on every fifth bar is still stopped and still noticed.
 #
 # THE BACKSTOP BELOW THIS ONE IS INERT, AND RAISING THIS MAKES THAT MATTER.
 # `daily_loss_limit_usd` is 300 and it is evaluated PER BOOK, against books
@@ -145,12 +156,17 @@ max_concurrent_positions = 1
 # trade cap and it is not doing that job. Setting it to something a 100-dollar
 # book can actually reach is the owner's call and is not made here.
 #
-# RECEIPTS. Every backtest receipt produced with `--guards` before today was
-# measured at 4. This is an explicit, recorded amendment rather than a silent
-# edit, the same way `flat_before_weekend_hhmm` moved on 2026-09-19; a receipt
-# that needs the old behaviour re-runs with `max_trades_per_day = 4` set on
-# the run, which the API's guard edit already allows per book.
-max_trades_per_day = 12
+# RECEIPTS, AND WHY THEY SAY 4 WHILE THE LIVE DESK RAN AT 10. The overlay is
+# applied by `AppState::guards_for`, which is the API; `search --guards` calls
+# `Guards::for_market` on this file and never sees `guards.toml`. So a
+# backtest receipt really was measured at 4 and a live book really was capped
+# at 10, at the same time, from one repository. That divergence is the reason
+# the overlay was cleared rather than simply raised.
+#
+# This is an explicit, recorded amendment rather than a silent edit, the same
+# way `flat_before_weekend_hhmm` moved on 2026-09-19; a receipt that needs the
+# old behaviour re-runs with `max_trades_per_day = 4` set on the run.
+max_trades_per_day = 20
 daily_loss_limit_usd = 300.0
 cooldown_ms = 1_800_000
 # The four below are the risk role's standing list (2026-09-13/14). Each is
