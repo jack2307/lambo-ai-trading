@@ -682,7 +682,13 @@ server = "VantageMarkets-Live 21"
 #
 # One terminal holds one login, so this cannot be C:\MT5-cent, and it must not
 # be the price feed's terminal either.
-terminal = 'C:\MT5-v12'
+#
+# THE EXE, NOT THE DIRECTORY. This first read 'C:\MT5-v12' and the executor
+# exited at once with `initialize(C:\MT5-v12) failed: (-10003, "IPC initialize
+# failed, Process create failed")` - MetaTrader5's `path=` launches a process,
+# so it wants the binary. The two accounts above always had the full path and
+# this one was written short.
+terminal = 'C:\MT5-v12	erminal64.exe'
 
 # A cent account, the same as 33705331: XAUUSD.sc at contract 1.0, tick 0.01,
 # tick value 1.0. MEASURED on the terminal 2026-09-21 right after login, with
