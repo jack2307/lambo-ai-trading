@@ -653,3 +653,72 @@ runs = [
 # one mistake in this file that costs real money. The defence is now a
 # permission spent in two places rather than a wall, which means reading before
 # uncommenting matters more than it did, not less.
+
+# ---------------------------------------------------------------------------
+[[account]]
+id = "vantage-v12"
+label = "Lambo V12 - REAL MONEY"
+
+# A SECOND REAL ACCOUNT, ONE MODEL, 2026-09-21. The owner's plan is one model
+# per account, and this is the first of them: DeepSeek alone, on its own
+# login, on its own terminal, with its own record under data/live/vantage-v12/.
+# The broker's own name for the account is "Lambo V12", which is the product
+# name it will be shown under.
+#
+# It runs THE SAME BOOK as vantage-cent. That is not duplication by accident -
+# this file has always said one book may run on several accounts at once and
+# that the comparison is the point. What differs here is the SIZE: 33705331
+# mirrors at x1.0 and this one at x10, so the two records answer "does the
+# same rule behave the same when each trade is worth ten times more", which
+# no paper book can answer.
+login = 33708517
+server = "VantageMarkets-Live 21"
+
+# Its own install, cloned from the idle C:\MT5-live on 2026-09-21 because that
+# copy already carried config\servers.dat - a fresh copy of Program Files
+# starts with an EMPTY server list, cannot resolve the broker name, and fails
+# to log in while writing nothing to any log. That trap is described at the
+# top of this file and it was avoided rather than survived.
+#
+# One terminal holds one login, so this cannot be C:\MT5-cent, and it must not
+# be the price feed's terminal either.
+terminal = 'C:\MT5-v12'
+
+# A cent account, the same as 33705331: XAUUSD.sc at contract 1.0, tick 0.01,
+# tick value 1.0. MEASURED on the terminal 2026-09-21 right after login, with
+# XAUUSD (no suffix) coming back as not listed at all. So the paper books' own
+# units carry over with no conversion, which is the same happy case the cent
+# account has and the opposite of the standard demo.
+symbol_suffix = ".sc"
+
+# TEN, AND THE TWO NUMBERS THAT SAY IT IS SAFE.
+#
+# The paper book runs on 100 USD and risks 1% - one dollar - per trade. This
+# account holds 100,000 USC = 1,000 USD, so x10 puts about 10 USD at risk per
+# trade, which is that same 1%. At x1.0 it would have been 0.1% and the curve
+# this account exists to show would have been a flat line.
+#
+# The file's own rule is that a change of scale is checked against the ceiling
+# and the floor before it is written. At a 4363.71 price, the largest order
+# the book can produce is 0.07 lot, so x10 sends 0.70:
+#
+#   --max-notional-ratio 10.0   0.70 lot = 305,460 USC = 3.05x equity. The
+#                               ceiling binds at 2.29 lots, so 3.3x of
+#                               headroom. Does not bind. PER-ORDER, not
+#                               aggregate - but this account runs one book.
+#   --min-margin-level 500      611 USC of margin at 1:500, a margin level of
+#                               16,369%. Does not bind.
+#
+# NOTE THE LEVERAGE IS 500 HERE, not the 2000 of 33705331 - MEASURED, not
+# assumed - so margin per lot is four times that account's. It still does not
+# come close to the floor, but the next person to change the scale has to run
+# the floor again with 500 and not with 2000.
+lot_scale = 10.0
+
+real_money = true
+dry_run = false
+enabled = true
+
+runs = [
+    "ai-xau-ds-ctx",
+]
