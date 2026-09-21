@@ -530,6 +530,12 @@ function accountTrades(broker: PaperBroker | null): ChartTrade[] {
       // below: a zero would read as a measurement.
       pnlUsd: Number.NaN,
       pnlAccount: f.pnl ?? 0,
+      // `null`, not `f.rebate`, for the same reason `pnlUsd` is NaN above:
+      // `rebateUsd` is DOLLARS to everything that reads a `BacktestTrade`
+      // and the account's credit is in the account's currency. The
+      // account's own figure is on `BrokerFill.rebate`, and Analytics reads
+      // it from there.
+      rebateUsd: null,
       r: Number.NaN,
       mae: Number.NaN,
       mfe: Number.NaN,

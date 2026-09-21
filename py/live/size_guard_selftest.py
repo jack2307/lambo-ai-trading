@@ -679,9 +679,17 @@ MAGIC = X.magic_for("t")
 
 
 def deal(pos_id: int, entry_in: bool, server_ms: int, price: float, lots: float,
-         is_buy: bool, profit: float = 0.0, comment: str = "") -> Obj:
-    """One MT5 deal. `time_msc` is SERVER time, as the terminal reports it."""
+         is_buy: bool, profit: float = 0.0, comment: str = "", ticket: int = 0) -> Obj:
+    """One MT5 deal. `time_msc` is SERVER time, as the terminal reports it.
+
+    `ticket` is the deal's own id, which the rebate added a reader for on
+    2026-09-21: `history_of` looks each deal up in the order-time spread
+    memory by it. Every real deal carries one; this fixture derives a
+    distinct pair per position so that nothing here accidentally shares a
+    key. Rebate behaviour is pinned in `rebate_selftest.py`, not here.
+    """
     return Obj(magic=MAGIC, position_id=pos_id, entry=0 if entry_in else 1,
+               ticket=ticket or (pos_id * 10 + (0 if entry_in else 1)),
                type=0 if is_buy else 1, time_msc=server_ms, price=price,
                volume=lots, profit=profit, swap=0.0, commission=0.0, comment=comment)
 

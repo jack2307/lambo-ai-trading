@@ -173,6 +173,36 @@ synthetic `btc` tape that file uses, so they carry the same JSON the router
 serialises and can be regenerated from any checkout without a store or a
 terminal. Prices in them are the test's sine wave and mean nothing.
 
+### The introducing-broker rebate (`/api/paper/status`, added 2026-09-21)
+
+| file | what it is |
+|---|---|
+| `paper-status-rebate.json` | a whole `/api/paper/status` response for one `ema-cross` book that closed four trades, with `config/accounts.toml` in scope so `[rebate]` is read: `rebate` beside `net_usd` on the run, and `rebateUsd` beside `pnlUsd` on each of `last_fills` |
+
+Read the two money figures against each other rather than either alone. The
+book's `net_usd` is `-323.92` and the credit is `+4.44` over four trades, so
+`net_of_rebate_usd` is `-319.48`: the rebate is a line beside the result and
+not a rescue of it. `share_of_spread` and `spread` travel with the figure so
+that a reader can check 45% of `5.0 x lots x contract` without going to find
+what was multiplied by what.
+
+The three counts are the part a consumer must not average. Here they are
+`4 exact / 0 estimated / 0 unpriced`, because a paper book pays the spread
+the engine charged it and there is nothing to estimate. The same three sit on
+`broker.rebate` in an ACCOUNT's snapshot, where `estimated` is usually the
+large one: the spread at a real fill was not recorded before 2026-09-21, and
+an exit the broker takes at a stop still leaves none.
+
+`rebate: null` is what a desk with no `[rebate]` table sees, and it is not a
+credit of zero. Every other sample here was written without the registry in
+scope, which is why none of them carries one.
+
+Written by the ignored test `write_rebate_sample` in
+`crates/fd-api/tests/paper.rs` (`cargo test -p fd-api --test paper
+write_rebate_sample -- --ignored`), on the same synthetic `btc` tape, so it
+can be regenerated from any checkout without a store or a terminal. Prices in
+it are the test's sine wave and mean nothing.
+
 ## Provenance, and how to tell when they are stale
 
 Served 2026-09-18 from branch `chart-window` at 479979b, `XAUUSD.sc` on the

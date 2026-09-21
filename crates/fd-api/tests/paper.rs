@@ -1833,6 +1833,125 @@ async fn the_pending_route_lists_a_resting_order_under_its_own_id_and_a_stop_wit
     assert_eq!(row["bars_waited"], 1);
 }
 
+
+/* ------------------------------------------------- the rebate, as a credit */
+
+/// The workspace `config/` directory, which is where `[rebate]` lives.
+///
+/// `AppState::new` defaults `config_dir` to the relative `config`, which does
+/// not exist from a test's working directory - so every OTHER test in this
+/// file runs with no arrangement recorded and must see `rebate: null`. That
+/// is deliberate and is asserted below.
+fn with_registry(state: Arc<AppState>) -> Arc<AppState> {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("..").join("..").join("config");
+    let inner = Arc::try_unwrap(state).unwrap_or_else(|_| panic!("one reference"));
+    Arc::new(inner.with_config_dir(dir))
+}
+
+/// A book with closed trades, with and without the rebate terms in scope.
+async fn traded(dir: &Path, registry: bool) -> (Arc<AppState>, Value) {
+    let state = state_over(dir, 300);
+    let state = if registry { with_registry(state) } else { state };
+    start_run(&state, json!({ "market": "btc", "tf": "15m", "strategy": "ema-cross", "id": "b", "window": 200 }))
+        .await
+        .expect("start");
+    for i in 300..380 {
+        post_bar(&state, "btc", "15m", wave(i)).await.expect("bar");
+    }
+    let run = run_named(&read_status(&state).await, "b").clone();
+    assert!(run["trades"].as_u64().expect("trades") > 0, "the tape must close something: {run}");
+    (state, run)
+}
+
+#[tokio::test]
+async fn the_rebate_is_a_separate_line_and_changes_nothing_that_existed() {
+    // THE WHOLE POINT OF THE OPTION THE OWNER PICKED. He was offered three
+    // ways to count his introducing-broker credit and chose a separate line
+    // over folding it into the cost model, so every figure that had a meaning
+    // before must have the same value after. If this test ever fails, the
+    // credit has leaked into the book.
+    let plain = tempfile::tempdir().expect("temp dir");
+    let (_, without) = traded(plain.path(), false).await;
+    let credited = tempfile::tempdir().expect("temp dir");
+    let (_, with) = traded(credited.path(), true).await;
+
+    for key in ["trades", "net_usd", "equity", "profit_factor", "equity_curve"] {
+        assert_eq!(with[key], without[key], "`{key}` moved when the rebate shipped: {with}");
+    }
+    assert_eq!(
+        with["last_fills"][0]["pnlUsd"], without["last_fills"][0]["pnlUsd"],
+        "a trade's own P&L moved when the rebate shipped"
+    );
+
+    // `null` is not zero. With no registry in scope no arrangement is
+    // recorded, and a desk with no IB agreement must not be shown a rebate of
+    // nothing - it must be shown nothing.
+    assert!(without["rebate"].is_null(), "no registry, no arrangement: {without}");
+    assert!(without["last_fills"][0]["rebateUsd"].is_null(), "and no trade claims one");
+}
+
+#[tokio::test]
+async fn the_rebate_is_the_owners_share_of_the_round_turn_spread() {
+    let dir = tempfile::tempdir().expect("temp dir");
+    let (state, run) = traded(dir.path(), true).await;
+
+    let rebate = &run["rebate"];
+    // `btc` in config/default.toml: contract 1.0, spread 5.0. The share is
+    // the one `config/accounts.toml` grants, and both travel with the figure
+    // so a reader never has to go and find what was multiplied by what.
+    assert_eq!(rebate["share_of_spread"], 0.45, "the shipped terms: {rebate}");
+    assert_eq!(rebate["spread"], 5.0, "the basis is the spread the book is charged: {rebate}");
+
+    // ONE ROUND TURN, NOT ONE PER SIDE. The engine takes half the spread on
+    // entry and half on exit; the two halves are one spread, so the credit is
+    // 0.45 of `spread x lots x contract_size` once.
+    let fills = read_detail(&state, "b", Some(1)).await.expect("detail")["fills"].clone();
+    let trades = fills.as_array().expect("fills").len();
+    let mut summed = 0.0;
+    for fill in fills.as_array().expect("fills") {
+        let lots = fill["lots"].as_f64().expect("lots");
+        let want = fd_core::js_round_to(0.45 * 5.0 * lots * 1.0, 4);
+        let got = fill["rebateUsd"].as_f64().unwrap_or_else(|| panic!("a priced trade: {fill}"));
+        assert!((got - want).abs() < 1e-9, "{got} is not 45% of one round turn ({want}): {fill}");
+        summed += got;
+    }
+    let total = rebate["usd"].as_f64().expect("a total");
+    assert!(
+        (total - fd_core::js_round_to(summed, 2)).abs() < 1e-9,
+        "the run's total {total} is not the sum of its trades {summed}"
+    );
+
+    // And the net beside it, published rather than left to two clients to
+    // work out separately - but never INSTEAD of `net_usd`.
+    let net = run["net_usd"].as_f64().expect("net");
+    let after = rebate["net_of_rebate_usd"].as_f64().expect("net of rebate");
+    assert!((after - fd_core::js_round_to(net + total, 2)).abs() < 1e-9, "{after} is not {net} + {total}");
+    assert!(total > 0.0, "a credit is money coming back, not going out: {rebate}");
+
+    // EXACT, AND THE WORD IS EARNED. A paper book pays the spread the engine
+    // charged it, so there is nothing here to estimate - which is exactly
+    // what is NOT true on the account, where the same three counts sit on
+    // `broker.json` and `estimated` is usually the large one.
+    assert_eq!(rebate["exact_trades"].as_u64().expect("exact"), trades as u64, "{rebate}");
+    assert_eq!(rebate["estimated_trades"], 0, "nothing on paper is an estimate: {rebate}");
+    assert_eq!(rebate["unpriced_trades"], 0, "{rebate}");
+}
+
+/// Writes `docs/api-samples/paper-status-rebate.json` from the handler, for
+/// `ui/scripts/contract.check.mjs`. Ignored by default because it writes into
+/// the repo; run with
+/// `cargo test -p fd-api --test paper write_rebate_sample -- --ignored`.
+#[tokio::test]
+#[ignore = "writes docs/api-samples; run on purpose"]
+async fn write_rebate_sample() {
+    let out = Path::new(env!("CARGO_MANIFEST_DIR")).join("..").join("..").join("docs").join("api-samples");
+    let dir = tempfile::tempdir().expect("temp dir");
+    let (state, _) = traded(dir.path(), true).await;
+    let served = read_status(&state).await;
+    std::fs::write(out.join("paper-status-rebate.json"), serde_json::to_string_pretty(&served).expect("json"))
+        .expect("write");
+}
+
 /* ------------------------------------------------ served samples for docs */
 
 /// Writes `docs/api-samples/paper-order-*.json` from the handlers, so a

@@ -225,6 +225,18 @@ export interface BacktestTrade {
   target: number | null
   lots: number
   pnlUsd: number
+  /**
+   * The introducing-broker rebate credited on this trade's own spread, in
+   * USD, BESIDE `pnlUsd` and never inside it.
+   *
+   * `null` is not zero and is not "no rebate". It means the trade was never
+   * priced for one: a backtest carries null on every trade because the
+   * rebate is a commercial arrangement on an account and a backtest has no
+   * account, and a paper book carries null when `config/accounts.toml`
+   * records no arrangement. A `0` means the arithmetic ran and came to
+   * nothing.
+   */
+  rebateUsd: number | null
   r: number
   /**
    * Worst excursion while the trade was open, **in R** — the engine divides by
@@ -509,6 +521,20 @@ export interface PaperRun {
   pending_order: null | PaperPendingOrder
   trades: number
   net_usd: number
+  /**
+   * The owner's introducing-broker credit on this book's own spread, and the
+   * same book net of it.
+   *
+   * A SEPARATE LINE. `net_usd` above is untouched and still means exactly
+   * what it meant before the rebate existed — the owner was offered three
+   * ways to count this and chose a credit beside the book over a change to
+   * the cost model, so that a reader can always see how much of a result is
+   * the strategy and how much is the commercial arrangement.
+   *
+   * `null` when `config/accounts.toml` records no arrangement, which is not
+   * a rebate of zero.
+   */
+  rebate: null | PaperRebate
   profit_factor: number | null
   skipped_by_guard: Record<string, number>
   closed_by_guard: Record<string, number>
@@ -634,6 +660,9 @@ export interface PaperBroker {
    *  counterpart to the paper book's `net_usd` and `trades`. */
   realised: number | null
   closed: number | null
+  /** The IB credit on what this book paid in spread on this account, beside
+   *  `realised` and never inside it. See `BrokerAccountRebate`. */
+  rebate: BrokerAccountRebate | null
   /** The account's own closed trades, oldest first - what the BROKER did, as
    *  against the paper book's fills, which are the rule executed perfectly at
    *  the bar's price. */
@@ -678,6 +707,67 @@ export interface PaperBroker {
 }
 
 /**
+ * What one paper book was credited, beside what it made.
+ *
+ * The three counts are the honest part and they are never averaged into one
+ * figure. On paper every priced trade is `exact_trades`: the engine charged
+ * the configured spread and the credit is arithmetic on a known cost. On an
+ * ACCOUNT the same three sit on `BrokerAccountRebate` and `estimated` is
+ * usually the large one, because the spread at a real fill was mostly never
+ * recorded.
+ */
+export interface PaperRebate {
+  /** The share of the ROUND-TURN spread the terms grant — one spread per
+   *  trade, not one per side. */
+  share_of_spread: number
+  /** The spread the credit was computed from, per unit of price: the same
+   *  number the engine takes out of every fill. Carried with the figure so a
+   *  reader never has to go and find what was multiplied by what. */
+  spread: number
+  /** The credit over the book's closed trades, USD — the sum over the trades
+   *  that could be priced. `unpriced_trades` says how many are not in it. */
+  usd: number
+  /** `net_usd + usd`, USD. Published, never substituted for `net_usd`. */
+  net_of_rebate_usd: number
+  /** Priced from the spread actually charged. Every priced trade, on paper. */
+  exact_trades: number
+  /** Priced from a configured spread because the one actually paid was not
+   *  recorded. Always 0 on paper; the field exists so the paper shape and the
+   *  account's are the same shape. */
+  estimated_trades: number
+  /** No usable basis: credited nothing and counted, because a total that
+   *  silently dropped them would read as complete. */
+  unpriced_trades: number
+}
+
+/**
+ * The same credit on a BROKER account, in the account's own currency.
+ *
+ * Computed by the executor, because nothing else can: the rebate needs the
+ * spread each fill actually paid and the terminal is the only thing that ever
+ * saw it. `null` when the executor is older than this field, or when no
+ * arrangement is recorded.
+ */
+export interface BrokerAccountRebate {
+  /** In the ACCOUNT's currency — USC on the funded cent account, like
+   *  `realised` and unlike every USD figure on the paper book beside it. */
+  amount: number | null
+  /** `realised + amount`, same currency. Beside `realised`, never inside it. */
+  realised_with_rebate: number | null
+  currency: string | null
+  share_of_spread: number | null
+  /** The spread the ESTIMATED trades were priced from, per unit of price. */
+  configured_spread: number | null
+  /** Priced from a spread read at the moment the order was sent. */
+  exact: number | null
+  /** Priced from the configured spread because no quote was captured — every
+   *  trade closed before 2026-09-21, and every exit the broker took at a stop
+   *  or a target since. */
+  estimated: number | null
+  unpriced: number | null
+}
+
+/**
  * One trade the account actually completed.
  *
  * Deliberately not a `BacktestTrade`. A broker has no stop distance, so it has
@@ -695,6 +785,14 @@ export interface BrokerFill {
   exitReason: string | null
   /** In the account's currency, commission and swap included. */
   pnl: number | null
+  /** This trade's own rebate, in the account's currency, beside `pnl` and
+   *  never inside it. `null` when it could not be priced. */
+  rebate: number | null
+  /** `EXACT` when the credit came from a spread read at the moment the order
+   *  was sent, `ESTIMATED` when it came from the configured spread, `null`
+   *  when the trade was not priced. A number without this word beside it
+   *  would be a measured value and a guessed one sharing a column. */
+  rebateBasis: 'EXACT' | 'ESTIMATED' | null
 }
 
 /**

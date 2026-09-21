@@ -498,11 +498,174 @@ def notional_of(info, vol: float, price: float) -> float | None:
 
 MAX_FILLS = 40
 
+# ---------------------------------------------------------------- the rebate
+#
+# The owner is the introducing broker on his own accounts, so part of the
+# spread this account's trading pays comes back to him. He asked for it as a
+# SEPARATE CREDIT LINE rather than as a change to the cost model, so nothing
+# below ever touches `realised`, a deal's `profit`, or any figure that already
+# had a meaning. The credit is published beside them and a net-of-rebate
+# figure beside that.
+#
+# WHAT THIS PROCESS CAN AND CANNOT KNOW, because the difference is the whole
+# design. The credit is a share of the spread a trade actually paid, and until
+# 2026-09-21 this desk never recorded the spread at the moment of a fill:
+# `broker.json` carries `bid` and `ask` as of the SNAPSHOT, which is whenever
+# the poll happened to run. So a trade already in history can only be priced
+# from the CONFIGURED spread, and that is an estimate - the spread logger has
+# measured XAUUSD.sc down to 0.210 against a configured 0.280, so an estimate
+# on this market runs about a quarter high.
+#
+# Going forward, `send()` reads the quote immediately before every order it
+# sends and keeps it against the deal ticket the broker returns, so those
+# fills are EXACT. What stays an estimate is an exit the BROKER took: a stop
+# or a target fires with no order from this desk and no quote to read. On a
+# book that mostly exits at its stop, most exits will stay estimated, and the
+# counts say so rather than the average quietly absorbing it.
 
-def history_of(mt5, magic: int, offset_ms) -> tuple:
+# How many order-time spreads are kept. One entry and one exit per trade, so
+# 500 is well over a year of these books at a handful of trades a day, and the
+# file stays a few tens of kilobytes. The oldest are dropped first.
+SPREAD_MEMORY = 500
+
+
+def rebate_share(path: Path):
+    """The share of the round-turn spread `config/accounts.toml` grants.
+
+    `None` means the file declares no arrangement, or could not be read. That
+    is NOT a rebate of zero: every figure derived from it then reports null,
+    and 0.0 typed in the file means the rebate really is nothing. The desk
+    shows the two differently and so must this.
+
+    ROUND TURN, and the word decides the number. A position pays the spread
+    once - the ask it enters at against the bid it leaves at - so the share
+    multiplies the whole spread once per trade, never once per side.
+    """
+    try:
+        import tomli
+    except ImportError:
+        return None
+    try:
+        with open(path, "rb") as f:
+            doc = tomli.load(f)
+    except (OSError, ValueError):
+        return None
+    share = (doc.get("rebate") or {}).get("share_of_spread")
+    if not isinstance(share, (int, float)) or isinstance(share, bool):
+        return None
+    return float(share)
+
+
+def load_spreads(path: Path) -> dict:
+    """Order-time spreads, keyed by the DEAL ticket the broker returned.
+
+    Keyed by deal rather than by position because a deal ticket is what
+    `order_send` hands back and what `history_deals_get` hands out, so the two
+    ends join with no assumption in the middle. Position ids happen to equal
+    the opening order's ticket on this broker today, which is the kind of
+    "happens to" that this desk has already been bitten by twice.
+
+    A missing or unreadable file is an empty memory, not an error: every
+    affected trade then falls back to the configured spread and is labelled
+    an estimate, which is exactly what it is.
+    """
+    try:
+        with open(path, encoding="utf-8") as f:
+            store = json.load(f)
+    except (OSError, ValueError):
+        return {}
+    return store if isinstance(store, dict) else {}
+
+
+def remember_spread(path: Path, store: dict, deal, spread) -> None:
+    """Keep one order-time spread, and write the file.
+
+    Dropped silently when either half is missing: a deal with no spread and a
+    spread with no deal are both unusable, and storing a null against a ticket
+    would make "the quote was unreadable" indistinguishable from "the spread
+    was nothing".
+
+    Written whole then renamed, like the snapshot, because a reader catching a
+    half-written file would price trades from garbage. And like the snapshot,
+    a failure to write is swallowed: a rebate line must never be the reason a
+    mirror stops trading. What it costs is that the trade is later reported as
+    an estimate rather than as exact, which is the safe direction.
+    """
+    if not deal or spread is None:
+        return
+    store[str(int(deal))] = float(spread)
+    while len(store) > SPREAD_MEMORY:
+        store.pop(next(iter(store)))
+    tmp = path.with_suffix(".tmp")
+    try:
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(store, f)
+        os.replace(tmp, path)
+    except (OSError, TypeError, ValueError):
+        pass
+
+
+def spread_of(run, remembered):
+    """The spread the paper book is charged, from its status entry.
+
+    `run["rebate"]["spread"]` is the market's configured spread as the engine
+    charges it, published on the run so that the account's estimate and the
+    book's cost are the same number by construction rather than by two files
+    agreeing. Absent when the desk records no rebate arrangement at all, in
+    which case there is nothing to estimate for.
+
+    Returns `remembered` unchanged when the status has nothing to say, so a
+    poll that could not reach the API does not turn every estimate to null
+    and back again.
+    """
+    spread = ((run or {}).get("rebate") or {}).get("spread")
+    if isinstance(spread, (int, float)) and not isinstance(spread, bool) and spread > 0:
+        return float(spread)
+    return remembered
+
+
+def quoted_spread(tick) -> float | None:
+    """The spread the terminal is showing right now, per unit of price.
+
+    `None` rather than zero when the tick is missing or crossed. A zero spread
+    is a real thing a broker can quote for an instant; a tick that could not
+    be read is not, and the two must not arrive at the same number.
+    """
+    if tick is None:
+        return None
+    bid = getattr(tick, "bid", None)
+    ask = getattr(tick, "ask", None)
+    if not bid or not ask or ask < bid:
+        return None
+    return float(ask) - float(bid)
+
+
+def money_per_price_unit(info) -> float | None:
+    """What one unit of PRICE is worth, per lot, in the ACCOUNT's currency.
+
+    `tick_value / tick_size`, the same conversion `notional_of` uses, and the
+    reason a rebate cannot be computed from `contract_size` alone on a cent
+    account: XAUUSD.sc has contract 1 (one ounce) with tick 0.01 and tick
+    value 1.00 USC, so 1.00 of price is 100 USC a lot, not 1. Reading the
+    contract size as the multiplier is the `notional_of` bug of 2026-09-17
+    written a second time.
+
+    `None` when the terminal will not say, and the trade is then unpriced
+    rather than priced on a guess - rule 3 of
+    docs/decisions/2026-09-17-unit-carrying.md.
+    """
+    size = getattr(info, "trade_tick_size", None)
+    value = getattr(info, "trade_tick_value", None)
+    if not size or value is None:
+        return None
+    return float(value) / float(size)
+
+
+
+def history_of(mt5, magic: int, offset_ms, spreads=None, basis=None) -> tuple:
     """This book's closed trades ON THE ACCOUNT, and what they came to.
 
-    Returns `(realised, closed, fills)`. `offset_ms` is how far the terminal's
+    Returns `(realised, closed, fills, rebate)`. `offset_ms` is how far the terminal's
     clock runs ahead of UTC, and every time in `fills` is converted by it - so
     the times handed out here are UTC, the same clock the paper book's are on,
     and they are comparable without anyone having to know that MT5's are not.
@@ -535,11 +698,33 @@ def history_of(mt5, magic: int, offset_ms) -> tuple:
     Commission is counted on every deal and profit and swap only on the closing
     ones: an entry deal carries a charge but no result, and counting its zero
     profit as a trade would double the count.
+
+    THE REBATE IS A FOURTH RETURN VALUE AND IS NEVER INSIDE `realised`. It is
+    the owner's introducing-broker credit on the spread this book's trading
+    paid, computed here because nothing else can see the deals. `spreads` is
+    the order-time memory (`load_spreads`) and `basis` carries the terms and
+    the conversion:
+
+        {"share": 0.45,               # of the ROUND-TURN spread
+         "configured_spread": 0.28,   # the book's own, for what was not measured
+         "per_price_unit": 100.0,     # account currency per unit of price, per lot
+         "currency": "USC"}
+
+    With no `basis` the rebate comes back `None` - no arrangement is recorded,
+    which is not a rebate of zero - and every fill carries `rebate: None`.
+
+    A trade is EXACT when the quote was captured on both of its deals: the
+    trader crosses half the spread going in and half coming out, so the
+    round-turn cost is `(spread_in + spread_out) / 2`, which is one whole
+    spread when the two are equal. Anything else falls back to the configured
+    spread and is labelled ESTIMATED; with no configured spread either, it is
+    counted as unpriced and credited nothing.
     """
     now = dt.datetime.now()
     deals = mt5.history_deals_get(now - dt.timedelta(days=400), now + dt.timedelta(days=2))
     if deals is None:
-        return None, 0, []
+        return None, 0, [], None
+    spreads = spreads or {}
 
     total = 0.0
     trades = {}
@@ -551,6 +736,10 @@ def history_of(mt5, magic: int, offset_ms) -> tuple:
             "direction": None, "entryTime": None, "entryPrice": None,
             "exitTime": None, "exitPrice": None, "lots": None,
             "exitReason": "", "pnl": 0.0,
+            # The spread this desk read as it sent each side's order, when it
+            # sent one at all. Underscored because they are working notes for
+            # the rebate below and are stripped before anything leaves here.
+            "_spread_in": None, "_spread_out": None,
         })
         t["pnl"] += d.commission
         if d.entry == mt5.DEAL_ENTRY_IN:
@@ -559,6 +748,7 @@ def history_of(mt5, magic: int, offset_ms) -> tuple:
             t["entryTime"] = int(d.time_msc)
             t["entryPrice"] = d.price
             t["lots"] = d.volume
+            t["_spread_in"] = spreads.get(str(int(d.ticket)))
         else:
             total += d.profit + d.swap
             t["pnl"] += d.profit + d.swap
@@ -567,6 +757,12 @@ def history_of(mt5, magic: int, offset_ms) -> tuple:
             if t["exitTime"] is None or int(d.time_msc) >= t["exitTime"]:
                 t["exitTime"] = int(d.time_msc)
                 t["exitPrice"] = d.price
+                # The same deal that wins the exit wins its spread, so a
+                # part-closed position is priced on the leg that ended it
+                # rather than on whichever part happened to be looked at
+                # last. `None` when this desk sent no order for it - a stop
+                # or a target the broker took on its own.
+                t["_spread_out"] = spreads.get(str(int(d.ticket)))
                 # The broker's own word for why it ended. "sl"/"tp" come from
                 # MT5 itself; anything else is the comment the executor wrote,
                 # and an empty one stays empty rather than being guessed at.
@@ -577,12 +773,63 @@ def history_of(mt5, magic: int, offset_ms) -> tuple:
     # Sorted on the raw server stamps, BEFORE the conversion, so the ordering
     # is right even when the offset is unknown and the times go out as None.
     fills.sort(key=lambda t: t["entryTime"])
+
+    # ---- the rebate, over EVERY closed trade, beside `total` and not in it --
+    #
+    # Over every trade rather than over the `MAX_FILLS` that go out below, so
+    # that the credit's scope is `realised`'s scope and the two can be read
+    # against each other. The per-trade figure on each fill is the same
+    # arithmetic on one trade, so a consumer summing the fills it was sent and
+    # a consumer reading the total are both right about what they have.
+    share = None if basis is None else basis.get("share")
+    per_unit = None if basis is None else basis.get("per_price_unit")
+    configured = None if basis is None else basis.get("configured_spread")
+    credited = 0.0
+    exact = estimated = unpriced = 0
+    for t in fills:
+        s_in, s_out = t.pop("_spread_in"), t.pop("_spread_out")
+        lots = t.get("lots")
+        if s_in is not None and s_out is not None:
+            # Half the spread crossed on the way in and half on the way out.
+            # Equal spreads make this one whole spread, which is what one
+            # round turn costs and what the share is a share of.
+            round_turn, how = (float(s_in) + float(s_out)) / 2.0, "EXACT"
+        elif configured:
+            round_turn, how = float(configured), "ESTIMATED"
+        else:
+            round_turn, how = None, None
+        if share is None or per_unit is None or not lots or round_turn is None or round_turn <= 0:
+            # Credited nothing AND counted. A total that silently dropped
+            # these would read as complete.
+            t["rebate"], t["rebateBasis"] = None, None
+            if share is not None:
+                unpriced += 1
+            continue
+        credit = round(share * round_turn * float(lots) * float(per_unit), 4)
+        t["rebate"], t["rebateBasis"] = credit, how
+        credited += credit
+        if how == "EXACT":
+            exact += 1
+        else:
+            estimated += 1
+
     for t in fills:
         t["pnl"] = round(t["pnl"], 2)
         t["entryTime"] = None if offset_ms is None else t["entryTime"] - offset_ms
         t["exitTime"] = None if offset_ms is None else t["exitTime"] - offset_ms
     closed = len(fills)
-    return round(total, 2), closed, fills[-MAX_FILLS:]
+    realised = round(total, 2)
+    rebate = None if share is None else {
+        "amount": round(credited, 2),
+        "realised_with_rebate": round(realised + credited, 2),
+        "currency": None if basis is None else basis.get("currency"),
+        "share_of_spread": share,
+        "configured_spread": configured,
+        "exact": exact,
+        "estimated": estimated,
+        "unpriced": unpriced,
+    }
+    return realised, closed, fills[-MAX_FILLS:], rebate
 
 
 def write_snapshot(path, payload: dict) -> None:
@@ -1264,6 +1511,37 @@ def main() -> int:
             one_lot_at=(lambda n: None if n is None else round(n, 2))(
                 notional_of(info, 1.0, getattr(mt5.symbol_info_tick(args.symbol), "ask", 0.0) or 0.0)))
 
+        # ---- the rebate's three inputs, established once ----
+        #
+        # `spreads_seen` is this book's order-time quotes on this account,
+        # keyed by deal ticket and reloaded from disk so a restart does not
+        # turn every exact trade back into an estimate. `share` is the
+        # owner's IB terms from the registry - None means no arrangement is
+        # recorded, which is not a rebate of zero. `per_price_unit` is what
+        # one unit of price is worth per lot in the ACCOUNT's currency, read
+        # from the symbol rather than assumed from `contract_size`: on
+        # XAUUSD.sc those two differ by a factor of a hundred, which is the
+        # `notional_of` mistake of 2026-09-17.
+        spreads_path = here / "spreads.json"
+        spreads_seen = load_spreads(spreads_path)
+        share_of_spread = rebate_share(ROOT / "config" / "accounts.toml")
+        per_price_unit = money_per_price_unit(info)
+        # The spread the BOOK is charged, for trades whose own spread was
+        # never captured. Read from the paper run itself (`rebate.spread` on
+        # `/api/paper/status`) rather than from a copy of default.toml here,
+        # so the estimate is made from the number the book is actually
+        # costed at and not from a second reading of the same file. None
+        # until the first status arrives, and remembered afterwards: a
+        # configured spread does not change between polls, and letting an
+        # unreachable API turn every estimate to null would make the rebate
+        # line flicker for a reason that has nothing to do with the rebate.
+        book_spread = None
+        log(out, "rebate-terms", share_of_spread=share_of_spread,
+            per_price_unit=per_price_unit, currency=getattr(acc, "currency", None),
+            order_spreads_remembered=len(spreads_seen),
+            reason="the IB credit is reported beside `realised` and never inside it; "
+                   "null share means config/accounts.toml records no arrangement")
+
         def positions():
             return [p for p in (mt5.positions_get(symbol=args.symbol) or []) if p.magic == magic]
 
@@ -1271,6 +1549,18 @@ def main() -> int:
             if args.dry_run:
                 log(out, "dry-run", action=what, request={k: v for k, v in request.items() if k != "type_filling"})
                 return True
+            # THE SPREAD AT THE FILL, read here and nowhere else.
+            #
+            # Every order this process sends goes through this function, so
+            # this is the one place that can honestly claim to have looked at
+            # the quote at the moment of an order. `broker.json`'s `bid` and
+            # `ask` are as of the POLL and are not this; a rebate computed
+            # from them would be a measured-looking number taken up to
+            # fifteen seconds away from the trade it describes.
+            #
+            # Read BEFORE `order_send` rather than after, because after is
+            # already a different market - the order itself moved it.
+            at_order = quoted_spread(mt5.symbol_info_tick(args.symbol))
             result = mt5.order_send(request)
             retcode = getattr(result, "retcode", None)
             asked = request.get("volume")
@@ -1326,7 +1616,21 @@ def main() -> int:
                 comment=getattr(result, "comment", None), ticket=getattr(result, "order", None),
                 deal=getattr(result, "deal", None),
                 price=getattr(result, "price", None), volume=filled, asked=asked,
-                requested=request.get("price"), **failed_extra)
+                requested=request.get("price"), spread=at_order, **failed_extra)
+            # Kept against the DEAL, which is what the history hands back, so
+            # the rebate on this trade is later computed from the spread it
+            # actually paid instead of from the configured one. A refused
+            # order has no deal and nothing to remember.
+            #
+            # A PENDING ORDER IS THE HOLE THIS DOES NOT CLOSE. Placing one
+            # returns no deal, and the deal that fills it later is made by
+            # the broker with no order from here, so `--mirror-pending`
+            # entries stay estimated exactly as broker-taken exits do. Said
+            # rather than papered over: the counts in the snapshot are what
+            # make it visible, and closing it would take a quote logger
+            # running independently of this loop.
+            if ok or partial:
+                remember_spread(spreads_path, spreads_seen, getattr(result, "deal", None), at_order)
             # Carried into the snapshot so it leaves this machine. A refusal
             # that only ever reaches a log file is a book that quietly stopped
             # trading: the desk goes on deciding, the paper P&L goes on moving,
@@ -1757,7 +2061,7 @@ def main() -> int:
             # None for the realised total. That is "the terminal would not say
             # what this book has done", not "it has done nothing", and the two
             # must not collapse here.
-            realised, _, fills = history_of(mt5, magic, offset)
+            realised, _, fills, _ = history_of(mt5, magic, offset)
             if realised is None:
                 return "unknown", None
             side = book_open.get("side")
@@ -2205,7 +2509,15 @@ def main() -> int:
                 log(out, "no-account", error=str(mt5.last_error()))
                 return
             offset = server_offset_ms()
-            realised, closed, fills = history_of(mt5, magic, offset)
+            # The terms travel with the numbers they produce, so a reader of
+            # broker.json never has to know what was multiplied by what.
+            basis = None if share_of_spread is None else {
+                "share": share_of_spread,
+                "configured_spread": book_spread,
+                "per_price_unit": per_price_unit,
+                "currency": getattr(acc, "currency", None),
+            }
+            realised, closed, fills, rebate = history_of(mt5, magic, offset, spreads_seen, basis)
             tick = mt5.symbol_info_tick(args.symbol)
             pos = held[0] if held else None
             # The terminal is asked for resting orders only when the flag is
@@ -2266,6 +2578,19 @@ def main() -> int:
                 "book_side": (book_open or {}).get("side"),
                 "book_lots": (book_open or {}).get("lots"),
                 "realised": realised, "closed": closed, "fills": fills,
+                # THE IB CREDIT, BESIDE `realised` AND NEVER INSIDE IT. The
+                # owner chose a separate line over a change to the cost
+                # model, so `realised` above is the same number it has always
+                # been and this is published next to it with a
+                # net-of-rebate figure of its own. `exact` counts trades
+                # priced from a spread read at the order; `estimated` counts
+                # those priced from the book's configured spread because no
+                # quote was captured - a stop the broker took, a pending
+                # order it filled, or any trade closed before 2026-09-21.
+                # Two counts and not an average, because an average of a
+                # measured and a guessed number is a guessed number wearing a
+                # measurement's clothes.
+                "rebate": rebate,
                 # Cleared on every successful open, so `blocked` describes the
                 # state now rather than the last thing that ever went wrong.
                 "margin_floor": args.min_margin_level,
@@ -2392,6 +2717,7 @@ def main() -> int:
                 try:
                     run = read_status(args.api, args.run)
                     book_open = (run or {}).get("open")
+                    book_spread = spread_of(run, book_spread)
                 except Exception as e:  # noqa: BLE001
                     # Logged, not fatal, and deliberately not a `continue`:
                     # the closes above have already happened, and what the
@@ -2437,6 +2763,10 @@ def main() -> int:
                 time.sleep(args.poll)
                 continue
             book_open = run.get("open")
+            # What the book is charged, for estimating a rebate on a trade
+            # whose own spread was never read. Remembered rather than reset:
+            # see `book_spread` where it is declared.
+            book_spread = spread_of(run, book_spread)
             held = positions()
             # ---- the pending order first, then the position as always ----
             if args.mirror_pending:

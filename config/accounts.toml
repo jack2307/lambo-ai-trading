@@ -148,6 +148,88 @@ fill_on_open = true
 # has killed a single executor.
 weekend_flat = "20:45"
 
+# ---------------------------------------------------------------------------
+# THE INTRODUCING-BROKER REBATE. A CREDIT, NOT A COST.
+# ---------------------------------------------------------------------------
+#
+# The owner is the introducing broker on his own accounts, so part of the
+# spread his trading pays comes back to him. His instruction, 2026-09-20:
+# "tinh them tien backcom se bang 45% cua spread" - count the Backcom money
+# too, it will be 45% of the spread.
+#
+# HE WAS OFFERED THREE WAYS AND PICKED A SEPARATE CREDIT LINE, on live and on
+# paper. Not a cost-model change. So NOTHING that already had a number has a
+# different one because this key exists: `config/default.toml`'s `spread`
+# still charges what the venue charges, every `net_usd` and every `realised`
+# still means what it meant, and every receipt in docs/decisions/ still
+# reproduces. The rebate is published BESIDE those figures with a
+# net-of-rebate figure next to it, so a reader can always see how much of a
+# result is the strategy and how much is the commercial arrangement. Folding
+# it into the cost model would destroy exactly that, which is why it was not
+# the option chosen.
+#
+# WHY HERE AND NOT IN config/default.toml. That file is the COST MODEL: what
+# the venue charges anybody who trades this symbol, measured from the
+# terminal. This is not a property of gold, of Vantage's spread, or of any
+# market - it is a term of the owner's own IB agreement, and it attaches to
+# the LOGIN, exactly like `real_money` and `lot_scale` below. A second desk
+# trading the same config with no IB link would pay the same spread and
+# receive nothing. `config/default.toml` describes the market; this file
+# describes the relationship, and the rebate is a relationship.
+#
+# TOP-LEVEL RATHER THAN PER-ACCOUNT, and that is an argument that can be lost.
+# There is one agreement today, and the paper books belong to no account at
+# all - a paper book is a market and a strategy, and it would have nowhere to
+# read a per-account rate from. So the rate sits beside [prices], which is the
+# other table here that is a fact about the DESK rather than about one
+# account. An account that negotiates its own terms adds its own key to its
+# own [[account]] block when that day comes; nothing here has to move.
+[rebate]
+# The share of the ROUND-TURN spread that comes back. 0.45 is the owner's
+# figure and is the only number he has given.
+#
+# ROUND TURN, AND THE WORD IS LOAD-BEARING. A position pays the spread once
+# between the ask it enters at and the bid it leaves at; the engine charges
+# half of it on each side (crates/fd-backtest/src/engine.rs, `apply_costs`)
+# and the two halves are one spread. So the credit on one trade is
+#
+#     0.45 x spread x lots x (money per unit of price, per lot)
+#
+# and NOT 0.45 of each side, which would be twice this. On XAUUSD.sc at the
+# configured 0.28 spread, 0.07 lots, contract 1 oz, tick 0.01 / tick value
+# 1.00 USC (so 1.00 of price is 100 USC a lot): the spread costs 1.96 USC and
+# this credits 0.88 USC, which on a book risking about 0.82 USD a trade is
+# about 0.011 R. Those are the numbers to check an implementation against.
+#
+# 0.0 IS A RATE AND MEANS "the rebate is zero". Deleting this table means "no
+# arrangement is recorded", and every figure derived from it then reports
+# null rather than nought. They are different states and the desk shows them
+# differently.
+share_of_spread = 0.45
+
+# per_lot = 11.0
+# per_lot_currency = "USD"
+#
+# NOT IMPLEMENTED, AND LEFT WRITTEN DOWN BECAUSE IT IS THE LIKELIER TRUTH. An
+# IB rebate is USUALLY quoted per standard lot - the figure in
+# docs/decisions/2026-09-13-close-reopen-drift.md is $10-12 per standard lot
+# from this owner's own book - and a per-lot rebate and a share of the spread
+# are NOT the same number wearing two hats. A share of the spread moves with
+# the spread and pays nothing when the spread is nothing; a flat per-lot
+# figure pays the same in a quiet hour as in a violent one. At 0.28 on gold
+# the two can be made to agree; at 0.21 (the spread logger's measured median,
+# which this desk deliberately does not charge yet) they do not.
+#
+# A standard lot is 100x this workspace's gold contract, so $11 per standard
+# lot is $0.11 per lot here - worth saying out loud before anyone types the
+# broker's own number into a file whose lots are ounces.
+#
+# When the owner supplies the real per-lot figure it goes here, the reader
+# prefers it over `share_of_spread`, and whichever was used travels with every
+# number it produced. It is not implemented today because guessing which form
+# the agreement takes would produce a confident figure from an invented term,
+# and an invented term is worse than no rebate line at all.
+
 [[account]]
 # Short, stable, and what you type at the launcher. It is also the name the
 # desk shows, so it is worth reading well.

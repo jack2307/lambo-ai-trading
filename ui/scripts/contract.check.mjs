@@ -425,6 +425,77 @@ const CONTRACTS = [
     },
   },
   {
+    sample: 'paper-status-rebate.json',
+    what: 'GET /api/paper/status - the IB rebate, beside the net and never inside it',
+    paths: {
+      'runs[0].id': 'string',
+      'runs[0].trades': 'number',
+      // THE FIGURE THAT MUST NOT MOVE. The owner chose a separate credit
+      // line over a change to the cost model, so this still means what it
+      // meant before the rebate existed. The `also` below checks that the
+      // response has not quietly started sending the credited number here.
+      'runs[0].net_usd': 'number',
+      // USD, like every money field on this response; these two are how the
+      // client shows a cent account's own number without the conversion
+      // entering anybody's arithmetic.
+      'runs[0].account_currency': 'string',
+      'runs[0].units_per_usd': 'number',
+      // `null` when config/accounts.toml records no arrangement, which is
+      // NOT a rebate of zero - the desk shows the two differently and the
+      // type here says so.
+      'runs[0].rebate': 'object|null',
+      'runs[0].rebate.share_of_spread': 'number',
+      // The basis travels with the figure: without it a reader cannot tell
+      // 45% of 0.28 from 45% of 0.21, and this desk has already been bitten
+      // by a number published without what it was computed from.
+      'runs[0].rebate.spread': 'number',
+      'runs[0].rebate.usd': 'number',
+      'runs[0].rebate.net_of_rebate_usd': 'number',
+      // Three counts and never an average of them. A paper book pays the
+      // spread the engine charged it, so `estimated_trades` is 0 here and is
+      // usually the LARGE one on an account, where the spread at the fill
+      // was mostly never recorded.
+      'runs[0].rebate.exact_trades': 'number',
+      'runs[0].rebate.estimated_trades': 'number',
+      'runs[0].rebate.unpriced_trades': 'number',
+      'runs[0].last_fills[0].pnlUsd': 'number',
+      // Per trade, beside its P&L. `null` is "this trade was never priced
+      // for a rebate", not "its rebate was nothing".
+      'runs[0].last_fills[0].rebateUsd': 'number|null',
+    },
+    also: (doc, fail) => {
+      for (const run of doc.runs ?? []) {
+        const r = run.rebate
+        if (r === null || r === undefined) continue
+        // THE LEAK CHECK. If these two are ever the same number while a
+        // credit was paid, the rebate has been folded into the book - which
+        // is the one thing the option the owner picked rules out.
+        if (r.usd !== 0 && run.net_usd === r.net_of_rebate_usd) {
+          fail(`${run.id}: net_usd equals net_of_rebate_usd with a credit of ${r.usd} - the rebate is inside the book`)
+        }
+        if (Math.abs(run.net_usd + r.usd - r.net_of_rebate_usd) > 0.011) {
+          fail(`${run.id}: ${run.net_usd} + ${r.usd} is not ${r.net_of_rebate_usd}`)
+        }
+        // Every closed trade is in exactly one of the three. A total that
+        // silently dropped the ones it could not price would read as
+        // complete, and the count is the only thing that says otherwise.
+        const counted = r.exact_trades + r.estimated_trades + r.unpriced_trades
+        if (counted !== run.trades) {
+          fail(`${run.id}: ${counted} trades accounted for against ${run.trades} closed`)
+        }
+        // A rebate is money coming back. A negative one is a cost wearing a
+        // credit's name, and the client colours it as a credit either way.
+        if (r.usd < 0) fail(`${run.id}: a credit of ${r.usd}`)
+        // Paper pays the spread the engine charged it. Nothing about it can
+        // be an estimate, and the day this fires the paper book has started
+        // guessing at its own costs.
+        if (r.estimated_trades !== 0) {
+          fail(`${run.id}: ${r.estimated_trades} paper trades are estimates; the book knows its own spread`)
+        }
+      }
+    },
+  },
+  {
     sample: 'chart-bars-4h-forming.json',
     what: 'GET /api/chart/bars — file-backed 4h with a partial bar',
     paths: {

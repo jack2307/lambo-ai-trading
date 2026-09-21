@@ -325,11 +325,39 @@ pub struct TradeDto {
     pub target: Option<f64>,
     pub lots: f64,
     pub pnl_usd: f64,
+    /// The introducing-broker rebate credited on this trade's own spread, in
+    /// USD, BESIDE `pnl_usd` and never inside it.
+    ///
+    /// `None` is not zero and it is not "no rebate". It means this trade was
+    /// never priced for one: a backtest response carries `None` on every
+    /// trade because the rebate is a commercial arrangement on an account and
+    /// a backtest has no account, and a paper book carries `None` when
+    /// `config/accounts.toml` declares no arrangement or the market's spread
+    /// is not a number a credit can be taken from. A rebate of `0.0` means
+    /// the arithmetic ran and came to nothing.
+    ///
+    /// Set by [`TradeDto::with_rebate`] where a book knows the terms;
+    /// `From<&Trade>` cannot know them and so leaves it absent.
+    pub rebate_usd: Option<f64>,
     pub r: f64,
     pub mae: f64,
     pub mfe: f64,
     pub hold_ms: i64,
     pub reason: String,
+}
+
+impl TradeDto {
+    /// The same trade with the IB rebate priced onto it.
+    ///
+    /// Takes the figure rather than the terms: pricing a rebate needs the
+    /// market's spread and contract size, which live with the run and not
+    /// with the trade, so the one place that has all three does the
+    /// arithmetic and hands the answer here.
+    #[must_use]
+    pub fn with_rebate(mut self, usd: Option<f64>) -> Self {
+        self.rebate_usd = usd;
+        self
+    }
 }
 
 impl From<&fd_backtest::Trade> for TradeDto {
@@ -345,6 +373,9 @@ impl From<&fd_backtest::Trade> for TradeDto {
             target: t.target,
             lots: t.lots,
             pnl_usd: t.pnl_usd,
+            // Absent, not zero: this conversion knows a trade and nothing
+            // about whose account it was taken on. See `with_rebate`.
+            rebate_usd: None,
             r: t.r,
             mae: t.mae,
             mfe: t.mfe,

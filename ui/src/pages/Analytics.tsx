@@ -168,6 +168,26 @@ interface Closed {
   exitTime: number
   holdMs: number
   money: number
+  /**
+   * The owner's introducing-broker rebate on this trade's own spread, in the
+   * same unit as `money`, BESIDE it and never inside it.
+   *
+   * `null` means the trade was never priced for one - no arrangement
+   * recorded, or no spread the credit could be taken from. It is not a
+   * rebate of zero, and the header counts the two separately.
+   */
+  rebate: number | null
+  /**
+   * `EXACT` when the credit came from the spread the trade actually paid,
+   * `ESTIMATED` when it came from a configured spread standing in for one
+   * nobody recorded, `null` when the trade was not priced.
+   *
+   * Every paper trade is EXACT: the engine charged the configured spread, so
+   * the credit is arithmetic on a known cost. On an ACCOUNT most are
+   * estimates, because the spread at a real fill was not recorded until
+   * 2026-09-21 and a stop the broker takes still leaves none.
+   */
+  rebateBasis: 'EXACT' | 'ESTIMATED' | null
   r: number | null
   mae: number | null
   mfe: number | null
@@ -198,6 +218,19 @@ interface Stats {
   meanMfe: number
   longestWin: number
   longestLoss: number
+  /**
+   * The IB credit over these trades, in the list's money, and how it was
+   * arrived at. `net` above is untouched by it: the owner asked for a credit
+   * BESIDE the book and not inside it, so a reader can see how much of a
+   * result is the strategy and how much is the commercial arrangement.
+   *
+   * `rebateExact + rebateEstimated + rebateUnpriced` is `trades`; a total
+   * that silently dropped what it could not price would read as complete.
+   */
+  rebate: number
+  rebateExact: number
+  rebateEstimated: number
+  rebateUnpriced: number
   /** Cumulative P&L after each trade, oldest first — the curve, from zero. */
   curve: { t: number; v: number }[]
 }
@@ -225,6 +258,10 @@ const EMPTY: Stats = {
   meanMfe: 0,
   longestWin: 0,
   longestLoss: 0,
+  rebate: 0,
+  rebateExact: 0,
+  rebateEstimated: 0,
+  rebateUnpriced: 0,
   curve: [],
 }
 
@@ -264,6 +301,10 @@ function summarise(trades: Closed[]): Stats {
   let holdSum = 0
   let maeSum = 0
   let mfeSum = 0
+  let rebate = 0
+  let rebateExact = 0
+  let rebateEstimated = 0
+  let rebateUnpriced = 0
   const rs: number[] = []
   const monies: number[] = []
   const curve: { t: number; v: number }[] = []
@@ -290,6 +331,16 @@ function summarise(trades: Closed[]): Stats {
     maeSum += t.mae ?? 0
     mfeSum += t.mfe ?? 0
     if (hasR) rs.push(t.r as number)
+    // The credit is summed apart from the money and never added into `net`.
+    // A trade with no credit is COUNTED rather than treated as a zero: the
+    // three counts are what tell a reader whether the total beside them is
+    // measured, estimated, or missing most of the book.
+    if (t.rebate === null) rebateUnpriced += 1
+    else {
+      rebate += t.rebate
+      if (t.rebateBasis === 'EXACT') rebateExact += 1
+      else rebateEstimated += 1
+    }
     monies.push(t.money)
     curve.push({ t: t.exitTime, v: net })
   }
@@ -319,6 +370,10 @@ function summarise(trades: Closed[]): Stats {
     meanMfe: hasR ? mfeSum / sorted.length : 0,
     longestWin,
     longestLoss,
+    rebate,
+    rebateExact,
+    rebateEstimated,
+    rebateUnpriced,
     curve,
   }
 }
@@ -358,6 +413,12 @@ export function Analytics({ book, accounts }: { book: Book; accounts: BrokerAcco
               exitTime: fill.exitTime,
               holdMs: fill.holdMs,
               money: fill.pnlUsd,
+              // A paper book pays the spread the engine charged it, so a
+              // credit it could price is exact by construction. `null` when
+              // config/accounts.toml records no arrangement, which is not a
+              // rebate of nothing.
+              rebate: fill.rebateUsd,
+              rebateBasis: fill.rebateUsd === null ? null : 'EXACT',
               r: fill.r,
               mae: fill.mae,
               mfe: fill.mfe,
@@ -433,6 +494,12 @@ export function Analytics({ book, accounts }: { book: Book; accounts: BrokerAcco
           exitTime: f.exitTime,
           holdMs: Math.max(0, f.exitTime - f.entryTime),
           money: f.pnl,
+          // The executor's own figure, in the account's currency, with its
+          // provenance beside it - most of these are estimated from the
+          // configured spread because the one the fill actually paid was
+          // never recorded. The header says how many.
+          rebate: f.rebate,
+          rebateBasis: f.rebate === null ? null : f.rebateBasis,
           r: null,
           mae: null,
           mfe: null,
@@ -582,6 +649,25 @@ function TopStrip({
 
   const realMoney = account !== null && (account.real_money || account.demo === false)
 
+  // How many of these trades carry a credit at all. Zero means no rebate
+  // line is drawn - not a credit of nothing.
+  const priced = overall.rebateExact + overall.rebateEstimated
+  const rebateTitle = [
+    `The introducing-broker credit on the spread these trades paid, in ${money.unit}.`,
+    overall.rebateExact > 0
+      ? `${overall.rebateExact} priced from the spread the trade actually paid.`
+      : '',
+    overall.rebateEstimated > 0
+      ? `${overall.rebateEstimated} ESTIMATED from the configured spread, because the spread the fill actually paid was never recorded. On gold the configured 0.28 sits above every spread this desk has measured, so those run high.`
+      : '',
+    overall.rebateUnpriced > 0
+      ? `${overall.rebateUnpriced} could not be priced at all and are in no total.`
+      : '',
+    'Counted beside the net and never inside it.',
+  ]
+    .filter(Boolean)
+    .join(' ')
+
   return (
     <div className="text-muted-foreground flex h-8 shrink-0 flex-wrap items-center gap-x-4 gap-y-1 border-b px-3 text-[11px]">
       {onAccount ? (
@@ -621,10 +707,54 @@ function TopStrip({
           </span>
         )}
       </span>
-      <span className="num">
+      <span
+        className="num"
+        title={`What the ${onAccount ? 'account' : 'books'} made over these closed trades, after the spread. BEFORE the introducing-broker rebate, which is the figure beside it.`}
+      >
         net <span className={bySign(overall.net)}>{money.fmt(overall.net)}</span>
         <span className={cn('ml-1', bySign(ret))}>({ret >= 0 ? '+' : MINUS}{pct(Math.abs(ret))})</span>
       </span>
+      {/* THE REBATE, AND THE BOOK NET OF IT - two figures, never one.
+          The owner is the introducing broker on these accounts, so part of
+          the spread this trading pays comes back to him. He asked for it as
+          a credit BESIDE the book rather than as a change to the cost model,
+          so `net` above is untouched and a reader can see how much of a
+          result is the strategy and how much is the arrangement.
+
+          Shown only when something was actually priced. Nothing here is a
+          zero standing in for an absence: a desk with no arrangement
+          recorded, or a book none of whose trades could be priced, shows no
+          rebate at all rather than a credit of nought. */}
+      {priced > 0 && (
+        <>
+          <span className="num" title={rebateTitle}>
+            rebate <span className={bySign(overall.rebate)}>{money.fmt(overall.rebate)}</span>
+            {/* The provenance, next to the figure and not in a tooltip -
+                `ui/DESIGN.md`: a figure the data cannot fully support says so
+                where it is read. Amber is this strip's existing word for "a
+                caveat applies", the same one the undated-fills note wears;
+                no new colour is introduced for it. */}
+            {overall.rebateExact > 0 && (
+              <span className="text-muted-foreground"> {overall.rebateExact} exact</span>
+            )}
+            {overall.rebateEstimated > 0 && (
+              <span className="text-caution"> {overall.rebateEstimated} estimated</span>
+            )}
+            {overall.rebateUnpriced > 0 && (
+              <span className="text-caution"> {overall.rebateUnpriced} unpriced</span>
+            )}
+          </span>
+          <span
+            className="num"
+            title="The same trades with the rebate added. Published beside the net, never instead of it."
+          >
+            net + rebate{' '}
+            <span className={bySign(overall.net + overall.rebate)}>
+              {money.fmt(overall.net + overall.rebate)}
+            </span>
+          </span>
+        </>
+      )}
       <span className="num">
         {overall.trades} <span className="text-muted-foreground">closed</span>
       </span>

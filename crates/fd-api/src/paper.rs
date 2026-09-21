@@ -1310,6 +1310,13 @@ pub struct RunStatus {
     pub pending_order: Option<PendingOrderDto>,
     pub trades: usize,
     pub net_usd: f64,
+    /// The introducing-broker rebate on this book's own spread, and the same
+    /// book net of it. A SEPARATE LINE: `net_usd` above is untouched by this
+    /// and means exactly what it meant before the rebate existed.
+    ///
+    /// `null` when `config/accounts.toml` declares no arrangement - which is
+    /// not a rebate of zero. See [`RebateDto`].
+    pub rebate: Option<RebateDto>,
     /// `null` with no losing trade yet (the engine's infinity).
     pub profit_factor: f64,
     pub skipped_by_guard: BTreeMap<String, usize>,
@@ -1430,6 +1437,15 @@ pub struct BrokerDto {
     /// compare.
     pub realised: Option<f64>,
     pub closed: Option<usize>,
+    /// The introducing-broker rebate on what this book paid in spread ON THIS
+    /// ACCOUNT, beside `realised` and never inside it.
+    ///
+    /// Computed by the executor, because nothing else can: the rebate needs
+    /// the spread each fill actually paid and the terminal is the only thing
+    /// that ever saw it. `null` when the executor is older than this field or
+    /// `config/accounts.toml` declares no arrangement. See
+    /// [`BrokerRebateDto`] for the estimate that most of it still is.
+    pub rebate: Option<BrokerRebateDto>,
     /// The account's own closed trades for this book, oldest first - what the
     /// BROKER did, as against the paper book's `fills`, which are the rule
     /// executed perfectly at the bar's price. Kept separate rather than
@@ -1469,6 +1485,59 @@ pub struct BrokerDto {
     pub drift: Option<String>,
 }
 
+/// What this book's trading on this account earned back in rebate.
+///
+/// THE HONEST PART, AND IT IS THE WHOLE REASON THIS TYPE HAS THREE COUNTS.
+/// The desk did not record the spread at the moment of a real fill until
+/// 2026-09-21. `broker.json` carries `bid` and `ask` as of the SNAPSHOT,
+/// which is whenever the executor last polled and has nothing to do with
+/// when a trade filled. So for a trade whose spread was not captured, the
+/// credit can only be worked out from the CONFIGURED spread, and that is an
+/// estimate - the logger has measured XAUUSD.sc as low as 0.210 against a
+/// configured 0.280, so an estimate on this market is high by about a
+/// quarter.
+///
+/// The executor now reads the quote immediately before every order it sends
+/// and keeps it against the deal ticket, so those fills are exact. It still
+/// cannot be exact about an exit the BROKER took - a stop or a target fires
+/// with no order from this desk and no quote read - so `estimated` will stay
+/// the larger number on any book that exits at its stop.
+///
+/// `exact` and `estimated` are never added into one figure without both
+/// counts beside it. A field that mixed measured and estimated values
+/// without saying which is the kind of thing this desk treats as a defect.
+#[derive(Debug, Default, Serialize, Deserialize)]
+#[serde(default)]
+pub struct BrokerRebateDto {
+    /// The credit, in the ACCOUNT's currency - USC on the funded cent
+    /// account, like `realised` and unlike every USD figure on the paper
+    /// book beside it. `currency` below says which, in the record rather
+    /// than only in this comment.
+    pub amount: Option<f64>,
+    /// `realised + amount`, in the same currency. Published beside
+    /// `realised` and never folded into it.
+    pub realised_with_rebate: Option<f64>,
+    /// The account's currency, so the two figures above are never read as
+    /// dollars on a cent account.
+    pub currency: Option<String>,
+    /// The share of the round-turn spread the terms give, as the executor
+    /// read it from `config/accounts.toml`.
+    pub share_of_spread: Option<f64>,
+    /// The spread the ESTIMATED trades were priced from, per unit of price:
+    /// the book's own configured spread, as the paper desk charges it.
+    /// `null` when the executor could not reach the API to ask for it, in
+    /// which case nothing could be estimated at all.
+    pub configured_spread: Option<f64>,
+    /// Trades priced from a spread read at the moment the order was sent.
+    pub exact: Option<usize>,
+    /// Trades priced from the configured spread because no quote was
+    /// captured for them - every trade closed before 2026-09-21, and every
+    /// exit the broker took at a stop or a target since.
+    pub estimated: Option<usize>,
+    /// Trades with no usable basis at all, credited nothing and counted.
+    pub unpriced: Option<usize>,
+}
+
 /// One trade the account actually completed.
 ///
 /// Deliberately NOT the same shape as a paper trade. A broker has no stop
@@ -1493,6 +1562,16 @@ pub struct BrokerFillDto {
     pub exit_reason: Option<String>,
     /// In the ACCOUNT's currency, commission and swap included.
     pub pnl: Option<f64>,
+    /// This trade's own rebate, in the ACCOUNT's currency, beside `pnl` and
+    /// never inside it. `null` when it could not be priced.
+    pub rebate: Option<f64>,
+    /// `EXACT` when the credit came from a spread read at the moment the
+    /// order was sent, `ESTIMATED` when it came from the configured spread,
+    /// absent when the trade was not priced. A number without this word
+    /// beside it would be a measured value and a guessed one sharing a
+    /// column.
+    #[serde(rename = "rebateBasis")]
+    pub rebate_basis: Option<String>,
 }
 
 /// The position the account actually holds for this book, as opposed to the
@@ -1585,7 +1664,152 @@ pub struct DetailQuery {
     pub bars: Option<usize>,
 }
 
-fn status_of(data: &Path, run: &PaperRun, rules: &TradingRules, guards: Option<&Guards>, live: Option<LiveBar>) -> RunStatus {
+/* ------------------------------------------- the introducing-broker rebate */
+
+/// The rebate's terms, read from `config/accounts.toml`.
+///
+/// The owner is the introducing broker on his own accounts, so part of the
+/// spread his trading pays comes back. He chose a SEPARATE CREDIT LINE rather
+/// than a change to the cost model, and that choice is what every type below
+/// is shaped by: nothing here ever alters `net_usd`, `equity` or a trade's
+/// `pnl_usd`, and a reader can always see how much of a result is the
+/// strategy and how much is the commercial arrangement.
+///
+/// Read per REQUEST, for the same reason [`account_registry`] is: changing a
+/// commercial term should be editing one file, not restarting a desk that is
+/// carrying live positions.
+///
+/// `None` from [`rebate_terms`] means the file declares no arrangement at
+/// all. Every figure derived from it is then `null` and not zero - a rebate
+/// of zero is one that was calculated and came to nothing, which is a
+/// different fact about the world.
+#[derive(Debug, Clone, Copy, Deserialize)]
+pub struct RebateTerms {
+    /// The share of the ROUND-TURN spread credited back, 0.45 today.
+    ///
+    /// ROUND TURN, and the word decides the number. A position pays the
+    /// spread once, between the ask it enters at and the bid it leaves at;
+    /// the engine charges half on each side (`apply_costs`) and the two
+    /// halves are ONE spread. So this multiplies the whole spread once per
+    /// trade and never once per side, which would be twice the truth.
+    ///
+    /// `config/accounts.toml` also carries a commented-out `per_lot` form
+    /// with the reason it is not implemented. An IB rebate is usually quoted
+    /// per standard lot and the two forms are not the same number: a share of
+    /// the spread moves with the spread, a per-lot figure does not.
+    pub share_of_spread: f64,
+}
+
+#[derive(Debug, Deserialize)]
+struct RebateFile {
+    rebate: Option<RebateTerms>,
+}
+
+impl RebateTerms {
+    /// The credit on one trade, in USD, or `None` when it cannot be priced.
+    ///
+    /// `lots x contract_size` is what one unit of price is worth in USD on
+    /// this market - the engine's own P&L identity - so the spread the trade
+    /// paid, in money, is `spread x lots x contract_size`, and this is the
+    /// configured share of it.
+    ///
+    /// Refuses rather than returning zero when the spread or the size is not
+    /// a positive number. A market configured with no spread charges nothing
+    /// and therefore has nothing to rebate, but saying so with a `0.0` would
+    /// make "not priced" and "priced at nothing" the same figure.
+    fn on(self, lots: f64, spread: f64, contract_size: f64) -> Option<f64> {
+        let finite = lots.is_finite() && spread.is_finite() && contract_size.is_finite();
+        (finite && lots > 0.0 && spread > 0.0 && contract_size > 0.0)
+            .then(|| fd_core::js_round_to(self.share_of_spread * spread * lots * contract_size, 4))
+    }
+}
+
+/// The `[rebate]` table, or `None` when the file declares none.
+///
+/// A missing or malformed registry costs the rebate line and nothing else,
+/// exactly as it costs the account labels and nothing else in
+/// [`account_registry`]: a broken config file must not take down the view of
+/// what is trading.
+fn rebate_terms(dir: &Path) -> Option<RebateTerms> {
+    let text = std::fs::read_to_string(dir.join("accounts.toml")).ok()?;
+    let terms = toml::from_str::<RebateFile>(&text).ok()?.rebate?;
+    terms.share_of_spread.is_finite().then_some(terms)
+}
+
+/// What one paper book was credited, beside what it made.
+///
+/// `null` on a run when no arrangement is configured. Present, it sits NEXT
+/// TO [`RunStatus::net_usd`], which is untouched and still means what it has
+/// always meant.
+#[derive(Debug, Clone, Serialize)]
+pub struct RebateDto {
+    /// The configured share of the round-turn spread, as read.
+    pub share_of_spread: f64,
+    /// The spread the credit was computed from, per unit of price - the same
+    /// number `config/default.toml` charges this market and the engine takes
+    /// out of every fill. Carried here so the figure and the basis it came
+    /// from travel together (`docs/decisions/2026-09-17-unit-carrying.md`).
+    pub spread: f64,
+    /// The credit over the book's closed trades, USD. In USD like every other
+    /// money field on this response; `account_currency` and `units_per_usd`
+    /// beside them are how a client shows the account's own number.
+    ///
+    /// The sum over the trades that could be priced. `unpriced_trades` says
+    /// how many are not in it.
+    pub usd: f64,
+    /// `net_usd + usd`, USD. Published rather than left to the client so that
+    /// two screens cannot disagree about it - and published SEPARATELY so
+    /// that `net_usd` never quietly becomes this.
+    pub net_of_rebate_usd: f64,
+    /// Trades whose credit came from the spread actually charged. On a paper
+    /// book that is every priced trade: the engine took the configured spread
+    /// out of the fill, so the credit is arithmetic on a known cost and not
+    /// an estimate of anything.
+    pub exact_trades: usize,
+    /// Trades priced from a configured spread when the spread actually paid
+    /// was not recorded. Always zero on paper, and the reason this field
+    /// exists here at all is so that the paper shape and the account's are
+    /// the same shape - on the account it is usually most of them.
+    pub estimated_trades: usize,
+    /// Trades with no usable basis, credited nothing and counted instead. A
+    /// total that silently dropped them would read as complete.
+    pub unpriced_trades: usize,
+}
+
+/// The rebate over a book's closed trades.
+///
+/// `trades` is the whole book, so this total is over every closed trade and
+/// not over the tail any one response carries. The per-trade figure on a
+/// `TradeDto` is the same arithmetic on one trade.
+fn rebate_of(trades: &[fd_backtest::Trade], rules: &TradingRules, net_usd: f64, terms: RebateTerms) -> RebateDto {
+    let mut usd = 0.0;
+    let mut exact = 0;
+    let mut unpriced = 0;
+    for t in trades {
+        match terms.on(t.lots, rules.spread, rules.contract_size) {
+            Some(credit) => {
+                usd += credit;
+                exact += 1;
+            }
+            None => unpriced += 1,
+        }
+    }
+    let usd = fd_core::js_round_to(usd, 2);
+    RebateDto {
+        share_of_spread: terms.share_of_spread,
+        spread: rules.spread,
+        usd,
+        net_of_rebate_usd: fd_core::js_round_to(net_usd + usd, 2),
+        exact_trades: exact,
+        // A paper book pays the spread the engine charged it and nothing
+        // else, so nothing here is ever an estimate. The field is a zero the
+        // client can rely on rather than an absence it has to special-case.
+        estimated_trades: 0,
+        unpriced_trades: unpriced,
+    }
+}
+
+fn status_of(data: &Path, run: &PaperRun, rules: &TradingRules, guards: Option<&Guards>, live: Option<LiveBar>, rebate: Option<RebateTerms>) -> RunStatus {
     let book = &run.book;
     let metrics = book.metrics(rules);
     let open = book.position.as_ref().map(|p| OpenDto {
@@ -1703,6 +1927,7 @@ fn status_of(data: &Path, run: &PaperRun, rules: &TradingRules, guards: Option<&
         pending_order,
         trades: book.trades.len(),
         net_usd: metrics.net_pnl_usd,
+        rebate: rebate.map(|terms| rebate_of(&book.trades, rules, metrics.net_pnl_usd, terms)),
         profit_factor: metrics.profit_factor,
         skipped_by_guard: book.skipped_by_guard.clone(),
         closed_by_guard: book.closed_by_guard.clone(),
@@ -1711,7 +1936,13 @@ fn status_of(data: &Path, run: &PaperRun, rules: &TradingRules, guards: Option<&
         gaps: run.gaps,
         news: NewsDto { events_loaded: events.len(), next_blackout, horizon, horizon_days, horizon_name },
         live,
-        last_fills: book.trades[skip..].iter().map(TradeDto::from).collect(),
+        last_fills: book.trades[skip..]
+            .iter()
+            .map(|t| {
+                TradeDto::from(t)
+                    .with_rebate(rebate.and_then(|terms| terms.on(t.lots, rules.spread, rules.contract_size)))
+            })
+            .collect(),
         equity_curve: book.equity_curve.len(),
         brokers: brokers_of(data, &run.config.id()),
         driver: driver_of(data, &run.config.id()),
@@ -2007,7 +2238,14 @@ pub async fn start(State(state): State<Arc<AppState>>, Json(request): Json<Start
             "news": fd_strategy::news::summary("data/news/events.parquet"),
         }),
     )?;
-    let status = status_of(&state.data, &run, &rules, guards.as_ref(), state.live_bar(&run.config.market, &run.config.tf));
+    let status = status_of(
+        &state.data,
+        &run,
+        &rules,
+        guards.as_ref(),
+        state.live_bar(&run.config.market, &run.config.tf),
+        rebate_terms(&state.config_dir),
+    );
     runs.insert(id, run);
     Ok(Json(status))
 }
@@ -3139,10 +3377,14 @@ pub async fn guards_set(
 pub async fn status(State(state): State<Arc<AppState>>) -> Result<Json<StatusResponse>, ApiError> {
     let runs = state.paper.lock().expect("paper runs");
     let mut out = Vec::with_capacity(runs.len());
+    // Read once for the whole response rather than once per run: the terms
+    // are one file and one arrangement, and ten books quoting ten reads of it
+    // could disagree with each other mid-edit.
+    let rebate = rebate_terms(&state.config_dir);
     for run in runs.values() {
         let (rules, guards) = rules_and_guards(&state, &run.config)?;
         let live = state.live_bar(&run.config.market, &run.config.tf);
-        out.push(status_of(&state.data, run, &rules, guards.as_ref(), live));
+        out.push(status_of(&state.data, run, &rules, guards.as_ref(), live, rebate));
     }
     Ok(Json(StatusResponse { runs: out }))
 }
@@ -3162,7 +3404,8 @@ pub async fn detail(
     let run = runs.get(&id).ok_or_else(|| ApiError::NotFound(format!("no paper run `{id}`")))?;
     let (rules, guards) = rules_and_guards(&state, &run.config)?;
     let live = state.live_bar(&run.config.market, &run.config.tf);
-    let status = status_of(&state.data, run, &rules, guards.as_ref(), live.clone());
+    let rebate = rebate_terms(&state.config_dir);
+    let status = status_of(&state.data, run, &rules, guards.as_ref(), live.clone(), rebate);
 
     let book = &run.book;
     let mut equity_curve = Vec::with_capacity(book.equity_curve.len() + 1);
@@ -3170,7 +3413,12 @@ pub async fn detail(
     equity_curve.extend_from_slice(&book.equity_curve);
 
     let skip = book.trades.len().saturating_sub(MAX_DETAIL_FILLS);
-    let fills = book.trades[skip..].iter().map(TradeDto::from).collect();
+    let fills = book.trades[skip..]
+        .iter()
+        .map(|t| {
+            TradeDto::from(t).with_rebate(rebate.and_then(|terms| terms.on(t.lots, rules.spread, rules.contract_size)))
+        })
+        .collect();
 
     let events = events_of(&state.data, &id, MAX_DETAIL_EVENTS);
 
@@ -4769,7 +5017,31 @@ mod broker_snapshot_tests {
             "book_lots": 0.05,
             "realised": -20.0,
             "closed": 3,
-            "fills": [],
+            // The IB credit, as the executor writes it from 2026-09-21.
+            // `realised` above is unchanged by it and this sits beside it,
+            // which is the whole shape of the thing.
+            "rebate": {
+                "amount": 1.76,
+                "realised_with_rebate": -18.24,
+                "currency": "USC",
+                "share_of_spread": 0.45,
+                "configured_spread": 0.28,
+                "exact": 1,
+                "estimated": 2,
+                "unpriced": 0,
+            },
+            "fills": [{
+                "direction": "LONG",
+                "entryTime": 1_789_640_000_000_i64,
+                "entryPrice": 4378.59,
+                "exitTime": 1_789_641_000_000_i64,
+                "exitPrice": 4380.0,
+                "lots": 0.07,
+                "exitReason": "tp",
+                "pnl": 9.87,
+                "rebate": 0.88,
+                "rebateBasis": "ESTIMATED",
+            }],
             "position": null,
             "blocked": null,
             "standing_out": null,
@@ -4814,6 +5086,22 @@ mod broker_snapshot_tests {
         assert_eq!(brokers[0].closed, Some(3));
         assert_eq!(brokers[0].server_offset_ms, Some(10_800_000));
         assert!(brokers[0].drift.as_deref().is_some_and(|d| d.contains("0.10")));
+
+        // The credit crosses the boundary WITH its three counts and its
+        // currency. A reader given the amount alone could not tell a
+        // measured figure from a guessed one, which is the one thing this
+        // field must never let happen.
+        let rebate = brokers[0].rebate.as_ref().expect("the credit is declared");
+        assert_eq!(rebate.amount, Some(1.76));
+        assert_eq!(rebate.currency.as_deref(), Some("USC"), "USC, not dollars");
+        assert_eq!((rebate.exact, rebate.estimated, rebate.unpriced), (Some(1), Some(2), Some(0)));
+        // And `realised` is untouched by it. This is the assertion that
+        // fails if the credit is ever folded into the book.
+        assert_eq!(brokers[0].realised, Some(-20.0), "the credit is beside the money, not in it");
+        assert_eq!(rebate.realised_with_rebate, Some(-18.24));
+        assert_eq!(brokers[0].fills[0].rebate, Some(0.88));
+        assert_eq!(brokers[0].fills[0].rebate_basis.as_deref(), Some("ESTIMATED"));
+        assert_eq!(brokers[0].fills[0].pnl, Some(9.87), "a fill's own P&L is untouched too");
     }
 
     #[test]
@@ -4879,6 +5167,10 @@ mod broker_snapshot_tests {
         assert_eq!(brokers[0].closed, None);
         assert_eq!(brokers[0].server_offset_ms, None, "an older executor measured no clock");
         assert_eq!(brokers[0].drift, None);
+        // `null`, not a credit of zero. An executor that predates the rebate
+        // has not calculated one, and showing 0.00 for that would be the
+        // desk asserting something nobody measured.
+        assert!(brokers[0].rebate.is_none(), "absent is not a rebate of nothing");
     }
 
     #[test]
