@@ -486,11 +486,63 @@ const CONTRACTS = [
         // A rebate is money coming back. A negative one is a cost wearing a
         // credit's name, and the client colours it as a credit either way.
         if (r.usd < 0) fail(`${run.id}: a credit of ${r.usd}`)
-        // Paper pays the spread the engine charged it. Nothing about it can
-        // be an estimate, and the day this fires the paper book has started
-        // guessing at its own costs.
-        if (r.estimated_trades !== 0) {
-          fail(`${run.id}: ${r.estimated_trades} paper trades are estimates; the book knows its own spread`)
+        // Paper pays the spread the engine charged it - so a paper trade is
+        // an estimate ONLY when the trade itself did not record what it was
+        // charged and sized under. That used to be impossible and was
+        // asserted as such; it stopped being true on 2026-09-21, when a
+        // config correction was found to have restated a stored trade's P&L
+        // and every trade closed before the engine began carrying its own
+        // basis became an estimate for good
+        // (docs/decisions/2026-09-21-restated-pnl-contract-size.md).
+        //
+        // So the check is no longer "never an estimate", it is "never an
+        // estimate that the record cannot account for": a trade carrying
+        // `contractSize` and `spread` is priced from them, and an estimate
+        // beside a full book of such trades means the book has started
+        // guessing at costs it knows. Only asserted when the fill tail IS
+        // the whole book, because a tail cannot speak for what it omits.
+        const tail = run.last_fills ?? []
+        const blind = tail.filter((t) => t.contractSize === null || t.contractSize === undefined)
+        if (r.estimated_trades !== 0 && tail.length >= run.trades && blind.length === 0) {
+          fail(`${run.id}: ${r.estimated_trades} estimates over ${run.trades} trades that all carry their own basis`)
+        }
+        // A trade that carries a basis must carry BOTH halves of it. One
+        // without the other is a figure priced half from the record and half
+        // from today's config, which is the blend this desk treats as a
+        // defect.
+        for (const t of tail) {
+          const has = (v) => v !== null && v !== undefined
+          if (has(t.contractSize) !== has(t.spread)) {
+            fail(`${run.id}: a fill carries contractSize ${t.contractSize} beside spread ${t.spread}`)
+          }
+        }
+      }
+
+      // EXCLUDED, NEVER DELETED. A book holding a trade out says so, says
+      // what it came to, and still ships the trade in its own fill list.
+      for (const run of doc.runs ?? []) {
+        const x = run.excluded
+        if (x === null || x === undefined) continue
+        if (!(x.trades > 0)) fail(`${run.id}: an excluded block that excludes nothing`)
+        if ((x.fills ?? []).length !== x.trades) {
+          fail(`${run.id}: ${x.trades} excluded against ${(x.fills ?? []).length} listed`)
+        }
+        const summed = (x.fills ?? []).reduce((a, t) => a + (t.pnlUsd ?? 0), 0)
+        if (Math.abs(summed - x.net_usd) > 0.011) {
+          fail(`${run.id}: the excluded trades come to ${summed}, not ${x.net_usd}`)
+        }
+        for (const t of x.fills ?? []) {
+          if (!t.excludedReason) fail(`${run.id}: an excluded trade with no reason given`)
+          // A trade the book will not count must not carry a credit either:
+          // the rebate is priced off the same lots and contract size, so on
+          // a trade excluded for its size it is wrong by the same factor.
+          if (t.rebateUsd !== null && t.rebateUsd !== undefined) {
+            fail(`${run.id}: an excluded trade claims a credit of ${t.rebateUsd}`)
+          }
+          const shown = (run.last_fills ?? []).find((f) => f.entryTime === t.entryTime)
+          if ((run.last_fills ?? []).length >= run.trades + x.trades && !shown) {
+            fail(`${run.id}: the excluded trade at ${t.entryTime} is missing from the book's own fills`)
+          }
         }
       }
     },

@@ -136,6 +136,24 @@ pub struct Trade {
     pub mfe: f64,
     pub hold_ms: i64,
     pub reason: String,
+    /// The contract size this trade was SIZED and BOOKED under — the one
+    /// [`Live::contract_size`] carried from the fill, not whatever the config
+    /// says when someone reads the record.
+    ///
+    /// Present, `pnl_usd` above is `points x lots x this` and every figure
+    /// derived later — dollars per point, the IB rebate — is computed from
+    /// it too, so a config correction cannot restate what this trade earned.
+    ///
+    /// `None` on a trade closed before the field existed. That trade's
+    /// sizing basis is UNKNOWN, which is not the same as "the current one":
+    /// anything computed for it from today's config is an estimate and every
+    /// surface that shows one says so.
+    #[serde(default)]
+    pub contract_size: Option<f64>,
+    /// The spread this trade actually paid, per unit of price, round turn.
+    /// `None` on a trade closed before the field existed.
+    #[serde(default)]
+    pub spread: Option<f64>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -226,6 +244,41 @@ pub struct Live {
     pub mae: f64,
     pub mfe: f64,
     pub self_managed: bool,
+    /// The contract size `lots` above was SIZED under, carried with the
+    /// position so that a later config correction cannot restate it.
+    ///
+    /// `lots` is `risk_usd / (risk x contract_size)` and P&L is
+    /// `points x lots x contract_size`. The two readings of `contract_size`
+    /// cancel only while they are the SAME reading. On 2026-09-16 they were
+    /// not: `eur-hours` sized a position at 1.0 at 07:00 UTC, commit cd92998
+    /// corrected the euro's contract size to 1000.0 at 08:53 UTC, and the
+    /// position closed at 15:00 UTC against the new number — booking $176.85
+    /// on a $100 book for a move worth $0.18. Neither contract size was
+    /// wrong. What was wrong is that the trade did not carry the one it was
+    /// born with.
+    ///
+    /// `None` on a position reloaded from a state file written before this
+    /// field existed. Absent, never a default: a fallback that guesses is how
+    /// the restatement became invisible in the first place. See
+    /// `docs/decisions/2026-09-21-restated-pnl-contract-size.md` and
+    /// `docs/decisions/2026-09-17-unit-carrying.md`.
+    #[serde(default)]
+    pub contract_size: Option<f64>,
+    /// The spread this position's entry was charged, per unit of price, from
+    /// the same reading of the config that sized it.
+    ///
+    /// Carried by the same argument. `apply_costs` has already taken half of
+    /// it out of `entry_price` and will take the other half out of the exit,
+    /// so the cost is spent and cannot be recovered from the prices alone —
+    /// while the IB rebate line is computed from whatever spread the config
+    /// holds at the moment somebody reads the book. The rebate decision of
+    /// 2026-09-21 names "the spread repricing" as a thing that will happen;
+    /// when it does, a trade that did not carry its own spread would have its
+    /// credit recomputed from a cost it never paid.
+    ///
+    /// `None` on a position written before this field existed.
+    #[serde(default)]
+    pub spread: Option<f64>,
 }
 
 impl Live {
@@ -659,6 +712,10 @@ pub fn open_position(
             mae: 0.0,
             mfe: 0.0,
             self_managed,
+            // The sizing basis, recorded at the only moment it is known to
+            // be the one that produced `lots` and `entry`.
+            contract_size: Some(rules.contract_size),
+            spread: Some(rules.spread),
         },
         sized_down,
     ))
@@ -840,7 +897,14 @@ pub fn close_position(
     let nights = fd_core::clock::swap_nights(position.entry_time, exit_time);
     let per_night = if position.side.is_long() { rules.swap_long_per_lot } else { rules.swap_short_per_lot };
     let swap = per_night * position.lots * f64::from(nights);
-    let pnl = points * position.lots * rules.contract_size - commission + swap;
+    // The contract size THIS POSITION WAS SIZED UNDER, not the one the config
+    // holds now. `lots` came out of `risk_usd / (risk x contract_size)` at the
+    // fill; multiplying it back by a different contract size is not a P&L, it
+    // is two numbers from two configs multiplied together. A position reloaded
+    // from a state file older than the field has none to carry, and only then
+    // does the current rule stand in — see `Live::contract_size`.
+    let contract_size = position.contract_size.unwrap_or(rules.contract_size);
+    let pnl = points * position.lots * contract_size - commission + swap;
 
     Trade {
         direction: position.side,
@@ -860,6 +924,12 @@ pub fn close_position(
         mfe: round4(position.mfe / position.risk),
         hold_ms: exit_time - position.entry_time,
         reason: entry_reason.to_string(),
+        // Carried onto the closed trade, so the record of what it earned
+        // travels with the basis it was earned on. `None` stays `None`: a
+        // position whose basis was never recorded produces a trade whose
+        // basis is not known, and saying otherwise here would invent one.
+        contract_size: position.contract_size,
+        spread: position.spread,
     }
 }
 
@@ -1009,6 +1079,8 @@ mod trail_tests {
             mae: 0.0,
             mfe: 0.0,
             self_managed: false,
+            contract_size: Some(1.0),
+            spread: Some(0.0),
         }
     }
 

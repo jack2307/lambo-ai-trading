@@ -1113,7 +1113,21 @@ pub struct OpenDto {
     /// price that is moving — and it cannot be derived from the fields above
     /// either, because `unrealised / (close - entry)` divides by zero exactly
     /// when a position opens.
+    ///
+    /// Computed from `contract_size` below — the one this position was SIZED
+    /// under — and only from the market's current contract size when the
+    /// position predates that field, which `contract_size: null` says.
     pub usd_per_point: f64,
+    /// The contract size this position was sized under, beside the figure
+    /// derived from it (`docs/decisions/2026-09-17-unit-carrying.md`, rule 1:
+    /// where a name cannot carry the unit, the unit rides in a sibling
+    /// field).
+    ///
+    /// `null` on a position reloaded from a state file written before the
+    /// engine recorded it. `usd_per_point` is then computed from the
+    /// market's CURRENT contract size, which is a guess about a position
+    /// already open, and this null is how a reader can tell.
+    pub contract_size: Option<f64>,
 }
 
 /// An entry that has been decided but has not filled.
@@ -1287,6 +1301,14 @@ pub struct RunStatus {
     /// without it the client can say the price but not whether it has moved
     /// up or down since the bot last decided anything.
     pub last_bar_close: Option<f64>,
+    /// The book's own LEDGER, USD: what it has actually booked, and what the
+    /// engine multiplies by `risk_per_trade_pct` to size the next position.
+    ///
+    /// It is the one figure here that an exclusion does NOT remove, because
+    /// the book really did book that money and really will size from it.
+    /// `excluded.equity_usd` is the same ledger with the held-out trades
+    /// taken back out; restating the ledger of a running book is a decision
+    /// about that book, not a reporting fix.
     pub equity: f64,
     /// What this book's account is denominated in, and how many of those units
     /// make a dollar. Every money field above and below is in USD; these two
@@ -1308,8 +1330,19 @@ pub struct RunStatus {
     /// every rule-based run, and on an external run between orders. Never set
     /// beside `pending`; see [`PendingOrderDto`].
     pub pending_order: Option<PendingOrderDto>,
+    /// Closed trades this book's figures are computed over — the ones that
+    /// COUNT. A book holding a trade out carries the rest under `excluded`,
+    /// and `trades + excluded.trades` is everything it ever closed.
     pub trades: usize,
     pub net_usd: f64,
+    /// The trades a pre-committed exclusion holds out of `trades`, `net_usd`
+    /// and `profit_factor`, with what they came to and why. `null` on a book
+    /// that counts everything it took, which is nearly all of them.
+    ///
+    /// Excluded, never deleted: each one is still in `last_fills` above with
+    /// its `excludedReason`, still in `trades.jsonl` and still in
+    /// `fills.jsonl`. See [`ExcludedDto`] and `config/exclusions.toml`.
+    pub excluded: Option<ExcludedDto>,
     /// The introducing-broker rebate on this book's own spread, and the same
     /// book net of it. A SEPARATE LINE: `net_usd` above is untouched by this
     /// and means exactly what it meant before the rebate existed.
@@ -1736,6 +1769,87 @@ fn rebate_terms(dir: &Path) -> Option<RebateTerms> {
     terms.share_of_spread.is_finite().then_some(terms)
 }
 
+/* ------------------------------------------- trades held out of the count */
+
+/// One trade held out of its book's headline figures, named in
+/// `config/exclusions.toml` with the reason it is out.
+///
+/// The desk does not rewrite history. When four books each took one trade
+/// from a process running against the wrong binary, the answer was a
+/// pre-committed exclusion written into the registrations and a promise that
+/// *"it is not deleted"*
+/// (`docs/hypotheses/2026-09-18-plan-entry.md`, amendment 2026-09-18 16:55Z).
+/// This is the same answer made machine-readable, so that a book's own
+/// `/api/paper/status` says what it is not counting instead of that fact
+/// living only in a markdown file nobody serves.
+///
+/// A book holds one position at a time, so `run` and `entry_time` name one
+/// trade. Nothing here can delete a row: the trade stays in `trades.jsonl`,
+/// stays in `fills.jsonl`, stays in the run's `last_fills` with its reason
+/// attached, and is listed again under [`ExcludedDto`] with its own total.
+#[derive(Debug, Clone, Deserialize)]
+pub struct Exclusion {
+    /// The run id, e.g. `eur-hours`.
+    pub run: String,
+    /// The trade's `entry_time`, epoch ms — the bar its fill is priced at.
+    pub entry_time: i64,
+    /// Why it is not counted, in a sentence a reader gets in the response.
+    pub reason: String,
+}
+
+#[derive(Debug, Default, Deserialize)]
+struct ExclusionFile {
+    #[serde(default)]
+    trade: Vec<Exclusion>,
+}
+
+/// `config/exclusions.toml`, or an empty list when there is no such file.
+///
+/// A missing or malformed file costs the exclusions and nothing else, the
+/// way a malformed `accounts.toml` costs the rebate line and nothing else.
+/// The failure mode is deliberate in ONE direction only: a file that will
+/// not parse means every trade is counted, which over-reports rather than
+/// hides, and the trade is still in the record either way.
+fn exclusions(dir: &Path) -> Vec<Exclusion> {
+    std::fs::read_to_string(dir.join("exclusions.toml"))
+        .ok()
+        .and_then(|text| toml::from_str::<ExclusionFile>(&text).ok())
+        .map(|f| f.trade)
+        .unwrap_or_default()
+}
+
+/// The reason one trade of this run is held out, or `None` when it counts.
+fn excluded_reason(list: &[Exclusion], run: &str, trade: &fd_backtest::Trade) -> Option<String> {
+    list.iter().find(|e| e.run == run && e.entry_time == trade.entry_time).map(|e| e.reason.clone())
+}
+
+/// What a run's headline figures leave out, and what it came to.
+///
+/// `null` on a run with nothing excluded — not an empty object, so that "this
+/// book counts everything it took" and "this book is holding trades out" are
+/// different shapes and a client cannot render one as the other.
+#[derive(Debug, Serialize)]
+pub struct ExcludedDto {
+    /// Closed trades the run's `trades`, `net_usd` and `profit_factor` leave
+    /// out.
+    pub trades: usize,
+    /// What those trades came to, USD. Not in `net_usd`, and shown rather
+    /// than dropped: a figure removed without its size is an assertion a
+    /// reader cannot check.
+    pub net_usd: f64,
+    /// The book's ledger equity with them taken back out, USD.
+    ///
+    /// NOT what the run is sizing from. `RunStatus::equity` is the book's own
+    /// ledger and it still carries every trade below, because that ledger is
+    /// what the engine multiplies by `risk_per_trade_pct` for the next
+    /// position. Restating a live book's equity is a decision about a running
+    /// book and not a reporting fix, so it is the owner's to make; this field
+    /// is what it would become.
+    pub equity_usd: f64,
+    /// Each excluded trade, oldest first, with `excludedReason` on it.
+    pub fills: Vec<TradeDto>,
+}
+
 /// What one paper book was credited, beside what it made.
 ///
 /// `null` on a run when no arrangement is configured. Present, it sits NEXT
@@ -1761,35 +1875,75 @@ pub struct RebateDto {
     /// two screens cannot disagree about it - and published SEPARATELY so
     /// that `net_usd` never quietly becomes this.
     pub net_of_rebate_usd: f64,
-    /// Trades whose credit came from the spread actually charged. On a paper
-    /// book that is every priced trade: the engine took the configured spread
-    /// out of the fill, so the credit is arithmetic on a known cost and not
-    /// an estimate of anything.
+    /// Trades whose credit came from the spread actually charged — the one
+    /// the trade RECORDED having been charged (`Trade::spread`), so the
+    /// credit is arithmetic on a known cost and not an estimate of anything.
     pub exact_trades: usize,
-    /// Trades priced from a configured spread when the spread actually paid
-    /// was not recorded. Always zero on paper, and the reason this field
-    /// exists here at all is so that the paper shape and the account's are
-    /// the same shape - on the account it is usually most of them.
+    /// Trades priced from the market's CURRENT configured spread and
+    /// contract size, because the trade did not record its own.
+    ///
+    /// This was zero on every paper book until 2026-09-21, and the sentence
+    /// that justified it — "the engine took the configured spread out of the
+    /// fill" — was true only while the configured spread was still the one
+    /// that had been taken out. It was not: the euro's contract size changed
+    /// under a stored trade on 2026-09-16 and restated what that trade had
+    /// earned (`docs/decisions/2026-09-21-restated-pnl-contract-size.md`).
+    /// A trade closed before the engine began carrying its own basis is
+    /// therefore an estimate here, and stays one for good; on the account
+    /// side this count has always been the large one.
     pub estimated_trades: usize,
     /// Trades with no usable basis, credited nothing and counted instead. A
     /// total that silently dropped them would read as complete.
     pub unpriced_trades: usize,
 }
 
+/// The contract size and spread one trade's money is computed from, and
+/// whether they are the trade's OWN.
+///
+/// This is the whole repair in four lines. A trade that carries the basis it
+/// was sized and booked under is priced from that basis for ever, and no
+/// later correction to `config/default.toml` can restate it. A trade that
+/// does not carry one — every trade closed before 2026-09-21 — is priced
+/// from the market's current basis, which is a guess about a trade that has
+/// already happened, and the `false` is how every surface downstream says
+/// so rather than blending the two into one confident number.
+///
+/// See `docs/decisions/2026-09-21-restated-pnl-contract-size.md`, and
+/// `docs/decisions/2026-09-17-unit-carrying.md` rule 3 for why this stops
+/// short of refusing: a rebate that cannot be priced costs a line on a
+/// screen, it does not gate a decision that spends money.
+fn basis_of(t: &fd_backtest::Trade, rules: &TradingRules) -> (f64, f64, bool) {
+    match (t.contract_size, t.spread) {
+        (Some(contract_size), Some(spread)) => (contract_size, spread, true),
+        (contract_size, spread) => (
+            contract_size.unwrap_or(rules.contract_size),
+            spread.unwrap_or(rules.spread),
+            false,
+        ),
+    }
+}
+
 /// The rebate over a book's closed trades.
 ///
-/// `trades` is the whole book, so this total is over every closed trade and
-/// not over the tail any one response carries. The per-trade figure on a
-/// `TradeDto` is the same arithmetic on one trade.
+/// `trades` is the whole book LESS anything `config/exclusions.toml` holds
+/// out, so this total is over every counted trade and not over the tail any
+/// one response carries. The per-trade figure on a `TradeDto` is the same
+/// arithmetic on one trade.
 fn rebate_of(trades: &[fd_backtest::Trade], rules: &TradingRules, net_usd: f64, terms: RebateTerms) -> RebateDto {
     let mut usd = 0.0;
     let mut exact = 0;
+    let mut estimated = 0;
     let mut unpriced = 0;
     for t in trades {
-        match terms.on(t.lots, rules.spread, rules.contract_size) {
+        let (contract_size, spread, own) = basis_of(t, rules);
+        match terms.on(t.lots, spread, contract_size) {
             Some(credit) => {
                 usd += credit;
-                exact += 1;
+                if own {
+                    exact += 1;
+                } else {
+                    estimated += 1;
+                }
             }
             None => unpriced += 1,
         }
@@ -1797,21 +1951,53 @@ fn rebate_of(trades: &[fd_backtest::Trade], rules: &TradingRules, net_usd: f64, 
     let usd = fd_core::js_round_to(usd, 2);
     RebateDto {
         share_of_spread: terms.share_of_spread,
+        // The market's configured spread: the basis the ESTIMATED trades
+        // were priced from, and the one an exact trade recorded unless the
+        // config has moved since. Each trade carries its own on `spread`.
         spread: rules.spread,
         usd,
         net_of_rebate_usd: fd_core::js_round_to(net_usd + usd, 2),
         exact_trades: exact,
-        // A paper book pays the spread the engine charged it and nothing
-        // else, so nothing here is ever an estimate. The field is a zero the
-        // client can rely on rather than an absence it has to special-case.
-        estimated_trades: 0,
+        estimated_trades: estimated,
         unpriced_trades: unpriced,
     }
 }
 
-fn status_of(data: &Path, run: &PaperRun, rules: &TradingRules, guards: Option<&Guards>, live: Option<LiveBar>, rebate: Option<RebateTerms>) -> RunStatus {
+#[allow(clippy::too_many_arguments)]
+fn status_of(
+    data: &Path,
+    run: &PaperRun,
+    rules: &TradingRules,
+    guards: Option<&Guards>,
+    live: Option<LiveBar>,
+    rebate: Option<RebateTerms>,
+    held_out: &[Exclusion],
+) -> RunStatus {
     let book = &run.book;
-    let metrics = book.metrics(rules);
+    let id = run.config.id();
+    // The book's trades split into what counts and what a pre-committed
+    // exclusion holds out. Borrowed and not copied on the ordinary book,
+    // which excludes nothing.
+    let reason_for = |t: &fd_backtest::Trade| excluded_reason(held_out, &id, t);
+    let held: Vec<&fd_backtest::Trade> = book.trades.iter().filter(|t| reason_for(t).is_some()).collect();
+    let counted: std::borrow::Cow<'_, [fd_backtest::Trade]> = if held.is_empty() {
+        std::borrow::Cow::Borrowed(&book.trades)
+    } else {
+        std::borrow::Cow::Owned(book.trades.iter().filter(|t| reason_for(t).is_none()).cloned().collect())
+    };
+    let metrics = fd_backtest::metrics_of(&counted, rules.starting_equity_usd);
+    let excluded = (!held.is_empty()).then(|| {
+        let net: f64 = held.iter().map(|t| t.pnl_usd).sum();
+        ExcludedDto {
+            trades: held.len(),
+            net_usd: fd_core::js_round_to(net, 2),
+            equity_usd: fd_core::js_round_to(book.equity - net, 2),
+            fills: held
+                .iter()
+                .map(|t| TradeDto::from(*t).excluded_because(reason_for(t)))
+                .collect(),
+        }
+    });
     let open = book.position.as_ref().map(|p| OpenDto {
         side: p.side.as_str(),
         entry_time: p.entry_time,
@@ -1824,7 +2010,8 @@ fn status_of(data: &Path, run: &PaperRun, rules: &TradingRules, guards: Option<&
         risk: p.risk,
         learned_at: run.opened_learned_at,
         unrealised_usd_at_last_close: book.unrealised_usd(rules).unwrap_or(0.0),
-        usd_per_point: p.lots * rules.contract_size,
+        usd_per_point: p.lots * p.contract_size.unwrap_or(rules.contract_size),
+        contract_size: p.contract_size,
     });
     // The next blackout the run's guards would act on: the first installed
     // event at or after now with impact at or above the guards' threshold
@@ -1925,10 +2112,11 @@ fn status_of(data: &Path, run: &PaperRun, rules: &TradingRules, guards: Option<&
         open,
         pending,
         pending_order,
-        trades: book.trades.len(),
+        trades: counted.len(),
         net_usd: metrics.net_pnl_usd,
-        rebate: rebate.map(|terms| rebate_of(&book.trades, rules, metrics.net_pnl_usd, terms)),
+        rebate: rebate.map(|terms| rebate_of(&counted, rules, metrics.net_pnl_usd, terms)),
         profit_factor: metrics.profit_factor,
+        excluded,
         skipped_by_guard: book.skipped_by_guard.clone(),
         closed_by_guard: book.closed_by_guard.clone(),
         sized_down: book.sized_down_by_guard,
@@ -1936,11 +2124,16 @@ fn status_of(data: &Path, run: &PaperRun, rules: &TradingRules, guards: Option<&
         gaps: run.gaps,
         news: NewsDto { events_loaded: events.len(), next_blackout, horizon, horizon_days, horizon_name },
         live,
+        // The tail of EVERY closed trade, excluded ones included and marked.
+        // A book whose held-out trade quietly vanished from its own fill list
+        // would be a deletion wearing a report's clothes.
         last_fills: book.trades[skip..]
             .iter()
             .map(|t| {
+                let (contract_size, spread, _) = basis_of(t, rules);
                 TradeDto::from(t)
-                    .with_rebate(rebate.and_then(|terms| terms.on(t.lots, rules.spread, rules.contract_size)))
+                    .with_rebate(rebate.and_then(|terms| terms.on(t.lots, spread, contract_size)))
+                    .excluded_because(reason_for(t))
             })
             .collect(),
         equity_curve: book.equity_curve.len(),
@@ -2245,6 +2438,7 @@ pub async fn start(State(state): State<Arc<AppState>>, Json(request): Json<Start
         guards.as_ref(),
         state.live_bar(&run.config.market, &run.config.tf),
         rebate_terms(&state.config_dir),
+        &exclusions(&state.config_dir),
     );
     runs.insert(id, run);
     Ok(Json(status))
@@ -3381,10 +3575,14 @@ pub async fn status(State(state): State<Arc<AppState>>) -> Result<Json<StatusRes
     // are one file and one arrangement, and ten books quoting ten reads of it
     // could disagree with each other mid-edit.
     let rebate = rebate_terms(&state.config_dir);
+    // Read once for the whole response, for the same reason: an exclusion is
+    // a declaration about the record and two books quoting two reads of it
+    // could disagree with each other mid-edit.
+    let held_out = exclusions(&state.config_dir);
     for run in runs.values() {
         let (rules, guards) = rules_and_guards(&state, &run.config)?;
         let live = state.live_bar(&run.config.market, &run.config.tf);
-        out.push(status_of(&state.data, run, &rules, guards.as_ref(), live, rebate));
+        out.push(status_of(&state.data, run, &rules, guards.as_ref(), live, rebate, &held_out));
     }
     Ok(Json(StatusResponse { runs: out }))
 }
@@ -3405,7 +3603,8 @@ pub async fn detail(
     let (rules, guards) = rules_and_guards(&state, &run.config)?;
     let live = state.live_bar(&run.config.market, &run.config.tf);
     let rebate = rebate_terms(&state.config_dir);
-    let status = status_of(&state.data, run, &rules, guards.as_ref(), live.clone(), rebate);
+    let held_out = exclusions(&state.config_dir);
+    let status = status_of(&state.data, run, &rules, guards.as_ref(), live.clone(), rebate, &held_out);
 
     let book = &run.book;
     let mut equity_curve = Vec::with_capacity(book.equity_curve.len() + 1);
@@ -3416,7 +3615,10 @@ pub async fn detail(
     let fills = book.trades[skip..]
         .iter()
         .map(|t| {
-            TradeDto::from(t).with_rebate(rebate.and_then(|terms| terms.on(t.lots, rules.spread, rules.contract_size)))
+            let (contract_size, spread, _) = basis_of(t, &rules);
+            TradeDto::from(t)
+                .with_rebate(rebate.and_then(|terms| terms.on(t.lots, spread, contract_size)))
+                .excluded_because(excluded_reason(&held_out, &id, t))
         })
         .collect();
 
@@ -5248,5 +5450,106 @@ mod broker_snapshot_tests {
         bench("decisions-at-roll", 6386, 32 * 1024 * 1024);
         bench("executor-today", 221, 73_862);
         bench("executor-at-roll", 221, 32 * 1024 * 1024);
+    }
+}
+
+/// A trade carries the basis it was booked under; a trade that does not is
+/// an ESTIMATE and is counted as one.
+///
+/// `docs/decisions/2026-09-21-restated-pnl-contract-size.md`. The engine-side
+/// gate is `crates/fd-backtest/tests/contract_size.rs`; these are the two
+/// places the API can still blend a measured basis with a guessed one.
+#[cfg(test)]
+mod carried_basis {
+    use super::*;
+
+    fn trade(lots: f64, contract_size: Option<f64>, spread: Option<f64>) -> fd_backtest::Trade {
+        fd_backtest::Trade {
+            direction: fd_strategy::registry::Side::Short,
+            entry_time: 1_789_542_000_000,
+            entry_price: 1.1546,
+            exit_time: 1_789_570_800_000,
+            exit_price: 1.15391,
+            exit_reason: "window closed".into(),
+            exit_kind: fd_backtest::ExitKind::Signal,
+            stop: 1.1585,
+            target: None,
+            lots,
+            pnl_usd: 0.18,
+            swap_usd: 0.0,
+            r: 0.1769,
+            mae: -0.2563,
+            mfe: 0.469,
+            hold_ms: 28_800_000,
+            reason: "window 0245-1045 New York".into(),
+            contract_size,
+            spread,
+        }
+    }
+
+    /// The euro as it is configured TODAY - the corrected contract size, and
+    /// a spread no trade below was ever charged.
+    fn euro_now() -> TradingRules {
+        TradingRules { contract_size: 1000.0, spread: 0.0002, ..TradingRules::default() }
+    }
+
+    const TERMS: RebateTerms = RebateTerms { share_of_spread: 0.45 };
+
+    #[test]
+    fn a_trade_that_carries_its_basis_is_priced_from_it_and_counted_exact() {
+        let carried = trade(256.3, Some(1.0), Some(0.00014));
+        let (contract_size, spread, own) = basis_of(&carried, &euro_now());
+        assert!(own, "the trade knows what it was sized under");
+        assert!((contract_size - 1.0).abs() < f64::EPSILON, "its own, not the config's 1000: {contract_size}");
+        assert!((spread - 0.00014).abs() < f64::EPSILON, "its own, not the config's 0.0002: {spread}");
+
+        let dto = rebate_of(std::slice::from_ref(&carried), &euro_now(), 0.18, TERMS);
+        // 0.45 x 0.00014 x 256.3 x 1.0. Priced from what the trade paid, so
+        // the config moving underneath it changes nothing.
+        let want = fd_core::js_round_to(0.45 * 0.00014 * 256.3 * 1.0, 2);
+        assert!((dto.usd - want).abs() < 1e-9, "{} is not {want}", dto.usd);
+        assert_eq!((dto.exact_trades, dto.estimated_trades, dto.unpriced_trades), (1, 0, 0), "{dto:?}");
+    }
+
+    #[test]
+    fn a_trade_with_no_basis_is_priced_from_the_config_and_counted_estimated() {
+        // Every trade closed before 2026-09-21. The credit is still shown,
+        // because a rebate line that cannot be priced costs a line on a
+        // screen and does not gate a decision - but it is shown in the
+        // ESTIMATED count, never blended into the exact one.
+        let blind = trade(256.3, None, None);
+        let (contract_size, spread, own) = basis_of(&blind, &euro_now());
+        assert!(!own, "the trade does not know, and nothing may pretend it does");
+        assert!((contract_size - 1000.0).abs() < f64::EPSILON);
+        assert!((spread - 0.0002).abs() < f64::EPSILON);
+
+        let dto = rebate_of(std::slice::from_ref(&blind), &euro_now(), 0.18, TERMS);
+        assert_eq!((dto.exact_trades, dto.estimated_trades, dto.unpriced_trades), (0, 1, 0), "{dto:?}");
+        assert_eq!(
+            dto.exact_trades + dto.estimated_trades + dto.unpriced_trades,
+            1,
+            "every trade is in exactly one of the three: {dto:?}"
+        );
+    }
+
+    /// The shipped `config/exclusions.toml` parses, and it still names the
+    /// trade it was written for. A registration that silently stopped
+    /// matching would put a restated figure back into a headline without
+    /// anybody editing a number.
+    #[test]
+    fn the_shipped_exclusions_file_names_the_restated_euro_trade() {
+        let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("..").join("..").join("config");
+        let list = exclusions(&dir);
+        let entry = list
+            .iter()
+            .find(|e| e.run == "eur-hours")
+            .unwrap_or_else(|| panic!("config/exclusions.toml must still hold eur-hours: {list:?}"));
+        assert_eq!(entry.entry_time, 1_789_542_000_000, "the 07:00Z fill of 2026-09-16");
+        assert!(entry.reason.contains("256.3"), "the reason says which trade and why: {}", entry.reason);
+
+        // And it matches by entry time, which is what the status route uses.
+        let held = trade(256.3, None, None);
+        assert_eq!(excluded_reason(&list, "eur-hours", &held).as_deref(), Some(entry.reason.as_str()));
+        assert!(excluded_reason(&list, "xau-stoch", &held).is_none(), "one book's exclusion is not another's");
     }
 }

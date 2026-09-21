@@ -1852,6 +1852,11 @@ fn with_registry(state: Arc<AppState>) -> Arc<AppState> {
 async fn traded(dir: &Path, registry: bool) -> (Arc<AppState>, Value) {
     let state = state_over(dir, 300);
     let state = if registry { with_registry(state) } else { state };
+    traded_on(state).await
+}
+
+/// The same book on a state whose `config_dir` is already set.
+async fn traded_on(state: Arc<AppState>) -> (Arc<AppState>, Value) {
     start_run(&state, json!({ "market": "btc", "tf": "15m", "strategy": "ema-cross", "id": "b", "window": 200 }))
         .await
         .expect("start");
@@ -2013,4 +2018,131 @@ async fn write_order_samples() {
     let text = std::fs::read_to_string(dir.path().join("paper").join("l").join("fills.jsonl")).expect("fills");
     let kept: Vec<&str> = text.lines().filter(|l| !l.contains("\"kind\":\"started\"")).collect();
     std::fs::write(out.join("paper-order-fills.jsonl"), kept.join("\n") + "\n").expect("write");
+}
+
+/* --------------------------------------- trades excluded, and never deleted */
+
+/// A config directory carrying the workspace's real `accounts.toml` — so the
+/// rebate line is in scope — and an `exclusions.toml` written for this test.
+fn config_with_exclusions(dir: &Path, exclusions: &str) -> std::path::PathBuf {
+    let real = Path::new(env!("CARGO_MANIFEST_DIR")).join("..").join("..").join("config");
+    let out = dir.join("config");
+    std::fs::create_dir_all(&out).expect("a config dir");
+    std::fs::copy(real.join("accounts.toml"), out.join("accounts.toml")).expect("accounts.toml");
+    std::fs::write(out.join("exclusions.toml"), exclusions).expect("exclusions.toml");
+    out
+}
+
+fn state_with_config(dir: &Path, config_dir: std::path::PathBuf) -> Arc<AppState> {
+    let state = state_over(dir, 300);
+    let inner = Arc::try_unwrap(state).unwrap_or_else(|_| panic!("one reference"));
+    Arc::new(inner.with_config_dir(config_dir))
+}
+
+#[tokio::test]
+async fn a_trade_held_out_stays_in_the_record_and_leaves_the_headline_figures() {
+    // The same deterministic tape twice. The first book counts everything;
+    // the second is told, before any figure is read, that its first trade
+    // does not count.
+    let plain = tempfile::tempdir().expect("temp dir");
+    let (_, counted) = traded(plain.path(), true).await;
+    assert!(counted["excluded"].is_null(), "a book that counts everything sends no block: {counted}");
+
+    let first = counted["last_fills"][0].clone();
+    let entry_time = first["entryTime"].as_i64().expect("an entry time");
+    let pnl = first["pnlUsd"].as_f64().expect("a P&L");
+    assert!(first["excludedReason"].is_null(), "and no trade claims to be held out");
+
+    let held = tempfile::tempdir().expect("temp dir");
+    let config = config_with_exclusions(
+        held.path(),
+        &format!(
+            "[[trade]]\nrun = \"b\"\nentry_time = {entry_time}\nreason = \"sized under one contract size and booked under another\"\n"
+        ),
+    );
+    let (state, run) = traded_on(state_with_config(held.path(), config)).await;
+
+    // OUT OF THE COUNT.
+    assert_eq!(
+        run["trades"].as_u64().expect("trades"),
+        counted["trades"].as_u64().expect("trades") - 1,
+        "the headline count still carries the excluded trade: {run}"
+    );
+    let net = run["net_usd"].as_f64().expect("net");
+    let was = counted["net_usd"].as_f64().expect("net");
+    assert!((net - (was - pnl)).abs() < 0.011, "{net} is not {was} less the excluded {pnl}");
+
+    // AND STILL IN THE RECORD. Same trade, same P&L, with the reason on it.
+    let excluded = &run["excluded"];
+    assert_eq!(excluded["trades"], 1, "{excluded}");
+    assert!((excluded["net_usd"].as_f64().expect("net") - pnl).abs() < 0.011, "{excluded}");
+    assert_eq!(excluded["fills"][0]["entryTime"].as_i64(), Some(entry_time), "{excluded}");
+    assert_eq!(
+        excluded["fills"][0]["excludedReason"],
+        "sized under one contract size and booked under another",
+        "the reason travels with the trade: {excluded}"
+    );
+    let still_there = run["last_fills"]
+        .as_array()
+        .expect("fills")
+        .iter()
+        .find(|f| f["entryTime"].as_i64() == Some(entry_time))
+        .unwrap_or_else(|| panic!("the excluded trade vanished from the book's own fills: {run}"));
+    assert_eq!(still_there["pnlUsd"].as_f64(), Some(pnl), "and it is unaltered");
+    assert!(!still_there["excludedReason"].is_null(), "marked, not hidden: {still_there}");
+    // No credit is printed beside a trade the book will not count. On the
+    // euro fill this rule was written for, the rebate was wrong by the same
+    // factor as the P&L and came to $16.15.
+    assert!(still_there["rebateUsd"].is_null(), "an excluded trade must claim no credit: {still_there}");
+    assert!(excluded["fills"][0]["rebateUsd"].is_null(), "{excluded}");
+
+    // The detail route says the same thing; two screens cannot disagree.
+    let detail = read_detail(&state, "b", Some(1)).await.expect("detail");
+    let in_detail = detail["fills"]
+        .as_array()
+        .expect("fills")
+        .iter()
+        .find(|f| f["entryTime"].as_i64() == Some(entry_time))
+        .expect("still in the detail");
+    assert!(!in_detail["excludedReason"].is_null(), "{in_detail}");
+
+    // THE LEDGER IS NOT RESTATED. `equity` is what the book booked and what
+    // it will size the next position from; the block says what it would be
+    // without the held-out trade, and that is a different field on purpose.
+    let equity = run["equity"].as_f64().expect("equity");
+    assert!(
+        (equity - counted["equity"].as_f64().expect("equity")).abs() < 1e-9,
+        "the exclusion restated a running book's ledger: {equity}"
+    );
+    assert!((excluded["equity_usd"].as_f64().expect("equity") - (equity - pnl)).abs() < 0.011, "{excluded}");
+
+    // And the rebate's three counts are over what COUNTS, so they still add
+    // up to the trades the book is reporting.
+    let rebate = &run["rebate"];
+    let accounted = rebate["exact_trades"].as_u64().expect("exact")
+        + rebate["estimated_trades"].as_u64().expect("estimated")
+        + rebate["unpriced_trades"].as_u64().expect("unpriced");
+    assert_eq!(accounted, run["trades"].as_u64().expect("trades"), "{rebate}");
+}
+
+#[tokio::test]
+async fn every_closed_trade_carries_the_contract_size_it_was_booked_under() {
+    let dir = tempfile::tempdir().expect("temp dir");
+    let (_, run) = traded(dir.path(), true).await;
+
+    // `btc` in config/default.toml: contract 1.0, spread 5.0.
+    for fill in run["last_fills"].as_array().expect("fills") {
+        assert_eq!(fill["contractSize"].as_f64(), Some(1.0), "a trade must say what it was sized under: {fill}");
+        assert_eq!(fill["spread"].as_f64(), Some(5.0), "and what it paid: {fill}");
+    }
+
+    // So none of them is an estimate, and the word is earned rather than
+    // assumed: it is earned by the trade carrying its own basis, not by the
+    // config happening to hold the same number today.
+    assert_eq!(run["rebate"]["estimated_trades"], 0, "{run}");
+    assert_eq!(
+        run["rebate"]["exact_trades"].as_u64().expect("exact"),
+        run["trades"].as_u64().expect("trades"),
+        "{run}"
+    );
 }

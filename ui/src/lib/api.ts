@@ -710,11 +710,16 @@ export interface PaperBroker {
  * What one paper book was credited, beside what it made.
  *
  * The three counts are the honest part and they are never averaged into one
- * figure. On paper every priced trade is `exact_trades`: the engine charged
- * the configured spread and the credit is arithmetic on a known cost. On an
- * ACCOUNT the same three sit on `BrokerAccountRebate` and `estimated` is
- * usually the large one, because the spread at a real fill was mostly never
- * recorded.
+ * figure. A paper trade is `exact_trades` when the trade ITSELF recorded the
+ * spread and contract size it was charged and sized under; it is
+ * `estimated_trades` when it did not and the market's current config had to
+ * stand in. That second case was impossible until 2026-09-21 and this comment
+ * said so: a config correction was then found to have restated a stored
+ * trade's P&L, and every paper trade closed before the engine began carrying
+ * its own basis is an estimate for good
+ * (docs/decisions/2026-09-21-restated-pnl-contract-size.md). On an ACCOUNT
+ * the same three sit on `BrokerAccountRebate` and `estimated` is usually the
+ * large one, because the spread at a real fill was mostly never recorded.
  */
 export interface PaperRebate {
   /** The share of the ROUND-TURN spread the terms grant — one spread per
@@ -729,11 +734,10 @@ export interface PaperRebate {
   usd: number
   /** `net_usd + usd`, USD. Published, never substituted for `net_usd`. */
   net_of_rebate_usd: number
-  /** Priced from the spread actually charged. Every priced trade, on paper. */
+  /** Priced from the spread the trade recorded having been charged. */
   exact_trades: number
-  /** Priced from a configured spread because the one actually paid was not
-   *  recorded. Always 0 on paper; the field exists so the paper shape and the
-   *  account's are the same shape. */
+  /** Priced from the market's CURRENT configured spread and contract size,
+   *  because the trade recorded neither. Not always 0 on paper — see above. */
   estimated_trades: number
   /** No usable basis: credited nothing and counted, because a total that
    *  silently dropped them would read as complete. */

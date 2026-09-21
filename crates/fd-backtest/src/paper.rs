@@ -729,7 +729,10 @@ impl PaperBook {
         let last = self.last_bar?;
         let exit = apply_costs(last.close, open.side, false, rules);
         let points = if open.side.is_long() { exit - open.entry_price } else { open.entry_price - exit };
-        Some(round2(points * open.lots * rules.contract_size))
+        // The position's own sizing basis, for the reason `close_position`
+        // gives: marking `lots` against a contract size it was not sized
+        // under is the same defect one bar earlier.
+        Some(round2(points * open.lots * open.contract_size.unwrap_or(rules.contract_size)))
     }
 
     /// The engine's metrics over the closed trades.

@@ -46,6 +46,14 @@ numbers before moving on, and `tests/golden/` holds what it published.
 - The MT5 account currency is **USC** (cents); `contract_size` 1.0 on
   `XAUUSD.sc` is one ounce in dollar terms. Spread, swap and P&L per lot in
   this workspace are per ounce; multiply by 100 for a standard 100 oz lot.
+- Correcting a number in `config/default.toml` **restates every stored trade
+  computed from it**, silently. `eur-hours` sized 256.3 lots at contract 1.0
+  and booked the exit at 1000.0 two hours after the correction landed,
+  reporting $176.85 on a $100 book for a move worth $0.18. A trade now
+  carries its own `contract_size` and `spread` (`Live`, `Trade`) and is
+  priced from them; one that carries neither is an ESTIMATE and the counts
+  say so. Locked by `fd-backtest/tests/contract_size.rs`; see
+  `docs/decisions/2026-09-21-restated-pnl-contract-size.md`.
 - The Deribit public endpoint reaches back about a day. History not captured
   as it happens is gone; `fd-ingest --bin collect` is what captures it.
 - The OTL feed (gold tape and GC bars) renders times in the account's zone,

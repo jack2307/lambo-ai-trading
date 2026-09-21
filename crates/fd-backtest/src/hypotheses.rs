@@ -670,6 +670,8 @@ mod tests {
             mfe: 0.0,
             hold_ms: minutes * 60_000,
             reason: "test".into(),
+            contract_size: Some(1.0),
+            spread: Some(0.0),
         }
     }
 

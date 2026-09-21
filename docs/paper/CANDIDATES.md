@@ -53,3 +53,29 @@ for `XAUUSD.sc` M15 and M5, and `EURUSD.sc` M15). The books live in
 the risk role and the news-desk read the fills, and the three steadiest
 books go to demo terminals through `py/live/mt5_executor.py` with the
 demo-only lock.
+
+## Amendment 2026-09-21 — row 10's paper record is one excluded trade, not +$177.51
+
+The row above is unchanged and stands: it is a claim about backtests, and
+nothing here touches them.
+
+What is amended is what the LIVE book beside it says. Between 2026-09-16 and
+2026-09-21 the Overview showed `eur-hours` at **+$177.51 on three trades**,
+by some distance the best of the ten, and it was not a result. One fill — a
+short of 256.3 lots taken at 07:00 UTC on 2026-09-16 — was sized while
+`config/default.toml` declared the euro's contract size 1.0 and was booked
+after commit cd92998 corrected it to 1000.0 at 08:53 UTC the same morning.
+The book earned about eighteen cents on it and recorded $176.85. The position
+it reports having held is $295,920 of notional against $100 of equity, which
+the desk's own 300% cap would have refused and which the book never held.
+
+That trade is now excluded — named in `config/exclusions.toml`, still in the
+record, out of the count — so row 10's live record reads: one closed trade,
+excluded; no counted trade, no counted P&L. The two further fills the book
+took after the correction are clean and count normally.
+
+The full account, the sweep of every other book, and what was persisted so
+this cannot recur are in
+`docs/decisions/2026-09-21-restated-pnl-contract-size.md`. Anyone who ranked
+the ten books by their live net before today ranked them on that number, and
+should rank them again.

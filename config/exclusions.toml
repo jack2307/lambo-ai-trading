@@ -1,0 +1,45 @@
+# Trades that stay in the record and out of the count.
+#
+# THIS FILE NEVER DELETES ANYTHING. A trade named here is still in the book's
+# `trades.jsonl`, still in its `fills.jsonl`, and still in the run's own
+# `last_fills` on `/api/paper/status` — with `excludedReason` on it and with
+# the reason below quoted back. What changes is that the book's `trades`,
+# `net_usd` and `profit_factor` are computed WITHOUT it, and the response
+# carries an `excluded` block saying how many it left out and what they came
+# to. A reader can always see both that it happened and that it is not
+# counted.
+#
+# The precedent is `docs/hypotheses/2026-09-18-plan-entry.md`, amendment
+# 2026-09-18 16:55Z: four books each took one trade from a process running
+# against the wrong binary, and the answer was a pre-committed exclusion
+# written into the registrations, not a deletion. *"A campaign whose first
+# trade is quietly missing is worse than one that says which trade it is
+# not counting."* This file is that answer made machine-readable, so a book
+# says what it is not counting on its own API instead of that fact living
+# only in a markdown file nobody serves.
+#
+# THE ONE RULE: an exclusion is written BEFORE the figures it changes are
+# read, and the reason says what is wrong with the trade rather than what is
+# wrong with the number. An exclusion added because a result was disliked is
+# a deletion with extra steps.
+#
+# A book holds one position at a time, so `run` and `entry_time` (epoch ms,
+# the bar the fill is priced at) name exactly one trade. A file that will not
+# parse costs the exclusions and nothing else: every trade is then counted,
+# which over-reports rather than hides.
+
+[[trade]]
+run = "eur-hours"
+entry_time = 1_789_542_000_000  # 2026-09-16 07:00:00Z
+reason = """\
+Sized under one contract size and booked under another. This short of \
+256.3 lots was sized at 07:00Z on 2026-09-16, when config/default.toml \
+declared the euro's contract size 1.0; commit cd92998 corrected it to \
+1000.0 at 08:53Z, two hours later; the position closed at 15:00Z against \
+the corrected number. A move of 0.00069 on 256.3 lots is $0.18 at the size \
+the book actually took and $176.85 at the size it was re-read as. The \
+position it reports having held is $295,920 of notional on a $100 book, \
+which the 300% notional cap would have refused and which the book never \
+held. +$176.85 was never a result. \
+See docs/decisions/2026-09-21-restated-pnl-contract-size.md.\
+"""

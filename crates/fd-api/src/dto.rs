@@ -344,6 +344,28 @@ pub struct TradeDto {
     pub mfe: f64,
     pub hold_ms: i64,
     pub reason: String,
+    /// The contract size and spread this trade was SIZED and BOOKED under,
+    /// travelling with it so a reader can see what `pnlUsd` above is a
+    /// multiple of.
+    ///
+    /// `null` on a trade closed before the engine recorded them, and that is
+    /// a statement about the record rather than about the market: the trade's
+    /// sizing basis is unknown, so any figure derived for it from today's
+    /// config — `rebateUsd`, dollars per point — is an estimate. See
+    /// `docs/decisions/2026-09-21-restated-pnl-contract-size.md`.
+    pub contract_size: Option<f64>,
+    pub spread: Option<f64>,
+    /// Why this trade is in the record but out of the book's headline
+    /// figures, or `null` for the ordinary case where it counts.
+    ///
+    /// An exclusion is declared in `config/exclusions.toml` before any figure
+    /// is read from it and it never removes the row: the trade stays here,
+    /// stays in `trades.jsonl` and stays in `fills.jsonl`, and `trades`,
+    /// `net_usd` and `profit_factor` on its run are computed without it and
+    /// say how many they left out. A campaign whose bad trade is quietly
+    /// missing is worse than one that names it
+    /// (`docs/hypotheses/2026-09-18-plan-entry.md`, amendment 16:55Z).
+    pub excluded_reason: Option<String>,
 }
 
 impl TradeDto {
@@ -356,6 +378,26 @@ impl TradeDto {
     #[must_use]
     pub fn with_rebate(mut self, usd: Option<f64>) -> Self {
         self.rebate_usd = usd;
+        self
+    }
+
+    /// The same trade marked as excluded from its book's headline figures,
+    /// with the reason the exclusion was registered under.
+    ///
+    /// An excluded trade also loses its `rebateUsd`, and that is the point
+    /// rather than a side effect. The credit is `share x spread x lots x
+    /// contract_size`, so on a trade excluded for having the wrong size it
+    /// is wrong by exactly the same factor: the euro fill of 2026-09-16
+    /// priced at $16.15 of credit on a $100 book. A desk that will not count
+    /// a trade's P&L must not print a confident credit beside it. `null`
+    /// here already means "never priced for one", which is what an excluded
+    /// trade is.
+    #[must_use]
+    pub fn excluded_because(mut self, reason: Option<String>) -> Self {
+        if reason.is_some() {
+            self.rebate_usd = None;
+        }
+        self.excluded_reason = reason;
         self
     }
 }
@@ -381,6 +423,11 @@ impl From<&fd_backtest::Trade> for TradeDto {
             mfe: t.mfe,
             hold_ms: t.hold_ms,
             reason: t.reason.clone(),
+            contract_size: t.contract_size,
+            spread: t.spread,
+            // A trade knows nothing about which register it is counted in.
+            // See `excluded_because`.
+            excluded_reason: None,
         }
     }
 }
