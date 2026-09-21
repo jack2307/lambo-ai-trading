@@ -208,6 +208,59 @@ rồi khởi động lại `fd-api`. Hoặc chạy tay với `--auth`.
 bằng `!!` ra console. Nó không bao giờ mở cổng đó ở trạng thái không khoá.
 8138 vẫn chạy bình thường trong mọi trường hợp.
 
+### Dựng tunnel (làm một lần, trong RDP)
+
+`cloudflared` đã cài sẵn tại `C:\cloudflared\cloudflared.exe` (bản 2026.9.1,
+chữ ký Cloudflare hợp lệ). Chưa đăng nhập, chưa tạo tunnel nào.
+
+**1. Tạo tunnel trên dashboard.** Vào Cloudflare → Zero Trust → Networks →
+Tunnels → Create a tunnel → chọn **Cloudflared** → đặt tên. Nó hiện một lệnh
+cài kèm **một token dài**.
+
+> Token đó là **bí mật** — ai có nó là dựng được tunnel vào tài khoản anh.
+> Đừng dán nó vào chat, vào ticket, vào chỗ nào ngoài cửa sổ RDP.
+
+**2. Cài service trên VPS**, dán token vào chỗ `<TOKEN>`:
+
+```powershell
+C:\cloudflared\cloudflared.exe service install <TOKEN>
+```
+
+Nó chạy dưới dạng Windows service, **tự lên sau khi máy khởi động lại**.
+
+**3. Trỏ hostname vào cổng 8139.** Trong tunnel vừa tạo → Public Hostname →
+Add:
+
+| Trường | Giá trị |
+|---|---|
+| Subdomain | một tên **khó đoán**, ví dụ `v12-9k3x` — đừng dùng `desk` hay `api` |
+| Domain | tên miền của anh trong Cloudflare |
+| Type | `HTTP` |
+| URL | `127.0.0.1:8139` |
+
+> **`8139`, không phải `8138`.** Gõ nhầm một chữ số là đưa toàn bộ nút "Dừng
+> sổ", "Tạm dừng" và "Xoá credential" ra internet **không có mật khẩu**.
+> Kiểm lại ô này trước khi bấm lưu.
+
+**4. Nên làm: bật Cloudflare Access.** Zero Trust → Access → Applications →
+Add → Self-hosted → chọn hostname vừa tạo → policy `Emails` = email của anh.
+
+Nó bắt đăng nhập **ở biên Cloudflare, trước khi request chạm tới máy anh**.
+Nghĩa là kẻ tấn công không tới được cả cái form đăng nhập để mà dò mật khẩu —
+lớp giãn-khoá bên trong fd-api trở thành lưới thứ hai chứ không phải lưới duy
+nhất. Miễn phí tới 50 người dùng.
+
+**Kiểm tra sau khi xong:**
+
+```powershell
+Test-NetConnection 127.0.0.1 -Port 8139     # TcpTestSucceeded phải là True
+Get-Service cloudflared | Select Status
+```
+
+Rồi mở hostname trên máy nhà: phải thấy **trang đăng nhập**, không phải giao
+diện bàn. Thấy thẳng giao diện là **tunnel đang trỏ nhầm 8138** — tắt service
+ngay và sửa lại.
+
 ### Ba chuyện sẽ gặp
 
 - **Deploy là đăng xuất.** Phiên nằm trong RAM, không ghi đĩa. Khởi động lại
