@@ -131,8 +131,18 @@ changes is that `trades`, `net_usd` and `profit_factor` are computed without
 it and the response carries an `excluded` block saying how many it left out,
 what they came to, and what the equity would be without them.
 
+An excluded trade also carries no rebate, and that is the point rather than a
+side effect: the credit is `share x spread x lots x contract_size`, so on a
+trade excluded for its size it is wrong by exactly the same factor — this one
+priced at **$16.15** of credit on a $100 book. A desk that will not count a
+trade's P&L must not print a confident credit beside it.
+
 So the book's record reads: **one closed trade, taken 2026-09-16, excluded;
 no counted trade, no counted P&L.** Not a loss and not a win — no result.
+Served against a copy of the store on 2026-09-21 the route says exactly that:
+`trades 0, net_usd 0.0, profit_factor null, equity 276.85`, with
+`excluded: { trades 1, net_usd 176.85, equity_usd 100.00 }` and the fill
+itself still in `last_fills`.
 
 **Two things are deliberately NOT done.**
 
@@ -159,7 +169,8 @@ testing each stored trade two ways: is its market one cd92998 touched
 `lots x |entry - stop| x contract_size_now` — the risk the trade implies at
 today's contract size — make sense against the book's equity.
 
-**Sixteen books. Sixty-seven closed trades. One is contaminated.**
+**Sixteen books. Sixty-six stored trade rows — 41 on the main books and 25
+on their shadows. One is contaminated.**
 
 | book | market | trades | verdict |
 |---|---|---|---|
@@ -235,7 +246,7 @@ change.
 - **It does not say the desk's other restated figures have been found.**
   Dollars per point and the rebate were both being recomputed from current
   config for every trade on every market. They are correct now for trades
-  that carry their basis, and remain estimates for ever on the sixty-seven
+  that carry their basis, and remain estimates for ever on the sixty-six
   that do not.
 
 ## Gates
