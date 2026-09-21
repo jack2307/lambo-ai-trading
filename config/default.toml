@@ -274,8 +274,14 @@ atr_fraction = 0.15
 # It is NOT changed here, for the same reason `[trading.trail]` stays off:
 # every receipt in docs/decisions/ was measured at 0.28, and moving the number
 # globally would make all of them unreproducible without editing a single
-# receipt. Repricing is an explicit, recorded amendment — the way the rebate
-# repricing was done — not a silent edit. Two things are still missing before
+# receipt. Repricing is an explicit, recorded amendment — the way the SPREAD
+# repricing was done, docs/decisions/2026-09-16-spread-repricing-scale.txt —
+# not a silent edit. (This read "the rebate repricing" until 2026-09-21. There
+# has never been one. The slip was harmless while no rebate existed and stopped
+# being harmless the day `[rebate]` appeared in config/accounts.toml, because a
+# reader would now go looking for an amendment that was never made: that rebate
+# is a credit line and repriced nothing —
+# docs/decisions/2026-09-21-rebate-credit-line.md.) Two things are still missing before
 # that amendment can be written: the 21:00 UTC rollover hour and a weekend,
 # neither of which the 12.8-hour sample covers. The logger is running 168
 # hours and now samples BTCUSD.sc too, whose 17.05 has never been checked over
