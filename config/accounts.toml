@@ -574,42 +574,45 @@ enabled = true
 # curve shows after a month is the first thing anyone has ever known about
 # this model on this task. Do not read it as continuing anything.
 runs = [
-    "xau-ema",
-    "xau-macd-asia",
+    # ONE BOOK. 2026-09-21, the owner's decision: "ben tai khoan 331 real se
+    # cho deepseek chay thoi / Toi se tach rieng tai khoan chay tung model 1"
+    # - this account carries DeepSeek alone, and each model gets an account of
+    # its own from here.
+    #
+    # WHAT CAME OFF, AND WHERE EACH STOOD WHEN IT DID. Realised on this
+    # account, in USC, at the moment of the change:
+    #
+    #     ai-xau-ds-ctx       +204.03 over 9 closed   KEPT
+    #     ai-xau-terra-ctx     +20.55 over 9 closed   off
+    #     xau-stoch              0.00 over 0 closed   off
+    #     xau-macd-asia         -33.45 over 3 closed  off
+    #     xau-ema               -82.46 over 2 closed  off
+    #     ai-xau-opus-ctx-b     -97.08 over 5 closed  off
+    #
+    # The kept book is also the only one of the six in profit, which is worth
+    # writing down beside a decision made for a different reason - one account
+    # per model - so that nobody later reads the profit as the reason.
+    #
+    # TERRA HELD A POSITION AND WAS CLOSED DELIBERATELY. LONG 0.06, ticket
+    # 584090677, sitting at -1.86 USC. Removing a book that holds one leaves
+    # the position with nobody reconciling it, which the launcher refuses
+    # outright, so a STOP file was written to
+    # data/live/vantage-cent/ai-xau-terra-ctx/ and the executor closed it and
+    # exited: "close STOP file", retcode 10009, closing ticket 584106430. The
+    # account read margin 0.0 and margin_level null afterwards. Terra came off
+    # +20.55 and is NOT off for failing.
+    #
+    # EVERY BOOK REMOVED HERE KEEPS RUNNING ON PAPER. This list is what the
+    # account follows, not what the desk thinks; and every removed book's
+    # data/live/vantage-cent/<book>/ record stays exactly where it is, which
+    # is the same rule `ai-xau-opus-ctx` has been living under since
+    # 2026-09-18 and `ai-xau-sol-ctx` since 2026-09-17.
+    #
+    # The STOP file under terra's directory is NOT cleared by the launcher and
+    # should stay: it stops that book ON THIS ACCOUNT only, so it is exactly
+    # the right thing to leave behind when terra moves to an account of its
+    # own - a different directory, which this file cannot reach.
     "ai-xau-ds-ctx",
-    # 2026-09-18, owner's decision: the mirror follows the no-coin-penalty
-    # Opus book, not the base one. `ai-xau-opus-ctx` answered NONE on every
-    # one of ~100 real bars (docs/hypotheses/2026-09-17-prompt-coin-penalty.md)
-    # and a mirror of a book that never enters mirrors nothing; `-b` entered
-    # its first trade this morning. The base book KEEPS RUNNING on paper -
-    # it is the registered control for that experiment - only the account
-    # stops following it. Its data/live/vantage-cent/ai-xau-opus-ctx/ record
-    # stays where it is.
-    "ai-xau-opus-ctx-b",
-    "ai-xau-terra-ctx",
-    # 2026-09-21, owner's decision, made on the paper curve: "xau-stoch chay
-    # paper on do, cho sang chay real di."
-    #
-    # WHAT THE PAPER CURVE SAYS: 18 trades, profit factor 2.26, +$6.34, over
-    # five days, eleven of the eighteen sized down.
-    #
-    # WHAT THIS DESK ALREADY MEASURED, WHICH IS THE LARGER NUMBER AND POINTS
-    # THE OTHER WAY: stoch-reversal is KILLED in the record. The recent-year
-    # screen - the criterion the owner himself made primary on 2026-09-13 -
-    # ran it on Vantage gold 15m from 2025-09-13 to 2026-09-12 and got 1,297
-    # trades at profit factor 0.912, expectancy -0.044R, the 34th percentile;
-    # 507 New York-hours trades at 0.923, the 40th. Registration
-    # docs/hypotheses/2026-09-13-recent-year-screen.md, receipt
-    # docs/research/runs/2026-09-13-recent-year-screen/in-sample.txt, verdict
-    # `stoch` in ui/src/lib/verdicts.ts.
-    #
-    # The run's own label has said what it was for since the day it started:
-    # "#7 the in-sample leaderboard's top, to see what it does live". Eighteen
-    # trades is not a result and does not overturn 1,297. This entry is here
-    # because the owner decided to watch it with money on, not because
-    # anything was validated - and it is written down so that a month from now
-    # nobody reads the promotion as evidence that it passed.
-    "xau-stoch",
 ]
 
 # The directory data/live/vantage-cent/ is stamped with this login the first
