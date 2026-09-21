@@ -53,19 +53,17 @@ set "LOG=%LOGDIR%\boot-traders-%STAMP%.out"
 >>"%LOG%" echo ==== boot traders start %DATE% %TIME%
 
 cd /d "%ROOT%"
-for /f %%N in ('powershell -NoProfile -Command "@(Get-CimInstance Win32_Process -Filter \"name='python.exe'\" ^| Where-Object { $_.CommandLine -like '*ai_trader.py*' }).Count"') do set "ALIVE=%%N"
->>"%LOG%" echo ==== ai_trader processes already running: %ALIVE%
-if not "%ALIVE%"=="0" (
-  >>"%LOG%" echo ==== DECLINING. This action stops every trader before starting its
-  >>"%LOG%" echo ==== selection, so running it now would kill the Opus and Terra
-  >>"%LOG%" echo ==== campaigns and not restart them. It is a BOOT recovery action.
-  >>"%LOG%" echo ==== To restart everything by hand instead:
-  >>"%LOG%" echo ====   powershell -File py\live\start_ai_traders.ps1 -Detached
-  >>"%LOG%" echo ==== boot traders end %DATE% %TIME% rc=0 declined
-  exit /b 0
-)
 
-powershell -NoProfile -ExecutionPolicy Bypass -File "%ROOT%\py\live\start_ai_traders.ps1" -Model deepseek-flash >>"%LOG%" 2>&1
+rem  THE GUARD IS IN THE POWERSHELL, NOT HERE, AND THAT IS THE SECOND
+rem  ATTEMPT. The first counted the traders with a `for /f` wrapped around a
+rem  PowerShell one-liner, and cmd ate the quotes inside it: the count came
+rem  back empty, this file read it as zero while nine traders were running,
+rem  went ahead, and killed the two campaigns the -Model filter cannot
+rem  restart. Measured 2026-09-21 21:23; restored a minute later, and no bar
+rem  closed in the gap. -OnlyIfNoneRunning does the same check where
+rem  counting a process needs no escaping, and where the script that does
+rem  the killing is the one that decides not to.
+powershell -NoProfile -ExecutionPolicy Bypass -File "%ROOT%\py\live\start_ai_traders.ps1" -Model deepseek-flash -OnlyIfNoneRunning >>"%LOG%" 2>&1
 set "RC=%ERRORLEVEL%"
 >>"%LOG%" echo ==== boot traders end %DATE% %TIME% rc=%RC%
 exit /b %RC%

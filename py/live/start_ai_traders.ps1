@@ -45,6 +45,21 @@ param(
     # never are, without anyone remembering to edit a list in a .cmd file.
     [string[]]$Model = @(),
 
+    # Do nothing, successfully, if any trader is already running.
+    #
+    # FOR THE BOOT TASK, AND IT EXISTS BECAUSE THE FIRST VERSION OF THIS
+    # GUARD LIVED IN A .cmd AND DID NOT WORK. run-traders.cmd counted the
+    # processes with a `for /f` around a PowerShell one-liner whose quotes
+    # cmd ate; it read zero while nine were running, went ahead, and killed
+    # the Opus and Terra campaigns that the filter cannot restart. Measured
+    # 2026-09-21 21:23, restored a minute later, no bar close in the gap.
+    #
+    # So the check moved here, where counting a process needs no escaping
+    # and where the script that does the killing is the one deciding not to.
+    # Exit 0 and not an error: "the desk is already up" is this task doing
+    # its job, and a red Last Run Result trains somebody to ignore it.
+    [switch]$OnlyIfNoneRunning,
+
     # Drive the model's book with no coin beside it.
     #
     # The owner asked for this on 2026-09-17, having decided the control was
@@ -73,6 +88,21 @@ param(
     # detachment, and a second one would hide the traders from it.
     [switch]$Detached
 )
+
+# Before the re-launch, so that a detached call declines here rather than
+# spawning a child to decline in a log nobody reads.
+if ($OnlyIfNoneRunning) {
+    $live = @(Get-CimInstance Win32_Process -Filter "name='python.exe'" |
+        Where-Object { $_.CommandLine -like '*ai_trader.py*' })
+    if ($live.Count) {
+        Write-Host "$($live.Count) trader(s) already running; -OnlyIfNoneRunning declines."
+        Write-Host 'This script stops EVERY trader before starting its selection, so running'
+        Write-Host 'it now with a filter would stop campaigns it will not restart.'
+        Write-Host 'To restart everything deliberately: start_ai_traders.ps1 -Detached'
+        exit 0
+    }
+    Write-Host 'no trader is running; -OnlyIfNoneRunning proceeds'
+}
 
 # Re-launch and return, before anything is stopped. Deliberately first: a
 # -Detached run that fell through to the body would stop every trader here
