@@ -241,15 +241,28 @@ $campaigns = @(
     # books sharing a seed share a coin's luck on every bar where both traded,
     # which is the one thing a control may not do, so the number moved and the
     # registration records the change.
-    # REGISTERED, NOT STARTED, 2026-09-19. The block, the variant and the
-    # books are built and tested; what is missing is the decision to spend on
-    # them. Starting is three deliberate acts, in this order: create the books
-    # with `start_ai_runs.py --only=ai-xau-ds-smc`, uncomment this row, and
-    # restart the traders with -Detached. Left commented rather than left out
-    # so the id is reserved and the wiring stays visible; a launcher row that
-    # starts a campaign nobody decided on is how a desk acquires a cost it
-    # cannot explain. docs/hypotheses/2026-09-18-smc-context.md
-    # @{ model = 'deepseek-flash'; run = 'ai-xau-ds-smc'; control = 'ai-xau-ds-smc-coin'; seed = 53; log = 'ai_trader_ds_smc'; promptVariant = 'smc-context' },
+    # STARTED 2026-09-21, on the owner's word: he asked for an SMC book on
+    # DeepSeek because DeepSeek is the cheap one. Registered 2026-09-19 and
+    # held back since, for two reasons that are now both answered.
+    #
+    # The first was technical and is gone: the block needs
+    # `GET /api/paper/levels`, which did not exist when the row was written,
+    # and without it every decision would have carried `smc: unavailable` -
+    # a recorded result, but not the experiment. The route deployed today
+    # (rounds 11 to 13) and answers on the real store: structure UP, 81 order
+    # blocks, a dealing range present.
+    #
+    # The second was not technical: "what is missing is the decision to spend
+    # on them." That decision is this line. Measured beside it so the cost is
+    # not a surprise - the six DeepSeek traders run about $0.63 a day between
+    # them, roughly $0.13 to $0.21 each, so this makes a seventh.
+    #
+    # WHAT THE REGISTRATION SAYS TO READ IT AGAINST, and it says it in
+    # advance: this is the THIRD variant on one control, after -otl and -htf.
+    # Three books each holding a 10% disagreement gate are three chances at a
+    # false positive, so a positive result here is read against three tests
+    # and not one. docs/hypotheses/2026-09-18-smc-context.md
+    @{ model = 'deepseek-flash'; run = 'ai-xau-ds-smc'; control = 'ai-xau-ds-smc-coin'; seed = 53; log = 'ai_trader_ds_smc'; promptVariant = 'smc-context' },
     # THE STAGED-ENTRY PAIR, stages 1 and 2 of
     # docs/plans/2026-09-18-staged-ai-entry.md. Registered at
     # docs/hypotheses/2026-09-18-plan-entry.md and 2026-09-18-plan-trigger.md

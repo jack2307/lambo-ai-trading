@@ -557,8 +557,16 @@ check("'ai-xau-ds-smc-coin'" in row[0] and "seed = 53" in row[0]
 # launcher row that starts a campaign nobody chose is how a desk acquires a
 # cost it cannot explain. Uncommenting it is a deliberate act and this test
 # is what makes it a visible one.
-check(row[0].strip().startswith("#"),
-      "and the row is COMMENTED, so nothing starts until someone decides it should")
+#
+# INVERTED 2026-09-21, NOT DELETED. The assertion above did its job: the row
+# sat commented for two days and came alive only on the owner's explicit
+# word, once /api/paper/levels was deployed and the block had something real
+# to carry. A test saying "this book runs and somebody chose to run it" is
+# worth as much as the one that said the opposite, because the next person to
+# silence this trader should have to come here and say so too. If it ever
+# goes back to commented, flip this line with the decision that flipped it.
+check(not row[0].strip().startswith("#"),
+      "and the row is LIVE - started 2026-09-21 on the owner's word")
 
 print()
 print(f"{'all checks passed' if not fails else str(len(fails)) + ' FAILED'}")
