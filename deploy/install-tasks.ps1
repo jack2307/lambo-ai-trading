@@ -170,6 +170,38 @@ $TASKS = @(
        Principal = 'system'; Trigger = 'startup' },
     @{ Name = 'flowdesk-watch'; Cmd = 'run-telegram.cmd'; Log = 'telegram.out'; What = 'the telegram watch'
        Principal = 'system'; Trigger = 'startup' },
+    # THE PAPER SIDE COMES BACK BY ITSELF; THE MONEY SIDE DOES NOT.
+    #
+    # Until 2026-09-21 a reboot left this desk answering HTTP and deciding
+    # nothing: fd-api and the watch had boot triggers, and the traders, the
+    # pollers and the executors had none. Nothing said so. The owner was
+    # offered three shapes and chose the middle one - "boot mot nua" - for a
+    # reason this repository already argues elsewhere: `-Live` and
+    # `-AllowReal` are a permission spent at a command line by somebody who
+    # is awake, and a boot task that sends real orders unattended spends it
+    # for them. So the executors stay manual, deliberately, and this brings
+    # back the research books that would otherwise leave a hole in a curve
+    # nobody notices until they read it.
+    #
+    # SYSTEM, AND THEREFORE DEEPSEEK ONLY. run-traders.cmd carries the whole
+    # argument; in short, the metered key sits in config\local.toml where
+    # SYSTEM can read it, while Opus and Terra are keyless and reach their
+    # models through the owner's own plans inside his profile, which SYSTEM
+    # has no path to. Those two come back when he does.
+    #
+    # THE POLLERS ARE NOT HERE AND CANNOT BE, measured rather than assumed.
+    # `py\live\mt5_bars.py` needs a terminal, the terminals live in the
+    # owner's RDP session, and this file already refuses to register the bar
+    # export as SYSTEM for that exact reason - "a task that registers
+    # cleanly and attaches to nothing". At boot, before any logon, there is
+    # no session and no terminal, so a poller task would start, find nothing
+    # and die. The traders survive it: they read bars from the API and never
+    # touch MetaTrader - zero MetaTrader5 references in ai_trader.py - and
+    # their staleness gate makes them sit out rather than decide on a feed
+    # that is not moving.
+    @{ Name = 'flowdesk-traders'; Cmd = 'run-traders.cmd'; Log = 'boot-traders.out'
+       What = 'the DeepSeek paper traders, after a reboot'
+       Principal = 'system'; Trigger = 'startup' },
     # THE HIGHER-TIMEFRAME BAR EXPORT, and it is the odd one out twice over.
     #
     # WHY IT EXISTS. `GET /api/paper/htf` reads data\bars\XAUUSD-4h.parquet

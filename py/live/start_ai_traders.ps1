@@ -27,6 +27,24 @@ param(
     # this script stops every ai_trader first, leaving one out STOPS it.
     [string[]]$Only = @(),
 
+    # Run only the campaigns on these models. Same stopping rule as -Only: a
+    # campaign left out is not started, and since this script stops every
+    # ai_trader first, leaving one out STOPS it.
+    #
+    # ADDED 2026-09-21 FOR THE BOOT TASK, and the reason is a permission
+    # boundary rather than convenience. `deepseek-flash` is metered and its
+    # key is read from `config/local.toml`, which any account that can read
+    # the repo can read - SYSTEM included. `claude-opus-5` and
+    # `codex/gpt-5.6-terra` are keyless: they reach their models through the
+    # OWNER'S OWN PLANS, authenticated in the Administrator profile, which
+    # SYSTEM has no path to. A boot task running everything would fail the
+    # reachability check above the kill and start nothing at all.
+    #
+    # Naming the MODEL rather than seven run ids so the boot task does not
+    # drift: a DeepSeek book added later is picked up, and Opus and Terra
+    # never are, without anyone remembering to edit a list in a .cmd file.
+    [string[]]$Model = @(),
+
     # Drive the model's book with no coin beside it.
     #
     # The owner asked for this on 2026-09-17, having decided the control was
@@ -66,6 +84,11 @@ if ($Detached) {
     if ($DryRun)    { $rest += '-DryRun' }
     if ($NoControl) { $rest += '-NoControl' }
     if ($Only.Count) { $rest += @('-Only', ($Only -join ',')) }
+    # Forwarded like -Only, and for the same reason: a filter the child does
+    # not receive is a child that stops every trader and starts all of them,
+    # which from a boot task running as SYSTEM would start two campaigns
+    # whose models it cannot reach.
+    if ($Model.Count) { $rest += @('-Model', ($Model -join ',')) }
     $logs = Join-Path $Root 'data\paper\logs'
     New-Item -ItemType Directory -Force -Path $logs | Out-Null
 
@@ -334,6 +357,28 @@ if ($Only.Count) {
         exit 1
     }
     $campaigns = $campaigns | Where-Object { $Only -contains $_.run }
+}
+
+$Model = @($Model | ForEach-Object { $_ -split ',' } | Where-Object { $_ })
+if ($Model.Count) {
+    $knownModels = @($campaigns | ForEach-Object { $_.model } | Sort-Object -Unique)
+    $unknownModels = $Model | Where-Object { $knownModels -notcontains $_ }
+    if ($unknownModels) {
+        # Refused rather than ignored, for the same reason -Only refuses a
+        # typo: a name that matches nothing selects nothing, and this script
+        # stops every trader before it starts the selection.
+        Write-Error ("no campaign on model: " + ($unknownModels -join ', ') + "; known: " + ($knownModels -join ', '))
+        exit 1
+    }
+    $campaigns = $campaigns | Where-Object { $Model -contains $_.model }
+}
+
+# Both filters can empty the list, and an empty list here would stop every
+# trader and start none while reporting success - the same failure -Only's
+# typo check exists to prevent, reached a different way.
+if (-not @($campaigns).Count) {
+    Write-Error 'the filters selected no campaign; nothing was stopped'
+    exit 1
 }
 Write-Host ("campaigns: " + (($campaigns | ForEach-Object { $_.run }) -join ', '))
 if ($NoControl) { Write-Host 'no coin: these books have nothing to be read against' -ForegroundColor Yellow }
