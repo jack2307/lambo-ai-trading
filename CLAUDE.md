@@ -100,6 +100,18 @@ numbers before moving on, and `tests/golden/` holds what it published.
   spawns long-lived children must not redirect into a path it will reuse** -
   this applies to ad-hoc deploy wrappers too, and one of them hit it the same
   night.
+- **`git worktree remove` follows a junction and deletes what it points at.**
+  An agent worktree needs `ui/node_modules`, and the cheap way to give it one
+  is `mklink /J` to the primary tree's. Remove the worktree without removing
+  the junction first and the primary tree's `node_modules` is emptied - 300
+  directories down to 2, `npx tsc` suddenly reporting that TypeScript is not
+  installed, and nothing else on the machine touched. Measured 2026-09-22.
+  **Always `cmd /c rmdir <link>` first** - it removes the reparse point and
+  not the target - **and check the target survived** before removing the
+  worktree. The repair is `npm ci` and costs a few minutes; the danger is
+  that the symptom looks like a broken toolchain rather than a deletion. The
+  live desk is unaffected either way: it serves a built `dist`, not
+  `node_modules`.
 
 ## Toolchain
 
