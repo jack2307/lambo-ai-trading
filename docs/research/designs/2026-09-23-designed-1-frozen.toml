@@ -1,0 +1,37 @@
+# designed-1 — FROZEN PARAMETERS: NONE. NOTHING IS PROPOSED.
+#
+# Agent designed-1 (angle 1, "attack the cost term") proposes ZERO methods for
+# the withheld year 2025-09-23 -> 2026-09-17. There is nothing here to run and
+# nothing to freeze. The file exists so that a reader looking for it finds this
+# sentence rather than a missing path, and it deliberately contains no
+# `[[hypothesis]]` table: `hypotheses::batch_from_file` refuses a batch with
+# none, so pointing `--batch-file` at this file fails loudly instead of
+# silently measuring something.
+#
+# Why, in one paragraph. The angle works and is not enough. Moving a dull
+# channel break's invalidation from 1.2 x ATR (2.4-3.6 points, 9.4% of R paid
+# to the 0.28 spread) to the far edge of the channel that broke (9-22 points,
+# 1.3-3.1% of R) lifts the profit factor by +0.085 to +0.140 on the design
+# window, by +0.074 to +0.167 with guards off, and by +0.159 to +0.198 over 15
+# years of Dukascopy gold. Every one of those rows still fails: the best is
+# 1.065 against the standing gate of 1.20, at +0.009 R against 0.05 R. The
+# ceiling is arithmetic - `[trading] max_hold_ms` is four hours, over which the
+# median absolute move on this data is 3.94 points, so no engine-exit method on
+# 15-minute gold can pay the spread less than about 7% of its profit factor -
+# and the gross profit factor available from any dull signal measured here,
+# on two vendors over 3 years and over 15, is 1.01 to 1.16 against the 1.21 to
+# 1.32 it would need. The shortfall is in the signal term by a factor of two.
+#
+# Full measurement, receipts and the two defects found:
+#   docs/research/designs/2026-09-23-designed-1-far-stop-break.md
+#   docs/research/designs/2026-09-23-designed-1-contrast.toml   (the 8 declared rows)
+#   docs/research/runs/2026-09-23-designed-1-cost-term/         (4 receipts)
+#
+# The instrument itself stays in the registry as `far-stop-break`
+# (crates/fd-strategy/src/far_stop_break.rs) with its causality test. It is a
+# measuring device for the cost term, not a submission, and it is not to be
+# read as one.
+
+[proposal]
+methods = 0
+reason = "the cost term is worth at most 0.19 of profit factor, measured; the shortfall to the gate is 0.23 to 0.41, and it is in the signal term"

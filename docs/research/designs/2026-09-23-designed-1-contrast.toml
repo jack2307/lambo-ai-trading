@@ -1,0 +1,67 @@
+# The cost-term contrast, declared before it was run.
+#
+# One signal — a close beyond the prior N-bar channel — and one thing varied:
+# where the trade is wrong. `structural` puts the stop at the opposite edge of
+# the channel that broke; `atr` puts it 1.2 x ATR away, which is what every
+# other method in this registry does. Same code path, same bars, same 0.28
+# spread, same guards, so a difference between a pair is the invalidation
+# distance and nothing else.
+#
+# This is not a search and nothing here is carried anywhere: it measures
+# `cost/R = spread/stop` inside the audited engine, against the same
+# count-matched random-entry null every receipt in docs/decisions/ uses.
+# Eight rows, all eight reported.
+#
+# Run:
+#   fd-backtest --bin search --market=xauusd --interval=15m \
+#     --data=E:/rust/flowdesk/data-sealed --from=2022-06-16 --to=2025-09-23 \
+#     --mode=hypotheses --batch-file=docs/research/designs/2026-09-23-designed-1-contrast.toml \
+#     --fixed --seeds=200 --guards
+
+[[hypothesis]]
+label = "atr-20"
+base = "far-stop-break"
+overrides = { period = 20, stopMode = 1, stopAtr = 1.2, riskReward = 1.0 }
+why = "the registry's habit: an ATR-scaled invalidation on a 20-bar channel break. The control arm."
+
+[[hypothesis]]
+label = "struct-20"
+base = "far-stop-break"
+overrides = { period = 20, stopMode = 0, riskReward = 1.0 }
+why = "the same break, wrong only where the range is intact again — the far channel edge, several times the ATR distance away"
+
+[[hypothesis]]
+label = "atr-40"
+base = "far-stop-break"
+overrides = { period = 40, stopMode = 1, stopAtr = 1.2, riskReward = 1.0 }
+why = "the control arm at a 40-bar channel: the ATR distance barely moves with the lookback, so this holds the stop fixed while the structure grows"
+
+[[hypothesis]]
+label = "struct-40"
+base = "far-stop-break"
+overrides = { period = 40, stopMode = 0, riskReward = 1.0 }
+why = "a 40-bar channel's far edge is about twice a 20-bar channel's, so this is the same claim at twice the stop"
+
+[[hypothesis]]
+label = "atr-80"
+base = "far-stop-break"
+overrides = { period = 80, stopMode = 1, stopAtr = 1.2, riskReward = 1.0 }
+why = "the control arm at an 80-bar channel"
+
+[[hypothesis]]
+label = "struct-80"
+base = "far-stop-break"
+overrides = { period = 80, stopMode = 0, riskReward = 1.0 }
+why = "the widest structural invalidation this signal offers: cost/R around a fortieth of the spread-to-stop ratio the ATR arm pays"
+
+[[hypothesis]]
+label = "struct-80-f14"
+base = "far-stop-break"
+overrides = { period = 80, stopMode = 0, riskReward = 1.0, minStopPoints = 14.0 }
+why = "the cost condition stated in cost units: take the trade only when the invalidation is at least fifty spreads (50 x 0.28) away"
+
+[[hypothesis]]
+label = "atr-20-f14"
+base = "far-stop-break"
+overrides = { period = 20, stopMode = 1, stopAtr = 1.2, riskReward = 1.0, minStopPoints = 14.0 }
+why = "the same floor on the ATR arm, where it can only be met in the most volatile conditions — the control for the floor itself"

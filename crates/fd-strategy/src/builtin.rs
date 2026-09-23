@@ -71,6 +71,8 @@ pub fn register_all(registry: &mut Registry) {
     registry.register(Box::new(crate::screen::SqueezeBreak));
     registry.register(Box::new(crate::screen::StochReversal));
     registry.register(Box::new(crate::volman_box::VolmanBox));
+    // The cost-term instrument: one signal, two invalidation rules.
+    registry.register(Box::new(crate::far_stop_break::FarStopBreak));
 }
 
 /* ---------------- classic technical baselines ---------------- */
