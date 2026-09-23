@@ -1,0 +1,66 @@
+Slice 1 of the 2026-09-23 three-month search: how it was run and how to read it
+==============================================================================
+
+Registration: docs/hypotheses/2026-09-23-three-month-search.md, committed at
+0115da6 before this run existed. Nothing below softens its falsifier or its
+four reporting commitments.
+
+The slice is five mechanisms and their full registry grids: ema-cross,
+rsi-reversion, donchian-breakout, bb-fade and keltner-break. Each grid is
+three values on two axes, so the slice is 45 cells and every one of them was
+run. The receipt beside this file, slice-1-xauusd-15m.txt, prints all 45 rows
+in grid order before it ranks them, so the best of 45 can be read against the
+44 it beat rather than quoted on its own.
+
+A cell here is a strategy and one fully specified point of its grid. It is run
+through the existing walk-forward at the configured four folds with every grid
+axis pinned by a Preset, which is what makes "same strategy, same parameters,
+no re-fit" checkable: with the axes pinned the grid a fold could sweep is
+empty, so each fold selects the one cell it was given and then measures it on
+the window that follows. The in-sample figure for a cell is therefore the
+combined return over the four measured folds, not over the whole window, and
+the first fifth of the window is training only. The spread is the configured
+0.28, the guards are the market's own and were on, the gate is the registry's
+min_trades 30 / min_profit_factor 1.2 / min_expectancy_r 0.05, and none of the
+three was touched.
+
+The nine-month leg is the replay, not a second search. It uses the fixed path
+that runs the cell at those same parameters over the whole window with no
+folds and no selection at all, which is the harsher of the two available
+readings and the one the registration's wording requires. Each cell is read
+against 200 count-matched control runs, with the count matching repaired
+earlier today; the achieved match is printed on every row so a percentile read
+against a null of the wrong size can be spotted instead of trusted.
+
+The windows were cut with the end dates inclusive, so the two do not overlap
+by a day and do not skip one: in sample is 2026-06-23 through 2026-09-23 and
+out of sample is 2025-09-23 through 2026-06-22. The gold feed on disk stops at
+2026-09-17 13:00, so the in-sample window is 5731 bars and ends there rather
+than on the 23rd. That is the data, not a choice, and it shortens the search
+window by six days.
+
+Two deviations are recorded rather than argued. The registration said the top
+five cells overall would be carried forward; the search was split across four
+agents by mechanism, so twenty cells are carried in total and five of them are
+this slice's. That is more out-of-sample tests than the registration promised,
+not fewer, so it cannot flatter the result. Second, the driver that runs this
+protocol is a new binary, crates/fd-backtest/src/bin/slice_three_month.rs. It
+sets no threshold and computes no metric of its own; it enumerates the grids,
+calls the existing hypothesis paths, and prints what they return, including
+the return over the window that the standing hypotheses receipt format does
+not have a column for.
+
+How to read the outcome. On this slice the search did not clear 50% even in
+sample: the best cell returned 12.90% over the three months, which is a
+quarter of the target and was produced by a search over 45 cells on 5731 bars.
+Of the five cells carried forward, none survived the nine months. Two failed
+all three legs outright, and the three keltner-break cells kept a positive
+expectancy there while failing the 1.2 profit factor and sitting at the 69th,
+78th and 79th percentile of their own matched nulls rather than the 95th. The
+first row's null is 0.73 of the method's trade count, outside the quarter-wide
+band the repair set, so that percentile is not that method's percentile; the
+row fails on expectancy and profit factor without it, so nothing rests on the
+unmatched figure.
+
+Nothing here goes on the funded account, and the registration forbids it
+doing so whatever it showed.
