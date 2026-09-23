@@ -202,6 +202,31 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             guards,
         );
     }
+    if mode == "rescore" {
+        // The rate the desk actually has, from the same file the live side
+        // reads. `--rebate-share=` overrides it for a sensitivity run and
+        // says so in the header; it is never a config edit.
+        let share = arg("rebate-share", "");
+        let rebate = if share.is_empty() {
+            fd_backtest::Rebate::from_config_dir(std::path::Path::new(&arg("config", "config")))
+        } else {
+            share.trim().parse::<f64>().ok().and_then(fd_backtest::Rebate::new)
+        };
+        run_rescore(
+            &registry,
+            &bars,
+            &rules,
+            config.backtest.walk_forward_folds,
+            select_by,
+            config.backtest.min_trades_per_cell,
+            &gate,
+            arg("seeds", "200").parse().unwrap_or(200),
+            arg("direction-samples", "1000").parse().unwrap_or(1000),
+            arg("batch-file", "").as_str(),
+            rebate,
+            guards,
+        );
+    }
     if mode == "costs" {
         run_cost_sensitivity(
             &registry,
@@ -514,7 +539,7 @@ fn run_direction_null(
             if self_managed {
                 return permuted_sides_pf(&actual.trades, rules, seed as u64 + 1);
             }
-            let flipped = DirectionFlipped { inner: strategy, seed: seed as u64 + 1 };
+            let flipped = fd_backtest::DirectionFlipped { inner: strategy, seed: seed as u64 + 1 };
             let gated = fd_strategy::filter::Filtered { inner: &flipped, filters: filters.clone() };
             run_backtest_guarded(bars, &gated, &params, rules, guards, timeline, Range::default(), None)
                 .metrics
@@ -553,85 +578,13 @@ fn run_direction_null(
     println!();
 }
 
-/// The profit factor of `trades` with each side re-drawn by coin flip: the
-/// price move over the same interval reversed, the spread paid again.
-fn permuted_sides_pf(trades: &[fd_backtest::Trade], rules: &TradingRules, seed: u64) -> f64 {
-    let (mut wins, mut losses) = (0.0f64, 0.0f64);
-    for t in trades {
-        let mut hash = seed ^ (t.entry_time as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15);
-        hash ^= hash >> 29;
-        hash = hash.wrapping_mul(0xBF58_476D_1CE4_E5B9);
-        let spread = rules.spread * t.lots * rules.contract_size;
-        // pnl = move − spread (+ swap, which does not flip with the side here:
-        // this account charges none). The flipped trade earns −move − spread.
-        let pnl = if hash >> 63 == 0 { t.pnl_usd } else { -(t.pnl_usd + spread) - spread };
-        if pnl > 0.0 { wins += pnl } else { losses -= pnl }
-    }
-    if losses > 0.0 { wins / losses } else { f64::INFINITY }
-}
-
-/// A strategy with its entry direction replaced by a coin flip.
+/// The profit factor of `trades` with each side re-drawn by coin flip.
 ///
-/// The stop and target are mirrored around the entry price rather than kept, so
-/// a flipped long risks and targets the same distance a long did. Keeping them
-/// would put a short's stop below the market, which is not a trade anybody
-/// would take and would make the null meaninglessly bad.
-struct DirectionFlipped<'a> {
-    inner: &'a dyn fd_strategy::registry::Strategy,
-    seed: u64,
-}
-
-impl fd_strategy::registry::Strategy for DirectionFlipped<'_> {
-    fn id(&self) -> &'static str {
-        self.inner.id()
-    }
-    fn name(&self) -> &'static str {
-        self.inner.name()
-    }
-    fn description(&self) -> &'static str {
-        self.inner.description()
-    }
-    fn default_params(&self) -> fd_strategy::registry::Params {
-        self.inner.default_params()
-    }
-    fn grid(&self) -> std::collections::BTreeMap<String, Vec<f64>> {
-        self.inner.grid()
-    }
-    fn indicators(&self, p: &fd_strategy::registry::Params) -> Vec<fd_indicators::IndicatorSpec> {
-        self.inner.indicators(p)
-    }
-    fn warmup(&self, p: &fd_strategy::registry::Params) -> usize {
-        self.inner.warmup(p)
-    }
-    fn series(&self, p: &fd_strategy::registry::Params) -> Vec<String> {
-        self.inner.series(p)
-    }
-    fn needs_options(&self) -> bool {
-        self.inner.needs_options()
-    }
-    fn exits(&self) -> fd_strategy::registry::Exits {
-        self.inner.exits()
-    }
-    fn on_bar(&self, ctx: &fd_strategy::registry::BarContext) -> fd_strategy::registry::Intent {
-        let intent = self.inner.on_bar(ctx);
-        let fd_strategy::registry::Intent::Enter { side, stop, target, reason } = intent else {
-            return intent;
-        };
-        let mut hash = self.seed ^ (ctx.bar.time as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15);
-        hash ^= hash >> 29;
-        hash = hash.wrapping_mul(0xBF58_476D_1CE4_E5B9);
-        if hash >> 63 == 0 {
-            return fd_strategy::registry::Intent::Enter { side, stop, target, reason };
-        }
-        let close = ctx.bar.close;
-        let mirror = |price: f64| 2.0 * close - price;
-        fd_strategy::registry::Intent::Enter {
-            side: if side.is_long() { fd_strategy::registry::Side::Short } else { fd_strategy::registry::Side::Long },
-            stop: stop.map(mirror),
-            target: target.map(mirror),
-            reason,
-        }
-    }
+/// Moved into `fd_backtest::direction` on 2026-09-23 so the rebate rescore
+/// reads the same control this mode does rather than a second copy of it. The
+/// arithmetic did not change.
+fn permuted_sides_pf(trades: &[fd_backtest::Trade], rules: &TradingRules, seed: u64) -> f64 {
+    fd_backtest::profit_factor_of(&fd_backtest::permuted_sides_pnls(trades, rules, seed))
 }
 
 /// What this pipeline produces when it is fed no signal.
@@ -939,6 +892,162 @@ fn run_hypotheses(
         println!("That is the result. The list is closed; add a hypothesis only with a new reason.");
     } else {
         println!("Survivors: {} — worth a decision record and a direction null before anything else.", survivors.join(", "));
+    }
+    println!();
+}
+
+/// Every construct in a batch, scored twice: as the record closed it, and
+/// with the introducing-broker rebate credited beside the book.
+///
+/// **The credit never touches the cost model.** `rules.spread` is what the
+/// venue charges and stays what it was; the net columns come from a credited
+/// copy of the same trades. Gross is byte-identical to a `--mode=hypotheses`
+/// run of the same batch, which is the property
+/// `fd-backtest/src/rebate.rs` pins and `docs/decisions/2026-09-21-rebate-credit-line.md`
+/// asks for.
+///
+/// **Both nulls carry the rebate.** The matched null's own out-of-sample
+/// trades and the direction null's own trades are credited with the same
+/// arithmetic, so the percentiles compare like with like. A run that could
+/// not do that for one of the two says so in its header rather than printing
+/// a percentile that means nothing.
+#[allow(clippy::too_many_arguments)]
+fn run_rescore(
+    registry: &Registry,
+    bars: &[Bar],
+    rules: &TradingRules,
+    folds: usize,
+    select_by: SelectBy,
+    min_trades_per_cell: usize,
+    gate: &fd_backtest::PromisingGate,
+    seeds: usize,
+    direction_samples: usize,
+    batch_file: &str,
+    rebate: Option<fd_backtest::Rebate>,
+    guards: Option<&Guards>,
+) {
+    let Some(rebate) = rebate else {
+        println!("no [rebate] table in the config directory's accounts.toml, and no --rebate-share=.");
+        println!("That is 'no arrangement is recorded', not a rebate of zero, so nothing is scored.");
+        return;
+    };
+    let batch = match batch_from_file(std::path::Path::new(batch_file)) {
+        Ok(b) => b,
+        Err(e) => {
+            println!("{e}");
+            return;
+        }
+    };
+    println!("== rebate rescore `{batch_file}`: {} constructs, walk-forward ({folds} folds) ==", batch.len());
+    println!("rebate:   {:.2} of the round-turn spread, credited BESIDE the book", rebate.share_of_spread);
+    println!("          gross columns are unchanged; the cost model is untouched");
+    println!("nulls:    matched null {seeds} runs and direction null {direction_samples} draws, BOTH carrying the same credit");
+    println!("swap:     long {:.2} / short {:.2} USD per lot per night; spread {}", rules.swap_long_per_lot, rules.swap_short_per_lot, rules.spread);
+    println!("{}", fd_strategy::news::summary(NEWS_FILE));
+    println!("{}", news_scope_line(rules));
+    println!("{}", guards_line(guards));
+    println!();
+    println!(
+        "{:<22} {:>6} {:>8} {:>8} {:>8} {:>7} {:>7} {:>7} {:>7}  verdict",
+        "construct", "trades", "PF gross", "PF net", "rebate$", "reb/R", "mnullG", "mnullN", "dirN"
+    );
+
+    let mut passed: Vec<String> = Vec::new();
+    let mut ran = 0usize;
+    let mut not_run: Vec<String> = Vec::new();
+    for hypothesis in &batch {
+        let outcome = fd_backtest::hypotheses::rescore_hypothesis(
+            registry,
+            hypothesis,
+            bars,
+            rules,
+            folds,
+            select_by,
+            min_trades_per_cell,
+            gate,
+            seeds,
+            direction_samples,
+            rebate,
+            guards,
+        );
+        let row = match outcome {
+            Ok(Some(row)) => row,
+            Ok(None) => {
+                println!("{:<22} not run: the walk-forward could not be formed on these bars", hypothesis.label);
+                not_run.push(format!("{}: no walk-forward on these bars", hypothesis.label));
+                continue;
+            }
+            Err(e) => {
+                println!("{:<22} not run: {e}", hypothesis.label);
+                not_run.push(format!("{}: {e}", hypothesis.label));
+                continue;
+            }
+        };
+        ran += 1;
+        let verdict = if row.passes_net() {
+            "PASSES ALL THREE".to_string()
+        } else if row.verdict_net.promising {
+            format!("gate pass, inside a null (matched {:.0}, dir {:.0})", row.matched_pct_net, row.dir_pct_net)
+        } else {
+            format!("fail: {}", row.verdict_net.reasons.join("; "))
+        };
+        println!(
+            "{:<22} {:>6} {:>8.3} {:>8.3} {:>8.2} {:>6.2}% {:>6.0}% {:>6.0}% {:>6.0}%  {verdict}",
+            row.label,
+            row.oos.trades,
+            row.oos.profit_factor,
+            row.oos_net.profit_factor,
+            row.rebate_usd,
+            row.rebate_frac_r * 100.0,
+            row.matched_pct_gross,
+            row.matched_pct_net,
+            row.dir_pct_net,
+        );
+        println!(
+            "{:<22} whole window {} trades, PF {:.3} gross / {:.3} net; direction null p95 {:.3} gross / {:.3} net{}",
+            "",
+            row.whole.trades,
+            row.whole.profit_factor,
+            row.whole_net.profit_factor,
+            fd_backtest::hypotheses::RescoreRow::null_quantile(&row.dir_null_gross, 0.95),
+            fd_backtest::hypotheses::RescoreRow::null_quantile(&row.dir_null_net, 0.95),
+            if row.dir_self_managed { " (own sides permuted)" } else { "" },
+        );
+        println!(
+            "{:<22} matched null p50 {:.3} / p95 {:.3} gross, p50 {:.3} / p95 {:.3} net over {} runs",
+            "",
+            fd_backtest::hypotheses::RescoreRow::null_quantile(&row.matched_null_gross, 0.50),
+            fd_backtest::hypotheses::RescoreRow::null_quantile(&row.matched_null_gross, 0.95),
+            fd_backtest::hypotheses::RescoreRow::null_quantile(&row.matched_null_net, 0.50),
+            fd_backtest::hypotheses::RescoreRow::null_quantile(&row.matched_null_net, 0.95),
+            row.matched_null_net.len(),
+        );
+        if row.passes_net() {
+            passed.push(format!("{} ({})", row.label, if row.passes_gross() { "passed gross too" } else { "the credit moved it" }));
+        }
+    }
+
+    println!();
+    println!("ran {ran} of {} constructs in the batch; {} not run", batch.len(), not_run.len());
+    for line in &not_run {
+        println!("  not run — {line}");
+    }
+    println!();
+    // The multiplicity statement, made by the record rather than left to a
+    // reader: at the 95th percentile, one in twenty passes by luck, so a
+    // batch of n expects n/20 passes from noise alone.
+    let expected = batch.len() as f64 / 20.0;
+    println!(
+        "{} of {} passed all three legs; noise at the 95th percentile yields about {expected:.1} of {} by luck.",
+        passed.len(),
+        batch.len(),
+        batch.len()
+    );
+    if passed.is_empty() {
+        println!("Nothing crossed. The rebate lowers the bar and the bar was not the binding constraint.");
+    } else {
+        println!("Passed: {}", passed.join(", "));
+        println!("A pass at or below the expected-by-chance count is indistinguishable from luck at this width.");
     }
     println!();
 }

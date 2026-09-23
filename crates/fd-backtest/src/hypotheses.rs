@@ -27,6 +27,7 @@ use serde::Deserialize;
 use std::collections::BTreeMap;
 
 use crate::control::RandomEntry;
+use crate::rebate::Rebate;
 use crate::control_hold::RandomHold;
 use crate::engine::{Metrics, TradingRules};
 use crate::guards::Guards;
@@ -630,6 +631,224 @@ pub fn run_hypothesis_guarded(
         closed_by_guard: result.closed_by_guard,
         sized_down_by_guard: result.sized_down_by_guard,
     }))
+}
+
+/* ----------------------------------- the rebate rescore, 2026-09-23 */
+
+/// One construct measured twice: as the record closed it, and with the
+/// introducing-broker rebate credited beside the book.
+///
+/// Registered in `docs/hypotheses/2026-09-23-rebate-rescore.md`. The gross
+/// columns are the ones every receipt in `docs/decisions/` was written from
+/// and this type never recomputes them — `oos` is the walk-forward's own
+/// `Metrics`, carried through untouched, and `oos_net` is a separate figure
+/// taken from a credited *copy* of the same trades.
+///
+/// **BOTH NULLS CARRY THE REBATE.** `matched_null_net` and `dir_null_net` are
+/// the controls' own profit factors with the identical credit applied to the
+/// controls' own trades. A credit given to the method and withheld from its
+/// control lifts every row equally and produces a percentile that means
+/// nothing; the registration fails on that point rather than reporting one.
+#[derive(Debug, Clone)]
+pub struct RescoreRow {
+    pub label: String,
+    pub base: String,
+    pub filters: String,
+    pub why: String,
+    /// Walk-forward, out of sample, gross — the number as closed.
+    pub oos: Metrics,
+    /// The same out-of-sample trades with the credit added.
+    pub oos_net: Metrics,
+    /// Total credit over those trades, USD.
+    pub rebate_usd: f64,
+    /// The credit as a fraction of the risk taken, averaged per trade. The
+    /// registration's own unit: at a 12-point stop it is about 1% of R.
+    pub rebate_frac_r: f64,
+    /// The matched null's out-of-sample profit factors, ascending, without
+    /// and with the same credit. Same runs, same seeds, two columns.
+    pub matched_null_gross: Vec<f64>,
+    pub matched_null_net: Vec<f64>,
+    pub matched_pct_gross: f64,
+    pub matched_pct_net: f64,
+    /// The whole window at the registered parameters — what `--mode=null-dir`
+    /// has always measured the direction control against, and therefore what
+    /// the direction percentiles below are percentiles OF.
+    pub whole: Metrics,
+    pub whole_net: Metrics,
+    pub dir_null_gross: Vec<f64>,
+    pub dir_null_net: Vec<f64>,
+    pub dir_pct_gross: f64,
+    pub dir_pct_net: f64,
+    /// Whether the direction control permuted the method's own sides (a
+    /// method that manages its own exits) or re-ran it with a mirrored side.
+    pub dir_self_managed: bool,
+    pub verdict_gross: Verdict,
+    pub verdict_net: Verdict,
+}
+
+impl RescoreRow {
+    /// The falsifier, in full: the registry's standing profit-factor gate on
+    /// the net figure, and the 95th of **both** nulls, each carrying the same
+    /// rebate. All three, or the construct stays closed.
+    #[must_use]
+    pub fn passes_net(&self) -> bool {
+        self.verdict_net.promising && self.matched_pct_net >= 95.0 && self.dir_pct_net >= 95.0
+    }
+
+    /// The same three legs without the credit, so a record can say whether a
+    /// pass is the rebate's doing or was there all along.
+    #[must_use]
+    pub fn passes_gross(&self) -> bool {
+        self.verdict_gross.promising && self.matched_pct_gross >= 95.0 && self.dir_pct_gross >= 95.0
+    }
+
+    #[must_use]
+    pub fn null_quantile(curve: &[f64], q: f64) -> f64 {
+        if curve.is_empty() {
+            return f64::NAN;
+        }
+        curve[(((curve.len() - 1) as f64) * q).round() as usize]
+    }
+}
+
+/// Share of `curve` strictly below `value`, 0–100. `NaN` propagates rather
+/// than being scored as a percentile, because a profit factor that is not a
+/// number is a run that produced no losses, not a run that beat everything.
+fn percentile_in(curve: &[f64], value: f64) -> f64 {
+    if curve.is_empty() || !value.is_finite() {
+        return f64::NAN;
+    }
+    100.0 * curve.iter().filter(|v| **v < value).count() as f64 / curve.len() as f64
+}
+
+/// Run one construct through the registered rescore.
+///
+/// Everything about the gross path is [`run_hypothesis_guarded`] — the same
+/// walk-forward, the same matched null calibrated to the method's trade count,
+/// the same seeds — and the net path is that path's own trades with
+/// [`Rebate`] credited onto them. The direction control follows
+/// `--mode=null-dir`: the whole window at the registered parameters, the
+/// method's own sides permuted where the method manages its own exits and a
+/// mirrored re-run where the engine does.
+///
+/// `Ok(None)` means the walk-forward could not run at all (not enough bars),
+/// which is reported as "not run" and never as a failure to pass.
+#[allow(clippy::too_many_arguments)]
+pub fn rescore_hypothesis(
+    registry: &Registry,
+    hypothesis: &Hypothesis,
+    bars: &[Bar],
+    rules: &TradingRules,
+    folds: usize,
+    select_by: SelectBy,
+    min_trades_per_cell: usize,
+    gate: &PromisingGate,
+    seeds: usize,
+    direction_samples: usize,
+    rebate: Rebate,
+    guards: Option<&Guards>,
+) -> Result<Option<RescoreRow>, String> {
+    use crate::direction::{DirectionFlipped, permuted_sides_profit_factors};
+    use crate::engine::{Range, run_backtest_guarded};
+
+    let base = registry.get(&hypothesis.base).map_err(|e| e.to_string())?;
+    let preset = Preset::new(base, &hypothesis.overrides)?;
+    let filtered = Filtered { inner: &preset, filters: scoped(&hypothesis.filters, rules) };
+    let Some(result) = walk_forward_guarded(&filtered, bars, rules, None, folds, select_by, min_trades_per_cell, guards)
+    else {
+        return Ok(None);
+    };
+    let equity = rules.starting_equity_usd;
+
+    // The whole window at the registered parameters: the control's trade
+    // count follows this rather than the walk-forward's, which is a fifth of
+    // the bars per fold and would under-match.
+    let whole = run_backtest_guarded(bars, &filtered, &preset.defaults, rules, guards, None, Range::default(), None);
+    let drift = base.exits() == fd_strategy::registry::Exits::Strategy && preset.grid().is_empty();
+    let rate = (!drift).then(|| matched_rate(bars, rules, &hypothesis.filters, whole.trades.len(), guards));
+    let hold = drift.then(|| hold_distribution(&whole.trades)).flatten();
+
+    // ---- the matched null, run once and read twice -----------------------
+    //
+    // Each seed is one complete walk-forward of the control through the same
+    // pipeline. Its OUT-OF-SAMPLE TRADES are what the credit is applied to,
+    // so the control is paid exactly what the method is paid. A pair is kept
+    // only when both of its figures are finite, so the two curves are the
+    // same runs in the same order and the percentiles are comparable.
+    let mut matched: Vec<(f64, f64)> = (0..seeds)
+        .into_par_iter()
+        .filter_map(|seed| {
+            let (inner, defaults) = matched_control_for(base, &hypothesis.overrides, seed as f64 + 1.0, rate, hold);
+            let control = Preset::bare(inner, defaults);
+            let gated = Filtered { inner: &control, filters: scoped(&hypothesis.filters, rules) };
+            let run = walk_forward_guarded(&gated, bars, rules, None, folds, select_by, min_trades_per_cell, guards)?;
+            let gross = run.oos.profit_factor;
+            let net = rebate.credited_metrics(&run.oos_trades, rules, equity).profit_factor;
+            (gross.is_finite() && net.is_finite()).then_some((gross, net))
+        })
+        .collect();
+    matched.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap_or(std::cmp::Ordering::Equal));
+    let matched_null_gross: Vec<f64> = matched.iter().map(|p| p.0).collect();
+    let mut matched_null_net: Vec<f64> = matched.iter().map(|p| p.1).collect();
+    matched_null_net.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+
+    // ---- the direction null, likewise ------------------------------------
+    let mut dir: Vec<(f64, f64)> = (0..direction_samples)
+        .into_par_iter()
+        .filter_map(|seed| {
+            let (gross, net) = if drift_sides(base) {
+                permuted_sides_profit_factors(&whole.trades, rules, seed as u64 + 1, rebate)
+            } else {
+                let flipped = DirectionFlipped { inner: &preset, seed: seed as u64 + 1 };
+                let gated = Filtered { inner: &flipped, filters: scoped(&hypothesis.filters, rules) };
+                let run =
+                    run_backtest_guarded(bars, &gated, &preset.defaults, rules, guards, None, Range::default(), None);
+                (run.metrics.profit_factor, rebate.credited_metrics(&run.trades, rules, equity).profit_factor)
+            };
+            (gross.is_finite() && net.is_finite()).then_some((gross, net))
+        })
+        .collect();
+    dir.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap_or(std::cmp::Ordering::Equal));
+    let dir_null_gross: Vec<f64> = dir.iter().map(|p| p.0).collect();
+    let mut dir_null_net: Vec<f64> = dir.iter().map(|p| p.1).collect();
+    dir_null_net.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+
+    let oos_net = rebate.credited_metrics(&result.oos_trades, rules, equity);
+    let whole_net = rebate.credited_metrics(&whole.trades, rules, equity);
+
+    Ok(Some(RescoreRow {
+        label: hypothesis.label.clone(),
+        base: hypothesis.base.clone(),
+        filters: filtered.describe(),
+        why: hypothesis.why.clone(),
+        verdict_gross: verdict(&result.oos, gate),
+        verdict_net: verdict(&oos_net, gate),
+        rebate_usd: rebate.total(&result.oos_trades, rules),
+        rebate_frac_r: rebate.mean_fraction_of_r(&result.oos_trades, rules),
+        matched_pct_gross: percentile_in(&matched_null_gross, result.oos.profit_factor),
+        matched_pct_net: percentile_in(&matched_null_net, oos_net.profit_factor),
+        dir_pct_gross: percentile_in(&dir_null_gross, whole.metrics.profit_factor),
+        dir_pct_net: percentile_in(&dir_null_net, whole_net.profit_factor),
+        dir_self_managed: drift_sides(base),
+        oos: result.oos,
+        oos_net,
+        whole: whole.metrics,
+        whole_net,
+        matched_null_gross,
+        matched_null_net,
+        dir_null_gross,
+        dir_null_net,
+    }))
+}
+
+/// Whether the direction control permutes the method's own sides.
+///
+/// A method that manages its own exits decides them from the side it holds,
+/// so replaying it with a coin-flip side keeps the method's exit rule inside
+/// the null. `--mode=null-dir` has branched on exactly this since the tsmom-2
+/// pass and this is the same test.
+fn drift_sides(base: &dyn Strategy) -> bool {
+    base.exits() == fd_strategy::registry::Exits::Strategy
 }
 
 #[cfg(test)]

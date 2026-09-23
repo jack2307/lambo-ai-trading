@@ -1750,7 +1750,14 @@ impl RebateTerms {
     /// a positive number. A market configured with no spread charges nothing
     /// and therefore has nothing to rebate, but saying so with a `0.0` would
     /// make "not priced" and "priced at nothing" the same figure.
-    fn on(self, lots: f64, spread: f64, contract_size: f64) -> Option<f64> {
+    ///
+    /// PUBLIC SINCE 2026-09-23 so the backtest's own credit line can be held
+    /// against it. `fd_backtest::rebate::Rebate::on` is this arithmetic and
+    /// `crates/fd-api/tests/rebate_parity.rs` asserts the two agree on a
+    /// table of cases, so the live side and the research side cannot drift
+    /// into pricing the same trade differently.
+    #[must_use]
+    pub fn on(self, lots: f64, spread: f64, contract_size: f64) -> Option<f64> {
         let finite = lots.is_finite() && spread.is_finite() && contract_size.is_finite();
         (finite && lots > 0.0 && spread > 0.0 && contract_size > 0.0)
             .then(|| fd_core::js_round_to(self.share_of_spread * spread * lots * contract_size, 4))

@@ -11,10 +11,12 @@
 pub mod context;
 pub mod control;
 pub mod control_hold;
+pub mod direction;
 pub mod engine;
 pub mod guards;
 pub mod hypotheses;
 pub mod paper;
+pub mod rebate;
 pub mod sweep;
 pub mod timeline;
 
@@ -26,6 +28,8 @@ pub use engine::{
     BacktestResult, ExitKind, Metrics, Range, Trade, TradingRules, metrics_of, run_backtest,
     run_backtest_guarded, trading_rules_for,
 };
+pub use direction::{DirectionFlipped, permuted_sides_pnls, profit_factor_of};
+pub use rebate::{Rebate, usd_per_r};
 pub use guards::{Exposure, GuardKind, GuardState, Guards, Refusal, guard_exit};
 pub use paper::{PaperBook, StepReport};
 pub use sweep::{

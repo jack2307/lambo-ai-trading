@@ -1,7 +1,8 @@
 # 2026-09-23-rebate-rescore: does the introducing-broker rebate move anything across the line
 
 **Registered:** (commit time is authoritative) — before any run
-**Status:** open
+**Status:** decided → docs/decisions/2026-09-23-rebate-rescore.md (0 of 22 runnable rows covering all 29 constructs passed, against about 1.1 expected by chance; the claim is refuted and both nulls carried the rebate)
+**Batch file:** `docs/hypotheses/2026-09-23-rebate-rescore.toml`, written after this registration and naming no threshold it does not.
 
 ## Where this came from
 

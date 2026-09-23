@@ -1,0 +1,199 @@
+# The run spec for docs/hypotheses/2026-09-23-rebate-rescore.md.
+#
+# THIS FILE IS NOT THE REGISTRATION. The registration is the markdown beside
+# it, committed before any run, and its falsifier, its multiplicity statement
+# and its data section are not adjustable. This is only the batch the runner
+# reads: one row per construct that carries a recorded profit factor in
+# `ui/src/lib/verdicts.ts`.
+#
+# WHY THESE ROWS. Twenty-nine verdict rows quote a profit factor. Eight of
+# them are indicators quoting their own strategy's number verbatim — `ema` is
+# `ema-cross`, `keltner` is `keltner-break` — so they are the same run and are
+# not listed twice here. The ninth, `atr`, is not a base method at all: ATR is
+# the risk unit, and its recorded 0.950/1.004 came from a volatility CONDITION
+# on the opening-range break (docs/hypotheses/2026-09-13-volcond-breakout.md),
+# so it is carried as those two gated rows. That leaves twenty-two rows
+# covering all twenty-nine constructs, and the decision record says which row
+# answers for which construct.
+#
+# THE FILTERS ARE THE SCREEN'S, NOT A NEW CHOICE. Seventeen of the twenty
+# strategies were closed as the all-day rows of
+# docs/hypotheses/2026-09-13-recent-year-screen.toml, which gates every entry
+# to weekdays and holds the book flat across the 16:30-18:15 New York window.
+# Those two filters are repeated here unchanged so a gross column reproduces
+# the receipt it is being compared with. The three that were closed on other
+# windows - volman-box, tsmom, intraday-momentum - are run on the same primary
+# year under the same two filters, because the registration's data section
+# names one primary window for every construct.
+
+[run]
+# The recent Vantage year, the criterion the owner made primary on 2026-09-13.
+in_sample = "xauusd:15m"
+in_sample_from = "2025-09-13"
+in_sample_to = "2026-09-12"
+# Reported beside any candidate and never a gate.
+out_of_sample = "xauduka:15m"
+out_of_sample_from = "2022-06-16"
+out_of_sample_to = "2025-04-10"
+seeds = 200
+direction_samples = 1000
+# The configured spread, not the logger's measured 0.21. Every receipt in
+# docs/decisions/ was measured at 0.28 and repricing here would flatter every
+# row against the record it is being compared with.
+spread = 0.28
+# config/accounts.toml, [rebate] share_of_spread.
+rebate_share_of_spread = 0.45
+
+[[hypothesis]]
+label = "ema-cross"
+base = "ema-cross"
+filters = ["weekdays", "flat:1630-1815"]
+overrides = {}
+why = "closed at PF 1.033 on BTC and 0.768 on gold; also the `ema` indicator row"
+
+[[hypothesis]]
+label = "rsi-reversion"
+base = "rsi-reversion"
+filters = ["weekdays", "flat:1630-1815"]
+overrides = {}
+why = "closed at PF 1.011, the 78th; one of the five named in advance; also the `rsi` row"
+
+[[hypothesis]]
+label = "donchian-breakout"
+base = "donchian-breakout"
+filters = ["weekdays", "flat:1630-1815"]
+overrides = {}
+why = "closed at PF 0.972, the 54th; one of the five named in advance; also the `donchian` row"
+
+[[hypothesis]]
+label = "bb-fade"
+base = "bb-fade"
+filters = ["weekdays", "flat:1630-1815"]
+overrides = {}
+why = "closed at PF 0.952, the 44th, the worst of the four baselines; also the `bbands` row"
+
+[[hypothesis]]
+label = "keltner-break"
+base = "keltner-break"
+filters = ["weekdays", "flat:1630-1815"]
+overrides = {}
+why = "the nearest to the line at PF 1.052 and the 78th; named first in the registration; also the `keltner` row"
+
+[[hypothesis]]
+label = "macd-cross"
+base = "macd-cross"
+filters = ["weekdays", "flat:1630-1815"]
+overrides = {}
+why = "closed at PF 1.010, the 66th, with an Asian row that failed the direction null; also the `macd` row"
+
+[[hypothesis]]
+label = "rsi2-pullback"
+base = "rsi2-pullback"
+filters = ["weekdays", "flat:1630-1815"]
+overrides = {}
+why = "Connors' rule, closed with a best row at PF 1.110 and the 74th"
+
+[[hypothesis]]
+label = "squeeze-break"
+base = "squeeze-break"
+filters = ["weekdays", "flat:1630-1815"]
+overrides = {}
+why = "closed at PF 0.849, the 14th of its null"
+
+[[hypothesis]]
+label = "stoch-reversal"
+base = "stoch-reversal"
+filters = ["weekdays", "flat:1630-1815"]
+overrides = {}
+why = "closed at PF 0.912, the 34th; also the `stoch` row"
+
+[[hypothesis]]
+label = "orb"
+base = "orb"
+filters = ["weekdays", "flat:1630-1815"]
+overrides = {}
+why = "five registrations, closed out of sample at PF 0.95-1.12 with the direction null at the 34th and 54th"
+
+[[hypothesis]]
+label = "pdhl"
+base = "pdhl"
+filters = ["weekdays", "flat:1630-1815"]
+overrides = {}
+why = "closed at PF 0.645-0.758, the 1st to 6th percentile"
+
+[[hypothesis]]
+label = "ict-sweep-mss-fvg"
+base = "ict-sweep-mss-fvg"
+filters = ["weekdays", "flat:1630-1815"]
+overrides = {}
+why = "the expert's A+ chain, closed out of sample at PF 0.75-0.77"
+
+[[hypothesis]]
+label = "vwap-fade"
+base = "vwap-fade"
+filters = ["weekdays", "flat:1630-1815"]
+overrides = {}
+why = "closed at PF 0.951, the 44th, with the direction null at the 13th; also the `vwap` row"
+
+[[hypothesis]]
+label = "doji-reversal"
+base = "doji-reversal"
+filters = ["weekdays", "flat:1630-1815"]
+overrides = {}
+why = "the strict row reached PF 1.203 and fell to the 90th once the null was matched to its trade count"
+
+[[hypothesis]]
+label = "gap-fade"
+base = "gap-fade"
+filters = ["weekdays", "flat:1630-1815"]
+overrides = {}
+why = "closed at PF 0.423 on 207 gaps, the 1st percentile"
+
+[[hypothesis]]
+label = "trend-pullback"
+base = "trend-pullback"
+filters = ["weekdays", "flat:1630-1815"]
+overrides = {}
+why = "closed at PF 0.379 on gold and 0.511 on BTC, the 0th percentile on both"
+
+[[hypothesis]]
+label = "volume-thrust"
+base = "volume-thrust"
+filters = ["weekdays", "flat:1630-1815"]
+overrides = {}
+why = "the registry's only rule that trades volume as a signal; closed at PF 0.960 and 0.931"
+
+[[hypothesis]]
+label = "volman-box"
+base = "volman-box"
+filters = ["weekdays", "flat:1630-1815"]
+overrides = {}
+why = "closed at PF 0.639 on 2010-18 Dukascopy minutes; re-asked here on the primary year"
+
+[[hypothesis]]
+label = "tsmom"
+base = "tsmom"
+filters = ["weekdays", "flat:1630-1815"]
+overrides = {}
+why = "closed at PF 2.031 on 75 trades with its own permuted sides at the 86th; re-asked on the primary year"
+
+[[hypothesis]]
+label = "intraday-momentum"
+base = "intraday-momentum"
+filters = ["weekdays", "flat:1630-1815"]
+overrides = {}
+why = "closed at PF 0.606 on 2022 sessions, the 35th; re-asked on the primary year"
+
+[[hypothesis]]
+label = "atr/hivol-london"
+base = "orb"
+filters = ["weekdays", "flat:1630-1815", "hours:0800-1200", "volabs:14:0.075-9"]
+overrides = { rangeStart = 200, rangeMinutes = 360, entryUntil = 1200, maxRangeAtr = 100 }
+why = "the `atr` verdict row: ATR as a regime CONDITION on the London break, closed at PF 0.950-1.004"
+
+[[hypothesis]]
+label = "atr/hivol-orb60"
+base = "orb"
+filters = ["weekdays", "flat:1630-1815", "hours:0920-1200", "volabs:14:0.075-9"]
+overrides = { rangeStart = 820, rangeMinutes = 60, entryUntil = 1200, maxRangeAtr = 100 }
+why = "the second `atr` row: the same condition on the New York opening range"

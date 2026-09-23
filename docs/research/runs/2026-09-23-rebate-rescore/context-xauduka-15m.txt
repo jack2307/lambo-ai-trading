@@ -1,0 +1,94 @@
+bounds:   --from=2022-06-16 --to=2025-04-10 kept 66243 of 378749 bars
+spread:   0.28 per round trip
+trail:    off
+bars:     66243 from 2022-06-16 00:00 to 2025-04-09 23:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from data/news/events.parquet
+news scope: USD (news_currencies)
+guards: off (every number unguarded)
+
+== rebate rescore `docs/hypotheses/2026-09-23-rebate-rescore.toml`: 22 constructs, walk-forward (4 folds) ==
+rebate:   0.45 of the round-turn spread, credited BESIDE the book
+          gross columns are unchanged; the cost model is untouched
+nulls:    matched null 200 runs and direction null 1000 draws, BOTH carrying the same credit
+swap:     long 0.00 / short 0.00 USD per lot per night; spread 0.28
+news: 747 events (2010-01-08 → 2027-12-08) from data/news/events.parquet
+news scope: USD (news_currencies)
+guards: off (every number unguarded)
+
+construct              trades PF gross   PF net  rebate$   reb/R  mnullG  mnullN    dirN  verdict
+ema-cross                 642    0.797    0.851  1983.33   3.48%     16%     16%     15%  fail: profit factor 0.851 < 1.2; expectancy -0.073R < 0.05R
+                       whole window 1054 trades, PF 0.752 gross / 0.806 net; direction null p95 0.948 gross / 1.015 net
+                       matched null p50 0.858 / p95 0.986 gross, p50 0.916 / p95 1.048 net over 200 runs
+rsi-reversion             837    0.882    0.942  2514.69   3.18%     60%     60%     95%  fail: profit factor 0.942 < 1.2; expectancy -0.025R < 0.05R
+                       whole window 1581 trades, PF 0.897 gross / 0.965 net; direction null p95 0.871 gross / 0.966 net
+                       matched null p50 0.858 / p95 0.986 gross, p50 0.916 / p95 1.048 net over 200 runs
+donchian-breakout        2876    0.808    0.861  4348.77   1.89%     20%     20%     68%  fail: profit factor 0.861 < 1.2; expectancy -0.039R < 0.05R
+                       whole window 3156 trades, PF 0.805 gross / 0.860 net; direction null p95 0.818 gross / 0.901 net
+                       matched null p50 0.858 / p95 0.986 gross, p50 0.916 / p95 1.048 net over 200 runs
+bb-fade                  2297    0.908    0.977  7588.45   3.83%     73%     76%     71%  fail: profit factor 0.977 < 1.2; expectancy -0.011R < 0.05R
+                       whole window 4481 trades, PF 0.823 gross / 0.892 net; direction null p95 0.831 gross / 0.931 net
+                       matched null p50 0.858 / p95 0.986 gross, p50 0.916 / p95 1.048 net over 200 runs
+keltner-break             785    0.847    0.885  1328.54   1.80%     39%     28%     29%  fail: profit factor 0.885 < 1.2; expectancy -0.045R < 0.05R
+                       whole window 2746 trades, PF 0.836 gross / 0.894 net; direction null p95 0.930 gross / 0.993 net
+                       matched null p50 0.858 / p95 0.986 gross, p50 0.916 / p95 1.048 net over 200 runs
+macd-cross               2827    0.832    0.890  6800.52   3.57%     28%     30%     85%  fail: profit factor 0.890 < 1.2; expectancy -0.050R < 0.05R
+                       whole window 3586 trades, PF 0.871 gross / 0.943 net; direction null p95 0.888 gross / 0.960 net
+                       matched null p50 0.858 / p95 0.986 gross, p50 0.916 / p95 1.048 net over 200 runs
+rsi2-pullback            1177    0.862    0.929  3043.88   2.88%     54%     54%     82%  fail: profit factor 0.929 < 1.2; expectancy -0.024R < 0.05R
+                       whole window 2556 trades, PF 0.864 gross / 0.933 net; direction null p95 0.884 gross / 0.955 net
+                       matched null p50 0.858 / p95 0.986 gross, p50 0.916 / p95 1.048 net over 200 runs
+squeeze-break             522    0.852    0.922  2220.16   4.61%     44%     52%     65%  fail: profit factor 0.922 < 1.2; expectancy -0.043R < 0.05R
+                       whole window 585 trades, PF 0.807 gross / 0.889 net; direction null p95 0.895 gross / 0.987 net
+                       matched null p50 0.858 / p95 0.986 gross, p50 0.916 / p95 1.048 net over 200 runs
+stoch-reversal           3588    0.852    0.912  8754.97   3.57%     44%     48%     70%  fail: profit factor 0.912 < 1.2; expectancy -0.047R < 0.05R
+                       whole window 4361 trades, PF 0.828 gross / 0.898 net; direction null p95 0.863 gross / 0.934 net
+                       matched null p50 0.858 / p95 0.986 gross, p50 0.916 / p95 1.048 net over 200 runs
+orb                       346    0.942    0.986   524.42   1.52%     86%     78%     87%  fail: profit factor 0.986 < 1.2; expectancy -0.003R < 0.05R
+                       whole window 442 trades, PF 0.996 gross / 1.042 net; direction null p95 1.036 gross / 1.084 net
+                       matched null p50 0.858 / p95 0.986 gross, p50 0.916 / p95 1.048 net over 200 runs
+pdhl                      531    0.728    0.826  2743.63   5.78%      4%      8%     19%  fail: profit factor 0.826 < 1.2; expectancy -0.082R < 0.05R
+                       whole window 669 trades, PF 0.695 gross / 0.782 net; direction null p95 0.804 gross / 0.904 net
+                       matched null p50 0.858 / p95 0.986 gross, p50 0.916 / p95 1.048 net over 200 runs
+ict-sweep-mss-fvg         121    0.636    0.670   240.98   2.04%      0%      0%     20%  fail: profit factor 0.670 < 1.2; expectancy -0.150R < 0.05R
+                       whole window 152 trades, PF 0.689 gross / 0.730 net; direction null p95 1.050 gross / 1.113 net
+                       matched null p50 0.858 / p95 0.986 gross, p50 0.916 / p95 1.048 net over 200 runs
+vwap-fade                1907    0.851    0.907  4868.00   3.05%     44%     42%     83%  fail: profit factor 0.907 < 1.2; expectancy -0.043R < 0.05R
+                       whole window 3133 trades, PF 0.850 gross / 0.939 net; direction null p95 0.876 gross / 0.967 net
+                       matched null p50 0.858 / p95 0.986 gross, p50 0.916 / p95 1.048 net over 200 runs
+doji-reversal             299    0.832    0.934  2074.92   7.40%     28%     57%     88%  fail: profit factor 0.934 < 1.2; expectancy -0.046R < 0.05R
+                       whole window 701 trades, PF 0.765 gross / 0.875 net; direction null p95 0.795 gross / 0.908 net
+                       matched null p50 0.858 / p95 0.986 gross, p50 0.916 / p95 1.048 net over 200 runs
+gap-fade                    0      NaN      NaN     0.00    NaN%    NaN%    NaN%     23%  fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+                       whole window 3 trades, PF 0.059 gross / 0.066 net; direction null p95 23.860 gross / 25.707 net
+                       matched null p50 0.858 / p95 0.986 gross, p50 0.916 / p95 1.048 net over 200 runs
+trend-pullback           2445    0.588    0.720 13754.88  12.08%      0%      0%     35%  fail: profit factor 0.720 < 1.2; expectancy -0.200R < 0.05R
+                       whole window 2416 trades, PF 0.436 gross / 0.573 net; direction null p95 0.538 gross / 0.703 net
+                       matched null p50 0.858 / p95 0.986 gross, p50 0.916 / p95 1.048 net over 200 runs
+volume-thrust               0      NaN      NaN     0.00    NaN%    NaN%    NaN%    NaN%  fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+                       whole window 0 trades, PF NaN gross / NaN net; direction null p95 NaN gross / NaN net
+                       matched null p50 0.858 / p95 0.986 gross, p50 0.916 / p95 1.048 net over 200 runs
+volman-box                 62    0.573    0.625   256.86   4.24%      0%      0%    NaN%  fail: profit factor 0.625 < 1.2; expectancy -0.207R < 0.05R
+                       whole window 0 trades, PF NaN gross / NaN net; direction null p95 NaN gross / NaN net
+                       matched null p50 0.858 / p95 0.986 gross, p50 0.916 / p95 1.048 net over 200 runs
+tsmom                       0      NaN      NaN     0.00    NaN%    NaN%    NaN%    100%  fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+                       whole window 2 trades, PF 1.576 gross / 1.585 net; direction null p95 1.576 gross / 1.585 net (own sides permuted)
+                       matched null p50 0.858 / p95 0.986 gross, p50 0.916 / p95 1.048 net over 200 runs
+intraday-momentum         559    0.840    0.987   264.59   0.48%     74%    100%     87%  fail: profit factor 0.987 < 1.2; expectancy -0.000R < 0.05R
+                       whole window 694 trades, PF 0.760 gross / 0.902 net; direction null p95 0.791 gross / 0.939 net (own sides permuted)
+                       matched null p50 0.827 / p95 0.866 gross, p50 0.902 / p95 0.944 net over 200 runs
+atr/hivol-london          476    0.925    0.952   454.25   0.98%     59%     56%     46%  fail: profit factor 0.952 < 1.2; expectancy -0.013R < 0.05R
+                       whole window 596 trades, PF 0.945 gross / 0.975 net; direction null p95 1.126 gross / 1.161 net
+                       matched null p50 0.895 / p95 1.193 gross, p50 0.940 / p95 1.260 net over 200 runs
+atr/hivol-orb60           500    1.025    1.069   642.52   1.27%     80%     79%     93%  fail: profit factor 1.069 < 1.2; expectancy 0.022R < 0.05R
+                       whole window 634 trades, PF 1.022 gross / 1.067 net; direction null p95 1.033 gross / 1.079 net
+                       matched null p50 0.885 / p95 1.302 gross, p50 0.933 / p95 1.365 net over 200 runs
+
+ran 22 of 22 constructs in the batch; 0 not run
+
+0 of 22 passed all three legs; noise at the 95th percentile yields about 1.1 of 22 by luck.
+Nothing crossed. The rebate lowers the bar and the bar was not the binding constraint.
+
