@@ -2,7 +2,7 @@
 
 **Registered:** (commit time is authoritative) — before any agent is briefed, before
 any method is designed, and before any sealed-window number exists
-**Status:** open
+**Status:** decided -> docs/decisions/2026-09-24-designed-methods.md (0 of the 8 available hypotheses were proposed: four agents, four angles, each measured its own mechanism on 3-15 years and refused it. Three of the four found the effect they were sent for and all four fell short on the same quantity -- gross profit factor 1.01-1.22 against the 1.21-1.32 that net 1.20 needs. Explanation 1 is answered: the old mechanisms were not the problem. THE SEAL WAS NEVER SPENT -- no method reached the withheld year, so XAUUSD 15m 2025-09-23 -> 2026-09-17 remains a genuinely untouched hold-out. Eight defects published, the worst being that neither null controls for the instrument's own drift, so a long-biased gold method clears both on its side ratio alone)
 
 ## Where this came from
 

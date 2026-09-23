@@ -1,0 +1,112 @@
+# designed-3 (angle 3, lower frequency) — frozen parameters
+#
+# ############################################################################
+# #  THIS IS NOT A SUBMISSION. designed-3 proposes ZERO methods.             #
+# ############################################################################
+#
+# The file exists because the brief asks for exact frozen values and because
+# the design-window numbers in
+# `docs/research/designs/2026-09-23-designed-3-quiet-swing.md` cannot be
+# reproduced without them. Running it on the withheld year spends one of the
+# program's eight multiplicity slots, and the designer declined to spend it.
+#
+# WHY IT IS REFUSED, first reason. The design-window result is TWO EPISODES. On
+# the broker's own bars, 2025 is 26% of the trades and carries +6.55 R of a
+# +5.90 R total -- more than all of it -- while 2022-2024 is -0.65 R over 101
+# trades. The withheld year begins 2025-09-23, the day after those nine months
+# end. On fifteen years of Dukascopy gold, 2010-2012 is 14% of the trades and
+# carries 48% of the R; with the 2025 stub, 19% of the trades carry 72% of it,
+# and the twelve full years between them yield +0.0128 R a trade with six of
+# twelve under a 1.0 profit factor. On silver, 2010-2012 carries 386% of the
+# total. See section 5a of the design note.
+#
+# SECOND REASON. The method fails a falsifier leg on its
+# own design window, on both gold windows, and on different legs each time: on
+# the broker's own 3.27 years it clears profit factor 1.2 (1.218) and sits at
+# the 82nd percentile of a count-matched drift null and the 84th of the
+# direction null; on 15.3 years of Dukascopy gold it clears the drift null
+# (96th) and fails profit factor (1.131) and the direction null (92nd). The
+# same frozen parameters on Dukascopy silver — same vendor, same fifteen years,
+# the nearest possible second instrument — produce profit factor 1.012 and
+# expectancy +0.0062 R over 783 trades. Submitting it would mean predicting
+# that a percentile of 82 or 92 rises past 95 on a smaller sample.
+#
+# If a lead runs it anyway, everything needed is below and nothing must be
+# re-fitted. Expected trade count on the withheld year: ABOUT 32 (28-36),
+# because 71 completed sessions are consumed before the first decision. That is
+# on the 30-trade floor and can land under it.
+
+[method]
+id = "quiet-swing"                  # crates/fd-strategy/src/quiet_swing.rs
+name = "Quiet-tape multi-day continuation"
+exits = "Strategy"                  # self-managed: escapes [trading] max_hold_ms = 4 h
+proposed = false                    # ZERO methods proposed by designed-3
+refused_because = "design-window result is two episodes (2025 carries >100% on the broker's bars; 19% of trades carry 72% of R over fifteen years); fails a falsifier leg on both gold design windows; does not transfer to silver"
+
+[params]
+# Exact values. No grid, no ranges. The strategy declares an EMPTY grid, so
+# these can only arrive pinned and no sweep can put anything back.
+lookbackSessions = 10               # sessions; the momentum lookback AND the range window
+windowSessions   = 60               # sessions; the trailing distribution the range sum is placed in
+quietPct         = 0.50             # enter only below this share of the trailing window
+holdSessions     = 5                # sessions; exit on the decision bar of the 5th session after entry
+riskDailyRanges  = 1.5              # sizing stop = this x the mean NY-day range of the last rangeDays
+rangeDays        = 20               # New York calendar days in that mean
+atrPeriod        = 14               # declared so sizing_atr_key resolves; never sets risk here
+
+[run]
+# The falsifier's window and settings, unchanged.
+market   = "xauusd"                 # Vantage XAUUSD.sc, contract 1.0 oz, spread 0.28
+interval = "15m"
+from     = "2025-09-23"
+to       = "2026-09-18"             # `to` is exclusive; the withheld year ends 2026-09-17
+guards   = true                     # Guards::for_market: weekend flat 1640 NY, news 60/30 USD impact>=3,
+                                    # max_open_loss_r 2.0, notional 300%, daily cap 20, cooldown 30 min
+spread   = 0.28                     # as configured; no threshold moved
+seeds    = 200
+gate     = "30 trades / PF 1.2 / 0.05 R"   # unchanged; the falsifier needs expectancy > 0, not >= 0.05
+
+[binary]
+# Run from THIS worktree's target/release. The target directory is not shared
+# and a stale binary in the primary tree does not know this strategy exists.
+command = "./target/release/designed_3.exe --market=xauusd --interval=15m --data=<root> --from=2025-09-23 --to=2026-09-18 --seeds=200"
+
+[known_limitations]
+# Read before reading any percentile this produces.
+drift_null_count_match = """
+run_hypothesis_fixed_guarded computes the control's entry rate only on the
+non-drift branch, so the RandomHold drift null keeps entryRate = 1.0 and
+re-enters on every flat bar. Against this method it takes 3.1-3.7x the trades,
+count_matched() reports out of band, and the printed percentile is inflated to
+100 by arithmetic. On the design window, calibrating the entry rate to a count
+match of 1.03 moved the percentile from 100 to 82. The registered leg is
+therefore UNMEASURED for this method; designed_3.rs prints both figures.
+"""
+drift_exposure = """
+Neither null controls for gold's unconditional drift, which is +0.3946 of a
+20-session ATR per five sessions over 2022-06 -> 2025-09 (t = +6.74). This
+method is two-sided (57-61% long) and its side split and per-leg P&L are
+printed with every result, but a long-biased multi-day method would clear both
+nulls on its side ratio alone.
+"""
+
+[era_concentration]
+# Measured per calendar year at exactly the parameters above, guards on. The
+# horizons this method counts are SESSIONS and wall-clock milliseconds, never
+# bars, so the 2013 Dukascopy bar-rule change (longest consecutive run falls
+# from 476 bars to exactly 92 when the one-hour daily break is introduced) does
+# not reach it: trade counts are 42-62 a year on both sides of the break. The
+# P&L concentration below is a separate and larger problem.
+xauusd_by_year  = { y2022_6mo = { trades = 11, total_r = -2.82, pf = 0.238 }, y2023 = { trades = 46, total_r = 0.81, pf = 1.066 }, y2024 = { trades = 44, total_r = 1.36, pf = 1.148 }, y2025_9mo = { trades = 35, total_r = 6.55, pf = 2.196 } }
+xauduka_pre2013 = { trades = 111, share_of_trades_pct = 14, share_of_total_r_pct = 48 }
+xauduka_2013_2024 = { trades = 627, total_r = 8.05, r_per_trade = 0.0128, years_under_pf_1 = 6 }
+xagduka_pre2013 = { trades = 111, total_r = 18.64, share_of_total_r_pct = 386 }
+
+[design_window]
+# Measured, guards on, at exactly the parameters above. Published beside any
+# withheld-year number so the gap is visible rather than inferable.
+xauusd_2022_06_to_2025_09 = { trades = 136, per_year = 41.6, expectancy_r = 0.0434, profit_factor = 1.218, return_pct = 5.75, mean_hold_days = 2.64, drift_null_pct_calibrated = 82, direction_null_pct = 84, stop_median_usd_per_oz = 41.57, spread_share_of_r_pct = 0.67 }
+xauduka_2010_06_to_2025_09 = { trades = 773, per_year = 50.5, expectancy_r = 0.0375, profit_factor = 1.131, return_pct = 30.89, mean_hold_days = 2.64, drift_null_pct_calibrated = 96, direction_null_pct = 92, stop_median_usd_per_oz = 27.98, spread_share_of_r_pct = 1.00 }
+xagduka_2010_06_to_2025_09 = { trades = 783, per_year = 51.1, expectancy_r = 0.0062, profit_factor = 1.012, return_pct = 2.80, mean_hold_days = 2.58, drift_null_pct_calibrated = 96, direction_null_pct = 86, stop_median_usd_per_oz = 0.78, spread_share_of_r_pct = 2.70 }
+data_root = "E:/rust/flowdesk/data-sealed"
+variants_tried = 70                 # 47 structure screens + 23 distinct trading configurations

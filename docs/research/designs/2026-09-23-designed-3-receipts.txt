@@ -1,0 +1,211 @@
+# designed-3 receipts — every run's data root is the SEALED store (ends 2025-09-22 23:45 UTC)
+# Reproduce: docs/research/designs/2026-09-23-designed-3-quiet-swing.md
+
+############ XAUUSD (Vantage) 2022-06-16 -> 2025-09-23 ############
+== designed-3: quiet-tape multi-day continuation, frozen parameters ==
+DATA ROOT:  E:/rust/flowdesk/data-sealed
+bars file:  E:/rust/flowdesk/data-sealed\bars\XAUUSD-15m.parquet
+market:     xauusd 15m, spread 0.28 per round trip, contract 1
+equity:     100 USC starting
+store span: 77278 bars, 2022-06-16 10:30 -> 2025-09-22 23:45
+window:     77278 bars, 2022-06-16 10:30 -> 2025-09-22 23:45 (asked 2022-06-16 -> 2025-09-23, `to` exclusive)
+news:       news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data-sealed\news\events.parquet
+frozen:     lookbackSessions=10 windowSessions=60 quietPct=0.5 holdSessions=5 riskDailyRanges=1.5 rangeDays=20 atrPeriod=14
+exits:      Strategy (the engine's 4-hour max_hold_ms does not apply)
+gate:       30 trades / PF 1.2 / 0.05 R, both nulls at the 95th
+
+guards on:  max_open_loss_r 2.0, notional 300%, weekend flat 16:40 NY, news flat 60/30 (impact≥3, USD), daily cap 20, loss limit $300, cooldown 30 min
+
+-- guards on, as configured --
+   trades 136  expectancy +0.0434 R  profit factor 1.218  return +5.75 %  win rate 43.4 %
+   mean hold 2.64 days  max drawdown 5.30 %  total R +5.90
+   drift null (RandomHold, 200 seeds): 95th percentile PF 1.123, method at the 100th; null median 504 trades vs the method's 136 (count match 3.71, OUTSIDE the band: this percentile is unmatched)
+   hold distribution the null is built from: geometric-mean 3230.7 min (2.24 days), sd of ln 0.59;              shortest 795 min, longest 5.0 days
+   guards: refused none; closed NEWS_FLAT 40, WEEKEND_FLAT 55; sized down 0
+   gate: trades>=30 pass | PF>=1.2 pass | expectancy>=0.05 FAIL | 95th percentile pass
+
+-- guards on, WEEKEND FLAT OFF (everything else identical) --
+   trades 130  expectancy +0.0148 R  profit factor 1.075  return +1.90 %  win rate 45.4 %
+   mean hold 3.30 days  max drawdown 6.13 %  total R +1.92
+   drift null (RandomHold, 200 seeds): 95th percentile PF 1.233, method at the 78th; null median 416 trades vs the method's 130 (count match 3.20, OUTSIDE the band: this percentile is unmatched)
+   hold distribution the null is built from: geometric-mean 3802.5 min (2.64 days), sd of ln 0.72;              shortest 795 min, longest 7.0 days
+   guards: refused none; closed NEWS_FLAT 42; sized down 0
+   gate: trades>=30 pass | PF>=1.2 FAIL | expectancy>=0.05 FAIL | 95th percentile FAIL
+
+-- guards off (the record's pre-2026-09-14 convention) --
+   trades 110  expectancy +0.0669 R  profit factor 1.248  return +6.22 %  win rate 40.0 %
+   mean hold 4.45 days  max drawdown 5.07 %  total R +7.36
+   drift null (RandomHold, 200 seeds): 95th percentile PF 1.284, method at the 92th; null median 248 trades vs the method's 110 (count match 2.25, OUTSIDE the band: this percentile is unmatched)
+   hold distribution the null is built from: geometric-mean 5574.4 min (3.87 days), sd of ln 0.61;              shortest 1440 min, longest 7.0 days
+   guards: nothing acted
+   gate: trades>=30 pass | PF>=1.2 pass | expectancy>=0.05 pass | 95th percentile FAIL
+
+-- direction null (same trades, side by coin flip, 200 finite seeds) --
+   method PF 1.218; null 95th percentile 1.686; method at the 84th
+
+-- drift null, entry rate calibrated to the trade count (200 finite seeds) --
+   entryRate 0.00247; null median 140 trades vs the method's 136 (count match 1.03);              95th percentile PF 1.442; method PF 1.218 at the 82th
+
+-- trades per calendar year, and each year's own numbers --
+   year    trades    total R   expect R        PF   long %
+   2022        11      -2.82    -0.2562     0.238      73 %
+   2023        46      +0.81    +0.0175     1.066      54 %
+   2024        44      +1.36    +0.0309     1.148      61 %
+   2025        35      +6.55    +0.1873     2.196      66 %
+
+-- the stop distance, which is the whole cost argument --
+   sizing stop |entry - stop|: p10 28.85  median 41.57  p90 64.54 USD per ounce
+   spread 0.28 as a share of R: p10 0.43 %  median 0.67 %  p90 0.97 %              (an intraday 2.00 USD stop pays 14.0 %)
+
+-- side split, because neither null controls for the instrument's own drift --
+   83 long / 53 short of 136 trades (61 % long); long P&L +12.81 USD, short P&L -7.06 USD
+   A method whose short leg also pays is not harvesting the drift. One whose short leg
+   only loses has been measured against two nulls that have no drift exposure at all.
+
+############ XAUDUKA (Dukascopy gold) 2010-06-01 -> 2025-09-23 ############
+== designed-3: quiet-tape multi-day continuation, frozen parameters ==
+DATA ROOT:  E:/rust/flowdesk/data-sealed
+bars file:  E:/rust/flowdesk/data-sealed\bars\XAUDUKA-15m.parquet
+market:     xauduka 15m, spread 0.28 per round trip, contract 1
+equity:     10000 USD starting
+store span: 362803 bars, 2010-06-01 00:00 -> 2025-09-22 23:45
+window:     362803 bars, 2010-06-01 00:00 -> 2025-09-22 23:45 (asked 2010-06-01 -> 2025-09-23, `to` exclusive)
+news:       news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data-sealed\news\events.parquet
+frozen:     lookbackSessions=10 windowSessions=60 quietPct=0.5 holdSessions=5 riskDailyRanges=1.5 rangeDays=20 atrPeriod=14
+exits:      Strategy (the engine's 4-hour max_hold_ms does not apply)
+gate:       30 trades / PF 1.2 / 0.05 R, both nulls at the 95th
+
+guards on:  max_open_loss_r 2.0, notional 300%, weekend flat 16:40 NY, news flat 60/30 (impact≥3, USD), daily cap 20, loss limit $300, cooldown 30 min
+
+-- guards on, as configured --
+   trades 773  expectancy +0.0375 R  profit factor 1.131  return +30.89 %  win rate 47.0 %
+   mean hold 2.64 days  max drawdown 14.95 %  total R +29.00
+   drift null (RandomHold, 200 seeds): 95th percentile PF 1.018, method at the 100th; null median 2420 trades vs the method's 773 (count match 3.13, OUTSIDE the band: this percentile is unmatched)
+   hold distribution the null is built from: geometric-mean 3156.4 min (2.19 days), sd of ln 0.64;              shortest 795 min, longest 7.0 days
+   guards: refused none; closed NEWS_FLAT 257, OPEN_LOSS_CAP 3, WEEKEND_FLAT 299; sized down 0
+   gate: trades>=30 pass | PF>=1.2 FAIL | expectancy>=0.05 FAIL | 95th percentile pass
+
+-- guards on, WEEKEND FLAT OFF (everything else identical) --
+   trades 717  expectancy +0.0426 R  profit factor 1.158  return +33.19 %  win rate 47.4 %
+   mean hold 3.43 days  max drawdown 11.12 %  total R +30.52
+   drift null (RandomHold, 200 seeds): 95th percentile PF 1.045, method at the 100th; null median 1913 trades vs the method's 717 (count match 2.67, OUTSIDE the band: this percentile is unmatched)
+   hold distribution the null is built from: geometric-mean 3924.0 min (2.72 days), sd of ln 0.75;              shortest 795 min, longest 7.0 days
+   guards: refused none; closed NEWS_FLAT 251, OPEN_LOSS_CAP 2; sized down 0
+   gate: trades>=30 pass | PF>=1.2 FAIL | expectancy>=0.05 FAIL | 95th percentile pass
+
+-- guards off (the record's pre-2026-09-14 convention) --
+   trades 606  expectancy +0.0468 R  profit factor 1.140  return +29.99 %  win rate 45.2 %
+   mean hold 4.50 days  max drawdown 11.51 %  total R +28.36
+   drift null (RandomHold, 200 seeds): 95th percentile PF 1.071, method at the 99th; null median 1152 trades vs the method's 606 (count match 1.90, OUTSIDE the band: this percentile is unmatched)
+   hold distribution the null is built from: geometric-mean 5659.0 min (3.93 days), sd of ln 0.60;              shortest 1440 min, longest 7.0 days
+   guards: nothing acted
+   gate: trades>=30 pass | PF>=1.2 FAIL | expectancy>=0.05 FAIL | 95th percentile pass
+
+-- direction null (same trades, side by coin flip, 200 finite seeds) --
+   method PF 1.131; null 95th percentile 1.140; method at the 92th
+
+-- drift null, entry rate calibrated to the trade count (200 finite seeds) --
+   entryRate 0.00321; null median 793 trades vs the method's 773 (count match 1.03);              95th percentile PF 1.115; method PF 1.131 at the 96th
+
+-- trades per calendar year, and each year's own numbers --
+   year    trades    total R   expect R        PF   long %
+   2010        13      +1.86    +0.1433     1.556      77 %
+   2011        42      +4.71    +0.1122     1.441      69 %
+   2012        56      +7.35    +0.1312     1.627      59 %
+   2013        47      -2.41    -0.0513     0.813      45 %
+   2014        52      +2.64    +0.0507     1.203      60 %
+   2015        62      +5.03    +0.0811     1.357      39 %
+   2016        50      -1.08    -0.0216     0.916      50 %
+   2017        61      +6.07    +0.0994     1.382      64 %
+   2018        53      +3.46    +0.0652     1.278      43 %
+   2019        47      -1.78    -0.0380     0.860      62 %
+   2020        58      -1.57    -0.0270     0.900      66 %
+   2021        55      -3.17    -0.0577     0.776      62 %
+   2022        49      -2.52    -0.0514     0.825      53 %
+   2023        48      +1.42    +0.0296     1.106      56 %
+   2024        45      +1.98    +0.0440     1.166      60 %
+   2025        35      +7.03    +0.2009     2.102      66 %
+   2010-2012 (the 24-hour contiguous era): 111 of 773 trades (14 %) carrying +13.92 R of +29.00 R (48 %)
+
+-- the stop distance, which is the whole cost argument --
+   sizing stop |entry - stop|: p10 17.49  median 27.98  p90 47.39 USD per ounce
+   spread 0.28 as a share of R: p10 0.59 %  median 1.00 %  p90 1.60 %              (an intraday 2.00 USD stop pays 14.0 %)
+
+-- side split, because neither null controls for the instrument's own drift --
+   439 long / 334 short of 773 trades (57 % long); long P&L +2730.39 USD, short P&L +358.41 USD
+   A method whose short leg also pays is not harvesting the drift. One whose short leg
+   only loses has been measured against two nulls that have no drift exposure at all.
+
+############ XAGDUKA (Dukascopy silver) 2010-06-01 -> 2025-09-23 ############
+== designed-3: quiet-tape multi-day continuation, frozen parameters ==
+DATA ROOT:  E:/rust/flowdesk/data-sealed
+bars file:  E:/rust/flowdesk/data-sealed\bars\XAGDUKA-15m.parquet
+market:     xagduka 15m, spread 0.021 per round trip, contract 50
+equity:     10000 USD starting
+store span: 358065 bars, 2010-06-01 00:00 -> 2025-09-22 23:45
+window:     358065 bars, 2010-06-01 00:00 -> 2025-09-22 23:45 (asked 2010-06-01 -> 2025-09-23, `to` exclusive)
+news:       news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data-sealed\news\events.parquet
+frozen:     lookbackSessions=10 windowSessions=60 quietPct=0.5 holdSessions=5 riskDailyRanges=1.5 rangeDays=20 atrPeriod=14
+exits:      Strategy (the engine's 4-hour max_hold_ms does not apply)
+gate:       30 trades / PF 1.2 / 0.05 R, both nulls at the 95th
+
+guards on:  max_open_loss_r 2.0, notional 300%, weekend flat 16:40 NY, news flat 60/30 (impact≥3, USD), daily cap 20, loss limit $300, cooldown 30 min
+
+-- guards on, as configured --
+   trades 783  expectancy +0.0062 R  profit factor 1.012  return +2.80 %  win rate 45.7 %
+   mean hold 2.58 days  max drawdown 20.89 %  total R +4.83
+   drift null (RandomHold, 200 seeds): 95th percentile PF 0.935, method at the 100th; null median 2458 trades vs the method's 783 (count match 3.14, OUTSIDE the band: this percentile is unmatched)
+   hold distribution the null is built from: geometric-mean 3052.7 min (2.12 days), sd of ln 0.65;              shortest 795 min, longest 7.0 days
+   guards: refused none; closed NEWS_FLAT 244, OPEN_LOSS_CAP 8, WEEKEND_FLAT 307; sized down 0
+   gate: trades>=30 pass | PF>=1.2 FAIL | expectancy>=0.05 FAIL | 95th percentile pass
+
+-- guards on, WEEKEND FLAT OFF (everything else identical) --
+   trades 696  expectancy +0.0092 R  profit factor 1.024  return +4.81 %  win rate 45.8 %
+   mean hold 3.48 days  max drawdown 17.80 %  total R +6.42
+   drift null (RandomHold, 200 seeds): 95th percentile PF 0.971, method at the 98th; null median 1884 trades vs the method's 696 (count match 2.71, OUTSIDE the band: this percentile is unmatched)
+   hold distribution the null is built from: geometric-mean 3998.2 min (2.78 days), sd of ln 0.75;              shortest 795 min, longest 8.0 days
+   guards: refused none; closed NEWS_FLAT 224, OPEN_LOSS_CAP 5; sized down 0
+   gate: trades>=30 pass | PF>=1.2 FAIL | expectancy>=0.05 FAIL | 95th percentile pass
+
+-- guards off (the record's pre-2026-09-14 convention) --
+   trades 591  expectancy -0.0103 R  profit factor 0.962  return -7.57 %  win rate 44.8 %
+   mean hold 4.42 days  max drawdown 27.75 %  total R -6.11
+   drift null (RandomHold, 200 seeds): 95th percentile PF 1.013, method at the 82th; null median 1171 trades vs the method's 591 (count match 1.98, OUTSIDE the band: this percentile is unmatched)
+   hold distribution the null is built from: geometric-mean 5525.6 min (3.84 days), sd of ln 0.61;              shortest 1320 min, longest 7.0 days
+   guards: nothing acted
+   gate: trades>=30 pass | PF>=1.2 FAIL | expectancy>=0.05 FAIL | 95th percentile FAIL
+
+-- direction null (same trades, side by coin flip, 200 finite seeds) --
+   method PF 1.012; null 95th percentile 1.054; method at the 86th
+
+-- drift null, entry rate calibrated to the trade count (200 finite seeds) --
+   entryRate 0.00331; null median 806 trades vs the method's 783 (count match 1.03);              95th percentile PF 1.011; method PF 1.012 at the 96th
+
+-- trades per calendar year, and each year's own numbers --
+   year    trades    total R   expect R        PF   long %
+   2010        10      +2.37    +0.2366     3.545     100 %
+   2011        44      +7.87    +0.1789     1.770      52 %
+   2012        57      +8.41    +0.1475     1.773      49 %
+   2013        59      -0.82    -0.0139     0.942      42 %
+   2014        57      +2.86    +0.0502     1.220      39 %
+   2015        60      -1.63    -0.0272     0.876      37 %
+   2016        39      -1.32    -0.0337     0.878      59 %
+   2017        56      +6.06    +0.1082     1.473      62 %
+   2018        59      -1.77    -0.0299     0.870      47 %
+   2019        51      -7.10    -0.1392     0.510      39 %
+   2020        52      +5.49    +0.1056     1.418      63 %
+   2021        56      -1.16    -0.0208     0.901      54 %
+   2022        44      -1.63    -0.0370     0.871      50 %
+   2023        55      -4.05    -0.0736     0.754      53 %
+   2024        46     -10.43    -0.2268     0.396      43 %
+   2025        38      +1.68    +0.0443     1.168      79 %
+   2010-2012 (the 24-hour contiguous era): 111 of 783 trades (14 %) carrying +18.64 R of +4.83 R (386 %)
+
+-- the stop distance, which is the whole cost argument --
+   sizing stop |entry - stop|: p10 0.39  median 0.78  p90 1.35 USD per ounce
+   spread 0.02 as a share of R: p10 1.56 %  median 2.70 %  p90 5.45 %              (an intraday 2.00 USD stop pays 1.1 %)
+
+-- side split, because neither null controls for the instrument's own drift --
+   400 long / 383 short of 783 trades (51 % long); long P&L -626.49 USD, short P&L +906.29 USD
+   A method whose short leg also pays is not harvesting the drift. One whose short leg
+   only loses has been measured against two nulls that have no drift exposure at all.

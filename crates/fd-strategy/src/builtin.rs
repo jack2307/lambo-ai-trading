@@ -71,11 +71,21 @@ pub fn register_all(registry: &mut Registry) {
     registry.register(Box::new(crate::screen::SqueezeBreak));
     registry.register(Box::new(crate::screen::StochReversal));
     registry.register(Box::new(crate::volman_box::VolmanBox));
+    // The three instruments built by the 2026-09-23 designed-methods programme.
+    // NONE of them is a candidate: all three are registered at parameters that
+    // their own design window refuses, and the programme proposed no method at
+    // all. They are here so the next agent starts from working plumbing instead
+    // of rebuilding it — see docs/decisions/2026-09-24-designed-methods.md.
+    //
     // The cost-term instrument: one signal, two invalidation rules.
     registry.register(Box::new(crate::far_stop_break::FarStopBreak));
     // The only method here that reads TWO instruments. It takes no trades
     // unless a companion series is installed; see its module docs.
     registry.register(Box::new(crate::companion_unconfirmed::CompanionUnconfirmed));
+    // Multi-day. Its sizing parameters are named so `control_for` copies them
+    // onto the null, which is how a method should close the not-cost-matched
+    // hole rather than use it.
+    registry.register(Box::new(crate::quiet_swing::QuietTapeSwing));
 }
 
 /* ---------------- classic technical baselines ---------------- */
