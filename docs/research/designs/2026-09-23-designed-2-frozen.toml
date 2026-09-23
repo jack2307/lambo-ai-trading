@@ -1,0 +1,97 @@
+# Frozen parameters — agent 2 of 4, angle "conditional structure: when not to trade"
+#
+# Registration: docs/hypotheses/2026-09-23-designed-methods.md
+# Design note:  docs/research/designs/2026-09-23-designed-2-path-shape.md
+# Branch:       agent/designed-2
+# Data root used for every measurement: E:/rust/flowdesk/data-sealed
+#
+# METHODS PROPOSED: NONE. There is nothing here for the lead to run on the
+# withheld year, and that is the submission rather than an omission.
+#
+# `null` is not `0` is not `[]`. This file declares an EMPTY SLATE: no method
+# was proposed, so no parameters were frozen, so there is no sealed-window
+# number to publish for this agent and no multiplicity spent from the cap of
+# eight. It does not declare a method whose expectancy was zero, and it does not
+# declare a method that took no trades.
+
+[submission]
+agent = "designed-2"
+angle = "conditional structure — when not to trade"
+methods_proposed = 0
+methods = []                      # empty, deliberately: see the note above
+multiplicity_spent = 0            # of the registration's cap of eight
+data_root = "E:/rust/flowdesk/data-sealed"
+design_window_last_bar = "2025-09-22 23:45 UTC"   # XAUUSD-15m, as every receipt prints it
+
+# Candidate specifications considered and closed on the design window, in the
+# order reached. Counts and figures are in the design note against the receipt
+# that produced each one; this list exists so the private multiplicity behind
+# the zero is legible rather than implied.
+[multiplicity]
+candidate_specifications_considered = 7
+carried_to_a_full_cost_and_regime_test = 1
+cells_inspected_order_of_magnitude = 1000   # 5 hour groupings x 7 move-size bands
+                                            # x 5 thinness ceilings x 6 holding
+                                            # periods, plus 6 volatility bands,
+                                            # 3 eras, 16 years, 4 instruments
+variants_frozen = 0
+
+# Why the one carried candidate was not proposed. Both are measurements, not
+# judgements, and both are in the note with their receipts.
+[closed]
+# The candidate: revert a 0.5-2 ATR fifteen-minute move made in 19:00-23:00 UTC
+# when the trailing hour's travel was below the day's average hour, hold 8 bars,
+# fill at open[t+1] as the engine fills, forward window free of halt and weekend.
+reason_1 = """
+The effect inverts in the volatility regime the withheld year is in. Gross
++0.15 to +0.33 ATR in every trailing-ATR band up to 4.0 points and NEGATIVE
+above it, on Dukascopy gold (n = 248, -0.0988 ATR) and on the broker's own
+XAUUSD (n = 100, -0.2450 ATR) independently. The design window's last year
+measures a mean ATR96 of 4.657 points (Dukascopy) and 4.575 (broker), so the
+withheld year sits in the band where the sign is wrong. The cost advantage of
+high volatility and the effect are anti-correlated.
+"""
+reason_2 = """
+On the feed that decides, the whole design window gives n = 586 at a
+Newey-West t of 2.02, chosen after inspecting of the order of a thousand cells.
+The fifteen-year Dukascopy figure (t = 6.22) is a different vendor and is worth
++0.017 ATR net of the 0.28-point round trip, which is one eighth of a spread.
+"""
+reason_3 = """
+The condition could not be reduced to a state the bars can see. Holding book
+thinness fixed, the 17:00-20:00 UTC block reverts four to eight times as much as
+every other hour at every thinness band, so the hour carries the effect and the
+state does not replace it. That is the same fragility the clock findings closed
+in docs/decisions/2026-09-14-night-synthesis.md had, and it is the one designed
+defence this candidate turned out not to have.
+"""
+
+# Two findings the note publishes that are not about any method, recorded here
+# because they change how other measurements on this data should be read.
+[findings_for_the_record]
+wrong_null = """
+Path efficiency against the textbook 1/sqrt(h) random-walk line overstates
+persistence. Volatility dispersion inside the window raises the ratio above
+1/sqrt(h) with no serial dependence at all (Cauchy-Schwarz). On fifteen years of
+Dukascopy gold at h = 16 bars the sign-flip control's median is 0.2731 against
+the walk line's 0.2500 -- the line understates the null by 9.2%, which is the
+entire size of the apparent persistence it would have produced.
+"""
+no_slice_is_directional = """
+Against a 200-seed sign-flip control, the fifteen-minute path over four hours is
+LESS directional than a copy of itself with the signs shuffled in all 24 hours of
+the day, in all six trailing-volatility bands, and on all four series held
+(Dukascopy gold / silver / EUR and Vantage XAUUSD), at the 0th or 1st percentile
+on the whole-window row of each. There is no slice of this market in which a
+breakout is pushing with the path rather than against it.
+"""
+halt_manufactures_reversion = """
+A forward window opened near the CFD's evening halt measures one bar, an hour
+with no quotes, and a fresh mark. Restricting to windows made only of
+consecutive fifteen-minute bars cuts hour 20:00 UTC's apparent reversion from
++0.1927 ATR (n = 3301) to +0.0844 (n = 1759), dropping 46.7% of that hour's
+bars. This is NOT a new defect: py/research/bias_measures.py:forward_map already
+refuses a wrong-gap forward window and calls a bar-counted horizon "fault 11 in
+this desk's own list". What is new is the size of it at that hour. The engine is
+not exposed (max_hold_ms is wall-clock ms) but a Strategy that counts bars is.
+"""
