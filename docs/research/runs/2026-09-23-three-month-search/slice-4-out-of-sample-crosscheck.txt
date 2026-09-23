@@ -1,0 +1,43 @@
+bounds:   --from=2025-09-23 --to=2026-06-22 kept 17485 of 100586 bars
+spread:   0.28 per round trip
+trail:    off
+bars:     17485 from 2025-09-23 00:00 to 2026-06-21 23:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from data/news/events.parquet
+news scope: USD (news_currencies)
+guards: on — max_open_loss_r 2.0, notional 300%, weekend flat 16:40 NY, news flat 60/30 (impact≥3, USD), daily cap 20, loss limit $300, cooldown 30 min
+
+== hypotheses `docs/research/runs/2026-09-23-three-month-search/slice-4-carried-cells.toml`: 5 declared, FIXED parameters over the whole window (no selection), each against 200 matched null runs ==
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+news: 747 events (2010-01-08 → 2027-12-08) from data/news/events.parquet
+news scope: USD (news_currencies)
+guards: on — max_open_loss_r 2.0, notional 300%, weekend flat 16:40 NY, news flat 60/30 (impact≥3, USD), daily cap 20, loss limit $300, cooldown 30 min
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+cell-1-session-hold session-hold          191   0.888  -0.132    0.966    1.104        0   12%  fail: profit factor 0.888 < 1.2; expectancy -0.132R < 0.05R
+                                  — rank 1 of 26 cells on 2026-06-23 to 2026-09-17: the highest walk-forward return in slice 4, +1.63%
+                                matched null 1289 trades median vs the method's 191 — count match 6.75  ** outside the band: this percentile is unmatched **
+                                guards: refused none; closed NEWS_FLAT 5, OPEN_LOSS_CAP 93; sized down 123
+cell-2-intraday-mom intraday-momentum     179   0.956  -0.002    0.954    1.058        0   52%  fail: profit factor 0.956 < 1.2; expectancy -0.002R < 0.05R
+                                  — rank 2 of 26 cells on the three months, walk-forward return +0.11%
+                                matched null 2722 trades median vs the method's 179 — count match 15.20  ** outside the band: this percentile is unmatched **
+                                guards: refused none; closed WEEKEND_FLAT 35; sized down 0
+cell-3-tp-f10-rr2 trend-pullback        910   0.868  -0.208    0.974    1.121        0   12%  fail: profit factor 0.868 < 1.2; expectancy -0.208R < 0.05R
+                                  — rank 3 of 26 cells on the three months, walk-forward return -4.16% — carried because the registration publishes the top five whatever they are
+                                matched null 678 trades median vs the method's 910 — count match 0.74  ** outside the band: this percentile is unmatched **
+                                guards: refused NEWS_FLAT 7, WEEKEND_FLAT 3; closed WEEKEND_FLAT 3; sized down 867
+cell-4-tp-f34-rr1 trend-pullback        516   0.580  -0.405    0.976    1.169        0    0%  fail: profit factor 0.580 < 1.2; expectancy -0.405R < 0.05R
+                                  — rank 4 of 26 cells on the three months, walk-forward return -4.97%
+                                matched null 444 trades median vs the method's 516 — count match 0.86
+                                guards: refused NEWS_FLAT 10, WEEKEND_FLAT 2; closed none; sized down 502
+cell-5-tp-f10-rr15 trend-pullback        925   0.794  -0.267    0.974    1.112        0    1%  fail: profit factor 0.794 < 1.2; expectancy -0.267R < 0.05R
+                                  — rank 5 of 26 cells on the three months, walk-forward return -5.22%
+                                matched null 685 trades median vs the method's 925 — count match 0.74  ** outside the band: this percentile is unmatched **
+                                guards: refused NEWS_FLAT 7, WEEKEND_FLAT 3; closed WEEKEND_FLAT 3; sized down 884
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+
