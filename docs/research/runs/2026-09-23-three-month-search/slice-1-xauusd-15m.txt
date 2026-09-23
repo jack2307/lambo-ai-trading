@@ -1,0 +1,100 @@
+== 2026-09-23 three-month search, slice 1 ==
+market:   xauusd:15m (XAUUSD)
+bars:     100586 on file, 2022-06-16 10:30 to 2026-09-17 13:00
+spread:   0.28 per round trip (configured, not overridden)
+trail:    off
+folds:    4 (config walk_forward_folds), select_by expectancy
+gate:     min_trades 30 / min_profit_factor 1.2 / min_expectancy_r 0.05
+news: 747 events (2010-01-08 → 2027-12-08) from data/news/events.parquet
+guards:   on — max_open_loss_r 2.0, notional 300%, weekend flat 16:40 NY, news flat 60/30 (impact≥3, USD), daily cap 20, loss limit $300, cooldown 30 min
+
+in sample:  5731 bars, 2026-06-23 00:00 to 2026-09-17 13:00 (asked (2026, 6, 23)..=(2026, 9, 23))
+out of s.:  17577 bars, 2025-09-23 00:00 to 2026-06-22 23:45 (asked (2025, 9, 23)..=(2026, 6, 22))
+
+-- in sample: every cell of every grid, walk-forward (4 folds), parameters pinned per cell --
+base                 cell                           return%   total R  trades      PF   expect
+ema-cross            fast=9 slow=55                    4.64    10.558      97   1.125   0.1088
+ema-cross            fast=9 slow=89                   -0.13     0.422      74   0.996   0.0057
+ema-cross            fast=9 slow=144                  -9.03    -8.945      65   0.683  -0.1376
+ema-cross            fast=21 slow=55                   3.49     6.757      65   1.137   0.1040
+ema-cross            fast=21 slow=89                  -2.12    -1.411      48   0.898  -0.0294
+ema-cross            fast=21 slow=144                 -7.98    -9.030      44   0.609  -0.2052
+ema-cross            fast=34 slow=55                 -10.16   -13.400      56   0.631  -0.2393
+ema-cross            fast=34 slow=89                  -2.20    -3.191      43   0.878  -0.0742
+ema-cross            fast=34 slow=144                  0.22     0.512      32   1.019   0.0160
+rsi-reversion        oversold=20 period=7             -5.83    -7.404     204   0.909  -0.0363
+rsi-reversion        oversold=20 period=14            -8.48   -10.062      59   0.702  -0.1705
+rsi-reversion        oversold=20 period=21           -11.00   -13.060      33   0.406  -0.3957
+rsi-reversion        oversold=25 period=7             -7.89   -11.628     255   0.900  -0.0456
+rsi-reversion        oversold=25 period=14           -11.87   -15.027      82   0.693  -0.1833
+rsi-reversion        oversold=25 period=21           -11.07   -13.110      37   0.433  -0.3543
+rsi-reversion        oversold=30 period=7              0.30     1.888     313   1.003   0.0060
+rsi-reversion        oversold=30 period=14            -9.76   -11.037     108   0.796  -0.1022
+rsi-reversion        oversold=30 period=21           -16.63   -21.057      58   0.439  -0.3631
+donchian-breakout    period=10 stopAtr=1.5            -1.15    -2.547     385   0.992  -0.0066
+donchian-breakout    period=10 stopAtr=2               1.36     1.480     352   1.012   0.0042
+donchian-breakout    period=10 stopAtr=3               0.91     0.610     327   1.013   0.0019
+donchian-breakout    period=20 stopAtr=1.5            12.90    17.722     258   1.121   0.0687
+donchian-breakout    period=20 stopAtr=2              12.10    14.764     227   1.144   0.0650
+donchian-breakout    period=20 stopAtr=3               7.18     7.543     212   1.132   0.0356
+donchian-breakout    period=40 stopAtr=1.5             2.52     2.320     170   1.032   0.0136
+donchian-breakout    period=40 stopAtr=2               1.11     0.859     145   1.017   0.0059
+donchian-breakout    period=40 stopAtr=3              -1.74    -2.602     136   0.962  -0.0191
+bb-fade              mult=1.5 period=14              -20.24   -29.767     556   0.891  -0.0535
+bb-fade              mult=1.5 period=20              -23.07   -32.574     484   0.871  -0.0673
+bb-fade              mult=1.5 period=30              -16.80   -23.736     382   0.891  -0.0621
+bb-fade              mult=2 period=14                -14.26   -16.842     321   0.877  -0.0525
+bb-fade              mult=2 period=20                -13.51   -18.974     312   0.887  -0.0608
+bb-fade              mult=2 period=30                 -3.96    -5.870     257   0.963  -0.0228
+bb-fade              mult=2.5 period=14               -5.40    -5.903     114   0.878  -0.0518
+bb-fade              mult=2.5 period=20               -2.14    -3.230     142   0.964  -0.0227
+bb-fade              mult=2.5 period=30               -3.46    -6.260     127   0.939  -0.0493
+keltner-break        mult=1.5 riskReward=1             4.15     4.465     228   1.051   0.0196
+keltner-break        mult=1.5 riskReward=1.5           8.92     6.400     205   1.109   0.0312
+keltner-break        mult=1.5 riskReward=2            10.77     7.895     192   1.136   0.0411
+keltner-break        mult=2 riskReward=1               1.58     0.809     140   1.034   0.0058
+keltner-break        mult=2 riskReward=1.5             0.66    -0.229     127   1.015  -0.0018
+keltner-break        mult=2 riskReward=2               3.15     3.482     122   1.069   0.0285
+keltner-break        mult=2.5 riskReward=1             5.79     5.417      74   1.323   0.0732
+keltner-break        mult=2.5 riskReward=1.5           7.22     6.935      69   1.413   0.1005
+keltner-break        mult=2.5 riskReward=2             8.26     8.125      67   1.479   0.1213
+
+cells swept: 45 across 5 mechanisms; 45 produced a walk-forward number
+
+-- the top 5 by in-sample return over the three months --
+1. donchian-breakout    period=20 stopAtr=1.5        return 12.90%  total 17.722 R over 258 trades, PF 1.121, expectancy 0.0687 R
+2. donchian-breakout    period=20 stopAtr=2          return 12.10%  total 14.764 R over 227 trades, PF 1.144, expectancy 0.0650 R
+3. keltner-break        mult=1.5 riskReward=2        return 10.77%  total 7.895 R over 192 trades, PF 1.136, expectancy 0.0411 R
+4. keltner-break        mult=1.5 riskReward=1.5      return 8.92%  total 6.400 R over 205 trades, PF 1.109, expectancy 0.0312 R
+5. keltner-break        mult=2.5 riskReward=2        return 8.26%  total 8.125 R over 67 trades, PF 1.479, expectancy 0.1213 R
+
+-- out of sample: the same 5 cells, same parameters, NO re-fit, on the nine months before the search --
+null: 200 count-matched control runs per cell, the 2026-09-23 repair in force
+
+base                 cell                          trades   return%      PF   expect null p50 null p95   pct
+donchian-breakout    period=20 stopAtr=1.5            952    -29.27   0.913  -0.0395    0.969    1.100   26%
+                                                  matched null 700 trades median vs the method's 952 — count match 0.73  ** outside the band: this percentile is unmatched **
+                                                  guards: refused COOLDOWN 22, NEWS_FLAT 30, WEEKEND_FLAT 13; closed NEWS_FLAT 3, WEEKEND_FLAT 10; sized down 459
+donchian-breakout    period=20 stopAtr=2              856    -23.95   0.917  -0.0248    0.971    1.114   27%
+                                                  matched null 651 trades median vs the method's 856 — count match 0.76
+                                                  guards: refused COOLDOWN 11, NEWS_FLAT 30, WEEKEND_FLAT 13; closed NEWS_FLAT 4, WEEKEND_FLAT 8; sized down 157
+keltner-break        mult=1.5 riskReward=2            699     18.90   1.056   0.0502    0.976    1.156   79%
+                                                  matched null 562 trades median vs the method's 699 — count match 0.80
+                                                  guards: refused NEWS_FLAT 17, WEEKEND_FLAT 5; closed NEWS_FLAT 6, WEEKEND_FLAT 9; sized down 200
+keltner-break        mult=1.5 riskReward=1.5          731      8.13   1.025   0.0291    0.969    1.136   69%
+                                                  matched null 581 trades median vs the method's 731 — count match 0.79
+                                                  guards: refused NEWS_FLAT 17, WEEKEND_FLAT 5; closed NEWS_FLAT 7, WEEKEND_FLAT 9; sized down 207
+keltner-break        mult=2.5 riskReward=2            262      8.72   1.097   0.0443    0.964    1.205   78%
+                                                  matched null 254 trades median vs the method's 262 — count match 0.97
+                                                  guards: refused NEWS_FLAT 5, WEEKEND_FLAT 2; closed WEEKEND_FLAT 3; sized down 4
+
+-- the three legs, cell by cell --
+donchian-breakout period=20 stopAtr=1.5: expectancy FAIL (-0.0395 R), profit factor FAIL (0.913 vs 1.2), null FAIL (26th vs 95th) — refuted
+donchian-breakout period=20 stopAtr=2: expectancy FAIL (-0.0248 R), profit factor FAIL (0.917 vs 1.2), null FAIL (27th vs 95th) — refuted
+keltner-break mult=1.5 riskReward=2: expectancy PASS (0.0502 R), profit factor FAIL (1.056 vs 1.2), null FAIL (79th vs 95th) — refuted
+keltner-break mult=1.5 riskReward=1.5: expectancy PASS (0.0291 R), profit factor FAIL (1.025 vs 1.2), null FAIL (69th vs 95th) — refuted
+keltner-break mult=2.5 riskReward=2: expectancy PASS (0.0443 R), profit factor FAIL (1.097 vs 1.2), null FAIL (78th vs 95th) — refuted
+
+Survivors: none of 5. Every cell carried forward from the three-month search is refuted on the nine months it was not selected on.
+
+cells swept: 45. Nothing above went near the funded account, and the registration forbids it doing so.
