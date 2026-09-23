@@ -169,6 +169,20 @@ interface Closed {
   holdMs: number
   money: number
   /**
+   * The size that was actually sent, in lots.
+   *
+   * On PAPER this is what the engine sized against the book's own risk; on
+   * an ACCOUNT it is what the broker filled, which is the paper number times
+   * the account's `lot_scale` and then rounded to the broker's 0.01 grid. The
+   * two therefore differ on purpose and the page never adds them - it builds
+   * one list per book on screen.
+   *
+   * `null` when the source did not say. A zero would read as "it sent
+   * nothing", which is a different event and one that cannot produce a
+   * closed trade.
+   */
+  lots: number | null
+  /**
    * The owner's introducing-broker rebate on this trade's own spread, in the
    * same unit as `money`, BESIDE it and never inside it.
    *
@@ -235,6 +249,17 @@ interface Stats {
    * `rebateExact + rebateEstimated + rebateUnpriced` is `trades`; a total
    * that silently dropped what it could not price would read as complete.
    */
+  /**
+   * Lots sent across these trades, and how many trades could not say.
+   *
+   * Summed rather than averaged because the question it answers is "how much
+   * size did this strategy put through the broker", which is what a rebate
+   * is paid on. `lotsUnknown` is published beside it for the same reason the
+   * rebate publishes its three counts: a total that silently skipped what it
+   * could not read would look complete.
+   */
+  lots: number
+  lotsUnknown: number
   rebate: number
   rebateExact: number
   rebateEstimated: number
@@ -266,6 +291,8 @@ const EMPTY: Stats = {
   meanMfe: 0,
   longestWin: 0,
   longestLoss: 0,
+  lots: 0,
+  lotsUnknown: 0,
   rebate: 0,
   rebateExact: 0,
   rebateEstimated: 0,
@@ -309,6 +336,8 @@ function summarise(trades: Closed[]): Stats {
   let holdSum = 0
   let maeSum = 0
   let mfeSum = 0
+  let lots = 0
+  let lotsUnknown = 0
   let rebate = 0
   let rebateExact = 0
   let rebateEstimated = 0
@@ -320,6 +349,11 @@ function summarise(trades: Closed[]): Stats {
 
   for (const t of sorted) {
     net += t.money
+    // Summed, with the ones that could not say counted separately rather
+    // than treated as zero: a size of nothing cannot produce a closed trade,
+    // so a null here is a gap in the record and not a small trade.
+    if (typeof t.lots === 'number' && Number.isFinite(t.lots)) lots += t.lots
+    else lotsUnknown += 1
     if (t.money > 0) {
       grossWin += t.money
       wins += 1
@@ -378,6 +412,8 @@ function summarise(trades: Closed[]): Stats {
     meanMfe: hasR ? mfeSum / sorted.length : 0,
     longestWin,
     longestLoss,
+    lots,
+    lotsUnknown,
     rebate,
     rebateExact,
     rebateEstimated,
@@ -421,6 +457,7 @@ export function Analytics({ book, accounts }: { book: Book; accounts: BrokerAcco
               exitTime: fill.exitTime,
               holdMs: fill.holdMs,
               money: fill.pnlUsd,
+              lots: fill.lots ?? null,
               // A paper book pays the spread the engine charged it — but only
               // a trade that RECORDED what it was charged can be called exact.
               // This read `rebateUsd === null ? null : 'EXACT'` and was true
@@ -517,6 +554,7 @@ export function Analytics({ book, accounts }: { book: Book; accounts: BrokerAcco
           // never recorded. The header says how many.
           rebate: f.rebate,
           rebateBasis: f.rebate === null ? null : f.rebateBasis,
+          lots: f.lots ?? null,
           r: null,
           mae: null,
           mfe: null,
@@ -849,7 +887,7 @@ function TopStrip({
 
 /** Track widths; the wrapper's `min-w` is their sum plus the gaps. */
 const STRAT_COLS =
-  'grid-cols-[minmax(150px,1.4fr)_minmax(120px,1fr)_58px_86px_56px_58px_72px_72px_86px_66px_64px]'
+  'grid-cols-[minmax(140px,1.3fr)_minmax(110px,0.9fr)_54px_84px_52px_54px_68px_68px_62px_78px_82px_62px_60px]'
 
 function StrategyTable({
   rows,
@@ -895,6 +933,29 @@ function StrategyTable({
                 <span className="text-right">Median R</span>
               </>
             )}
+            <span
+              className="text-right"
+              title={
+                'Lots this strategy has actually sent, summed over its closed trades. ' +
+                'On an account this is the paper size times that account’s lot scale, ' +
+                'rounded to the broker’s 0.01 grid, so the two books do not match and are never added.'
+              }
+            >
+              Lots
+            </span>
+            <span
+              className="text-right"
+              title={
+                'The introducing-broker rebate credited on these trades’ own spread, in ' +
+                money.unit +
+                '. BESIDE the net, never inside it — so you can see how much of a result is the ' +
+                'strategy and how much is the commercial arrangement. A trade whose spread was never ' +
+                'recorded is priced from the configured one and counted as an estimate; the header ' +
+                'strip carries those counts.'
+              }
+            >
+              Backcom
+            </span>
             <span className="text-right" title={`Deepest fall from this strategy's own running peak, in ${money.unit}.`}>
               Drawdown
             </span>
@@ -944,6 +1005,24 @@ function StrategyTable({
                   </span>
                 </>
               )}
+              <span
+                className="num text-muted-foreground text-right"
+                title={
+                  stats.lotsUnknown
+                    ? `${stats.lotsUnknown} of ${stats.trades} closed trades did not report a size, so this total is short by that many.`
+                    : undefined
+                }
+              >
+                {stats.trades ? stats.lots.toFixed(2) : '—'}
+                {stats.lotsUnknown ? <span className="text-caution"> ?</span> : null}
+              </span>
+              <span className="num text-right">
+                {stats.trades && stats.rebate ? (
+                  <span className={bySign(stats.rebate)}>{money.fmt(stats.rebate)}</span>
+                ) : (
+                  <span className="text-muted-foreground">—</span>
+                )}
+              </span>
               <span className="num text-lp text-right">{stats.trades ? money.fmt(-stats.maxDrawdown) : '—'}</span>
               <span className="num text-muted-foreground text-right">
                 {stats.trades ? hold(stats.meanHoldMs) : '—'}
