@@ -1,0 +1,139 @@
+Slice 2 of the 2026-09-23 three-month search: macd-cross, rsi2-pullback,
+squeeze-break, stoch-reversal, orb
+==============================================================================
+
+Registration: docs/hypotheses/2026-09-23-three-month-search.md, committed at
+0115da6 before this run and before any number here was known. Matched-null
+repair this run depends on: docs/decisions/2026-09-23-matched-null-repair.md.
+Runner: crates/fd-backtest/src/bin/three_month_2.rs, committed at 2afb994
+before the run. Raw output: slice-2-run.txt (both legs, one process) and
+slice-2-funded-rows.txt (the two live configurations, a separate question).
+
+WHAT WAS SWEPT
+
+Forty-five cells: nine for each of the five mechanisms, which is each
+mechanism's own grid in the registry, unchanged, with no filters added. Both
+axes of every grid were pinned per cell through Preset::new, so the
+walk-forward had nothing left to select and measured that one parameter set on
+each of the four folds' test blocks. Guards on, configured spread 0.28,
+starting equity 100 (the cent account's 10,000 USC), select_by expectancy, four
+folds, minimum five trades per training cell. Forty-five is the N behind "the
+best of N" for this slice; three other agents swept their own.
+
+THE WINDOW IS SHORT OF WHAT WAS REGISTERED
+
+The registration asks for 2026-06-23 → 2026-09-23. The XAUUSD 15m store ends at
+2026-09-17 13:00, so the in-sample window is 5,731 bars covering 2026-06-23 →
+2026-09-17: six calendar days short at the near end, about 93% of the window
+asked for. The nine-month window is fully covered, 17,485 bars from
+2025-09-23 00:00 to 2026-06-21 23:45. Nothing was done about the shortfall
+because extending the feed would have meant touching the MT5 export mid-run;
+it is recorded instead. A shorter search window produces, if anything, a less
+impressive in-sample number, so it does not flatter what follows.
+
+LEG ONE, IN SAMPLE, PUBLISHED AS IT FELL
+
+Ranked by walk-forward return over the three months, with the plain
+whole-window return of the same cell beside it:
+
+  1  macd-cross     fast=16 riskReward=1      +20.22%  (whole window +31.80%)
+  2  macd-cross     fast=12 riskReward=1      +16.29%  (whole window +24.86%)
+  3  macd-cross     fast=16 riskReward=1.5    +12.70%  (whole window +22.55%)
+  4  macd-cross     fast=16 riskReward=2       +8.95%  (whole window +15.87%)
+  5  squeeze-break  lookback=60 riskReward=1.5 +8.82%  (whole window +12.84%)
+
+The registration pre-committed to publishing a spectacular in-sample number as
+a spectacular number. There is not one here. The best of forty-five cells
+returns 20.22% walked forward and 31.80% measured over the whole window, and
+the owner asked for at least 50%. On this slice the answer to the arithmetic
+question is that the window is too short to buy even the lucky number, at 1%
+risk with these guards — one of the outcomes the registration names.
+Twenty-three of the forty-five cells lost money on the walk-forward. Eight of
+the nine stoch-reversal cells did, the ninth returning +0.25%, and all nine of
+them lost over the whole window.
+
+LEG TWO, THE SAME FIVE CELLS ON THE NINE MONTHS THEY WERE NOT CHOSEN ON
+
+Same strategy, same parameters, no re-fit: fixed parameters over the whole
+window, no folds, no selection, each against 200 runs of its count-matched
+random-entry null.
+
+  cell                                      ret%   trades     PF   expect  null p95   pct  survives
+  macd-cross fast=16 riskReward=1          -7.69      932  0.976   -0.001     1.108   50%   no
+  macd-cross fast=12 riskReward=1          -4.14     1028  0.989   -0.003     1.097   56%   no
+  macd-cross fast=16 riskReward=1.5       +10.65      895  1.028   +0.035     1.120   72%   no
+  macd-cross fast=16 riskReward=2         +13.53      862  1.033   +0.049     1.120   74%   no
+  squeeze-break lookback=60 riskReward=1.5-12.52      174  0.810   -0.106     1.244   14%   no
+
+Survivors: none. Zero of five. Two of the five keep a positive expectancy on
+the nine months, and both of those fail the standing 1.2 profit factor by a
+wide margin and sit at the 72nd and 74th percentile of their own null, nowhere
+near the 95th. Every cell has more than thirty trades on both windows, so
+nothing here is disqualified for thinness; the smallest count on the nine
+months is 174.
+
+Three of the five rows carry a count match outside the 0.25 band the repair
+registration set: 0.74, 0.71 and 0.75. Those three percentiles are therefore
+not read against a null of the method's own size, and are reported as such
+rather than quietly. The direction of the miss is worth stating: the control
+took fewer trades than the method, not more, which widens the control's profit
+factor distribution and raises the bar at the 95th. So the mismatch, such as
+it is, works against the method and cannot be what produced these failures.
+The squeeze-break row matched at 1.01 and failed anyway, at the 14th
+percentile.
+
+THE TWO MECHANISMS ON THE FUNDED ACCOUNT, SAID SEPARATELY
+
+macd-cross runs live as xau-macd-asia and stoch-reversal as xau-stoch. Neither
+live row is a cell of this sweep: both run at default parameters with filters
+(weekdays, NY 18:00-02:00 and news 60-30 for the first; weekdays and news
+60-30 for the second), while the sweep runs the bare grids all day. So they
+were measured again in their own configuration on the same three months, and
+that is slice-2-funded-rows.txt.
+
+xau-macd-asia on the three months: 97 trades, profit factor 1.134, expectancy
++0.031R, 76th percentile of a null that matched at 0.93. The record's headline
+for this row is profit factor 1.56 on 300 trades at the 100th percentile
+matched and the 93rd on direction, from the recent-year screen. The three
+months do not reproduce that: the profit factor is 1.134, not 1.56, and the
+percentile is the 76th, not the 100th. It is still positive and it is still the
+best-behaved mechanism in this slice, but the number on the window the owner
+asked about is materially below what the record advertises, and it does not
+clear the gate on this window. That is the record's own three-year figure of
+0.91 looking more representative than its one-year figure.
+
+There is a second reading in the other direction and it belongs here too. The
+registration quotes the best expectancy this desk has ever measured as +0.011R,
+for macd-cross over 923 closed trades. The unfiltered macd-cross cell
+fast=16 riskReward=2 returns +0.049R over 862 trades on the nine months — about
+four and a half times the record's headline figure, on a comparable number of
+trades. The verdict does not change, because 1.033 is not 1.2 and the 74th is
+not the 95th, but the record's "best ever +0.011R" is not the ceiling it reads
+as, and a reader of that line should know an all-day variant measured higher on
+a window the line does not cover.
+
+xau-stoch on the three months: 384 trades, profit factor 0.836, expectancy
+-0.087R, 14th percentile of its null (count match 0.69, so that percentile is
+unmatched, again in the conservative direction). Its entry on the candidate
+list was honest about being in-sample only — profit factor 1.48 on 35 trades of
+one week — and the nearest matched-null figure for the mechanism was the 30th
+percentile. The three months are worse than "inside the noise": the mechanism
+is below the median of random entry over nearly four hundred trades, and the
+unfiltered sweep agrees emphatically, all nine grid cells losing over the whole
+window, the worst at -28.23%. This does not contradict the
+record, which never claimed an edge for it; it contradicts the idea that live
+money should keep finding out. Saying so is not a promotion or demotion
+decision, which is not this registration's to make.
+
+DEVIATION FROM THE REGISTRATION, RECORDED
+
+The registration says the top five cells overall are carried to the nine
+months. The search was split across four agents by mechanism, so each carried
+its own top five and twenty cells were tested out of sample rather than five.
+That is more out-of-sample tests, not fewer, and it cannot flatter the result;
+it is recorded because it is not what was written down.
+
+Nothing from this run goes anywhere near the funded account, per the
+registration's third reporting commitment. No threshold was moved: the gate is
+the config's 30 / 1.2 / 0.05, both null readings stayed at the 95th, and the
+spread stayed at the configured 0.28.

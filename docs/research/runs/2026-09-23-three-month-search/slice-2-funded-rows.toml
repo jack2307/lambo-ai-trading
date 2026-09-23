@@ -1,0 +1,23 @@
+# The two mechanisms of this slice that are running on the owner's funded
+# account, in the configuration they are actually running in
+# (py/live/start_runs.py rows 2 and 7: default parameters, those filters),
+# measured on the same three-month window as the search.
+#
+# This is not part of the registered search. The search sweeps the registry's
+# own grids with no session filters; these two rows carry filters and run at
+# defaults, so the search's macd-cross and stoch-reversal numbers are the
+# all-day variants and are not these rows. This file exists so the report can
+# say what the three months did to the live configurations themselves rather
+# than to their unfiltered cousins.
+
+[[hypothesis]]
+label = "xau-macd-asia"
+base = "macd-cross"
+filters = ["weekdays", "hours:1800-0200", "news:60-30"]
+why = "row 2 of docs/paper/CANDIDATES.md, live on the funded account, read on the window the owner asked about"
+
+[[hypothesis]]
+label = "xau-stoch"
+base = "stoch-reversal"
+filters = ["weekdays", "news:60-30"]
+why = "row 7 of docs/paper/CANDIDATES.md, live on the funded account, read on the window the owner asked about"
