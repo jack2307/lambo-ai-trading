@@ -1,0 +1,31 @@
+bounds:   --from=2026-06-23 --to=2026-09-23 kept 5731 of 100586 bars
+spread:   0.28 per round trip
+trail:    off
+bars:     5731 from 2026-06-23 00:00 to 2026-09-17 13:00
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from data/news/events.parquet
+news scope: USD (news_currencies)
+guards: on — max_open_loss_r 2.0, notional 300%, weekend flat 16:40 NY, news flat 60/30 (impact≥3, USD), daily cap 20, loss limit $300, cooldown 30 min
+
+== hypotheses `docs/research/runs/2026-09-23-three-month-search/slice-2-funded-rows.toml`: 2 declared, FIXED parameters over the whole window (no selection), each against 200 matched null runs ==
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+news: 747 events (2010-01-08 → 2027-12-08) from data/news/events.parquet
+news scope: USD (news_currencies)
+guards: on — max_open_loss_r 2.0, notional 300%, weekend flat 16:40 NY, news flat 60/30 (impact≥3, USD), daily cap 20, loss limit $300, cooldown 30 min
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+xau-macd-asia macd-cross             97   1.134   0.031    0.986    1.438        0   76%  fail: profit factor 1.134 < 1.2; expectancy 0.031R < 0.05R
+                                MoTuWeThFr + NY 18:00-02:00 + no entries 60 min before to 30 min after high-impact news (USD)  — row 2 of docs/paper/CANDIDATES.md, live on the funded account, read on the window the owner asked about
+                                matched null 90 trades median vs the method's 97 — count match 0.93
+                                guards: refused COOLDOWN 1; closed none; sized down 78
+xau-stoch    stoch-reversal        384   0.836  -0.087    0.972    1.195        0   14%  fail: profit factor 0.836 < 1.2; expectancy -0.087R < 0.05R
+                                MoTuWeThFr + no entries 60 min before to 30 min after high-impact news (USD)  — row 7 of docs/paper/CANDIDATES.md, live on the funded account, read on the window the owner asked about
+                                matched null 266 trades median vs the method's 384 — count match 0.69  ** outside the band: this percentile is unmatched **
+                                guards: refused WEEKEND_FLAT 1; closed NEWS_FLAT 3, WEEKEND_FLAT 10; sized down 207
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+
