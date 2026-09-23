@@ -1,0 +1,105 @@
+slice:    3 — pdhl, ict-sweep-mss-fvg, vwap-fade, doji-reversal, gap-fade
+stage:    in
+market:   xauusd:15m  bars 5731 of 100586 kept
+window:   2026-06-23 00:00 -> 2026-09-17 13:00
+bounds:   --from=2026-06-23 --to=2026-09-24 (to exclusive)
+spread:   0.28 per round trip
+trail:    off
+guards:   on — max_open_loss_r 2.0, notional 300%, weekend flat 16:40 NY, news flat 60/30 (impact≥3, USD), daily cap 20, loss limit $300, cooldown 30 min
+gate:     min_trades 30 / PF 1.2 / expectancy 0.05R
+news: 747 events (2010-01-08 → 2027-12-08) from data/news/events.parquet
+news scope: USD
+
+== in-sample: every cell of the slice's grids, whole window ==
+cells swept: 45
+
+strategy             cell                                trades    win%   profit   expect    totalR    return%
+ict-sweep-mss-fvg    displacementMult=1.2,riskReward=2       11   63.6%    1.915    0.200      2.20      2.14%
+ict-sweep-mss-fvg    displacementMult=1.2,riskReward=3       11   63.6%    1.872    0.191      2.10      2.04%
+ict-sweep-mss-fvg    displacementMult=1.2,riskReward=1.5      11   63.6%    1.756    0.167      1.83      1.77%
+gap-fade             minGapAtr=2,stopGapMult=2                5   40.0%    1.761    0.086      0.43      0.35%
+gap-fade             minGapAtr=0.5,stopGapMult=2              9   44.4%    1.015    0.015      0.13      0.02%
+gap-fade             minGapAtr=1,stopGapMult=2                9   44.4%    1.015    0.015      0.13      0.02%
+ict-sweep-mss-fvg    displacementMult=1.5,riskReward=2       11   54.5%    1.003    0.029      0.32      0.01%
+ict-sweep-mss-fvg    displacementMult=1.5,riskReward=3       11   54.5%    0.976    0.019      0.21     -0.08%
+gap-fade             minGapAtr=0.5,stopGapMult=1              9   33.3%    0.936   -0.158     -1.42     -0.10%
+gap-fade             minGapAtr=1,stopGapMult=1                9   33.3%    0.936   -0.158     -1.42     -0.10%
+ict-sweep-mss-fvg    displacementMult=1.5,riskReward=1.5      11   54.5%    0.917   -0.005     -0.05     -0.27%
+gap-fade             minGapAtr=2,stopGapMult=0.5              5   20.0%    0.555   -0.265     -1.33     -0.53%
+gap-fade             minGapAtr=2,stopGapMult=1                5   20.0%    0.297   -0.388     -1.94     -0.78%
+ict-sweep-mss-fvg    displacementMult=2,riskReward=2         12   50.0%    0.802   -0.058     -0.69     -0.81%
+gap-fade             minGapAtr=0.5,stopGapMult=0.5            9   22.2%    0.488   -0.365     -3.28     -0.83%
+gap-fade             minGapAtr=1,stopGapMult=0.5              9   22.2%    0.488   -0.365     -3.28     -0.83%
+ict-sweep-mss-fvg    displacementMult=2,riskReward=3         12   50.0%    0.780   -0.067     -0.80     -0.90%
+ict-sweep-mss-fvg    displacementMult=2,riskReward=1.5       12   50.0%    0.734   -0.089     -1.07     -1.09%
+doji-reversal        bodyMaxPct=0.05,riskReward=1            32   37.5%    0.661   -0.313    -10.00     -2.62%
+doji-reversal        bodyMaxPct=0.05,riskReward=2            32   25.0%    0.713   -0.297     -9.50     -2.64%
+doji-reversal        bodyMaxPct=0.05,riskReward=1.5          32   28.1%    0.663   -0.344    -11.01     -2.94%
+doji-reversal        bodyMaxPct=0.2,riskReward=1.5          123   38.2%    0.844   -0.125    -15.38     -4.42%
+doji-reversal        bodyMaxPct=0.2,riskReward=1            123   44.7%    0.810   -0.177    -21.78     -4.78%
+doji-reversal        bodyMaxPct=0.2,riskReward=2            122   33.6%    0.814   -0.088    -10.69     -5.58%
+doji-reversal        bodyMaxPct=0.1,riskReward=1.5           57   28.1%    0.625   -0.348    -19.82     -5.62%
+doji-reversal        bodyMaxPct=0.1,riskReward=1             57   35.1%    0.585   -0.356    -20.28     -5.65%
+doji-reversal        bodyMaxPct=0.1,riskReward=2             57   22.8%    0.578   -0.364    -20.76     -6.81%
+pdhl                 bufferPips=6,riskReward=1.5             59   28.8%    0.610   -0.234    -13.78     -7.93%
+pdhl                 bufferPips=1,riskReward=1.5             59   27.1%    0.570   -0.279    -16.45     -8.47%
+pdhl                 bufferPips=3,riskReward=1.5             59   27.1%    0.575   -0.277    -16.34     -8.50%
+pdhl                 bufferPips=1,riskReward=2               59   22.0%    0.547   -0.294    -17.33     -9.67%
+pdhl                 bufferPips=6,riskReward=2               59   23.7%    0.561   -0.253    -14.91     -9.73%
+pdhl                 bufferPips=3,riskReward=2               59   22.0%    0.550   -0.294    -17.32     -9.77%
+pdhl                 bufferPips=1,riskReward=1               59   32.2%    0.466   -0.325    -19.18     -9.94%
+pdhl                 bufferPips=3,riskReward=1               59   32.2%    0.471   -0.323    -19.07     -9.99%
+pdhl                 bufferPips=6,riskReward=1               59   32.2%    0.476   -0.321    -18.94    -10.12%
+vwap-fade            stopAtr=1.5,stretchAtr=1               305   50.8%    0.889   -0.048    -14.49    -12.28%
+vwap-fade            stopAtr=2,stretchAtr=1.5               230   48.7%    0.820   -0.072    -16.68    -15.27%
+vwap-fade            stopAtr=1.5,stretchAtr=1.5             243   44.0%    0.832   -0.069    -16.68    -15.69%
+vwap-fade            stopAtr=2,stretchAtr=1                 293   55.3%    0.832   -0.065    -19.05    -16.57%
+vwap-fade            stopAtr=1,stretchAtr=1.5               266   33.8%    0.812   -0.115    -30.50    -17.09%
+vwap-fade            stopAtr=1,stretchAtr=1                 338   39.9%    0.830   -0.109    -36.71    -17.48%
+vwap-fade            stopAtr=1,stretchAtr=2                 206   28.6%    0.719   -0.193    -39.73    -20.67%
+vwap-fade            stopAtr=2,stretchAtr=2                 173   40.5%    0.664   -0.155    -26.83    -22.01%
+vwap-fade            stopAtr=1.5,stretchAtr=2               188   36.7%    0.682   -0.177    -33.38    -24.27%
+
+== trade counts by mechanism (a cell under 30 trades is not a result) ==
+pdhl                 9 cells, trades 59..59 (sum 531)
+ict-sweep-mss-fvg    9 cells, trades 11..12 (sum 102)
+vwap-fade            9 cells, trades 173..338 (sum 2242)
+doji-reversal        9 cells, trades 32..123 (sum 635)
+gap-fade             9 cells, trades 5..9 (sum 69)
+
+== the mechanism's own walk-forward over the same window (4 folds, select_by Expectancy) ==
+strategy              trades    win%   profit   expect   return%  verdict
+pdhl                      48   27.1%    0.724   -0.179    -4.56%  fail: profit factor 0.724 < 1.2; expectancy -0.179R < 0.05R
+   fold 1: selected atrPeriod=14,bufferPips=6,maxRiskAtr=3,mode=0,pipSize=0.1,riskReward=2 on 11 training trades -> 10 test trades, PF 0.816, expectancy -0.104R
+   fold 2: selected atrPeriod=14,bufferPips=6,maxRiskAtr=3,mode=0,pipSize=0.1,riskReward=2 on 21 training trades -> 12 test trades, PF 0.642, expectancy -0.188R
+   fold 3: selected atrPeriod=14,bufferPips=6,maxRiskAtr=3,mode=0,pipSize=0.1,riskReward=2 on 33 training trades -> 12 test trades, PF 0.344, expectancy -0.403R
+   fold 4: selected atrPeriod=14,bufferPips=6,maxRiskAtr=3,mode=0,pipSize=0.1,riskReward=1.5 on 45 training trades -> 14 test trades, PF 1.497, expectancy -0.034R
+ict-sweep-mss-fvg          6   50.0%    1.015    0.019     0.02%  fail: only 6 trades (need 30); profit factor 1.015 < 1.2; expectancy 0.019R < 0.05R
+   fold 1: no parameter set produced enough training trades
+   fold 2: no parameter set produced enough training trades
+   fold 3: selected atrPeriod=14,displacementLookback=20,displacementMult=1.2,entryPercent=50,htfFactor=15,htfTolerancePips=25,liquidityLookback=150,maxBarsFvgToEntry=30,maxBarsMssToFvg=5,maxBarsSweepToMss=20,maxHtfFvgAge=60,maxSweepPips=60,minBodyAtrRatio=0.5,minEntryFvgPips=1,minHtfFvgPips=15,minSweepPips=1,mssBufferPips=0.5,pipSize=0.1,riskReward=2,slBufferPips=3,structureLookback=30,sweepBufferPips=0.5,swingLeft=3,swingRight=3 on 5 training trades -> 4 test trades, PF 0.277, expectancy -0.252R
+   fold 4: selected atrPeriod=14,displacementLookback=20,displacementMult=1.2,entryPercent=50,htfFactor=15,htfTolerancePips=25,liquidityLookback=150,maxBarsFvgToEntry=30,maxBarsMssToFvg=5,maxBarsSweepToMss=20,maxHtfFvgAge=60,maxSweepPips=60,minBodyAtrRatio=0.5,minEntryFvgPips=1,minHtfFvgPips=15,minSweepPips=1,mssBufferPips=0.5,pipSize=0.1,riskReward=2,slBufferPips=3,structureLookback=30,sweepBufferPips=0.5,swingLeft=3,swingRight=3 on 9 training trades -> 2 test trades, PF inf, expectancy 0.560R
+vwap-fade                254   46.5%    0.814   -0.088   -16.54%  fail: profit factor 0.814 < 1.2; expectancy -0.088R < 0.05R
+   fold 1: selected atrPeriod=14,sessionMs=86400000,stopAtr=1,stretchAtr=1 on 63 training trades -> 71 test trades, PF 0.860, expectancy -0.086R
+   fold 2: selected atrPeriod=14,sessionMs=86400000,stopAtr=1.5,stretchAtr=1 on 123 training trades -> 57 test trades, PF 0.882, expectancy -0.034R
+   fold 3: selected atrPeriod=14,sessionMs=86400000,stopAtr=1.5,stretchAtr=1 on 179 training trades -> 69 test trades, PF 0.776, expectancy -0.092R
+   fold 4: selected atrPeriod=14,sessionMs=86400000,stopAtr=1.5,stretchAtr=1 on 248 training trades -> 57 test trades, PF 0.752, expectancy -0.140R
+doji-reversal             60   33.3%    0.783   -0.257    -2.89%  fail: profit factor 0.783 < 1.2; expectancy -0.257R < 0.05R
+   fold 1: selected atrPeriod=14,bodyMaxPct=0.2,bufferPips=3,minRangeAtr=1,pipSize=0.1,riskReward=1.5,trendAtr=1.5,trendBars=10 on 23 training trades -> 22 test trades, PF 0.744, expectancy -0.275R
+   fold 2: selected atrPeriod=14,bodyMaxPct=0.05,bufferPips=3,minRangeAtr=1,pipSize=0.1,riskReward=1.5,trendAtr=1.5,trendBars=10 on 15 training trades -> 6 test trades, PF 0.547, expectancy -0.673R
+   fold 3: selected atrPeriod=14,bodyMaxPct=0.05,bufferPips=3,minRangeAtr=1,pipSize=0.1,riskReward=1,trendAtr=1.5,trendBars=10 on 21 training trades -> 3 test trades, PF 0.444, expectancy -0.387R
+   fold 4: selected atrPeriod=14,bodyMaxPct=0.2,bufferPips=3,minRangeAtr=1,pipSize=0.1,riskReward=1.5,trendAtr=1.5,trendBars=10 on 94 training trades -> 29 test trades, PF 0.907, expectancy -0.143R
+gap-fade                   0    NaN%      NaN      NaN     0.00%  fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+   fold 1: no parameter set produced enough training trades
+   fold 2: no parameter set produced enough training trades
+   fold 3: no parameter set produced enough training trades
+   fold 4: selected atrPeriod=14,fillPct=100,minGapAtr=2,minGapHours=24,stopGapMult=2 on 5 training trades -> 0 test trades, PF NaN, expectancy NaNR
+
+== top five of the slice by in-sample return, carried forward unchanged ==
+1. ict-sweep-mss-fvg displacementMult=1.2,riskReward=2  return 2.14%  trades 11  PF 1.915  expectancy 0.200R
+2. ict-sweep-mss-fvg displacementMult=1.2,riskReward=3  return 2.04%  trades 11  PF 1.872  expectancy 0.191R
+3. ict-sweep-mss-fvg displacementMult=1.2,riskReward=1.5  return 1.77%  trades 11  PF 1.756  expectancy 0.167R
+4. gap-fade minGapAtr=2,stopGapMult=2  return 0.35%  trades 5  PF 1.761  expectancy 0.086R
+5. gap-fade minGapAtr=0.5,stopGapMult=2  return 0.02%  trades 9  PF 1.015  expectancy 0.015R
+
+carried-forward cells written to E:/rust/fd-wt-3m3/docs/research/runs/2026-09-23-three-month-search/slice-3-cells.txt
