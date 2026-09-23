@@ -49,3 +49,7 @@ config/local.toml
 # it. Rollback material, per-machine, and not source - and it dirtied the
 # tree the same way.
 /deploy/task-backup-*
+
+# The sealed research store: a truncated copy of data/ built by seal-store for
+# design agents that must not see the withheld year. Derived, large, rebuildable.
+/data-sealed
