@@ -71,6 +71,7 @@ pub fn register_all(registry: &mut Registry) {
     registry.register(Box::new(crate::screen::SqueezeBreak));
     registry.register(Box::new(crate::screen::StochReversal));
     registry.register(Box::new(crate::volman_box::VolmanBox));
+    registry.register(Box::new(crate::quiet_swing::QuietTapeSwing));
 }
 
 /* ---------------- classic technical baselines ---------------- */

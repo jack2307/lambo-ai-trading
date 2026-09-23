@@ -18,6 +18,7 @@ pub mod intraday_momentum;
 pub mod news;
 pub mod orb;
 pub mod pdhl;
+pub mod quiet_swing;
 pub mod registry;
 pub mod screen;
 pub mod external;
