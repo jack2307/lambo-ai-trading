@@ -2,7 +2,7 @@
 
 **Registered:** (commit time is authoritative) — before any run, and before
 any in-sample winner is known
-**Status:** open
+**Status:** decided -> docs/decisions/2026-09-23-three-month-search.md (161 cells across 21 mechanisms, 25 out-of-sample tests, 0 survivors; the claim is refuted -- and this registration's own prediction that the search would clear 50% in sample was falsified too, the best of 161 cells reaching +20.22%, so the named "nothing clears 50% even in sample" branch is the one that happened; the cited "+0.011R best ever" ceiling was also wrong, an unfiltered macd-cross cell measuring +0.049R over 862 trades)
 
 ## What the owner asked
 
