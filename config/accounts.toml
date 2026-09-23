@@ -745,4 +745,40 @@ enabled = true
 
 runs = [
     "ai-xau-ds-ctx",
+    # 2026-09-23, the owner's decision: "ap dung xau-macd-asia vao ben real
+    # money". A SECOND BOOK on this account, and the first that is not the
+    # model this account was opened for.
+    #
+    # WHAT THE PAPER CURVE SHOWS: 8 trades, +$5.10, profit factor 4.52,
+    # reward-to-risk median 1.47. Eight trades.
+    #
+    # WHAT THE RECORD SAYS, AND IT IS ABOUT THIS EXACT ROW. `macd-cross` is
+    # killed: 923 trades over the recent Vantage year at profit factor 1.010,
+    # the 66th percentile. The ASIAN-SESSION row - this book, filters
+    # hours:1800-0200 - was the best thing the whole screen found: 300 trades
+    # at PF 1.556, the 98th percentile. It was closed anyway, because its
+    # DIRECTION NULL came in at the 93rd against a threshold of 95 declared
+    # before the test was run, and on the 2022-25 window the same null is
+    # 92nd at PF 0.908. Verdict `macd` in ui/src/lib/verdicts.ts; record
+    # docs/decisions/2026-09-13-recent-year-screen.md.
+    #
+    # That is a sharper objection than the one against xau-stoch. Stoch lost
+    # from the start. This one WON in sample and failed the gate the desk had
+    # already committed to. A rule that clears every bar except the one it
+    # promised to clear is the shape an overfit takes.
+    #
+    # IT HAS ALSO ALREADY TRADED REAL MONEY AND LOST: -33.45 USC over 3
+    # closed on 33705331, two stops against one target.
+    #
+    # THE SIZING WAS CHECKED BEFORE THIS LINE WAS WRITTEN, as this file
+    # requires whenever the scale or the book count changes. At x10 its
+    # largest order is 0.70 lots: 303,800 USC of notional, 3.09x equity
+    # against a 10x per-order ceiling. Both books at maximum together are
+    # 1.40 lots, 1,215 USC of margin at 1:500, a margin level of 8,100%
+    # against a 500% floor. Neither binds. Both stopping out on the same day
+    # costs about 2% of the account.
+    #
+    # Context the owner has: this account is down 1,111 USC over 10 closed
+    # trades as this is written.
+    "xau-macd-asia",
 ]
