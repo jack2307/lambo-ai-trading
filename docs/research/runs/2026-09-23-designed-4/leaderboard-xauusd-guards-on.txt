@@ -1,0 +1,46 @@
+$ search --data=E:/rust/flowdesk/data-sealed --interval=15m --mode=compare --spread=0.28 --market=xauusd --companion=XAGDUKA --guards
+
+data:     E:/rust/flowdesk/data-sealed (bars from E:/rust/flowdesk/data-sealed\bars\XAUUSD-15m.parquet)
+spread:   0.28 per round trip
+trail:    off
+bars:     77278 from 2022-06-16 10:30 to 2025-09-22 23:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from data/news/events.parquet
+news scope: USD (news_currencies)
+companion: XAGDUKA-15m 358065 bars 2010-06-01 → 2025-09-22 (modal interval 900s) from E:/rust/flowdesk/data-sealed\bars\XAGDUKA-15m.parquet
+guards: on — max_open_loss_r 2.0, notional 300%, weekend flat 16:40 NY, news flat 60/30 (impact≥3, USD), daily cap 20, loss limit $300, cooldown 30 min
+
+== every method at its default parameters ==
+strategy              trades     win%    profit   expect      maxDD$
+tsmom                    186    51.1%     1.346    0.078           5
+buy-and-hold             957    25.4%     1.269    0.330          49
+companion-unconfirmed     216    49.5%     1.087    0.033          10
+orb                      531    46.7%     0.987   -0.007          19
+session-hold             842    41.2%     0.962   -0.051          39
+volume-thrust            316    45.9%     0.915   -0.028          16
+squeeze-break            730    41.5%     0.915   -0.085          30
+pdhl                     814    41.4%     0.909   -0.127          23
+vwap-fade               3796    37.0%     0.893   -0.088          68
+rsi2-pullback           3103    49.1%     0.885   -0.048          63
+ict-sweep-mss-fvg        193    45.6%     0.883   -0.053          15
+donchian-breakout       3807    36.7%     0.878   -0.050          72
+keltner-break           3373    42.3%     0.878   -0.055          69
+macd-cross              4265    41.7%     0.868   -0.070          78
+rsi-reversion           1947    45.5%     0.867   -0.064          55
+bb-fade                 5208    45.9%     0.852   -0.079          91
+doji-reversal            862    39.9%     0.838   -0.165          29
+ema-cross               1268    37.5%     0.834   -0.096          50
+stoch-reversal          5256    41.5%     0.831   -0.076          89
+intraday-momentum        811    40.2%     0.747   -0.008           6
+trend-pullback          2989    35.2%     0.577   -0.386          75
+gap-fade                  44    34.1%     0.536   -0.231           4
+level-reversion      needs an options timeline
+maxpain-magnet       needs an options timeline
+flow-momentum        needs an options timeline
+flow-at-level        needs an options timeline
+external                   0     NaN%       NaN      NaN           0
+volman-box                 0     NaN%       NaN      NaN           0
+

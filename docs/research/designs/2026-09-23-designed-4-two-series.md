@@ -486,3 +486,10 @@ designed-2.** My `search.rs` touches two places — a `data:` receipt line near
 the top of `main` and a new `load_companion`. If designed-1's own data-root line
 lands in the same spot the conflict is one line and either copy will do; the
 `load_companion` function and its call site are independent.
+
+**Receipts.** Every run quoted above is kept verbatim in
+`docs/research/runs/2026-09-23-designed-4/` — four leaderboards
+(XAUDUKA guards off / guards on / no companion installed, XAUUSD guards on) and
+two direction nulls (the rule as written, and the single-series control at
+`companionAtr=999`). Each one's first line names the store it read, and every
+one names `E:/rust/flowdesk/data-sealed`.
