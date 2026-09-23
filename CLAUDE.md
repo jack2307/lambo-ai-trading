@@ -76,16 +76,34 @@ numbers before moving on, and `tests/golden/` holds what it published.
   exporter handles both; do not call the terminal directly.
 - The MT5 terminal on this machine is a **live** account. Read-only calls
   only (`copy_rates_*`, `symbol_info`); no order function is ever imported.
-- Agent worktrees share `CARGO_TARGET_DIR=E:/rust/flowdesk/target` so three of
-  them cannot fill the disk — and that **bakes the worktree's path into test
-  binaries**, because several tests reach `config/` through
-  `env!("CARGO_MANIFEST_DIR")`. Delete the worktree and those binaries stay in
-  the shared target still naming a directory that is gone: the same test then
-  PASSES under `cargo test -p <crate>` and FAILS under `--workspace`, with
-  `config/default.toml … NotFound` pointing at some `fd-wt-*` path. It is not
-  a config fault and not a flaky test. `cargo clean -p <crate>` for whatever
-  failed, then re-run. Measured 2026-09-21: two crates, and the clean also
-  freed 46 GiB.
+- **`CARGO_TARGET_DIR` is NOT set, and this line used to claim it was.** It
+  said agent worktrees share `E:/rust/flowdesk/target` "so three of them
+  cannot fill the disk". They do not share it — nothing sets the variable — so
+  every worktree builds its own target, 12–32 GiB each. On 2026-09-24 four
+  design agents took a 301 GiB volume down to **640 KiB free**, and the note
+  that was supposed to prevent exactly that was recording an intention as a
+  fact. Corrected rather than deleted, because both halves are traps:
+  - **When it is unset (the default), watch the disk.** `cargo clean` in a
+    finished worktree returns 12–14 GiB; the primary tree's own target was
+    34.7 GiB. And **cargo failing on a full disk does not say so**: every line
+    reads `rustc-LLVM ERROR: ... No space left on device` or
+    `failed to write ...rmeta: There is not enough space on the disk`, with no
+    compile error and no failing assertion. A build or test that dies with
+    LLVM errors and no test output is a disk check, not a code review.
+  - **If you do set it, sharing it bakes the worktree's path into test
+    binaries**, because several tests reach `config/` through
+    `env!("CARGO_MANIFEST_DIR")`. Delete the worktree and those binaries stay
+    in the shared target still naming a directory that is gone: the same test
+    then PASSES under `cargo test -p <crate>` and FAILS under `--workspace`,
+    with `config/default.toml … NotFound` pointing at some `fd-wt-*` path. It
+    is not a config fault and not a flaky test. `cargo clean -p <crate>` for
+    whatever failed, then re-run. Measured 2026-09-21: two crates, and the
+    clean also freed 46 GiB.
+  - Either way, a binary in *another* tree's target can answer your command.
+    An agent ran `E:/rust/flowdesk/target/release/search.exe` from its own
+    worktree and got "unknown strategy" for a strategy that existed only on
+    its branch. Run `./target/release/<bin>` from inside your own tree and
+    check the receipt names your strategy rather than refusing it.
 - **A launcher that redirects its own output into a fixed file cannot be run
   twice.** `Start-Process` hands each child the parent's handles, so the
   processes a launcher starts hold its log open for as long as they live; the
