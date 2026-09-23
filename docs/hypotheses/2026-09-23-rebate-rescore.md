@@ -109,7 +109,20 @@ two of 29 pass by luck**. So:
 ## What this does NOT test
 
 Whether a purpose-built high-frequency strategy could earn more rebate than
-it pays. The arithmetic above says it cannot at 45%, and that is a
-statement about the cost model rather than about any particular rule. If the
-owner's IB terms change — a per-lot rebate, or a share above about 60% —
-the sign of that arithmetic changes and this is worth asking again.
+it pays. The arithmetic above says it cannot at 45%, and that is a statement
+about the cost model rather than about any particular rule.
+
+**Corrected the same day, before any run.** This paragraph first said that a
+share "above about 60%" would change the sign of that arithmetic. That is
+false and the check that produced it is trivial: the net cost of a round
+turn is `(1 − share) × spread`, which is positive at every share below 100%.
+At 60% the desk still pays 40% of the spread on every trade; at 90% it pays
+10%. Churn with no edge loses money at **any** share short of a full
+refund, and a full refund would only make it free, never profitable. The
+number that can change the sign is not the share but a **per-lot** rebate,
+which is not proportional to the spread and can exceed it — the owner's own
+book pays $10–12 per standard lot
+(`docs/decisions/2026-09-13-close-reopen-drift.md`), and a standard lot is
+100× this workspace's gold contract. If the IB terms ever become per-lot on
+this account, the arithmetic is different in kind and this is worth asking
+again. Under a share of the spread it is not.
