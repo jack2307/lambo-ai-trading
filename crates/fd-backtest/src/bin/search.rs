@@ -53,6 +53,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let interval = arg("interval", &config.backtest.timeframe);
     let bars_path = data.join("bars").join(format!("{}-{interval}.parquet", spec.bar_symbol));
+    // WHICH STORE THIS RUN READ, in the receipt, first line. Every other line
+    // here named a market or a symbol and left the directory implicit, so a
+    // receipt could not be checked against the store it was meant to come from
+    // — which is exactly what the sealed-store programme asks a receipt to
+    // prove (`docs/hypotheses/2026-09-23-designed-methods.md`).
+    println!("data:     {} (bars from {})", data.display(), bars_path.display());
     let mut bars = read_bars(&bars_path)?;
     // `--from=YYYY-MM-DD --to=YYYY-MM-DD` (UTC, `to` exclusive) cut the series
     // before anything runs: an out-of-sample feed that overlaps the in-sample
@@ -143,6 +149,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let news_line = load_news(&data);
     println!("{news_line}");
     println!("{}", news_scope_line(&rules));
+    // `--companion=<SYMBOL>`: the SECOND instrument, for the one method that
+    // reads two. Installed once for the process, at the same interval and out
+    // of the same store as the primary, and printed here so a receipt says
+    // which series it was — a companion-reading method with none installed
+    // takes no trades, and the two cases must not look alike.
+    println!("{}", load_companion(&data, &interval));
     // `--guards`: the configured risk guards on every run of every mode.
     // Printed right under the calendar so a receipt's header says whether
     // its numbers were bounded, and by what.
@@ -321,6 +333,31 @@ fn load_news(data: &std::path::Path) -> String {
         }
     }
     fd_strategy::news::summary(NEWS_FILE)
+}
+
+/// Install `--companion=<SYMBOL>` from `<data>/bars/<SYMBOL>-<interval>.parquet`
+/// and say what happened in one line.
+///
+/// No flag is not an error — every `cmp` series is then NaN and the line says
+/// so. A named symbol that cannot be read IS reported, and loudly: a method
+/// that reads two series and silently gets one would produce a run of zero
+/// trades that looks like a run that found no signals.
+fn load_companion(data: &std::path::Path, interval: &str) -> String {
+    let symbol = arg("companion", "");
+    if symbol.is_empty() {
+        return fd_indicators::companion::summary();
+    }
+    let path = data.join("bars").join(format!("{symbol}-{interval}.parquet"));
+    match read_bars(&path) {
+        Err(e) => format!("companion: could not read {}: {e} — every cmp series is NaN", path.display()),
+        Ok(bars) => {
+            let companion = fd_indicators::companion::Companion::new(&symbol, interval, bars);
+            match fd_indicators::companion::install(companion) {
+                Ok(_) => format!("{} from {}", fd_indicators::companion::summary(), path.display()),
+                Err(e) => format!("companion: {e}"),
+            }
+        }
+    }
 }
 
 fn describe(bars: &[Bar], timeline: Option<&OptionsTimeline>) {

@@ -71,6 +71,9 @@ pub fn register_all(registry: &mut Registry) {
     registry.register(Box::new(crate::screen::SqueezeBreak));
     registry.register(Box::new(crate::screen::StochReversal));
     registry.register(Box::new(crate::volman_box::VolmanBox));
+    // The only method here that reads TWO instruments. It takes no trades
+    // unless a companion series is installed; see its module docs.
+    registry.register(Box::new(crate::companion_unconfirmed::CompanionUnconfirmed));
 }
 
 /* ---------------- classic technical baselines ---------------- */
