@@ -1,0 +1,20 @@
+data root: E:/rust/flowdesk/data-sealed
+bars:      XAUUSD-15m 77278 from 2022-06-16 10:30:00+00:00 to 2025-09-22 23:45:00+00:00
+forward:   8 bars held.  spread 0.28 points per round trip
+
+== the cell: 19-23 UTC, |z| 0.5-2, thin < 1, forward window free of halt and weekend ==
+All columns in ATR units. netN = openFill minus the round trip: what the engine can be paid.
+           slice       n  closeFil      t  openFill      t  gapOnly  sprd/atr      netN  atrPts
+    whole window     586   0.15631   2.05   0.15440   2.02  0.00137   0.09549   0.05890   2.932
+            2022      78   0.29362   1.73   0.29633   1.74 -0.00420   0.13177   0.16456   2.125
+            2023     165   0.33446   1.88   0.33418   1.87  0.00063   0.13671   0.19747   2.048
+            2024     167   0.20381   2.02   0.19578   1.95  0.00613   0.10296   0.09282   2.720
+            2025     176  -0.11664  -0.91  -0.11632  -0.91  0.00001   0.06481  -0.18113   4.321
+
+== and on every other hour block, for contrast (openFill) ==
+           slice       n  closeFil      t  openFill      t  gapOnly  sprd/atr      netN  atrPts
+          h00-06    4838   0.02124   0.83   0.02230   0.87 -0.00066   0.09814  -0.07584   2.853
+          h07-11    3453   0.05821   1.63   0.05872   1.64 -0.00105   0.09747  -0.03874   2.873
+          h12-16    2191  -0.00035  -0.01   0.00359   0.05 -0.00102   0.09162  -0.08803   3.056
+          h17-18    1046   0.03800   0.77   0.03592   0.72  0.00000   0.09721  -0.06129   2.880
+          h19-23     586   0.15631   2.05   0.15440   2.02  0.00137   0.09549   0.05890   2.932
