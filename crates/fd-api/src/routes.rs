@@ -82,6 +82,11 @@ pub async fn catalog(State(state): State<Arc<AppState>>) -> Result<Json<Catalog>
 
     let indicators = INDICATORS
         .iter()
+        // `cmp` reads a SECOND instrument that only the binary owning the data
+        // directory installs, and `fd-api` installs none — so offering it here
+        // would offer a line that is NaN at every bar. The menu shows it
+        // exactly when this process can compute it.
+        .filter(|def| def.id != "cmp" || fd_indicators::companion::installed().is_some())
         .map(|def| {
             // THE MEASUREMENT TRAVELS WITH THE DEFINITION, so a viewer reads
             // what a line costs in the menu where the line is chosen rather

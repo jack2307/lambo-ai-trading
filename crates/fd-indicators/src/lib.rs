@@ -17,6 +17,8 @@ use std::sync::Arc;
 use fd_core::types::Bar;
 use serde::{Deserialize, Serialize};
 
+pub mod companion;
+
 /// Which chart area an indicator belongs in.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -210,6 +212,19 @@ pub static INDICATORS: &[IndicatorDef] = &[
         pane: Pane::Overlay,
         params: &[("anchor", 1.0)],
         outputs: &["avwap"],
+    },
+    // THE ONE DEFINITION THAT IS NOT A FUNCTION OF THESE BARS. It reads the
+    // second instrument installed in [`companion`], matched on an exact
+    // timestamp, and every output is NaN when nothing is installed. See that
+    // module for why a second series enters the crate there rather than
+    // through `compute_indicators`' signature, and for the alignment rules
+    // that make reading it causal.
+    IndicatorDef {
+        id: "cmp",
+        name: "Companion instrument",
+        pane: Pane::Separate,
+        params: &[("period", 2.0), ("atrPeriod", 14.0)],
+        outputs: &["change", "atr", "close"],
     },
 ];
 
@@ -507,6 +522,19 @@ fn compute_one(def: &IndicatorDef, p: &[f64], source: Source, bars: &[Bar]) -> V
             vec![("zigzag", line), ("direction", direction)]
         }
         "avwap" => vec![("avwap", anchored_vwap(bars, Anchor::from_days(def.param(p, "anchor"))))],
+        // The second instrument. All NaN when nothing is installed, which is
+        // the honest answer and not a fallback to these bars' own values.
+        "cmp" => match companion::installed() {
+            None => {
+                let nan = || vec![f64::NAN; bars.len()];
+                vec![("change", nan()), ("atr", nan()), ("close", nan())]
+            }
+            Some(c) => {
+                let (change, atr, close) =
+                    companion::aligned_change(bars, c, period("period"), period("atrPeriod"));
+                vec![("change", change), ("atr", atr), ("close", close)]
+            }
+        },
         other => unreachable!("indicator {other} is registered but not implemented"),
     }
 }

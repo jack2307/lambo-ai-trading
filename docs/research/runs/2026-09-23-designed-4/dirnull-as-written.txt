@@ -1,0 +1,24 @@
+$ search --data=E:/rust/flowdesk/data-sealed --market=xauduka --interval=15m --mode=null-dir --strategy=companion-unconfirmed --samples=200 --spread=0.28 --companion=XAGDUKA --guards --params=
+
+data:     E:/rust/flowdesk/data-sealed (bars from E:/rust/flowdesk/data-sealed\bars\XAUDUKA-15m.parquet)
+spread:   0.28 per round trip
+trail:    off
+bars:     362803 from 2010-06-01 00:00 to 2025-09-22 23:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data-sealed\news\events.parquet
+news scope: USD (news_currencies)
+companion: XAGDUKA-15m 358065 bars 2010-06-01 → 2025-09-22 (modal interval 900s) from E:/rust/flowdesk/data-sealed\bars\XAGDUKA-15m.parquet
+guards: on — max_open_loss_r 2.0, notional 300%, weekend flat 16:40 NY, news flat 60/30 (impact≥3, USD), daily cap 20, loss limit $300, cooldown 30 min
+
+== direction control: companion-unconfirmed, 685 trades, 200 coin-flip assignments ==
+  entries, stops and targets held fixed; only the side is randomised
+  profit factor of the same trades with random direction:
+    p05 0.799   p25 0.838   p50 0.872   p75 0.903   p95 0.954   max 1.012
+
+  actual: 1.072  ->  100th percentile  (p = 0.000)
+
+  Outside its own null. That is a finding worth taking further.
+

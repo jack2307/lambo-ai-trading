@@ -10,6 +10,7 @@
 //! past it into the future, because there is nothing there to reach.
 
 pub mod builtin;
+pub mod companion_unconfirmed;
 pub mod doji;
 pub mod gap_fade;
 pub mod filter;

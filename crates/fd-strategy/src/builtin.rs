@@ -73,6 +73,9 @@ pub fn register_all(registry: &mut Registry) {
     registry.register(Box::new(crate::volman_box::VolmanBox));
     // The cost-term instrument: one signal, two invalidation rules.
     registry.register(Box::new(crate::far_stop_break::FarStopBreak));
+    // The only method here that reads TWO instruments. It takes no trades
+    // unless a companion series is installed; see its module docs.
+    registry.register(Box::new(crate::companion_unconfirmed::CompanionUnconfirmed));
 }
 
 /* ---------------- classic technical baselines ---------------- */
