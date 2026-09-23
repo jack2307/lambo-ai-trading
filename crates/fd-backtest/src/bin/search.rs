@@ -53,6 +53,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let interval = arg("interval", &config.backtest.timeframe);
     let bars_path = data.join("bars").join(format!("{}-{interval}.parquet", spec.bar_symbol));
+    // The store this receipt was measured on, said before anything is measured.
+    // `three_month_2` has always printed it and this binary did not, which is
+    // only a cosmetic gap until a program withholds part of the history: a
+    // `search` receipt then cannot be checked against the store it was meant
+    // to read (`docs/hypotheses/2026-09-23-designed-methods.md`).
+    println!("market:   {market} {interval} from {}", bars_path.display());
     let mut bars = read_bars(&bars_path)?;
     // `--from=YYYY-MM-DD --to=YYYY-MM-DD` (UTC, `to` exclusive) cut the series
     // before anything runs: an out-of-sample feed that overlaps the in-sample

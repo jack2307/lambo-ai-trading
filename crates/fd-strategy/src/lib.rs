@@ -21,6 +21,7 @@ pub mod pdhl;
 pub mod registry;
 pub mod screen;
 pub mod external;
+pub mod far_stop_break;
 pub mod session_hold;
 pub mod trend_pullback;
 pub mod tsmom;
