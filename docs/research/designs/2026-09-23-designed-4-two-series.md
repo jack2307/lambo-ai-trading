@@ -154,9 +154,10 @@ at once, and each would have had to change:
    an all-`NaN` companion.
 
 **The smallest extension, and the one I implemented.** Not a new `BarContext`
-field: that is a public struct with public fields, constructed at twelve sites
-across five crates and two test suites, and every one would have to change for
-a capability eleven of them do not use. Instead, the extension follows the
+field: it is a public struct with public fields, constructed at **28 sites
+across three crates** — 3 in production code (`engine.rs`, `fd-api/paper.rs`
+×2) and 25 in test modules — and every one of the 28 would have to name the new
+field for a capability 27 of them do not use. Instead, the extension follows the
 precedent this codebase already set for exactly this problem —
 `fd_strategy::news`, where the scheduled-news calendar is a process-wide
 `OnceLock` installed by the binary that owns the data directory, because a
@@ -464,3 +465,24 @@ something using it**, and because a later agent that wants to test a two-series
 idea should start from a working example rather than from this note. It is
 registered at parameters that fail the gate, and its module docs point here. It
 is not a candidate and it is not proposed.
+
+---
+
+## 9. Two operational notes for whoever merges this
+
+**The workspace test ran out of disk, not out of correctness.** `E:` reached
+**301 GB used of 301 GB, 640 KB free** during `cargo test --workspace`, and
+every error in that run was `rustc-LLVM ERROR: IO failure on output stream: No
+space left on device` — no compile error and no failing assertion. The cause is
+worth recording: `CARGO_TARGET_DIR` is **unset**, so each agent worktree builds
+its own `target/`, and at the time of the failure `flowdesk/target` held 32.3 GB
+and `fd-wt-dm1/target` 11.4 GB against 18 worktrees on the drive.
+`crates/CLAUDE.md` says agent worktrees share a target dir "so three of them
+cannot fill the disk"; they do not share it, and the disk filled. I deleted
+nothing outside my own worktree. The suite was re-run once space came back.
+
+**This branch is based on `253e94a`, before `main` merged designed-1 and
+designed-2.** My `search.rs` touches two places — a `data:` receipt line near
+the top of `main` and a new `load_companion`. If designed-1's own data-root line
+lands in the same spot the conflict is one line and either copy will do; the
+`load_companion` function and its call site are independent.
