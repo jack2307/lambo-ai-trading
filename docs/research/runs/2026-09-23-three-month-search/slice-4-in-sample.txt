@@ -1,0 +1,57 @@
+window:   --from=2026-06-23 --to=2026-09-23 kept 5731 of 100586 bars
+bars:     5731 from 2026-06-23 00:00Z to 2026-09-17 13:00Z
+spread:   0.28 per round trip (configured, not overridden)
+equity:   100 USD starting, risk 1% per trade
+trail:    off
+news: 747 events (2010-01-08 → 2027-12-08) from data/news/events.parquet
+news scope: USD (news_currencies)
+guards:   on — max_open_loss_r 2.0, notional 300%, weekend flat 16:40 NY, news flat 60/30 (impact≥3, USD), daily cap 20, loss limit $300, cooldown 30 min
+config:   folds 4 · select_by expectancy · min_trades_per_cell 5 · gate trades≥30 PF≥1.2 expectancy≥0.05
+filters:  none — the bare mechanisms and the registry's own grids
+
+== in sample: every cell of 6 mechanisms, walk-forward (4 folds) ==
+ranked by the walk-forward return over the window; `whole` is the same cell replayed over every bar
+a cell that took no trade has no return, so it ranks last and is listed as unscoreable with its counts
+
+rank strategy            cell                           wfTrd    wfRet%    wfPF    wfExp  folds   whlTrd   whlRet%   whlPF
+   1 session-hold        (no grid — one cell)              49      1.63   1.050    0.091      4       62     -8.71   0.792
+   2 intraday-momentum   (no grid — one cell)              49      0.11   1.085    0.002      4       55      0.42   1.294
+   3 trend-pullback      fast=10 riskReward=2             228     -4.16   0.887   -0.327      4      275     -4.68   0.898
+   4 trend-pullback      fast=34 riskReward=1             131     -4.97   0.612   -0.479      4      155     -5.36   0.652
+   5 trend-pullback      fast=10 riskReward=1.5           232     -5.22   0.848   -0.365      4      281     -4.43   0.895
+   6 trend-pullback      fast=20 riskReward=2             164     -6.03   0.723   -0.382      4      204     -4.10   0.854
+   7 trend-pullback      fast=34 riskReward=2             130     -6.11   0.621   -0.396      4      154     -5.89   0.694
+   8 trend-pullback      fast=34 riskReward=1.5           130     -6.50   0.571   -0.444      4      154     -5.73   0.676
+   9 trend-pullback      fast=20 riskReward=1.5           166     -6.86   0.671   -0.420      4      207     -6.00   0.777
+  10 trend-pullback      fast=20 riskReward=1             168     -8.25   0.582   -0.476      4      210     -7.24   0.710
+  11 trend-pullback      fast=10 riskReward=1             238     -8.96   0.723   -0.411      4      288     -9.57   0.753
+  12 volume-thrust       riskReward=1 volMult=2             0   no book       —        —      0        4      2.02  51.500
+  13 volume-thrust       riskReward=1 volMult=2.5           0   no book       —        —      0        1     -0.18   0.000
+  14 volume-thrust       riskReward=1 volMult=3.5           0   no book       —        —      0        0      0.00       —
+  15 volume-thrust       riskReward=1.5 volMult=2           0   no book       —        —      0        4      1.29   4.225
+  16 volume-thrust       riskReward=1.5 volMult=2.5         0   no book       —        —      0        1     -0.18   0.000
+  17 volume-thrust       riskReward=1.5 volMult=3.5         0   no book       —        —      0        0      0.00       —
+  18 volume-thrust       riskReward=2 volMult=2             0   no book       —        —      0        3      1.43   4.575
+  19 volume-thrust       riskReward=2 volMult=2.5           0   no book       —        —      0        1     -0.18   0.000
+  20 volume-thrust       riskReward=2 volMult=3.5           0   no book       —        —      0        0      0.00       —
+  21 volman-box          boxBars=12                         0   no book       —        —      0        1      0.87     inf
+  22 volman-box          boxBars=20                         0   no book       —        —      0        0      0.00       —
+  23 volman-box          boxBars=30                         0   no book       —        —      0        0      0.00       —
+  24 tsmom               lookbackDays=20                    0   no book       —        —      0        0      0.00       —
+  25 tsmom               lookbackDays=60                    0   no book       —        —      0        0      0.00       —
+  26 tsmom               lookbackDays=120                   0   no book       —        —      0        0      0.00       —
+
+cells swept, per mechanism:
+  trend-pullback         9
+  volume-thrust          9
+  volman-box             3
+  tsmom                  3
+  intraday-momentum      1
+  session-hold           1
+  TOTAL                 26  ← N, the number `the best of N` is meaningless without
+
+cells with no walk-forward book at all (a filter was NOT loosened to make one):
+  volume-thrust       riskReward=1 volMult=2       folds scored 0 · whole-window trades 4
+  volume-thrust       riskReward=1 volMult=2.5     folds scored 0 · whole-window trades 1
+  volume-thrust       riskReward=1 volMult=3.5     folds scored 0 · whole-window trades 0
+  volume-thrust       riskReward=1.5 volMult=2     folds scored 0

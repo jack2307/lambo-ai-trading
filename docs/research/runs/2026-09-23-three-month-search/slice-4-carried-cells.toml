@@ -1,0 +1,54 @@
+# The five cells slice 4 carries from the three-month search to the nine months
+# before it. Written from `slice-4-in-sample.txt` and not edited after the
+# out-of-sample run: these are the parameters the search chose, and the point of
+# the leg is that nothing is re-fitted on the window that scores them.
+#
+# Slice 4's mechanisms are trend-pullback, volume-thrust, volman-box, tsmom,
+# intraday-momentum and session-hold, 26 cells in all. Fifteen of the 26 took no
+# trade at all in any walk-forward fold — every volume-thrust, volman-box and
+# tsmom cell — so the five below are the top five of the eleven cells that
+# produced a book, which are ranks 1 to 5 of the ranked table.
+#
+# An earlier version of this file carried `fast = 34, riskReward = 2` at rank 5.
+# That ranking came from a run whose news calendar was never installed, so the
+# configured news guard was inert; with it installed `fast = 10,
+# riskReward = 1.5` is rank 5 instead. Both receipts are published.
+#
+# `overrides` pins every swept axis at the cell's coordinates, which is what
+# makes the replay a replay. session-hold and intraday-momentum declare no grid,
+# so they have nothing to pin and one cell each.
+
+[[hypothesis]]
+label = "cell-1-session-hold"
+base = "session-hold"
+filters = []
+overrides = {}
+why = "rank 1 of 26 cells on 2026-06-23 to 2026-09-17: the highest walk-forward return in slice 4, +1.63%"
+
+[[hypothesis]]
+label = "cell-2-intraday-mom"
+base = "intraday-momentum"
+filters = []
+overrides = {}
+why = "rank 2 of 26 cells on the three months, walk-forward return +0.11%"
+
+[[hypothesis]]
+label = "cell-3-tp-f10-rr2"
+base = "trend-pullback"
+filters = []
+overrides = { fast = 10.0, riskReward = 2.0 }
+why = "rank 3 of 26 cells on the three months, walk-forward return -4.16% — carried because the registration publishes the top five whatever they are"
+
+[[hypothesis]]
+label = "cell-4-tp-f34-rr1"
+base = "trend-pullback"
+filters = []
+overrides = { fast = 34.0, riskReward = 1.0 }
+why = "rank 4 of 26 cells on the three months, walk-forward return -4.97%"
+
+[[hypothesis]]
+label = "cell-5-tp-f10-rr15"
+base = "trend-pullback"
+filters = []
+overrides = { fast = 10.0, riskReward = 1.5 }
+why = "rank 5 of 26 cells on the three months, walk-forward return -5.22%"

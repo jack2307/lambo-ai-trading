@@ -1,0 +1,38 @@
+window:   --from=2025-09-23 --to=2026-06-22 kept 17485 of 100586 bars
+bars:     17485 from 2025-09-23 00:00Z to 2026-06-21 23:45Z
+spread:   0.28 per round trip (configured, not overridden)
+equity:   100 USD starting, risk 1% per trade
+trail:    off
+guards:   on — max_open_loss_r 2.0, notional 300%, weekend flat 16:40 NY, news flat 60/30 (impact≥3, USD), daily cap 20, loss limit $300, cooldown 30 min
+config:   folds 4 · select_by expectancy · min_trades_per_cell 5 · gate trades≥30 PF≥1.2 expectancy≥0.05
+filters:  none — the bare mechanisms and the registry's own grids
+
+== out of sample: 5 cells REPLAYED at their parameters, no folds, no selection ==
+each against 200 matched-null runs; the three legs are expectancy > 0, PF ≥ 1.2, percentile ≥ 95
+nothing is re-fitted here: the parameters are the ones the three-month search chose
+
+cell                       base                 trades   return%      PF   expect  null p50  null p95         pct     cm
+cell-1-session-hold        session-hold            191    -20.70   0.847   -0.188     0.968     1.107  UNMEASURED   6.63
+                                               expectancy > 0: FAIL · PF ≥ 1.2: FAIL · ≥ 95th of its matched null: UNMEASURED — hold null, not count-matched; control took a median of 1266 trades against this cell's 191 (ratio 6.63)
+                                               registry verdict (stricter than the three legs): profit factor 0.847 < 1.2; expectancy -0.188R < 0.05R
+                                               guards: refused none; closed OPEN_LOSS_CAP 97; sized down 123
+cell-2-intraday-mom        intraday-momentum       179     -0.36   0.956   -0.002     0.957     1.060  UNMEASURED  15.28
+                                               expectancy > 0: FAIL · PF ≥ 1.2: FAIL · ≥ 95th of its matched null: UNMEASURED — hold null, not count-matched; control took a median of 2734 trades against this cell's 179 (ratio 15.28)
+                                               registry verdict (stricter than the three legs): profit factor 0.956 < 1.2; expectancy -0.002R < 0.05R
+                                               guards: refused none; closed WEEKEND_FLAT 35; sized down 0
+cell-3-tp-f10-rr2          trend-pullback          917    -21.87   0.863   -0.207     0.971     1.110         12%   0.74
+                                               expectancy > 0: FAIL · PF ≥ 1.2: FAIL · ≥ 95th of its matched null: FAIL (at the 12th)
+                                               ** the count match is 0.74, outside 1 ± 0.25: this percentile is not this cell's size **
+                                               registry verdict (stricter than the three legs): profit factor 0.863 < 1.2; expectancy -0.207R < 0.05R
+                                               guards: refused WEEKEND_FLAT 3; closed WEEKEND_FLAT 3; sized down 871
+cell-4-tp-f34-rr1          trend-pullback          526    -26.95   0.599   -0.396     0.975     1.176          0%   0.85
+                                               expectancy > 0: FAIL · PF ≥ 1.2: FAIL · ≥ 95th of its matched null: FAIL (at the 0th)
+                                               registry verdict (stricter than the three legs): profit factor 0.599 < 1.2; expectancy -0.396R < 0.05R
+                                               guards: refused WEEKEND_FLAT 2; closed none; sized down 510
+cell-5-tp-f34-rr2          trend-pullback          515    -14.73   0.816   -0.252     0.976     1.184          6%   0.86
+                                               expectancy > 0: FAIL · PF ≥ 1.2: FAIL · ≥ 95th of its matched null: FAIL (at the 6th)
+                                               registry verdict (stricter than the three legs): profit factor 0.816 < 1.2; expectancy -0.252R < 0.05R
+                                               guards: refused WEEKEND_FLAT 2; closed none; sized down 498
+
+Nothing cleared all three legs. That is the result of the registration, not a prompt to widen anything.
+

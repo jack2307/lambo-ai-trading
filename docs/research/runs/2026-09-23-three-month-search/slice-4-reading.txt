@@ -1,0 +1,105 @@
+Slice 4 of the three-month search, read in plain sentences.
+Registration: docs/hypotheses/2026-09-23-three-month-search.md
+Mechanisms: trend-pullback, volume-thrust, volman-box, tsmom,
+            intraday-momentum, session-hold.
+Receipts in this directory:
+  slice-4-in-sample.txt                        the ranked cells, three months
+  slice-4-out-of-sample.txt                    the carried five, nine months
+  slice-4-out-of-sample-crosscheck.txt         the same five through the
+                                               existing --mode=hypotheses
+                                               --fixed printer
+  slice-4-carried-cells.toml                   the five cells, as parameters
+  slice-4-in-sample-without-news-calendar.txt  the first, defective in-sample
+  slice-4-out-of-sample-without-news-calendar.txt  and its out-of-sample leg
+
+WHAT WAS SWEPT. Twenty-six cells, where a cell is one point of a mechanism's
+own registry grid with every swept axis pinned to it: nine for trend-pullback
+(fast x riskReward), nine for volume-thrust (volMult x riskReward), three for
+volman-box (boxBars), three for tsmom (lookbackDays), and one each for
+intraday-momentum and session-hold, which declare no grid at all. Twenty-six is
+N, and the best of twenty-six is what the ranked table reports. The window is
+2026-06-23 to 2026-09-23 as registered, but the stored 15m bars end on
+2026-09-17 13:00Z, so 5,731 bars ran and the real window is a week short of
+three months. Guards on, configured spread 0.28, four folds, select_by
+expectancy, min_trades_per_cell 5, all from config; no threshold was touched.
+
+THE IN-SAMPLE NUMBER IS NOT SPECTACULAR, AND THAT IS ALSO A RESULT. The
+registration pre-committed to publishing a flattering number as a flattering
+number. There is none to publish in this slice. The best walk-forward return of
+twenty-six cells is session-hold at +1.63%, then intraday-momentum at +0.11%,
+and every one of the remaining nine cells that traded at all is negative, down
+to -8.96%. The best whole-window replay of any cell is volume-thrust at
+volMult 2, riskReward 1, which returns +2.02% on four trades. The owner asked
+for at least 50% over three months. On these six mechanisms, at 1% risk with
+the configured costs, the search cannot manufacture even a lucky 5%, which is
+the registration's own last branch: the window is too short at this risk level
+to produce a flattering number.
+
+FIFTEEN OF THE TWENTY-SIX CELLS ARE UNSCOREABLE AND NO FILTER WAS LOOSENED TO
+FIX THAT. Every tsmom cell took no trade at all over the three months at any
+lookback: tsmom rebalances daily but holds for weeks off 15m bars, and the
+warmup alone is longer than the window. Every volman-box cell took at most one
+trade over the whole window and none inside a fold. Every volume-thrust cell
+took between zero and four trades over the whole window and none inside a fold.
+A fold needs five training trades to select anything, so those fifteen cells
+produced no walk-forward book, and a cell that took no trade has no return.
+They are ranked last rather than at a fabricated 0.00%, which would have put
+every mechanism that never fired above every mechanism that fired and lost, and
+they are listed with their counts at the foot of the receipt.
+
+THE CARRIED FIVE. Ranks 1 to 5 of the eleven cells that produced a book:
+session-hold, intraday-momentum, trend-pullback at fast 10 / riskReward 2,
+trend-pullback at fast 34 / riskReward 1, and trend-pullback at fast 10 /
+riskReward 1.5. They were replayed on 2025-09-23 to 2026-06-22, 17,485 bars,
+at those parameters with no folds and no selection, so nothing was re-fitted.
+
+  cell                     trades   return%      PF   expect   percentile   count
+  cell-1-session-hold         191    -14.94   0.888   -0.132   UNMEASURED    6.75
+  cell-2-intraday-mom         179     -0.36   0.956   -0.002   UNMEASURED   15.20
+  cell-3-tp-f10-rr2           910    -20.84   0.868   -0.208          12%    0.74
+  cell-4-tp-f34-rr1           516    -27.55   0.580   -0.405           0%    0.86
+  cell-5-tp-f10-rr15          925    -29.10   0.794   -0.267           1%    0.74
+
+None of the five survived. Every one fails the first leg and the second on its
+own: expectancy is negative on all five and no profit factor reaches 1.2, so
+the third leg never decides anything. The two cells that looked positive in
+sample lose 14.94% and 0.36% on the nine months they were not selected on. The
+answer to the owner's question is the one the registration expected: a
+three-month search on these mechanisms buys a number, and the number does not
+survive contact with the nine months before it.
+
+THE HOLD NULL IS REPORTED AS UNMEASURED, NOT QUOTED. session-hold and
+intraday-momentum manage their own exits, so hypotheses.rs reads them against
+RandomHold rather than random entries, and that control is not count-matched;
+the repair of 2026-09-23 did not touch it and says so. The controls took a
+median of 1,289 and 2,722 trades against these cells' 191 and 179, ratios of
+6.75 and 15.20. The existing printer calls those rows the 12th and the 52nd
+percentile and flags them; this receipt prints UNMEASURED with the ratio
+beside it instead, because a percentile read against a control fifteen times
+the method's size is not the method's percentile. The gate and expectancy legs
+are unaffected and both fail, so nothing turns on it here.
+
+AND TSMOM WOULD HAVE BEEN A THIRD SUCH CASE. The brief named two mechanisms as
+hold-null cases. Pinning a cell makes it three: tsmom also has a self-managed
+exit, and hypotheses.rs takes the hold-null path when the exit is self-managed
+AND the preset's grid is empty, which pinning lookbackDays makes true. It never
+reached the out-of-sample leg because it took no trade in sample, so no such
+row appears here, but any future cell-level run of tsmom will carry the same
+UNMEASURED handling and for the same reason.
+
+THE DEFECT FOUND IN MY OWN RUNNER, PUBLISHED BESIDE ITS REPAIR. The first pair
+of receipts was produced without installing the news calendar, so the news flat
+in the guards line (60/30 minutes, impact 3 and above, USD) was inert while the
+header said guards were on. The cross-check against the existing search binary,
+which does install it, is what caught it: 917 trades against 910 on one cell,
+profit factors apart in the second decimal, and NEWS_FLAT refusals in one run
+and none in the other. It also changed which cell was rank 5 in sample, from
+fast 34 / riskReward 2 to fast 10 / riskReward 1.5, so the carried five are not
+the same five. The defective receipts are kept under
+*-without-news-calendar.txt rather than deleted. After the fix every column the
+two printers share is identical on all five cells.
+
+DEVIATION ON THE RECORD. The registration carries the top five overall forward.
+Splitting the sweep across four agents means twenty cells are carried, five per
+slice, which is more out-of-sample tests and not fewer, so it cannot flatter
+the result. Recorded here as a deviation all the same.
