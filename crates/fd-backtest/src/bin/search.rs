@@ -877,6 +877,20 @@ fn run_hypotheses(
             report.percentile
         );
         println!("{:<12} {:<18} {}  — {}", "", "", report.filters, report.why);
+        // What the count-matching ACHIEVED, printed on every row rather than
+        // assumed: the control's median out-of-sample trade count against the
+        // method's. The registration of 2026-09-23 calls anything outside a
+        // quarter either way a null that is not this method's size, and a
+        // percentile read against such a null is not this method's percentile.
+        println!(
+            "{:<12} {:<18} matched null {:.0} trades median vs the method's {} — count match {:.2}{}",
+            "",
+            "",
+            fd_backtest::hypotheses::median_count(&report.null_trades),
+            m.trades,
+            report.count_match(),
+            if report.count_matched() { "" } else { "  ** outside the band: this percentile is unmatched **" },
+        );
         // How often a guard acted on this row's own out-of-sample runs, so a
         // receipt shows whether a bounded number was bounded in practice.
         if guards.is_some() {
@@ -1021,6 +1035,16 @@ fn run_rescore(
             fd_backtest::hypotheses::RescoreRow::null_quantile(&row.matched_null_net, 0.50),
             fd_backtest::hypotheses::RescoreRow::null_quantile(&row.matched_null_net, 0.95),
             row.matched_null_net.len(),
+        );
+        // The achieved count match, measured and printed rather than assumed
+        // — see `docs/decisions/2026-09-23-matched-null-repair.md`.
+        println!(
+            "{:<22} matched null {:.0} trades median vs the method's {} — count match {:.2}{}",
+            "",
+            fd_backtest::hypotheses::median_count(&row.matched_null_trades),
+            row.oos.trades,
+            row.count_match(),
+            if row.count_matched() { "" } else { "  ** outside the band: this percentile is unmatched **" },
         );
         if row.passes_net() {
             passed.push(format!("{} ({})", row.label, if row.passes_gross() { "passed gross too" } else { "the credit moved it" }));

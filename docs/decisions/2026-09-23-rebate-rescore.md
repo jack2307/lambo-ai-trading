@@ -289,3 +289,49 @@ question is worth asking again.
 - Nothing else. A construct that failed three legs by this much is not a
   re-run away from passing, and re-running it until it does is how a backtest
   stops measuring the market and starts measuring the search.
+
+## Amendment, 2026-09-23 (later the same day): the matched null was repaired and this record's matched-null column is restated
+
+The defect this record named in full under *"2. THE MATCHED NULL IS NOT
+MATCHED TO THE TRADE COUNT IN THE WALK-FORWARD PATH"* was registered, fixed
+and re-run the same day. **The original numbers above are left exactly as they
+were published**; the corrected ones are beside them in
+`docs/decisions/2026-09-23-matched-null-repair.md` and in the receipts
+`docs/research/runs/2026-09-23-matched-null-repair/primary-xauusd-15m-repaired.txt`
+and `…-before-instrumented.txt`.
+
+What changed and what did not, on this record's own primary table:
+
+- **Nothing in the gate columns.** Trades, PF gross, PF net, rebate $ and
+  reb/R are identical on all 22 rows, measured by running the same binary
+  twice on the same day with the pin off and on. **The direction column is
+  identical on all 22 rows too.** Only the matched-null column moved.
+- **The matched-null percentile moved on 13 of 22 rows.** The largest moves
+  are the thin ones the defect was hurting: `ict-sweep-mss-fvg` 4 → 28,
+  `volume-thrust` 2 → 42, `orb` 18 → 32, `pdhl` 12 → 22, `squeeze-break`
+  14 → 24. `macd-cross` 68 → 78 and `keltner-break` 76 → 83; `stoch-reversal`
+  34 → 30, `bb-fade` 30 → 24, `atr/hivol-orb60` 28 → 14.
+- **The conclusion is unchanged. 0 of 22 still pass all three legs**, gross or
+  net, and the sentence *"nothing crossed"* stands.
+- The claim above that *"a repair can only move rows further inside their
+  nulls"* is **wrong** and is corrected here rather than edited out. A repair
+  moves a row toward wherever a correctly sized null puts it, which for a row
+  below its null's median is outward and for one above it is inward. Most rows
+  here are below, which is why most moved up.
+
+Two things this record got right and one it could not see:
+
+- The warning beside `volman-box`'s "100th percentile on two trades" was
+  right, and the repair does not rescue it: its count match is 150.50.
+- The 19-of-22 figure is confirmed by measurement. The pre-repair control's
+  median was **280 trades** for methods of 2 to 1,297.
+- `intraday-momentum`, called here "the nearest thing to a candidate" at the
+  98th–99th, is **unaffected by this repair and unmeasured for a different
+  reason**: it is a self-managed-exit method, so its matched null is
+  `RandomHold`, which is not count-matched at all — 197 out-of-sample trades
+  against a control taking 2,914. That is a second defect, recorded in the
+  repair document and not fixed there.
+
+The context window (`xauduka` 2022-06-16 → 2025-04-10, the second table) was
+**not** re-run: it is context and never a gate. Its matched-null column
+carries the same defect and stands uncorrected.

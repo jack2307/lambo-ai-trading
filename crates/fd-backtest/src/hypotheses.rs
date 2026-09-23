@@ -205,6 +205,12 @@ pub struct HypothesisReport {
     pub swap_usd: f64,
     /// Out-of-sample profit factors of the matched null, ascending.
     pub null_pf: Vec<f64>,
+    /// Trade counts of those same null runs, ascending — what the control's
+    /// calibration ACHIEVED, so a reader can check the match instead of
+    /// trusting the comment that claims it. Sorted independently of
+    /// `null_pf`, so the two vectors are the same runs but not aligned;
+    /// nothing here needs them paired and a median wants them sorted.
+    pub null_trades: Vec<usize>,
     /// Share of null runs the hypothesis beat, 0–100.
     pub percentile: f64,
     pub verdict: Verdict,
@@ -216,7 +222,58 @@ pub struct HypothesisReport {
     pub sized_down_by_guard: usize,
 }
 
+/// How far a control's trade count may sit from its method's before the
+/// count-matching has failed, as a fraction: 0.25 is "within about a
+/// quarter", which is what the 2026-09-23 registration
+/// (`docs/hypotheses/2026-09-23-matched-null-repair.md`) named as the line
+/// between a repair and a repair that did not work. It is not a gate on a
+/// strategy and it is not a threshold anyone may move to make a number
+/// pass; it is a check on the measuring instrument. Held by
+/// `crates/fd-backtest/tests/matched_null.rs`.
+pub const COUNT_MATCH_BAND: f64 = 0.25;
+
+/// The median of an ascending list of counts, as a float. `NaN` when empty,
+/// because a median of nothing is not zero.
+#[must_use]
+pub fn median_count(ascending: &[usize]) -> f64 {
+    if ascending.is_empty() {
+        return f64::NAN;
+    }
+    let n = ascending.len();
+    if n % 2 == 1 { ascending[n / 2] as f64 } else { (ascending[n / 2 - 1] + ascending[n / 2]) as f64 / 2.0 }
+}
+
+/// The control's median trade count as a fraction of the method's. 1.0 is a
+/// perfect match, 0.5 is a control taking half the method's trades, and
+/// `NaN` when either side has nothing to compare.
+#[must_use]
+pub fn count_match_ratio(method_trades: usize, null_trades: &[usize]) -> f64 {
+    if method_trades == 0 || null_trades.is_empty() {
+        return f64::NAN;
+    }
+    median_count(null_trades) / method_trades as f64
+}
+
 impl HypothesisReport {
+    /// What the count-matching achieved on this row: the control's median
+    /// out-of-sample trade count over the method's. See
+    /// [`COUNT_MATCH_BAND`]; a figure outside `1 ± band` means the null this
+    /// row's percentile was read against is not the method's size.
+    #[must_use]
+    pub fn count_match(&self) -> f64 {
+        count_match_ratio(self.oos.trades, &self.null_trades)
+    }
+
+    /// Whether [`Self::count_match`] is inside the registration's band. A
+    /// row with no trades or no null runs is `false`: it has no match to
+    /// report, and reporting one would be the assumption the registration
+    /// forbids.
+    #[must_use]
+    pub fn count_matched(&self) -> bool {
+        let r = self.count_match();
+        r.is_finite() && (r - 1.0).abs() <= COUNT_MATCH_BAND
+    }
+
     #[must_use]
     pub fn null_quantile(&self, q: f64) -> f64 {
         if self.null_pf.is_empty() {
@@ -371,20 +428,27 @@ fn hold_distribution(trades: &[crate::engine::Trade]) -> Option<(f64, f64)> {
 }
 
 /// `control_for`, with the random-entry rate matched to the method's count.
+///
+/// The third element is the list of parameters this function **calibrated**,
+/// which is what [`Preset::calibrated`] must pin so that a walk-forward's
+/// sweep cannot put a grid value back. It is empty when nothing was
+/// calibrated — a hold null has no rate, and its grid is empty anyway.
 fn matched_control_for(
     base: &dyn Strategy,
     overrides: &[(String, f64)],
     seed: f64,
     rate: Option<f64>,
     realised_hold: Option<(f64, f64)>,
-) -> (&'static dyn Strategy, Params) {
+) -> (&'static dyn Strategy, Params, Vec<String>) {
     let (inner, mut p) = control_for(base, overrides, seed, realised_hold);
+    let mut calibrated = Vec::new();
     if let Some(rate) = rate
         && p.contains("entryRate")
     {
         p.set("entryRate", rate);
+        calibrated.push("entryRate".to_string());
     }
-    (inner, p)
+    (inner, p, calibrated)
 }
 
 /// A method with some defaults replaced: a preset, as a strategy.
@@ -410,6 +474,24 @@ impl<'a> Preset<'a> {
     /// The method as it is: nothing overridden, nothing pinned.
     pub fn bare(inner: &'a dyn Strategy, defaults: Params) -> Self {
         Self { inner, defaults, pinned: Vec::new() }
+    }
+    /// A control at defaults some of which were **calibrated** rather than
+    /// registered, with those named so a sweep cannot overwrite them.
+    ///
+    /// [`Preset::bare`] pins nothing, which is right for a method being
+    /// replayed as it stands and wrong for a control whose whole point is a
+    /// parameter computed from the method it is a control for. Wrapping the
+    /// calibrated control in `bare` and then walking it forward let
+    /// `RandomEntry::grid`'s `entryRate` axis replace the calibrated rate in
+    /// every cell the selection could choose, so the count-matching was
+    /// discarded on every walk-forward matched null this desk published
+    /// before 2026-09-23
+    /// (`docs/decisions/2026-09-23-matched-null-repair.md`). The axis that is
+    /// *not* named here — `stopAtr` — stays in the grid on purpose: the
+    /// control is meant to get the same selection advantage a real method
+    /// gets, and only the rate is calibrated.
+    pub fn calibrated(inner: &'a dyn Strategy, defaults: Params, pinned: Vec<String>) -> Self {
+        Self { inner, defaults, pinned }
     }
 }
 
@@ -505,19 +587,25 @@ pub fn run_hypothesis_fixed_guarded(
     let rate = (!drift).then(|| matched_rate(bars, rules, &hypothesis.filters, result.trades.len(), guards));
     let hold = drift.then(|| hold_distribution(&result.trades)).flatten();
 
-    let mut null_pf: Vec<f64> = (0..seeds)
+    // This path never sweeps — the control is run at the explicit params
+    // below — so the pin costs nothing here and is carried only so that the
+    // two paths build their control the same way.
+    let mut null: Vec<(f64, usize)> = (0..seeds)
         .into_par_iter()
         .filter_map(|seed| {
-            let (inner, defaults) = matched_control_for(base, &hypothesis.overrides, seed as f64 + 1.0, rate, hold);
-            let control = Preset::bare(inner, defaults.clone());
+            let (inner, defaults, calibrated) =
+                matched_control_for(base, &hypothesis.overrides, seed as f64 + 1.0, rate, hold);
+            let control = Preset::calibrated(inner, defaults.clone(), calibrated);
             let matched = Filtered { inner: &control, filters: scoped(&hypothesis.filters, rules) };
-            let pf = run_backtest_guarded(bars, &matched, &defaults, rules, guards, None, Range::default(), None)
-                .metrics
-                .profit_factor;
-            pf.is_finite().then_some(pf)
+            let run = run_backtest_guarded(bars, &matched, &defaults, rules, guards, None, Range::default(), None);
+            let pf = run.metrics.profit_factor;
+            pf.is_finite().then_some((pf, run.metrics.trades))
         })
         .collect();
-    null_pf.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+    null.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap_or(std::cmp::Ordering::Equal));
+    let null_pf: Vec<f64> = null.iter().map(|p| p.0).collect();
+    let mut null_trades: Vec<usize> = null.iter().map(|p| p.1).collect();
+    null_trades.sort_unstable();
 
     let pf = result.metrics.profit_factor;
     let percentile = if null_pf.is_empty() || !pf.is_finite() {
@@ -534,6 +622,7 @@ pub fn run_hypothesis_fixed_guarded(
         swap_usd: result.trades.iter().map(|t| t.swap_usd).sum(),
         oos: result.metrics,
         null_pf,
+        null_trades,
         percentile,
         skipped_by_guard: result.skipped_by_guard,
         closed_by_guard: result.closed_by_guard,
@@ -597,18 +686,26 @@ pub fn run_hypothesis_guarded(
     let rate = (!drift).then(|| matched_rate(bars, rules, &hypothesis.filters, whole.trades.len(), guards));
     let hold = drift.then(|| hold_distribution(&whole.trades)).flatten();
 
-    let mut null_pf: Vec<f64> = (0..seeds)
+    // `Preset::calibrated`, not `Preset::bare`: the walk-forward below sweeps
+    // the control's grid, and `RandomEntry`'s grid carries `entryRate`. Wrap
+    // the calibrated control in a preset that pins nothing and every cell the
+    // sweep can choose carries a grid rate instead of the calibrated one,
+    // which is what every matched null published before 2026-09-23 did.
+    let mut null: Vec<(f64, usize)> = (0..seeds)
         .into_par_iter()
         .filter_map(|seed| {
-            let (inner, defaults) = matched_control_for(base, &hypothesis.overrides, seed as f64 + 1.0, rate, hold);
-            let control = Preset::bare(inner, defaults);
+            let (inner, defaults, calibrated) =
+                matched_control_for(base, &hypothesis.overrides, seed as f64 + 1.0, rate, hold);
+            let control = Preset::calibrated(inner, defaults, calibrated);
             let matched = Filtered { inner: &control, filters: scoped(&hypothesis.filters, rules) };
-            walk_forward_guarded(&matched, bars, rules, None, folds, select_by, min_trades_per_cell, guards)
-                .map(|r| r.oos.profit_factor)
-                .filter(|pf| pf.is_finite())
+            let run = walk_forward_guarded(&matched, bars, rules, None, folds, select_by, min_trades_per_cell, guards)?;
+            run.oos.profit_factor.is_finite().then_some((run.oos.profit_factor, run.oos.trades))
         })
         .collect();
-    null_pf.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+    null.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap_or(std::cmp::Ordering::Equal));
+    let null_pf: Vec<f64> = null.iter().map(|p| p.0).collect();
+    let mut null_trades: Vec<usize> = null.iter().map(|p| p.1).collect();
+    null_trades.sort_unstable();
 
     let pf = result.oos.profit_factor;
     let percentile = if null_pf.is_empty() || !pf.is_finite() {
@@ -626,6 +723,7 @@ pub fn run_hypothesis_guarded(
         swap_usd: result.oos_trades.iter().map(|t| t.swap_usd).sum(),
         oos: result.oos,
         null_pf,
+        null_trades,
         percentile,
         skipped_by_guard: result.skipped_by_guard,
         closed_by_guard: result.closed_by_guard,
@@ -668,6 +766,10 @@ pub struct RescoreRow {
     /// and with the same credit. Same runs, same seeds, two columns.
     pub matched_null_gross: Vec<f64>,
     pub matched_null_net: Vec<f64>,
+    /// Out-of-sample trade counts of those same control runs, ascending —
+    /// what the calibration achieved rather than what it intended. Read
+    /// through [`Self::count_match`].
+    pub matched_null_trades: Vec<usize>,
     pub matched_pct_gross: f64,
     pub matched_pct_net: f64,
     /// The whole window at the registered parameters — what `--mode=null-dir`
@@ -687,6 +789,20 @@ pub struct RescoreRow {
 }
 
 impl RescoreRow {
+    /// What the count-matching achieved: the control's median out-of-sample
+    /// trade count over the method's. See [`COUNT_MATCH_BAND`].
+    #[must_use]
+    pub fn count_match(&self) -> f64 {
+        count_match_ratio(self.oos.trades, &self.matched_null_trades)
+    }
+
+    /// Whether [`Self::count_match`] is inside the registration's band.
+    #[must_use]
+    pub fn count_matched(&self) -> bool {
+        let r = self.count_match();
+        r.is_finite() && (r - 1.0).abs() <= COUNT_MATCH_BAND
+    }
+
     /// The falsifier, in full: the registry's standing profit-factor gate on
     /// the net figure, and the 95th of **both** nulls, each carrying the same
     /// rebate. All three, or the construct stays closed.
@@ -775,22 +891,29 @@ pub fn rescore_hypothesis(
     // so the control is paid exactly what the method is paid. A pair is kept
     // only when both of its figures are finite, so the two curves are the
     // same runs in the same order and the percentiles are comparable.
-    let mut matched: Vec<(f64, f64)> = (0..seeds)
+    // `Preset::calibrated`, not `Preset::bare`: this walk-forward sweeps the
+    // control's grid and `RandomEntry`'s grid carries `entryRate`, so a
+    // control that pins nothing throws the calibration away
+    // (`docs/decisions/2026-09-23-matched-null-repair.md`).
+    let mut matched: Vec<(f64, f64, usize)> = (0..seeds)
         .into_par_iter()
         .filter_map(|seed| {
-            let (inner, defaults) = matched_control_for(base, &hypothesis.overrides, seed as f64 + 1.0, rate, hold);
-            let control = Preset::bare(inner, defaults);
+            let (inner, defaults, calibrated) =
+                matched_control_for(base, &hypothesis.overrides, seed as f64 + 1.0, rate, hold);
+            let control = Preset::calibrated(inner, defaults, calibrated);
             let gated = Filtered { inner: &control, filters: scoped(&hypothesis.filters, rules) };
             let run = walk_forward_guarded(&gated, bars, rules, None, folds, select_by, min_trades_per_cell, guards)?;
             let gross = run.oos.profit_factor;
             let net = rebate.credited_metrics(&run.oos_trades, rules, equity).profit_factor;
-            (gross.is_finite() && net.is_finite()).then_some((gross, net))
+            (gross.is_finite() && net.is_finite()).then_some((gross, net, run.oos.trades))
         })
         .collect();
     matched.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap_or(std::cmp::Ordering::Equal));
     let matched_null_gross: Vec<f64> = matched.iter().map(|p| p.0).collect();
     let mut matched_null_net: Vec<f64> = matched.iter().map(|p| p.1).collect();
     matched_null_net.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+    let mut matched_null_trades: Vec<usize> = matched.iter().map(|p| p.2).collect();
+    matched_null_trades.sort_unstable();
 
     // ---- the direction null, likewise ------------------------------------
     let mut dir: Vec<(f64, f64)> = (0..direction_samples)
@@ -836,6 +959,7 @@ pub fn rescore_hypothesis(
         whole_net,
         matched_null_gross,
         matched_null_net,
+        matched_null_trades,
         dir_null_gross,
         dir_null_net,
     }))
@@ -990,6 +1114,7 @@ why = "the first hour's range is the day's liquidity"
             swap_usd: 0.0,
             oos,
             null_pf: vec![0.8, 0.9, 1.0, 1.1, 1.2],
+            null_trades: vec![90, 95, 100, 104, 110],
             percentile: 100.0,
             skipped_by_guard: BTreeMap::new(),
             closed_by_guard: BTreeMap::new(),
@@ -1005,5 +1130,44 @@ why = "the first hour's range is the day's liquidity"
         acted.closed_by_guard.insert("OPEN_LOSS_CAP".into(), 2);
         acted.closed_by_guard.insert("WEEKEND_FLAT".into(), 40);
         assert_eq!(acted.guard_activity(), "guards: refused WEEKEND_FLAT 3; closed OPEN_LOSS_CAP 2, WEEKEND_FLAT 40; sized down 0");
+    }
+
+    #[test]
+    fn the_achieved_count_match_is_the_controls_median_over_the_methods_count() {
+        assert!(median_count(&[]).is_nan(), "a median of nothing is not zero");
+        assert_eq!(median_count(&[7]), 7.0);
+        assert_eq!(median_count(&[10, 20]), 15.0, "an even list takes the mean of the middle pair");
+        assert_eq!(median_count(&[1, 2, 3]), 2.0);
+
+        assert_eq!(count_match_ratio(100, &[90, 100, 110]), 1.0);
+        assert_eq!(count_match_ratio(100, &[40, 50, 60]), 0.5, "a control at half the method's size");
+        assert!(count_match_ratio(0, &[10]).is_nan(), "a method that took no trade has no match to report");
+        assert!(count_match_ratio(10, &[]).is_nan(), "and neither has a null that produced no run");
+
+        // The registration's band, read the way the test that guards it
+        // reads it: within about a quarter either way, and the edges are in.
+        let mut oos = Metrics::empty();
+        oos.trades = 100;
+        let row = |counts: Vec<usize>| HypothesisReport {
+            label: "x".into(),
+            base: "y".into(),
+            filters: String::new(),
+            why: String::new(),
+            verdict: verdict(&oos, &PromisingGate::default()),
+            swap_usd: 0.0,
+            oos: oos.clone(),
+            null_pf: vec![1.0],
+            null_trades: counts,
+            percentile: 50.0,
+            skipped_by_guard: BTreeMap::new(),
+            closed_by_guard: BTreeMap::new(),
+            sized_down_by_guard: 0,
+        };
+        assert!(row(vec![100]).count_matched());
+        assert!(row(vec![75]).count_matched(), "a quarter under is the edge and the edge is inside");
+        assert!(row(vec![125]).count_matched(), "and so is a quarter over");
+        assert!(!row(vec![74]).count_matched());
+        assert!(!row(vec![126]).count_matched());
+        assert!(!row(vec![]).count_matched(), "no null runs is not a match, it is no measurement");
     }
 }

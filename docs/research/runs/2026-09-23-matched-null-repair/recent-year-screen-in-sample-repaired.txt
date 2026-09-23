@@ -1,0 +1,125 @@
+bounds:   --from=2025-09-13 --to=2026-09-12 kept 23531 of 100586 bars
+spread:   0.28 per round trip
+trail:    off
+bars:     23531 from 2025-09-14 22:00 to 2026-09-11 20:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from data/news/events.parquet
+news scope: USD (news_currencies)
+guards: off (every number unguarded)
+
+== hypotheses `docs/hypotheses/2026-09-13-recent-year-screen.toml`: 34 declared, walk-forward (4 folds), each against 200 matched null runs ==
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+news: 747 events (2010-01-08 → 2027-12-08) from data/news/events.parquet
+news scope: USD (news_currencies)
+guards: off (every number unguarded)
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+ema-cross/all ema-cross             222   0.639  -0.199    0.959    1.175        0    0%  fail: profit factor 0.639 < 1.2; expectancy -0.199R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15  — the moving-average cross baseline, all day
+                                matched null 278 trades median vs the method's 222 — count match 1.25  ** outside the band: this percentile is unmatched **
+ema-cross/ny ema-cross             101   0.996  -0.031    0.952    1.360        0   58%  fail: profit factor 0.996 < 1.2; expectancy -0.031R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 08:00-16:00  — the moving-average cross baseline, New York hours
+                                matched null 104 trades median vs the method's 101 — count match 1.03
+rsi-reversion/all rsi-reversion         417   0.864  -0.055    0.958    1.134        0   20%  fail: profit factor 0.864 < 1.2; expectancy -0.055R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15  — the RSI reversion baseline, all day
+                                matched null 390 trades median vs the method's 417 — count match 0.94
+rsi-reversion/ny rsi-reversion          84   0.909  -0.041    0.975    1.284        0   36%  fail: profit factor 0.909 < 1.2; expectancy -0.041R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 08:00-16:00  — the RSI reversion baseline, New York hours
+                                matched null 164 trades median vs the method's 84 — count match 1.95  ** outside the band: this percentile is unmatched **
+donchian-breakout/all donchian-breakout     519   0.962  -0.005    0.953    1.103        0   56%  fail: profit factor 0.962 < 1.2; expectancy -0.005R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15  — the channel breakout baseline, all day
+                                matched null 676 trades median vs the method's 519 — count match 1.30  ** outside the band: this percentile is unmatched **
+donchian-breakout/ny donchian-breakout     315   0.818  -0.059    0.950    1.192        0   13%  fail: profit factor 0.818 < 1.2; expectancy -0.059R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 08:00-16:00  — the channel breakout baseline, New York hours
+                                matched null 285 trades median vs the method's 315 — count match 0.90
+bb-fade/all  bb-fade               994   0.897  -0.051    0.948    1.077        0   24%  fail: profit factor 0.897 < 1.2; expectancy -0.051R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15  — the Bollinger fade baseline, all day
+                                matched null 832 trades median vs the method's 994 — count match 0.84
+bb-fade/ny   bb-fade               380   0.977  -0.010    0.953    1.179        0   59%  fail: profit factor 0.977 < 1.2; expectancy -0.010R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 08:00-16:00  — the Bollinger fade baseline, New York hours
+                                matched null 358 trades median vs the method's 380 — count match 0.94
+orb/all      orb                   149   0.856  -0.050    0.961    1.237        0   32%  fail: profit factor 0.856 < 1.2; expectancy -0.050R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15  — the opening-range breakout, all day
+                                matched null 154 trades median vs the method's 149 — count match 1.03
+orb/ny       orb                   149   0.856  -0.050    0.961    1.208        0   32%  fail: profit factor 0.856 < 1.2; expectancy -0.050R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 08:00-16:00  — the opening-range breakout, New York hours
+                                matched null 136 trades median vs the method's 149 — count match 0.91
+pdhl/all     pdhl                  177   0.824  -0.107    0.963    1.199        0   22%  fail: profit factor 0.824 < 1.2; expectancy -0.107R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15  — previous-day high and low, fade and break, all day
+                                matched null 175 trades median vs the method's 177 — count match 0.99
+pdhl/ny      pdhl                   68   0.784  -0.132    0.957    1.507        0   24%  fail: profit factor 0.784 < 1.2; expectancy -0.132R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 08:00-16:00  — previous-day high and low, fade and break, New York hours
+                                matched null 64 trades median vs the method's 68 — count match 0.94
+vwap-fade/all vwap-fade             860   0.932  -0.043    0.946    1.111        0   44%  fail: profit factor 0.932 < 1.2; expectancy -0.043R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15  — a stretch from session VWAP fades, all day
+                                matched null 657 trades median vs the method's 860 — count match 0.76
+vwap-fade/ny vwap-fade             340   0.838  -0.105    0.945    1.176        0   17%  fail: profit factor 0.838 < 1.2; expectancy -0.105R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 08:00-16:00  — a stretch from session VWAP fades, New York hours
+                                matched null 261 trades median vs the method's 340 — count match 0.77
+doji-reversal/all doji-reversal         102   0.570  -0.332    0.967    1.214        0    0%  fail: profit factor 0.570 < 1.2; expectancy -0.332R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15  — a doji at the end of a move fades, all day
+                                matched null 172 trades median vs the method's 102 — count match 1.69  ** outside the band: this percentile is unmatched **
+doji-reversal/ny doji-reversal          98   0.743  -0.179    0.968    1.368        0   14%  fail: profit factor 0.743 < 1.2; expectancy -0.179R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 08:00-16:00  — a doji at the end of a move fades, New York hours
+                                matched null 79 trades median vs the method's 98 — count match 0.81
+trend-pullback/all trend-pullback        687   0.629  -0.278    0.957    1.125        0    0%  fail: profit factor 0.629 < 1.2; expectancy -0.278R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15  — the first pullback in a slow trend continues it, all day
+                                matched null 562 trades median vs the method's 687 — count match 0.82
+trend-pullback/ny trend-pullback        260   0.656  -0.261    0.969    1.230        0    2%  fail: profit factor 0.656 < 1.2; expectancy -0.261R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 08:00-16:00  — the first pullback in a slow trend continues it, New York hours
+                                matched null 222 trades median vs the method's 260 — count match 0.85
+gap-fade/all gap-fade                0     NaN     NaN    0.950    1.155       -0  NaN%  fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15  — the reopen gap fills, all day
+                                matched null 301 trades median vs the method's 0 — count match NaN  ** outside the band: this percentile is unmatched **
+gap-fade/ny  gap-fade                0     NaN     NaN    0.947    1.303       -0  NaN%  fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 08:00-16:00  — the reopen gap fills, New York hours
+                                matched null 115 trades median vs the method's 0 — count match NaN  ** outside the band: this percentile is unmatched **
+volume-thrust/all volume-thrust          10   0.737  -0.095    0.862    4.781        0   42%  fail: only 10 trades (need 30); profit factor 0.737 < 1.2; expectancy -0.095R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15  — a bar on unusual volume that closes at its extreme continues, all day
+                                matched null 5 trades median vs the method's 10 — count match 0.50  ** outside the band: this percentile is unmatched **
+volume-thrust/ny volume-thrust           4   0.201  -0.398    0.000    1.663        0   67%  fail: only 4 trades (need 30); profit factor 0.201 < 1.2; expectancy -0.398R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 08:00-16:00  — a bar on unusual volume that closes at its extreme continues, New York hours
+                                matched null 2 trades median vs the method's 4 — count match 0.50  ** outside the band: this percentile is unmatched **
+ict-sweep-mss-fvg/all ict-sweep-mss-fvg      25   0.757  -0.110    0.931    1.650        0   28%  fail: only 25 trades (need 30); profit factor 0.757 < 1.2; expectancy -0.110R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15  — sweep, shift, gap: the ICT chain, all day
+                                matched null 31 trades median vs the method's 25 — count match 1.24
+ict-sweep-mss-fvg/ny ict-sweep-mss-fvg      10   0.831  -0.054    0.871    3.973        0   49%  fail: only 10 trades (need 30); profit factor 0.831 < 1.2; expectancy -0.054R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 08:00-16:00  — sweep, shift, gap: the ICT chain, New York hours
+                                matched null 10 trades median vs the method's 10 — count match 1.00
+keltner-break/all keltner-break         533   1.048   0.028    0.944    1.120        0   83%  fail: profit factor 1.048 < 1.2; expectancy 0.028R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15  — a close outside the Keltner channel continues, all day
+                                matched null 597 trades median vs the method's 533 — count match 1.12
+keltner-break/ny keltner-break         227   0.868  -0.043    0.934    1.210        0   26%  fail: profit factor 0.868 < 1.2; expectancy -0.043R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 08:00-16:00  — a close outside the Keltner channel continues, New York hours
+                                matched null 250 trades median vs the method's 227 — count match 1.10
+macd-cross/all macd-cross            923   1.014   0.011    0.955    1.095        0   78%  fail: profit factor 1.014 < 1.2; expectancy 0.011R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15  — the MACD line crossing its signal, all day
+                                matched null 736 trades median vs the method's 923 — count match 0.80
+macd-cross/ny macd-cross            448   0.988  -0.020    0.954    1.175        0   58%  fail: profit factor 0.988 < 1.2; expectancy -0.020R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 08:00-16:00  — the MACD line crossing its signal, New York hours
+                                matched null 300 trades median vs the method's 448 — count match 0.67  ** outside the band: this percentile is unmatched **
+rsi2-pullback/all rsi2-pullback         542   0.873  -0.044    0.956    1.125        0   16%  fail: profit factor 0.873 < 1.2; expectancy -0.044R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15  — RSI(2) extremes with the SMA200 trend, all day
+                                matched null 560 trades median vs the method's 542 — count match 1.03
+rsi2-pullback/ny rsi2-pullback         198   1.098   0.039    0.967    1.259        0   83%  fail: profit factor 1.098 < 1.2; expectancy 0.039R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 08:00-16:00  — RSI(2) extremes with the SMA200 trend, New York hours
+                                matched null 207 trades median vs the method's 198 — count match 1.05
+squeeze-break/all squeeze-break         160   0.841  -0.088    0.959    1.188        0   24%  fail: profit factor 0.841 < 1.2; expectancy -0.088R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15  — a Bollinger squeeze, then a close outside the bands, all day
+                                matched null 180 trades median vs the method's 160 — count match 1.12
+squeeze-break/ny squeeze-break          27   0.994  -0.008    0.973    1.496        0   55%  fail: only 27 trades (need 30); profit factor 0.994 < 1.2; expectancy -0.008R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 08:00-16:00  — a Bollinger squeeze, then a close outside the bands, New York hours
+                                matched null 53 trades median vs the method's 27 — count match 1.96  ** outside the band: this percentile is unmatched **
+stoch-reversal/all stoch-reversal       1297   0.908  -0.044    0.948    1.090        0   30%  fail: profit factor 0.908 < 1.2; expectancy -0.044R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15  — stochastic crossing from an extreme, all day
+                                matched null 814 trades median vs the method's 1297 — count match 0.63  ** outside the band: this percentile is unmatched **
+stoch-reversal/ny stoch-reversal        507   0.913  -0.030    0.951    1.172        0   35%  fail: profit factor 0.913 < 1.2; expectancy -0.030R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 08:00-16:00  — stochastic crossing from an extreme, New York hours
+                                matched null 325 trades median vs the method's 507 — count match 0.64  ** outside the band: this percentile is unmatched **
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+

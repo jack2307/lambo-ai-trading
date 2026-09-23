@@ -1,0 +1,118 @@
+bounds:   --from=2025-09-13 --to=2026-09-12 kept 23531 of 100586 bars
+spread:   0.28 per round trip
+trail:    off
+bars:     23531 from 2025-09-14 22:00 to 2026-09-11 20:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from data/news/events.parquet
+news scope: USD (news_currencies)
+guards: off (every number unguarded)
+
+== hypotheses `docs/hypotheses/2026-09-13-recent-year-sessions.toml`: 32 declared, walk-forward (4 folds), each against 200 matched null runs ==
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+news: 747 events (2010-01-08 → 2027-12-08) from data/news/events.parquet
+news scope: USD (news_currencies)
+guards: off (every number unguarded)
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+ema-cross/asia ema-cross              37   1.622   0.294    1.015    1.358        0   99%  SURVIVES
+                                MoTuWeThFr + flat 16:30-18:15 + NY 18:00-02:00  — the moving-average cross baseline, the Asian session, 18:00-02:00 New York
+                                matched null 105 trades median vs the method's 37 — count match 2.84  ** outside the band: this percentile is unmatched **
+ema-cross/london ema-cross             110   0.805  -0.112    0.912    1.304        0   30%  fail: profit factor 0.805 < 1.2; expectancy -0.112R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 03:00-11:00  — the moving-average cross baseline, the London session, 03:00-11:00 New York
+                                matched null 113 trades median vs the method's 110 — count match 1.03
+rsi-reversion/asia rsi-reversion         104   1.098   0.048    1.000    1.354        0   69%  fail: profit factor 1.098 < 1.2; expectancy 0.048R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 18:00-02:00  — the RSI reversion baseline, the Asian session, 18:00-02:00 New York
+                                matched null 124 trades median vs the method's 104 — count match 1.19
+rsi-reversion/london rsi-reversion         110   0.809  -0.098    0.905    1.226        0   29%  fail: profit factor 0.809 < 1.2; expectancy -0.098R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 03:00-11:00  — the RSI reversion baseline, the London session, 03:00-11:00 New York
+                                matched null 163 trades median vs the method's 110 — count match 1.48  ** outside the band: this percentile is unmatched **
+donchian-breakout/asia donchian-breakout     209   1.013   0.013    1.004    1.246        0   54%  fail: profit factor 1.013 < 1.2; expectancy 0.013R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 18:00-02:00  — the channel breakout baseline, the Asian session, 18:00-02:00 New York
+                                matched null 257 trades median vs the method's 209 — count match 1.23
+donchian-breakout/london donchian-breakout     436   0.767  -0.076    0.894    1.121        0    9%  fail: profit factor 0.767 < 1.2; expectancy -0.076R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 03:00-11:00  — the channel breakout baseline, the London session, 03:00-11:00 New York
+                                matched null 310 trades median vs the method's 436 — count match 0.71  ** outside the band: this percentile is unmatched **
+bb-fade/asia bb-fade               205   0.891  -0.052    0.999    1.241        0   18%  fail: profit factor 0.891 < 1.2; expectancy -0.052R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 18:00-02:00  — the Bollinger fade baseline, the Asian session, 18:00-02:00 New York
+                                matched null 305 trades median vs the method's 205 — count match 1.49  ** outside the band: this percentile is unmatched **
+bb-fade/london bb-fade               431   1.053   0.020    0.902    1.127        0   90%  fail: profit factor 1.053 < 1.2; expectancy 0.020R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 03:00-11:00  — the Bollinger fade baseline, the London session, 03:00-11:00 New York
+                                matched null 394 trades median vs the method's 431 — count match 0.91
+orb/asia     orb                     0     NaN     NaN    1.009    1.386       -0  NaN%  fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 18:00-02:00  — the opening-range breakout, the Asian session, 18:00-02:00 New York
+                                matched null 97 trades median vs the method's 0 — count match NaN  ** outside the band: this percentile is unmatched **
+orb/london   orb                   134   0.794  -0.072    0.924    1.257        0   26%  fail: profit factor 0.794 < 1.2; expectancy -0.072R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 03:00-11:00  — the opening-range breakout, the London session, 03:00-11:00 New York
+                                matched null 123 trades median vs the method's 134 — count match 0.92
+pdhl/asia    pdhl                   64   0.832  -0.102    1.010    1.500        0   27%  fail: profit factor 0.832 < 1.2; expectancy -0.102R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 18:00-02:00  — previous-day high and low, fade and break, the Asian session, 18:00-02:00 New York
+                                matched null 66 trades median vs the method's 64 — count match 1.03
+pdhl/london  pdhl                   64   0.673  -0.217    0.928    1.413        0   17%  fail: profit factor 0.673 < 1.2; expectancy -0.217R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 03:00-11:00  — previous-day high and low, fade and break, the London session, 03:00-11:00 New York
+                                matched null 61 trades median vs the method's 64 — count match 0.95
+vwap-fade/asia vwap-fade             297   0.870  -0.070    1.015    1.251        0   16%  fail: profit factor 0.870 < 1.2; expectancy -0.070R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 18:00-02:00  — a stretch from session VWAP fades, the Asian session, 18:00-02:00 New York
+                                matched null 235 trades median vs the method's 297 — count match 0.79
+vwap-fade/london vwap-fade             448   0.944  -0.028    0.899    1.129        0   62%  fail: profit factor 0.944 < 1.2; expectancy -0.028R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 03:00-11:00  — a stretch from session VWAP fades, the London session, 03:00-11:00 New York
+                                matched null 307 trades median vs the method's 448 — count match 0.69  ** outside the band: this percentile is unmatched **
+doji-reversal/asia doji-reversal          19   0.341  -0.580    0.993    1.482        0    0%  fail: only 19 trades (need 30); profit factor 0.341 < 1.2; expectancy -0.580R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 18:00-02:00  — a doji at the end of a move fades, the Asian session, 18:00-02:00 New York
+                                matched null 52 trades median vs the method's 19 — count match 2.74  ** outside the band: this percentile is unmatched **
+doji-reversal/london doji-reversal          89   0.691  -0.215    0.924    1.365        0   18%  fail: profit factor 0.691 < 1.2; expectancy -0.215R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 03:00-11:00  — a doji at the end of a move fades, the London session, 03:00-11:00 New York
+                                matched null 81 trades median vs the method's 89 — count match 0.91
+trend-pullback/asia trend-pullback        173   0.540  -0.387    1.007    1.289        0    0%  fail: profit factor 0.540 < 1.2; expectancy -0.387R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 18:00-02:00  — the first pullback in a slow trend continues it, the Asian session, 18:00-02:00 New York
+                                matched null 192 trades median vs the method's 173 — count match 1.11
+trend-pullback/london trend-pullback        284   0.769  -0.157    0.908    1.176        0   18%  fail: profit factor 0.769 < 1.2; expectancy -0.157R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 03:00-11:00  — the first pullback in a slow trend continues it, the London session, 03:00-11:00 New York
+                                matched null 231 trades median vs the method's 284 — count match 0.81
+volume-thrust/asia volume-thrust          17   0.873  -0.065    0.242    3.535        0   64%  fail: only 17 trades (need 30); profit factor 0.873 < 1.2; expectancy -0.065R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 18:00-02:00  — a bar on unusual volume that closes at its extreme continues, the Asian session, 18:00-02:00 New York
+                                matched null 2 trades median vs the method's 17 — count match 0.12  ** outside the band: this percentile is unmatched **
+volume-thrust/london volume-thrust           3   0.000  -0.672    0.000    1.844        0    0%  fail: only 3 trades (need 30); profit factor 0.000 < 1.2; expectancy -0.672R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 03:00-11:00  — a bar on unusual volume that closes at its extreme continues, the London session, 03:00-11:00 New York
+                                matched null 1 trades median vs the method's 3 — count match 0.33  ** outside the band: this percentile is unmatched **
+ict-sweep-mss-fvg/asia ict-sweep-mss-fvg       9   1.709   0.253    0.956    3.023        0   78%  fail: only 9 trades (need 30)
+                                MoTuWeThFr + flat 16:30-18:15 + NY 18:00-02:00  — sweep, shift, gap: the ICT chain, the Asian session, 18:00-02:00 New York
+                                matched null 8 trades median vs the method's 9 — count match 0.89
+ict-sweep-mss-fvg/london ict-sweep-mss-fvg      10   0.029  -0.508    0.909    2.688        0    7%  fail: only 10 trades (need 30); profit factor 0.029 < 1.2; expectancy -0.508R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 03:00-11:00  — sweep, shift, gap: the ICT chain, the London session, 03:00-11:00 New York
+                                matched null 9 trades median vs the method's 10 — count match 0.90
+keltner-break/asia keltner-break         262   1.286   0.154    1.000    1.237        0   98%  SURVIVES
+                                MoTuWeThFr + flat 16:30-18:15 + NY 18:00-02:00  — a close outside the Keltner channel continues, the Asian session, 18:00-02:00 New York
+                                matched null 227 trades median vs the method's 262 — count match 0.87
+keltner-break/london keltner-break         169   0.911  -0.043    0.891    1.158        0   54%  fail: profit factor 0.911 < 1.2; expectancy -0.043R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 03:00-11:00  — a close outside the Keltner channel continues, the London session, 03:00-11:00 New York
+                                matched null 268 trades median vs the method's 169 — count match 1.59  ** outside the band: this percentile is unmatched **
+macd-cross/asia macd-cross            300   1.558   0.276    1.000    1.261        0  100%  SURVIVES
+                                MoTuWeThFr + flat 16:30-18:15 + NY 18:00-02:00  — the MACD line crossing its signal, the Asian session, 18:00-02:00 New York
+                                matched null 264 trades median vs the method's 300 — count match 0.88
+macd-cross/london macd-cross            450   0.850  -0.084    0.891    1.120        0   37%  fail: profit factor 0.850 < 1.2; expectancy -0.084R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 03:00-11:00  — the MACD line crossing its signal, the London session, 03:00-11:00 New York
+                                matched null 323 trades median vs the method's 450 — count match 0.72  ** outside the band: this percentile is unmatched **
+rsi2-pullback/asia rsi2-pullback         179   0.835  -0.087    1.000    1.247        0    9%  fail: profit factor 0.835 < 1.2; expectancy -0.087R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 18:00-02:00  — RSI(2) extremes with the SMA200 trend, the Asian session, 18:00-02:00 New York
+                                matched null 217 trades median vs the method's 179 — count match 1.21
+rsi2-pullback/london rsi2-pullback         143   1.047   0.018    0.909    1.198        0   80%  fail: profit factor 1.047 < 1.2; expectancy 0.018R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 03:00-11:00  — RSI(2) extremes with the SMA200 trend, the London session, 03:00-11:00 New York
+                                matched null 221 trades median vs the method's 143 — count match 1.55  ** outside the band: this percentile is unmatched **
+squeeze-break/asia squeeze-break          94   0.799  -0.119    1.004    1.437        0   19%  fail: profit factor 0.799 < 1.2; expectancy -0.119R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 18:00-02:00  — a Bollinger squeeze, then a close outside the bands, the Asian session, 18:00-02:00 New York
+                                matched null 82 trades median vs the method's 94 — count match 0.87
+squeeze-break/london squeeze-break          63   0.676  -0.182    0.919    1.415        0   16%  fail: profit factor 0.676 < 1.2; expectancy -0.182R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 03:00-11:00  — a Bollinger squeeze, then a close outside the bands, the London session, 03:00-11:00 New York
+                                matched null 72 trades median vs the method's 63 — count match 1.15
+stoch-reversal/asia stoch-reversal        420   0.918  -0.044    1.003    1.251        0   26%  fail: profit factor 0.918 < 1.2; expectancy -0.044R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 18:00-02:00  — stochastic crossing from an extreme, the Asian session, 18:00-02:00 New York
+                                matched null 299 trades median vs the method's 420 — count match 0.71  ** outside the band: this percentile is unmatched **
+stoch-reversal/london stoch-reversal        512   0.886  -0.049    0.898    1.133        0   49%  fail: profit factor 0.886 < 1.2; expectancy -0.049R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 03:00-11:00  — stochastic crossing from an extreme, the London session, 03:00-11:00 New York
+                                matched null 344 trades median vs the method's 512 — count match 0.67  ** outside the band: this percentile is unmatched **
+
+Survivors: ema-cross/asia/ema-cross, keltner-break/asia/keltner-break, macd-cross/asia/macd-cross — worth a decision record and a direction null before anything else.
+

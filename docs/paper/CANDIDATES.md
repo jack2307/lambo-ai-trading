@@ -79,3 +79,36 @@ this cannot recur are in
 `docs/decisions/2026-09-21-restated-pnl-contract-size.md`. Anyone who ranked
 the ten books by their live net before today ranked them on that number, and
 should rank them again.
+
+## Amendment, 2026-09-23: the matched-null percentiles quoted in the table above are restated
+
+The "why it is here" column quotes matched-null percentiles from walk-forward
+`--mode=hypotheses` runs, and those runs were measuring every row of a batch
+against the same control regardless of the row's size. The defect, the fix and
+the corrected numbers are in
+`docs/decisions/2026-09-23-matched-null-repair.md`. **No profit factor, trade
+count or direction-null figure in the table above moves** — only the
+matched-null percentile does, and only where a re-run has been published.
+
+Corrected so far, for the rows on this list:
+
+- **Row 2, `xau-macd-asia`** — running on the funded account. "98th of
+  random" becomes the **100th**, on a control that now takes 264 trades
+  against the method's 300 instead of 92 against 300. Its direction null is
+  unchanged at the **93rd**, so it still clears two legs of three and it is
+  still on this list for the reason it always was: it is a closed construct.
+- **Row 3, `xau-keltner-asia`** — "90th/93rd on the year" becomes **98th**
+  matched and 93rd direction. That is a status change: it now clears the gate
+  and the matched null where before it cleared only the gate. It is recorded
+  as such and it is **not** promoted, on the registration's own rule that a
+  percentile which improved when its control was repaired is a percentile
+  measured once.
+- **Row 7, `xau-stoch`** — running on the funded account. Its entry here was
+  never a matched null ("in-sample only"); the nearest published matched-null
+  figure for `stoch-reversal` is the all-day screen row, which moves
+  **34th → 30th**, and the Asian variant **36th → 26th**. The repair takes a
+  little away from it and adds nothing.
+
+Rows 1, 4, 5, 6, 8, 9 and 10 cite records whose re-runs are listed in the
+repair document; where a receipt could not be reproduced, the repair document
+says so by name.

@@ -212,3 +212,48 @@ target passes the gate and both nulls in any session on either timeframe;
 the only rows at the 100th of the matched null are ICT sweeps at PF 1.14–1.25
 on 81–288 trades with direction at the 86th–95th, in a closed family. The
 long window agrees with the year.
+
+## Amendment, 2026-09-23: the matched null was not count-matched, and these percentiles are restated
+
+Every matched-null percentile in this record — the tables above and the
+addendum — came from a walk-forward `--mode=hypotheses` run in which the
+control's calibrated entry rate was swept away before it could be used. The
+defect, the fix and the corrected numbers are in
+`docs/decisions/2026-09-23-matched-null-repair.md`; the re-run receipts are
+`docs/research/runs/2026-09-23-matched-null-repair/recent-year-{screen,sessions}-in-sample-repaired.txt`,
+each beside a same-day pre-fix baseline of the same batch.
+
+**The original numbers above are not edited.** What the re-run says about
+them:
+
+- **Nothing in the gate columns moved and no direction percentile moved** —
+  0 of 32 screen rows and 0 of 31 sessions rows, measured against a same-day
+  pre-fix baseline. The third-decimal differences between this record's
+  2026-09-13 figures and the 2026-09-23 re-run are the engine drift already
+  noted in `2026-09-23-rebate-rescore.md`, not this repair.
+- **The screen's two null distributions became thirty-two, and the sessions'
+  two became thirty-one.** That the whole 15m screen was measured against two
+  nulls, one per filter set, for rows of 10 to 1,297 trades, is the defect
+  made visible.
+- **The screen's conclusion is unchanged.** 28 of 32 percentiles moved and no
+  verdict did: nothing new passes the gate and both nulls, and nothing that
+  passed stopped. The thin rows moved most — `volume-thrust/ny` 0 → 67 on
+  four trades, `ict-sweep-mss-fvg/ny` 22 → 49 on ten, `ict-sweep-mss-fvg/all`
+  4 → 28 on twenty-five — which is what a control that had been running at
+  106 or 280 trades against them would do.
+- **The sessions batch changed one row's status.** `keltner-break/asia` moves
+  **89th → 98th** at PF 1.286 on 262 trades and now clears its matched null as
+  well as the gate. Its direction null is unchanged at the 93rd, so it clears
+  two of three legs and not three; it is recorded as a row that changed and it
+  is **not** promoted. `macd-cross/asia`, this record's other Asian nomination
+  and a construct running on a funded account, moves **98th → 100th**, with
+  its direction null unchanged at the 93rd — also two legs of three.
+- `stoch-reversal/all` moves 34 → 30 and `stoch-reversal/asia` 36 → 26.
+- `ict-sweep-mss-fvg/asia` **falls**, 99th → 78th on nine trades, because a
+  correctly matched nine-trade null is far wider than the 92-trade one it had
+  been read against. The repair document investigates that fall rather than
+  publishing it bare.
+
+The 2022–25 context batches (`out-of-sample.txt` in each directory) carry the
+same defect. They are re-run where the receipt records the command that made
+it; anything still uncorrected is listed in the repair document.
