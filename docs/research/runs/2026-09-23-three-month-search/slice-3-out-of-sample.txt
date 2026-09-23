@@ -1,0 +1,56 @@
+slice:    3 — pdhl, ict-sweep-mss-fvg, vwap-fade, doji-reversal, gap-fade
+stage:    oos
+market:   xauusd:15m  bars 17577 of 100586 kept
+window:   2025-09-23 00:00 -> 2026-06-22 23:45
+bounds:   --from=2025-09-23 --to=2026-06-23 (to exclusive)
+spread:   0.28 per round trip
+trail:    off
+guards:   on — max_open_loss_r 2.0, notional 300%, weekend flat 16:40 NY, news flat 60/30 (impact≥3, USD), daily cap 20, loss limit $300, cooldown 30 min
+gate:     min_trades 30 / PF 1.2 / expectancy 0.05R
+news: 747 events (2010-01-08 → 2027-12-08) from data/news/events.parquet
+news scope: USD
+
+== out of sample: the same cells, no re-fit, 200 matched-null seeds ==
+legs: expectancy > 0, profit factor >= 1.2, percentile >= 95 of the matched null
+
+-- ict-sweep-mss-fvg displacementMult=1.2,riskReward=2
+   trades 27  win 37.0%  PF 0.704  expectancy -0.133R  totalR -3.60  return -2.90%  maxDD $6
+   matched null: 200 runs, 95th 1.757, median trades 30, count match 1.09 (inside the band), method at the 20th
+   legs: expectancy>0 no  PF>=1.2 no  >=95th no  => refuted
+   standing gate: fail: only 27 trades (need 30); profit factor 0.704 < 1.2; expectancy -0.133R < 0.05R
+   UNSCOREABLE: 27 trades is under the 30-trade floor
+   guards: refused none; closed NEWS_FLAT 1; sized down 3
+
+-- ict-sweep-mss-fvg displacementMult=1.2,riskReward=3
+   trades 27  win 33.3%  PF 0.629  expectancy -0.180R  totalR -4.87  return -3.95%  maxDD $8
+   matched null: 200 runs, 95th 1.757, median trades 30, count match 1.09 (inside the band), method at the 17th
+   legs: expectancy>0 no  PF>=1.2 no  >=95th no  => refuted
+   standing gate: fail: only 27 trades (need 30); profit factor 0.629 < 1.2; expectancy -0.180R < 0.05R
+   UNSCOREABLE: 27 trades is under the 30-trade floor
+   guards: refused none; closed NEWS_FLAT 1; sized down 3
+
+-- ict-sweep-mss-fvg displacementMult=1.2,riskReward=1.5
+   trades 27  win 44.4%  PF 0.731  expectancy -0.099R  totalR -2.67  return -2.32%  maxDD $5
+   matched null: 200 runs, 95th 1.757, median trades 30, count match 1.09 (inside the band), method at the 22th
+   legs: expectancy>0 no  PF>=1.2 no  >=95th no  => refuted
+   standing gate: fail: only 27 trades (need 30); profit factor 0.731 < 1.2; expectancy -0.099R < 0.05R
+   UNSCOREABLE: 27 trades is under the 30-trade floor
+   guards: refused none; closed NEWS_FLAT 1; sized down 3
+
+-- gap-fade minGapAtr=2,stopGapMult=2
+   trades 11  win 36.4%  PF 0.220  expectancy -0.270R  totalR -2.97  return -2.13%  maxDD $2
+   matched null: 200 runs, 95th 3.583, median trades 12, count match 1.09 (inside the band), method at the 4th
+   legs: expectancy>0 no  PF>=1.2 no  >=95th no  => refuted
+   standing gate: fail: only 11 trades (need 30); profit factor 0.220 < 1.2; expectancy -0.270R < 0.05R
+   UNSCOREABLE: 11 trades is under the 30-trade floor
+   guards: refused none; closed none; sized down 1
+
+-- gap-fade minGapAtr=0.5,stopGapMult=2
+   trades 25  win 24.0%  PF 0.121  expectancy -0.429R  totalR -10.73  return -6.85%  maxDD $7
+   matched null: 200 runs, 95th 1.854, median trades 27, count match 1.08 (inside the band), method at the 0th
+   legs: expectancy>0 no  PF>=1.2 no  >=95th no  => refuted
+   standing gate: fail: only 25 trades (need 30); profit factor 0.121 < 1.2; expectancy -0.429R < 0.05R
+   UNSCOREABLE: 25 trades is under the 30-trade floor
+   guards: refused none; closed none; sized down 6
+
+0 of 5 cells cleared all three legs.

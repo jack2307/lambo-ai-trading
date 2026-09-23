@@ -1,0 +1,5 @@
+ict-sweep-mss-fvg displacementMult=1.2,riskReward=2
+ict-sweep-mss-fvg displacementMult=1.2,riskReward=3
+ict-sweep-mss-fvg displacementMult=1.2,riskReward=1.5
+gap-fade minGapAtr=2,stopGapMult=2
+gap-fade minGapAtr=0.5,stopGapMult=2

@@ -1,0 +1,154 @@
+slice 3 of the 2026-09-23 three-month search — how the two receipts beside this
+file were produced, and every place the run departs from the registration
+
+Registration: docs/hypotheses/2026-09-23-three-month-search.md (committed at
+0115da6, before any run). Null repair it depends on:
+docs/decisions/2026-09-23-matched-null-repair.md.
+
+Mechanisms in this slice, five of them, with their full registry grids:
+pdhl, ict-sweep-mss-fvg, vwap-fade, doji-reversal, gap-fade. Each grid is two
+axes of three values, so nine cells each and forty-five cells swept in total.
+That is the N the registration requires be published, and it is small: the
+multiplicity paragraph in the registration was written for hundreds of cells
+and this slice searched forty-five.
+
+Tool: crates/fd-backtest/src/bin/three_month_slice3.rs, new in this commit. It
+exists because no existing mode ranks individual cells by return and then
+replays the named cells on a second window without re-fitting them; --mode=wf
+reports one number per mechanism and --mode=hypotheses needs a batch file whose
+rows are known in advance. It chooses no threshold of its own: the gate, the
+fold count, select_by and the spread all come from config/default.toml, and the
+three survival legs come from the registration.
+
+Commands, exactly as run:
+
+  three_month_slice3 --market=xauusd --interval=15m \
+    --data=E:/rust/flowdesk/data --config=config --stage=in \
+    --from=2026-06-23 --to=2026-09-24 --spread=0.28 \
+    --cells-out=docs/research/runs/2026-09-23-three-month-search/slice-3-cells.txt
+    > slice-3-in-sample.txt
+
+  three_month_slice3 --market=xauusd --interval=15m \
+    --data=E:/rust/flowdesk/data --config=config --stage=oos \
+    --from=2025-09-23 --to=2026-06-23 --spread=0.28 --seeds=200 \
+    --cells=docs/research/runs/2026-09-23-three-month-search/slice-3-cells.txt
+    > slice-3-out-of-sample.txt
+
+--to is exclusive, which is why the in-sample call names 2026-09-24 and the
+out-of-sample call names 2026-06-23. The two windows are contiguous and do not
+overlap by a single bar.
+
+WHAT THE WINDOW ACTUALLY WAS. The registration names 2026-06-23 -> 2026-09-23.
+The 15m store's last bar is 2026-09-17 13:00, because py/ingest/mt5_export.py
+has not been run since 17 September, so the in-sample window is
+2026-06-23 00:00 -> 2026-09-17 13:00: 5,731 bars, about 86 days rather than 92.
+Nothing was done about this — extending the store would change the data under a
+registration that is already committed — and it is recorded here rather than
+silently absorbed. The out-of-sample window is the full
+2025-09-23 00:00 -> 2026-06-22 23:45, 17,577 bars.
+
+HOW A CELL WAS SCORED IN SAMPLE, and the one place this is an interpretation
+rather than an instruction. The slice's assignment says "walk-forward with the
+existing fold count ... Rank every cell by return over the window." A fixed
+cell has nothing to select, so a per-cell number cannot be a walk-forward
+number: the walk-forward is a property of the mechanism, not of a cell. Both are
+therefore reported and they are labelled differently. The ranking that decides
+the top five is each cell's return_pct over the whole in-sample window, guards
+on, spread 0.28 — an in-sample number, which is what the registration calls it.
+Beside it, slice-3-in-sample.txt reports each mechanism's own walk-forward over
+the same window at the configured four folds and select_by = expectancy, fold by
+fold, with the parameters each fold selected. If the other three agents read
+that sentence the other way their in-sample columns will not be comparable to
+this one, and that is the reason it is written down here.
+
+No filters were applied to the cells. The registration says guards on, the
+configured spread and the registry's own grids, and names no filter; the
+rebate-rescore batch's rows carry ["weekdays", "flat:1630-1815"] but that is
+that batch's screen and not this one's. The consequence is reported in the
+result rather than assumed: gap-fade is scoreable here, at 5 to 9 trades in
+three months, where under the screen's weekdays filter its Sunday-reopen entry
+is removed entirely. The guards were on throughout and the header line of each
+receipt names them.
+
+HOW THE OUT-OF-SAMPLE LEG WAS SCORED. Each of the five cells was replayed
+through fd_backtest::hypotheses::run_hypothesis_fixed_guarded — the desk's
+existing replay path, no folds, no selection, the parameters named in
+slice-3-cells.txt and nothing else — against 200 matched-null seeds. The three
+legs are the registration's: expectancy > 0, profit factor >= 1.2, and the 95th
+percentile of the matched null. None of the three was moved, and neither was the
+spread. The count match is printed on every row so the percentile can be
+checked rather than trusted; all five landed at 1.08 or 1.09, inside the 0.25
+band that docs/decisions/2026-09-23-matched-null-repair.md set.
+
+DEVIATIONS, all of them.
+
+1. The registration carries the top five overall forward. Splitting the search
+   across four agents carries five per slice, so twenty in total. That is more
+   out-of-sample tests than were promised, not fewer, so it cannot flatter the
+   result; it is recorded because it is a deviation.
+2. The in-sample window is six days shorter than the registration names, for the
+   data reason above.
+3. The per-cell in-sample ranking is a plain in-sample return, not a
+   walk-forward return, for the reason above. The walk-forward is reported
+   separately and per mechanism.
+   -- SUPERSEDED 2026-09-23, see the restatement below. --
+
+RESTATEMENT, 2026-09-23, AFTER THE FIRST NUMBERS HAD BEEN SEEN
+
+This is the weak part of the record and it is stated first rather than buried.
+The ranking above was run, its top five were carried out of sample, and all of
+those numbers were read, BEFORE the ranking was changed. The coordinator then
+reconciled slice 3 against slices 1 and 2, which had both ranked by walk-forward
+return, and against the registration's own wording — "the winner is whichever
+cell has the highest walk-forward return on the three-month window, chosen by the
+existing select_by rule" — and ruled that this slice's reading had to move. So
+the restated column is not what was planned here; it is a correction made with
+the first answer already in hand, and anyone reading these receipts should weight
+it accordingly. Both columns are published side by side in
+slice-3-in-sample-restated.txt for exactly that reason, and the original
+slice-3-in-sample.txt and slice-3-cells.txt are left untouched as the first
+version rather than overwritten.
+
+What the restatement does. Every one of the forty-five cells is wrapped in
+fd_backtest::hypotheses::Preset::new over BOTH of its grid axes, which empties
+the preset's grid, so walk_forward_guarded has exactly one combination to choose
+from in each of the four folds and measures that cell on each fold's test window
+instead of selecting a different cell. A cell's walk-forward return is the
+return_pct of the combined out-of-sample folds. Nothing else changed: same
+window, same guards, same 0.28 spread, same four folds, same
+select_by = expectancy, same five-training-trade floor per fold, and the six-day
+feed shortfall stays exactly as recorded above. No threshold moved and no filter
+was loosened.
+
+A number this ranking needs read with it. A cell whose training windows never
+reach the five-trade floor has NO walk-forward number, which is not the same as a
+walk-forward return of zero, so such cells are printed as "no fold" and sorted
+below every cell that has one. And the folds column matters as much as the
+return: four of the five cells this ranking promotes have ONE measured fold and
+TWO walk-forward trades, with an infinite profit factor because neither trade
+lost. Their walk-forward returns of 1.14% and 0.57% rest on two trades each.
+That is a property of the registered ranking on mechanisms this thin, not a
+finding, and it is why the out-of-sample leg is the only part of this slice that
+carries weight.
+
+The top five DID change, so the out-of-sample leg was re-run on the new five:
+slice-3-cells-restated.txt and slice-3-out-of-sample-restated.txt, same three
+legs, same 200 seeds, achieved count match printed per row (1.05 to 1.08, all
+inside the band). Nought of five cleared all three legs, as before. One row wants
+a note: doji-reversal bodyMaxPct=0.05,riskReward=2 shows a positive nine-month
+return of 1.48% against a NEGATIVE expectancy of -0.069R and a total of -5.31R.
+The guards sized 65 of its 77 entries down, so its dollar return and its R
+arithmetic disagree, and the registration's legs are expectancy and profit
+factor rather than return precisely so that a row like this cannot pass on the
+dollar column alone. It fails on all three legs regardless, at the 65th
+percentile of its matched null.
+
+The original out-of-sample receipt, slice-3-out-of-sample.txt, remains valid for
+the five cells it names; those five were the top five under the superseded
+ranking and their figures are unchanged by anything here.
+
+Gate: cargo +stable-x86_64-pc-windows-gnu test --workspace passed, nothing
+failed.
+
+Nothing in this run touched ui/src/lib/verdicts.ts, config/default.toml, or any
+threshold anywhere.
