@@ -1,4 +1,4 @@
-# The matched null was never matched in the walk-forward, and repairing it moved 27 of 31 percentiles without touching a single gate figure
+# The matched null was never matched in the walk-forward, and repairing it moved 69 of 85 percentiles without touching a single gate figure
 
 **Date:** 2026-09-23
 **Registration:** `docs/hypotheses/2026-09-23-matched-null-repair.md`, committed
@@ -68,9 +68,9 @@ Three sites build the control. Each was checked rather than assumed:
 
 | site | path | affected | what changed |
 |---|---|---|---|
-| `run_hypothesis_fixed_guarded` (~line 536) | `run_backtest_guarded` at explicit params | **no** — no grid is consulted | uses `calibrated` for uniformity; the pin is a no-op there |
-| `run_hypothesis_guarded` (~line 695) | `walk_forward_guarded` | **yes** | the calibrated rate now survives the sweep |
-| `rescore_hypothesis` (~line 900) | `walk_forward_guarded` | **yes** | same |
+| `run_hypothesis_fixed_guarded` (`hypotheses.rs:598`) | `run_backtest_guarded` at explicit params | **no** — no grid is consulted | uses `calibrated` for uniformity; the pin is a no-op there |
+| `run_hypothesis_guarded` (`hypotheses.rs:699`) | `walk_forward_guarded` | **yes** | the calibrated rate now survives the sweep |
+| `rescore_hypothesis` (`hypotheses.rs:903`) | `walk_forward_guarded` | **yes** | same |
 
 What was deliberately **not** changed:
 
@@ -80,9 +80,12 @@ What was deliberately **not** changed:
   pinned. The control is meant to get the same selection advantage a real
   method gets, which is the whole argument of `control.rs`.
 - **The direction null.** It permutes sides on the method's own trades and is
-  count-matched by construction. Its percentiles are byte-identical either
-  side of this change on every row re-run — all 22 of the rescore, all 31
-  sessions rows, all 32 screen rows.
+  count-matched by construction, and this change does not reach its code
+  path. On the one receipt format that prints both nulls side by side — the
+  rescore — its percentile is identical on all 22 rows, pin off and pin on.
+  The screen and sessions direction nulls live in their own
+  `direction-*.txt` receipts from `--mode=null-dir`, which this change cannot
+  touch, so they were not re-run.
 - **Every threshold.**
 
 ## What holds it: three tests and a negative check
@@ -180,7 +183,9 @@ above exist and are published. Against those, nothing moved at all.
 Receipts are under `docs/research/runs/2026-09-23-matched-null-repair/`. The
 `*-before-instrumented.txt` files are the same-day pre-fix baselines; the
 `*-repaired.txt` and `<dir>__<name>.txt` files are the re-runs. Nothing was
-overwritten and nothing was dropped.
+overwritten and nothing was dropped — the originals under their own run
+directories are untouched, and the full list of what was and was not re-run
+is at the end of this record.
 
 ### The rebate rescore, `xauusd` 15m, 2025-09-13 → 2026-09-12
 
@@ -216,7 +221,7 @@ after the repair. The direction null did not move on any row and is omitted.
 **The conclusion of `2026-09-23-rebate-rescore.md` is unchanged: 0 of 22 rows
 pass all three legs, gross or net.** Nothing crossed before the repair and
 nothing crosses after it. The record's own prediction — "a repair can only
-move rows further inside their nulls" — is half right: it moved 13 of 22
+move rows further inside their nulls" — is half right: it moved 14 of 22
 matched-null percentiles, most of them up, and none of them across.
 
 ### The recent-year sessions batch, in sample
@@ -228,13 +233,13 @@ the rows that matter:
 | row | trades | PF | null trades before → after | matched pct before → after | cm after | direction null (unchanged) |
 |---|---:|---:|---|---:|---:|---:|
 | `macd-cross/asia` | 300 | 1.558 | 92 → 264 | 98 → **100** | 0.88 | 93rd |
-| `keltner-break/asia` | 262 | 1.286 | 92 → 228 | 89 → **98** | 0.87 | 93rd |
+| `keltner-break/asia` | 262 | 1.286 | 92 → 227 | 89 → **98** | 0.87 | 93rd |
 | `ema-cross/asia` | 37 | 1.622 | 92 → 105 | 99 → 99 | 2.84 | 49th |
-| `stoch-reversal/asia` | 420 | 0.918 | 92 → 298 | 36 → **26** | 0.71 | 31st |
-| `bb-fade/london` | 431 | 1.053 | 104 → — | 72 → **90** | — | — |
+| `stoch-reversal/asia` | 420 | 0.918 | 92 → 299 | 36 → **26** | 0.71 | 31st |
+| `bb-fade/london` | 431 | 1.053 | 104 → 394 | 72 → **90** | 0.91 | — |
 | `ict-sweep-mss-fvg/asia` | 9 | 1.709 | 92 → 8 | 99 → **78** | 0.89 | — |
-| `donchian-breakout/london` | 436 | 0.767 | 104 → 309 | 22 → **9** | 0.71 | — |
-| `rsi2-pullback/london` | 143 | 1.047 | 104 → 222 | 72 → **80** | 1.55 | — |
+| `donchian-breakout/london` | 436 | 0.767 | 104 → 310 | 22 → **9** | 0.71 | — |
+| `rsi2-pullback/london` | 143 | 1.047 | 104 → 221 | 72 → **80** | 1.55 | — |
 
 ### The recent-year screen batch, in sample
 
@@ -292,11 +297,24 @@ It is recorded here as a row that changed, and it is **not** promoted:
   when its control was repaired is not funded on that evidence.
 - Its long window is 0.88, and it is a member of a family closed on it.
 
-No row that previously survived stopped surviving. No badge in
-`ui/src/lib/verdicts.ts` cites a number that this repair changed — the
-`keltner` badge quotes the all-day row (533 trades, PF 1.052, 78th), which
-still fails the gate at 1.052 — so `verdicts.ts` is untouched and
-`verdicts.check.mjs` passes unchanged.
+No row that previously survived stopped surviving.
+
+**`ui/src/lib/verdicts.ts` is not edited, and it is worth being exact about
+why, because several badges do quote a percentile this repair moved.** The
+`stoch` badge says "1297 trades, PF 0.912, 34th"; the repaired figure is the
+30th. The `macd` badge says 66th and the repaired figure is the 78th;
+`keltner` says 78th against a repaired 83rd; `squeeze-break` 14th against
+24th; `rsi2-pullback` 74th against 83rd. **Not one of them changes a status**
+— every one of those rows fails its profit-factor gate before the null is
+consulted, and `killed` is still `killed`. The rule this desk works to is
+that a badge is edited when a status changes, and none did.
+
+`verdicts.check.mjs` passes unchanged, and it passes for the right reason
+rather than by luck: every amendment above is an appended dated note, so the
+original numbers the badges cite are still literally present in the records
+they cite. If one of those original numbers had been edited in place instead
+of annotated, the check would have failed — which is the coupling working,
+and the reason this desk annotates a receipt rather than rewriting one.
 
 ## The pre-declared direction, and the two rows that fell
 
@@ -349,38 +367,57 @@ against the `== direction control: …` header of `--mode=null-dir`. **Sixty
 walk-forward hypotheses receipts exist.** A decision record is affected if and
 only if it quotes a percentile from one of them.
 
-**Affected — the walk-forward matched null:** the run directories
-`2026-09-13-{btc-m15-check, btc-us-hours, btc-us-open, close-reopen-drift,
-doji, doji-2018, doji-btc, friday-weekend-hold, gap-fade, gold-m15-check,
-ict-sweep-mss-fvg, london-fix, london-range, orb-ny, orb-ny-matched-null,
-pdhl, recent-year-gap, recent-year-hours, recent-year-screen,
-recent-year-screen-5m, recent-year-sessions, recent-year-sessions-5m,
-trend-pullback, trend-pullback-btc, tsmom, tsmom-2, tsmom-silver,
-volcond-breakout, volume-thrust, volume-thrust-gold, vwap-fade}`,
-`2026-09-14-{close-reopen-guarded, fx-local-hours, fx-local-hours-news,
-fx-local-hours-sign, intraday-momentum, tsmom-eurusd, volman-box,
-volman-box-vantage}` and `2026-09-23-rebate-rescore`, and the decision records
-that quote them.
+**Affected — records whose percentile comes from a walk-forward matched
+null.** Thirty-nine run directories under `docs/research/runs/` hold at least
+one walk-forward hypotheses receipt, and **33 of the 41 records that contain
+the word "percentile" cite one of them or are named after one**. That 33 is an
+upper bound and is offered as such: some of those citations are
+cross-references rather than the source of that record's own number
+(`2026-09-15-pair-residual.md` mentions `close-reopen-drift` in passing;
+`2026-09-14-pre-nfp-drift.md` and `2026-09-15-nfp-cross-asset.md` point at
+`fx-local-hours` as prior work). The records where a walk-forward matched-null
+percentile is load-bearing are:
 
-**Unaffected, and why, named rather than left to inference:**
+`2026-09-13-{btc-us-hours, btc-us-open, close-reopen-drift, doji,
+friday-weekend-hold, gap-fade, ict-sweep-mss-fvg, london-fix, m15-check,
+night-synthesis, orb-ny, pdhl, recent-year-screen, trend-pullback, tsmom,
+tsmom-2, tsmom-silver, volcond-breakout, volume-thrust, vwap-fade,
+instrument-faults}.md`, `2026-09-14-{fx-local-hours, fx-local-hours-sign,
+intraday-momentum, night-synthesis, tsmom-eurusd, volman-box}.md`,
+`2026-09-19-smc-structure-measured.md` and `2026-09-23-rebate-rescore.md`.
+
+**One more, found by a different route and worth naming because the mapping
+above cannot see it:** `2026-09-12-gold-intraday-batch-1.md` quotes
+`search --mode=hypotheses` and a 92nd percentile, and it predates the
+`/research` pipeline, so **it has no receipt directory and cannot be re-run
+from a recorded command**. Its percentiles are affected and stand
+uncorrected.
+
+**Unaffected, named rather than left to inference.** Eight of the 41 take
+their percentile from somewhere this change cannot reach:
+
+| record | where its percentile comes from |
+|---|---|
+| `2026-09-12-technical-baselines.md` | `--mode=null` (`run_null_control`) and `--mode=costs` — a different control that was never count-matched, and a different record |
+| `2026-09-12-vantage-bars-baselines.md` | `--mode=compare` |
+| `2026-09-14-nfp-vs-first-friday.md` | its own permutation test |
+| `2026-09-14-pre-nfp-drift.md` | its own permutation test |
+| `2026-09-15-nfp-cross-asset.md` | its own permutation test |
+| `2026-09-15-quote-asymmetry.md` | its own permutation test |
+| `2026-09-15-selftest-audit.md` | self-tests of the above |
+| `2026-09-15-venue-residual.md` | its own controls |
+| `2026-09-16-trailing-stop.md` and its run file | `scripts/trail_sweep.py`, which computes its own percentile |
+
+And two categories are unaffected wherever they appear:
 
 - **Every `--fixed` figure.** `in-sample-fixed.txt` and
   `out-of-sample-fixed.txt` come from `run_hypothesis_fixed_guarded`, which
   runs the control at explicit parameters and never touches a grid. The
-  count-matching always worked there. Eighteen such receipts exist.
+  count-matching always worked there.
 - **Every direction null.** `direction-*.txt` and `--mode=null-dir` permute
   sides on the method's own trades and are count-matched by construction.
-  Verified empirically as well: the direction percentile is identical on all
-  85 rows re-run.
-- **Records with no hypotheses receipt at all**, which use their own
-  permutation machinery and are untouched by any of this:
-  `2026-09-14-nfp-vs-first-friday`, `2026-09-14-pre-nfp-drift`,
-  `2026-09-15-{nfp-cross-asset, pair-residual, quote-asymmetry,
-  selftest-audit, venue-residual, monthend-fix-slope}`,
-  `2026-09-16-trailing-stop`, `2026-09-19-smc-structure-measured`.
-- **`2026-09-12-technical-baselines.md` and `2026-09-12-gold-intraday-batch-1.md`**
-  quote `--mode=null` and `--mode=compare`, which are not the hypotheses
-  path.
+  Verified empirically where a receipt prints it beside the matched null: the
+  rescore's direction percentile is identical on all 22 rows.
 
 **One caution about the fingerprint.** The identical-null signature above
 *detects* the defect; its absence does not *exclude* it. A receipt with one
@@ -412,35 +449,98 @@ its own registration. `ema-cross/asia` (count match 2.84 after repair) and
 `doji-reversal` (1.69) are smaller instances of the related whole-window
 versus walk-forward gap described above.
 
+## A caution that applies to every re-run except the three above
+
+The three batches with a **same-day pre-fix baseline** — the rebate rescore,
+the recent-year screen and the recent-year sessions — are clean before-and-
+after pairs: the same binary, the same bars, the same hour, the pin off and
+the pin on. Everything said above about them isolates this repair and nothing
+else.
+
+**The bulk re-runs of the other receipts do not isolate it, and are not
+offered as if they did.** Each was driven from the command line its own
+receipt records, but the world has moved under those commands since
+2026-09-13:
+
+- **The engine changed.** The exit-bar excursion correction and the
+  price-decimals rounding landed after the September receipts. They move a
+  profit factor in the third decimal, and because the walk-forward *selects*
+  on the score, a small move can flip which grid cell a fold picks and change
+  the trade count outright. `btc-m15-check/m15/vwap-allday` is 3,392 trades in
+  its original receipt and 2,557 in the re-run on **identical bars**. That is
+  selection, not the null.
+- **The bars changed.** A command with an open end now reads more of them —
+  `doji/out-of-sample` and `close-reopen-drift/out-of-sample` gain six days of
+  Vantage bars — and one parquet was rebuilt with a longer history:
+  `gold-m15-check` read 66,243 `xauduka` bars from 2022-06-16 when it was
+  written and reads 352,261 from 2010-06-01 now. Four re-runs so far are in
+  this category and each is flagged by comparing the `bars:` line of the two
+  receipts.
+
+So for those receipts the re-run is **the current, correct number**, and the
+difference from the published one is the repair *plus* ten days of everything
+else. It is published as a corrected figure and not as a measurement of this
+change. Anyone wanting the isolated effect on one of them should do what was
+done for the three above: run the same binary twice with the pin reverted.
+
 ## What was re-run, and what was not
 
-Re-run and published beside their originals:
+**Re-run with a same-day pre-fix baseline — clean before-and-after pairs:**
 
-- `docs/hypotheses/2026-09-23-rebate-rescore.toml`, the primary year, 22 rows
-  — plus a same-day pre-fix baseline of the same batch.
-- `docs/hypotheses/2026-09-13-recent-year-sessions.toml`, in sample, 31 rows
-  — the batch carrying `xau-macd-asia` — plus its same-day pre-fix baseline.
-- `docs/hypotheses/2026-09-13-recent-year-screen.toml`, in sample, 32 rows
-  — plus its same-day pre-fix baseline.
-- The remaining walk-forward hypotheses receipts that carry their own command
-  line, driven from that line so the window, market, seeds and guards are the
-  receipt's own and not re-typed. Each lands at
-  `docs/research/runs/2026-09-23-matched-null-repair/<dir>__<name>.txt`.
+| batch | rows | receipts |
+|---|---:|---|
+| `2026-09-23-rebate-rescore.toml`, `xauusd` 15m primary year | 22 | `primary-xauusd-15m-{repaired,before-instrumented}.txt` |
+| `2026-09-13-recent-year-sessions.toml`, in sample | 31 | `recent-year-sessions-in-sample-{repaired,before-instrumented}.txt` |
+| `2026-09-13-recent-year-screen.toml`, in sample | 32 | `recent-year-screen-in-sample-{repaired,before-instrumented}.txt` |
 
-**Not re-run, and named:**
+**Re-run without a baseline, driven from each receipt's own recorded command,
+and subject to the caution above:** `2026-09-13-{btc-m15-check,
+btc-us-hours, btc-us-open, doji-2018, doji-btc, doji/out-of-sample,
+gold-m15-check, london-range/in-sample-0trades, recent-year-gap,
+recent-year-hours, trend-pullback-btc, volume-thrust, volume-thrust-gold}`
+and `2026-09-14-volman-box-vantage`, as
+`<dir>__<name>.txt` in the same directory.
 
-- **The rebate rescore's context window** (`xauduka` 2022-06-16 → 2025-04-10,
-  the second table of `2026-09-23-rebate-rescore.md`). It is context and never
-  a gate, and the primary year is what the registration asked for first.
-- **Ten receipts that cannot be reproduced.** Four carry no command line
-  (`2026-09-13-doji/in-sample-2022-2025-matched-null.txt`,
+**`recent-year-hours` deserves a sentence of its own**, because it holds the
+one row of about 170 that passed the 2026-09-13 year screen and is running as
+paper candidate #5, `xau-evening`. **It still passes: `hold/18-20-long`, 164
+trades, moves 95th → 96th.** Every row in that batch has a count match of
+exactly 1.00 before and after, and the reason is worth recording: a
+`session-hold` is a self-managed-exit method, so its matched null is
+`RandomHold`, which enters once per session window and therefore takes the
+method's trade count by construction. **The hours batch was never affected by
+this defect**, and its twelve distinct nulls, one per two-hour window, were
+twelve because there were twelve filter sets and not because anything was
+being matched. Nineteen of its 24 percentiles move by a point or two, which
+is Monte-Carlo noise on 200 seeds and not this repair.
+
+**Not re-run, and named rather than left to be discovered:**
+
+- **Thirty-seven walk-forward hypotheses receipts.** The bulk re-run was
+  ordered cheapest-first and stopped when the remaining ones were all long
+  Dukascopy windows at 300 seeds costing tens of minutes each. What is left
+  uncorrected: `close-reopen-drift`, `friday-weekend-hold`, `gap-fade`,
+  `london-fix`, `london-range` (the real in-sample and out-of-sample),
+  `orb-ny` and `orb-ny-matched-null`, `pdhl`, `tsmom`, `tsmom-2`,
+  `tsmom-silver`, `trend-pullback` (gold), `volcond-breakout`, `vwap-fade`,
+  `close-reopen-guarded`, all three `fx-local-hours` variants,
+  `intraday-momentum`, `tsmom-eurusd`, `volman-box` (Dukascopy), the
+  out-of-sample halves of the four recent-year batches, and both 5m
+  recent-year batches. Three of those back paper candidates — `xau-close`
+  (#4), `xau-ict-5m` (#8), `xau-box-5m` (#9) and `eur-hours` (#10) — and
+  none backs a funded position.
+- **The rebate rescore's context window** (`xauduka` 2022-06-16 →
+  2025-04-10, the second table of `2026-09-23-rebate-rescore.md`). Context,
+  never a gate.
+- **Ten receipts that cannot be reproduced at all.** Four carry no command
+  line (`2026-09-13-doji/in-sample-2022-2025-matched-null.txt`,
   `2026-09-13-ict-sweep-mss-fvg/{in-sample,out-of-sample}.txt`,
   `2026-09-13-orb-ny/out-of-sample-disjoint.txt`). Six are diagnostics kept
   under a sub-directory from code states that no longer exist
   (`before-fold-close`, `one-trade`, `stop-enforced`, `null-late-exit`);
   re-running them would produce a different thing wearing the same name.
-  Their percentiles are affected and stand uncorrected, and they are named
-  here rather than left to be discovered.
+- **`2026-09-12-gold-intraday-batch-1.md`**, which predates the `/research`
+  pipeline and has no receipt directory.
 - **The `--fixed` and direction receipts** — because they are unaffected, not
   because they were skipped.
 

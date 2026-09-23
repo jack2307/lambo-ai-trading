@@ -306,7 +306,7 @@ What changed and what did not, on this record's own primary table:
   reb/R are identical on all 22 rows, measured by running the same binary
   twice on the same day with the pin off and on. **The direction column is
   identical on all 22 rows too.** Only the matched-null column moved.
-- **The matched-null percentile moved on 13 of 22 rows.** The largest moves
+- **The matched-null percentile moved on 14 of 22 rows.** The largest moves
   are the thin ones the defect was hurting: `ict-sweep-mss-fvg` 4 → 28,
   `volume-thrust` 2 → 42, `orb` 18 → 32, `pdhl` 12 → 22, `squeeze-break`
   14 → 24. `macd-cross` 68 → 78 and `keltner-break` 76 → 83; `stoch-reversal`

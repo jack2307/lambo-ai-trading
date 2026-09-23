@@ -2,7 +2,7 @@
 
 **Registered:** (commit time is authoritative) — before the fix is written and
 before any corrected number is seen
-**Status:** decided → docs/decisions/2026-09-23-matched-null-repair.md (the pin is in; no gate figure moved on any of the 85 rows re-run and no direction percentile moved; the achieved count match went from 0 of 20 inside the band to 14 of 20 on the rescore; 13 of 22 rescore percentiles moved and the 0-of-22 conclusion did not; one status changed — `keltner-break/asia` 89th → 98th, still two legs of three — and pre-commitment 4's stated direction was itself falsified by one row, which is recorded rather than smoothed over)
+**Status:** decided → docs/decisions/2026-09-23-matched-null-repair.md (the pin is in; no gate figure moved on any of the 85 rows re-run and no direction percentile moved; the achieved count match went from 0 of 20 inside the band to 14 of 20 on the rescore; 14 of 22 rescore percentiles moved and the 0-of-22 conclusion did not; one status changed — `keltner-break/asia` 89th → 98th, still two legs of three — and pre-commitment 4's stated direction was itself falsified by one row, which is recorded rather than smoothed over)
 
 This is not a hypothesis about the market. It is a pre-commitment about what
 will be done with numbers that are about to change, written before they are

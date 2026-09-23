@@ -226,9 +226,11 @@ each beside a same-day pre-fix baseline of the same batch.
 **The original numbers above are not edited.** What the re-run says about
 them:
 
-- **Nothing in the gate columns moved and no direction percentile moved** —
-  0 of 32 screen rows and 0 of 31 sessions rows, measured against a same-day
-  pre-fix baseline. The third-decimal differences between this record's
+- **Nothing in the gate columns moved** — 0 of 32 screen rows and 0 of 31
+  sessions rows, measured against a same-day pre-fix baseline. **The
+  direction nulls are untouched**: they come from `--mode=null-dir`, which
+  this change cannot reach, so the `direction-*.txt` receipts still stand as
+  published. The third-decimal differences between this record's
   2026-09-13 figures and the 2026-09-23 re-run are the engine drift already
   noted in `2026-09-23-rebate-rescore.md`, not this repair.
 - **The screen's two null distributions became thirty-two, and the sessions'
@@ -257,3 +259,19 @@ them:
 The 2022–25 context batches (`out-of-sample.txt` in each directory) carry the
 same defect. They are re-run where the receipt records the command that made
 it; anything still uncorrected is listed in the repair document.
+
+### The hours batch, in the same amendment
+
+`recent-year-hours` — the twenty-four two-hour holds, and the batch that
+holds the one row of about 170 this record says passed — **was never affected
+by the defect.** A `session-hold` manages its own exits, so its matched null
+is `RandomHold`, which enters once per session window and therefore takes the
+method's trade count by construction: the achieved count match is exactly
+1.00 on all 24 rows, before the repair and after it. Its twelve distinct null
+distributions were twelve because there were twelve filter sets, not because
+anything was being size-matched.
+
+**`hold/18-20-long` still passes: 164 trades, 95th → 96th of its matched
+null.** Nineteen of the 24 percentiles move by a point or two, which is
+sampling noise on 200 seeds. Receipt:
+`docs/research/runs/2026-09-23-matched-null-repair/2026-09-13-recent-year-hours__in-sample.txt`.

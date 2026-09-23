@@ -109,6 +109,13 @@ Corrected so far, for the rows on this list:
   **34th → 30th**, and the Asian variant **36th → 26th**. The repair takes a
   little away from it and adds nothing.
 
-Rows 1, 4, 5, 6, 8, 9 and 10 cite records whose re-runs are listed in the
-repair document; where a receipt could not be reproduced, the repair document
-says so by name.
+**Row 5, `xau-evening`** — checked because it is the one row of about 170
+that passed the year screen, and a row that passed is the one that most needs
+checking. **It still passes: 95th → 96th.** Its null was never affected: a
+`session-hold` manages its own exits, so its control enters once per session
+window and takes the method's trade count by construction, at a count match
+of exactly 1.00 before and after.
+
+Rows 1, 4, 6, 8, 9 and 10 cite records whose re-runs — and the ones that were
+not re-run, by name — are listed in the repair document. None of those is on
+a funded account.

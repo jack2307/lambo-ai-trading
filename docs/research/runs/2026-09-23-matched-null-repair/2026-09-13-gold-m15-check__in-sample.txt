@@ -1,0 +1,37 @@
+$ E:/rust/flowdesk/target/release/search.exe --market=xauduka --interval=15m --mode=hypotheses --batch-file=E:/rust/fd-wt-null/docs/hypotheses/2026-09-13-gold-m15-check.toml --seeds=200 --to=2025-04-10 --data=E:/rust/flowdesk/data --config=config
+
+bounds:   --from=… --to=2025-04-10 kept 352261 of 378749 bars
+spread:   0.28 per round trip
+trail:    off
+bars:     352261 from 2010-06-01 00:00 to 2025-04-09 23:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from data/news/events.parquet
+news scope: USD (news_currencies)
+guards: off (every number unguarded)
+
+== hypotheses `E:/rust/fd-wt-null/docs/hypotheses/2026-09-13-gold-m15-check.toml`: 4 declared, walk-forward (4 folds), each against 200 matched null runs ==
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+news: 747 events (2010-01-08 → 2027-12-08) from data/news/events.parquet
+news scope: USD (news_currencies)
+guards: off (every number unguarded)
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+m15/orb-60m  orb                  2483   0.918  -0.028    0.859    0.930        0   92%  fail: profit factor 0.918 < 1.2; expectancy -0.028R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 09:20-12:00  — the New York opening-range break on 15-minute closes
+                                matched null 2099 trades median vs the method's 2483 — count match 0.85
+m15/london   orb                  2477   0.884  -0.037    0.859    0.927        0   72%  fail: profit factor 0.884 < 1.2; expectancy -0.037R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 08:00-12:00  — the London-range break on 15-minute closes
+                                matched null 2281 trades median vs the method's 2477 — count match 0.92
+m15/pdhl-fade pdhl                 2655   0.769  -0.145    0.827    0.886        0    7%  fail: profit factor 0.769 < 1.2; expectancy -0.145R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15  — yesterday's level faded on a 15-minute close back inside
+                                matched null 2808 trades median vs the method's 2655 — count match 1.06
+m15/pdhl-break pdhl                  792   0.759  -0.166    0.848    0.972        0    6%  fail: profit factor 0.759 < 1.2; expectancy -0.166R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 08:00-12:00  — yesterday's level broken on a 15-minute close
+                                matched null 835 trades median vs the method's 792 — count match 1.05
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+

@@ -1,0 +1,94 @@
+bounds:   --from=2025-09-13 --to=2026-09-12 kept 23531 of 100586 bars
+spread:   0.28 per round trip
+trail:    off
+bars:     23531 from 2025-09-14 22:00 to 2026-09-11 20:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from data/news/events.parquet
+news scope: USD (news_currencies)
+guards: off (every number unguarded)
+
+== hypotheses `docs/hypotheses/2026-09-13-recent-year-hours.toml`: 24 declared, walk-forward (4 folds), each against 200 matched null runs ==
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+news: 747 events (2010-01-08 → 2027-12-08) from data/news/events.parquet
+news scope: USD (news_currencies)
+guards: off (every number unguarded)
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+hold/00-02-long session-hold          206   0.985  -0.018    0.961    1.270        0   60%  fail: profit factor 0.985 < 1.2; expectancy -0.018R < 0.05R
+                                MoTuWeThFr + NY 00:00-00:05  — long from 00:00 to 02:00 New York; the null holds random sides from the same bar
+                                matched null 206 trades median vs the method's 206 — count match 1.00
+hold/00-02-short session-hold          206   0.943  -0.037    0.961    1.270        0   48%  fail: profit factor 0.943 < 1.2; expectancy -0.037R < 0.05R
+                                MoTuWeThFr + NY 00:00-00:05  — short from 00:00 to 02:00 New York; the null holds random sides from the same bar
+                                matched null 206 trades median vs the method's 206 — count match 1.00
+hold/02-04-long session-hold          206   0.969  -0.015    0.942    1.318        0   58%  fail: profit factor 0.969 < 1.2; expectancy -0.015R < 0.05R
+                                MoTuWeThFr + NY 02:00-02:05  — long from 02:00 to 04:00 New York; the null holds random sides from the same bar
+                                matched null 206 trades median vs the method's 206 — count match 1.00
+hold/02-04-short session-hold          206   0.921  -0.040    0.942    1.318        0   46%  fail: profit factor 0.921 < 1.2; expectancy -0.040R < 0.05R
+                                MoTuWeThFr + NY 02:00-02:05  — short from 02:00 to 04:00 New York; the null holds random sides from the same bar
+                                matched null 206 trades median vs the method's 206 — count match 1.00
+hold/04-06-long session-hold          205   0.599  -0.227    0.956    1.288        0    1%  fail: profit factor 0.599 < 1.2; expectancy -0.227R < 0.05R
+                                MoTuWeThFr + NY 04:00-04:05  — long from 04:00 to 06:00 New York; the null holds random sides from the same bar
+                                matched null 205 trades median vs the method's 205 — count match 1.00
+hold/04-06-short session-hold          205   1.507   0.173    0.956    1.288        0   99%  SURVIVES
+                                MoTuWeThFr + NY 04:00-04:05  — short from 04:00 to 06:00 New York; the null holds random sides from the same bar
+                                matched null 205 trades median vs the method's 205 — count match 1.00
+hold/06-08-long session-hold          206   1.192   0.118    0.956    1.329        0   86%  fail: profit factor 1.192 < 1.2
+                                MoTuWeThFr + NY 06:00-06:05  — long from 06:00 to 08:00 New York; the null holds random sides from the same bar
+                                matched null 206 trades median vs the method's 206 — count match 1.00
+hold/06-08-short session-hold          206   0.726  -0.176    0.956    1.329        0   12%  fail: profit factor 0.726 < 1.2; expectancy -0.176R < 0.05R
+                                MoTuWeThFr + NY 06:00-06:05  — short from 06:00 to 08:00 New York; the null holds random sides from the same bar
+                                matched null 206 trades median vs the method's 206 — count match 1.00
+hold/08-10-long session-hold          206   1.038   0.071    0.999    1.306        0   61%  fail: profit factor 1.038 < 1.2
+                                MoTuWeThFr + NY 08:00-08:05  — long from 08:00 to 10:00 New York; the null holds random sides from the same bar
+                                matched null 206 trades median vs the method's 206 — count match 1.00
+hold/08-10-short session-hold          206   0.860  -0.128    0.999    1.306        0   24%  fail: profit factor 0.860 < 1.2; expectancy -0.128R < 0.05R
+                                MoTuWeThFr + NY 08:00-08:05  — short from 08:00 to 10:00 New York; the null holds random sides from the same bar
+                                matched null 206 trades median vs the method's 206 — count match 1.00
+hold/10-12-long session-hold          206   0.926  -0.057    0.949    1.358        0   46%  fail: profit factor 0.926 < 1.2; expectancy -0.057R < 0.05R
+                                MoTuWeThFr + NY 10:00-10:05  — long from 10:00 to 12:00 New York; the null holds random sides from the same bar
+                                matched null 206 trades median vs the method's 206 — count match 1.00
+hold/10-12-short session-hold          206   1.015   0.014    0.949    1.358        0   70%  fail: profit factor 1.015 < 1.2; expectancy 0.014R < 0.05R
+                                MoTuWeThFr + NY 10:00-10:05  — short from 10:00 to 12:00 New York; the null holds random sides from the same bar
+                                matched null 206 trades median vs the method's 206 — count match 1.00
+hold/12-14-long session-hold          206   0.816  -0.084    0.924    1.336        0   30%  fail: profit factor 0.816 < 1.2; expectancy -0.084R < 0.05R
+                                MoTuWeThFr + NY 12:00-12:05  — long from 12:00 to 14:00 New York; the null holds random sides from the same bar
+                                matched null 206 trades median vs the method's 206 — count match 1.00
+hold/12-14-short session-hold          206   1.074   0.043    0.924    1.336        0   72%  fail: profit factor 1.074 < 1.2; expectancy 0.043R < 0.05R
+                                MoTuWeThFr + NY 12:00-12:05  — short from 12:00 to 14:00 New York; the null holds random sides from the same bar
+                                matched null 206 trades median vs the method's 206 — count match 1.00
+hold/14-16-long session-hold          203   0.877  -0.067    0.954    1.319        0   33%  fail: profit factor 0.877 < 1.2; expectancy -0.067R < 0.05R
+                                MoTuWeThFr + NY 14:00-14:05  — long from 14:00 to 16:00 New York; the null holds random sides from the same bar
+                                matched null 203 trades median vs the method's 203 — count match 1.00
+hold/14-16-short session-hold          203   1.054   0.021    0.954    1.319        0   69%  fail: profit factor 1.054 < 1.2; expectancy 0.021R < 0.05R
+                                MoTuWeThFr + NY 14:00-14:05  — short from 14:00 to 16:00 New York; the null holds random sides from the same bar
+                                matched null 203 trades median vs the method's 203 — count match 1.00
+hold/16-18-long session-hold          197   1.374   0.150    0.951    1.428        0   92%  gate pass, inside the noise
+                                MoTuWeThFr + NY 16:00-16:05  — long from 16:00 to 18:00 New York; the null holds random sides from the same bar
+                                matched null 197 trades median vs the method's 197 — count match 1.00
+hold/16-18-short session-hold          197   0.643  -0.201    0.951    1.428        0    8%  fail: profit factor 0.643 < 1.2; expectancy -0.201R < 0.05R
+                                MoTuWeThFr + NY 16:00-16:05  — short from 16:00 to 18:00 New York; the null holds random sides from the same bar
+                                matched null 197 trades median vs the method's 197 — count match 1.00
+hold/18-20-long session-hold          164   1.362   0.221    0.953    1.305        0   96%  SURVIVES
+                                MoTuWeThFr + NY 18:00-18:05  — long from 18:00 to 20:00 New York; the null holds random sides from the same bar
+                                matched null 164 trades median vs the method's 164 — count match 1.00
+hold/18-20-short session-hold          164   0.651  -0.278    0.953    1.305        0    3%  fail: profit factor 0.651 < 1.2; expectancy -0.278R < 0.05R
+                                MoTuWeThFr + NY 18:00-18:05  — short from 18:00 to 20:00 New York; the null holds random sides from the same bar
+                                matched null 164 trades median vs the method's 164 — count match 1.00
+hold/20-22-long session-hold          164   0.862  -0.147    0.951    1.348        0   33%  fail: profit factor 0.862 < 1.2; expectancy -0.147R < 0.05R
+                                MoTuWeThFr + NY 20:00-20:05  — long from 20:00 to 22:00 New York; the null holds random sides from the same bar
+                                matched null 164 trades median vs the method's 164 — count match 1.00
+hold/20-22-short session-hold          164   1.135   0.089    0.951    1.348        0   78%  fail: profit factor 1.135 < 1.2
+                                MoTuWeThFr + NY 20:00-20:05  — short from 20:00 to 22:00 New York; the null holds random sides from the same bar
+                                matched null 164 trades median vs the method's 164 — count match 1.00
+hold/22-00-long session-hold          165   0.746  -0.120    0.972    1.311        0   14%  fail: profit factor 0.746 < 1.2; expectancy -0.120R < 0.05R
+                                MoTuWeThFr + NY 22:00-22:05  — long from 22:00 to 00:00 New York; the null holds random sides from the same bar
+                                matched null 165 trades median vs the method's 165 — count match 1.00
+hold/22-00-short session-hold          165   1.174   0.069    0.972    1.311        0   90%  fail: profit factor 1.174 < 1.2
+                                MoTuWeThFr + NY 22:00-22:05  — short from 22:00 to 00:00 New York; the null holds random sides from the same bar
+                                matched null 165 trades median vs the method's 165 — count match 1.00
+
+Survivors: hold/04-06-short/session-hold, hold/18-20-long/session-hold — worth a decision record and a direction null before anything else.
+

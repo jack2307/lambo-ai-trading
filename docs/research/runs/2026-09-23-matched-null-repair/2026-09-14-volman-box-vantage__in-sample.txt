@@ -1,0 +1,31 @@
+$ E:/rust/flowdesk/target/release/search.exe --market=xauusd --interval=5m --mode=hypotheses --batch-file=E:/rust/fd-wt-null/docs/hypotheses/2026-09-14-volman-box-vantage.toml --seeds=200 --from=2025-04-11 --to=2026-09-12 --data=E:/rust/flowdesk/data --config=config
+
+bounds:   --from=2025-04-11 --to=2026-09-12 kept 100749 of 101242 bars
+spread:   0.28 per round trip
+trail:    off
+bars:     100749 from 2025-04-11 01:05 to 2026-09-11 20:55
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from data/news/events.parquet
+news scope: USD (news_currencies)
+guards: off (every number unguarded)
+
+== hypotheses `E:/rust/fd-wt-null/docs/hypotheses/2026-09-14-volman-box-vantage.toml`: 2 declared, walk-forward (4 folds), each against 200 matched null runs ==
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+news: 747 events (2010-01-08 → 2027-12-08) from data/news/events.parquet
+news scope: USD (news_currencies)
+guards: off (every number unguarded)
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+box/b2       volman-box            441   0.926  -0.032    0.940    1.092        0   41%  fail: profit factor 0.926 < 1.2; expectancy -0.032R < 0.05R
+                                MoTuWeThFr  — context: box 2 target on the last seventeen months of Vantage 5m bars
+                                matched null 607 trades median vs the method's 441 — count match 1.38  ** outside the band: this percentile is unmatched **
+box/b3       volman-box            181   1.018   0.019    0.933    1.108        0   82%  fail: profit factor 1.018 < 1.2; expectancy 0.019R < 0.05R
+                                MoTuWeThFr  — context: box 3 target on the same
+                                matched null 585 trades median vs the method's 181 — count match 3.23  ** outside the band: this percentile is unmatched **
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+

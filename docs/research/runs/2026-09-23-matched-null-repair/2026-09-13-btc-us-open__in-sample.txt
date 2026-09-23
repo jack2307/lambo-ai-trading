@@ -1,0 +1,34 @@
+$ E:/rust/flowdesk/target/release/search.exe --market=btc --interval=5m --mode=hypotheses --batch-file=E:/rust/fd-wt-null/docs/hypotheses/2026-09-13-btc-us-open.toml --seeds=200 --data=E:/rust/flowdesk/data --config=config
+
+spread:   5 per round trip
+trail:    off
+bars:     218880 from 2024-08-13 19:00 to 2026-09-12 18:55
+timeline: 1828 frames from 2026-09-11 05:36 to 2026-09-17 13:51
+          the tape covers 448 of 218880 bars (0.2%)
+
+tape:     44843 prints, 1828 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from data/news/events.parquet
+news scope: USD (news_currencies)
+guards: off (every number unguarded)
+
+== hypotheses `E:/rust/fd-wt-null/docs/hypotheses/2026-09-13-btc-us-open.toml`: 3 declared, walk-forward (4 folds), each against 200 matched null runs ==
+swap: long 0.00 / short 0.00 USD per lot per night; spread 5
+news: 747 events (2010-01-08 → 2027-12-08) from data/news/events.parquet
+news scope: USD (news_currencies)
+guards: off (every number unguarded)
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+btc/eq-open-60m orb                   362   1.124   0.036    0.993    1.177        0   86%  fail: profit factor 1.124 < 1.2; expectancy 0.036R < 0.05R
+                                MoTuWeThFr + NY 10:30-13:00  — the first hour after the equity open; the null trades the same window
+                                matched null 334 trades median vs the method's 362 — count match 0.92
+btc/eq-open-30m orb                   415   1.046   0.019    0.990    1.168        0   69%  fail: profit factor 1.046 < 1.2; expectancy 0.019R < 0.05R
+                                MoTuWeThFr + NY 10:00-13:00  — the first half hour: earlier entries, more noise
+                                matched null 394 trades median vs the method's 415 — count match 0.95
+btc/data-0830-60m orb                   432   0.882  -0.050    0.991    1.185        0   14%  fail: profit factor 0.882 < 1.2; expectancy -0.050R < 0.05R
+                                MoTuWeThFr + NY 09:30-13:00  — the range around the 08:30 US data releases, broken into the equity open
+                                matched null 423 trades median vs the method's 432 — count match 0.98
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+

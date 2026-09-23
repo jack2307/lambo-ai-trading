@@ -1,0 +1,31 @@
+$ E:/rust/flowdesk/target/release/search.exe --market=xauusd --interval=5m --mode=hypotheses --batch-file=E:/rust/fd-wt-null/docs/hypotheses/2026-09-13-recent-year-gap.toml --seeds=200 --from=2025-09-13 --to=2026-09-12 --data=E:/rust/flowdesk/data --config=config
+
+bounds:   --from=2025-09-13 --to=2026-09-12 kept 70590 of 101242 bars
+spread:   0.28 per round trip
+trail:    off
+bars:     70590 from 2025-09-14 22:00 to 2026-09-11 20:55
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from data/news/events.parquet
+news scope: USD (news_currencies)
+guards: off (every number unguarded)
+
+== hypotheses `E:/rust/fd-wt-null/docs/hypotheses/2026-09-13-recent-year-gap.toml`: 2 declared, walk-forward (4 folds), each against 200 matched null runs ==
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+news: 747 events (2010-01-08 → 2027-12-08) from data/news/events.parquet
+news scope: USD (news_currencies)
+guards: off (every number unguarded)
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+gap-fade/reopen gap-fade               33   0.401  -0.230    0.952    1.616        0    4%  fail: profit factor 0.401 < 1.2; expectancy -0.230R < 0.05R
+                                NY 17:00-19:00  — the reopen gap fills; gated to the reopen hour only
+                                matched null 26 trades median vs the method's 33 — count match 0.79
+gap-fade/reopen-2atr gap-fade               19   0.734  -0.094    0.906    1.789        0   34%  fail: only 19 trades (need 30); profit factor 0.734 < 1.2; expectancy -0.094R < 0.05R
+                                NY 17:00-19:00  — only the large gaps
+                                matched null 19 trades median vs the method's 19 — count match 1.00
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+

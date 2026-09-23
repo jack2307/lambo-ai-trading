@@ -1,0 +1,31 @@
+$ E:/rust/flowdesk/target/release/search.exe --market=btc --interval=15m --mode=hypotheses --batch-file=E:/rust/fd-wt-null/docs/hypotheses/2026-09-13-doji-btc.toml --seeds=200 --data=E:/rust/flowdesk/data --config=config
+
+spread:   5 per round trip
+trail:    off
+bars:     70080 from 2024-09-12 10:15 to 2026-09-12 10:00
+timeline: 1828 frames from 2026-09-11 05:36 to 2026-09-17 13:51
+          the tape covers 114 of 70080 bars (0.2%)
+
+tape:     44843 prints, 1828 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from data/news/events.parquet
+news scope: USD (news_currencies)
+guards: off (every number unguarded)
+
+== hypotheses `E:/rust/fd-wt-null/docs/hypotheses/2026-09-13-doji-btc.toml`: 2 declared, walk-forward (4 folds), each against 200 matched null runs ==
+swap: long 0.00 / short 0.00 USD per lot per night; spread 5
+news: 747 events (2010-01-08 → 2027-12-08) from data/news/events.parquet
+news scope: USD (news_currencies)
+guards: off (every number unguarded)
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+doji/btc-allday doji-reversal         236   0.786  -0.148    0.959    1.123        0    2%  fail: profit factor 0.786 < 1.2; expectancy -0.148R < 0.05R
+                                  — the same pattern on BTC 15-minute bars
+                                matched null 562 trades median vs the method's 236 — count match 2.38  ** outside the band: this percentile is unmatched **
+doji/btc-us  doji-reversal         109   0.808  -0.133    0.952    1.162        0   16%  fail: profit factor 0.808 < 1.2; expectancy -0.133R < 0.05R
+                                NY 08:00-16:00  — US hours only
+                                matched null 263 trades median vs the method's 109 — count match 2.41  ** outside the band: this percentile is unmatched **
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+

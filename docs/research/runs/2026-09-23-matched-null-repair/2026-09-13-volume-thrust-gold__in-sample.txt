@@ -1,0 +1,34 @@
+$ E:/rust/flowdesk/target/release/search.exe --market=xauusd --interval=15m --mode=hypotheses --batch-file=E:/rust/fd-wt-null/docs/hypotheses/2026-09-13-volume-thrust-gold.toml --seeds=200 --from=2022-06-16 --to=2025-04-10 --data=E:/rust/flowdesk/data --config=config
+
+bounds:   --from=2022-06-16 --to=2025-04-10 kept 66568 of 100586 bars
+spread:   0.28 per round trip
+trail:    off
+bars:     66568 from 2022-06-16 10:30 to 2025-04-09 23:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from data/news/events.parquet
+news scope: USD (news_currencies)
+guards: off (every number unguarded)
+
+== hypotheses `E:/rust/fd-wt-null/docs/hypotheses/2026-09-13-volume-thrust-gold.toml`: 3 declared, walk-forward (4 folds), each against 200 matched null runs ==
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+news: 747 events (2010-01-08 → 2027-12-08) from data/news/events.parquet
+news scope: USD (news_currencies)
+guards: off (every number unguarded)
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+vt-gold/fixed volume-thrust         241   0.952  -0.019    0.869    1.061        0   78%  fail: profit factor 0.952 < 1.2; expectancy -0.019R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15  — the defaults pinned on the broker's tick volume, all hours
+                                matched null 254 trades median vs the method's 241 — count match 1.05
+vt-gold/all  volume-thrust          57   0.965  -0.005    0.869    1.061        0   81%  fail: profit factor 0.965 < 1.2; expectancy -0.005R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15  — the grid walked forward, all hours
+                                matched null 254 trades median vs the method's 57 — count match 4.46  ** outside the band: this percentile is unmatched **
+vt-gold/ny   volume-thrust          43   0.797  -0.087    0.864    1.241        0   38%  fail: profit factor 0.797 < 1.2; expectancy -0.087R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 08:00-16:00  — New York hours, where tick volume means participation rather than a thin print
+                                matched null 122 trades median vs the method's 43 — count match 2.84  ** outside the band: this percentile is unmatched **
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+

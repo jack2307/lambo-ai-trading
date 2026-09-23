@@ -1,0 +1,28 @@
+$ E:/rust/flowdesk/target/release/search.exe --market=xauduka --interval=15m --mode=hypotheses --batch-file=E:/rust/fd-wt-null/docs/hypotheses/2026-09-13-doji-2018.toml --seeds=200 --from=2018-06-16 --to=2022-06-16 --data=E:/rust/flowdesk/data --config=config
+
+bounds:   --from=2018-06-16 --to=2022-06-16 kept 94125 of 378749 bars
+spread:   0.28 per round trip
+trail:    off
+bars:     94125 from 2018-06-17 22:00 to 2022-06-14 23:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from data/news/events.parquet
+news scope: USD (news_currencies)
+guards: off (every number unguarded)
+
+== hypotheses `E:/rust/fd-wt-null/docs/hypotheses/2026-09-13-doji-2018.toml`: 1 declared, walk-forward (4 folds), each against 200 matched null runs ==
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+news: 747 events (2010-01-08 → 2027-12-08) from data/news/events.parquet
+news scope: USD (news_currencies)
+guards: off (every number unguarded)
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+doji/strict-2018 doji-reversal          97   0.579  -0.289    0.829    1.151        0    4%  fail: profit factor 0.579 < 1.2; expectancy -0.289R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15  — the registered strict preset, parameters pinned, on four years nobody has looked at
+                                matched null 111 trades median vs the method's 97 — count match 1.14
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+
