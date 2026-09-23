@@ -357,6 +357,57 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         );
     }
 
+    /* ---- era concentration, because the Dukascopy bar rule changes in 2013 ---- */
+
+    // The feed prints 24-hour contiguous days until 2012 and a 23-hour session
+    // plus a one-hour break from 2013 on, so the longest run of CONSECUTIVE
+    // 15-minute bars falls from 476 to exactly 92 that year. A horizon counted
+    // in bars is satisfiable only in the early era and becomes a 2010-2012
+    // measurement wearing a fifteen-year sample count. This method counts
+    // SESSIONS and the engine counts wall-clock milliseconds, so neither is
+    // exposed — but the claim is worth nothing unless the trades are actually
+    // spread across the years, so here they are, per year.
+    {
+        use std::collections::BTreeMap;
+        #[derive(Default)]
+        struct Year { n: usize, r: f64, win: f64, loss: f64, longs: usize }
+        let mut by_year: BTreeMap<i64, Year> = BTreeMap::new();
+        for t in &run.trades {
+            let (y, _, _) = fd_core::clock::civil_from_days(t.entry_time.div_euclid(DAY_MS));
+            let e = by_year.entry(y).or_default();
+            e.n += 1;
+            e.r += t.r;
+            if t.pnl_usd > 0.0 { e.win += t.pnl_usd } else { e.loss -= t.pnl_usd }
+            e.longs += usize::from(t.direction.is_long());
+        }
+        println!();
+        println!("-- trades per calendar year, and each year's own numbers --");
+        println!("   {:<6} {:>7} {:>10} {:>10} {:>9} {:>8}", "year", "trades", "total R", "expect R", "PF", "long %");
+        for (y, e) in &by_year {
+            let pf = if e.loss > 0.0 { e.win / e.loss } else { f64::INFINITY };
+            println!(
+                "   {:<6} {:>7} {:>+10.2} {:>+10.4} {:>9.3} {:>7.0} %",
+                y,
+                e.n,
+                e.r,
+                e.r / e.n as f64,
+                pf,
+                100.0 * e.longs as f64 / e.n as f64
+            );
+        }
+        let early: f64 = by_year.iter().filter(|(y, _)| **y <= 2012).map(|(_, e)| e.r).sum();
+        let early_n: usize = by_year.iter().filter(|(y, _)| **y <= 2012).map(|(_, e)| e.n).sum();
+        let total: f64 = by_year.values().map(|e| e.r).sum();
+        let total_n: usize = by_year.values().map(|e| e.n).sum();
+        if early_n > 0 && early_n < total_n {
+            println!(
+                "   2010-2012 (the 24-hour contiguous era): {early_n} of {total_n} trades ({:.0} %) carrying {early:+.2} R of {total:+.2} R ({:.0} %)",
+                100.0 * early_n as f64 / total_n as f64,
+                100.0 * early / total
+            );
+        }
+    }
+
     // The stop distance, said out loud in points as well as in ATRs. The
     // count-matched `RandomEntry` null is NOT cost-matched — `control_for`
     // leaves its `stopAtr` at 1.5 whatever the method uses — so a wide stop

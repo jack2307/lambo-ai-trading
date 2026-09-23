@@ -223,6 +223,101 @@ positive (+358 USD), which is the one figure that argues the effect is real
 rather than beta. Silver's short leg carries the whole of its (nonexistent)
 result. Three instruments, three different stories about the same mechanism.
 
+### 5a. The design-window numbers are two episodes, and this is why it is refused
+
+A sibling agent found that the Dukascopy metals bar rule changes in 2013 and
+that a horizon counted in *bars* becomes a 2010–2012 measurement wearing a
+fifteen-year sample count. §5b shows this method is not exposed to that — it
+counts sessions and wall-clock milliseconds, never bars, and its trade count is
+flat at 42–62 a year in every year including 2013 onward. But being told to look
+for era concentration found a worse thing than the one I was warned about.
+
+Total R by calendar year, guards on, at the frozen parameters:
+
+| year | Dukascopy gold: trades / total R / R per trade / PF | Vantage gold: trades / total R / R per trade / PF |
+|---|---|---|
+| 2010 (7 mo) | 13 / +1.86 / +0.1433 / 1.556 | — |
+| 2011 | 42 / +4.71 / +0.1122 / 1.441 | — |
+| 2012 | 56 / +7.35 / +0.1312 / 1.627 | — |
+| 2013 | 47 / −2.41 / −0.0513 / 0.813 | — |
+| 2014 | 52 / +2.64 / +0.0507 / 1.203 | — |
+| 2015 | 62 / +5.03 / +0.0811 / 1.357 | — |
+| 2016 | 50 / −1.08 / −0.0216 / 0.916 | — |
+| 2017 | 61 / +6.07 / +0.0994 / 1.382 | — |
+| 2018 | 53 / +3.46 / +0.0652 / 1.278 | — |
+| 2019 | 47 / −1.78 / −0.0380 / 0.860 | — |
+| 2020 | 58 / −1.57 / −0.0270 / 0.900 | — |
+| 2021 | 55 / −3.17 / −0.0577 / 0.776 | — |
+| 2022 | 49 / −2.52 / −0.0514 / 0.825 | 11 (6 mo) / −2.82 / −0.2562 / **0.238** |
+| 2023 | 48 / +1.42 / +0.0296 / 1.106 | 46 / +0.81 / +0.0175 / 1.066 |
+| 2024 | 45 / +1.98 / +0.0440 / 1.166 | 44 / +1.36 / +0.0309 / 1.148 |
+| 2025 (9 mo) | 35 / +7.03 / **+0.2009** / **2.102** | 35 / +6.55 / **+0.1873** / **2.196** |
+
+Read the two right-hand columns together with the totals in §5:
+
+- **On the broker's own bars, the entire result is the last nine months.** 2025
+  is 26% of the trades and carries **+6.55 R of a +5.90 R total — more than all
+  of it.** 2022 through 2024, 101 trades over two and a half years, is
+  **−0.65 R**. The profit factor of 1.218 that clears the gate is a nine-month
+  profit factor of 2.196 averaged against two and a half losing years. And the
+  withheld year begins **2025-09-23, the day after that nine months ends.**
+- **On the fifteen years, 2010–2012 is 14% of the trades and carries 48% of the
+  R** (+13.92 of +29.00). Add the 2025 stub and 19% of the trades carry 72% of
+  the result. The twelve full years in between — 2013 to 2024, 627 trades —
+  carry **+8.05 R, or +0.0128 R a trade**, and six of those twelve years have a
+  profit factor below 1.0.
+- **On silver, 2010–2012 is 14% of the trades and carries +18.64 R of a +4.83 R
+  total — 386% of it.** Silver's near-zero fifteen-year figure is a positive
+  pre-2013 era and a solidly negative 2013–2025.
+
+So the method's apparent edge is two episodes — the pre-2013 Dukascopy era and
+the nine months ending on the seal — and twelve years of nothing between them.
+That is not a marginal method that might survive a hold-out. **This is now the
+first reason it is refused**, ahead of the failed nulls and ahead of silver.
+
+### 5b. Which horizons this method counts, and why the 2013 bar rule does not reach it
+
+Measured on the sealed store, longest run of **consecutive** 15-minute bars and
+session integrity, per year:
+
+| | XAUDUKA 2010–2012 | XAUDUKA 2013–2025 | XAUUSD 2022–2025 |
+|---|---|---|---|
+| longest consecutive run | **476 bars** (~5 days) | **exactly 92 bars** (23 h) | exactly 92 bars |
+| median consecutive run | 189–476 bars | 92 bars | 92 bars |
+| sessions per full year | 259–261 | 257–259 | 257–259 |
+| median bars per session | 96 (24 h) | 92 (23 h) | 92 |
+| sessions my stub filter drops | 0–6 of ~258 | 0–4 of ~258 | 0–1 of ~258 |
+
+The 2013 change is the introduction of the **one-hour daily break**: a 24-hour
+contiguous day becomes a 23-hour session plus a gap. It removes no session, it
+does not gap the interior of a session (the median run of 92 *is* the whole
+session), and the session count per year is unchanged at 257–261 throughout.
+A horizon expressed in sessions or in wall-clock time is therefore era-neutral;
+one expressed in bars is not, and 96 contiguous bars exist only before 2013.
+
+**A note for whoever hits this next:** the "median consecutive run 44–46 bars"
+figure came from the XAUDUKA ∩ XAGDUKA *join*. Intersecting two series drops
+every bar only one of them printed and roughly halves the runs. On XAUDUKA alone
+the median run is 92 from 2013 and 189–476 before it. The 44–46 is a property of
+the join, not of either feed.
+
+What this method counts:
+
+- `lookbackSessions`, `windowSessions`, `holdSessions` — **sessions**, indexed
+  from 17:00 New York off each bar's timestamp (`quiet_swing::session_index`).
+  Never bars. A session with internal gaps is still one session.
+- `rangeDays` — **New York calendar days** (`tsmom::average_day_range`).
+- the guards' weekend flat, news windows and `max_hold_ms` — **wall-clock
+  milliseconds**, as the engine computes them.
+- The only bar count anywhere is the stub filter's *relative* comparison inside
+  one window (`bars * 2 >= fullest`), which the table above shows drops 0–6
+  sessions of ~258 a year with no era pattern.
+
+And the trade counts confirm it empirically: 42–62 trades a year in every full
+year from 2011 to 2024, on both sides of the 2013 break. The bar-count trap did
+not touch this method. The era concentration of its *P&L* in §5a is a separate
+and larger problem.
+
 ---
 
 ## 6. How many variants I tried — my own multiplicity
@@ -303,6 +398,16 @@ longest 5–7 days. The holds really are multi-day.
 Route (c) remains the blocker for anybody who wants a multi-day method measured
 through `Exits::Engine` with a real stop and target. It is a lead's call.
 
+A sibling agent confirmed the other half of the same fork, and it hardens the
+choice: **`Exits::Engine` cannot express "a stop and no target" at all.**
+`Intent::Enter { target: None }` means "derive one from `reward_risk`", not "no
+target" — `engine::open_position` reads `None if self_managed || stop.is_none()
+|| rules.reward_risk == 0.0 => None` and otherwise manufactures a target at
+`risk × reward_risk`. So an engine-managed multi-day method would be capped at
+four hours *and* handed a 1.8 R target it did not ask for. Only
+`Exits::Strategy` escapes either, and it gives up the engine's stop and clock
+together.
+
 ### 7.2 The drift null is hold-matched but never count-matched
 
 `RandomHold` carries an `entryRate` parameter and
@@ -366,12 +471,27 @@ Four concurrent agents each building their own `target/` will fill this disk.
 ## 8. Why this is refused rather than submitted
 
 The registration says a null submission is valid and preferred, and that an
-agent submitting filler has made the program worse. This method fails a
-falsifier leg **on its own design window**, on both gold windows, and its
-nearest sibling instrument shows nothing at all. Submitting it would mean
-predicting that a percentile of 82 or 92 will rise past 95 on a *smaller*
-sample. That is a coin flip dressed as a hypothesis, and it would spend an
-eighth of the program's multiplicity to buy one.
+agent submitting filler has made the program worse. Four things, any one of
+which would be enough:
+
+1. **The design-window result is two episodes.** On the broker's own bars the
+   last nine months carry more than 100% of it and the preceding two and a half
+   years are −0.65 R over 101 trades; on the fifteen years, 19% of the trades
+   carry 72% of the R and the twelve years in between yield +0.0128 R a trade
+   (§5a). The withheld year starts the day after the nine months that carry it.
+2. **It fails a falsifier leg on its own design window**, on both gold windows,
+   and on *different* legs each time — profit factor on the fifteen years, both
+   nulls on the recent window. A real edge fails the same leg or none.
+3. **It does not transfer to silver**: profit factor 1.012, expectancy
+   +0.0062 R over 783 trades and fifteen years, same vendor, same parameters —
+   and even that is a positive pre-2013 era against a negative 2013–2025.
+4. **Seventy variants** were looked at (§6) and the surviving one is at the
+   noise floor.
+
+Submitting it would mean predicting that a percentile of 82 or 92 rises past 95
+on a *smaller* sample, on the strength of nine months. That is a coin flip
+dressed as a hypothesis, and it would spend an eighth of the program's
+multiplicity to buy one.
 
 What the program gets instead is the measurement, which answers the angle:
 

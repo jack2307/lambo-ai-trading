@@ -10,7 +10,17 @@
 # reproduced without them. Running it on the withheld year spends one of the
 # program's eight multiplicity slots, and the designer declined to spend it.
 #
-# WHY IT IS REFUSED, in one paragraph. The method fails a falsifier leg on its
+# WHY IT IS REFUSED, first reason. The design-window result is TWO EPISODES. On
+# the broker's own bars, 2025 is 26% of the trades and carries +6.55 R of a
+# +5.90 R total -- more than all of it -- while 2022-2024 is -0.65 R over 101
+# trades. The withheld year begins 2025-09-23, the day after those nine months
+# end. On fifteen years of Dukascopy gold, 2010-2012 is 14% of the trades and
+# carries 48% of the R; with the 2025 stub, 19% of the trades carry 72% of it,
+# and the twelve full years between them yield +0.0128 R a trade with six of
+# twelve under a 1.0 profit factor. On silver, 2010-2012 carries 386% of the
+# total. See section 5a of the design note.
+#
+# SECOND REASON. The method fails a falsifier leg on its
 # own design window, on both gold windows, and on different legs each time: on
 # the broker's own 3.27 years it clears profit factor 1.2 (1.218) and sits at
 # the 82nd percentile of a count-matched drift null and the 84th of the
@@ -31,7 +41,7 @@ id = "quiet-swing"                  # crates/fd-strategy/src/quiet_swing.rs
 name = "Quiet-tape multi-day continuation"
 exits = "Strategy"                  # self-managed: escapes [trading] max_hold_ms = 4 h
 proposed = false                    # ZERO methods proposed by designed-3
-refused_because = "fails a falsifier leg on its own design window on both gold windows; does not transfer to silver"
+refused_because = "design-window result is two episodes (2025 carries >100% on the broker's bars; 19% of trades carry 72% of R over fifteen years); fails a falsifier leg on both gold design windows; does not transfer to silver"
 
 [params]
 # Exact values. No grid, no ranges. The strategy declares an EMPTY grid, so
@@ -79,6 +89,18 @@ method is two-sided (57-61% long) and its side split and per-leg P&L are
 printed with every result, but a long-biased multi-day method would clear both
 nulls on its side ratio alone.
 """
+
+[era_concentration]
+# Measured per calendar year at exactly the parameters above, guards on. The
+# horizons this method counts are SESSIONS and wall-clock milliseconds, never
+# bars, so the 2013 Dukascopy bar-rule change (longest consecutive run falls
+# from 476 bars to exactly 92 when the one-hour daily break is introduced) does
+# not reach it: trade counts are 42-62 a year on both sides of the break. The
+# P&L concentration below is a separate and larger problem.
+xauusd_by_year  = { y2022_6mo = { trades = 11, total_r = -2.82, pf = 0.238 }, y2023 = { trades = 46, total_r = 0.81, pf = 1.066 }, y2024 = { trades = 44, total_r = 1.36, pf = 1.148 }, y2025_9mo = { trades = 35, total_r = 6.55, pf = 2.196 } }
+xauduka_pre2013 = { trades = 111, share_of_trades_pct = 14, share_of_total_r_pct = 48 }
+xauduka_2013_2024 = { trades = 627, total_r = 8.05, r_per_trade = 0.0128, years_under_pf_1 = 6 }
+xagduka_pre2013 = { trades = 111, total_r = 18.64, share_of_total_r_pct = 386 }
 
 [design_window]
 # Measured, guards on, at exactly the parameters above. Published beside any
