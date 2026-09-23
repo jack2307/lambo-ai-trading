@@ -493,3 +493,9 @@ lands in the same spot the conflict is one line and either copy will do; the
 two direction nulls (the rule as written, and the single-series control at
 `companionAtr=999`). Each one's first line names the store it read, and every
 one names `E:/rust/flowdesk/data-sealed`.
+
+**A third small defect, fixed.** `search` printed its news line from a `const`
+reading `data/news/events.parquet` whatever `--data` said, so a receipt from
+`--data=E:/rust/flowdesk/data-sealed` claimed a calendar out of `data/`. In a
+programme whose audit rests on receipts naming their store, a line that names
+the wrong store is worse than no line. It now names the path actually read.

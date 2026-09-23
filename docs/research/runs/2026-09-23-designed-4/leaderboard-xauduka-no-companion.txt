@@ -8,7 +8,7 @@ timeline: none — options strategies will be skipped
 
 tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
 
-news: 747 events (2010-01-08 → 2027-12-08) from data/news/events.parquet
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data-sealed\news\events.parquet
 news scope: USD (news_currencies)
 companion: none loaded — every cmp series is NaN
 guards: on — max_open_loss_r 2.0, notional 300%, weekend flat 16:40 NY, news flat 60/30 (impact≥3, USD), daily cap 20, loss limit $300, cooldown 30 min

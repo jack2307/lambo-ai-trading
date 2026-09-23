@@ -8,7 +8,7 @@ timeline: none — options strategies will be skipped
 
 tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
 
-news: 747 events (2010-01-08 → 2027-12-08) from data/news/events.parquet
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data-sealed\news\events.parquet
 news scope: USD (news_currencies)
 companion: XAGDUKA-15m 358065 bars 2010-06-01 → 2025-09-22 (modal interval 900s) from E:/rust/flowdesk/data-sealed\bars\XAGDUKA-15m.parquet
 guards: off (every number unguarded)

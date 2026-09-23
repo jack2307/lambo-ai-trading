@@ -146,8 +146,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // The calendar behind every `news:` filter, installed once for the
     // process. Printed here and again beside the swap/spread line of a
     // hypotheses receipt so a record can quote which calendar it ran on.
-    let news_line = load_news(&data);
-    println!("{news_line}");
+    println!("{}", load_news(&data));
     println!("{}", news_scope_line(&rules));
     // `--companion=<SYMBOL>`: the SECOND instrument, for the one method that
     // reads two. Installed once for the process, at the same interval and out
@@ -317,13 +316,24 @@ fn load_timeline(
     (!timeline.is_empty()).then_some(timeline)
 }
 
-/// Where the scheduled-news calendar lives under the data directory.
-const NEWS_FILE: &str = "data/news/events.parquet";
+/// The calendar path `load_news` actually read, for the receipt lines printed
+/// deeper in, which do not have `--data` in scope.
+static NEWS_SOURCE: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+
+/// The `news:` receipt line, naming the file this process read.
+fn news_line() -> String {
+    fd_strategy::news::summary(NEWS_SOURCE.get().map_or("data/news/events.parquet", String::as_str))
+}
 
 /// Install `<data>/news/events.parquet` for the `news:` filters, if it is
 /// there, and say what happened in one line. A missing file is not an error
 /// — the filters are then no-ops, and the line says so; an unreadable one is
 /// reported, not fatal, for the same reason.
+///
+/// The line names the path actually read. It used to name a `const` reading
+/// `data/news/events.parquet` whatever `--data` said, so a receipt from
+/// `--data=data-sealed` claimed a calendar out of `data/` — a claim about the
+/// store that was not true, in the one line a reader would check.
 fn load_news(data: &std::path::Path) -> String {
     let path = data.join("news").join("events.parquet");
     if path.is_file() {
@@ -332,7 +342,8 @@ fn load_news(data: &std::path::Path) -> String {
             Err(e) => println!("news: could not load {}: {e}", path.display()),
         }
     }
-    fd_strategy::news::summary(NEWS_FILE)
+    let _ = NEWS_SOURCE.set(path.display().to_string());
+    news_line()
 }
 
 /// Install `--companion=<SYMBOL>` from `<data>/bars/<SYMBOL>-<interval>.parquet`
@@ -867,7 +878,7 @@ fn run_hypotheses(
         println!("== hypotheses `{shown}`: {} declared, walk-forward ({folds} folds), each against {seeds} matched null runs ==", batch.len());
     }
     println!("swap: long {:.2} / short {:.2} USD per lot per night; spread {}", rules.swap_long_per_lot, rules.swap_short_per_lot, rules.spread);
-    println!("{}", fd_strategy::news::summary(NEWS_FILE));
+    println!("{}", news_line());
     println!("{}", news_scope_line(rules));
     println!("{}", guards_line(guards));
     println!();
@@ -994,7 +1005,7 @@ fn run_rescore(
     println!("          gross columns are unchanged; the cost model is untouched");
     println!("nulls:    matched null {seeds} runs and direction null {direction_samples} draws, BOTH carrying the same credit");
     println!("swap:     long {:.2} / short {:.2} USD per lot per night; spread {}", rules.swap_long_per_lot, rules.swap_short_per_lot, rules.spread);
-    println!("{}", fd_strategy::news::summary(NEWS_FILE));
+    println!("{}", news_line());
     println!("{}", news_scope_line(rules));
     println!("{}", guards_line(guards));
     println!();
