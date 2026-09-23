@@ -91,6 +91,61 @@ DEVIATIONS, all of them.
 3. The per-cell in-sample ranking is a plain in-sample return, not a
    walk-forward return, for the reason above. The walk-forward is reported
    separately and per mechanism.
+   -- SUPERSEDED 2026-09-23, see the restatement below. --
+
+RESTATEMENT, 2026-09-23, AFTER THE FIRST NUMBERS HAD BEEN SEEN
+
+This is the weak part of the record and it is stated first rather than buried.
+The ranking above was run, its top five were carried out of sample, and all of
+those numbers were read, BEFORE the ranking was changed. The coordinator then
+reconciled slice 3 against slices 1 and 2, which had both ranked by walk-forward
+return, and against the registration's own wording — "the winner is whichever
+cell has the highest walk-forward return on the three-month window, chosen by the
+existing select_by rule" — and ruled that this slice's reading had to move. So
+the restated column is not what was planned here; it is a correction made with
+the first answer already in hand, and anyone reading these receipts should weight
+it accordingly. Both columns are published side by side in
+slice-3-in-sample-restated.txt for exactly that reason, and the original
+slice-3-in-sample.txt and slice-3-cells.txt are left untouched as the first
+version rather than overwritten.
+
+What the restatement does. Every one of the forty-five cells is wrapped in
+fd_backtest::hypotheses::Preset::new over BOTH of its grid axes, which empties
+the preset's grid, so walk_forward_guarded has exactly one combination to choose
+from in each of the four folds and measures that cell on each fold's test window
+instead of selecting a different cell. A cell's walk-forward return is the
+return_pct of the combined out-of-sample folds. Nothing else changed: same
+window, same guards, same 0.28 spread, same four folds, same
+select_by = expectancy, same five-training-trade floor per fold, and the six-day
+feed shortfall stays exactly as recorded above. No threshold moved and no filter
+was loosened.
+
+A number this ranking needs read with it. A cell whose training windows never
+reach the five-trade floor has NO walk-forward number, which is not the same as a
+walk-forward return of zero, so such cells are printed as "no fold" and sorted
+below every cell that has one. And the folds column matters as much as the
+return: four of the five cells this ranking promotes have ONE measured fold and
+TWO walk-forward trades, with an infinite profit factor because neither trade
+lost. Their walk-forward returns of 1.14% and 0.57% rest on two trades each.
+That is a property of the registered ranking on mechanisms this thin, not a
+finding, and it is why the out-of-sample leg is the only part of this slice that
+carries weight.
+
+The top five DID change, so the out-of-sample leg was re-run on the new five:
+slice-3-cells-restated.txt and slice-3-out-of-sample-restated.txt, same three
+legs, same 200 seeds, achieved count match printed per row (1.05 to 1.08, all
+inside the band). Nought of five cleared all three legs, as before. One row wants
+a note: doji-reversal bodyMaxPct=0.05,riskReward=2 shows a positive nine-month
+return of 1.48% against a NEGATIVE expectancy of -0.069R and a total of -5.31R.
+The guards sized 65 of its 77 entries down, so its dollar return and its R
+arithmetic disagree, and the registration's legs are expectancy and profit
+factor rather than return precisely so that a row like this cannot pass on the
+dollar column alone. It fails on all three legs regardless, at the 65th
+percentile of its matched null.
+
+The original out-of-sample receipt, slice-3-out-of-sample.txt, remains valid for
+the five cells it names; those five were the top five under the superseded
+ranking and their figures are unchanged by anything here.
 
 Gate: cargo +stable-x86_64-pc-windows-gnu test --workspace passed, nothing
 failed.

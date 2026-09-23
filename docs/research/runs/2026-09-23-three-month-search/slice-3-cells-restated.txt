@@ -1,0 +1,5 @@
+doji-reversal bodyMaxPct=0.05,riskReward=2
+gap-fade minGapAtr=0.5,stopGapMult=1
+gap-fade minGapAtr=1,stopGapMult=1
+gap-fade minGapAtr=0.5,stopGapMult=2
+gap-fade minGapAtr=1,stopGapMult=2

@@ -14,13 +14,12 @@
 //! three_month_slice3 --stage=oos --from=2025-09-23 --to=2026-06-22 --cells=<file>
 //! ```
 //!
-//! `--stage=in` sweeps every cell of every grid over the window at the
-//! configured spread with the guards on, ranks the cells by `return_pct`, and
-//! writes the top five as `strategy key=value,key=value` lines. It also reports
-//! the mechanism's own walk-forward over the same window at the configured fold
-//! count and `select_by`, because the registration's "walk-forward" is a
-//! *mechanism* number: a fixed cell has nothing to select, so a per-cell
-//! ranking is in-sample by construction and is published as such.
+//! `--stage=in` evaluates every cell of every grid over the window twice — once
+//! over the whole window, and once **walked forward with that cell's own
+//! parameters pinned**, which is the ranking the registration names — and writes
+//! the top five by walk-forward return as `strategy key=value,key=value` lines.
+//! Both columns are printed, because the first version of this receipt ranked on
+//! the whole-window return and the correction has to stay visible.
 //!
 //! `--stage=oos` replays exactly those cells — same strategy, same parameters,
 //! no fold, no selection — through `run_hypothesis_fixed_guarded`, which is the
@@ -36,7 +35,7 @@ use fd_backtest::{Guards, PromisingGate};
 use fd_core::config::Config;
 use fd_core::types::Bar;
 use fd_store::read_bars;
-use fd_strategy::registry::{Params, Registry, parameter_combinations};
+use fd_strategy::registry::{Params, Registry, Strategy as _, parameter_combinations};
 
 /// The five mechanisms this slice owns, in the order the assignment lists them.
 const SLICE: [&str; 5] = ["pdhl", "ict-sweep-mss-fvg", "vwap-fade", "doji-reversal", "gap-fade"];
@@ -91,6 +90,18 @@ impl Cell {
     fn preset(&self) -> String {
         self.overrides.iter().map(|(k, v)| format!("{k}={v}")).collect::<Vec<_>>().join(",")
     }
+}
+
+/// One cell's two numbers: the whole window, and the same cell walked forward
+/// with nothing left to select.
+struct Row {
+    cell: Cell,
+    whole: fd_backtest::engine::Metrics,
+    wf: Option<fd_backtest::engine::Metrics>,
+    /// How many of the folds actually measured anything. A cell whose training
+    /// windows never reached `min_trades_per_cell` has no walk-forward number
+    /// at all, and that is not the same as a walk-forward return of zero.
+    measured_folds: usize,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -162,7 +173,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-/// Every cell of every grid in the slice, over the whole window.
+/// Every cell of every grid in the slice, twice: once over the whole window and
+/// once walked forward with the cell's own parameters pinned.
+///
+/// Pinning is what makes a per-cell walk-forward number mean anything. Wrapping
+/// the cell in `Preset::new` over both grid axes empties the preset's grid, so
+/// the walk-forward has exactly one combination to choose from in every fold and
+/// measures that cell on each fold's test window instead of re-selecting a
+/// different one. The registered ranking is this number — "the highest
+/// walk-forward return on the three-month window" — and the whole-window return
+/// is carried beside it because the first version of this receipt ranked on it,
+/// and a correction that hides what it corrected is worse than the error.
 fn stage_in(
     registry: &Registry,
     bars: &[Bar],
@@ -175,7 +196,7 @@ fn stage_in(
     let folds = config.backtest.walk_forward_folds;
     let min_trades_per_cell = config.backtest.min_trades_per_cell;
 
-    let mut rows: Vec<(Cell, fd_backtest::engine::Metrics)> = Vec::new();
+    let mut rows: Vec<Row> = Vec::new();
     for id in SLICE {
         let Ok(strategy) = registry.get(id) else {
             println!("unknown strategy: {id}");
@@ -184,14 +205,78 @@ fn stage_in(
         let grid = strategy.grid();
         let axes: Vec<String> = grid.keys().cloned().collect();
         for params in parameter_combinations(&strategy.default_params(), &grid) {
-            let result = run_backtest_guarded(bars, strategy, &params, rules, guards, None, Range::default(), None);
-            let overrides = axes.iter().map(|k| (k.clone(), params.get(k))).collect();
-            rows.push((Cell { strategy: id.to_string(), overrides, params: params.clone() }, result.metrics));
+            let whole =
+                run_backtest_guarded(bars, strategy, &params, rules, guards, None, Range::default(), None).metrics;
+            let overrides: Vec<(String, f64)> = axes.iter().map(|k| (k.clone(), params.get(k))).collect();
+            let cell = Cell { strategy: id.to_string(), overrides, params: params.clone() };
+            // Both axes pinned: the walk-forward's grid is empty and every fold
+            // is forced onto this cell.
+            let (wf, measured_folds) = match fd_backtest::hypotheses::Preset::new(strategy, &cell.overrides) {
+                Err(e) => {
+                    println!("{id} could not be pinned at {}: {e}", cell.preset());
+                    (None, 0)
+                }
+                Ok(preset) => {
+                    debug_assert!(preset.grid().is_empty(), "both grid axes should be pinned");
+                    match walk_forward_guarded(&preset, bars, rules, None, folds, select_by, min_trades_per_cell, guards)
+                    {
+                        None => (None, 0),
+                        Some(result) => {
+                            let measured = result.folds.iter().filter(|f| f.selected.is_some()).count();
+                            (Some(result.oos), measured)
+                        }
+                    }
+                }
+            };
+            rows.push(Row { cell, whole, wf, measured_folds });
         }
     }
 
-    println!("== in-sample: every cell of the slice's grids, whole window ==");
+    // A cell with no measured fold has no walk-forward return, and it must sort
+    // below every cell that has one rather than above the losers at 0.00%.
+    let wf_return = |r: &Row| match &r.wf {
+        Some(m) if r.measured_folds > 0 => m.return_pct,
+        _ => f64::NEG_INFINITY,
+    };
+
+    println!("== in-sample: every cell of the slice's grids, both rankings ==");
     println!("cells swept: {}", rows.len());
+    println!();
+    println!("RESTATED 2026-09-23, ranked by WALK-FORWARD return with each cell's parameters");
+    println!("pinned ({folds} folds, select_by {select_by:?}, a fold needs {min_trades_per_cell} training trades).");
+    println!("This is the registration's own wording and it is the ranking that decides the top");
+    println!("five. The `whole%` column is the plain whole-window return that the first version");
+    println!("of this receipt ranked on, kept so the correction stays visible; slice-3-method.txt");
+    println!("records that the restatement happened after the first numbers had been seen.");
+    println!();
+    println!(
+        "{:<20} {:<34} {:>5} {:>8} {:>8} {:>8} {:>9}   {:>7} {:>8} {:>8}",
+        "strategy", "cell", "folds", "wfTrades", "wfPF", "wfExpect", "wfReturn%", "trades", "wholePF", "whole%"
+    );
+    let mut by_wf: Vec<usize> = (0..rows.len()).collect();
+    by_wf.sort_by(|a, b| wf_return(&rows[*b]).partial_cmp(&wf_return(&rows[*a])).unwrap_or(std::cmp::Ordering::Equal));
+    for i in &by_wf {
+        let r = &rows[*i];
+        let wf = match &r.wf {
+            Some(m) if r.measured_folds > 0 => {
+                format!("{:>8} {:>8.3} {:>8.3} {:>8.2}%", m.trades, m.profit_factor, m.expectancy, m.return_pct)
+            }
+            _ => format!("{:>8} {:>8} {:>8} {:>9}", "-", "-", "-", "no fold"),
+        };
+        println!(
+            "{:<20} {:<34} {:>5} {wf}   {:>7} {:>8.3} {:>7.2}%",
+            r.cell.strategy,
+            r.cell.preset(),
+            r.measured_folds,
+            r.whole.trades,
+            r.whole.profit_factor,
+            r.whole.return_pct
+        );
+    }
+    println!();
+
+    println!("ORIGINAL ranking, by whole-window return — the column the first version of this");
+    println!("receipt used to pick its top five. Kept so the two orderings can be compared.");
     println!();
     println!(
         "{:<20} {:<34} {:>7} {:>7} {:>8} {:>8} {:>9} {:>10}",
@@ -199,10 +284,10 @@ fn stage_in(
     );
     let mut ordered: Vec<usize> = (0..rows.len()).collect();
     ordered.sort_by(|a, b| {
-        rows[*b].1.return_pct.partial_cmp(&rows[*a].1.return_pct).unwrap_or(std::cmp::Ordering::Equal)
+        rows[*b].whole.return_pct.partial_cmp(&rows[*a].whole.return_pct).unwrap_or(std::cmp::Ordering::Equal)
     });
     for i in &ordered {
-        let (cell, m) = &rows[*i];
+        let (cell, m) = (&rows[*i].cell, &rows[*i].whole);
         println!(
             "{:<20} {:<34} {:>7} {:>6.1}% {:>8.3} {:>8.3} {:>9.2} {:>9.2}%",
             cell.strategy,
@@ -219,14 +304,18 @@ fn stage_in(
 
     println!("== trade counts by mechanism (a cell under 30 trades is not a result) ==");
     for id in SLICE {
-        let counts: Vec<usize> = rows.iter().filter(|(c, _)| c.strategy == id).map(|(_, m)| m.trades).collect();
+        let counts: Vec<usize> = rows.iter().filter(|r| r.cell.strategy == id).map(|r| r.whole.trades).collect();
+        let wf_counts: Vec<usize> =
+            rows.iter().filter(|r| r.cell.strategy == id).map(|r| r.wf.as_ref().map_or(0, |m| m.trades)).collect();
         let (lo, hi) = (counts.iter().copied().min().unwrap_or(0), counts.iter().copied().max().unwrap_or(0));
-        let total: usize = counts.iter().sum();
-        println!("{id:<20} {} cells, trades {lo}..{hi} (sum {total})", counts.len());
+        let (wlo, whi) = (wf_counts.iter().copied().min().unwrap_or(0), wf_counts.iter().copied().max().unwrap_or(0));
+        println!("{id:<20} {} cells, whole-window trades {lo}..{hi}, pinned walk-forward trades {wlo}..{whi}", counts.len());
     }
     println!();
 
-    println!("== the mechanism's own walk-forward over the same window ({folds} folds, select_by {select_by:?}) ==");
+    println!("== the mechanism's own free-grid walk-forward over the same window ({folds} folds, select_by {select_by:?}) ==");
+    println!("This one DOES select, fold by fold, and is kept for the record beside the pinned");
+    println!("per-cell numbers above.");
     println!("{:<20} {:>7} {:>7} {:>8} {:>8} {:>9}  verdict", "strategy", "trades", "win%", "profit", "expect", "return%");
     for id in SLICE {
         let Ok(strategy) = registry.get(id) else { continue };
@@ -271,31 +360,44 @@ fn stage_in(
     }
     println!();
 
-    let top: Vec<&(Cell, fd_backtest::engine::Metrics)> = ordered.iter().take(5).map(|i| &rows[*i]).collect();
-    println!("== top five of the slice by in-sample return, carried forward unchanged ==");
-    for (rank, (cell, m)) in top.iter().enumerate() {
-        println!(
-            "{}. {} {}  return {:.2}%  trades {}  PF {:.3}  expectancy {:.3}R",
-            rank + 1,
-            cell.strategy,
-            cell.preset(),
-            m.return_pct,
-            m.trades,
-            m.profit_factor,
-            m.expectancy
-        );
+    let top: Vec<&Row> = by_wf.iter().take(5).map(|i| &rows[*i]).collect();
+    println!("== top five of the slice by WALK-FORWARD return, carried forward unchanged ==");
+    for (rank, r) in top.iter().enumerate() {
+        match &r.wf {
+            Some(m) if r.measured_folds > 0 => println!(
+                "{}. {} {}  walk-forward return {:.2}% over {} measured folds, {} trades, PF {:.3}, expectancy {:.3}R  (whole window {:.2}% on {} trades)",
+                rank + 1,
+                r.cell.strategy,
+                r.cell.preset(),
+                m.return_pct,
+                r.measured_folds,
+                m.trades,
+                m.profit_factor,
+                m.expectancy,
+                r.whole.return_pct,
+                r.whole.trades
+            ),
+            _ => println!(
+                "{}. {} {}  no walk-forward number at all: no fold reached {min_trades_per_cell} training trades  (whole window {:.2}% on {} trades)",
+                rank + 1,
+                r.cell.strategy,
+                r.cell.preset(),
+                r.whole.return_pct,
+                r.whole.trades
+            ),
+        }
     }
     println!();
 
     let out = arg("cells-out", "");
     if !out.is_empty() {
-        let text: String = top.iter().map(|(c, _)| format!("{} {}\n", c.strategy, c.preset())).collect();
+        let text: String = top.iter().map(|r| format!("{} {}\n", r.cell.strategy, r.cell.preset())).collect();
         match std::fs::write(&out, text) {
             Ok(()) => println!("carried-forward cells written to {out}"),
             Err(e) => println!("could not write {out}: {e}"),
         }
     }
-    let _ = top.iter().map(|(c, _)| &c.params).count();
+    let _ = top.iter().map(|r| &r.cell.params).count();
 }
 
 /// The named cells replayed on this window at their registered parameters.
