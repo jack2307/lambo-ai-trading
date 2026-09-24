@@ -63,6 +63,59 @@ The gap between 0.858 and 0.881 is the whole content of the parity check, and it
 small enough that it needs a few hundred trades to see — which is stated here so
 that a number at 60 trades is not read as a result.
 
+## AMENDED before a single trade was posted: the fixed prediction above is wrong
+
+The six books were created and the arithmetic was checked against the live feed
+before any poster started. It does not hold, and the reason matters more than the
+number.
+
+**The prediction above used a historical median ATR. The books trade at whatever
+ATR obtains.** Measured on the live feed at 2026-09-24, gold 15m **ATR14 is 8.92
+points** — about **3.6x** the 2.49 implied by the 2022-2025 median that
+`docs/research/runs/2026-09-24-repair-d/` reports. So a 1.5 ATR stop is **13.37
+points**, not 3.73, and the round trip costs:
+
+| | stop | cost/R |
+|---|---:|---:|
+| 2022-2025 median ATR, charged spread 0.28 | 3.73 pts | 7.50% |
+| 2022-2025 median ATR, measured spread 0.220 | 3.73 pts | 5.89% |
+| **today's ATR, measured spread 0.220** | **13.37 pts** | **1.65%** |
+
+With `reward_risk` 1.8, profit factor is `(b - c)/(b(1 + c))`, so **c = 1.65% implies
+a profit factor of about 0.97** — not 0.88, and close enough to 1.00 that the
+falsifier as written above would have **refuted a null that was behaving correctly.**
+
+That is the error this registration existed to catch, caught on itself. It is
+recorded rather than rewritten.
+
+### The falsifier that replaces it
+
+A fixed number cannot work, because the cost these books pay is set by the
+volatility they happen to trade through. So the prediction becomes relative, and the
+comparison is against the cost the trades actually paid:
+
+- Record, per trade, the **realised stop distance in points** and therefore the
+  realised `cost/R`. Take its median over the pooled trades.
+- The predicted profit factor is `(1.8 - c) / (1.8 x (1 + c))` at that realised
+  median `c`, using the measured spread of 0.220 — **computed from the trades' own
+  cost, not from a historical median.**
+- **Confirmed** if the pooled profit factor is within **0.06** of that prediction.
+- **Refuted** if it is more than 0.06 above — live random entry beating its own cost
+  model means the null every published percentile is read against is wrong.
+- **Refuted** if it is more than 0.06 below — something in the live fills costs more
+  than the spread, which would be worth knowing on its own.
+
+The 0.06 band is wider than the gap between the charged and measured spread at any
+plausible ATR, which is deliberate: this test can say whether live random entry
+matches its cost model, and it cannot say which spread figure is right.
+
+**And the headline consequence, stated now rather than discovered later:** at
+today's volatility a coin on gold loses only about 1.65% of R per trade, so a
+pooled profit factor near 0.97 is the *correct* result and is **not** evidence that
+random entry works. It is evidence that gold's ATR is currently large enough to make
+the spread nearly irrelevant — which is the same finding the cost table already
+carries, from the other direction.
+
 ## Falsifier
 
 On the **pooled** trades of all six books, at 200 pooled trades and again at 400:
