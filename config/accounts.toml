@@ -741,7 +741,20 @@ lot_scale = 10.0
 
 real_money = true
 dry_run = false
-enabled = true
+# 2026-09-24, the owner's decision, in his words: "Stop chien luoc ben real
+# money di, no dang di ko tot." Both executors on this account were stopped the
+# same minute (PIDs 8764 ai-xau-ds-ctx and 7764 xau-macd-asia) and verified
+# gone, so no new order can reach 33708517.
+#
+# WHAT THIS LINE DOES AND DOES NOT DO. `mt5_executor.py` never reads it - it
+# takes `--account` and `--allow-real` from its command line - so this is a
+# DECLARATION for fd-api and for whoever reads this file next, not an interlock.
+# The thing that actually stopped the trading is that the two processes are
+# dead, and nothing restarts them: `flowdesk-traders` starts the paper AI
+# traders only and `flowdesk-watch` runs the Telegram watcher, so a reboot
+# leaves this account flat. Starting an executor by hand would still work and
+# would still be wrong.
+enabled = false
 
 runs = [
     "ai-xau-ds-ctx",
