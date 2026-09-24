@@ -2,7 +2,7 @@
 
 **Registered:** (commit time is authoritative) — before the fix is written and
 before any corrected percentile is seen
-**Status:** open
+**Status:** decided -> the fix is in, receipts under `docs/research/runs/2026-09-24-cost-matched-null/`. The prediction held: 11 of 11 registry rows, 28 of the 38 rows away from 1.5 ATR moving as predicted, all 5 rows at exactly 1.5 bit-identical, and neither funded book moving. Two errors in THIS registration are amended in place below rather than rewritten: the "bounded by a factor of two" scope claim was false, and case 1 of the fix as specified would have mis-repaired the very row that exposed the defect. Two leg-level status changes, one of them uncomfortable: `at-1.0-vwap` GAINED the percentile leg at PF 0.903, which says plainly that the leg means "loses less than random entry at the same cost" and not "makes money".
 
 This is not a hypothesis about the market. It is a pre-commitment about numbers
 that are about to move, written before they are known, for the same reason the
@@ -64,6 +64,38 @@ three-to-nine-fold mismatch the far-stop method produced:
 - **One grid sweeps the stop**: `donchian-breakout`'s
   `("stopAtr", &[1.5, 2.0, 3.0])`, so its 3.0 cells were compared to a control
   at 1.5 while its 1.5 cells were matched.
+
+**AMENDED 2026-09-24, after the fix ran: the bound above is wrong.** This
+section said the distortion was "bounded by a factor of two" because the
+registry's stops "run 1.0 to 3.0 ATR". That was read off a grep for `"stopAtr"`
+and a grep can only find methods that name one. Verified after the fact:
+
+- **Eight methods name no `stopAtr` at all** — `orb`, `pdhl`, `doji-reversal`,
+  `gap-fade`, `trend-pullback`, `volman-box`, `volume-thrust`,
+  `ict-sweep-mss-fvg` — and every one was read against a control at 1.5 with
+  nothing to compare it to. The two whose realised stops were measured came out
+  at **1.855 and 2.783 ATR**, so the mismatch outside the named-`stopAtr` set is
+  real and was never inside the stated bound.
+- **`companion-unconfirmed` declares `stopAtr = 4.0` and sweeps 2.0/4.0/6.0** —
+  up to **4x** the control, the largest named mismatch in the registry, and
+  absent from the list above.
+- **`far-stop-break` declares `stopAtr = 1.2` and ignores it** in `stopMode = 0`,
+  stopping at the opposite channel edge, measured at **4.2-9.3 ATR**.
+
+The last one also breaks the fix as this registration specified it. Case 1 said
+"the method names `stopAtr` — copy the value", and copying 1.2 would have left
+`struct-80` — the row that exposed the whole defect — at the 98th percentile.
+The implementing agent caught this and replaced the test: not whether a
+declared stop *exists* but whether it *governs*, evidenced against the method's
+own realised distance, with case 1 applying only when the declared value is
+within 25% of the realised median. That correction is the implementer's, not
+this registration's, and it is recorded here rather than absorbed silently.
+
+The direction of the bias, which is the part that mattered, was right: 28 of
+the 38 rows away from 1.5 moved as predicted, all 5 rows at exactly 1.5 were
+bit-identical, and the single row that moved against it moved 1 point of
+percentile on 17 trades at a count match of 2.24 — already printed unmatched
+and already failing the 30-trade floor.
 
 **Both funded books are at 1.5 and are therefore cost-matched by coincidence.**
 `xau-macd-asia` and `xau-stoch` both run `macd-cross` and `stoch-reversal` at
