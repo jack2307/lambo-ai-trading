@@ -1,0 +1,82 @@
+market:   xauusd 15m
+data:     E:/rust/flowdesk/data-sealed (bars from E:/rust/flowdesk/data-sealed\bars\XAUUSD-15m.parquet)
+bounds:   --from=2022-06-16 --to=2025-09-23 kept 77278 of 77278 bars
+spread:   0.28 per round trip
+trail:    off
+bars:     77278 from 2022-06-16 10:30 to 2025-09-22 23:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data-sealed\news\events.parquet
+news scope: USD (news_currencies)
+companion: none loaded — every cmp series is NaN
+guards: on — max_open_loss_r 2.0, notional 300%, weekend flat 16:40 NY, news flat 60/30 (impact≥3, USD), daily cap 20, loss limit $300, cooldown 30 min
+
+== hypotheses `docs/research/designs/2026-09-23-designed-1-contrast.toml`: 8 declared, FIXED parameters over the whole window (no selection), each against 200 matched null runs ==
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data-sealed\news\events.parquet
+news scope: USD (news_currencies)
+guards: on — max_open_loss_r 2.0, notional 300%, weekend flat 16:40 NY, news flat 60/30 (impact≥3, USD), daily cap 20, loss limit $300, cooldown 30 min
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+atr-20       far-stop-break       5577   0.786  -0.104    0.842    0.894        0    6%  fail: profit factor 0.786 < 1.2; expectancy -0.104R < 0.05R
+                                  — the registry's habit: an ATR-scaled invalidation on a 20-bar channel break. The control arm.
+                                matched null 3996 trades median vs the method's 5577 — count match 0.72  ** outside the band: this percentile is unmatched **
+                                cost-matched null: control stop 1.200 ATR = 2.96 points, cost 9.45% of R (named stopAtr, copied)
+                                the method's own realised stop: median 1.259 ATR = 3.11 points over 5577 trades
+                                at the control's registered 1.5 ATR (the record's reading): pct 2%, count match 0.67 — corrected 6%, +4 points of percentile
+                                guards: refused COOLDOWN 702, NEWS_FLAT 122, NOTIONAL_CAP 100, WEEKEND_FLAT 26; closed NEWS_FLAT 17, WEEKEND_FLAT 46; sized down 5192
+struct-20    far-stop-break       3404   0.871  -0.029    0.874    0.955        0   46%  fail: profit factor 0.871 < 1.2; expectancy -0.029R < 0.05R
+                                  — the same break, wrong only where the range is intact again — the far channel edge, several times the ATR distance away
+                                matched null 2320 trades median vs the method's 3404 — count match 0.68  ** outside the band: this percentile is unmatched **
+                                cost-matched null: control stop 4.215 ATR = 10.54 points, cost 2.66% of R (realised median, structural); the method DECLARES stopAtr 1.20 and does not use it
+                                the method's own realised stop: median 4.215 ATR = 10.54 points over 3404 trades
+                                at the control's registered 1.5 ATR (the record's reading): pct 61%, count match 0.80 — corrected 46%, -14 points of percentile
+                                guards: refused COOLDOWN 22, NEWS_FLAT 119, WEEKEND_FLAT 26; closed NEWS_FLAT 59, WEEKEND_FLAT 58; sized down 757
+atr-40       far-stop-break       3917   0.801  -0.096    0.845    0.913        0   16%  fail: profit factor 0.801 < 1.2; expectancy -0.096R < 0.05R
+                                  — the control arm at a 40-bar channel: the ATR distance barely moves with the lookback, so this holds the stop fixed while the structure grows
+                                matched null 3115 trades median vs the method's 3917 — count match 0.80
+                                cost-matched null: control stop 1.200 ATR = 3.15 points, cost 8.88% of R (named stopAtr, copied)
+                                the method's own realised stop: median 1.255 ATR = 3.30 points over 3917 trades
+                                at the control's registered 1.5 ATR (the record's reading): pct 6%, count match 0.76 — corrected 16%, +10 points of percentile
+                                guards: refused COOLDOWN 535, NEWS_FLAT 98, WEEKEND_FLAT 12; closed NEWS_FLAT 14, WEEKEND_FLAT 29; sized down 3751
+struct-40    far-stop-break       2266   0.903  -0.014    0.887    0.972        0   64%  fail: profit factor 0.903 < 1.2; expectancy -0.014R < 0.05R
+                                  — a 40-bar channel's far edge is about twice a 20-bar channel's, so this is the same claim at twice the stop
+                                matched null 1794 trades median vs the method's 2266 — count match 0.79
+                                cost-matched null: control stop 5.807 ATR = 15.47 points, cost 1.81% of R (realised median, structural); the method DECLARES stopAtr 1.20 and does not use it
+                                the method's own realised stop: median 5.807 ATR = 15.47 points over 2266 trades
+                                at the control's registered 1.5 ATR (the record's reading): pct 79%, count match 0.88 — corrected 64%, -14 points of percentile
+                                guards: refused COOLDOWN 2, NEWS_FLAT 96, WEEKEND_FLAT 12; closed NEWS_FLAT 45, WEEKEND_FLAT 38; sized down 110
+atr-80       far-stop-break       2536   0.833  -0.077    0.849    0.915        0   38%  fail: profit factor 0.833 < 1.2; expectancy -0.077R < 0.05R
+                                  — the control arm at an 80-bar channel
+                                matched null 2222 trades median vs the method's 2536 — count match 0.88
+                                cost-matched null: control stop 1.200 ATR = 3.54 points, cost 7.91% of R (named stopAtr, copied)
+                                the method's own realised stop: median 1.251 ATR = 3.69 points over 2536 trades
+                                at the control's registered 1.5 ATR (the record's reading): pct 26%, count match 0.86 — corrected 38%, +11 points of percentile
+                                guards: refused COOLDOWN 365, NEWS_FLAT 90, WEEKEND_FLAT 10; closed NEWS_FLAT 5, WEEKEND_FLAT 29; sized down 2419
+struct-80    far-stop-break       1437   0.973  -0.001    0.892    0.993        0   88%  fail: profit factor 0.973 < 1.2; expectancy -0.001R < 0.05R
+                                  — the widest structural invalidation this signal offers: cost/R around a fortieth of the spread-to-stop ratio the ATR arm pays
+                                matched null 1314 trades median vs the method's 1437 — count match 0.91
+                                cost-matched null: control stop 8.568 ATR = 24.01 points, cost 1.17% of R (realised median, structural); the method DECLARES stopAtr 1.20 and does not use it
+                                the method's own realised stop: median 8.568 ATR = 24.01 points over 1437 trades
+                                at the control's registered 1.5 ATR (the record's reading): pct 98%, count match 0.95 — corrected 88%, -10 points of percentile
+                                guards: refused COOLDOWN 2, NEWS_FLAT 88, WEEKEND_FLAT 10; closed NEWS_FLAT 30, WEEKEND_FLAT 39; sized down 1
+struct-80-f14 far-stop-break       1289   1.065   0.009    0.892    1.008        0  100%  fail: profit factor 1.065 < 1.2; expectancy 0.009R < 0.05R
+                                  — the cost condition stated in cost units: take the trade only when the invalidation is at least fifty spreads (50 x 0.28) away
+                                matched null 1212 trades median vs the method's 1289 — count match 0.94
+                                cost-matched null: control stop 8.948 ATR = 25.96 points, cost 1.08% of R (realised median, structural); the method DECLARES stopAtr 1.20 and does not use it
+                                the method's own realised stop: median 8.948 ATR = 25.96 points over 1289 trades
+                                at the control's registered 1.5 ATR (the record's reading): pct 100%, count match 0.97 — corrected 100%, +0 points of percentile
+                                guards: refused COOLDOWN 2, NEWS_FLAT 71, WEEKEND_FLAT 10; closed NEWS_FLAT 27, WEEKEND_FLAT 35; sized down 0
+atr-20-f14   far-stop-break         17   0.505  -0.307    0.863    1.500        0   10%  fail: only 17 trades (need 30); profit factor 0.505 < 1.2; expectancy -0.307R < 0.05R
+                                  — the same floor on the ATR arm, where it can only be met in the most volatile conditions — the control for the floor itself
+                                matched null 38 trades median vs the method's 17 — count match 2.24  ** outside the band: this percentile is unmatched **
+                                cost-matched null: control stop 1.200 ATR = 16.13 points, cost 1.74% of R (named stopAtr, copied)
+                                the method's own realised stop: median 1.208 ATR = 16.23 points over 17 trades
+                                at the control's registered 1.5 ATR (the record's reading): pct 10%, count match 2.24 — corrected 10%, -1 points of percentile
+                                guards: refused COOLDOWN 1; closed none; sized down 0
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+
