@@ -213,6 +213,19 @@ pub struct HypothesisReport {
     pub null_trades: Vec<usize>,
     /// Share of null runs the hypothesis beat, 0–100.
     pub percentile: f64,
+    /// Which sides the null took, so a receipt says which null its percentile
+    /// belongs to rather than leaving a reader to infer it.
+    pub null_sides: NullSides,
+    /// The method's own long share on the trades this row's percentile was
+    /// read from, 0.0–1.0, or `NaN` when it took none. The scope criterion of
+    /// Task A and the quantity the ratio-matched control is set from.
+    pub long_share: f64,
+    /// The long shares the null runs ACHIEVED, ascending — the side match, in
+    /// the same spirit as [`Self::null_trades`]: measured on the control's own
+    /// trades so a reader can check the match instead of trusting that it
+    /// happened. On [`NullSides::CoinFlip`] these sit near 0.50 whatever the
+    /// method did, which is the defect, visible.
+    pub null_long_share: Vec<f64>,
     pub verdict: Verdict,
     /// How often a guard acted on the hypothesis's own out-of-sample runs
     /// (not the null's): entries refused by label, positions closed by
@@ -220,6 +233,56 @@ pub struct HypothesisReport {
     pub skipped_by_guard: BTreeMap<String, usize>,
     pub closed_by_guard: BTreeMap<String, usize>,
     pub sized_down_by_guard: usize,
+}
+
+/// Which sides the matched null takes.
+///
+/// **This is a property of the measuring instrument, not a threshold, and it
+/// is reported on every row it touches.** Both controls have always drawn a
+/// side from a coin, so both carry an expected long share of 0.50 and an
+/// expected drift exposure of about zero. Gold's unconditional drift is
+/// +0.3946 ATR20 per five sessions (t = +6.74) on the recent window and the
+/// price went 1,200 → 3,700 over the data on file, so a long-biased multi-day
+/// gold method beats such a null on its side ratio alone. That was found and
+/// published as defect 1 of `docs/decisions/2026-09-24-designed-methods.md`
+/// and repaired under Task A of
+/// `docs/hypotheses/2026-09-24-what-the-record-cannot-see.md`; the choice of
+/// control, the two alternatives rejected and the pre-commitments are in
+/// `docs/research/notes/2026-09-24-drift-control-choice.md`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum NullSides {
+    /// A coin, 50/50. **Every percentile published before 2026-09-24 was read
+    /// against this**, so it is the default: a reader who does not ask for the
+    /// drift control gets the number the record already carries.
+    #[default]
+    CoinFlip,
+    /// The method's own **measured** long share, as
+    /// [`side_distribution`] reads it off the method's realised trades, drawn
+    /// independently per entry. Matched on the ratio and on nothing else: the
+    /// timing is still random and the side *sequence* is destroyed.
+    MatchedRatio,
+}
+
+impl NullSides {
+    /// The word a receipt prints, and the word `--null-sides=` accepts.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::CoinFlip => "coin",
+            Self::MatchedRatio => "ratio",
+        }
+    }
+
+    /// Parsed from `--null-sides=`. `Err` names what was understood rather
+    /// than falling back to the default: a misspelt flag that silently ran the
+    /// unrepaired null would be published as a repaired number.
+    pub fn parse(value: &str) -> Result<Self, String> {
+        match value {
+            "coin" => Ok(Self::CoinFlip),
+            "ratio" => Ok(Self::MatchedRatio),
+            other => Err(format!("unknown --null-sides `{other}` (have: coin, ratio)")),
+        }
+    }
 }
 
 /// How far a control's trade count may sit from its method's before the
@@ -272,6 +335,57 @@ impl HypothesisReport {
     pub fn count_matched(&self) -> bool {
         let r = self.count_match();
         r.is_finite() && (r - 1.0).abs() <= COUNT_MATCH_BAND
+    }
+
+    /// The control's median achieved long share, or `NaN` when it has no runs.
+    /// Printed beside [`Self::long_share`] on every row: the side match, stated
+    /// as achieved rather than as intended.
+    #[must_use]
+    pub fn null_long_share_median(&self) -> f64 {
+        if self.null_long_share.is_empty() {
+            return f64::NAN;
+        }
+        let mut s = self.null_long_share.clone();
+        s.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+        let n = s.len();
+        if n % 2 == 1 { s[n / 2] } else { (s[n / 2 - 1] + s[n / 2]) / 2.0 }
+    }
+
+    /// Whether the control's side ratio landed on the method's. Only asked of
+    /// a [`NullSides::MatchedRatio`] run; on a coin flip there is no side match
+    /// to achieve and this is `false` for any row the method biased, which is
+    /// the true statement about those rows.
+    ///
+    /// The band is five points of share, which is wider than the sampling error
+    /// of a Bernoulli draw at any count these runs produce and narrow enough
+    /// that a mis-set control cannot hide inside it. It is a check on the
+    /// instrument and is not a gate on anything.
+    #[must_use]
+    pub fn side_matched(&self) -> bool {
+        let (m, n) = (self.long_share, self.null_long_share_median());
+        m.is_finite() && n.is_finite() && (m - n).abs() <= 0.05
+    }
+
+    /// Whether the null is a **distribution** at all: whether its profit
+    /// factors differ between seeds.
+    ///
+    /// Found by the drift control on 2026-09-24 and worth stating plainly,
+    /// because it was true before the drift control existed and nothing
+    /// reported it. A window-hold null runs at `entryRate = 1.0` and, when the
+    /// preset names a window, at a fixed hold — so **its only random input is
+    /// the side coin.** Give it the method's side ratio at 0 or 1 and every
+    /// seed replays the same run: `null p50` equals `null p95`, and the
+    /// "percentile" is a single comparison dressed as a quantile. For such a
+    /// row the coin-flip null's whole spread WAS the side lottery, which is a
+    /// lottery the method never faced.
+    ///
+    /// It is not a defect of the ratio match; the match makes it visible. A
+    /// method that is in the market on every bar, on one side, has made no
+    /// timing decision, and there is nothing for a timing control to destroy.
+    #[must_use]
+    pub fn null_has_spread(&self) -> bool {
+        let Some(first) = self.null_pf.first() else { return false };
+        self.null_pf.len() > 1 && self.null_pf.iter().any(|pf| pf != first)
     }
 
     #[must_use]
@@ -347,11 +461,17 @@ fn scoped(filters: &[Filter], rules: &TradingRules) -> Vec<Filter> {
 /// `hold_distribution` measures it: (geometric mean in minutes, standard
 /// deviation of ln minutes). It sets the null's `holdMinutes` (log-median)
 /// and `holdLogSd`; every other source of a hold length is a fixed hold.
+/// `realised_long_share` is the method's own long share on this window, when
+/// the caller has measured it and asked for [`NullSides::MatchedRatio`]. It is
+/// `None` on the coin-flip default, and `None` is the only thing that leaves
+/// the control's `longShare` at 0.5 — so a caller that forgets to measure gets
+/// the old number rather than a half-repaired one.
 fn control_for(
     base: &dyn Strategy,
     overrides: &[(String, f64)],
     seed: f64,
     realised_hold: Option<(f64, f64)>,
+    realised_long_share: Option<f64>,
 ) -> (&'static dyn Strategy, Params) {
     // Judged on the preset, not the bare method: a pinned grid is empty.
     let preset = Preset::new(base, overrides).ok();
@@ -394,12 +514,64 @@ fn control_for(
             p.set("riskDailyRanges", pinned.get("riskDailyRanges"));
             p.set("rangeDays", pinned.get("rangeDays"));
         }
+        set_long_share(&mut p, realised_long_share);
         (&RandomHold, p)
     } else {
         let mut p = RandomEntry.default_params();
         p.set("seed", seed);
+        set_long_share(&mut p, realised_long_share);
         (&RandomEntry, p)
     }
+}
+
+/// Put a measured long share on a control, or leave the coin alone.
+///
+/// A share outside 0–1 or non-finite is **refused rather than clamped**: it can
+/// only come from a measurement bug, and clamping would publish a control whose
+/// side ratio silently is not the method's. Refusing leaves 0.5, which the
+/// receipt then prints as the achieved share, so the mismatch is visible.
+fn set_long_share(p: &mut Params, share: Option<f64>) {
+    if let Some(share) = share
+        && share.is_finite()
+        && (0.0..=1.0).contains(&share)
+    {
+        p.set("longShare", share);
+    }
+}
+
+/// The share of `trades` that were long, 0.0–1.0. `None` when there are none,
+/// because a side ratio of nothing is not 0.5 and is not zero either.
+///
+/// The sibling of [`hold_distribution`], and for the same reason: a control is
+/// matched to a **measured** property of the method rather than to a guess.
+/// The comments on `hold_distribution` record two occasions when a guessed
+/// hold was the null and was wrong; a guessed side ratio is the same mistake
+/// with the drift term instead of the tail.
+///
+/// This is the *ratio* and deliberately not the sequence. Handing a control
+/// which trade was long would hand it the method's timing, which is the thing
+/// under test.
+#[must_use]
+pub fn side_distribution(trades: &[crate::engine::Trade]) -> Option<f64> {
+    if trades.is_empty() {
+        return None;
+    }
+    let longs = trades.iter().filter(|t| t.direction.is_long()).count();
+    Some(longs as f64 / trades.len() as f64)
+}
+
+/// Whether a long share sits outside the 40–60% band that Task A of
+/// `docs/hypotheses/2026-09-24-what-the-record-cannot-see.md` uses to decide
+/// which published rows the drift control can move.
+///
+/// A row inside the band is two-sided enough that its drift exposure is near
+/// the coin's, so the repaired control should leave it where it was — which is
+/// the programme's own test of the repair. `NaN` (no trades) is **not** outside
+/// the band: a row with no book has no side ratio, and claiming one would be
+/// the assumption this desk keeps being caught making.
+#[must_use]
+pub fn side_ratio_is_biased(long_share: f64) -> bool {
+    long_share.is_finite() && !(0.40..=0.60).contains(&long_share)
 }
 
 /// The realised hold distribution of a trade list: (geometric mean of the
@@ -439,14 +611,23 @@ fn matched_control_for(
     seed: f64,
     rate: Option<f64>,
     realised_hold: Option<(f64, f64)>,
+    realised_long_share: Option<f64>,
 ) -> (&'static dyn Strategy, Params, Vec<String>) {
-    let (inner, mut p) = control_for(base, overrides, seed, realised_hold);
+    let (inner, mut p) = control_for(base, overrides, seed, realised_hold, realised_long_share);
     let mut calibrated = Vec::new();
     if let Some(rate) = rate
         && p.contains("entryRate")
     {
         p.set("entryRate", rate);
         calibrated.push("entryRate".to_string());
+    }
+    // `longShare` is calibrated from the method too, so it is named for the
+    // same reason `entryRate` is: neither control's grid carries the axis
+    // today, and a grid that gained one later would otherwise silently discard
+    // the measurement — which is exactly how the entry-rate match was lost
+    // between 2026-09-13 and 2026-09-23.
+    if realised_long_share.is_some() && p.contains("longShare") {
+        calibrated.push("longShare".to_string());
     }
     (inner, p, calibrated)
 }
@@ -578,6 +759,25 @@ pub fn run_hypothesis_fixed_guarded(
     seeds: usize,
     guards: Option<&Guards>,
 ) -> Result<HypothesisReport, String> {
+    run_hypothesis_fixed_sides(registry, hypothesis, bars, rules, gate, seeds, guards, NullSides::default())
+}
+
+/// [`run_hypothesis_fixed_guarded`] with the null's sides chosen explicitly.
+///
+/// The seven-argument form delegates here at [`NullSides::CoinFlip`], so every
+/// caller and every published figure keeps the null it was measured against and
+/// the drift control is something a caller has to ask for by name.
+#[allow(clippy::too_many_arguments)]
+pub fn run_hypothesis_fixed_sides(
+    registry: &Registry,
+    hypothesis: &Hypothesis,
+    bars: &[Bar],
+    rules: &TradingRules,
+    gate: &PromisingGate,
+    seeds: usize,
+    guards: Option<&Guards>,
+    null_sides: NullSides,
+) -> Result<HypothesisReport, String> {
     use crate::engine::{Range, run_backtest_guarded};
     let base = registry.get(&hypothesis.base).map_err(|e| e.to_string())?;
     let preset = Preset::new(base, &hypothesis.overrides)?;
@@ -586,24 +786,30 @@ pub fn run_hypothesis_fixed_guarded(
     let drift = base.exits() == fd_strategy::registry::Exits::Strategy && preset.grid().is_empty();
     let rate = (!drift).then(|| matched_rate(bars, rules, &hypothesis.filters, result.trades.len(), guards));
     let hold = drift.then(|| hold_distribution(&result.trades)).flatten();
+    // The method's own long share, on the same trades the percentile is read
+    // from. Measured either way so the receipt can print it; fed to the control
+    // only when the caller asked for the drift control.
+    let long_share = side_distribution(&result.trades);
+    let control_share = (null_sides == NullSides::MatchedRatio).then_some(long_share).flatten();
 
     // This path never sweeps — the control is run at the explicit params
     // below — so the pin costs nothing here and is carried only so that the
     // two paths build their control the same way.
-    let mut null: Vec<(f64, usize)> = (0..seeds)
+    let mut null: Vec<(f64, usize, f64)> = (0..seeds)
         .into_par_iter()
         .filter_map(|seed| {
             let (inner, defaults, calibrated) =
-                matched_control_for(base, &hypothesis.overrides, seed as f64 + 1.0, rate, hold);
+                matched_control_for(base, &hypothesis.overrides, seed as f64 + 1.0, rate, hold, control_share);
             let control = Preset::calibrated(inner, defaults.clone(), calibrated);
             let matched = Filtered { inner: &control, filters: scoped(&hypothesis.filters, rules) };
             let run = run_backtest_guarded(bars, &matched, &defaults, rules, guards, None, Range::default(), None);
             let pf = run.metrics.profit_factor;
-            pf.is_finite().then_some((pf, run.metrics.trades))
+            pf.is_finite().then_some((pf, run.metrics.trades, side_distribution(&run.trades).unwrap_or(f64::NAN)))
         })
         .collect();
     null.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap_or(std::cmp::Ordering::Equal));
     let null_pf: Vec<f64> = null.iter().map(|p| p.0).collect();
+    let null_long_share: Vec<f64> = null.iter().map(|p| p.2).filter(|s| s.is_finite()).collect();
     let mut null_trades: Vec<usize> = null.iter().map(|p| p.1).collect();
     null_trades.sort_unstable();
 
@@ -624,6 +830,9 @@ pub fn run_hypothesis_fixed_guarded(
         null_pf,
         null_trades,
         percentile,
+        null_sides,
+        long_share: long_share.unwrap_or(f64::NAN),
+        null_long_share,
         skipped_by_guard: result.skipped_by_guard,
         closed_by_guard: result.closed_by_guard,
         sized_down_by_guard: result.sized_down_by_guard,
@@ -661,6 +870,37 @@ pub fn run_hypothesis_guarded(
     seeds: usize,
     guards: Option<&Guards>,
 ) -> Result<Option<HypothesisReport>, String> {
+    run_hypothesis_sides(
+        registry,
+        hypothesis,
+        bars,
+        rules,
+        folds,
+        select_by,
+        min_trades_per_cell,
+        gate,
+        seeds,
+        guards,
+        NullSides::default(),
+    )
+}
+
+/// [`run_hypothesis_guarded`] with the null's sides chosen explicitly. The
+/// ten-argument form delegates here at [`NullSides::CoinFlip`].
+#[allow(clippy::too_many_arguments)]
+pub fn run_hypothesis_sides(
+    registry: &Registry,
+    hypothesis: &Hypothesis,
+    bars: &[Bar],
+    rules: &TradingRules,
+    folds: usize,
+    select_by: SelectBy,
+    min_trades_per_cell: usize,
+    gate: &PromisingGate,
+    seeds: usize,
+    guards: Option<&Guards>,
+    null_sides: NullSides,
+) -> Result<Option<HypothesisReport>, String> {
     let base = registry.get(&hypothesis.base).map_err(|e| e.to_string())?;
     let preset = Preset::new(base, &hypothesis.overrides)?;
     let filtered = Filtered { inner: &preset, filters: scoped(&hypothesis.filters, rules) };
@@ -685,25 +925,38 @@ pub fn run_hypothesis_guarded(
     let drift = base.exits() == fd_strategy::registry::Exits::Strategy && preset.grid().is_empty();
     let rate = (!drift).then(|| matched_rate(bars, rules, &hypothesis.filters, whole.trades.len(), guards));
     let hold = drift.then(|| hold_distribution(&whole.trades)).flatten();
+    // The side ratio comes from the **out-of-sample book**, not from the
+    // whole-window run the rate is calibrated on. The two differ in what they
+    // are: a trade *count* depends on the span of bars, so matching it needs
+    // the same span; a *ratio* does not, and the drift exposure to be matched
+    // is the one carried by the trades whose profit factor this row's
+    // percentile actually compares.
+    let long_share = side_distribution(&result.oos_trades);
+    let control_share = (null_sides == NullSides::MatchedRatio).then_some(long_share).flatten();
 
     // `Preset::calibrated`, not `Preset::bare`: the walk-forward below sweeps
     // the control's grid, and `RandomEntry`'s grid carries `entryRate`. Wrap
     // the calibrated control in a preset that pins nothing and every cell the
     // sweep can choose carries a grid rate instead of the calibrated one,
     // which is what every matched null published before 2026-09-23 did.
-    let mut null: Vec<(f64, usize)> = (0..seeds)
+    let mut null: Vec<(f64, usize, f64)> = (0..seeds)
         .into_par_iter()
         .filter_map(|seed| {
             let (inner, defaults, calibrated) =
-                matched_control_for(base, &hypothesis.overrides, seed as f64 + 1.0, rate, hold);
+                matched_control_for(base, &hypothesis.overrides, seed as f64 + 1.0, rate, hold, control_share);
             let control = Preset::calibrated(inner, defaults, calibrated);
             let matched = Filtered { inner: &control, filters: scoped(&hypothesis.filters, rules) };
             let run = walk_forward_guarded(&matched, bars, rules, None, folds, select_by, min_trades_per_cell, guards)?;
-            run.oos.profit_factor.is_finite().then_some((run.oos.profit_factor, run.oos.trades))
+            run.oos.profit_factor.is_finite().then_some((
+                run.oos.profit_factor,
+                run.oos.trades,
+                side_distribution(&run.oos_trades).unwrap_or(f64::NAN),
+            ))
         })
         .collect();
     null.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap_or(std::cmp::Ordering::Equal));
     let null_pf: Vec<f64> = null.iter().map(|p| p.0).collect();
+    let null_long_share: Vec<f64> = null.iter().map(|p| p.2).filter(|s| s.is_finite()).collect();
     let mut null_trades: Vec<usize> = null.iter().map(|p| p.1).collect();
     null_trades.sort_unstable();
 
@@ -725,6 +978,9 @@ pub fn run_hypothesis_guarded(
         null_pf,
         null_trades,
         percentile,
+        null_sides,
+        long_share: long_share.unwrap_or(f64::NAN),
+        null_long_share,
         skipped_by_guard: result.skipped_by_guard,
         closed_by_guard: result.closed_by_guard,
         sized_down_by_guard: result.sized_down_by_guard,
@@ -898,8 +1154,15 @@ pub fn rescore_hypothesis(
     let mut matched: Vec<(f64, f64, usize)> = (0..seeds)
         .into_par_iter()
         .filter_map(|seed| {
+            // `None`: the rescore keeps the COIN-FLIP null it published, so
+            // this path reproduces `2026-09-23-rebate-rescore.md` exactly. It
+            // is not extended to the drift control here because its one window
+            // (2025-09-13 → 2026-09-12) lies inside the sealed year, which
+            // Task A may not read, so a repaired figure could not be produced
+            // to sit beside the original anyway. Named rather than left as an
+            // omission; see `docs/research/notes/2026-09-24-drift-control-choice.md`.
             let (inner, defaults, calibrated) =
-                matched_control_for(base, &hypothesis.overrides, seed as f64 + 1.0, rate, hold);
+                matched_control_for(base, &hypothesis.overrides, seed as f64 + 1.0, rate, hold, None);
             let control = Preset::calibrated(inner, defaults, calibrated);
             let gated = Filtered { inner: &control, filters: scoped(&hypothesis.filters, rules) };
             let run = walk_forward_guarded(&gated, bars, rules, None, folds, select_by, min_trades_per_cell, guards)?;
@@ -982,14 +1245,14 @@ mod tests {
         let registry = Registry::with_builtins();
         let base = registry.get("tsmom").unwrap();
         let overrides = vec![("lookbackDays".to_string(), 20.0), ("riskDailyRanges".to_string(), 2.0), ("rangeDays".to_string(), 20.0)];
-        let (_, guessed) = super::control_for(base, &overrides, 1.0, None);
+        let (_, guessed) = super::control_for(base, &overrides, 1.0, None, None);
         assert_eq!(guessed.get("holdMinutes"), 20.0 * 1440.0 / 2.0, "no realised hold: half the lookback");
         assert_eq!(guessed.get("holdLogSd"), 0.0, "a guessed hold is a fixed hold");
-        let (_, realised) = super::control_for(base, &overrides, 1.0, Some((19_829.4, 0.8)));
+        let (_, realised) = super::control_for(base, &overrides, 1.0, Some((19_829.4, 0.8)), None);
         assert_eq!(realised.get("holdMinutes"), 19_829.0, "the method's own log-median hold, rounded");
         assert_eq!(realised.get("holdLogSd"), 0.8, "and the spread of its logs");
         assert_eq!(realised.get("riskDailyRanges"), 2.0, "sized like the method");
-        let (_, degenerate) = super::control_for(base, &overrides, 1.0, Some((19_829.4, f64::NAN)));
+        let (_, degenerate) = super::control_for(base, &overrides, 1.0, Some((19_829.4, f64::NAN)), None);
         assert_eq!(degenerate.get("holdLogSd"), 0.0, "a spread that is not a number falls back to the fixed hold");
     }
 
@@ -1029,7 +1292,138 @@ mod tests {
         assert_eq!(super::hold_distribution(&[held_for(0)]), None, "a zero-length hold has no log and is not a hold");
     }
 
+    /// The same trade with a side, so a side ratio can be built.
+    fn sided(long: bool) -> crate::engine::Trade {
+        crate::engine::Trade {
+            direction: if long { fd_strategy::registry::Side::Long } else { fd_strategy::registry::Side::Short },
+            ..held_for(60)
+        }
+    }
+
+    #[test]
+    fn the_side_ratio_is_the_long_share_of_the_realised_trades() {
+        assert_eq!(super::side_distribution(&[]), None, "no trades, no side ratio — and not 0.5 either");
+        assert_eq!(super::side_distribution(&[sided(true)]), Some(1.0));
+        assert_eq!(super::side_distribution(&[sided(false)]), Some(0.0));
+        let mixed: Vec<_> = (0..10).map(|i| sided(i < 7)).collect();
+        assert_eq!(super::side_distribution(&mixed), Some(0.7), "seven longs of ten");
+    }
+
+    #[test]
+    fn the_scope_band_is_forty_to_sixty_inclusive_and_no_book_is_not_biased() {
+        assert!(!super::side_ratio_is_biased(0.50), "an even method is not biased");
+        assert!(!super::side_ratio_is_biased(0.40), "the edges of the band are inside it");
+        assert!(!super::side_ratio_is_biased(0.60));
+        assert!(super::side_ratio_is_biased(0.39));
+        assert!(super::side_ratio_is_biased(0.61));
+        assert!(super::side_ratio_is_biased(1.0), "long-only is the case this was written for");
+        assert!(!super::side_ratio_is_biased(f64::NAN), "a row with no trades has no side ratio to be outside a band");
+    }
+
+    /// The control has to be given the method's measured share and nothing
+    /// else, and a share that cannot be a share must not reach it.
+    #[test]
+    fn the_control_takes_the_measured_long_share_and_refuses_an_impossible_one() {
+        let registry = Registry::with_builtins();
+        // The stop-and-target branch.
+        let entry = registry.get("ema-cross").unwrap();
+        let (_, coin) = super::control_for(entry, &[], 1.0, None, None);
+        assert_eq!(coin.get("longShare"), 0.5, "no measured share: the coin the record was read against");
+        let (_, biased) = super::control_for(entry, &[], 1.0, None, Some(0.83));
+        assert_eq!(biased.get("longShare"), 0.83);
+        for impossible in [f64::NAN, -0.1, 1.2, f64::INFINITY] {
+            let (_, refused) = super::control_for(entry, &[], 1.0, None, Some(impossible));
+            assert_eq!(refused.get("longShare"), 0.5, "{impossible} is not a share and is refused, not clamped");
+        }
+        // And the hold branch, which is the one every drift row uses.
+        let hold_base = registry.get("session-hold").unwrap();
+        let (_, hold) = super::control_for(hold_base, &[], 1.0, Some((390.0, 0.4)), Some(1.0));
+        assert_eq!(hold.get("longShare"), 1.0, "a long-only drift method gets a long-only null");
+        assert_eq!(hold.get("holdMinutes"), 390.0, "and still the realised hold");
+    }
+
+    /// `longShare` is named as calibrated for the same reason `entryRate` is:
+    /// so a grid that later gained the axis could not discard the measurement.
+    #[test]
+    fn a_measured_long_share_is_named_as_calibrated_and_the_coin_is_not() {
+        let registry = Registry::with_builtins();
+        let base = registry.get("ema-cross").unwrap();
+        let (_, _, coin) = super::matched_control_for(base, &[], 1.0, Some(0.03), None, None);
+        assert_eq!(coin, vec!["entryRate".to_string()], "nothing was calibrated about the coin");
+        let (_, _, ratio) = super::matched_control_for(base, &[], 1.0, Some(0.03), None, Some(0.9));
+        assert_eq!(ratio, vec!["entryRate".to_string(), "longShare".to_string()]);
+    }
+
     use super::*;
+
+    #[test]
+    fn the_null_sides_flag_round_trips_and_refuses_a_misspelling() {
+        assert_eq!(NullSides::default(), NullSides::CoinFlip, "the default is what the record was measured against");
+        for sides in [NullSides::CoinFlip, NullSides::MatchedRatio] {
+            assert_eq!(NullSides::parse(sides.as_str()).unwrap(), sides);
+        }
+        assert!(NullSides::parse("drift").is_err(), "a misspelt flag must not fall back to the unrepaired null");
+    }
+
+    #[test]
+    fn the_side_match_is_read_from_the_controls_own_achieved_shares() {
+        let mut oos = Metrics::empty();
+        oos.trades = 100;
+        let row = |method: f64, null: Vec<f64>| HypothesisReport {
+            label: "x".into(),
+            base: "y".into(),
+            filters: String::new(),
+            why: String::new(),
+            verdict: verdict(&oos, &PromisingGate::default()),
+            swap_usd: 0.0,
+            oos: oos.clone(),
+            null_pf: vec![1.0],
+            null_trades: vec![100],
+            percentile: 50.0,
+            null_sides: NullSides::MatchedRatio,
+            long_share: method,
+            null_long_share: null,
+            skipped_by_guard: BTreeMap::new(),
+            closed_by_guard: BTreeMap::new(),
+            sized_down_by_guard: 0,
+        };
+        assert_eq!(row(1.0, vec![0.98, 1.0, 1.0]).null_long_share_median(), 1.0);
+        assert_eq!(row(1.0, vec![0.9, 1.0]).null_long_share_median(), 0.95, "an even list takes the middle pair");
+        assert!(row(1.0, vec![]).null_long_share_median().is_nan(), "no runs is no measurement");
+        assert!(row(1.0, vec![0.99]).side_matched());
+        assert!(!row(1.0, vec![0.5]).side_matched(), "the coin against a long-only method is the defect, not a match");
+        assert!(!row(f64::NAN, vec![0.5]).side_matched(), "a row with no book has no side match");
+    }
+
+    /// A null every seed of which produced the same profit factor is not a
+    /// distribution, and the row has to say so rather than print a percentile.
+    #[test]
+    fn a_null_whose_seeds_all_agree_is_not_a_distribution() {
+        let mut oos = Metrics::empty();
+        oos.trades = 100;
+        let row = |curve: Vec<f64>| HypothesisReport {
+            label: "x".into(),
+            base: "y".into(),
+            filters: String::new(),
+            why: String::new(),
+            verdict: verdict(&oos, &PromisingGate::default()),
+            swap_usd: 0.0,
+            oos: oos.clone(),
+            null_pf: curve,
+            null_trades: vec![100],
+            percentile: 100.0,
+            null_sides: NullSides::MatchedRatio,
+            long_share: 1.0,
+            null_long_share: vec![1.0],
+            skipped_by_guard: BTreeMap::new(),
+            closed_by_guard: BTreeMap::new(),
+            sized_down_by_guard: 0,
+        };
+        assert!(!row(vec![]).null_has_spread(), "no runs is not a distribution");
+        assert!(!row(vec![1.07]).null_has_spread(), "one run is not a distribution");
+        assert!(!row(vec![1.07; 300].to_vec()).null_has_spread(), "300 identical runs are one run 300 times");
+        assert!(row(vec![1.07, 1.07, 1.08]).null_has_spread(), "one seed that differs is a distribution");
+    }
 
     #[test]
     fn the_batches_name_only_registered_methods_and_give_every_entry_a_reason() {
@@ -1116,6 +1510,9 @@ why = "the first hour's range is the day's liquidity"
             null_pf: vec![0.8, 0.9, 1.0, 1.1, 1.2],
             null_trades: vec![90, 95, 100, 104, 110],
             percentile: 100.0,
+            null_sides: NullSides::CoinFlip,
+            long_share: 0.5,
+            null_long_share: vec![0.48, 0.5, 0.52],
             skipped_by_guard: BTreeMap::new(),
             closed_by_guard: BTreeMap::new(),
             sized_down_by_guard: 0,
@@ -1159,6 +1556,9 @@ why = "the first hour's range is the day's liquidity"
             null_pf: vec![1.0],
             null_trades: counts,
             percentile: 50.0,
+            null_sides: NullSides::CoinFlip,
+            long_share: 0.5,
+            null_long_share: vec![0.5],
             skipped_by_guard: BTreeMap::new(),
             closed_by_guard: BTreeMap::new(),
             sized_down_by_guard: 0,

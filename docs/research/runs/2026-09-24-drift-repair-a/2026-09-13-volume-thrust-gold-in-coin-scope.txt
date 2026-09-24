@@ -1,0 +1,45 @@
+$ E:\rust\fd-wt-ra\target\release\search.exe --market=xauusd --interval=15m --data=E:/rust/flowdesk/data --mode=hypotheses --batch-file=E:\rust\fd-wt-ra\docs\hypotheses\2026-09-13-volume-thrust-gold.toml --seeds=1 --null-sides=coin --from=2022-06-16 --to=2025-04-10 --fixed
+
+market:   xauusd 15m
+data:     E:/rust/flowdesk/data (bars from E:/rust/flowdesk/data\bars\XAUUSD-15m.parquet)
+bounds:   --from=2022-06-16 --to=2025-04-10 kept 66568 of 100586 bars
+spread:   0.28 per round trip
+trail:    off
+bars:     66568 from 2022-06-16 10:30 to 2025-04-09 23:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+companion: none loaded — every cmp series is NaN
+guards: off (every number unguarded)
+null sides: coin — 50/50, carries no drift; the null every published percentile was read against
+
+== hypotheses `E:\rust\fd-wt-ra\docs\hypotheses\2026-09-13-volume-thrust-gold.toml`: 3 declared, FIXED parameters over the whole window (no selection), each against 1 matched null runs ==
+null sides: coin (50/50, no drift exposure)
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+guards: off (every number unguarded)
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+vt-gold/fixed volume-thrust         297   0.931  -0.027    0.686    0.686        0  100%  fail: profit factor 0.931 < 1.2; expectancy -0.027R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15  — the defaults pinned on the broker's tick volume, all hours
+                                matched null 319 trades median vs the method's 297 — count match 1.07
+                                long share: method 0.478 vs the null's median 0.545
+                                ** the null has no spread across 1 seeds (p50 = p95 = 0.686): this percentile is one comparison, not a quantile **
+vt-gold/all  volume-thrust         297   0.931  -0.027    0.686    0.686        0  100%  fail: profit factor 0.931 < 1.2; expectancy -0.027R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15  — the grid walked forward, all hours
+                                matched null 319 trades median vs the method's 297 — count match 1.07
+                                long share: method 0.478 vs the null's median 0.545
+                                ** the null has no spread across 1 seeds (p50 = p95 = 0.686): this percentile is one comparison, not a quantile **
+vt-gold/ny   volume-thrust         139   0.776  -0.098    0.807    0.807        0    0%  fail: profit factor 0.776 < 1.2; expectancy -0.098R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 08:00-16:00  — New York hours, where tick volume means participation rather than a thin print
+                                matched null 133 trades median vs the method's 139 — count match 0.96
+                                long share: method 0.410 vs the null's median 0.504
+                                ** the null has no spread across 1 seeds (p50 = p95 = 0.807): this percentile is one comparison, not a quantile **
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+

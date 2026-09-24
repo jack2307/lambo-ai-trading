@@ -1,0 +1,40 @@
+$ E:\rust\fd-wt-ra\target\release\search.exe --market=xauduka --interval=5m --data=E:/rust/flowdesk/data --mode=hypotheses --batch-file=E:\rust\fd-wt-ra\docs\hypotheses\2026-09-14-volman-box.toml --seeds=1 --null-sides=coin --from=2010-06-01 --to=2018-06-15 --fixed
+
+market:   xauduka 5m
+data:     E:/rust/flowdesk/data (bars from E:/rust/flowdesk/data\bars\XAUDUKA-5m.parquet)
+bounds:   --from=2010-06-01 --to=2018-06-15 kept 574640 of 1135389 bars
+spread:   0.28 per round trip
+trail:    off
+bars:     574640 from 2010-06-01 00:00 to 2018-06-14 23:55
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+companion: none loaded — every cmp series is NaN
+guards: off (every number unguarded)
+null sides: coin — 50/50, carries no drift; the null every published percentile was read against
+
+== hypotheses `E:\rust\fd-wt-ra\docs\hypotheses\2026-09-14-volman-box.toml`: 2 declared, FIXED parameters over the whole window (no selection), each against 1 matched null runs ==
+null sides: coin (50/50, no drift exposure)
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+guards: off (every number unguarded)
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+box/b2       volman-box           3460   0.639  -0.137    0.703    0.703        0    0%  fail: profit factor 0.639 < 1.2; expectancy -0.137R < 0.05R
+                                MoTuWeThFr  — the breakout from a tight box travels one more box: stop at box 1's far side, target at box 2's far edge (Volman's TP1); boxBars selected from {12, 20, 30}
+                                matched null 3921 trades median vs the method's 3460 — count match 1.13
+                                long share: method 0.506 vs the null's median 0.500
+                                ** the null has no spread across 1 seeds (p50 = p95 = 0.703): this percentile is one comparison, not a quantile **
+box/b3       volman-box           3309   0.706  -0.139    0.691    0.691        0  100%  fail: profit factor 0.706 < 1.2; expectancy -0.139R < 0.05R
+                                MoTuWeThFr  — the same breakout travels two more boxes: target at box 3's far edge (Volman's TP final)
+                                matched null 3778 trades median vs the method's 3309 — count match 1.14
+                                long share: method 0.503 vs the null's median 0.498
+                                ** the null has no spread across 1 seeds (p50 = p95 = 0.691): this percentile is one comparison, not a quantile **
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+

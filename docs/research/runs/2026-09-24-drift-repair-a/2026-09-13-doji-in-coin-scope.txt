@@ -1,0 +1,45 @@
+$ E:\rust\fd-wt-ra\target\release\search.exe --market=xauduka --interval=15m --data=E:/rust/flowdesk/data --mode=hypotheses --batch-file=E:\rust\fd-wt-ra\docs\hypotheses\2026-09-13-doji.toml --seeds=1 --null-sides=coin --to=2025-04-10
+
+market:   xauduka 15m
+data:     E:/rust/flowdesk/data (bars from E:/rust/flowdesk/data\bars\XAUDUKA-15m.parquet)
+bounds:   --from=… --to=2025-04-10 kept 352261 of 378749 bars
+spread:   0.28 per round trip
+trail:    off
+bars:     352261 from 2010-06-01 00:00 to 2025-04-09 23:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+companion: none loaded — every cmp series is NaN
+guards: off (every number unguarded)
+null sides: coin — 50/50, carries no drift; the null every published percentile was read against
+
+== hypotheses `E:\rust\fd-wt-ra\docs\hypotheses\2026-09-13-doji.toml`: 3 declared, walk-forward (4 folds), each against 1 matched null runs ==
+null sides: coin (50/50, no drift exposure)
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+guards: off (every number unguarded)
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+doji/allday  doji-reversal        3085   0.698  -0.216    0.855    0.855        0    0%  fail: profit factor 0.698 < 1.2; expectancy -0.216R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15  — the pattern wherever it prints
+                                matched null 3098 trades median vs the method's 3085 — count match 1.00
+                                long share: method 0.495 vs the null's median 0.490
+                                ** the null has no spread across 1 seeds (p50 = p95 = 0.855): this percentile is one comparison, not a quantile **
+doji/ny      doji-reversal        1133   0.730  -0.174    0.839    0.839        0    0%  fail: profit factor 0.730 < 1.2; expectancy -0.174R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 08:00-16:00  — only in New York hours, where a full-ATR bar means participation
+                                matched null 1245 trades median vs the method's 1133 — count match 1.10
+                                long share: method 0.508 vs the null's median 0.498
+                                ** the null has no spread across 1 seeds (p50 = p95 = 0.839): this percentile is one comparison, not a quantile **
+doji/strict  doji-reversal         301   0.845  -0.105    0.768    0.768        0  100%  fail: profit factor 0.845 < 1.2; expectancy -0.105R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15  — a stricter doji: near-zero body on a large bar
+                                matched null 345 trades median vs the method's 301 — count match 1.15
+                                long share: method 0.545 vs the null's median 0.507
+                                ** the null has no spread across 1 seeds (p50 = p95 = 0.768): this percentile is one comparison, not a quantile **
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+

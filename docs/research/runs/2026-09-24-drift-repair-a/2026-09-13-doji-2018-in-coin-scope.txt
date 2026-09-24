@@ -1,0 +1,35 @@
+$ E:\rust\fd-wt-ra\target\release\search.exe --market=xauduka --interval=15m --data=E:/rust/flowdesk/data --mode=hypotheses --batch-file=E:\rust\fd-wt-ra\docs\hypotheses\2026-09-13-doji-2018.toml --seeds=1 --null-sides=coin --from=2018-06-16 --to=2022-06-16 --fixed
+
+market:   xauduka 15m
+data:     E:/rust/flowdesk/data (bars from E:/rust/flowdesk/data\bars\XAUDUKA-15m.parquet)
+bounds:   --from=2018-06-16 --to=2022-06-16 kept 94125 of 378749 bars
+spread:   0.28 per round trip
+trail:    off
+bars:     94125 from 2018-06-17 22:00 to 2022-06-14 23:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+companion: none loaded — every cmp series is NaN
+guards: off (every number unguarded)
+null sides: coin — 50/50, carries no drift; the null every published percentile was read against
+
+== hypotheses `E:\rust\fd-wt-ra\docs\hypotheses\2026-09-13-doji-2018.toml`: 1 declared, FIXED parameters over the whole window (no selection), each against 1 matched null runs ==
+null sides: coin (50/50, no drift exposure)
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+guards: off (every number unguarded)
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+doji/strict-2018 doji-reversal         121   0.618  -0.262    0.784    0.784        0    0%  fail: profit factor 0.618 < 1.2; expectancy -0.262R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15  — the registered strict preset, parameters pinned, on four years nobody has looked at
+                                matched null 170 trades median vs the method's 121 — count match 1.40  ** outside the band: this percentile is unmatched **
+                                long share: method 0.545 vs the null's median 0.429
+                                ** the null has no spread across 1 seeds (p50 = p95 = 0.784): this percentile is one comparison, not a quantile **
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+

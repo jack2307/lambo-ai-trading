@@ -1,0 +1,38 @@
+$ E:\rust\fd-wt-ra\target\release\search.exe --market=xauduka --interval=15m --data=E:/rust/flowdesk/data --mode=hypotheses --batch-file=E:\rust\fd-wt-ra\docs\hypotheses\2026-09-13-friday-weekend-hold.toml --seeds=300 --null-sides=coin --from=2010-06-01 --to=2018-06-15 --fixed
+
+market:   xauduka 15m
+data:     E:/rust/flowdesk/data (bars from E:/rust/flowdesk/data\bars\XAUDUKA-15m.parquet)
+bounds:   --from=2010-06-01 --to=2018-06-15 kept 191809 of 378749 bars
+spread:   0.28 per round trip
+trail:    off
+bars:     191809 from 2010-06-01 00:00 to 2018-06-14 23:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+companion: none loaded — every cmp series is NaN
+guards: off (every number unguarded)
+null sides: coin — 50/50, carries no drift; the null every published percentile was read against
+
+== hypotheses `E:\rust\fd-wt-ra\docs\hypotheses\2026-09-13-friday-weekend-hold.toml`: 2 declared, FIXED parameters over the whole window (no selection), each against 300 matched null runs ==
+null sides: coin (50/50, no drift exposure)
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+guards: off (every number unguarded)
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+fri/1630-1815 session-hold          400   0.989  -0.001    0.802    1.024        0   92%  fail: profit factor 0.989 < 1.2; expectancy -0.001R < 0.05R
+                                Fr + NY 16:15-16:20  — the test: long from Friday's last bars before the close to Sunday's first after the reopen, on eight years no run has read
+                                matched null 400 trades median vs the method's 400 — count match 1.00
+                                long share: method 1.000 vs the null's median 0.497  ** outside 40-60% long against a coin: this percentile carries the instrument's drift **
+close/1630-1815 session-hold         1620   0.744  -0.008    0.549    0.618        0  100%  fail: profit factor 0.744 < 1.2; expectancy -0.008R < 0.05R
+                                MoTuWeTh + NY 16:15-16:20  — the prediction, not the test: the weekday break at $1,050-1,900 gold should have the side right (direction >= 95th) and net near zero, if the closed record's spread reading is right
+                                matched null 1620 trades median vs the method's 1620 — count match 1.00
+                                long share: method 1.000 vs the null's median 0.499  ** outside 40-60% long against a coin: this percentile carries the instrument's drift **
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+

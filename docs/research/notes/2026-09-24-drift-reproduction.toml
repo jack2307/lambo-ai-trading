@@ -1,0 +1,50 @@
+# The reproduction of the defect, not a candidate and not a registration.
+#
+# Task A of docs/hypotheses/2026-09-24-what-the-record-cannot-see.md asks for
+# the simplest long-biased gold method that can be built, measured through
+# `run_hypothesis_fixed_guarded`, to show where it lands against the existing
+# nulls. This is that method and NOTHING ELSE. It proposes no edge; it is
+# buy-and-hold with overnight and weekend flats, expressed with a strategy that
+# is already registered so that no new code stands between the claim and the
+# measurement.
+#
+# `session-hold` at `side = 1` is long-only, manages its own exits and has an
+# empty grid, so `hypotheses::control_for` gives it the RandomHold drift null
+# with its realised hold — the same configuration the refused long-only weekly
+# hold of docs/decisions/2026-09-24-designed-methods.md had.
+#
+# THE WINDOW. 2018-06-16 to 2025-04-10 on Dukascopy gold 15m: the in-sample
+# window of 2026-09-13-close-reopen-drift.toml and 2026-09-13-tsmom-2.toml,
+# chosen because it ends well before the sealed cutoff of 2025-09-23 and is
+# therefore readable under Task A's rules.
+
+[run]
+in_sample = "xauduka:15m"
+in_sample_from = "2018-06-16"
+in_sample_to = "2025-04-10"
+out_of_sample = "xauduka:15m"
+out_of_sample_from = "2010-06-01"
+out_of_sample_to = "2018-06-15"
+seeds = 300
+fixed = true
+
+[[hypothesis]]
+label = "long-day"
+base = "session-hold"
+filters = []
+overrides = { from = 0.0, to = 2345.0, side = 1.0 }
+why = "long every New York day, flat overnight: the simplest long-biased gold method there is, to show that a drift-free null cannot tell it from a signal"
+
+[[hypothesis]]
+label = "short-day"
+base = "session-hold"
+filters = []
+overrides = { from = 0.0, to = 2345.0, side = -1.0 }
+why = "the same rule short, as the sign check: a coin-flip null should place it as far below the median as the long is above, and a drift-matched null should place both near it"
+
+[[hypothesis]]
+label = "long-ny"
+base = "session-hold"
+filters = ["weekdays"]
+overrides = { from = 930.0, to = 1600.0, side = 1.0 }
+why = "long the New York cash session only: a shorter hold collects less drift, so it says whether the percentile follows exposure rather than the rule"

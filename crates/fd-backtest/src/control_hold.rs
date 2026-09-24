@@ -8,6 +8,17 @@
 //! `holdMinutes`. Same costs, same sizing, same fills. What the method has to
 //! beat is the distribution of these across seeds.
 //!
+//! **The side is a coin only at `longShare = 0.5`, which is the default and is
+//! what every percentile published before 2026-09-24 was read against.** A
+//! coin carries an expected drift of about zero, so a long-biased multi-day
+//! method on an instrument with drift — gold's is +0.3946 ATR20 per five
+//! sessions, t = +6.74 — beats this null on its side ratio alone and not on
+//! its timing. `longShare` set from the method's own measured long share
+//! (`hypotheses::side_distribution`) gives the control the same drift exposure
+//! the method had, so what remains in the percentile is timing. It is never
+//! guessed and never registered by hand; see
+//! `docs/research/notes/2026-09-24-drift-control-choice.md`.
+//!
 //! Sizing follows the method: when `riskDailyRanges` is set (copied from a
 //! method that sizes on daily ranges, see `fd_strategy::tsmom`), the hold
 //! carries the same sizing stop; otherwise the engine's ATR fallback, as for
@@ -88,6 +99,10 @@ impl Strategy for RandomHold {
             ("holdLogSd", 0.0),
             ("entryRate", 1.0),
             ("atrPeriod", 14.0),
+            // The probability an entry is a long. 0.5 is the coin this null
+            // has always flipped; see `crate::control::long_share` and the
+            // module note above on what the ratio-matched setting is for.
+            ("longShare", 0.5),
             ("seed", 1.0),
             ("riskDailyRanges", 0.0),
             ("rangeDays", 20.0),
@@ -131,7 +146,7 @@ impl Strategy for RandomHold {
         if draw(seed, bar, 0) >= p.get("entryRate") {
             return Intent::None;
         }
-        let side = if draw(seed, bar, 1) < 0.5 { Side::Long } else { Side::Short };
+        let side = if draw(seed, bar, 1) < crate::control::long_share(p) { Side::Long } else { Side::Short };
         let ranges = p.get("riskDailyRanges");
         let stop = if ranges > 0.0 {
             let Some(stop) = fd_strategy::tsmom::sizing_stop(&ctx.bars[..=ctx.i], ctx.bar, side, ranges, p.period("rangeDays")) else {
@@ -141,7 +156,10 @@ impl Strategy for RandomHold {
         } else {
             None
         };
-        Intent::Enter { side, stop, target: None, reason: "coin flip, fixed hold".into() }
+        let share = crate::control::long_share(p);
+        let reason =
+            if share == 0.5 { "coin flip, fixed hold".to_string() } else { format!("{share:.3} long draw, fixed hold") };
+        Intent::Enter { side, stop, target: None, reason }
     }
 }
 
@@ -196,6 +214,29 @@ mod tests {
         };
         assert_eq!(sides(1.0), sides(1.0));
         assert_ne!(sides(1.0), sides(2.0));
+    }
+
+    /// The drift control on the hold branch: a long-only method's null must
+    /// take longs, and the default must still be the coin it always was.
+    #[test]
+    fn the_hold_null_takes_the_long_share_it_is_given() {
+        let bars: Vec<Bar> = (0..200).map(|i| Bar::flat(i * 60_000 * 37, 100.0)).collect();
+        let ind = fd_indicators::IndicatorSet::new();
+        let longs = |share: f64| -> usize {
+            let mut p = RandomHold.default_params();
+            p.set("longShare", share);
+            (0..bars.len())
+                .filter(|i| {
+                    let ctx = BarContext { bar: &bars[*i], i: *i, bars: &bars, ind: &ind, series: &[], options: None, position: None, params: &p };
+                    matches!(RandomHold.on_bar(&ctx), Intent::Enter { side: Side::Long, .. })
+                })
+                .count()
+        };
+        assert_eq!(RandomHold.default_params().get("longShare"), 0.5, "the default is the coin");
+        assert_eq!(longs(1.0), bars.len(), "a long-only null takes only longs");
+        assert_eq!(longs(0.0), 0, "a short-only null takes no longs");
+        let half = longs(0.5) as f64 / bars.len() as f64;
+        assert!((half - 0.5).abs() < 0.12, "the coin is still about even: {half:.3}");
     }
 
     /// Two hundred entry times spread over a few months, a minute apart at

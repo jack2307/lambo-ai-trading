@@ -1,0 +1,40 @@
+market:   xauduka 15m
+data:     E:/rust/flowdesk/data (bars from E:/rust/flowdesk/data\bars\XAUDUKA-15m.parquet)
+bounds:   --from=2018-06-16 --to=2025-04-10 kept 160368 of 378749 bars
+spread:   0.28 per round trip
+trail:    off
+bars:     160368 from 2018-06-17 22:00 to 2025-04-09 23:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+companion: none loaded — every cmp series is NaN
+guards: off (every number unguarded)
+null sides: ratio — the method's own measured long share, so the control carries the same drift
+
+== hypotheses `docs/research/notes/2026-09-24-drift-reproduction.toml`: 3 declared, FIXED parameters over the whole window (no selection), each against 300 matched null runs ==
+null sides: ratio (the method's measured long share, drift-matched)
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+guards: off (every number unguarded)
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+long-day     session-hold         1751   1.138   0.504    1.071    1.071        0  100%  fail: profit factor 1.138 < 1.2
+                                  — long every New York day, flat overnight: the simplest long-biased gold method there is, to show that a drift-free null cannot tell it from a signal
+                                matched null 1760 trades median vs the method's 1751 — count match 1.01
+                                long share: method 1.000 vs the null's median 1.000
+short-day    session-hold         1751   0.847  -0.846    0.861    0.861        0    0%  fail: profit factor 0.847 < 1.2; expectancy -0.846R < 0.05R
+                                  — the same rule short, as the sign check: a coin-flip null should place it as far below the median as the long is above, and a drift-matched null should place both near it
+                                matched null 1760 trades median vs the method's 1751 — count match 1.01
+                                long share: method 0.000 vs the null's median 0.000
+long-ny      session-hold         1751   0.866  -0.064    0.896    0.896        0    0%  fail: profit factor 0.866 < 1.2; expectancy -0.064R < 0.05R
+                                MoTuWeThFr  — long the New York cash session only: a shorter hold collects less drift, so it says whether the percentile follows exposure rather than the rule
+                                matched null 5940 trades median vs the method's 1751 — count match 3.39  ** outside the band: this percentile is unmatched **
+                                long share: method 1.000 vs the null's median 1.000
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+
