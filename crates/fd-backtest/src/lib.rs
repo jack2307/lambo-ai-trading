@@ -11,6 +11,7 @@
 pub mod context;
 pub mod control;
 pub mod control_hold;
+pub mod cost_table;
 pub mod direction;
 pub mod engine;
 pub mod guards;

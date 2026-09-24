@@ -1,0 +1,1046 @@
+   Compiling fd-api v0.1.0 (E:\rust\fd-wt-rd\crates\fd-api)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 35.97s
+     Running unittests src\lib.rs (target\debug\deps\fd_api-457fda11100d47fc.exe)
+
+running 105 tests
+test advisor::tests::the_setup_code_is_six_digits_and_does_not_change_within_a_process ... ok
+test auth::tests::a_missing_hash_refuses_the_listener_rather_than_opening_it ... ok
+test auth::tests::no_auth_section_is_absent_and_a_broken_one_is_an_error ... ok
+test advisor::tests::the_group_is_off_unless_the_machine_says_otherwise ... ok
+test auth::tests::a_switch_of_the_wrong_type_is_refused_rather_than_read_as_off ... ok
+test auth::tests::nobody_asking_means_no_second_listener ... ok
+test auth::tests::the_stored_iteration_count_is_used_rather_than_the_constant ... ok
+test auth::tests::only_three_paths_are_public ... ok
+test auth::tests::the_login_page_stands_on_its_own ... ok
+test auth::tests::debug_never_prints_the_verifier ... ok
+test auth::tests::a_short_password_is_refused_and_the_minimum_is_named ... ok
+test auth::tests::writing_into_an_existing_auth_section_keeps_its_place_in_the_file ... ok
+test auth::tests::writing_the_section_leaves_every_other_line_alone ... ok
+test htf::tests::a_bar_that_could_seed_either_way_seeds_up ... ok
+test auth::tests::an_expired_session_stops_working ... ok
+test htf::tests::a_close_outside_the_prior_week_reads_past_the_ends ... ok
+test htf::tests::a_missing_timeframe_is_named_beside_the_one_that_answered ... ok
+test htf::tests::a_higher_high_with_a_lower_low_is_a_range_and_has_no_break_level ... ok
+test htf::tests::a_live_zigzag_never_repaints ... ok
+test htf::tests::a_flat_top_is_not_a_swing ... ok
+test htf::tests::a_fractal_needs_n_bars_on_both_sides ... ok
+test auth::tests::a_wrong_password_mints_nothing ... ok
+test auth::tests::a_password_and_a_switch_open_it_on_the_configured_port ... ok
+test htf::tests::a_slope_of_zero_is_flat_and_not_absent ... ok
+test htf::tests::a_warmup_bar_is_skipped_whole_and_does_not_move_the_extreme ... ok
+test htf::tests::a_week_with_no_range_has_no_position_in_it ... ok
+test auth::tests::a_session_is_accepted_only_with_its_own_cookie ... ok
+test htf::tests::lower_highs_and_lower_lows_are_down_and_the_last_high_is_the_break ... ok
+test htf::tests::one_week_of_data_has_no_prior_week_rather_than_this_one ... ok
+test htf::tests::every_timeframe_this_route_serves_has_an_mt5_name ... ok
+test htf::tests::h1_runs_the_zigzag_and_h4_keeps_the_fractal ... ok
+test htf::tests::higher_highs_and_higher_lows_are_up_and_the_last_low_is_the_break ... ok
+test htf::tests::h1_and_h4_are_read_from_different_files ... ok
+test htf::tests::efficiency_is_one_on_a_straight_line_and_small_on_churn ... ok
+test auth::tests::a_flood_of_guesses_does_not_buy_a_flood_of_pbkdf2 ... ok
+test htf::tests::every_swing_carries_the_shared_id_so_the_levels_route_can_join_on_it ... ok
+test htf::tests::the_threshold_uses_the_published_atr ... ok
+test htf::tests::the_two_intraday_blocks_are_the_same_facts_with_their_own_period ... ok
+test htf::tests::the_confirming_lag_is_variable_which_is_why_the_field_is_published ... ok
+test htf::tests::the_label_is_stamped_with_the_bar_that_confirmed_it_not_the_swing ... ok
+test htf::tests::the_served_json_carries_h1_beside_h4_at_the_top_level ... ok
+test htf::tests::the_threshold_is_strictly_more_than_k_atrs ... ok
+test htf::tests::the_label_is_the_leg_in_force_and_range_means_no_leg_yet ... ok
+test htf::tests::the_prior_day_is_the_one_before_the_newest_closed_bar ... ok
+test htf::tests::this_bar_making_the_high_is_zero_bars_since_and_not_null ... ok
+test htf::tests::weeks_split_on_the_weekend_hole_and_not_on_the_calendar ... ok
+test auth::tests::logging_out_drops_that_session_and_only_that_one ... ok
+test htf::tests::zigzag_labels_match_the_research_definition ... ok
+test levels::tests::a_four_hour_bar_hides_the_daily_hole_so_the_day_is_counted_from_the_week ... ok
+test levels::tests::the_window_is_counted_in_trading_days_and_not_in_milliseconds ... ok
+test paper::carried_basis::a_trade_that_carries_its_basis_is_priced_from_it_and_counted_exact ... ok
+test levels::tests::an_hour_bar_is_as_long_as_the_hole_so_the_hole_rule_would_call_every_bar_a_day ... ok
+test paper::event_tests::the_tail_agrees_with_reading_every_line ... ok
+test levels::tests::the_export_hint_names_the_timeframe_that_is_missing ... ok
+test paper::event_tests::the_odd_lines_are_classified_exactly_as_the_full_read_classified_them ... ok
+test paper::event_tests::a_run_with_no_file_has_no_events_and_counts_zero ... ok
+test paper::event_tests::a_file_of_nothing_but_trades_costs_the_whole_file_and_returns_nothing ... ok
+test paper::carried_basis::a_trade_with_no_basis_is_priced_from_the_config_and_counted_estimated ... ok
+test paper::event_tests::fewer_events_than_asked_for_is_all_of_them ... ok
+test paper::carried_basis::the_shipped_exclusions_file_names_the_restated_euro_trade ... ok
+test paper::event_tests::the_tail_returns_events_and_never_trades ... ok
+test auth::tests::the_verifier_survives_a_round_trip_through_the_file_format ... ok
+test paper::tail_bench::reading_the_tail_against_reading_the_file ... ignored
+test paper::tail_bench::tailing_events_against_reading_every_line ... ignored
+test paper::roll_tests::a_full_log_is_moved_aside_whole_and_the_name_is_free_again ... ok
+test paper::tail_bench::broker_snapshot_tests::a_snapshot_from_an_older_executor_still_parses_too ... ok
+test paper::tail_bench::broker_snapshot_tests::a_snapshot_from_a_newer_executor_still_parses ... ok
+test paper::roll_tests::the_consultation_after_a_roll_starts_a_fresh_file_and_loses_nothing ... ok
+test auth::tests::the_right_password_verifies_and_a_wrong_one_does_not ... ok
+test paper::tail_bench::broker_snapshot_tests::a_book_with_nothing_wrong_reports_neither_drift_nor_a_refusal ... ok
+test paper::roll_tests::a_log_under_the_threshold_is_left_alone ... ok
+test paper::roll_tests::a_second_roll_never_overwrites_the_first ... ok
+test paper::tail_tests::a_file_that_is_not_there_is_no_lines ... ok
+test paper::tail_tests::a_growing_file_is_read_at_the_length_it_had ... ok
+test paper::roll_tests::a_log_that_does_not_exist_is_not_an_error ... ok
+test paper::tail_bench::broker_snapshot_tests::a_snapshot_that_is_not_json_costs_its_own_account_and_no_other ... ok
+test auth::tests::two_installs_of_the_same_password_do_not_share_a_hash ... ok
+test paper::tail_bench::broker_snapshot_tests::what_is_declared_is_served_and_what_is_not_stops_here ... ok
+test paper::tail_tests::an_empty_file_is_no_lines ... ok
+test paper::tail_tests::a_torn_line_that_would_parse_is_still_dropped ... ok
+test paper::tail_tests::a_line_that_is_not_json_costs_one_entry_not_the_response ... ok
+test paper::tail_tests::a_line_longer_than_the_window_is_found ... ok
+test research::tests::the_backlog_splits_open_from_closed_and_keeps_the_reason ... ok
+test research::tests::the_direction_receipt_yields_the_percentile_and_the_side_of_the_null ... ok
+test paper::tail_tests::fewer_lines_than_the_limit_gives_what_there_is ... ok
+test paper::tail_tests::one_line_with_no_newline_at_all_is_nothing ... ok
+test routes::anchor_tests::an_exported_file_is_served_whole_and_never_rebucketed ... ok
+test routes::anchor_tests::an_hour_is_allowed_from_fifteens_and_lands_on_the_hour ... ok
+test paper::tail_tests::the_head_of_a_large_file_is_never_read ... ok
+test paper::tail_tests::the_limit_takes_the_newest_and_keeps_them_oldest_first ... ok
+test routes::anchor_tests::every_series_comes_back_ascending_by_time ... ok
+test research::tests::the_hypotheses_table_is_read_row_by_row_and_the_verdict_line_closes_it ... ok
+test routes::anchor_tests::four_hours_is_refused_when_only_a_finer_series_is_stored ... ok
+test paper::tail_tests::blank_lines_are_not_lines ... ok
+test routes::anchor_tests::the_window_keeps_the_newest_bars_and_not_the_oldest ... ok
+test paper::tail_tests::an_unterminated_last_line_is_dropped ... ok
+test routes::anchor_tests::the_forming_bar_is_the_finer_bars_inside_it_and_says_how_far_it_knows ... ok
+test version::tests::the_stamp_describes_the_source_and_not_the_checkout ... ok
+test version::tests::a_hash_is_either_a_commit_or_the_word_unknown ... ok
+test routes::anchor_tests::a_forming_bar_with_a_hole_in_the_fine_series_carries_what_it_has ... ok
+test version::tests::the_build_time_is_a_real_instant_in_utc ... ok
+test routes::anchor_tests::there_is_no_forming_bar_when_nothing_finer_is_stored ... ok
+test version::tests::the_calendar_arithmetic_is_right_at_the_awkward_dates ... ok
+test auth::tests::failures_get_slower_and_a_success_clears_the_count ... ok
+test auth::tests::a_success_resets_the_failure_count ... ok
+
+test result: ok. 103 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 6.13s
+
+     Running unittests src\main.rs (target\debug\deps\fd_api-75078e8f250701c7.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\auth.rs (target\debug\deps\auth-e33e8bcfde0d8891.exe)
+
+running 9 tests
+test every_route_refuses_without_a_session ... ok
+test the_unauthenticated_port_has_no_login_routes_at_all ... ok
+test the_login_page_is_reachable_without_a_session ... ok
+test the_desks_own_port_still_answers_exactly_as_before ... ok
+test a_path_that_does_not_exist_answers_exactly_like_one_that_does ... ok
+test logging_out_puts_the_cookie_back ... ok
+test the_spa_itself_needs_a_session ... ok
+test a_wrong_password_does_not_authenticate ... ok
+test the_right_password_mints_a_cookie_that_works ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.88s
+
+     Running tests\bar_source.rs (target\debug\deps\bar_source-0e0aa6240c5b56bf.exe)
+
+running 3 tests
+test an_empty_store_says_so_rather_than_returning_nothing ... ok
+test a_timeframe_finer_than_anything_stored_is_refused ... ok
+test a_long_coarse_series_beats_a_short_fine_one ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.29s
+
+     Running tests\levels.rs (target\debug\deps\levels-cbfe1b8360a128f1.exe)
+
+running 11 tests
+test write_the_default_sample_from_a_real_store ... ignored, needs a real store; run with --ignored and FD_SAMPLE_BARS to refresh
+test write_the_served_samples ... ignored, writes docs/api-samples; run with --ignored to refresh
+test a_market_with_no_stored_bars_says_so_rather_than_answering_an_empty_list ... ok
+test ten_trading_days_of_daily_bars_is_ten_bars_and_the_response_says_which ... ok
+test a_timeframe_nothing_stores_is_refused_rather_than_resampled ... ok
+test the_analysis_window_holds_two_weeks_whatever_the_profile_window_is_asked_for ... ok
+test a_stored_timeframe_answers_in_its_own_bars_and_its_own_days ... ok
+test an_unknown_timeframe_is_a_400_that_lists_what_this_market_has ... ok
+test a_caller_that_passes_no_tf_gets_the_response_the_committed_sample_pins ... ok
+test the_json_carries_the_registrations_list_field_for_field ... ok
+test the_route_carries_no_verdict_on_any_timeframe ... ok
+
+test result: ok. 9 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.29s
+
+     Running tests\m1.rs (target\debug\deps\m1-a6eb365a8e508785.exe)
+
+running 7 tests
+test two_pollers_posting_one_quote_make_one_tick ... ok
+test more_than_the_ring_is_refused_and_the_refusal_names_the_ring ... ok
+test a_duplicate_stamp_is_counted_once_and_the_quote_is_what_makes_a_tick ... ok
+test an_older_tick_is_ignored_and_counted_in_dropped ... ok
+test the_ring_keeps_twelve_hours_and_drops_the_oldest ... ok
+test the_route_with_no_ticks_answers_unavailable ... ok
+test ticks_across_a_minute_boundary_close_one_bar_and_start_the_next ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s
+
+     Running tests\method_indicators.rs (target\debug\deps\method_indicators-6a1737f945846908.exe)
+
+running 6 tests
+test supertrend_matches_the_research_definition ... ok
+test the_catalog_carries_what_each_definition_was_measured_at ... ok
+test the_key_follows_the_declared_order_and_macd_proves_it_matters ... ok
+test the_wire_shape_says_what_was_measured_and_stays_silent_otherwise ... ok
+test anchored_vwap_matches_the_research_definition ... ok
+test zigzag_indicator_matches_the_research_definition ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.56s
+
+     Running tests\paper.rs (target\debug\deps\paper-ac9765d7feb50de2.exe)
+
+running 46 tests
+test a_start_is_checked_like_a_backtest_request ... ok
+test a_rule_based_book_cannot_be_claimed_by_a_decider ... ok
+test a_bar_one_run_refuses_still_feeds_the_others ... ok
+test a_restart_between_the_open_and_the_close_fills_once ... ok
+test a_new_entry_while_an_order_rests_replaces_it_and_a_stand_aside_leaves_it ... ok
+test a_stale_tick_is_not_reported ... ok
+test a_books_history_survives_a_restart_without_living_in_its_state_file ... ok
+test a_malformed_tick_is_refused ... ok
+test a_restart_between_the_decision_and_the_fill_fills_once ... ok
+test a_limit_fill_and_a_market_fill_at_the_same_price_are_the_same_trade ... ok
+test a_flat_book_reports_no_learned_at_and_a_reload_keeps_the_one_it_has ... ok
+test a_stand_aside_names_the_decider_without_touching_the_book ... ok
+test a_legacy_state_file_and_the_history_file_do_not_both_count ... ok
+test a_run_takes_bars_in_order_and_refuses_the_rest ... ok
+test a_stand_aside_also_survives_a_restart ... ok
+test a_decided_intent_records_when_the_decider_spoke_against_the_price_it_got ... ok
+test a_tick_is_keyed_by_stream ... ok
+test a_tick_beyond_an_invalidation_level_cancels_before_it_fills ... ok
+test an_open_at_or_before_the_last_bar_fills_nothing_and_a_gap_still_fills ... ok
+test a_start_on_a_market_with_no_store_file_warms_up_from_zero ... ok
+test an_open_replayed_after_its_bar_closed_cannot_take_the_next_intent ... ok
+test an_accepted_intent_survives_a_restart_and_still_fills ... ok
+test the_fill_bar_of_a_tick_fill_is_managed_from_the_fill_onward ... ok
+test an_intent_records_which_higher_timeframe_state_it_read ... ok
+test an_order_expires_after_its_valid_bars_and_the_miss_is_counted ... ok
+test a_state_file_from_the_one_run_per_stream_layout_reloads_under_its_old_id ... ok
+test pending_act_triggers_at_the_touched_side_and_a_cancel_carries_its_reason ... ok
+test the_decider_badge_names_only_decisions_the_book_actually_took ... ok
+test stop_closes_a_self_managed_hold_at_the_last_close ... ok
+test an_order_is_refused_with_a_reason_and_the_book_is_left_alone ... ok
+test a_tick_short_of_the_level_leaves_the_order_and_writes_nothing ... ok
+test the_detail_carries_the_curve_the_fills_the_events_and_the_window ... ok
+test the_open_fills_at_the_same_price_the_close_would_have ... ok
+test write_order_samples ... ignored, writes docs/api-samples; run on purpose
+test write_rebate_sample ... ignored, writes docs/api-samples; run on purpose
+test every_closed_trade_carries_the_contract_size_it_was_booked_under ... ok
+test the_open_half_fills_and_the_close_half_still_manages_the_bar ... ok
+test a_tick_is_reported_and_touches_nothing ... ok
+test the_pending_route_lists_a_resting_order_under_its_own_id_and_a_stop_withdraws_it ... ok
+test the_trade_row_says_how_the_position_was_entered ... ok
+test an_entry_records_when_it_was_learned_beside_the_bar_it_is_priced_at ... ok
+test the_state_file_survives_a_restart ... ok
+test the_rebate_is_the_owners_share_of_the_round_turn_spread ... ok
+test two_runs_share_a_stream_and_keep_separate_books ... ok
+test a_trade_held_out_stays_in_the_record_and_leaves_the_headline_figures ... ok
+test the_rebate_is_a_separate_line_and_changes_nothing_that_existed ... ok
+
+test result: ok. 44 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 2.87s
+
+     Running tests\paper_news.rs (target\debug\deps\paper_news-e9c4eddd0e9ea427.exe)
+
+running 1 test
+test the_next_blackout_is_the_first_release_of_the_markets_own_currencies ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.13s
+
+     Running tests\rebate_parity.rs (target\debug\deps\rebate_parity-2af4281795fa0ceb.exe)
+
+running 3 tests
+test the_backtest_prices_the_rebate_exactly_as_the_live_side_does ... ok
+test the_credit_is_one_round_turn_and_not_one_per_side ... ok
+test both_sides_read_the_same_share_out_of_the_same_file ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
+
+     Running unittests src\lib.rs (target\debug\deps\fd_backtest-4c605d27c9015bf5.exe)
+
+running 88 tests
+test control::tests::different_seeds_are_different_worlds ... ok
+test control::tests::a_seed_reproduces_its_own_sequence ... ok
+test control_hold::tests::the_exit_honours_the_drawn_hold_on_every_bar ... ok
+test control_hold::tests::different_seeds_are_different_worlds_and_the_same_seed_replays ... ok
+test context::tests::the_timeline_never_looks_forward ... ok
+test context::tests::an_empty_timeline_answers_nothing_rather_than_panicking ... ok
+test control_hold::tests::a_hold_ends_when_its_minutes_have_passed_and_not_before ... ok
+test control::tests::the_two_streams_are_independent ... ok
+test control_hold::tests::a_positive_log_sd_draws_a_log_normal_hold_pinned_by_entry_time_and_seed ... ok
+test control_hold::tests::a_zero_log_sd_is_the_fixed_hold_exactly ... ok
+test context::tests::frames_are_sorted_however_they_arrive ... ok
+test cost_table::tests::a_session_that_straddles_midnight_is_one_day_not_two ... ok
+test cost_table::tests::a_market_block_without_a_spread_is_refused_not_given_golds ... ok
+test control::tests::draws_stay_inside_the_unit_interval ... ok
+test control_hold::tests::the_window_null_fills_its_exit_on_the_same_bar_as_a_session_hold ... ok
+test control::tests::the_entry_rate_is_roughly_honoured ... ok
+test cost_table::tests::a_day_missing_bars_is_a_smaller_range_not_a_missing_day ... ok
+test cost_table::tests::an_absent_spread_has_no_ratio_rather_than_a_ratio_of_zero ... ok
+test cost_table::tests::an_empty_sample_summarises_to_nothing ... ok
+test cost_table::tests::a_zero_or_absent_stop_is_unmeasurable_not_infinite ... ok
+test direction::tests::the_control_carries_the_rebate ... ok
+test cost_table::tests::quantiles_are_nearest_rank_on_the_sorted_sample ... ok
+test cost_table::tests::the_ratio_is_dimensionless_so_lots_and_contract_size_cancel ... ok
+test cost_table::tests::each_market_carries_its_own_spread_and_none_of_them_is_golds ... ok
+test cost_table::tests::four_hour_buckets_sit_on_the_utc_grid ... ok
+test cost_table::tests::warmup_bars_contribute_no_ratio ... ok
+test direction::tests::a_book_that_never_lost_has_an_infinite_profit_factor_not_a_nan ... ok
+test direction::tests::the_gross_permuted_control_is_what_it_always_was ... ok
+test engine::trail_tests::off_by_default_changes_nothing ... ok
+test engine::trail_tests::ratchets_and_never_gives_ground_back ... ok
+test guards::tests::the_configured_guards_are_the_ones_in_the_toml ... ok
+test engine::trail_tests::refuses_a_position_it_was_told_not_to_manage ... ok
+test guards::tests::a_config_without_the_new_keys_still_loads_with_them_off ... ok
+test guards::tests::the_cooldown_runs_from_the_previous_entry ... ok
+test guards::tests::the_daily_cap_counts_trades_closed_in_the_last_24_hours ... ok
+test engine::trail_tests::does_nothing_until_the_trade_has_gone_far_enough ... ok
+test engine::trail_tests::never_invents_a_stop_the_strategy_did_not_set ... ok
+test guards::tests::nothing_is_refused_on_a_clean_slate ... ok
+test guards::tests::the_bar_interval_is_the_smallest_gap ... ok
+test engine::trail_tests::a_short_trails_the_other_way ... ok
+test engine::trail_tests::a_stop_is_never_tested_against_a_level_set_by_the_same_bar ... ok
+test guards::tests::a_days_loss_at_the_limit_stops_new_entries ... ok
+test guards::tests::an_open_position_blocks_another_when_the_cap_is_one ... ok
+test guards::tests::the_cooldown_also_sees_a_position_that_is_still_open ... ok
+test guards::tests::the_describe_line_names_every_guard ... ok
+test guards::tests::the_loss_check_runs_before_the_cap_check ... ok
+test guards::tests::the_loss_limit_is_read_as_a_magnitude ... ok
+test guards::tests::the_news_currencies_are_the_markets_own ... ok
+test hypotheses::tests::a_report_reads_its_null_by_quantile_and_survives_only_on_both_counts ... ok
+test hypotheses::tests::the_achieved_count_match_is_the_controls_median_over_the_methods_count ... ok
+test guards::tests::the_weekend_cutoff_is_read_on_the_new_york_clock ... ok
+test guards::tests::unbounded_refuses_nothing ... ok
+test hypotheses::tests::a_preset_on_a_gridded_parameter_pins_it ... ok
+test hypotheses::tests::the_hold_null_takes_the_realised_hold_over_the_lookback_guess ... ok
+test paper::advice_tests::a_cut_below_the_minimum_lot_is_a_veto_and_not_a_trade_the_broker_would_bounce ... ok
+test paper::advice_tests::a_cut_halves_the_lots_and_touches_nothing_else ... ok
+test paper::advice_tests::a_verdict_is_clamped_on_construction_so_nothing_downstream_trusts_the_wire ... ok
+test guards::tests::the_notional_cap_rounds_down_to_the_step_and_refuses_below_the_minimum ... ok
+test guards::tests::the_open_loss_cap_fills_at_the_level_or_the_open_through_it ... ok
+test hypotheses::tests::a_batch_file_parses_filters_and_refuses_a_reasonless_hypothesis ... ok
+test hypotheses::tests::the_batches_name_only_registered_methods_and_give_every_entry_a_reason ... ok
+test hypotheses::tests::the_hold_distribution_is_the_geometric_mean_and_the_sd_of_the_logs ... ok
+test paper::advice_tests::a_veto_refuses_the_entry_and_says_who_refused_it ... ok
+test paper::advice_tests::an_advisor_can_never_make_a_position_larger ... ok
+test paper::order_tests::a_book_with_an_order_round_trips_and_an_old_state_file_loads_without_one ... ok
+test paper::advice_tests::an_advisor_cannot_open_a_trade_the_strategy_did_not_ask_for ... ok
+test paper::advice_tests::no_advice_is_the_trade_the_strategy_asked_for ... ok
+test paper::order_tests::a_stop_order_fill_bar_does_not_stop_out_on_prices_from_before_the_fill ... ok
+test paper::order_tests::an_order_cannot_fill_over_a_position_and_a_stopped_book_rests_nothing ... ok
+test rebate::tests::a_rate_that_is_not_a_number_is_refused_rather_than_propagated ... ok
+test paper::order_tests::an_order_expires_after_its_valid_bars_and_a_closed_bar_never_fills_it ... ok
+test paper::order_tests::placing_an_order_replaces_the_one_resting_and_drops_a_market_intent ... ok
+test rebate::tests::gross_is_untouched_by_the_credit ... ok
+test paper::tests::the_book_round_trips_through_json ... ok
+test rebate::tests::nothing_is_priced_where_there_is_no_spread_or_no_size ... ok
+test paper::order_tests::a_limit_fill_and_a_market_fill_at_the_same_price_are_the_same_trade ... ok
+test paper::tests::a_signal_fills_at_the_next_open_and_a_stop_closes_it ... ok
+test paper::tests::stop_closes_at_the_last_close_as_a_signal_exit ... ok
+test paper::order_tests::the_touched_side_is_the_fill_rule_and_a_stop_fills_at_the_side_that_traded_through ... ok
+test rebate::tests::the_credit_as_a_fraction_of_r_grows_as_the_stop_tightens ... ok
+test rebate::tests::the_net_profit_factor_is_never_below_the_gross_one ... ok
+test paper::order_tests::the_fill_bar_is_managed_from_the_fill_and_not_from_its_open ... ok
+test rebate::tests::the_risk_unit_of_a_stopless_trade_comes_from_the_pnl_identity ... ok
+test sweep::tests::the_gate_passes_only_when_everything_clears ... ok
+test sweep::tests::the_gate_refuses_a_thin_sample_however_good_it_looks ... ok
+test sweep::tests::median_handles_both_parities_and_emptiness ... ok
+test sweep::tests::ranking_discounts_a_tiny_sample_instead_of_crowning_it ... ok
+test rebate::tests::the_worked_example_from_the_account_registry ... ok
+
+test result: ok. 88 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.22s
+
+     Running unittests src\bin\cost_table.rs (target\debug\deps\cost_table-06b2de3aae51c419.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\bin\designed_3.rs (target\debug\deps\designed_3-5f282771704553f8.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\bin\search.rs (target\debug\deps\search-a7a2ec4d70ca2340.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\bin\slice_three_month.rs (target\debug\deps\slice_three_month-b0c0864e760ae133.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\bin\three_month.rs (target\debug\deps\three_month-9e310925651eff0a.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\bin\three_month_2.rs (target\debug\deps\three_month_2-fddb9eb4f1d74f14.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\bin\three_month_slice3.rs (target\debug\deps\three_month_slice3-d32d3fd1c43d6cf0.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\contract_size.rs (target\debug\deps\contract_size-27654c8c93ff3b2e.exe)
+
+running 3 tests
+test a_position_with_no_recorded_basis_falls_back_and_says_it_did ... ok
+test a_trade_is_booked_at_the_contract_size_it_was_sized_under ... ok
+test the_euro_and_silver_contract_sizes_stay_as_measured ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.10s
+
+     Running tests\guards.rs (target\debug\deps\guards-acfc977d021526df.exe)
+
+running 5 tests
+test the_daily_trade_cap_bounds_the_run ... ok
+test without_guards_the_impatient_strategy_trades_constantly ... ok
+test guards_off_and_guards_none_are_the_same_run ... ok
+test the_cooldown_spaces_entries_apart ... ok
+test the_daily_loss_limit_stops_a_losing_day ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.12s
+
+     Running tests\guards_news.rs (target\debug\deps\guards_news-c79404347d771df9.exe)
+
+running 4 tests
+test the_news_guard_closes_on_the_first_bar_inside_the_window_and_reopens_after_it ... ok
+test a_zero_window_is_inert_even_with_a_calendar_installed ... ok
+test the_currency_list_scopes_the_guard_to_the_markets_releases ... ok
+test the_impact_threshold_selects_which_releases_count ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s
+
+     Running tests\guards_positions.rs (target\debug\deps\guards_positions-f4e5993edcc7f29f.exe)
+
+running 10 tests
+test the_open_loss_cap_closes_a_self_managed_hold_at_the_level ... ok
+test the_open_loss_cap_charges_the_exit_costs ... ok
+test the_notional_cap_refuses_an_entry_the_minimum_lot_already_exceeds ... ok
+test a_cap_of_zero_closes_nothing ... ok
+test the_notional_cap_reduces_the_lots_to_the_cap ... ok
+test the_engine_stop_is_taken_before_a_tighter_cap_when_one_bar_covers_both ... ok
+test the_weekend_guard_flattens_on_friday_and_lets_monday_in ... ok
+test the_open_loss_cap_fills_at_the_open_when_the_bar_gaps_through_it ... ok
+test the_weekend_guard_at_zero_changes_nothing ... ok
+test every_guard_at_zero_is_the_unguarded_run ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+
+     Running tests\matched_null.rs (target\debug\deps\matched_null-37750611f7a20a0f.exe)
+
+running 3 tests
+test a_calibrated_control_loses_the_calibrated_axis_and_keeps_the_others ... ok
+test the_matched_null_takes_about_as_many_trades_as_the_method ... ok
+test repairing_the_null_cannot_move_a_gate_figure ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.97s
+
+     Running tests\paper_parity.rs (target\debug\deps\paper_parity-671fa478117e1150.exe)
+
+running 4 tests
+test an_engine_managed_method_is_the_same_trade_for_trade ... ok
+test a_self_managed_method_is_the_same_trade_for_trade ... ok
+test the_guards_bite_in_the_fixture ... ok
+test filters_wrap_the_book_as_they_wrap_the_engine ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s
+
+     Running tests\parity.rs (target\debug\deps\parity-771972344d3f740e.exe)
+
+running 7 tests
+test trading_rules_come_from_the_manifest ... ok
+test side_labels_match_the_oracle_spelling ... ok
+test every_oracle_strategy_exists_in_the_registry ... ok
+test backtests_match_the_oracle_on_btc ... ok
+test a_trade_never_ends_better_than_its_best_moment ... ok
+test backtests_match_the_oracle_on_gold ... ok
+test the_golden_timeline_loads_with_frames_and_clusters ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.67s
+
+     Running tests\rebate_gross.rs (target\debug\deps\rebate_gross-76a3f713efd3f3ed.exe)
+
+running 2 tests
+test the_credit_is_forty_five_percent_of_the_spread_the_book_actually_paid ... ok
+test the_gross_book_is_bit_identical_either_side_of_the_credit ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s
+
+     Running tests\self_managed.rs (target\debug\deps\self_managed-5feba2dfc0de83d9.exe)
+
+running 3 tests
+test the_sizing_stop_still_sets_the_lots_and_the_r ... ok
+test a_window_that_ends_mid_hold_flattens_the_book_at_the_boundary ... ok
+test the_sizing_stop_and_the_clock_do_not_close_a_strategy_managed_position ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+     Running tests\swap.rs (target\debug\deps\swap-69d585706d993899.exe)
+
+running 3 tests
+test a_position_closed_inside_its_session_pays_nothing ... ok
+test a_position_held_monday_to_friday_pays_six_nights_with_wednesday_tripled ... ok
+test with_no_swap_configured_the_oracle_s_numbers_are_untouched ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
+
+     Running tests\timeline_parity.rs (target\debug\deps\timeline_parity-31942e0b1f156e11.exe)
+
+running 2 tests
+test the_btc_timeline_rebuilds_from_its_tape ... ok
+test the_gold_timeline_rebuilds_from_its_tape ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 22.87s
+
+     Running tests\trading_rules.rs (target\debug\deps\trading_rules-bfcbe012428ac14f.exe)
+
+running 3 tests
+test an_unknown_market_is_refused ... ok
+test policy_stays_shared_across_markets ... ok
+test btc_uses_its_own_contract_size_and_spread ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s
+
+     Running unittests src\lib.rs (target\debug\deps\fd_core-5769a3f003e06d98.exe)
+
+running 38 tests
+test classify::tests::quote_rule_then_tick_rule ... ok
+test classify::tests::the_four_buckets_match_the_reference_dashboard ... ok
+test config::tests::local_overrides_merge_key_by_key ... ok
+test config::tests::news_currencies_read_from_the_market_trading_table ... ok
+test classify::tests::inverted_quotes_are_ignored_rather_than_trusted ... ok
+test classify::tests::position_sign_follows_who_crossed_the_spread ... ok
+test config::tests::an_unknown_market_names_the_configured_ones ... ok
+test config::tests::each_market_resolves_to_its_own_conventions ... ok
+test clock::tests::civil_round_trips ... ok
+test clock::tests::dst_switches_on_the_2026_dates ... ok
+test config::tests::the_sample_config_parses_into_typed_settings ... ok
+test config::tests::trading_settings_pick_up_the_market_override ... ok
+test classify::tests::bull_is_lc_plus_sp_and_bear_is_lp_plus_sc ... ok
+test clock::tests::swap_nights_count_rollovers_and_triple_wednesday ... ok
+test clock::tests::the_cme_break_is_17_00_new_york_in_both_seasons ... ok
+test market::tests::btc_sizes_on_a_finer_step ... ok
+test premium::tests::gold_premium_matches_the_verified_tape_arithmetic ... ok
+test premium::tests::dte_counts_down_and_goes_negative_after_expiry ... ok
+test rounding_tests::a_negative_half_rounds_the_way_javascript_rounds_it ... ok
+test premium::tests::expiry_weight_is_monotone_toward_expiry ... ok
+test types::identity_tests::a_different_print_gets_a_different_id ... ok
+test tests::parity_treats_nan_as_equal_and_rejects_real_drift ... ok
+test types::identity_tests::assigning_ids_twice_over_the_same_tape_gives_the_same_ids ... ok
+test types::identity_tests::fields_that_are_not_part_of_the_print_do_not_change_its_id ... ok
+test types::tests::option_type_round_trips_through_its_letter ... ok
+test types::tests::expiration_type_buckets_match_the_prototype ... ok
+test market::tests::each_market_applies_its_own_premium_convention ... ok
+test market::tests::sizing_never_returns_less_than_the_minimum_lot ... ok
+test rounding_tests::non_finite_values_pass_through_untouched ... ok
+test rounding_tests::to_fixed_rounds_the_value_not_the_scaled_product ... ok
+test types::identity_tests::the_same_print_always_gets_the_same_id ... ok
+test types::identity_tests::two_identical_prints_stay_two_prints ... ok
+test market::tests::sizing_respects_the_risk_budget_and_the_lot_step ... ok
+test premium::tests::deribit_premium_needs_the_index_not_a_multiplier ... ok
+test tests::large_sums_need_the_relative_tolerance ... ok
+test types::tests::a_close_only_bar_reports_itself_as_synthetic ... ok
+test types::tests::aggressor_parses_both_feed_spellings ... ok
+test tests::half_a_unit_in_the_ninth_decimal_is_serialisation_noise ... ok
+
+test result: ok. 38 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.88s
+
+     Running unittests src\lib.rs (target\debug\deps\fd_engine-703891197b5859fe.exe)
+
+running 77 tests
+test bigtrades::tests::the_absolute_floor_and_the_percentile_both_qualify_a_print ... ok
+test bigtrades::tests::the_footprint_nets_aggression_per_strike ... ok
+test breakeven::tests::ids_round_trip_and_cover_every_model ... ok
+test breakeven::tests::net_positioning_ignores_strikes_where_sellers_dominate ... ok
+test bigtrades::tests::a_contract_floor_rejects_a_small_but_expensive_print ... ok
+test breakeven::tests::a_single_put_breaks_even_at_strike_minus_price ... ok
+test breakeven::tests::aggregate_payoff_respects_the_market_multiplier ... ok
+test engine::tests::a_whale_level_survives_a_later_snapshot_with_no_large_prints ... ok
+test bigtrades::tests::an_unknown_aggressor_adds_premium_but_no_direction ... ok
+test bigtrades::tests::quantile_interpolates_between_samples ... ok
+test breakeven::tests::an_empty_tape_gives_none_from_every_model ... ok
+test breakeven::tests::every_model_returns_a_number_or_none_but_never_nan ... ok
+test bigtrades::tests::the_limit_caps_the_result_and_keeps_the_newest ... ok
+test breakeven::tests::a_single_call_breaks_even_at_strike_plus_price ... ok
+test breakeven::tests::the_long_only_model_ignores_seller_aggressed_prints ... ok
+test engine::tests::a_snapshot_reports_levels_flow_and_clusters ... ok
+test engine::tests::iso_conversion_matches_known_instants ... ok
+test flow::tests::a_window_ignores_prints_outside_it_and_after_now ... ok
+test engine::tests::contracts_are_ordered_by_time_to_expiry ... ok
+test engine::tests::ingesting_the_same_tape_in_two_batches_gives_the_same_snapshot ... ok
+test levels::tests::configured_type_weights_override_the_defaults ... ok
+test levels::tests::diversity_raises_the_score_above_a_lone_level ... ok
+test maxpain::tests::candidate_settlements_can_sit_between_strikes ... ok
+test maxpain::tests::max_pain_minimises_total_intrinsic_payout ... ok
+test flow::tests::an_empty_tape_reads_balanced_rather_than_nan ... ok
+test flow::tests::bias_labels_sit_where_the_thresholds_put_them ... ok
+test levels::tests::experimental_levels_are_marked_as_such ... ok
+test levels::tests::nearby_levels_merge_and_distant_ones_do_not ... ok
+test flow::tests::bull_is_lc_plus_sp_and_bear_is_lp_plus_sc ... ok
+test flow::tests::unknown_aggressors_count_as_prints_but_pick_no_side ... ok
+test levels::tests::nearest_cluster_reports_zero_distance_when_inside ... ok
+test levels::tests::the_centre_is_weighted_not_the_midpoint ... ok
+test flow::tests::velocity_compares_the_last_window_with_the_one_before_it ... ok
+test levels::tests::a_context_only_contributes_the_levels_it_has ... ok
+test levels::tests::the_cluster_width_never_falls_below_its_floor ... ok
+test maxpain::tests::an_empty_table_returns_none_rather_than_a_number ... ok
+test maxpain::tests::negative_net_positioning_is_clamped_but_preserved ... ok
+test maxpain::tests::the_payout_curve_bottoms_out_at_max_pain ... ok
+test maxpain::tests::the_table_is_sorted_by_strike ... ok
+test maxpain::tests::net_mode_cancels_opposing_prints_and_volume_mode_does_not ... ok
+test price_levels::tests::a_partly_filled_gap_reports_the_fraction ... ok
+test price_levels::tests::a_period_extreme_carries_the_bar_that_made_it_and_its_state ... ok
+test price_levels::tests::an_order_block_price_closed_through_is_broken ... ok
+test price_levels::tests::an_untouched_gap_is_unfilled_and_a_bearish_one_mirrors_it ... ok
+test price_levels::tests::a_close_through_the_swing_high_in_an_uptrend_is_a_bos_and_a_wick_through_is_not ... ok
+test price_levels::tests::a_filled_gap_is_not_reported ... ok
+test price_levels::tests::an_empty_window_produces_nothing_rather_than_a_panic ... ok
+test price_levels::tests::an_order_block_nothing_came_back_to_is_untested ... ok
+test maxpain::tests::ties_resolve_to_the_lower_strike ... ok
+test price_levels::tests::a_period_pool_is_swept_only_by_bars_after_the_period_ended ... ok
+test price_levels::tests::a_pool_price_traded_through_names_the_bar_that_swept_it ... ok
+test price_levels::tests::a_body_under_the_atr_threshold_is_not_a_displacement ... ok
+test price_levels::tests::a_break_with_no_prevailing_structure_is_counted_and_not_guessed_at ... ok
+test price_levels::tests::a_run_is_split_by_the_hole_and_not_by_the_clock ... ok
+test price_levels::tests::a_swing_id_names_its_timeframe_its_side_and_its_bar ... ok
+test profile::tests::flow_class_drives_the_sign_in_signed_modes ... ok
+test profile::tests::neighbouring_nodes_sit_on_opposite_sides_of_the_poc ... ok
+test price_levels::tests::the_value_area_holds_seventy_percent_of_the_activity ... ok
+test profile::tests::an_empty_tape_produces_an_empty_profile_not_a_panic ... ok
+test profile::tests::volume_mode_counts_contracts_not_dollars ... ok
+test whale::tests::a_tape_with_nothing_large_produces_no_levels ... ok
+test whale::tests::a_tie_goes_to_the_strike_seen_first ... ok
+test whale::tests::ids_round_trip ... ok
+test whale::tests::whale_levels_sit_on_the_right_side_of_spot ... ok
+test price_levels::tests::the_first_close_through_the_opposite_swing_is_a_choch_and_the_next_one_is_a_bos ... ok
+test price_levels::tests::the_dealing_range_is_the_last_two_swings_and_its_fraction_is_not_clamped ... ok
+test profile::tests::value_area_walks_outward_from_the_poc ... ok
+test profile::tests::strike_bucketing_merges_nearby_strikes ... ok
+test whale::tests::the_largest_print_model_follows_premium_not_net_size ... ok
+test whale::tests::the_tracker_holds_a_level_until_something_stronger_arrives ... ok
+test price_levels::tests::a_block_broken_and_then_traded_back_into_is_a_breaker_and_one_merely_broken_is_not ... ok
+test price_levels::tests::equal_highs_inside_the_tolerance_are_one_pool_and_outside_it_are_two ... ok
+test price_levels::tests::the_bucket_size_follows_atr ... ok
+test profile::tests::premium_poc_is_the_strike_with_the_most_premium ... ok
+test profile::tests::signed_modes_still_rank_by_magnitude ... ok
+test whale::tests::premium_concentration_reads_every_print_not_just_the_big_ones ... ok
+test whale::tests::net_positioning_skips_prints_with_no_aggressor ... ok
+
+test result: ok. 77 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.26s
+
+     Running tests\parity.rs (target\debug\deps\parity-b7c07748f4e30fc4.exe)
+
+running 7 tests
+test the_golden_tape_loads_with_the_prints_the_manifest_claims ... ok
+test snapshot_matches_the_oracle_on_btc ... ok
+test profiles_match_the_oracle_on_btc ... ok
+test snapshot_matches_the_oracle_on_gold ... ok
+test profiles_match_the_oracle_on_gold ... ok
+test models_match_the_oracle_on_btc ... ok
+test models_match_the_oracle_on_gold ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.74s
+
+     Running tests\settings.rs (target\debug\deps\settings-fada4d59e26955ea.exe)
+
+running 2 tests
+test what_is_shared_stays_shared ... ok
+test btc_gets_its_own_cluster_width_and_big_print_floor ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+     Running unittests src\lib.rs (target\debug\deps\fd_features-e661b18a6f275817.exe)
+
+running 12 tests
+test tests::a_non_finite_feature_becomes_zero_rather_than_poisoning_the_vector ... ok
+test tests::a_series_shorter_than_two_bars_has_no_atr ... ok
+test dataset::tests::an_unknown_horizon_yields_nothing ... ok
+test dataset::tests::neutral_rows_are_kept_in_the_dataset_and_dropped_from_training ... ok
+test tests::the_day_range_position_is_a_half_when_there_is_no_range ... ok
+test tests::the_feature_order_is_the_length_the_model_expects ... ok
+test dataset::tests::a_move_inside_the_band_is_not_a_label ... ok
+test tests::atr_over_closes_is_the_mean_absolute_move ... ok
+test tests::resampling_recovers_a_range_from_closes_alone ... ok
+test dataset::tests::the_band_edge_counts_as_a_label ... ok
+test dataset::tests::the_forward_close_is_the_first_at_or_after_the_target ... ok
+test tests::the_price_context_reads_nothing_after_its_instant ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.24s
+
+     Running tests\parity.rs (target\debug\deps\parity-fdcadacb0e35e299.exe)
+
+running 2 tests
+test the_btc_feature_table_matches_the_oracle ... ok
+test the_gold_feature_table_matches_the_oracle ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 15.87s
+
+     Running unittests src\lib.rs (target\debug\deps\fd_indicators-a5d8e784fd2384ff.exe)
+
+running 24 tests
+test tests::every_measured_row_names_a_registered_indicator_and_its_own_sample ... ok
+test companion::tests::nothing_installed_means_nan_rather_than_zero ... ok
+test tests::keys_match_the_javascript_oracle ... ok
+test companion::tests::the_modal_interval_ignores_breaks ... ok
+test companion::tests::a_truncated_primary_is_a_prefix_and_so_is_a_truncated_companion ... ok
+test tests::an_unknown_avwap_anchor_draws_nothing ... ok
+test tests::rsi_saturates_at_100_and_stays_bounded ... ok
+test tests::output_keys_are_fully_qualified ... ok
+test companion::tests::a_timestamp_the_companion_lacks_is_nan_and_never_the_previous_bar ... ok
+test tests::an_unknown_indicator_lists_the_real_ones ... ok
+test companion::tests::a_change_across_a_break_is_refused_rather_than_measured ... ok
+test tests::donchian_excludes_the_current_bar ... ok
+test tests::swings_are_confirmed_late_and_never_repaint ... ok
+test tests::single_output_indicators_answer_to_both_spellings ... ok
+test tests::every_indicator_is_causal ... ok
+test tests::the_avwap_day_rolls_on_the_brokers_clock_in_both_seasons ... ok
+test tests::sma_and_ema_match_hand_computed_values ... ok
+test tests::two_instances_of_one_indicator_do_not_collide ... ok
+test tests::true_range_uses_the_gap_when_it_dominates ... ok
+test tests::the_avwap_week_starts_at_the_sunday_reopen ... ok
+test tests::the_supertrend_direction_is_two_valued_once_atr_is_warm ... ok
+test tests::the_zigzag_line_never_repaints ... ok
+test tests::wilder_smoothing_and_stdev_are_textbook ... ok
+test tests::warmup_is_nan_rather_than_a_fabricated_number ... ok
+
+test result: ok. 24 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s
+
+     Running tests\parity.rs (target\debug\deps\parity-ce4848526e158801.exe)
+
+running 3 tests
+test a_non_default_source_changes_the_result ... ok
+test indicators_match_the_oracle_on_btc ... ok
+test indicators_match_the_oracle_on_gold ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s
+
+     Running unittests src\lib.rs (target\debug\deps\fd_ingest-0b9b306466147216.exe)
+
+running 26 tests
+test deribit::tests::a_row_without_an_index_price_is_skipped_rather_than_priced_at_zero ... ok
+test deribit::tests::instrument_names_decompose_to_an_expiry_and_a_strike ... ok
+test gap::tests::a_repair_never_reaches_further_back_than_the_lookback ... ok
+test gap::tests::an_empty_series_asks_for_the_whole_lookback ... ok
+test binance::tests::overlapping_pages_keep_the_later_copy_of_a_bar ... ok
+test deribit::tests::a_put_and_a_single_digit_day_both_parse ... ok
+test feed::tests::backoff_grows_then_stops_growing ... ok
+test binance::tests::a_kline_tuple_becomes_a_bar ... ok
+test deribit::tests::names_that_are_not_options_are_refused ... ok
+test deribit::tests::premium_is_price_times_index_times_size ... ok
+test gap::tests::an_interior_hole_is_found_even_when_the_tail_is_fresh ... ok
+test binance::tests::a_truncated_tuple_is_refused_rather_than_half_read ... ok
+test binance::tests::intervals_are_the_ones_the_project_uses ... ok
+test deribit::tests::the_epoch_and_a_leap_day_anchor_the_calendar_arithmetic ... ok
+test feed::tests::a_kline_event_carries_its_closed_flag ... ok
+test feed::tests::a_message_that_is_not_a_kline_yields_nothing ... ok
+test otl::tests::a_run_length_encoded_level_holds_its_value_until_the_next_change ... ok
+test otl::tests::an_empty_payload_yields_nothing_rather_than_panicking ... ok
+test gap::tests::the_earliest_break_in_the_window_wins ... ok
+test otl::tests::a_columnar_tape_becomes_prints_with_stable_ids ... ok
+test gap::tests::an_unbroken_series_needs_no_repair_before_its_last_bar ... ok
+test gap::tests::holes_are_reported_as_the_bars_either_side ... ok
+test otl::tests::the_feeds_time_spellings_all_parse_on_one_clock ... ok
+test otl::tests::the_workspace_config_carries_the_measured_feed_offset ... ok
+test otl::tests::closes_only_candles_are_marked_synthetic ... ok
+test otl::tests::the_clock_offset_moves_prints_and_expiry_together ... ok
+
+test result: ok. 26 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.30s
+
+     Running unittests src\bin\backfill.rs (target\debug\deps\backfill-1e0f4c5c3effb9bd.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\bin\collect.rs (target\debug\deps\collect-e66b219f7237c0aa.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\bin\verify-feed.rs (target\debug\deps\verify_feed-f3268c2d65744791.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\lib.rs (target\debug\deps\fd_model-fb0538300554447a.exe)
+
+running 21 tests
+test metrics::tests::a_calibrated_model_matches_its_own_claims ... ok
+test tests::a_constant_feature_does_not_produce_nan ... ok
+test tests::a_row_of_the_wrong_width_is_refused_rather_than_truncated ... ok
+test metrics::tests::an_empty_bin_reports_nothing_rather_than_zero ... ok
+test metrics::tests::auc_is_undefined_with_one_class_and_says_so ... ok
+test tests::an_unfitted_model_refuses_to_predict ... ok
+test metrics::tests::log_loss_survives_a_confidently_wrong_prediction ... ok
+test metrics::tests::the_baseline_is_the_majority_class ... ok
+test metrics::tests::a_model_with_no_opinion_scores_a_half ... ok
+test metrics::tests::a_perfect_ranking_scores_one_and_a_reversed_one_scores_zero ... ok
+test tests::an_empty_dataset_is_refused ... ok
+test tests::the_sigmoid_does_not_overflow_at_either_end ... ok
+test tests::class_weighting_stops_a_lopsided_sample_collapsing ... ok
+test tests::training_is_deterministic ... ok
+test tests::an_explanation_is_the_models_own_arithmetic ... ok
+test tests::a_separable_problem_is_learned_and_the_noise_feature_is_not ... ok
+test walk_forward::tests::accuracy_counts_both_sides_of_the_threshold ... ok
+test walk_forward::tests::too_few_samples_is_refused_rather_than_guessed_at ... ok
+test walk_forward::tests::a_learnable_pattern_survives_out_of_sample ... ok
+test walk_forward::tests::every_fold_tests_on_rows_after_the_ones_it_trained_on ... ok
+test walk_forward::tests::noise_does_not_survive_out_of_sample ... ok
+
+test result: ok. 21 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.30s
+
+     Running unittests src\bin\evaluate.rs (target\debug\deps\evaluate-ae7bc685b88a1307.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\parity.rs (target\debug\deps\parity-091c2776605869cb.exe)
+
+running 2 tests
+test the_btc_model_matches_the_oracle ... ok
+test the_gold_model_matches_the_oracle ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.33s
+
+     Running unittests src\lib.rs (target\debug\deps\fd_store-9eaf7bd9b2d1a703.exe)
+
+running 11 tests
+test resample::tests::buckets_start_on_the_step_not_on_the_first_row ... ok
+test resample::tests::close_only_rows_stay_flat_and_say_so ... ok
+test resample::tests::a_row_without_volume_counts_as_one ... ok
+test resample::tests::an_empty_series_resamples_to_nothing ... ok
+test resample::tests::timeframes_are_the_ones_the_project_uses ... ok
+test store::tests::a_directory_that_is_not_ours_is_ignored ... ok
+test resample::tests::a_bucket_takes_the_first_open_and_the_last_close ... ok
+test store::tests::dates_match_known_instants ... ok
+test store::tests::dates_round_trip_through_the_partition_name ... ok
+test news::tests::column_order_is_not_a_contract_but_names_and_types_are ... ok
+test news::tests::reads_the_python_schema_by_name_and_skips_null_rows ... ok
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s
+
+     Running unittests src\bin\migrate-json.rs (target\debug\deps\migrate_json-81bb17c5e91324ca.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\bin\seal-store.rs (target\debug\deps\seal_store-aa2c73cdb43d44ac.exe)
+
+running 3 tests
+test tests::cutoff_parses_to_midnight_utc ... ok
+test tests::the_round_trip_holds_on_the_cutoff_itself ... ok
+test tests::a_bad_cutoff_is_refused_rather_than_guessed ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
+
+     Running tests\python_written.rs (target\debug\deps\python_written-6ad874714a840d96.exe)
+
+running 1 test
+test a_pyarrow_written_bar_file_reads_value_for_value ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+     Running tests\roundtrip.rs (target\debug\deps\roundtrip-e61785f87a5db585.exe)
+
+running 7 tests
+test an_empty_append_leaves_no_file ... ok
+test bars_survive_storage_including_the_absence_of_volume ... ok
+test the_btc_tape_survives_storage ... ok
+test prints_identical_in_content_are_still_two_prints_after_storage ... ok
+test appending_the_same_prints_twice_does_not_duplicate_them ... ok
+test a_store_partitions_by_day_and_reads_a_range_back ... ok
+test the_gold_tape_survives_storage ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.70s
+
+     Running unittests src\lib.rs (target\debug\deps\fd_strategy-616ddacf2c01f2dd.exe)
+
+running 99 tests
+test builtin::tests::indicator_keys_match_the_indicator_crate ... ok
+test doji::tests::a_body_too_large_or_a_range_too_small_or_no_move_is_not_a_signal ... ok
+test doji::tests::a_doji_after_a_rise_sells_with_the_stop_over_its_high ... ok
+test builtin::tests::options_strategies_are_flagged_and_technical_ones_are_not ... ok
+test companion_unconfirmed::tests::a_missing_companion_bar_takes_no_trade_rather_than_treating_it_as_flat ... ok
+test companion_unconfirmed::tests::a_gold_move_the_companion_did_not_share_is_faded ... ok
+test doji::tests::the_second_doji_in_a_row_is_not_a_new_signal ... ok
+test builtin::known_defects::maxpain_magnet_accepts_an_expired_contract ... ok
+test doji::tests::the_signal_does_not_change_when_later_bars_change ... ok
+test builtin::tests::cluster_distance_is_zero_inside_and_positive_outside ... ok
+test companion_unconfirmed::tests::a_move_the_companion_shared_is_left_alone ... ok
+test companion_unconfirmed::tests::a_move_straddling_a_break_is_not_a_thirty_minute_move ... ok
+test builtin::tests::buy_and_hold_manages_its_own_exit ... ok
+test far_stop_break::tests::an_invalidation_closer_than_the_floor_is_refused_rather_than_sized ... ok
+test companion_unconfirmed::tests::a_small_move_is_ignored_however_the_companion_behaved ... ok
+test far_stop_break::tests::the_atr_arm_is_the_same_signal_with_a_near_invalidation ... ok
+test external::tests::it_never_decides_anything_on_its_own ... ok
+test companion_unconfirmed::tests::the_declared_series_names_match_the_keys_the_specs_produce ... ok
+test builtin::tests::every_builtin_declares_the_parameters_it_reads ... ok
+test builtin::tests::grids_only_name_declared_parameters ... ok
+test filter::tests::filters_parse_from_their_batch_file_spelling ... ok
+test filter::tests::the_news_filter_parses_an_optional_currency_list_after_the_impact ... ok
+test filter::tests::the_news_filter_parses_widths_in_minutes_and_an_optional_impact ... ok
+test filter::tests::a_window_past_midnight_wraps ... ok
+test ict::tests::without_a_higher_timeframe_gap_there_is_no_setup ... ok
+test intraday_momentum::tests::a_day_with_no_bars_in_the_predictor_window_gives_no_trade ... ok
+test far_stop_break::tests::the_decision_on_a_bar_reads_no_later_bar ... ok
+test far_stop_break::tests::the_structural_stop_is_the_far_edge_of_the_channel_that_broke ... ok
+test filter::tests::the_flat_window_closes_the_book_and_refuses_entries ... ok
+test filter::tests::the_news_filter_gates_entries_on_the_signal_bar_and_never_exits ... ok
+test filter::tests::hours_are_read_on_the_new_york_clock ... ok
+test filter::tests::named_weekdays_parse_to_a_mask ... ok
+test filter::tests::the_regime_filter_adds_its_series_after_the_strategy_s_own ... ok
+test filter::tests::weekdays_exclude_the_weekend_on_the_new_york_clock ... ok
+test ict::tests::a_close_back_through_the_sweep_high_cancels_the_setup ... ok
+test ict::tests::the_sell_chain_enters_on_the_first_touch_of_the_gap_midpoint ... ok
+test filter::tests::parse_for_market_scopes_an_unscoped_news_filter_and_nothing_else ... ok
+test filter::tests::the_absolute_volatility_filter_reads_atr_over_price ... ok
+test gap_fade::tests::a_gap_up_over_a_weekend_is_sold_toward_the_friday_close ... ok
+test gap_fade::tests::a_small_gap_is_ignored ... ok
+test intraday_momentum::tests::a_predictor_move_smaller_than_min_move_daily_ranges_is_no_trade ... ok
+test intraday_momentum::tests::the_signal_on_bar_i_does_not_change_when_later_bars_change ... ok
+test news::tests::a_currency_list_selects_which_events_count ... ok
+test news::tests::the_window_is_closed_before_and_open_after ... ok
+test news::tests::zero_widths_block_only_the_instant_before_the_release ... ok
+test news::tests::a_different_calendar_is_refused_once_one_is_installed ... ok
+test news::tests::an_empty_list_never_blocks ... ok
+test orb::tests::a_break_inside_the_range_window_or_after_the_cutoff_does_not_count ... ok
+test orb::tests::a_range_from_yesterday_is_not_today_s_range ... ok
+test intraday_momentum::tests::an_up_first_half_hour_buys_the_hold_window_and_a_down_one_sells_it ... ok
+test news::tests::install_sorts_and_is_idempotent_for_the_same_list ... ok
+test news::tests::min_impact_selects_which_events_count ... ok
+test orb::tests::a_range_too_narrow_or_too_wide_for_the_day_gives_no_trade ... ok
+test intraday_momentum::tests::registered_and_self_managed ... ok
+test intraday_momentum::tests::the_exit_fires_on_the_first_bar_at_or_after_the_window_end ... ok
+test news::tests::the_global_path_reads_the_installed_list ... ok
+test news::tests::the_summary_quotes_the_span_and_the_source ... ok
+test pdhl::tests::the_fade_sells_the_first_touch_of_yesterday_s_high_that_closes_back_inside ... ok
+test pdhl::tests::the_signal_on_bar_i_does_not_change_when_later_bars_change ... ok
+test pdhl::tests::yesterday_is_the_last_day_with_bars_and_today_s_bars_never_count ... ok
+test quiet_swing::tests::a_holiday_stub_is_not_a_session ... ok
+test orb::tests::the_signal_on_bar_i_does_not_change_when_later_bars_change ... ok
+test pdhl::tests::a_close_through_the_level_is_a_break_not_a_fade ... ok
+test orb::tests::the_first_close_outside_the_range_is_the_only_signal_of_the_day ... ok
+test quiet_swing::tests::it_decides_once_a_session_on_the_first_bar ... ok
+test registry::tests::a_grid_expands_to_every_combination_deterministically ... ok
+test registry::tests::an_empty_grid_yields_the_defaults_alone ... ok
+test quiet_swing::tests::only_completed_sessions_are_read_and_a_truncated_one_is_refused ... ok
+test quiet_swing::tests::the_session_index_turns_over_at_17_00_new_york ... ok
+test screen::tests::rsi2_pullback_buys_only_with_the_trend ... ok
+test screen::tests::squeeze_break_needs_a_narrow_band_before_the_break ... ok
+test quiet_swing::tests::it_holds_for_the_session_count_and_flips_on_a_sign_change ... ok
+test registry::tests::an_undeclared_parameter_reads_as_nan_rather_than_zero ... ok
+test registry::tests::params_reject_names_the_strategy_never_declared ... ok
+test quiet_swing::tests::it_takes_the_side_of_the_trailing_return_and_refuses_a_loud_tape ... ok
+test registry::tests::the_registry_refuses_a_duplicate_and_names_what_it_has ... ok
+test quiet_swing::tests::nothing_is_decided_before_the_sessions_exist ... ok
+test registry::tests::the_context_returns_nan_outside_the_series ... ok
+test screen::tests::keltner_break_goes_with_the_first_close_outside_and_stops_at_the_middle ... ok
+test screen::tests::macd_cross_needs_the_cross_on_this_bar ... ok
+test trend_pullback::tests::the_first_close_under_the_fast_ema_in_an_uptrend_buys_with_the_stop_under_the_swing_low ... ok
+test tsmom::tests::a_sunday_evening_is_not_a_day_in_the_range ... ok
+test volman_box::tests::registered_and_engine_exits ... ok
+test volman_box::tests::the_signal_on_bar_i_does_not_change_when_later_bars_change ... ok
+test tsmom::tests::holds_the_side_of_the_trailing_return_and_flips_when_it_flips ... ok
+test tsmom::tests::only_the_first_bar_of_the_day_rebalances ... ok
+test volman_box::tests::too_few_bars_for_a_box_gives_nothing ... ok
+test volume_thrust::tests::a_high_volume_bar_closing_at_its_high_is_bought_with_the_stop_under_its_low ... ok
+test session_hold::tests::enters_on_the_first_bar_of_the_window_and_exits_on_the_first_bar_after ... ok
+test trend_pullback::tests::no_trend_means_no_pullback_trade ... ok
+test volman_box::tests::a_close_beyond_the_box_on_the_wrong_side_of_the_ema_is_no_trade ... ok
+test volman_box::tests::a_close_out_of_a_tight_box_on_the_ema_side_enters_with_box_stop_and_measured_target ... ok
+test screen::tests::stochastic_reversal_needs_the_cross_from_the_extreme ... ok
+test volman_box::tests::a_box_taller_than_max_box_atr_is_not_a_consolidation ... ok
+test session_hold::tests::a_daily_range_sizing_stop_rides_with_the_entry_and_nothing_else_changes ... ok
+test volman_box::tests::a_breakout_that_has_already_travelled_more_than_max_break_atr_is_not_an_entry ... ok
+test volume_thrust::tests::ordinary_volume_or_a_mid_range_close_is_nothing ... ok
+test vwap_fade::tests::inside_the_band_or_without_an_atr_there_is_nothing ... ok
+test vwap_fade::tests::the_first_stretched_close_fades_toward_the_vwap_and_the_next_does_not ... ok
+
+test result: ok. 99 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.76s
+
+     Running tests\causality_quiet_swing.rs (target\debug\deps\causality_quiet_swing-884b24b469287a7b.exe)
+
+running 2 tests
+test the_session_in_progress_is_invisible_however_extreme_it_is ... ok
+test a_truncated_walk_is_a_prefix_of_the_full_walk ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.51s
+
+     Running tests\news_uninstalled.rs (target\debug\deps\news_uninstalled-6e3586c2aa7f323f.exe)
+
+running 1 test
+test nothing_installed_means_never_in_blackout_and_a_no_op_filter ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+   Doc-tests fd_api
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests fd_backtest
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests fd_core
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests fd_engine
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests fd_features
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests fd_indicators
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests fd_ingest
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests fd_model
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests fd_store
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests fd_strategy
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

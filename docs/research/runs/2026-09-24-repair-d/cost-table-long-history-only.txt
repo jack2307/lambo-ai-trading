@@ -1,0 +1,109 @@
+cost_table — spread / stop per instrument. A MEASUREMENT, not a search.
+task D, docs/hypotheses/2026-09-24-what-the-record-cannot-see.md
+data:     E:/rust/flowdesk/data-sealed (config: config)
+interval: 15m (multi-day rule aggregates it to session days)
+clamp:    bars at or after 2025-09-23 00:00:00Z are dropped (the seal's cutoff, exclusive)
+rule I:   stop = 1.5 x ATR14 on 15m bars, in the instrument's own price units
+rule H:   stop = 1.5 x ATR14 on 4h bars — the horizon [trading] max_hold_ms imposes on every market
+rule M:   stop = 1.5 x ATR20 on session-daily bars (day boundary 21:00Z = broker UTC+3 midnight)
+invariance: k is a pure rescale. spread/(k x ATR) reorders no instrument; only the ATR series does
+ratio:    spread/stop. cost = spread x lots x contract; R = stop x lots x contract; lots and contract CANCEL
+quantile: nearest-rank, index round(q x (n-1)) on the sorted sample
+
+skip:     btc, btcusd, eurusd (excluded on the command line, to widen the common era)
+
+
+=== coverage, and the units the ratio cancels ===
+
+market    symbol          spread  contract      bars        first         last  sessions   flat%
+eurduka   EURUSD.sc      0.00014   1000.00    381199   2010-06-01   2025-09-22      4262    0.0%
+xagduka   XAGUSD.sc      0.02100     50.00    358065   2010-06-01   2025-09-22      4218    0.0%
+xauduka   XAUUSD.sc      0.28000      1.00    362803   2010-06-01   2025-09-22      4220    0.0%
+xauusd    XAUUSD.sc      0.28000      1.00     77278   2022-06-16   2025-09-22       897    0.0%
+
+=== RULE I — intraday, stop = 1.5 x ATR14 on 15m bars ===
+
+market        med stop med s/stop        p10        p90     spread         n
+eurduka        0.00108    13.015%     6.675%    24.445%  0.0001400    381186
+xagduka        0.07534    27.872%    11.777%    61.497%    0.02100    358052
+xauduka          2.571    10.892%     5.170%    20.145%    0.28000    362790
+xauusd           3.732     7.502%     3.844%    13.234%    0.28000     77265
+
+=== RULE H — four hours, stop = 1.5 x ATR14 on 4h bars (the max_hold_ms horizon) ===
+
+market        med stop med s/stop        p10        p90     spread         n
+eurduka        0.00460     3.042%     1.773%     4.776%  0.0001400     24629
+xagduka        0.30958     6.784%     3.522%    14.400%    0.02100     24096
+xauduka         10.993     2.547%     1.390%     4.281%    0.28000     24401
+xauusd          15.442     1.813%     1.043%     2.695%    0.28000      5217
+
+=== RULE M — multi-day, stop = 1.5 x ATR20 on session-daily bars ===
+
+market        med stop med s/stop        p10        p90     spread         n
+eurduka        0.01213     1.154%     0.718%     1.689%  0.0001400      4243
+xagduka        0.79374     2.646%     1.516%     5.460%    0.02100      4199
+xauduka         29.101     0.962%     0.555%     1.556%    0.28000      4201
+xauusd          40.540     0.691%     0.397%     0.944%    0.28000       878
+
+=== per era — median spread/stop (n), because coverage differs ===
+
+rule I (intraday, 15m):
+market               2010-2012            2013-2015            2016-2018            2019-2021            2022-2025        XAUUSD window               pooled
+eurduka         7.869% (64758)      12.317% (74706)      13.385% (74663)      17.243% (74674)      14.350% (92385)      14.691% (81055)     13.015% (381186)
+xagduka        13.777% (63798)      34.817% (70200)      48.907% (69659)      30.219% (69599)      22.109% (84796)      21.793% (74705)     27.872% (358052)
+xauduka        10.321% (63295)      12.679% (70620)      15.837% (70687)       9.977% (70855)       7.495% (87333)       7.409% (76785)     10.892% (362790)
+xauusd                    null                 null                 null                 null       7.502% (77265)       7.502% (77265)       7.502% (77265)
+
+rule H (four hours):
+market               2010-2012            2013-2015            2016-2018            2019-2021            2022-2025        XAUUSD window               pooled
+eurduka          1.871% (4172)        2.651% (4829)        3.133% (4825)        4.062% (4824)        3.329% (5979)        3.399% (5247)       3.042% (24629)
+xagduka          3.889% (4153)        8.302% (4769)       12.501% (4722)        7.282% (4715)        5.589% (5737)        5.474% (5053)       6.784% (24096)
+xauduka          2.455% (4115)        2.990% (4795)        3.861% (4786)        2.319% (4797)        1.823% (5908)        1.803% (5195)       2.547% (24401)
+xauusd                    null                 null                 null                 null        1.813% (5217)        1.813% (5217)        1.813% (5217)
+
+rule M (multi-day):
+market               2010-2012            2013-2015            2016-2018            2019-2021            2022-2025        XAUUSD window               pooled
+eurduka           0.747% (701)         1.019% (837)         1.162% (835)         1.539% (836)        1.275% (1034)         1.287% (905)        1.154% (4243)
+xagduka           1.646% (698)         3.311% (827)         4.950% (824)         2.693% (827)        2.338% (1023)         2.320% (895)        2.646% (4199)
+xauduka           0.937% (698)         1.149% (827)         1.481% (825)         0.823% (827)        0.706% (1024)         0.704% (896)        0.962% (4201)
+xauusd                    null                 null                 null                 null         0.691% (878)         0.691% (878)         0.691% (878)
+
+=== the common era every surviving instrument covers: 2022-06-16 to 2025-09-22 ===
+
+This is the only window on which the instruments are comparable without
+the price level of different decades doing the work.
+
+market            rule I med (n)         rule H med (n)         rule M med (n)
+eurduka          14.695% (81013)          3.400% (5244)           1.287% (905)
+xagduka          21.791% (74663)          5.473% (5050)           2.320% (895)
+xauduka           7.408% (76743)          1.803% (5192)           0.704% (896)
+xauusd            7.502% (77265)          1.813% (5217)           0.691% (878)
+
+=== excluded, and why ===
+
+btc: --skip on the command line; not a property of the instrument
+btcusd: --skip on the command line; not a property of the instrument
+eurusd: --skip on the command line; not a property of the instrument
+gold: no 15m bar file at E:/rust/flowdesk/data-sealed\bars\GC-15m.parquet (io: The system cannot find the file specified. (os error 2))
+
+=== where each configured spread came from, and the table at the MEASURED one ===
+
+Provenance is transcribed from config/default.toml's comments. There is NO KEY
+for it, so nothing in the codebase can distinguish a measured spread from an
+assumed one. The rescale below is exact: the ratio is linear in the spread.
+
+market      charged  measured provenance, as the config states it            I at meas   H at meas   M at meas
+eurduka   0.0001400 0.0001400 p50/p90 of 119k ticks over 3 days; charged = measured     13.015%      3.042%      1.154%
+xagduka     0.02100   0.02100 p50/p90 of 205k ticks over 3 days; charged = measured     27.872%      6.784%      2.646%
+xauduka     0.28000   0.22000 p50 of 2,315 samples/12.8h; 0.28 charges ~27% too much      8.558%      2.001%      0.756%
+xauusd      0.28000   0.22000 p50 of 2,315 samples/12.8h; 0.28 charges ~27% too much      5.894%      1.425%      0.543%
+
+Read the two BTC rows with the third column in hand: the cheapest figures in
+this whole table rest on a spread nobody has measured over time, and on one
+(btc, Binance spot) that is not an account this desk can trade at all.
+
+=== the cancellation, worked ===
+
+gold intraday (record: 14.0% at a 2.00-point stop): (0.28 x 0.07 x 1) / (2 x 0.07 x 1) = 14.0000% of R
+gold multi-day (record: 0.67% at a 41.57-point stop): (0.28 x 2.563 x 1) / (41.57 x 2.563 x 1) = 0.6736% of R
+the same gold intraday at a 100 oz lot: (0.28 x 0.07 x 100) / (2 x 0.07 x 100) = 14.0000% of R
