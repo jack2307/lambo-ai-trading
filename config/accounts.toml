@@ -754,10 +754,21 @@ dry_run = false
 # traders only and `flowdesk-watch` runs the Telegram watcher, so a reboot
 # leaves this account flat. Starting an executor by hand would still work and
 # would still be wrong.
-enabled = false
+#
+# 2026-09-24, LATER THE SAME DAY, the owner's decision: "Toi bao la cho may
+# chien luoc coin co hieu suat tot sang chay tai khoan REAL ay." Re-enabled with
+# three coin books added below. He was told the argument against it, twice, and
+# chose this; it is his account and his call, and it is recorded as his rather
+# than presented as a finding.
+enabled = true
 
 runs = [
-    "ai-xau-ds-ctx",
+    # STOPPED 2026-09-24 by the owner - "Stop chien luoc ben real money di, no
+    # dang di ko tot" - and NOT restarted when he moved the coin books here an
+    # hour later. Commented out rather than deleted: `runs` is the strategy
+    # selection, so leaving these listed would say this account mirrors them.
+    # He has not asked for either back; uncommenting one is his decision.
+    # "ai-xau-ds-ctx",
     # 2026-09-23, the owner's decision: "ap dung xau-macd-asia vao ben real
     # money". A SECOND BOOK on this account, and the first that is not the
     # model this account was opened for.
@@ -793,5 +804,56 @@ runs = [
     #
     # Context the owner has: this account is down 1,111 USC over 10 closed
     # trades as this is written.
-    "xau-macd-asia",
+    #
+    # ALSO STOPPED 2026-09-24 with the line above, and separately: this book
+    # failed its own gate on the most recent three months - 97 trades, PF 1.134,
+    # 76th percentile against a gate of 1.2 and the 95th - which the owner was
+    # told the day before (docs/decisions/2026-09-23-three-month-search.md).
+    # "xau-macd-asia",
+
+    # ------------------------------------------------------------------
+    # 2026-09-24, the owner's decision, in his words: "Toi bao la cho may chien
+    # luoc coin co hieu suat tot sang chay tai khoan REAL ay." He asked first
+    # whether it was sensible, was given the arithmetic against it, and chose
+    # it anyway. The three highest-profit-factor coin books at the moment he
+    # chose. Recorded as his decision, not as a result.
+    #
+    # WHAT THESE ARE. Each is the CONTROL of an AI book: a seeded 50/50 coin
+    # that takes the same bar and the same stop distance with a random side.
+    # They have no entry rule of their own, so the three parent models must
+    # keep running - and keep costing DeepSeek and Opus API - for these to
+    # trade at all. The API is paid for an opinion that is then discarded by a
+    # coin flip. That is the arrangement, stated plainly.
+    #
+    # WHAT THE RECORD SAYS ABOUT THEM. A coin's gross expectancy on a bracket
+    # is exactly zero by construction, so its net expectancy is minus the cost,
+    # always. The backtest's random-entry null has a median profit factor of
+    # 0.856-0.874 across 11 measurements of 200 seeds each. At today's ATR14 of
+    # 8.92 points the cost is only 1.65% of R, so the honest projection is
+    # about -2% of the account a month rather than the -11% first quoted to the
+    # owner, which was computed at a historical median ATR and was wrong by
+    # about five times. He has the corrected figure.
+    #
+    # AND THE SELECTION IS MEASURED TO BE UNSTABLE. Between two reads sixty
+    # minutes apart, on one to three new trades each: terra-ctx-coin 2.178 ->
+    # 1.831, plan-trigger-coin 1.312 -> 1.592, htf-filter-coin 1.476 -> 1.686,
+    # plan-coin 1.228 -> 1.057, and smc-coin 1.034 -> 0.928, which left the
+    # "good" group entirely. The membership of this list changed within an hour.
+    #
+    # THE SIZING, RECHECKED BECAUSE THE BOOK COUNT CHANGED, which this file
+    # requires. Per-order is unchanged and does not bind: 0.70 lot, about 3.05x
+    # equity against a 10x per-order ceiling. THE AGGREGATE IS NEW AND THE
+    # CEILING DOES NOT SEE IT - `--max-notional-ratio` is per-order, and the
+    # note above says so because the account then ran one book. THREE books
+    # run - the two above are stopped and commented out - so at maximum together
+    # they are 2.10 lots, about 9.15x equity in notional and 1,833 USC of margin
+    # at the MEASURED 1:500, a margin level of about 5,237% against a 500%
+    # floor. Margin does not bind. What is new is correlated risk: three
+    # independent coins can land on the same side, so three stops on the same
+    # day costs about 3% of the account against 2% for the two books this
+    # replaces. Corrected in place - the first version of this note computed the
+    # aggregate for five books, having left the two stopped ones in `runs`.
+    "ai-xau-terra-ctx-coin",
+    "ai-xau-ds-ctx-htf-filter-coin",
+    "ai-xau-ds-plan-trigger-coin",
 ]
