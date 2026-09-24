@@ -1,0 +1,93 @@
+# The registry's own stops, read against the cost-matched null and against the
+# control the record used before 2026-09-24, on the same window and the same
+# 200 seeds.
+#
+# This is not a search. Every row is a registered method at its registered
+# parameters, and the only reason it is here is the number in its `stopAtr` —
+# the quantity `docs/hypotheses/2026-09-24-cost-matched-null.md` predicted the
+# direction of movement for, before any of these numbers existed:
+#
+#   * above 1.5 ATR  -> the percentile FALLS
+#   * below 1.5 ATR  -> it RISES
+#   * exactly 1.5    -> it does not move AT ALL, and a row at 1.5 that moves
+#                       stops the work
+#
+# The two funded rows are first because they are the ones that must not move:
+# `xau-macd-asia` is live on account 33708517 and `xau-stoch` was live until
+# 2026-09-23, and both are `py/live/start_runs.py`'s own configuration, copied
+# strategy-for-strategy and filter-for-filter. Nothing here deploys, changes or
+# stops either of them.
+#
+# Run:
+#   search --market=xauusd --interval=15m --data=E:/rust/flowdesk/data-sealed \
+#     --from=2022-06-16 --to=2025-09-23 --mode=hypotheses \
+#     --batch-file=docs/research/runs/2026-09-24-cost-matched-null/registry-stops.toml \
+#     --fixed --seeds=200 --guards --null-registered-stop
+
+[[hypothesis]]
+label = "funded-macd"
+base = "macd-cross"
+filters = ["weekdays", "hours:1800-0200", "news:60-30"]
+why = "xau-macd-asia as it runs on the funded account: stopAtr 1.5, so the repair must not move it at all"
+
+[[hypothesis]]
+label = "funded-stoch"
+base = "stoch-reversal"
+filters = ["weekdays", "news:60-30"]
+why = "xau-stoch as it ran on the cent account: stopAtr 1.5, so the repair must not move it at all"
+
+[[hypothesis]]
+label = "at-1.5-ema"
+base = "ema-cross"
+filters = ["weekdays"]
+why = "the trend baseline at the control's own stop: a second unaffected row, with no session gate to explain a difference away"
+
+[[hypothesis]]
+label = "at-1.5-bb"
+base = "bb-fade"
+filters = ["weekdays"]
+why = "the fade baseline at 1.5, a third unaffected row"
+
+[[hypothesis]]
+label = "at-2.0-donch"
+base = "donchian-breakout"
+filters = ["weekdays"]
+why = "the flattered row named in the registration: stopAtr 2.0 against a control pinned at 1.5, so its percentile should fall"
+
+[[hypothesis]]
+label = "grid-1.5-donch"
+base = "donchian-breakout"
+filters = ["weekdays"]
+overrides = { stopAtr = 1.5 }
+why = "the same mechanism with its swept stop PINNED at the control's own 1.5 — the grid case the lead asked to be looked at twice, because a swept cell at 3.0 and a swept cell at 1.5 were read against the same control. This one must not move."
+
+[[hypothesis]]
+label = "grid-3.0-donch"
+base = "donchian-breakout"
+filters = ["weekdays"]
+overrides = { stopAtr = 3.0 }
+why = "the other end of that same grid: twice the control's stop, half the cost share, and the furthest this registry's stops reach"
+
+[[hypothesis]]
+label = "at-2.0-rsi2"
+base = "rsi2-pullback"
+filters = ["weekdays"]
+why = "the second method registered at 2.0 (screen.rs:179), so it is flattered the same way and by the same factor"
+
+[[hypothesis]]
+label = "at-1.0-vwap"
+base = "vwap-fade"
+filters = ["weekdays"]
+why = "the one method registered TIGHTER than the control, at 1.0 — the registration says its percentile was too LOW and must rise"
+
+[[hypothesis]]
+label = "struct-keltner"
+base = "keltner-break"
+filters = ["weekdays"]
+why = "a structural stop with no stopAtr to copy at all: case 2, matched from the method's own realised median"
+
+[[hypothesis]]
+label = "struct-orb"
+base = "orb"
+filters = ["weekdays"]
+why = "a second case-2 row, and one whose stop is a session level rather than a channel"

@@ -1,0 +1,58 @@
+# The cost-matched null: every command that produced a receipt in this
+# directory, and the published receipt each one is the correction of.
+#
+# Registration: docs/hypotheses/2026-09-24-cost-matched-null.md (direction of
+# movement fixed BEFORE any of these numbers existed) and
+# docs/hypotheses/2026-09-24-what-the-record-cannot-see.md, task B.
+#
+# Every run reads `--data=E:/rust/flowdesk/data-sealed` with `--to=2025-09-23`:
+# the withheld year 2025-09-23 -> 2026-09-17 is not read by anything here.
+#
+# `--null-registered-stop` prints each row TWICE: against the cost-matched
+# control (the repair) and against the control the record used before
+# 2026-09-24, which kept RandomEntry's own 1.5 ATR whatever the method stopped
+# at. The second column is a reproduction, not a reading. The method's own run
+# is the same call with the same parameters in both, so the gate figures are
+# checked for having held still rather than assumed to have; the printer says
+# so on any row where one moves, and none did.
+
+# 1-4. The four receipts of docs/research/runs/2026-09-23-designed-1-cost-term/,
+#      the maximally affected family in the record: eight rows whose ONLY
+#      declared variable is where the stop sits.
+
+search --market=xauusd --interval=15m --data=E:/rust/flowdesk/data-sealed \
+  --mode=hypotheses --batch-file=docs/research/designs/2026-09-23-designed-1-contrast.toml \
+  --fixed --seeds=200 --from=2022-06-16 --to=2025-09-23 --guards --null-registered-stop
+  # -> xauusd-guarded-corrected.txt          (original: xauusd-guarded.txt)
+
+search --market=xauusd --interval=15m --data=E:/rust/flowdesk/data-sealed \
+  --mode=hypotheses --batch-file=docs/research/designs/2026-09-23-designed-1-contrast.toml \
+  --fixed --seeds=200 --from=2022-06-16 --to=2025-09-23 --null-registered-stop
+  # -> xauusd-unguarded-corrected.txt        (original: xauusd-unguarded.txt)
+
+search --market=xauduka --interval=15m --data=E:/rust/flowdesk/data-sealed \
+  --mode=hypotheses --batch-file=docs/research/designs/2026-09-23-designed-1-contrast.toml \
+  --fixed --seeds=200 --from=2022-06-16 --to=2025-09-23 --guards --null-registered-stop
+  # -> xauduka-same-dates-guarded-corrected.txt (original: xauduka-same-dates-guarded.txt)
+
+search --market=xauduka --interval=15m --data=E:/rust/flowdesk/data-sealed \
+  --mode=hypotheses --batch-file=docs/research/designs/2026-09-23-designed-1-contrast.toml \
+  --fixed --seeds=200 --to=2025-09-23 --guards --null-registered-stop
+  # -> xauduka-15y-guarded-corrected.txt     (original: xauduka-15y-guarded.txt)
+
+# 5. The registry's own stops, including BOTH FUNDED BOOKS in their live
+#    configuration from py/live/start_runs.py, the grid case at 1.5 and at 3.0,
+#    the one method registered tighter than the control, and two structural
+#    stops with no multiple to copy. Declared in registry-stops.toml, which
+#    states the pre-registered direction for each row before the numbers.
+#
+#    These rows are NOT corrections of a published receipt: the published
+#    percentiles for these methods were measured on windows inside the
+#    withheld year, which is sealed. Both readings here are therefore mine,
+#    on one allowed window, and what they test is the direction of movement
+#    between them - which is what the registration pre-committed.
+
+search --market=xauusd --interval=15m --data=E:/rust/flowdesk/data-sealed \
+  --mode=hypotheses --batch-file=docs/research/runs/2026-09-24-cost-matched-null/registry-stops.toml \
+  --fixed --seeds=200 --from=2022-06-16 --to=2025-09-23 --guards --null-registered-stop
+  # -> registry-stops-guarded.txt            (no original: see above)

@@ -1,0 +1,74 @@
+market:   xauusd 15m
+data:     E:/rust/flowdesk/data-sealed (bars from E:/rust/flowdesk/data-sealed\bars\XAUUSD-15m.parquet)
+bounds:   --from=2022-06-16 --to=2025-09-23 kept 77278 of 77278 bars
+spread:   0.28 per round trip
+trail:    off
+bars:     77278 from 2022-06-16 10:30 to 2025-09-22 23:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data-sealed\news\events.parquet
+news scope: USD (news_currencies)
+companion: none loaded — every cmp series is NaN
+guards: off (every number unguarded)
+
+== hypotheses `docs/research/designs/2026-09-23-designed-1-contrast.toml`: 8 declared, FIXED parameters over the whole window (no selection), each against 200 matched null runs ==
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data-sealed\news\events.parquet
+news scope: USD (news_currencies)
+guards: off (every number unguarded)
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+atr-20       far-stop-break       6354   0.758  -0.106    0.816    0.872        0    6%  fail: profit factor 0.758 < 1.2; expectancy -0.106R < 0.05R
+                                  — the registry's habit: an ATR-scaled invalidation on a 20-bar channel break. The control arm.
+                                matched null 4403 trades median vs the method's 6354 — count match 0.69  ** outside the band: this percentile is unmatched **
+                                cost-matched null: control stop 1.200 ATR = 3.02 points, cost 9.26% of R (named stopAtr, copied)
+                                the method's own realised stop: median 1.259 ATR = 3.17 points over 6354 trades
+                                at the control's registered 1.5 ATR (the record's reading): pct 1%, count match 0.64 — corrected 6%, +4 points of percentile
+struct-20    far-stop-break       3493   0.832  -0.034    0.882    0.964        0   20%  fail: profit factor 0.832 < 1.2; expectancy -0.034R < 0.05R
+                                  — the same break, wrong only where the range is intact again — the far channel edge, several times the ATR distance away
+                                matched null 2368 trades median vs the method's 3493 — count match 0.68  ** outside the band: this percentile is unmatched **
+                                cost-matched null: control stop 4.215 ATR = 10.68 points, cost 2.62% of R (realised median, structural); the method DECLARES stopAtr 1.20 and does not use it
+                                the method's own realised stop: median 4.215 ATR = 10.68 points over 3493 trades
+                                at the control's registered 1.5 ATR (the record's reading): pct 46%, count match 0.79 — corrected 20%, -27 points of percentile
+atr-40       far-stop-break       4458   0.740  -0.104    0.810    0.876        0    6%  fail: profit factor 0.740 < 1.2; expectancy -0.104R < 0.05R
+                                  — the control arm at a 40-bar channel: the ATR distance barely moves with the lookback, so this holds the stop fixed while the structure grows
+                                matched null 3458 trades median vs the method's 4458 — count match 0.78
+                                cost-matched null: control stop 1.200 ATR = 3.20 points, cost 8.76% of R (named stopAtr, copied)
+                                the method's own realised stop: median 1.255 ATR = 3.35 points over 4458 trades
+                                at the control's registered 1.5 ATR (the record's reading): pct 0%, count match 0.74 — corrected 6%, +5 points of percentile
+struct-40    far-stop-break       2309   0.890  -0.019    0.889    0.987        0   50%  fail: profit factor 0.890 < 1.2; expectancy -0.019R < 0.05R
+                                  — a 40-bar channel's far edge is about twice a 20-bar channel's, so this is the same claim at twice the stop
+                                matched null 1829 trades median vs the method's 2309 — count match 0.79
+                                cost-matched null: control stop 5.801 ATR = 15.45 points, cost 1.81% of R (realised median, structural); the method DECLARES stopAtr 1.20 and does not use it
+                                the method's own realised stop: median 5.801 ATR = 15.45 points over 2309 trades
+                                at the control's registered 1.5 ATR (the record's reading): pct 87%, count match 0.88 — corrected 50%, -36 points of percentile
+atr-80       far-stop-break       2930   0.767  -0.087    0.808    0.878        0   17%  fail: profit factor 0.767 < 1.2; expectancy -0.087R < 0.05R
+                                  — the control arm at an 80-bar channel
+                                matched null 2512 trades median vs the method's 2930 — count match 0.86
+                                cost-matched null: control stop 1.200 ATR = 3.56 points, cost 7.86% of R (named stopAtr, copied)
+                                the method's own realised stop: median 1.251 ATR = 3.71 points over 2930 trades
+                                at the control's registered 1.5 ATR (the record's reading): pct 8%, count match 0.83 — corrected 17%, +8 points of percentile
+struct-80    far-stop-break       1475   0.934  -0.008    0.893    1.010        0   72%  fail: profit factor 0.934 < 1.2; expectancy -0.008R < 0.05R
+                                  — the widest structural invalidation this signal offers: cost/R around a fortieth of the spread-to-stop ratio the ATR arm pays
+                                matched null 1345 trades median vs the method's 1475 — count match 0.91
+                                cost-matched null: control stop 8.470 ATR = 23.85 points, cost 1.17% of R (realised median, structural); the method DECLARES stopAtr 1.20 and does not use it
+                                the method's own realised stop: median 8.470 ATR = 23.85 points over 1475 trades
+                                at the control's registered 1.5 ATR (the record's reading): pct 98%, count match 0.96 — corrected 72%, -25 points of percentile
+struct-80-f14 far-stop-break       1318   1.022   0.004    0.898    1.003        0   98%  fail: profit factor 1.022 < 1.2; expectancy 0.004R < 0.05R
+                                  — the cost condition stated in cost units: take the trade only when the invalidation is at least fifty spreads (50 x 0.28) away
+                                matched null 1238 trades median vs the method's 1318 — count match 0.94
+                                cost-matched null: control stop 8.885 ATR = 25.68 points, cost 1.09% of R (realised median, structural); the method DECLARES stopAtr 1.20 and does not use it
+                                the method's own realised stop: median 8.885 ATR = 25.68 points over 1318 trades
+                                at the control's registered 1.5 ATR (the record's reading): pct 100%, count match 0.97 — corrected 98%, -2 points of percentile
+atr-20-f14   far-stop-break         18   0.593  -0.238    0.829    1.391        0   19%  fail: only 18 trades (need 30); profit factor 0.593 < 1.2; expectancy -0.238R < 0.05R
+                                  — the same floor on the ATR arm, where it can only be met in the most volatile conditions — the control for the floor itself
+                                matched null 38 trades median vs the method's 18 — count match 2.11  ** outside the band: this percentile is unmatched **
+                                cost-matched null: control stop 1.200 ATR = 15.86 points, cost 1.77% of R (named stopAtr, copied)
+                                the method's own realised stop: median 1.209 ATR = 15.97 points over 18 trades
+                                at the control's registered 1.5 ATR (the record's reading): pct 19%, count match 2.11 — corrected 19%, +0 points of percentile
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+

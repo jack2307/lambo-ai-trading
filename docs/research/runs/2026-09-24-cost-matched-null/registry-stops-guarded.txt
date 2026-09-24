@@ -1,0 +1,103 @@
+market:   xauusd 15m
+data:     E:/rust/flowdesk/data-sealed (bars from E:/rust/flowdesk/data-sealed\bars\XAUUSD-15m.parquet)
+bounds:   --from=2022-06-16 --to=2025-09-23 kept 77278 of 77278 bars
+spread:   0.28 per round trip
+trail:    off
+bars:     77278 from 2022-06-16 10:30 to 2025-09-22 23:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data-sealed\news\events.parquet
+news scope: USD (news_currencies)
+companion: none loaded — every cmp series is NaN
+guards: on — max_open_loss_r 2.0, notional 300%, weekend flat 16:40 NY, news flat 60/30 (impact≥3, USD), daily cap 20, loss limit $300, cooldown 30 min
+
+== hypotheses `docs/research/runs/2026-09-24-cost-matched-null/registry-stops.toml`: 11 declared, FIXED parameters over the whole window (no selection), each against 200 matched null runs ==
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data-sealed\news\events.parquet
+news scope: USD (news_currencies)
+guards: on — max_open_loss_r 2.0, notional 300%, weekend flat 16:40 NY, news flat 60/30 (impact≥3, USD), daily cap 20, loss limit $300, cooldown 30 min
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+funded-macd  macd-cross           1226   0.956  -0.030    0.859    0.972        0   92%  fail: profit factor 0.956 < 1.2; expectancy -0.030R < 0.05R
+                                MoTuWeThFr + NY 18:00-02:00 + no entries 60 min before to 30 min after high-impact news (USD)  — xau-macd-asia as it runs on the funded account: stopAtr 1.5, so the repair must not move it at all
+                                matched null 900 trades median vs the method's 1226 — count match 0.73  ** outside the band: this percentile is unmatched **
+                                cost-matched null: control stop 1.500 ATR = 2.96 points, cost 9.45% of R (named stopAtr, copied)
+                                the method's own realised stop: median 1.571 ATR = 3.10 points over 1226 trades
+                                at the control's registered 1.5 ATR (the record's reading): pct 92%, null p50 0.859 p95 0.972, count match 0.73 — corrected 92%, +0 points of percentile
+                                guards: refused COOLDOWN 20; closed none; sized down 1183
+funded-stoch stoch-reversal       4985   0.832  -0.080    0.860    0.916        0   23%  fail: profit factor 0.832 < 1.2; expectancy -0.080R < 0.05R
+                                MoTuWeThFr + no entries 60 min before to 30 min after high-impact news (USD)  — xau-stoch as it ran on the cent account: stopAtr 1.5, so the repair must not move it at all
+                                matched null 3428 trades median vs the method's 4985 — count match 0.69  ** outside the band: this percentile is unmatched **
+                                cost-matched null: control stop 1.500 ATR = 3.74 points, cost 7.49% of R (named stopAtr, copied)
+                                the method's own realised stop: median 1.557 ATR = 3.88 points over 4985 trades
+                                at the control's registered 1.5 ATR (the record's reading): pct 23%, null p50 0.860 p95 0.916, count match 0.69 — corrected 23%, +0 points of percentile
+                                guards: refused NEWS_FLAT 7, NOTIONAL_CAP 96, WEEKEND_FLAT 34; closed NEWS_FLAT 57, WEEKEND_FLAT 102; sized down 4278
+at-1.5-ema   ema-cross            1204   0.820  -0.109    0.866    0.961        0   20%  fail: profit factor 0.820 < 1.2; expectancy -0.109R < 0.05R
+                                MoTuWeThFr  — the trend baseline at the control's own stop: a second unaffected row, with no session gate to explain a difference away
+                                matched null 1169 trades median vs the method's 1204 — count match 0.97
+                                cost-matched null: control stop 1.500 ATR = 3.76 points, cost 7.44% of R (named stopAtr, copied)
+                                the method's own realised stop: median 1.558 ATR = 3.91 points over 1204 trades
+                                at the control's registered 1.5 ATR (the record's reading): pct 20%, null p50 0.866 p95 0.961, count match 0.97 — corrected 20%, +0 points of percentile
+                                guards: refused COOLDOWN 11, NEWS_FLAT 27, WEEKEND_FLAT 4; closed NEWS_FLAT 19, WEEKEND_FLAT 13; sized down 1114
+at-1.5-bb    bb-fade              4919   0.854  -0.079    0.861    0.919        0   42%  fail: profit factor 0.854 < 1.2; expectancy -0.079R < 0.05R
+                                MoTuWeThFr  — the fade baseline at 1.5, a third unaffected row
+                                matched null 3399 trades median vs the method's 4919 — count match 0.69  ** outside the band: this percentile is unmatched **
+                                cost-matched null: control stop 1.500 ATR = 3.71 points, cost 7.55% of R (named stopAtr, copied)
+                                the method's own realised stop: median 1.557 ATR = 3.85 points over 4919 trades
+                                at the control's registered 1.5 ATR (the record's reading): pct 42%, null p50 0.861 p95 0.919, count match 0.69 — corrected 42%, +0 points of percentile
+                                guards: refused COOLDOWN 473, NEWS_FLAT 158, WEEKEND_FLAT 18; closed NEWS_FLAT 27, WEEKEND_FLAT 39; sized down 4479
+at-2.0-donch donchian-breakout    3608   0.881  -0.048    0.880    0.964        0   50%  fail: profit factor 0.881 < 1.2; expectancy -0.048R < 0.05R
+                                MoTuWeThFr  — the flattered row named in the registration: stopAtr 2.0 against a control pinned at 1.5, so its percentile should fall
+                                matched null 2601 trades median vs the method's 3608 — count match 0.72  ** outside the band: this percentile is unmatched **
+                                cost-matched null: control stop 2.000 ATR = 4.95 points, cost 5.66% of R (named stopAtr, copied)
+                                the method's own realised stop: median 2.060 ATR = 5.10 points over 3608 trades
+                                at the control's registered 1.5 ATR (the record's reading): pct 70%, null p50 0.859 p95 0.930, count match 0.77 — corrected 50%, -20 points of percentile
+                                guards: refused COOLDOWN 22, NEWS_FLAT 119, WEEKEND_FLAT 26; closed NEWS_FLAT 39, WEEKEND_FLAT 54; sized down 2767
+grid-1.5-donch donchian-breakout    4028   0.909  -0.053    0.859    0.926        0   88%  fail: profit factor 0.909 < 1.2; expectancy -0.053R < 0.05R
+                                MoTuWeThFr  — the same mechanism with its swept stop PINNED at the control's own 1.5 — the grid case the lead asked to be looked at twice, because a swept cell at 3.0 and a swept cell at 1.5 were read against the same control. This one must not move.
+                                matched null 2989 trades median vs the method's 4028 — count match 0.74  ** outside the band: this percentile is unmatched **
+                                cost-matched null: control stop 1.500 ATR = 3.74 points, cost 7.48% of R (named stopAtr, copied)
+                                the method's own realised stop: median 1.559 ATR = 3.89 points over 4028 trades
+                                at the control's registered 1.5 ATR (the record's reading): pct 88%, null p50 0.859 p95 0.926, count match 0.74 — corrected 88%, +0 points of percentile
+                                guards: refused COOLDOWN 51, NEWS_FLAT 120, WEEKEND_FLAT 26; closed NEWS_FLAT 32, WEEKEND_FLAT 49; sized down 3692
+grid-3.0-donch donchian-breakout    3287   0.881  -0.035    0.887    0.965        0   49%  fail: profit factor 0.881 < 1.2; expectancy -0.035R < 0.05R
+                                MoTuWeThFr  — the other end of that same grid: twice the control's stop, half the cost share, and the furthest this registry's stops reach
+                                matched null 2296 trades median vs the method's 3287 — count match 0.70  ** outside the band: this percentile is unmatched **
+                                cost-matched null: control stop 3.000 ATR = 7.30 points, cost 3.83% of R (named stopAtr, copied)
+                                the method's own realised stop: median 3.061 ATR = 7.45 points over 3287 trades
+                                at the control's registered 1.5 ATR (the record's reading): pct 72%, null p50 0.856 p95 0.936, count match 0.79 — corrected 49%, -24 points of percentile
+                                guards: refused COOLDOWN 5, NEWS_FLAT 119, WEEKEND_FLAT 26; closed NEWS_FLAT 39, WEEKEND_FLAT 54; sized down 1391
+at-2.0-rsi2  rsi2-pullback        2947   0.893  -0.045    0.878    0.950        0   65%  fail: profit factor 0.893 < 1.2; expectancy -0.045R < 0.05R
+                                MoTuWeThFr  — the second method registered at 2.0 (screen.rs:179), so it is flattered the same way and by the same factor
+                                matched null 2282 trades median vs the method's 2947 — count match 0.77
+                                cost-matched null: control stop 2.000 ATR = 4.87 points, cost 5.75% of R (named stopAtr, copied)
+                                the method's own realised stop: median 2.059 ATR = 5.01 points over 2947 trades
+                                at the control's registered 1.5 ATR (the record's reading): pct 78%, null p50 0.857 p95 0.935, count match 0.82 — corrected 65%, -12 points of percentile
+                                guards: refused COOLDOWN 61, NEWS_FLAT 63, WEEKEND_FLAT 34; closed NEWS_FLAT 36, WEEKEND_FLAT 80; sized down 2356
+at-1.0-vwap  vwap-fade            3650   0.903  -0.083    0.825    0.889        0   98%  fail: profit factor 0.903 < 1.2; expectancy -0.083R < 0.05R
+                                MoTuWeThFr  — the one method registered TIGHTER than the control, at 1.0 — the registration says its percentile was too LOW and must rise
+                                matched null 3032 trades median vs the method's 3650 — count match 0.83
+                                cost-matched null: control stop 1.000 ATR = 2.42 points, cost 11.57% of R (named stopAtr, copied)
+                                the method's own realised stop: median 1.058 ATR = 2.56 points over 3650 trades
+                                at the control's registered 1.5 ATR (the record's reading): pct 88%, null p50 0.860 p95 0.932, count match 0.77 — corrected 98%, +10 points of percentile
+                                guards: refused COOLDOWN 1, NEWS_FLAT 82, WEEKEND_FLAT 17; closed NEWS_FLAT 24, WEEKEND_FLAT 26; sized down 3617
+struct-keltner keltner-break        3197   0.873  -0.061    0.871    0.935        0   53%  fail: profit factor 0.873 < 1.2; expectancy -0.061R < 0.05R
+                                MoTuWeThFr  — a structural stop with no stopAtr to copy at all: case 2, matched from the method's own realised median
+                                matched null 2446 trades median vs the method's 3197 — count match 0.77
+                                cost-matched null: control stop 1.855 ATR = 4.79 points, cost 5.85% of R (realised median, structural)
+                                the method's own realised stop: median 1.855 ATR = 4.79 points over 3197 trades
+                                at the control's registered 1.5 ATR (the record's reading): pct 62%, null p50 0.856 p95 0.935, count match 0.80 — corrected 53%, -8 points of percentile
+                                guards: refused COOLDOWN 2, NEWS_FLAT 86, WEEKEND_FLAT 16; closed NEWS_FLAT 34, WEEKEND_FLAT 37; sized down 2451
+struct-orb   orb                   531   0.987  -0.007    0.896    1.049        0   84%  fail: profit factor 0.987 < 1.2; expectancy -0.007R < 0.05R
+                                MoTuWeThFr  — a second case-2 row, and one whose stop is a session level rather than a channel
+                                matched null 573 trades median vs the method's 531 — count match 1.08
+                                cost-matched null: control stop 2.783 ATR = 9.32 points, cost 3.00% of R (realised median, structural)
+                                the method's own realised stop: median 2.783 ATR = 9.32 points over 531 trades
+                                at the control's registered 1.5 ATR (the record's reading): pct 92%, null p50 0.874 p95 1.003, count match 1.05 — corrected 84%, -8 points of percentile
+                                guards: refused NEWS_FLAT 1; closed NEWS_FLAT 15; sized down 131
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+

@@ -29,7 +29,7 @@ use std::collections::BTreeMap;
 use crate::control::RandomEntry;
 use crate::rebate::Rebate;
 use crate::control_hold::RandomHold;
-use crate::engine::{Metrics, TradingRules};
+use crate::engine::{Metrics, Trade, TradingRules};
 use crate::guards::Guards;
 use crate::sweep::{PromisingGate, SelectBy, Verdict, verdict, walk_forward_guarded};
 
@@ -213,6 +213,11 @@ pub struct HypothesisReport {
     pub null_trades: Vec<usize>,
     /// Share of null runs the hypothesis beat, 0–100.
     pub percentile: f64,
+    /// The stop the control was given and where it came from — so a reader
+    /// can check the cost match the way `null_trades` lets them check the
+    /// count match, instead of trusting a comment that claims it. `None` on a
+    /// hold null, which has no stop.
+    pub control_stop: Option<ControlStop>,
     pub verdict: Verdict,
     /// How often a guard acted on the hypothesis's own out-of-sample runs
     /// (not the null's): entries refused by label, positions closed by
@@ -320,12 +325,28 @@ impl HypothesisReport {
 /// 300-trade null. So the control is calibrated: one probe run at the
 /// default rate, then the rate scaled to the method's count. Pinned, so the
 /// control's grid loses its rate axis too.
-fn matched_rate(bars: &[Bar], rules: &TradingRules, filters: &[Filter], target_trades: usize, guards: Option<&Guards>) -> f64 {
+///
+/// `stop_atr` is the control's stop, which has to be **set before the probe
+/// runs**: it is how long the control's trades last and therefore how many it
+/// takes on the same bars, so a rate calibrated at one stop and then used at
+/// another trades the count match away for the cost match
+/// (`docs/hypotheses/2026-09-24-cost-matched-null.md`, pre-commitment 5).
+fn matched_rate(
+    bars: &[Bar],
+    rules: &TradingRules,
+    filters: &[Filter],
+    target_trades: usize,
+    guards: Option<&Guards>,
+    stop_atr: f64,
+) -> f64 {
     use crate::engine::{Range, run_backtest_guarded};
     const PROBE: f64 = 0.02;
     let mut p = RandomEntry.default_params();
     p.set("entryRate", PROBE);
     p.set("seed", 1.0);
+    if stop_atr.is_finite() && stop_atr > 0.0 {
+        p.set("stopAtr", stop_atr);
+    }
     let probe = Filtered { inner: &RandomEntry, filters: scoped(filters, rules) };
     let got = run_backtest_guarded(bars, &probe, &p, rules, guards, None, Range::default(), None).trades.len();
     if got == 0 || target_trades == 0 {
@@ -343,15 +364,268 @@ fn scoped(filters: &[Filter], rules: &TradingRules) -> Vec<Filter> {
     filters.iter().cloned().map(|f| f.for_market(&rules.news_currencies)).collect()
 }
 
+/* ------------------------------------------------ the cost match, 2026-09-24 */
+
+/// Which control a percentile is read against.
+///
+/// Registered in `docs/hypotheses/2026-09-24-cost-matched-null.md`. Cost as a
+/// fraction of risk is `spread / stop`, so a control whose stop is not the
+/// method's is not the method's cost either, and a method that merely widens
+/// its stop clears such a control without predicting anything: `struct-80`
+/// measured **profit factor 0.973 — losing money — at the 98th percentile**,
+/// count match 0.95 and inside the band.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CostMatch {
+    /// The control takes the method's own stop. Every new measurement.
+    Method,
+    /// The control keeps `RandomEntry`'s registered stop (1.5 ATR) whatever
+    /// the method uses — what every receipt written before 2026-09-24
+    /// measured. **Only** for reproducing a published number so that the
+    /// corrected one can be published beside it; never for a new claim.
+    RegisteredStop,
+}
+
+/// How the control's stop was matched to the method's.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum StopSource {
+    /// The method names `stopAtr` and it governs the trades it took: copied
+    /// exactly (case 1 of the registration).
+    Named,
+    /// The method's invalidation is structural — a channel edge, a swing, a
+    /// level, or the engine's own ATR fallback — so there is no multiple to
+    /// copy and the control takes the method's **realised** median stop in
+    /// ATRs (case 2).
+    Realised,
+    /// Nothing to measure from and no governing `stopAtr`: the control keeps
+    /// its registered stop and the cost match on this row is UNMEASURED.
+    /// `null` is not `0`, and this is not a match.
+    Unmeasured,
+    /// The control was deliberately left at its registered stop to reproduce
+    /// a published number ([`CostMatch::RegisteredStop`]).
+    Registered,
+}
+
+impl StopSource {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Named => "named stopAtr, copied",
+            Self::Realised => "realised median, structural",
+            Self::Unmeasured => "UNMEASURED: no trade to measure and no governing stopAtr",
+            Self::Registered => "the control's registered stop (pre-2026-09-24 reading)",
+        }
+    }
+}
+
+/// The stop the control takes, and what it was taken from.
+#[derive(Debug, Clone, Copy)]
+pub struct ControlStop {
+    /// In ATRs of the series the engine sized the method's trades with.
+    pub atr: f64,
+    pub source: StopSource,
+    /// What the method's own parameters declared, when it declares one.
+    pub named: Option<f64>,
+    /// The method's realised median stop distance, in ATRs and in points.
+    /// `NaN` when it could not be measured — not zero.
+    pub realised_atr: f64,
+    pub realised_points: f64,
+    /// How many of the method's trades the realised figure came from.
+    pub measured_trades: usize,
+}
+
+impl ControlStop {
+    /// The control's stop in points, at the method's own median ATR — the
+    /// same distance the ATR column states, in the units a spread is quoted
+    /// in. `NaN` when nothing was measured.
+    #[must_use]
+    pub fn points(&self) -> f64 {
+        if self.realised_atr.is_finite() && self.realised_atr > 0.0 {
+            self.atr * self.realised_points / self.realised_atr
+        } else {
+            f64::NAN
+        }
+    }
+
+    /// Cost as a fraction of risk at this stop: `spread / stop`, the quantity
+    /// the whole defect is about. `NaN` when the stop is not in points.
+    #[must_use]
+    pub fn cost_fraction_of_r(&self, rules: &TradingRules) -> f64 {
+        let points = self.points();
+        if points.is_finite() && points > 0.0 { rules.spread / points } else { f64::NAN }
+    }
+}
+
+/// How far a realised median stop may sit from the method's declared
+/// `stopAtr` before the declared value is read as **not governing** the stop
+/// the method actually placed.
+///
+/// `far-stop-break` is why this is a measurement and not a lookup: it
+/// declares `stopAtr = 1.2` and, in `stopMode = 0`, ignores it and stops at
+/// the opposite edge of the channel — three to seven times further out. A fix
+/// that asked only "does the method name `stopAtr`?" would have copied 1.2
+/// onto the control of the very row that exposed the defect. An ATR-stop
+/// method's realised median differs from its declared multiple only by the
+/// gap between the signal bar's close and the next bar's open plus half a
+/// spread, which is a few percent of a stop; a structural one differs by
+/// multiples.
+pub const STOP_GOVERNS_BAND: f64 = 0.25;
+
+/// The method's realised stop distance on the trades it took: (median in
+/// ATRs, median in points, trades measured).
+///
+/// Measured exactly the way the engine measured risk when it sized those
+/// trades — `|entry_price - stop|` over the ATR of the bar **before** the
+/// fill, from the same series `sizing_atr_key` names — so the figure is the
+/// method's own risk unit and not a second opinion about it.
+///
+/// `None` when there is nothing to measure, and `None` when a trailing stop
+/// is enabled: `Trade::stop` is then wherever the stop was trailed to and no
+/// longer the distance the trade was sized on. A guessed value would be the
+/// null, which is the mistake `hold_distribution`'s comments record twice.
+fn realised_stop(
+    bars: &[Bar],
+    params: &Params,
+    rules: &TradingRules,
+    trades: &[Trade],
+) -> Option<(f64, f64, usize)> {
+    if trades.is_empty() || bars.is_empty() || rules.trail.enabled {
+        return None;
+    }
+    let key = crate::engine::sizing_atr_key(params, rules);
+    let period: f64 = key.trim_start_matches("atr_").trim_end_matches(".atr").parse().ok()?;
+    let series = fd_indicators::compute_indicators(bars, &[IndicatorSpec::new("atr").with("period", period)]).ok()?;
+    let atr = series.get(&key)?;
+
+    let mut in_atrs: Vec<f64> = Vec::with_capacity(trades.len());
+    let mut in_points: Vec<f64> = Vec::with_capacity(trades.len());
+    for trade in trades {
+        // The bars are ascending in time, so the fill is found rather than
+        // scanned for; a trade whose entry bar is not in this window is not
+        // this window's evidence and is skipped.
+        let Ok(i) = bars.binary_search_by(|b| b.time.cmp(&trade.entry_time)) else { continue };
+        let Some(&a) = atr.get(i.saturating_sub(1)) else { continue };
+        let distance = (trade.entry_price - trade.stop).abs();
+        if !a.is_finite() || a <= 0.0 || !distance.is_finite() || distance <= 0.0 {
+            continue;
+        }
+        in_atrs.push(distance / a);
+        in_points.push(distance);
+    }
+    if in_atrs.is_empty() {
+        return None;
+    }
+    let n = in_atrs.len();
+    let median = |mut v: Vec<f64>| {
+        v.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+        if v.len() % 2 == 1 { v[v.len() / 2] } else { (v[v.len() / 2 - 1] + v[v.len() / 2]) / 2.0 }
+    };
+    Some((median(in_atrs), median(in_points), n))
+}
+
+/// The stop to give the control, so that its cost as a fraction of risk is
+/// the method's.
+///
+/// Case 1, the method names `stopAtr` **and it governs**: the value, exact.
+/// Case 2, structural: the method's realised median stop in ATRs, which is
+/// what `hold_distribution` already does for the hold null — take the
+/// method's own realised figure rather than a guess.
+fn control_stop(
+    method_params: &Params,
+    bars: &[Bar],
+    rules: &TradingRules,
+    trades: &[Trade],
+    cost_match: CostMatch,
+) -> ControlStop {
+    let registered = RandomEntry.default_params().get("stopAtr");
+    let named = method_params.0.get("stopAtr").copied().filter(|v| v.is_finite() && *v > 0.0);
+    let measured = realised_stop(bars, method_params, rules, trades);
+    let (realised_atr, realised_points, measured_trades) =
+        measured.map_or((f64::NAN, f64::NAN, 0), |(a, p, n)| (a, p, n));
+
+    if cost_match == CostMatch::RegisteredStop {
+        return ControlStop {
+            atr: registered,
+            source: StopSource::Registered,
+            named,
+            realised_atr,
+            realised_points,
+            measured_trades,
+        };
+    }
+    // A declared multiple that the realised distance agrees with is copied
+    // exactly; one the realised distance contradicts did not place the stop.
+    let governs = match (named, realised_atr.is_finite()) {
+        (Some(v), true) => (realised_atr / v - 1.0).abs() <= STOP_GOVERNS_BAND,
+        (Some(_), false) => true, // nothing measured: the declared value is all there is
+        (None, _) => false,
+    };
+    match (governs, named, realised_atr.is_finite()) {
+        (true, Some(v), _) => {
+            ControlStop { atr: v, source: StopSource::Named, named, realised_atr, realised_points, measured_trades }
+        }
+        (false, _, true) => ControlStop {
+            atr: realised_atr,
+            source: StopSource::Realised,
+            named,
+            realised_atr,
+            realised_points,
+            measured_trades,
+        },
+        _ => ControlStop {
+            atr: registered,
+            source: StopSource::Unmeasured,
+            named,
+            realised_atr,
+            realised_points,
+            measured_trades,
+        },
+    }
+}
+
+/// The stop in ATRs a control was given, or `NaN` when it has none (the hold
+/// null). `NaN` is what [`matched_rate`] reads as "leave the probe's own".
+fn stop_atr(stop: Option<&ControlStop>) -> f64 {
+    stop.map_or(f64::NAN, |s| s.atr)
+}
+
+/// One control, built for one method at one seed.
+struct Control {
+    inner: &'static dyn Strategy,
+    params: Params,
+    /// Parameters computed from the method, which a sweep must not overwrite.
+    calibrated: Vec<String>,
+    /// Grid axes whose VALUES were scaled to the method's stop. The control
+    /// keeps the axis — and therefore the same room to find something
+    /// flattering that a real method gets — around the method's stop instead
+    /// of around 1.5.
+    rescaled: BTreeMap<String, Vec<f64>>,
+}
+
+impl Control {
+    fn preset(&self) -> Preset<'static> {
+        Preset {
+            inner: self.inner,
+            defaults: self.params.clone(),
+            pinned: self.calibrated.clone(),
+            rescaled: self.rescaled.clone(),
+        }
+    }
+}
+
 /// `realised_hold` is the method's own hold distribution on this window, as
 /// `hold_distribution` measures it: (geometric mean in minutes, standard
 /// deviation of ln minutes). It sets the null's `holdMinutes` (log-median)
 /// and `holdLogSd`; every other source of a hold length is a fixed hold.
+///
+/// `stop` is the stop the random-entry control takes, in ATRs — the method's
+/// own, so that the control pays the same `spread / stop`. The hold null does
+/// not take one: `RandomHold` has no stop, which is the point of it.
 fn control_for(
     base: &dyn Strategy,
     overrides: &[(String, f64)],
     seed: f64,
     realised_hold: Option<(f64, f64)>,
+    stop: Option<&ControlStop>,
 ) -> (&'static dyn Strategy, Params) {
     // Judged on the preset, not the bare method: a pinned grid is empty.
     let preset = Preset::new(base, overrides).ok();
@@ -398,6 +672,17 @@ fn control_for(
     } else {
         let mut p = RandomEntry.default_params();
         p.set("seed", seed);
+        // The method's own stop, so the control pays the same cost as a
+        // fraction of risk. Until 2026-09-24 this branch overrode `seed` and
+        // nothing else, so the control stopped at 1.5 ATR whatever the method
+        // did, and a method that merely widened its stop cleared its own null
+        // (`docs/hypotheses/2026-09-24-cost-matched-null.md`).
+        if let Some(stop) = stop
+            && stop.atr.is_finite()
+            && stop.atr > 0.0
+        {
+            p.set("stopAtr", stop.atr);
+        }
         (&RandomEntry, p)
     }
 }
@@ -427,20 +712,37 @@ fn hold_distribution(trades: &[crate::engine::Trade]) -> Option<(f64, f64)> {
     Some((mean.exp(), variance.sqrt()))
 }
 
-/// `control_for`, with the random-entry rate matched to the method's count.
+/// `control_for`, with the random-entry rate matched to the method's count
+/// and its stop matched to the method's distance.
 ///
-/// The third element is the list of parameters this function **calibrated**,
-/// which is what [`Preset::calibrated`] must pin so that a walk-forward's
-/// sweep cannot put a grid value back. It is empty when nothing was
-/// calibrated — a hold null has no rate, and its grid is empty anyway.
+/// `calibrated` is the list of parameters this function computed from the
+/// method, which is what [`Preset::calibrated`] must pin so that a
+/// walk-forward's sweep cannot put a grid value back. It is empty when
+/// nothing was calibrated — a hold null has no rate, and its grid is empty
+/// anyway.
+///
+/// The stop is handled differently from the rate, and the difference is the
+/// whole of the judgement in this repair. **Pinning** the stop would empty
+/// the control's grid (the rate is already pinned), so the control would lose
+/// the selection advantage it is deliberately given, and every walk-forward
+/// percentile in the record would move — including the rows at 1.5 ATR, which
+/// the registration names as the falsifier. **Leaving** it alone would let
+/// `RandomEntry::grid`'s `stopAtr` axis put 1.0/1.5/2.0 back into every cell
+/// a sweep can choose, which is exactly how the rate calibration was thrown
+/// away before 2026-09-23, and the repair would be inert on every swept path.
+/// So the axis is **rescaled**: the same three relative values the control
+/// has always swept, around the method's stop instead of around 1.5. At a
+/// method stop of 1.5 the scale factor is exactly 1.0 and every cell is
+/// bit-identical to what the record measured.
 fn matched_control_for(
     base: &dyn Strategy,
     overrides: &[(String, f64)],
     seed: f64,
     rate: Option<f64>,
     realised_hold: Option<(f64, f64)>,
-) -> (&'static dyn Strategy, Params, Vec<String>) {
-    let (inner, mut p) = control_for(base, overrides, seed, realised_hold);
+    stop: Option<&ControlStop>,
+) -> Control {
+    let (inner, mut p) = control_for(base, overrides, seed, realised_hold, stop);
     let mut calibrated = Vec::new();
     if let Some(rate) = rate
         && p.contains("entryRate")
@@ -448,7 +750,21 @@ fn matched_control_for(
         p.set("entryRate", rate);
         calibrated.push("entryRate".to_string());
     }
-    (inner, p, calibrated)
+    let mut rescaled = BTreeMap::new();
+    if let Some(stop) = stop
+        && p.contains("stopAtr")
+    {
+        let registered = RandomEntry.default_params().get("stopAtr");
+        let scale = stop.atr / registered;
+        // Exactly 1.0 multiplies to bit-identical values; anything else is a
+        // new axis and is stated as one.
+        if scale.is_finite() && scale > 0.0 && scale != 1.0 {
+            if let Some(axis) = inner.grid().get("stopAtr") {
+                rescaled.insert("stopAtr".to_string(), axis.iter().map(|v| v * scale).collect());
+            }
+        }
+    }
+    Control { inner, params: p, calibrated, rescaled }
 }
 
 /// A method with some defaults replaced: a preset, as a strategy.
@@ -464,16 +780,29 @@ pub struct Preset<'a> {
     pub inner: &'a dyn Strategy,
     pub defaults: Params,
     pub pinned: Vec<String>,
+    /// Grid axes whose **values** are replaced rather than removed. A pin
+    /// takes an axis away; this keeps the axis and moves it. It exists for one
+    /// reason: a cost-matched control has to sweep its stop around the
+    /// method's stop rather than around its own registered 1.5, and taking
+    /// the axis away instead would change what every swept control in the
+    /// record was allowed to select (`matched_control_for`). Empty on every
+    /// method; only a control ever carries one.
+    pub rescaled: BTreeMap<String, Vec<f64>>,
 }
 
 impl<'a> Preset<'a> {
     /// The method with `overrides` applied and every override pinned.
     pub fn new(inner: &'a dyn Strategy, overrides: &[(String, f64)]) -> Result<Self, String> {
-        Ok(Self { inner, defaults: preset_params(inner, overrides)?, pinned: overrides.iter().map(|(k, _)| k.clone()).collect() })
+        Ok(Self {
+            inner,
+            defaults: preset_params(inner, overrides)?,
+            pinned: overrides.iter().map(|(k, _)| k.clone()).collect(),
+            rescaled: BTreeMap::new(),
+        })
     }
     /// The method as it is: nothing overridden, nothing pinned.
     pub fn bare(inner: &'a dyn Strategy, defaults: Params) -> Self {
-        Self { inner, defaults, pinned: Vec::new() }
+        Self { inner, defaults, pinned: Vec::new(), rescaled: BTreeMap::new() }
     }
     /// A control at defaults some of which were **calibrated** rather than
     /// registered, with those named so a sweep cannot overwrite them.
@@ -489,9 +818,11 @@ impl<'a> Preset<'a> {
     /// (`docs/decisions/2026-09-23-matched-null-repair.md`). The axis that is
     /// *not* named here — `stopAtr` — stays in the grid on purpose: the
     /// control is meant to get the same selection advantage a real method
-    /// gets, and only the rate is calibrated.
+    /// gets, and only the rate is calibrated. Since 2026-09-24 that axis is
+    /// **rescaled** to the method's stop rather than pinned, for the same
+    /// reason: pinning it would take the advantage away.
     pub fn calibrated(inner: &'a dyn Strategy, defaults: Params, pinned: Vec<String>) -> Self {
-        Self { inner, defaults, pinned }
+        Self { inner, defaults, pinned, rescaled: BTreeMap::new() }
     }
 }
 
@@ -509,7 +840,15 @@ impl Strategy for Preset<'_> {
         self.defaults.clone()
     }
     fn grid(&self) -> std::collections::BTreeMap<String, Vec<f64>> {
-        self.inner.grid().into_iter().filter(|(key, _)| !self.pinned.contains(key)).collect()
+        self.inner
+            .grid()
+            .into_iter()
+            .filter(|(key, _)| !self.pinned.contains(key))
+            .map(|(key, values)| match self.rescaled.get(&key) {
+                Some(moved) => (key, moved.clone()),
+                None => (key, values),
+            })
+            .collect()
     }
     fn indicators(&self, p: &Params) -> Vec<IndicatorSpec> {
         self.inner.indicators(p)
@@ -578,13 +917,39 @@ pub fn run_hypothesis_fixed_guarded(
     seeds: usize,
     guards: Option<&Guards>,
 ) -> Result<HypothesisReport, String> {
+    run_hypothesis_fixed_as(registry, hypothesis, bars, rules, gate, seeds, guards, CostMatch::Method)
+}
+
+/// [`run_hypothesis_fixed_guarded`] against a named control.
+///
+/// [`CostMatch::Method`] is the measurement; [`CostMatch::RegisteredStop`]
+/// reproduces what a receipt written before 2026-09-24 measured, so the two
+/// can be printed beside each other. The method's own run is identical either
+/// way — it is the same call with the same parameters — so a difference
+/// between the two reports in a gate figure is a bug and not a reading.
+#[allow(clippy::too_many_arguments)]
+pub fn run_hypothesis_fixed_as(
+    registry: &Registry,
+    hypothesis: &Hypothesis,
+    bars: &[Bar],
+    rules: &TradingRules,
+    gate: &PromisingGate,
+    seeds: usize,
+    guards: Option<&Guards>,
+    cost_match: CostMatch,
+) -> Result<HypothesisReport, String> {
     use crate::engine::{Range, run_backtest_guarded};
     let base = registry.get(&hypothesis.base).map_err(|e| e.to_string())?;
     let preset = Preset::new(base, &hypothesis.overrides)?;
     let filtered = Filtered { inner: &preset, filters: scoped(&hypothesis.filters, rules) };
     let result = run_backtest_guarded(bars, &filtered, &preset.defaults, rules, guards, None, Range::default(), None);
     let drift = base.exits() == fd_strategy::registry::Exits::Strategy && preset.grid().is_empty();
-    let rate = (!drift).then(|| matched_rate(bars, rules, &hypothesis.filters, result.trades.len(), guards));
+    // The stop first, then the rate: the control's stop changes how long its
+    // trades last and therefore how many it takes, so a rate calibrated
+    // before the stop was set is a rate for a different control.
+    let stop = (!drift).then(|| control_stop(&preset.defaults, bars, rules, &result.trades, cost_match));
+    let rate = (!drift)
+        .then(|| matched_rate(bars, rules, &hypothesis.filters, result.trades.len(), guards, stop_atr(stop.as_ref())));
     let hold = drift.then(|| hold_distribution(&result.trades)).flatten();
 
     // This path never sweeps — the control is run at the explicit params
@@ -593,11 +958,11 @@ pub fn run_hypothesis_fixed_guarded(
     let mut null: Vec<(f64, usize)> = (0..seeds)
         .into_par_iter()
         .filter_map(|seed| {
-            let (inner, defaults, calibrated) =
-                matched_control_for(base, &hypothesis.overrides, seed as f64 + 1.0, rate, hold);
-            let control = Preset::calibrated(inner, defaults.clone(), calibrated);
+            let built = matched_control_for(base, &hypothesis.overrides, seed as f64 + 1.0, rate, hold, stop.as_ref());
+            let control = built.preset();
             let matched = Filtered { inner: &control, filters: scoped(&hypothesis.filters, rules) };
-            let run = run_backtest_guarded(bars, &matched, &defaults, rules, guards, None, Range::default(), None);
+            let run =
+                run_backtest_guarded(bars, &matched, &built.params, rules, guards, None, Range::default(), None);
             let pf = run.metrics.profit_factor;
             pf.is_finite().then_some((pf, run.metrics.trades))
         })
@@ -624,6 +989,7 @@ pub fn run_hypothesis_fixed_guarded(
         null_pf,
         null_trades,
         percentile,
+        control_stop: stop,
         skipped_by_guard: result.skipped_by_guard,
         closed_by_guard: result.closed_by_guard,
         sized_down_by_guard: result.sized_down_by_guard,
@@ -683,20 +1049,26 @@ pub fn run_hypothesis_guarded(
         None,
     );
     let drift = base.exits() == fd_strategy::registry::Exits::Strategy && preset.grid().is_empty();
-    let rate = (!drift).then(|| matched_rate(bars, rules, &hypothesis.filters, whole.trades.len(), guards));
+    // The stop before the rate: see `run_hypothesis_fixed_as`. The stop is
+    // measured from the same whole-window run the count follows, so both
+    // halves of the match are read off one set of the method's own trades.
+    let stop = (!drift).then(|| control_stop(&preset.defaults, bars, rules, &whole.trades, CostMatch::Method));
+    let rate = (!drift)
+        .then(|| matched_rate(bars, rules, &hypothesis.filters, whole.trades.len(), guards, stop_atr(stop.as_ref())));
     let hold = drift.then(|| hold_distribution(&whole.trades)).flatten();
 
     // `Preset::calibrated`, not `Preset::bare`: the walk-forward below sweeps
     // the control's grid, and `RandomEntry`'s grid carries `entryRate`. Wrap
     // the calibrated control in a preset that pins nothing and every cell the
     // sweep can choose carries a grid rate instead of the calibrated one,
-    // which is what every matched null published before 2026-09-23 did.
+    // which is what every matched null published before 2026-09-23 did. The
+    // stop axis is not pinned but rescaled to the method's stop, so the sweep
+    // cannot put 1.5 back either.
     let mut null: Vec<(f64, usize)> = (0..seeds)
         .into_par_iter()
         .filter_map(|seed| {
-            let (inner, defaults, calibrated) =
-                matched_control_for(base, &hypothesis.overrides, seed as f64 + 1.0, rate, hold);
-            let control = Preset::calibrated(inner, defaults, calibrated);
+            let built = matched_control_for(base, &hypothesis.overrides, seed as f64 + 1.0, rate, hold, stop.as_ref());
+            let control = built.preset();
             let matched = Filtered { inner: &control, filters: scoped(&hypothesis.filters, rules) };
             let run = walk_forward_guarded(&matched, bars, rules, None, folds, select_by, min_trades_per_cell, guards)?;
             run.oos.profit_factor.is_finite().then_some((run.oos.profit_factor, run.oos.trades))
@@ -725,6 +1097,7 @@ pub fn run_hypothesis_guarded(
         null_pf,
         null_trades,
         percentile,
+        control_stop: stop,
         skipped_by_guard: result.skipped_by_guard,
         closed_by_guard: result.closed_by_guard,
         sized_down_by_guard: result.sized_down_by_guard,
@@ -881,7 +1254,10 @@ pub fn rescore_hypothesis(
     // the bars per fold and would under-match.
     let whole = run_backtest_guarded(bars, &filtered, &preset.defaults, rules, guards, None, Range::default(), None);
     let drift = base.exits() == fd_strategy::registry::Exits::Strategy && preset.grid().is_empty();
-    let rate = (!drift).then(|| matched_rate(bars, rules, &hypothesis.filters, whole.trades.len(), guards));
+    // The stop before the rate: see `run_hypothesis_fixed_as`.
+    let stop = (!drift).then(|| control_stop(&preset.defaults, bars, rules, &whole.trades, CostMatch::Method));
+    let rate = (!drift)
+        .then(|| matched_rate(bars, rules, &hypothesis.filters, whole.trades.len(), guards, stop_atr(stop.as_ref())));
     let hold = drift.then(|| hold_distribution(&whole.trades)).flatten();
 
     // ---- the matched null, run once and read twice -----------------------
@@ -898,9 +1274,8 @@ pub fn rescore_hypothesis(
     let mut matched: Vec<(f64, f64, usize)> = (0..seeds)
         .into_par_iter()
         .filter_map(|seed| {
-            let (inner, defaults, calibrated) =
-                matched_control_for(base, &hypothesis.overrides, seed as f64 + 1.0, rate, hold);
-            let control = Preset::calibrated(inner, defaults, calibrated);
+            let built = matched_control_for(base, &hypothesis.overrides, seed as f64 + 1.0, rate, hold, stop.as_ref());
+            let control = built.preset();
             let gated = Filtered { inner: &control, filters: scoped(&hypothesis.filters, rules) };
             let run = walk_forward_guarded(&gated, bars, rules, None, folds, select_by, min_trades_per_cell, guards)?;
             let gross = run.oos.profit_factor;
@@ -982,14 +1357,14 @@ mod tests {
         let registry = Registry::with_builtins();
         let base = registry.get("tsmom").unwrap();
         let overrides = vec![("lookbackDays".to_string(), 20.0), ("riskDailyRanges".to_string(), 2.0), ("rangeDays".to_string(), 20.0)];
-        let (_, guessed) = super::control_for(base, &overrides, 1.0, None);
+        let (_, guessed) = super::control_for(base, &overrides, 1.0, None, None);
         assert_eq!(guessed.get("holdMinutes"), 20.0 * 1440.0 / 2.0, "no realised hold: half the lookback");
         assert_eq!(guessed.get("holdLogSd"), 0.0, "a guessed hold is a fixed hold");
-        let (_, realised) = super::control_for(base, &overrides, 1.0, Some((19_829.4, 0.8)));
+        let (_, realised) = super::control_for(base, &overrides, 1.0, Some((19_829.4, 0.8)), None);
         assert_eq!(realised.get("holdMinutes"), 19_829.0, "the method's own log-median hold, rounded");
         assert_eq!(realised.get("holdLogSd"), 0.8, "and the spread of its logs");
         assert_eq!(realised.get("riskDailyRanges"), 2.0, "sized like the method");
-        let (_, degenerate) = super::control_for(base, &overrides, 1.0, Some((19_829.4, f64::NAN)));
+        let (_, degenerate) = super::control_for(base, &overrides, 1.0, Some((19_829.4, f64::NAN)), None);
         assert_eq!(degenerate.get("holdLogSd"), 0.0, "a spread that is not a number falls back to the fixed hold");
     }
 
@@ -1116,6 +1491,7 @@ why = "the first hour's range is the day's liquidity"
             null_pf: vec![0.8, 0.9, 1.0, 1.1, 1.2],
             null_trades: vec![90, 95, 100, 104, 110],
             percentile: 100.0,
+            control_stop: None,
             skipped_by_guard: BTreeMap::new(),
             closed_by_guard: BTreeMap::new(),
             sized_down_by_guard: 0,
@@ -1159,6 +1535,7 @@ why = "the first hour's range is the day's liquidity"
             null_pf: vec![1.0],
             null_trades: counts,
             percentile: 50.0,
+            control_stop: None,
             skipped_by_guard: BTreeMap::new(),
             closed_by_guard: BTreeMap::new(),
             sized_down_by_guard: 0,

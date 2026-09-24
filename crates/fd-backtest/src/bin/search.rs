@@ -203,6 +203,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             arg("batch-file", "").as_str(),
             std::env::args().any(|a| a == "--fixed"),
             guards,
+            // `--null-registered-stop` also reads every row against the
+            // control the record used before 2026-09-24 — `RandomEntry`'s own
+            // 1.5 ATR whatever the method stopped at — and prints the two
+            // percentiles beside each other. It is how a corrected receipt
+            // carries its original
+            // (`docs/hypotheses/2026-09-24-cost-matched-null.md`), not a way
+            // to measure anything new: it doubles the null runs and the
+            // second column is a reproduction, not a reading.
+            std::env::args().any(|a| a == "--null-registered-stop"),
         );
     }
     if mode == "null" {
@@ -860,6 +869,7 @@ fn run_hypotheses(
     batch_file: &str,
     fixed: bool,
     guards: Option<&Guards>,
+    also_registered_stop: bool,
 ) {
     let (batch, shown) = if batch_file.is_empty() {
         match hypothesis_batch(batch_name) {
@@ -945,6 +955,85 @@ fn run_hypotheses(
             report.count_match(),
             if report.count_matched() { "" } else { "  ** outside the band: this percentile is unmatched **" },
         );
+        // And what the COST matching achieved, printed the same way and for
+        // the same reason: cost as a fraction of risk is `spread / stop`, so
+        // a control at a different stop is a control at a different cost, and
+        // a method that merely widens its stop clears such a control without
+        // predicting anything (`docs/hypotheses/2026-09-24-cost-matched-null.md`).
+        if let Some(stop) = &report.control_stop {
+            println!(
+                "{:<12} {:<18} cost-matched null: control stop {:.3} ATR = {:.2} points, cost {:.2}% of R ({}){}",
+                "",
+                "",
+                stop.atr,
+                stop.points(),
+                100.0 * stop.cost_fraction_of_r(rules),
+                stop.source.as_str(),
+                match stop.named {
+                    Some(v) if stop.source == fd_backtest::hypotheses::StopSource::Realised =>
+                        format!("; the method DECLARES stopAtr {v:.2} and does not use it"),
+                    _ => String::new(),
+                },
+            );
+            println!(
+                "{:<12} {:<18} the method's own realised stop: median {:.3} ATR = {:.2} points over {} trades",
+                "", "", stop.realised_atr, stop.realised_points, stop.measured_trades,
+            );
+        }
+        // The same row against the control the record used before
+        // 2026-09-24, printed beside the corrected one rather than replaced
+        // by it. The method's run is the same call with the same parameters,
+        // so the gate figures are checked for having held still rather than
+        // assumed to have.
+        if also_registered_stop {
+            if !fixed {
+                println!("{:<12} {:<18} --null-registered-stop needs --fixed; no original printed", "", "");
+            } else {
+                match fd_backtest::hypotheses::run_hypothesis_fixed_as(
+                    registry,
+                    hypothesis,
+                    bars,
+                    rules,
+                    gate,
+                    seeds,
+                    guards,
+                    fd_backtest::hypotheses::CostMatch::RegisteredStop,
+                ) {
+                    Ok(before) => {
+                        let moved = if before.percentile.is_nan() && report.percentile.is_nan() {
+                            "both unmeasured".to_string()
+                        } else {
+                            format!("{:+.0} points of percentile", report.percentile - before.percentile)
+                        };
+                        println!(
+                            "{:<12} {:<18} at the control's registered 1.5 ATR (the record's reading): pct {:.0}%, \
+                             null p50 {:.3} p95 {:.3}, count match {:.2} — corrected {:.0}%, {moved}",
+                            "",
+                            "",
+                            before.percentile,
+                            before.null_quantile(0.5),
+                            before.null_quantile(0.95),
+                            before.count_match(),
+                            report.percentile,
+                        );
+                        for (name, a, b) in [
+                            ("trades", before.oos.trades as f64, m.trades as f64),
+                            ("profit factor", before.oos.profit_factor, m.profit_factor),
+                            ("expectancy", before.oos.expectancy, m.expectancy),
+                        ] {
+                            if a.to_bits() != b.to_bits() {
+                                println!(
+                                    "{:<12} {:<18} ** {name} MOVED between the two readings: {a} vs {b} — \
+                                     the null is not the only thing that changed **",
+                                    "", "",
+                                );
+                            }
+                        }
+                    }
+                    Err(e) => println!("{:<12} {:<18} original refused: {e}", "", ""),
+                }
+            }
+        }
         // How often a guard acted on this row's own out-of-sample runs, so a
         // receipt shows whether a bounded number was bounded in practice.
         if guards.is_some() {
