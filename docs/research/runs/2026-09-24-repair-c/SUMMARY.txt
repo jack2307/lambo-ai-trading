@@ -1,0 +1,276 @@
+# Task C receipts — what the four-hour hold cap has been costing
+#
+# Registration: docs/hypotheses/2026-09-24-what-the-record-cannot-see.md, task C
+# Declared set:  DECLARED.md in this directory, committed before any horizon ran
+# Store:         E:/rust/flowdesk/data-sealed (ends 2025-09-23; the withheld year
+#                was not read)
+# Window:        --from=2022-06-16 --to=2025-09-23, 77,278 XAUUSD 15m bars
+# Config:        config/ unedited. Horizons stated by a copied config dir plus a
+#                three-line local.toml: [markets.xauusd.trading] max_hold_ms = N
+# Not done:      nothing deployed, nothing restarted, config/accounts.toml untouched
+
+
+## 1. The change is additive — the before/after reproduction
+
+BEFORE-4h-default.txt  pre-change binary, published command, no override
+AFTER-4h-default.txt   post-change binary, same command, no override
+
+    diff BEFORE-4h-default.txt AFTER-4h-default.txt
+    6a7
+    > max hold: 4 h (14400000 ms) from [trading] max_hold_ms, no per-market override
+
+One added provenance line. Not one figure moved: all eight rows — trades, OOS PF,
+expectancy, null p50/p95, swap, percentile, verdict, achieved count match, guard
+activity — are byte-identical.
+
+Those same eight rows are also byte-identical to the receipt published on
+2026-09-23 (docs/research/runs/2026-09-23-designed-1-cost-term/xauusd-guarded.txt).
+The only differences against that file are three header lines that other agents'
+fixes changed the same day (defects 6 and 7: the data root and the news
+provenance) plus designed-4's `companion:` line. No row differs.
+
+h4-fixed.txt equals AFTER-4h-default.txt apart from the opt-in `--exit-mix` lines
+and the recorded command string.
+
+
+## 2. Family 1 — fixed parameters, whole window, matched null, guards on
+##    (`--mode=hypotheses --fixed --seeds=200 --guards --exit-mix`)
+##
+## cm = achieved count match of the matched null (band is 1 +/- 0.25).
+## The matched null is NOT cost-matched (its control's stop is pinned at
+## 1.5 ATR whatever the method uses), so PF and expectancy carry the verdict.
+
+ row             h   trades      PF    expR  null p50  null p95  pct    cm   TIMEOUT  WEEKEND  NEWS  mean hold
+ atr-20          4     5577   0.786  -0.104     0.862     0.921   2%  0.67*      185       46    17     48.8 min
+ atr-20         24     5507   0.787  -0.104     0.884     0.949   0%  0.57*        4       61    18     54.8 min
+ atr-20         72     5505   0.787  -0.104     0.885     0.952   0%  0.57*        0       61    18     54.9 min
+ atr-20        168     5505   0.787  -0.104     0.885     0.952   0%  0.57*        0       61    18     54.9 min
+
+ struct-20       4     3404   0.871  -0.029     0.860     0.932  61%  0.80      2045       58    59    206.4 min
+ struct-20      24     1587   0.954  -0.011     0.890     0.975  91%  0.92       279      143    81    661.0 min
+ struct-20      72     1237   0.976  -0.005     0.888     0.990  92%  0.97        22      156    98    894.8 min
+ struct-20     168     1216   0.944  -0.011     0.889     0.987  82%  0.98         2      158    97    915.1 min
+
+ atr-40          4     3917   0.801  -0.096     0.859     0.929   6%  0.76       117       29    14     44.1 min
+ atr-40         24     3897   0.805  -0.094     0.882     0.958   4%  0.68*        2       39    14     50.0 min
+ atr-40         72     3897   0.806  -0.093     0.882     0.964   4%  0.67*        0       39    14     50.1 min
+ atr-40        168     3897   0.806  -0.093     0.882     0.963   4%  0.67*        0       39    14     50.1 min
+
+ struct-40       4     2266   0.903  -0.014     0.863     0.945  79%  0.88      1741       38    45    230.7 min
+ struct-40      24     1169   0.983  -0.001     0.886     0.989  94%  0.99       342      127    81    840.5 min
+ struct-40      72      834   0.975   0.001     0.890     1.013  88%  1.05        40      148   100   1286.6 min
+ struct-40     168      790   1.010   0.011     0.888     1.015  94%  1.06         2      152   102   1374.0 min
+
+ atr-80          4     2536   0.833  -0.077     0.861     0.941  26%  0.86        98       29     5     43.9 min
+ atr-80         24     2524   0.835  -0.076     0.883     0.965  20%  0.80         1       37     5     51.8 min
+ atr-80         72     2524   0.836  -0.075     0.883     0.967  18%  0.80         0       37     5     51.9 min
+ atr-80        168     2524   0.836  -0.075     0.883     0.967  18%  0.80         0       37     5     51.9 min
+
+ struct-80       4     1437   0.973  -0.001     0.867     0.951  98%  0.95      1248       39    30    239.0 min
+ struct-80      24      851   1.119   0.028     0.888     1.011 100%  1.04       364      121    65    999.9 min
+ struct-80      72      584   1.129   0.034     0.896     1.027 100%  1.10        52      148    96   1738.3 min
+ struct-80     168      549   1.121   0.035     0.896     1.030 100%  1.11         4      154    98   1887.2 min
+
+ struct-80-f14   4     1289   1.065   0.009     0.867     0.950 100%  0.97      1145       35    27    241.9 min
+ struct-80-f14  24      766   1.181   0.041     0.888     1.014 100%  1.06       352      115    60   1039.6 min
+ struct-80-f14  72      551   1.081   0.027     0.897     1.028  98%  1.11        52      146    92   1777.4 min
+ struct-80-f14 168      521   1.046   0.023     0.897     1.032  97%  1.12         4      153    95   1928.9 min
+
+ atr-20-f14      4       17   0.505  -0.307     0.853     1.593  10%  2.24*        0        0     0     37.9 min
+ atr-20-f14     24       17   0.505  -0.307     0.876     1.678   9%  2.21*        0        0     0     37.9 min
+ atr-20-f14     72       17   0.505  -0.307     0.876     1.678   9%  2.21*        0        0     0     37.9 min
+ atr-20-f14    168       17   0.505  -0.307     0.876     1.678   9%  2.21*        0        0     0     37.9 min
+
+ * outside the count-match band: that percentile is not the method's size.
+   atr-20-f14 is UNSCOREABLE at every horizon: 17 trades against a gate of 30.
+
+GATE OUTCOME, FAMILY 1: all eight rows fail at all four horizons, and each one
+fails on the same two legs (profit factor < 1.20 and expectancy < 0.05 R) at
+every horizon. **No verdict changed on this path.**
+
+
+## 3. Family 2 — the walk-forward path, both nulls
+##    (`--mode=rescore --seeds=200 --direction-samples=1000 --rebate-share=0 --guards`)
+##
+## Zero credit, so the gross and net columns are identical by construction and
+## the cost model is untouched. Trade counts are per-fold out-of-sample and are
+## NOT Family 1's whole-window counts.
+## mnull = matched-null percentile; dirN = direction-null percentile.
+## The direction null takes the method's own entries so its count match is 1.00
+## by construction; it does NOT control for drift (task A's defect).
+
+ row             h   trades      PF    expR   mnull  dirN    cm   gate outcome
+ atr-20           4     4539   0.827  -0.096     4%   39%  0.60*  fail: PF and expectancy
+ atr-20          24     4492   0.829  -0.097     0%   38%  0.43*  fail: PF and expectancy
+ atr-20          72     4490   0.829  -0.096     1%   37%  0.42*  fail: PF and expectancy
+ atr-20         168     4490   0.829  -0.096     1%   37%  0.42*  fail: PF and expectancy
+ struct-20        4     2734   0.955  -0.018    86%   37%  0.74*  fail: PF and expectancy
+ struct-20       24     1281   1.013   0.004    94%   68%  0.82   fail: PF and expectancy
+ struct-20       72     1011   1.017   0.008    90%   71%  0.88   fail: PF and expectancy
+ struct-20      168      997   1.009   0.007    88%   53%  0.88   fail: PF and expectancy
+ atr-40           4     3165   0.843  -0.088    14%   40%  0.70*  fail: PF and expectancy
+ atr-40          24     3150   0.848  -0.086     6%   39%  0.53*  fail: PF and expectancy
+ atr-40          72     3150   0.848  -0.086     5%   39%  0.52*  fail: PF and expectancy
+ atr-40         168     3150   0.848  -0.086     5%   39%  0.52*  fail: PF and expectancy
+ struct-40        4     1811   0.979  -0.004    95%   52%  0.84   fail: PF and expectancy
+ struct-40       24      940   1.026   0.010    92%   76%  0.91   fail: PF and expectancy
+ struct-40       72      684   1.038   0.024    88%   65%  0.97   fail: PF and expectancy
+ struct-40      168      655   1.067   0.031    96%   77%  0.97   fail: PF and expectancy
+ atr-80           4     2061   0.869  -0.065    29%   63%  0.80   fail: PF and expectancy
+ atr-80          24     2051   0.873  -0.064    15%   59%  0.67*  fail: PF and expectancy
+ atr-80          72     2051   0.873  -0.063    12%   59%  0.66*  fail: PF and expectancy
+ atr-80         168     2051   0.873  -0.063    12%   59%  0.66*  fail: PF and expectancy
+ struct-80        4     1154   1.021   0.006    98%   83%  0.92   fail: PF 1.021 < 1.2; exp 0.006R < 0.05R
+ struct-80       24      683   1.151   0.038   100%  100%  0.99   fail: PF 1.151 < 1.2; exp 0.038R < 0.05R
+ struct-80       72      473   1.210      --    99%   99%  1.05   PASSES ALL THREE
+ struct-80      168      448   1.233      --   100%   97%  1.06   PASSES ALL THREE
+ struct-80-f14    4     1047   1.110   0.016   100%   98%  0.93   fail: PF 1.110 < 1.2; exp 0.016R < 0.05R
+ struct-80-f14   24      618   1.294      --   100%  100%  1.01   PASSES ALL THREE
+ struct-80-f14   72      446   1.225      --    99%   88%  1.07   gate pass, inside the direction null
+ struct-80-f14  168      424   1.224      --   100%   74%  1.06   gate pass, inside the direction null
+ atr-20-f14     all        0     NaN     NaN    NaN   12%  NaN*   UNSCOREABLE: the walk-forward takes no trade
+
+ -- = NOT PRINTED. The rescore table has no expectancy column and the verdict
+   string only carries expectancy when it is a failure reason, so the exact
+   figure for a passing row is not in the receipt. What IS known is that the
+   gate includes expectancy >= 0.05 R and these rows passed it, so each is at or
+   above 0.05 R; the number itself is not quoted because it was not measured
+   into a receipt. Family 1's expectancy column, which IS printed at every
+   horizon, is in section 2.
+ * outside the count-match band.
+
+GATE OUTCOME, FAMILY 2: **three verdict changes, all caused by the hold cap and
+nothing else.**
+  - struct-80-f14 : fail at 4 h -> PASSES ALL THREE at 24 h
+  - struct-80     : fail at 4 h -> PASSES ALL THREE at 72 h and at 168 h
+Both rows clear 30 trades, PF 1.20, 0.05 R and both nulls at the 95th, with the
+matched null's achieved count match between 0.99 and 1.07.
+
+The bar moves with the horizon too, which is the null doing its job: struct-80's
+matched-null p95 rises 0.999 -> 1.067 -> 1.101 -> 1.114 across the four horizons
+and its direction-null p95 rises 1.014 -> 1.063 -> 1.076 -> 1.094. The pass at
+72 h is PF 1.210 against a matched p95 of 1.101, not against 0.999.
+
+
+## 4. How much of the record's arithmetic the cap was holding
+
+At four hours the structural arm was almost entirely a measurement of the clock:
+
+ row             TIMEOUT / trades at 4 h    at 24 h    at 72 h   at 168 h
+ struct-20         2045 / 3404 =  60%         18%        1.8%       0.2%
+ struct-40         1741 / 2266 =  77%         29%        4.8%       0.3%
+ struct-80         1248 / 1437 =  87%         43%        8.9%       0.7%
+ struct-80-f14     1145 / 1289 =  89%         46%        9.4%       0.8%
+ atr-20             185 / 5577 = 3.3%       0.07%          0%         0%
+ atr-40             117 / 3917 = 3.0%       0.05%          0%         0%
+ atr-80              98 / 2536 = 3.9%       0.04%          0%         0%
+
+Nine holds in ten on the widest structural row ended because of a config number,
+not because of the method. The ATR arm was barely touched. So the published
+comparison "a structural stop beats an ATR stop by +0.14 to +0.20 profit factor"
+was a comparison between an arm the cap did almost nothing to and an arm it
+closed nine times in ten.
+
+
+## 5. What replaces the cap as the binding clock
+
+ row / horizon   trades   WEEKEND_FLAT  NEWS_FLAT  guard exits as % of trades
+ struct-80    4    1437             39         30                        4.8%
+ struct-80   24     851            121         65                       21.9%
+ struct-80   72     584            148         96                       41.8%
+ struct-80  168     549            154         98                       45.9%
+ struct-80-f14  4  1289             35         27                        4.8%
+ struct-80-f14 24   766            115         60                       22.8%
+ struct-80-f14 72   551            146         92                       43.2%
+ struct-80-f14 168  521            153         95                       47.6%
+
+At 168 h the weekend flat at 16:40 New York and the news flat at 60/30 close
+nearly half of all positions and TIMEOUT closes four. **The cap stops binding
+somewhere between 24 h and 72 h; past that the guards are the horizon.** Mean
+hold on struct-80 is 1,887 minutes at a 10,080-minute cap — 31 hours under a
+one-week ceiling — because a hold cannot cross a weekend.
+
+Lifting the cap past about 72 hours therefore buys almost nothing on a guarded
+run, and that is a statement about the guards, not about the market.
+
+
+## 6. Era split, so nobody reads section 3 as a discovery
+##    (`--mode=hypotheses --fixed`, three disjoint eras, era-*.txt)
+
+ era                        h=4 h                       h=72 h
+ 2022-06-16 -> 2023-06-16   struct-80 PF 0.902 (n=425)  PF 0.839 (n=175)
+                            f14       PF 0.899 (n=372)  PF 0.762 (n=166)
+ 2023-06-16 -> 2024-06-16   struct-80 PF 0.831 (n=429)  PF 1.395 (n=175)
+                            f14       PF 0.999 (n=336)  PF 1.492 (n=152)
+ 2024-06-16 -> 2025-09-23   struct-80 PF 1.212 (n=580)  PF 1.116 (n=233)
+                            f14       PF 1.229 (n=578)  PF 1.127 (n=232)
+
+**The sign of the horizon effect disagrees across eras.** Going from 4 h to 72 h
+makes era 1 worse (0.902 -> 0.839), era 2 much better (0.831 -> 1.395) and era 3
+slightly worse (1.212 -> 1.116). The aggregate improvement is carried by one of
+three eras. Nothing here is a candidate and `far-stop-break` stays registered at
+parameters its own design window refuses.
+
+
+## 7. Bar counting, checked rather than assumed
+
+`max_hold_ms` is wall-clock milliseconds and nothing in this measurement
+resampled or counted bars. The one place a bar width enters is the weekend
+guard's `bar_interval_ms`, which takes the **minimum** positive gap between
+consecutive bars and so returns 15 minutes on a gapped 15m series exactly as on
+an ungapped one. The 2013 Dukascopy metals bar-rule change (longest consecutive
+run 476 before, exactly 92 after) is not exposed here in any case: every run
+above is Vantage XAUUSD from 2022-06-16, not XAUDUKA.
+
+
+## 8. Caveats, and defects found — including in what I did
+
+**8.1 The two families disagree, and both readings are real.** Family 2's three
+verdict changes are on the walk-forward path, which selects parameters per fold
+from the preset's grid. Family 1 holds the registered parameters fixed over the
+whole window and **no verdict changes there at any horizon**: struct-80's
+whole-window PF at 72 h is 1.129, below the 1.20 gate, while its walk-forward
+out-of-sample PF is 1.210, above it. CLAUDE.md says to quote the walk-forward, so
+the honest headline is "the cap changed a verdict"; the honest small print is that
+at fixed registered parameters over the whole window it did not, and that the
+difference is per-fold selection, not the horizon.
+
+**8.2 The direction percentile is a percentile of a different quantity.** In
+`rescore_hypothesis`, `matched_pct_*` is the percentile of the **walk-forward
+out-of-sample** PF inside a walk-forward null, while `dir_pct_*` is the percentile
+of the **whole-window** PF inside a whole-window null (hypotheses.rs:951-954; the
+struct's own doc comment says so). `passes_net()` therefore requires the gate and
+the matched leg on one basis and the direction leg on another. It is documented in
+the code and NOT in the printed table, so a reader of the receipt cannot tell. Not
+introduced here; recorded because this task's verdict changes rest on it.
+
+**8.3 The rescore receipt has no expectancy column.** A row that passes prints no
+expectancy anywhere, so the exact figure for the three passing rows is not
+recoverable from the receipt — only the fact that it is at or above 0.05 R. Family
+1's table carries expectancy at every horizon and is the one to read for it.
+
+**8.4 Lifting the cap changes how well the matched null is count-matched.** This
+is an interaction nobody has recorded. On the structural arm the count match
+IMPROVES with the horizon (struct-20: 0.80 -> 0.92 -> 0.97 -> 0.98 in Family 1)
+because the method's own trade count falls toward the control's. On the ATR arm it
+DEGRADES (atr-20: 0.67 -> 0.57; in Family 2, 0.60 -> 0.42) because the ATR arm's
+count barely moves while the control's falls. So the horizon a row is read at
+partly determines whether its percentile is the method's size at all. Three of the
+eight rows are out of band at 4 h and four are out of band at 168 h.
+
+**8.5 The change's own limitation.** A horizon can only be stated by a config
+directory; there is no `--max-hold=` flag. That is deliberate — a horizon is a
+declared property of a market, not an ad-hoc flag, and a flag would let a run
+change the clock without a config anyone can diff — but it means every receipt
+here depends on a `local.toml` beside a copy of `config/`. The mitigation is that
+`search` now prints the resolved value AND its source on every run, so a receipt
+says which horizon it measured whether or not the config dir still exists. The
+three `local-h*.toml` files in this directory are the exact overrides used.
+
+**8.6 What was NOT measured.** `[trading] reward_risk` is still global with no
+per-market override, so "a stop and no target" remains inexpressible under
+`Exits::Engine` (see `crates/fd-backtest/tests/max_hold_horizon.rs`,
+`a_no_target_entry_is_given_one`). I did not add a second override for it: that is
+a separate change with its own blast radius and it is not this task. No horizon
+was measured on any market other than xauusd, on any instrument other than the
+Vantage 15m bars, or past 2025-09-23.

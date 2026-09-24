@@ -1,0 +1,66 @@
+# command: search --market=xauusd --interval=15m --data=E:/rust/flowdesk/data-sealed --batch-file=docs/research/designs/2026-09-23-designed-1-contrast.toml --seeds=200 --from=2022-06-16 --to=2025-09-23 --guards --mode=rescore --direction-samples=1000 --rebate-share=0 --config=/c/Users/Admin/AppData/Local/Temp/claude/e--nodejs-backcom-vantage/a5c7fd65-9276-457f-850d-25cb44e74c74/scratchpad/config-h24
+market:   xauusd 15m
+data:     E:/rust/flowdesk/data-sealed (bars from E:/rust/flowdesk/data-sealed\bars\XAUUSD-15m.parquet)
+bounds:   --from=2022-06-16 --to=2025-09-23 kept 77278 of 77278 bars
+spread:   0.28 per round trip
+trail:    off
+max hold: 24 h (86400000 ms) from [markets.<id>.trading] max_hold_ms = 86400000
+bars:     77278 from 2022-06-16 10:30 to 2025-09-22 23:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data-sealed\news\events.parquet
+news scope: USD (news_currencies)
+companion: none loaded — every cmp series is NaN
+guards: on — max_open_loss_r 2.0, notional 300%, weekend flat 16:40 NY, news flat 60/30 (impact≥3, USD), daily cap 20, loss limit $300, cooldown 30 min
+
+== rebate rescore `docs/research/designs/2026-09-23-designed-1-contrast.toml`: 8 constructs, walk-forward (4 folds) ==
+rebate:   0.00 of the round-turn spread, credited BESIDE the book
+          gross columns are unchanged; the cost model is untouched
+nulls:    matched null 200 runs and direction null 1000 draws, BOTH carrying the same credit
+swap:     long 0.00 / short 0.00 USD per lot per night; spread 0.28
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data-sealed\news\events.parquet
+news scope: USD (news_currencies)
+guards: on — max_open_loss_r 2.0, notional 300%, weekend flat 16:40 NY, news flat 60/30 (impact≥3, USD), daily cap 20, loss limit $300, cooldown 30 min
+
+construct              trades PF gross   PF net  rebate$   reb/R  mnullG  mnullN    dirN  verdict
+atr-20                   4492    0.829    0.829     0.00   0.00%      0%      0%     38%  fail: profit factor 0.829 < 1.2; expectancy -0.097R < 0.05R
+                       whole window 5507 trades, PF 0.787 gross / 0.787 net; direction null p95 0.861 gross / 0.861 net
+                       matched null p50 0.933 / p95 1.005 gross, p50 0.933 / p95 1.005 net over 200 runs
+                       matched null 1910 trades median vs the method's 4492 — count match 0.43  ** outside the band: this percentile is unmatched **
+struct-20                1281    1.013    1.013     0.00   0.00%     94%     94%     68%  fail: profit factor 1.013 < 1.2; expectancy 0.004R < 0.05R
+                       whole window 1587 trades, PF 0.954 gross / 0.954 net; direction null p95 1.027 gross / 1.027 net
+                       matched null p50 0.928 / p95 1.019 gross, p50 0.928 / p95 1.019 net over 200 runs
+                       matched null 1052 trades median vs the method's 1281 — count match 0.82
+atr-40                   3150    0.848    0.848     0.00   0.00%      6%      6%     39%  fail: profit factor 0.848 < 1.2; expectancy -0.086R < 0.05R
+                       whole window 3897 trades, PF 0.805 gross / 0.805 net; direction null p95 0.875 gross / 0.875 net
+                       matched null p50 0.930 / p95 1.008 gross, p50 0.930 / p95 1.008 net over 200 runs
+                       matched null 1681 trades median vs the method's 3150 — count match 0.53  ** outside the band: this percentile is unmatched **
+struct-40                 940    1.026    1.026     0.00   0.00%     92%     92%     76%  fail: profit factor 1.026 < 1.2; expectancy 0.010R < 0.05R
+                       whole window 1169 trades, PF 0.983 gross / 0.983 net; direction null p95 1.064 gross / 1.064 net
+                       matched null p50 0.935 / p95 1.040 gross, p50 0.935 / p95 1.040 net over 200 runs
+                       matched null 860 trades median vs the method's 940 — count match 0.91
+atr-80                   2051    0.873    0.873     0.00   0.00%     15%     15%     59%  fail: profit factor 0.873 < 1.2; expectancy -0.064R < 0.05R
+                       whole window 2524 trades, PF 0.835 gross / 0.835 net; direction null p95 0.895 gross / 0.895 net
+                       matched null p50 0.928 / p95 1.015 gross, p50 0.928 / p95 1.015 net over 200 runs
+                       matched null 1377 trades median vs the method's 2051 — count match 0.67  ** outside the band: this percentile is unmatched **
+struct-80                 683    1.151    1.151     0.00   0.00%    100%    100%    100%  fail: profit factor 1.151 < 1.2; expectancy 0.038R < 0.05R
+                       whole window 851 trades, PF 1.119 gross / 1.119 net; direction null p95 1.063 gross / 1.063 net
+                       matched null p50 0.935 / p95 1.067 gross, p50 0.935 / p95 1.067 net over 200 runs
+                       matched null 676 trades median vs the method's 683 — count match 0.99
+struct-80-f14             618    1.294    1.294     0.00   0.00%    100%    100%    100%  PASSES ALL THREE
+                       whole window 766 trades, PF 1.181 gross / 1.181 net; direction null p95 1.084 gross / 1.084 net
+                       matched null p50 0.932 / p95 1.070 gross, p50 0.932 / p95 1.070 net over 200 runs
+                       matched null 623 trades median vs the method's 618 — count match 1.01
+atr-20-f14                  0      NaN      NaN     0.00    NaN%    NaN%    NaN%     12%  fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+                       whole window 17 trades, PF 0.505 gross / 0.505 net; direction null p95 2.271 gross / 2.271 net
+                       matched null p50 0.857 / p95 1.735 gross, p50 0.857 / p95 1.735 net over 200 runs
+                       matched null 29 trades median vs the method's 0 — count match NaN  ** outside the band: this percentile is unmatched **
+
+ran 8 of 8 constructs in the batch; 0 not run
+
+1 of 8 passed all three legs; noise at the 95th percentile yields about 0.4 of 8 by luck.
+Passed: struct-80-f14 (passed gross too)
+A pass at or below the expected-by-chance count is indistinguishable from luck at this width.
+

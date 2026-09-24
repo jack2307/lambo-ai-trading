@@ -133,6 +133,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             "off".to_string()
         }
     );
+    // WHAT HORIZON THIS RUN MEASURED, in the receipt, beside the spread.
+    // `max_hold_ms` force-closes an `Exits::Engine` position whatever its
+    // signal intended, and until 2026-09-24 there was no way to state it per
+    // market, so no receipt ever said which horizon it was read under — every
+    // one of them was four hours. It is stated now, together with where the
+    // number came from, because a receipt at 168 h and a receipt at 4 h are not
+    // comparable and must not look alike.
+    println!("{}", max_hold_line(&rules, spec.trading.max_hold_ms));
     let rules = rules;
     let gate = PromisingGate {
         min_trades: config.backtest.promising.min_trades,
@@ -204,14 +212,23 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             std::env::args().any(|a| a == "--fixed"),
             guards,
             // `--null-registered-stop` also reads every row against the
-            // control the record used before 2026-09-24 — `RandomEntry`'s own
-            // 1.5 ATR whatever the method stopped at — and prints the two
+            // control the record used before 2026-09-24 - `RandomEntry`'s own
+            // 1.5 ATR whatever the method stopped at - and prints the two
             // percentiles beside each other. It is how a corrected receipt
             // carries its original
             // (`docs/hypotheses/2026-09-24-cost-matched-null.md`), not a way
             // to measure anything new: it doubles the null runs and the
             // second column is a reproduction, not a reading.
             std::env::args().any(|a| a == "--null-registered-stop"),
+            // `--exit-mix`: one extra line per row naming HOW each position
+            // left - STOP, TARGET, TIMEOUT, a guard label - and the mean hold.
+            // Off by default so the receipt format every earlier run printed is
+            // byte-for-byte unchanged; on, it is the only direct evidence of
+            // whether `max_hold_ms` was binding, which is a count no receipt
+            // before 2026-09-24 carried. It is what measured that the cap closed
+            // 87% of `struct-80`'s holds at four hours against 3-4% of the ATR
+            // arm's, which is the finding of docs/research/runs/2026-09-24-repair-c.
+            std::env::args().any(|a| a == "--exit-mix"),
         );
     }
     if mode == "null" {
@@ -290,6 +307,24 @@ fn news_scope_line(rules: &TradingRules) -> String {
     } else {
         format!("news scope: {} (news_currencies)", rules.news_currencies.join("|"))
     }
+}
+
+/// The header line that says how long a position could be held, and where that
+/// number came from.
+///
+/// `0` is not four hours and is not absent: `engine::check_exit` treats a
+/// non-positive `max_hold_ms` as no timeout at all, so it is spelled out.
+fn max_hold_line(rules: &TradingRules, override_ms: Option<i64>) -> String {
+    let source = match override_ms {
+        Some(ms) => format!("[markets.<id>.trading] max_hold_ms = {ms}"),
+        None => "[trading] max_hold_ms, no per-market override".to_string(),
+    };
+    if rules.max_hold_ms <= 0 {
+        return format!("max hold: none — positions run to a stop, a target or the end of data ({source})");
+    }
+    let hours = rules.max_hold_ms as f64 / 3_600_000.0;
+    let shown = if (hours.fract()).abs() < 1e-9 { format!("{hours:.0}") } else { format!("{hours:.3}") };
+    format!("max hold: {shown} h ({} ms) from {source}", rules.max_hold_ms)
 }
 
 /// The header line that says whether the run was bounded, and by what.
@@ -870,6 +905,7 @@ fn run_hypotheses(
     fixed: bool,
     guards: Option<&Guards>,
     also_registered_stop: bool,
+    exit_mix: bool,
 ) {
     let (batch, shown) = if batch_file.is_empty() {
         match hypothesis_batch(batch_name) {
@@ -1038,6 +1074,18 @@ fn run_hypotheses(
         // receipt shows whether a bounded number was bounded in practice.
         if guards.is_some() {
             println!("{:<12} {:<18} {}", "", "", report.guard_activity());
+        }
+        // How each position left, and the mean hold. `TIMEOUT` is the hold cap
+        // acting; a zero there on a row whose mean hold is well under the cap
+        // means the cap was not binding on that row, which is a statement the
+        // percentile cannot make.
+        if exit_mix {
+            let mix = if m.exits.is_empty() {
+                "no exits recorded".to_string()
+            } else {
+                m.exits.iter().map(|(k, n)| format!("{k} {n}")).collect::<Vec<_>>().join(", ")
+            };
+            println!("{:<12} {:<18} exits: {mix}; mean hold {:.1} min", "", "", m.avg_hold_min);
         }
         if report.survives() {
             survivors.push(format!("{}/{}", report.label, report.base));
