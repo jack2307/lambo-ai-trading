@@ -40,11 +40,16 @@
 //!
 //! # Exits, and why the strategy owns them
 //!
-//! `[trading] max_hold_ms` is 14,400,000 — four hours — and
-//! `trading_rules_for` reads it from the shared table with no per-market
-//! override, so **every engine-managed method on this desk is force-closed
-//! four hours after entry whatever its signal horizon**. A five-session hold
-//! is unrepresentable under `Exits::Engine`. So exits are the strategy's:
+//! `[trading] max_hold_ms` is 14,400,000 — four hours — so **an engine-managed
+//! method on this desk is force-closed four hours after entry whatever its
+//! signal horizon** unless its market states otherwise. When this was designed
+//! there was no way to state otherwise;
+//! `[markets.<id>.trading] max_hold_ms` has since been added and the default is
+//! still four hours, so nothing here changed. Lifting the cap alone would still
+//! not make this method expressible under `Exits::Engine`: it wants a stop and
+//! no target, and `Intent::Enter { target: None }` means "derive one from
+//! `reward_risk`", not "none" (2026-09-24-designed-methods, defect 5). So exits
+//! are the strategy's:
 //! it closes on the decision bar of the `holdSessions`-th session after
 //! entry, or earlier when the sign of the `K`-session return flips. Loss
 //! control is then the guards' `max_open_loss_r` (2.0 R of the sizing unit),

@@ -370,6 +370,19 @@ pub struct MarketTradingOverride {
     /// `docs/decisions/` was measured at. One global number cannot be both.
     #[serde(default)]
     pub starting_equity_usd: Option<f64>,
+    /// Per-market maximum hold, in milliseconds. Absent keeps the global
+    /// `[trading] max_hold_ms` of 14,400,000 — four hours.
+    ///
+    /// Per-market because the horizon belongs to the market and the method, not
+    /// to policy. Four hours is sixteen fifteen-minute bars, and until this key
+    /// existed it bounded every `Exits::Engine` measurement in
+    /// `docs/decisions/` whatever the method intended
+    /// (2026-09-24-designed-methods, defect 4). Additive by construction: a
+    /// `config/` that names no override behaves exactly as it did before the key
+    /// existed, which is what keeps the two funded books on account 33708517 on
+    /// the four hours they were deployed with.
+    #[serde(default)]
+    pub max_hold_ms: Option<i64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -464,6 +477,7 @@ impl Config {
                 account_currency: m.trading.account_currency.clone(),
                 units_per_usd: m.trading.units_per_usd,
                 leverage: m.trading.leverage,
+                max_hold_ms: m.trading.max_hold_ms,
             },
             big_trade_min_premium_usd: m.big_trades.min_premium_usd,
             cluster_floor: m.levels.cluster.floor,
@@ -479,6 +493,11 @@ impl Config {
         trading.contract_size = market.trading.contract_size;
         if let Some(equity) = market.trading.starting_equity_usd {
             trading.starting_equity_usd = equity;
+        }
+        // Absent leaves the four hours the shared table states, so a config
+        // that names no override is the config every receipt was measured on.
+        if let Some(hold) = market.trading.max_hold_ms {
+            trading.max_hold_ms = hold;
         }
         trading.account_currency = market.trading.account_currency.clone();
         trading.units_per_usd = market.trading.units_per_usd;

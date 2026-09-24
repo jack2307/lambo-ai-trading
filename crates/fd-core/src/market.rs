@@ -121,6 +121,20 @@ pub struct TradingSpec {
     /// nowhere near one" is itself a number worth showing.
     #[serde(default = "default_leverage")]
     pub leverage: f64,
+    /// How long a position may be held before the engine closes it whatever the
+    /// price, in milliseconds. `None` keeps `[trading] max_hold_ms`, which is
+    /// **four hours** and is what every receipt in `docs/decisions/` was
+    /// measured under.
+    ///
+    /// Per-market because the horizon a method trades on belongs to the method
+    /// and its market, not to policy, and one global number silently bounded
+    /// every `Exits::Engine` measurement this desk has ever taken to sixteen
+    /// fifteen-minute bars (`docs/decisions/2026-09-24-designed-methods.md`,
+    /// defect 4). Absent — which is how `config/default.toml` ships — nothing
+    /// moves: the paper loop and the funded books on account 33708517 read this
+    /// through `trading_rules_for` and keep the four hours they have always had.
+    #[serde(default)]
+    pub max_hold_ms: Option<i64>,
 }
 
 fn default_leverage() -> f64 {
@@ -219,7 +233,7 @@ mod tests {
             premium_in_underlying: false,
             multiplier: 100.0,
             underlying: "GC".into(),
-            trading: TradingSpec { symbol: "XAUUSD".into(), contract_size: 100.0, spread: 0.3, lot_step: 0.01, min_lot: 0.01, swap_long_per_lot: 0.0, swap_short_per_lot: 0.0, news_currencies: Vec::new(), starting_equity_usd: None, account_currency: "USD".into(), units_per_usd: 1.0, leverage: 1.0, price_decimals: 2 },
+            trading: TradingSpec { symbol: "XAUUSD".into(), contract_size: 100.0, spread: 0.3, lot_step: 0.01, min_lot: 0.01, swap_long_per_lot: 0.0, swap_short_per_lot: 0.0, news_currencies: Vec::new(), starting_equity_usd: None, account_currency: "USD".into(), units_per_usd: 1.0, leverage: 1.0, price_decimals: 2, max_hold_ms: None },
             big_trade_min_premium_usd: 100_000.0,
             cluster_floor: 5.0,
             cluster_atr_fraction: 0.15,
@@ -237,7 +251,7 @@ mod tests {
             premium_in_underlying: true,
             multiplier: 1.0,
             underlying: "BTC".into(),
-            trading: TradingSpec { symbol: "BTCUSD".into(), contract_size: 1.0, spread: 5.0, lot_step: 0.001, min_lot: 0.001, swap_long_per_lot: 0.0, swap_short_per_lot: 0.0, news_currencies: Vec::new(), starting_equity_usd: None, account_currency: "USD".into(), units_per_usd: 1.0, leverage: 1.0, price_decimals: 2 },
+            trading: TradingSpec { symbol: "BTCUSD".into(), contract_size: 1.0, spread: 5.0, lot_step: 0.001, min_lot: 0.001, swap_long_per_lot: 0.0, swap_short_per_lot: 0.0, news_currencies: Vec::new(), starting_equity_usd: None, account_currency: "USD".into(), units_per_usd: 1.0, leverage: 1.0, price_decimals: 2, max_hold_ms: None },
             big_trade_min_premium_usd: 25_000.0,
             cluster_floor: 100.0,
             cluster_atr_fraction: 0.15,

@@ -315,12 +315,17 @@ pub fn trading_rules_for(config: &Config, market: &str) -> Result<TradingRules, 
         account_currency: spec.trading.account_currency.clone(),
         units_per_usd: spec.trading.units_per_usd,
         leverage: spec.trading.leverage,
+        // The horizon a method trades on, per market. Absent — which is how
+        // `config/default.toml` ships for every market — this is the shared
+        // four hours, so every receipt in `docs/decisions/` reproduces
+        // unchanged and the funded books on 33708517 are untouched. Present, it
+        // is the ONLY thing that moves; see `TradingSpec::max_hold_ms`.
+        max_hold_ms: spec.trading.max_hold_ms.unwrap_or(config.trading.max_hold_ms),
         // The rest is policy rather than venue convention, and is shared.
         commission_per_lot: config.trading.commission_per_lot,
         risk_per_trade_pct: config.trading.risk_per_trade_pct,
         stop_atr: config.trading.stop_atr,
         reward_risk: config.trading.reward_risk,
-        max_hold_ms: config.trading.max_hold_ms,
         trail: config.trading.trail.clone(),
         fallback_atr_period: config.backtest.fallback_atr_period,
     })
