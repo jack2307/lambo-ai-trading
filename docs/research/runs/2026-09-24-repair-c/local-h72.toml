@@ -1,0 +1,5 @@
+# The ONLY file added to a copy of config/ to state the 72 h horizon.
+# config/ itself was never edited. Reproduce with:
+#   cp -r config <dir> && cp this file <dir>/local.toml && search --config=<dir> ...
+[markets.xauusd.trading]
+max_hold_ms = 259200000

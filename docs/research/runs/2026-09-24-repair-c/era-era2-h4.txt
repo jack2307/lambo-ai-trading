@@ -1,0 +1,68 @@
+# command: search --market=xauusd --interval=15m --data=E:/rust/flowdesk/data-sealed --batch-file=docs/research/designs/2026-09-23-designed-1-contrast.toml --mode=hypotheses --fixed --seeds=200 --guards --exit-mix --from=2023-06-16 --to=2024-06-16 
+market:   xauusd 15m
+data:     E:/rust/flowdesk/data-sealed (bars from E:/rust/flowdesk/data-sealed\bars\XAUUSD-15m.parquet)
+bounds:   --from=2023-06-16 --to=2024-06-16 kept 23638 of 77278 bars
+spread:   0.28 per round trip
+trail:    off
+max hold: 4 h (14400000 ms) from [trading] max_hold_ms, no per-market override
+bars:     23638 from 2023-06-16 00:00 to 2024-06-14 20:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data-sealed\news\events.parquet
+news scope: USD (news_currencies)
+companion: none loaded — every cmp series is NaN
+guards: on — max_open_loss_r 2.0, notional 300%, weekend flat 16:40 NY, news flat 60/30 (impact≥3, USD), daily cap 20, loss limit $300, cooldown 30 min
+
+== hypotheses `docs/research/designs/2026-09-23-designed-1-contrast.toml`: 8 declared, FIXED parameters over the whole window (no selection), each against 200 matched null runs ==
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data-sealed\news\events.parquet
+news scope: USD (news_currencies)
+guards: on — max_open_loss_r 2.0, notional 300%, weekend flat 16:40 NY, news flat 60/30 (impact≥3, USD), daily cap 20, loss limit $300, cooldown 30 min
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+atr-20       far-stop-break       1701   0.752  -0.137    0.839    0.928        0    4%  fail: profit factor 0.752 < 1.2; expectancy -0.137R < 0.05R
+                                  — the registry's habit: an ATR-scaled invalidation on a 20-bar channel break. The control arm.
+                                matched null 1160 trades median vs the method's 1701 — count match 0.68  ** outside the band: this percentile is unmatched **
+                                guards: refused COOLDOWN 223, NEWS_FLAT 37, WEEKEND_FLAT 5; closed NEWS_FLAT 6, WEEKEND_FLAT 13; sized down 1680
+                                exits: NEWS_FLAT 6, STOP 814, TARGET 797, TIMEOUT 71, WEEKEND_FLAT 13; mean hold 45.8 min
+struct-20    far-stop-break       1033   0.917  -0.022    0.839    0.956        0   88%  fail: profit factor 0.917 < 1.2; expectancy -0.022R < 0.05R
+                                  — the same break, wrong only where the range is intact again — the far channel edge, several times the ATR distance away
+                                matched null 844 trades median vs the method's 1033 — count match 0.82
+                                guards: refused COOLDOWN 3, NEWS_FLAT 36, WEEKEND_FLAT 5; closed NEWS_FLAT 19, WEEKEND_FLAT 17; sized down 366
+                                exits: NEWS_FLAT 19, STOP 187, TARGET 201, TIMEOUT 609, WEEKEND_FLAT 17; mean hold 200.1 min
+atr-40       far-stop-break       1169   0.774  -0.122    0.841    0.955        0   16%  fail: profit factor 0.774 < 1.2; expectancy -0.122R < 0.05R
+                                  — the control arm at a 40-bar channel: the ATR distance barely moves with the lookback, so this holds the stop fixed while the structure grows
+                                matched null 917 trades median vs the method's 1169 — count match 0.78
+                                guards: refused COOLDOWN 164, NEWS_FLAT 36, WEEKEND_FLAT 1; closed NEWS_FLAT 6, WEEKEND_FLAT 7; sized down 1152
+                                exits: NEWS_FLAT 6, STOP 558, TARGET 557, TIMEOUT 41, WEEKEND_FLAT 7; mean hold 40.6 min
+struct-40    far-stop-break        680   0.916  -0.014    0.845    0.976        0   85%  fail: profit factor 0.916 < 1.2; expectancy -0.014R < 0.05R
+                                  — a 40-bar channel's far edge is about twice a 20-bar channel's, so this is the same claim at twice the stop
+                                matched null 618 trades median vs the method's 680 — count match 0.91
+                                guards: refused NEWS_FLAT 35, WEEKEND_FLAT 1; closed NEWS_FLAT 15, WEEKEND_FLAT 13; sized down 84
+                                exits: NEWS_FLAT 15, STOP 68, TARGET 79, TIMEOUT 505, WEEKEND_FLAT 13; mean hold 224.4 min
+atr-80       far-stop-break        731   0.800  -0.113    0.844    0.962        0   26%  fail: profit factor 0.800 < 1.2; expectancy -0.113R < 0.05R
+                                  — the control arm at an 80-bar channel
+                                matched null 654 trades median vs the method's 731 — count match 0.89
+                                guards: refused COOLDOWN 117, NEWS_FLAT 32, WEEKEND_FLAT 1; closed NEWS_FLAT 1, WEEKEND_FLAT 8; sized down 715
+                                exits: NEWS_FLAT 1, STOP 342, TARGET 344, TIMEOUT 36, WEEKEND_FLAT 8; mean hold 42.8 min
+struct-80    far-stop-break        429   0.831  -0.028    0.847    1.006        0   44%  fail: profit factor 0.831 < 1.2; expectancy -0.028R < 0.05R
+                                  — the widest structural invalidation this signal offers: cost/R around a fortieth of the spread-to-stop ratio the ATR arm pays
+                                matched null 425 trades median vs the method's 429 — count match 0.99
+                                guards: refused NEWS_FLAT 31, WEEKEND_FLAT 1; closed NEWS_FLAT 12, WEEKEND_FLAT 12; sized down 1
+                                exits: NEWS_FLAT 12, STOP 21, TARGET 22, TIMEOUT 362, WEEKEND_FLAT 12; mean hold 236.8 min
+struct-80-f14 far-stop-break        336   0.999  -0.002    0.849    1.035        0   93%  fail: profit factor 0.999 < 1.2; expectancy -0.002R < 0.05R
+                                  — the cost condition stated in cost units: take the trade only when the invalidation is at least fifty spreads (50 x 0.28) away
+                                matched null 343 trades median vs the method's 336 — count match 1.02
+                                guards: refused NEWS_FLAT 21, WEEKEND_FLAT 1; closed NEWS_FLAT 10, WEEKEND_FLAT 8; sized down 0
+                                exits: NEWS_FLAT 10, STOP 5, TARGET 11, TIMEOUT 302, WEEKEND_FLAT 8; mean hold 244.9 min
+atr-20-f14   far-stop-break          0     NaN     NaN    0.853    1.007       -0  NaN%  fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+                                  — the same floor on the ATR arm, where it can only be met in the most volatile conditions — the control for the floor itself
+                                matched null 398 trades median vs the method's 0 — count match NaN  ** outside the band: this percentile is unmatched **
+                                guards: nothing acted
+                                exits: no exits recorded; mean hold NaN min
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+
