@@ -86,6 +86,11 @@ pub fn register_all(registry: &mut Registry) {
     // onto the null, which is how a method should close the not-cost-matched
     // hole rather than use it.
     registry.register(Box::new(crate::quiet_swing::QuietTapeSwing));
+    // Built 2026-09-25 to the owner's description of an MT5 expert advisor:
+    // reversal candle + RSI past its threshold + both oscillators turning +
+    // volume over its 30-bar mean, all on one bar. Reward-to-risk 0.375, so it
+    // needs a 72.7% win rate to break even before costs - read its drawdown.
+    registry.register(Box::new(crate::rsi_reversal_vol::RsiReversalVol));
 }
 
 /* ---------------- classic technical baselines ---------------- */

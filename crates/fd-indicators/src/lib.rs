@@ -144,6 +144,18 @@ pub static INDICATORS: &[IndicatorDef] = &[
         outputs: &["k", "d"],
     },
     IndicatorDef {
+        // STOCH RSI, not `stoch`. `stoch` is the classic stochastic OF PRICE;
+        // this is the stochastic of the RSI SERIES, which is what a strategy
+        // asking for "Stoch RSI" means and is a different number. Added
+        // 2026-09-25 because the desk had only the former and a request
+        // described the latter.
+        id: "stochrsi",
+        name: "Stochastic RSI",
+        pane: Pane::Separate,
+        params: &[("rsiPeriod", 14.0), ("period", 14.0), ("smoothK", 3.0), ("smoothD", 3.0)],
+        outputs: &["k", "d"],
+    },
+    IndicatorDef {
         id: "adx",
         name: "ADX",
         pane: Pane::Separate,
@@ -497,6 +509,10 @@ fn compute_one(def: &IndicatorDef, p: &[f64], source: Source, bars: &[Bar]) -> V
             let (k, d) = stochastic(bars, period("period"), period("smoothK"), period("smoothD"));
             vec![("k", k), ("d", d)]
         }
+        "stochrsi" => {
+            let (k, d) = stoch_rsi(bars, period("rsiPeriod"), period("period"), period("smoothK"), period("smoothD"));
+            vec![("k", k), ("d", d)]
+        }
         "adx" => {
             let (adx_line, plus_di, minus_di) = adx(bars, period("period"));
             vec![("adx", adx_line), ("plusDi", plus_di), ("minusDi", minus_di)]
@@ -793,6 +809,55 @@ pub fn vwap(bars: &[Bar], session_ms: i64) -> Vec<f64> {
 }
 
 #[must_use]
+/// Stochastic RSI: the stochastic oscillator applied to the RSI SERIES.
+///
+/// NOT `stochastic`, which ranges price against its own high/low window. This
+/// ranges RSI against ITS window, so it answers "where is RSI inside its recent
+/// range" rather than "where is price inside its recent range". They move
+/// differently and a strategy written for one is not the same strategy on the
+/// other.
+///
+/// `k` is the raw ratio smoothed by `smooth_k`, `d` is `k` smoothed by
+/// `smooth_d` - the same two-stage shape `stochastic` uses, so the two read
+/// alike on a chart.
+///
+/// NaN until there is enough history, and NaN wherever the RSI window is flat:
+/// a zero range has no position inside it, and 0.5 would be a fabrication. A
+/// caller must check `is_finite`, which every strategy here already does.
+pub fn stoch_rsi(
+    bars: &[Bar],
+    rsi_period: usize,
+    period: usize,
+    smooth_k: usize,
+    smooth_d: usize,
+) -> (Vec<f64>, Vec<f64>) {
+    let r = rsi(bars, rsi_period);
+    let n = r.len();
+    let mut raw = vec![f64::NAN; n];
+    if period == 0 {
+        return (raw.clone(), raw);
+    }
+    for i in 0..n {
+        if i + 1 < period {
+            continue;
+        }
+        let window = &r[i + 1 - period..=i];
+        if window.iter().any(|v| !v.is_finite()) {
+            continue;
+        }
+        let lo = window.iter().copied().fold(f64::INFINITY, f64::min);
+        let hi = window.iter().copied().fold(f64::NEG_INFINITY, f64::max);
+        let span = hi - lo;
+        // A flat RSI window has no inside. NaN, not 0.5, not 0.
+        if span > 0.0 {
+            raw[i] = (r[i] - lo) / span * 100.0;
+        }
+    }
+    let k = sma(&raw, smooth_k.max(1));
+    let d = sma(&k, smooth_d.max(1));
+    (k, d)
+}
+
 pub fn stochastic(bars: &[Bar], period: usize, smooth_k: usize, smooth_d: usize) -> (Vec<f64>, Vec<f64>) {
     let mut raw = nans(bars.len());
     if period > 0 && bars.len() >= period {
