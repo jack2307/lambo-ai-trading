@@ -908,7 +908,7 @@ id = "vantage-v10"
 label = "Lambo V10 - screen books, REAL MONEY"
 login = 35911458
 server = "VantageMarkets-Live 21"
-terminal = 'C:\MT5-v10	erminal64.exe'
+terminal = 'C:\MT5-v10\terminal64.exe'
 symbol_suffix = ".sc"
 
 # FIVE, AND THE NUMBERS THAT SAY IT IS SAFE - checked before this line was
