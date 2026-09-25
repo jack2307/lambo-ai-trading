@@ -760,7 +760,20 @@ dry_run = false
 # three coin books added below. He was told the argument against it, twice, and
 # chose this; it is his account and his call, and it is recorded as his rather
 # than presented as a finding.
-enabled = true
+#
+# 2026-09-25: STOOD DOWN AGAIN, and this time not by preference but by a machine
+# limit. The owner chose "Cho chay truoc 35911458" - the new account first - and
+# ONLY ONE TERMINAL PER MACHINE CAN SERVE THE PYTHON BRIDGE. The MetaTrader5
+# package speaks over a single port, 22346; the second terminal to start logs
+# `MCP bind error on 127.0.0.1:22346` and is useless to Python. C:\MT5-v10 holds
+# it, so an executor pointed at C:\MT5-v12 would sit in an IPC timeout loop and
+# place nothing - which is exactly what 624 refused orders looked like the day
+# before. `enabled = false` so no session starts one believing it will work.
+#
+# ONE POSITION WAS OPEN ON THIS ACCOUNT WHEN IT STOOD DOWN. Its stop and target
+# are at the BROKER (mt5_executor sends sl and tp with the order), so it closes
+# at one of them with no executor watching. Nothing new can open.
+enabled = false
 
 runs = [
     # STOPPED 2026-09-24 by the owner - "Stop chien luoc ben real money di, no
@@ -856,4 +869,70 @@ runs = [
     "ai-xau-terra-ctx-coin",
     "ai-xau-ds-ctx-htf-filter-coin",
     "ai-xau-ds-plan-trigger-coin",
+]
+
+
+# ============================================================================
+[[account]]
+# 2026-09-25, the owner's decision, in his words: "Gio toi se chay 1 tk khac voi
+# chien luoc xau macd asia va xau stoch", funded with "50k cent duong tuong
+# 500$", and then "Cho chay truoc 35911458" when told that only one terminal per
+# machine can serve the Python bridge. He picked the name's family; V10 is V12's
+# smaller sibling, and the label carries what the id cannot.
+#
+# WHAT THE RECORD SAYS ABOUT BOTH BOOKS, because it is his decision and not a
+# finding of mine:
+#   `xau-stoch`      384 trades, PF 0.836, expectancy -0.087R, 14th percentile
+#                    of its matched null - below the median of RANDOM ENTRY over
+#                    nearly 400 trades. All nine stoch-reversal grid cells lost
+#                    over the whole window, worst -28.23%.
+#   `xau-macd-asia`  fails its own gate on the most recent three months: 97
+#                    trades, PF 1.134, 76th percentile, against a gate of 1.2 and
+#                    the 95th (docs/decisions/2026-09-23-three-month-search.md).
+#                    The record's headline of PF 1.56 at the 100th does not
+#                    reproduce on the window the owner made primary on 09-13.
+# He was told both, twice. Recorded as his call.
+id = "vantage-v10"
+label = "Lambo V10 - screen books, REAL MONEY"
+login = 35911458
+server = "VantageMarkets-Live 21"
+terminal = 'C:\MT5-v10	erminal64.exe'
+symbol_suffix = ".sc"
+
+# FIVE, AND THE NUMBERS THAT SAY IT IS SAFE - checked before this line was
+# written, as this file requires whenever a scale or a book count changes.
+#
+# The paper books run on 100 USD and risk 1% - one dollar - per trade. This
+# account holds 50,000 USC = 500 USD, so x5 puts about 5 USD at risk per trade,
+# which is that same 1%.
+#
+# THE LEVERAGE IS 500, MEASURED, AND THE OWNER ASKED FOR 2000. `account_info()`
+# read 500 on 2026-09-25 at 21:44 with the terminal logged in and connected. The
+# note on `vantage-v12` warns in capitals that leverage here is measured and not
+# assumed, and it was right again: the broker assigns it, the request does not.
+# Margin below is therefore computed at 500, which is four times what 2000 would
+# have needed - and it still does not come close to the floor.
+#
+# Largest order the paper books produce is 0.07 lot, so x5 sends 0.35:
+#   --max-notional-ratio 10.0   0.35 lot at 4279 = 149,765 USC = 3.00x equity.
+#                               The ceiling binds at 1.17 lots, 3.3x of
+#                               headroom. Does not bind. PER-ORDER, not
+#                               aggregate.
+#   --min-margin-level 500      299.5 USC of margin at 1:500, a margin level of
+#                               16,694%. Does not bind.
+#   AGGREGATE, because this account runs TWO books and the ceiling cannot see
+#                               it: 0.70 lot together, 5.99x equity, 599 USC of
+#                               margin, margin level 8,347%. Margin still does
+#                               not bind. What is real is correlated risk - both
+#                               books stopping out on the same day costs about
+#                               2% of the account, 10 USD.
+lot_scale = 5.0
+
+real_money = true
+dry_run = false
+enabled = true
+
+runs = [
+    "xau-macd-asia",
+    "xau-stoch",
 ]
