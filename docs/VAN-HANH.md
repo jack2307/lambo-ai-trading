@@ -10,19 +10,34 @@ Mọi lệnh bên dưới chạy trong PowerShell, tại `C:\flowdesk`.
 
 ---
 
-## 0. Bàn này đang là gì (21/09/2026)
+## 0. Bàn này đang là gì (25/09/2026)
 
-**Một tài khoản tiền thật, một model.**
+**Một tài khoản tiền thật, năm sổ.**
 
 | | |
 |---|---|
-| Tài khoản | `33708517`, tên broker **"Lambo V12"** |
-| Vốn | 100.000 USC = $1.000 |
-| Model | DeepSeek, sổ `ai-xau-ds-ctx` |
-| Hệ số | `lot_scale = 10` → mỗi lệnh liều ~$10 = 1% tài khoản |
-| Terminal | `C:\MT5-v12\terminal64.exe` |
+| Tài khoản | `35911458`, tên broker **"Lambo V10"** |
+| Vốn | 50.000 USC = $500 |
+| Sổ | `xau-macd-asia`, `xau-stoch`, và ba sổ **đối chứng đồng xu**: `ai-xau-terra-ctx-coin`, `ai-xau-ds-ctx-htf-filter-coin`, `ai-xau-ds-plan-trigger-coin` |
+| Hệ số | `lot_scale = 5` → mỗi lệnh liều ~$5 = 1% tài khoản |
+| Terminal | `C:\MT5-v10\terminal64.exe` |
 
-Tài khoản cũ **`33705331` đã tắt** (`enabled = false`), còn 382 USC.
+Cả hai tài khoản cũ **đã tắt**: `33705331` (còn 382 USC) và `33708517`
+("Lambo V12"). V12 tắt **không phải vì hiệu suất** mà vì giới hạn máy — chỉ
+**một terminal mỗi máy** nói chuyện được với Python (cổng 22346), và
+`C:\MT5-v10` đang giữ nó. Một executor trỏ vào `C:\MT5-v12` sẽ treo trong
+vòng lặp IPC và **không đặt được lệnh nào**.
+
+> **Ba sổ `-coin` là sổ đối chứng, không phải chiến lược.** Mỗi sổ là một
+> đồng xu 50/50 có seed, lấy đúng bar và đúng khoảng stop của sổ mẹ rồi chọn
+> ngẫu nhiên hướng. Kỳ vọng gộp bằng 0 theo cấu tạo, nên kỳ vọng ròng luôn
+> bằng âm chi phí — khoảng **−2% tài khoản mỗi tháng**. Chủ bàn đã được đưa
+> con số này và đã chọn chạy; ghi ở đây để người trực bàn không tưởng nhầm
+> đó là chiến lược đang được kỳ vọng sinh lời.
+>
+> Chúng **không tự giao dịch được**: sổ coin không có luật vào lệnh riêng, nên
+> ba sổ mẹ `ai-xau-terra-ctx`, `ai-xau-ds-ctx-htf-filter`,
+> `ai-xau-ds-plan-trigger` phải còn chạy thì chúng mới đặt lệnh.
 
 Ngoài ra có **29 sổ giấy** chạy nghiên cứu, không đụng tiền. Chín trader AI
 kéo chúng: bảy DeepSeek, một Opus, một Terra.
@@ -38,8 +53,12 @@ powershell -NoProfile -ExecutionPolicy Bypass -File deploy\status.ps1
 Nó **chỉ đọc**, không khởi động và không dừng gì. Đọc nó trước khi kết luận
 có gì hỏng.
 
-Bình thường phải thấy: API up, **traders 9, executors 1, pollers 4, MT5
-terminals 3**, và dòng `REAL MONEY executor: vantage-v12 at x10`.
+Bình thường phải thấy: API up, **traders 9, executors 5, pollers 4, MT5
+terminals 3**, và **năm dòng** `REAL MONEY executor: vantage-v10 at x5` —
+một dòng mỗi sổ, vì launcher chạy một executor cho mỗi sổ trong `runs`.
+
+Thấy `executors 1` thay vì 5 nghĩa là bốn sổ không được mirror; đọc log
+khởi động trước khi kết luận tài khoản có vấn đề.
 
 ---
 
@@ -55,8 +74,14 @@ terminals 3**, và dòng `REAL MONEY executor: vantage-v12 at x10`.
 
 1. **Mở các terminal MT5.** Poller cần terminal, mà terminal sống trong phiên
    RDP của anh — lúc máy vừa boot chưa ai đăng nhập nên chưa có phiên nào.
-   Mở `C:\MT5-cent\terminal64.exe` và `C:\MT5-v12\terminal64.exe`, kiểm tra
-   **AutoTrading đang bật** (nút Algo Trading trên thanh công cụ).
+   Mở `C:\MT5-v10\terminal64.exe` — **đây là terminal của tài khoản thật đang
+   chạy** — và kiểm tra **AutoTrading đang bật** (nút Algo Trading trên thanh
+   công cụ).
+
+   **Đừng mở `C:\MT5-v12` để phục vụ Python.** Chỉ một terminal mỗi máy giữ
+   được cổng 22346; cái thứ hai khởi động sẽ ghi `MCP bind error` và vô dụng
+   với Python. Nếu cần V12 chạy lại thì phải tắt V10 trước, không phải mở
+   thêm.
 
 2. **Poller** — nguồn nến cho mọi thứ:
    ```powershell
@@ -92,7 +117,19 @@ terminals 3**, và dòng `REAL MONEY executor: vantage-v12 at x10`.
 **Dừng một sổ trên tài khoản thật, và đóng luôn vị thế đang mở:**
 
 ```powershell
-Set-Content C:\flowdesk\data\live\vantage-v12\ai-xau-ds-ctx\STOP "ly do, ngay thang"
+Set-Content C:\flowdesk\data\live\vantage-v10\xau-macd-asia\STOP "ly do, ngay thang"
+```
+
+Đổi `xau-macd-asia` thành đúng tên sổ cần dừng. Năm sổ đang chạy trên
+`vantage-v10`; **mỗi sổ một file STOP riêng**, dừng sổ này không dừng sổ kia.
+
+Muốn dừng **cả tài khoản** thì đặt STOP vào cả năm thư mục:
+
+```powershell
+'xau-macd-asia','xau-stoch','ai-xau-terra-ctx-coin',
+'ai-xau-ds-ctx-htf-filter-coin','ai-xau-ds-plan-trigger-coin' | ForEach-Object {
+    Set-Content "C:\flowdesk\data\live\vantage-v10\$_\STOP" "ly do, ngay thang"
+}
 ```
 
 Executor thấy file này trong vòng ~15 giây, **đóng vị thế rồi tự thoát**. Đây
@@ -151,7 +188,7 @@ kèm bộ lọc nào.
 | Cần gì | Ở đâu |
 |---|---|
 | Giao diện | `http://127.0.0.1:8138` trong RDP, hoặc cổng 8139 qua tunnel — xem §6 |
-| Lãi lỗ tiền thật | `data\live\vantage-v12\ai-xau-ds-ctx\broker.json` |
+| Lãi lỗ tiền thật | `data\live\vantage-v10\<ten-so>\broker.json` — một thư mục mỗi sổ |
 | Nhật ký lệnh thật | cùng thư mục, `executor.jsonl` |
 | Quyết định của AI | `data\paper\<ten-so>\decisions.jsonl` |
 | Tiền API đã tốn | trường `cost_usd` trong file trên |
@@ -281,7 +318,9 @@ ngay và sửa lại.
 - **Sổ `eur-hours`** mang vốn $277,51 thay vì $100 (do một lệnh hỏng đã bị
   loại trừ nhưng vốn chưa đặt lại), nên nó đang đặt lệnh **to gấp 2,8 lần**
   dự định. Chỉ bẩn số liệu nghiên cứu, không mất tiền thật.
-- **Đổi mật khẩu MT5 của 33708517.** Nó từng đi qua một cuộc hội thoại.
-  Terminal đã nhớ phiên nên đổi xong không phải làm gì thêm.
+- **Đổi mật khẩu MT5 của `33708517` và của `35911458`.** Cả hai đều từng đi
+  qua một cuộc hội thoại — `35911458` vào ngày 25/09. Terminal đã nhớ phiên
+  nên đổi xong không phải làm gì thêm, và `config\accounts.toml` không chứa
+  mật khẩu nào (file tự nói vậy ở đầu), nên không có chỗ nào khác phải sửa.
 - **Hai sổ `plan` và `plan-trigger`** đang chạy tới mốc **30 lệnh** đã cam
   kết trước (hiện 7 và 9). Khoảng 01/10. Đừng tắt sớm.

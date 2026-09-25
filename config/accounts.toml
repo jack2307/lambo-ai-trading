@@ -866,9 +866,21 @@ runs = [
     # day costs about 3% of the account against 2% for the two books this
     # replaces. Corrected in place - the first version of this note computed the
     # aggregate for five books, having left the two stopped ones in `runs`.
-    "ai-xau-terra-ctx-coin",
-    "ai-xau-ds-ctx-htf-filter-coin",
-    "ai-xau-ds-plan-trigger-coin",
+    #
+    # MOVED TO vantage-v10 ON 2026-09-25, on the owner's "Cho chay lai V12 voi
+    # tai khoan moi nay". They run on 35911458 now, which is the account that
+    # has the one terminal this machine can give the Python bridge.
+    #
+    # COMMENTED OUT RATHER THAN DELETED, and it matters more here than usual.
+    # `runs` is the strategy selection, so leaving these listed would say this
+    # account still mirrors them - and if anyone ever sets `enabled = true`
+    # again, two REAL accounts would take the same three signals at once, on
+    # one terminal that can only serve one of them. That is a double position
+    # on live money produced by a line nobody edited. The record of what they
+    # did here stays under data/live/vantage-v12/ either way.
+    # "ai-xau-terra-ctx-coin",
+    # "ai-xau-ds-ctx-htf-filter-coin",
+    # "ai-xau-ds-plan-trigger-coin",
 ]
 
 
@@ -935,4 +947,53 @@ enabled = true
 runs = [
     "xau-macd-asia",
     "xau-stoch",
+
+    # ------------------------------------------------------------------
+    # 2026-09-25, the owner's decision: "Cho chay lai V12 voi tai khoan
+    # moi nay", with 35911458's credentials, and then - asked which books
+    # "V12" meant - he chose to ADD V12's three coin books here and keep
+    # the two screen books. So the three move to the account that has the
+    # working terminal, rather than waiting for a second terminal that
+    # this machine cannot give them.
+    #
+    # WHY THEY ARE HERE AND NOT ON vantage-v12. Only ONE terminal per
+    # machine can serve the Python bridge - the MetaTrader5 package speaks
+    # over a single port, 22346, and the second terminal to start logs
+    # `MCP bind error`. C:\MT5-v10 holds it. An executor pointed at
+    # C:\MT5-v12 would sit in an IPC timeout loop and place nothing.
+    #
+    # WHAT THESE ARE, unchanged from the note on vantage-v12 and repeated
+    # because it must not have to be looked up: each is the CONTROL of an
+    # AI book - a seeded 50/50 coin taking the same bar and the same stop
+    # distance with a random side. A coin's gross expectancy on a bracket
+    # is exactly zero by construction, so its net expectancy is minus the
+    # cost, always: about -2% of the account a month at today's ATR. The
+    # owner has that corrected figure, was given the arithmetic against
+    # this twice before, and has now chosen it a third time. Recorded as
+    # his decision and not as a finding.
+    #
+    # THEY CANNOT TRADE ALONE. A coin has no entry rule of its own, so
+    # ai-xau-terra-ctx, ai-xau-ds-ctx-htf-filter and ai-xau-ds-plan-trigger
+    # must all keep running - and keep costing DeepSeek and Terra API - for
+    # these three to place anything. Checked 2026-09-25: all three parents
+    # are in start_ai_runs.py, each paired with the coin listed here.
+    #
+    # THE SIZING, RECHECKED BECAUSE THE BOOK COUNT CHANGED 2 -> 5, which
+    # this file requires. Same basis as the note above: 50,000 USC equity,
+    # 0.07 lot largest paper order, x5, price 4279, and the MEASURED 1:500.
+    #
+    #   PER-ORDER is unchanged and does not bind: 0.35 lot = 149,765 USC
+    #     = 3.00x equity against a 10x ceiling, which binds at 1.17 lot.
+    #   AGGREGATE at five books: 1.75 lot = 748,825 USC = 14.98x equity,
+    #     1,497.7 USC of margin, a margin level of 3,339% against the 500%
+    #     floor. THE FLOOR DOES NOT BIND. The CEILING CANNOT SEE THIS -
+    #     `--max-notional-ratio` is per-order - so 14.98x is stated here
+    #     rather than enforced anywhere, which is the honest position.
+    #   CORRELATED RISK is what actually changed: five books landing on the
+    #     same side and stopping out the same day costs about 5% of the
+    #     account, 25 USD, against 2% and 10 USD for the two books alone.
+    # ------------------------------------------------------------------
+    "ai-xau-terra-ctx-coin",
+    "ai-xau-ds-ctx-htf-filter-coin",
+    "ai-xau-ds-plan-trigger-coin",
 ]
