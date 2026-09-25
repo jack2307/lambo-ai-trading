@@ -993,52 +993,69 @@ runs = [
     "xau-stoch",
 
     # ------------------------------------------------------------------
-    # 2026-09-25, the owner's decision: "Cho chay lai V12 voi tai khoan
-    # moi nay", with 35911458's credentials, and then - asked which books
-    # "V12" meant - he chose to ADD V12's three coin books here and keep
-    # the two screen books. So the three move to the account that has the
-    # working terminal, rather than waiting for a second terminal that
-    # this machine cannot give them.
+    # THE THREE COIN BOOKS ARE NOT HERE ANY MORE, and the note that stood in
+    # this spot is withdrawn rather than deleted, because two of its three
+    # arguments were wrong and a reader who only saw them removed would
+    # rebuild them.
     #
-    # WHY THEY ARE HERE AND NOT ON vantage-v12. Only ONE terminal per
-    # machine can serve the Python bridge - the MetaTrader5 package speaks
-    # over a single port, 22346, and the second terminal to start logs
-    # `MCP bind error`. C:\MT5-v10 holds it. An executor pointed at
-    # C:\MT5-v12 would sit in an IPC timeout loop and place nothing.
+    # 2026-09-25, the owner's decision: "3 chien luoc kia chay tren
+    # vantage-v12 di". They now run on `vantage-v12-coin` (login 35911764,
+    # the same C:\MT5-v12 terminal, a history directory of its own) at the
+    # end of this file. This account keeps the two screen books only, so the
+    # sizing note that was recalculated here for FIVE books no longer
+    # applies; `vantage-v12-coin` carries its own, for three.
     #
-    # WHAT THESE ARE, unchanged from the note on vantage-v12 and repeated
-    # because it must not have to be looked up: each is the CONTROL of an
-    # AI book - a seeded 50/50 coin taking the same bar and the same stop
-    # distance with a random side. A coin's gross expectancy on a bracket
-    # is exactly zero by construction, so its net expectancy is minus the
-    # cost, always: about -2% of the account a month at today's ATR. The
-    # owner has that corrected figure, was given the arithmetic against
-    # this twice before, and has now chosen it a third time. Recorded as
-    # his decision and not as a finding.
+    # WHAT WAS WRONG IN IT. It said they had to be here because "only ONE
+    # terminal per machine can serve the Python bridge". That claim was mine
+    # and it is false: mt5.initialize(path=...) honours the path, and on
+    # 2026-09-25 five real-money executors ran side by side, two on this
+    # account through C:\MT5-v10 and three on 35911764 through C:\MT5-v12,
+    # init-failed 0 on all five. The `MCP bind error on 127.0.0.1:22346` is
+    # real - one terminal binds that port - and it does not stop a client
+    # that names a path. See CLAUDE.md, where the same claim is withdrawn.
     #
-    # THEY CANNOT TRADE ALONE. A coin has no entry rule of its own, so
-    # ai-xau-terra-ctx, ai-xau-ds-ctx-htf-filter and ai-xau-ds-plan-trigger
-    # must all keep running - and keep costing DeepSeek and Terra API - for
-    # these three to place anything. Checked 2026-09-25: all three parents
-    # are in start_ai_runs.py, each paired with the coin listed here.
-    #
-    # THE SIZING, RECHECKED BECAUSE THE BOOK COUNT CHANGED 2 -> 5, which
-    # this file requires. Same basis as the note above: 50,000 USC equity,
-    # 0.07 lot largest paper order, x5, price 4279, and the MEASURED 1:500.
-    #
-    #   PER-ORDER is unchanged and does not bind: 0.35 lot = 149,765 USC
-    #     = 3.00x equity against a 10x ceiling, which binds at 1.17 lot.
-    #   AGGREGATE at five books: 1.75 lot = 748,825 USC = 14.98x equity,
-    #     1,497.7 USC of margin, a margin level of 3,339% against the 500%
-    #     floor. THE FLOOR DOES NOT BIND. The CEILING CANNOT SEE THIS -
-    #     `--max-notional-ratio` is per-order - so 14.98x is stated here
-    #     rather than enforced anywhere, which is the honest position.
-    #   CORRELATED RISK is what actually changed: five books landing on the
-    #     same side and stopping out the same day costs about 5% of the
-    #     account, 25 USD, against 2% and 10 USD for the two books alone.
     # ------------------------------------------------------------------
-    # The three coin books live on `vantage-v12-coin` at the end of this file:
-    # the same terminal, the new login, and a history of their own.
+    # DO NOT DELETE data/live/vantage-v10/ai-xau-ds-plan-trigger-coin/.
+    # THE OWNER ASKED FOR THIS, 2026-09-26: "cai lenh ben v10 lay nham ay,
+    # cu cho hien thi o lich su di, sau toi co the se can toi."
+    #
+    # That directory is the only record on this machine of the one real order
+    # this account took by mistake, and it belongs to a book that no longer
+    # runs here - which is exactly what makes it look like something to tidy
+    # away. It is not.
+    #
+    #   order  597097500   LONG 0.35 lot XAUUSD.sc   magic 120037770
+    #   opened 2026-09-26 01:47:19 (VPS, UTC+7) at 4274.45
+    #          comment 'ai-xau-ds-plan-tri-coin'
+    #   closed 2026-09-26 02:03:36 at 4296.36, broker-side target [tp 4296.18]
+    #   result +766.85 USC realised, plus 4.41 USC ESTIMATED rebate = 771.26
+    #
+    # +766.85 USC is the WHOLE of this account's gain: 50,000.00 transferred
+    # in from 33708517 plus 766.85 is the 50,766.85 balance standing now.
+    #
+    # HOW IT CAME TO BE TAKEN. The coin books were mirroring onto this account
+    # while it was the only one with a working terminal; five executors were
+    # started over SSH, the session closed, Windows OpenSSH killed the whole
+    # process tree, and this order had already been sent. So it sat with
+    # nobody mirroring it - and closed at the target the broker was already
+    # holding, which is why an executor dying did not decide the outcome.
+    # The 32 `already-taken` lines in its executor.jsonl are the guard
+    # afterwards refusing to mirror a position the account had already taken.
+    #
+    # WHAT MAKES IT VISIBLE, so nobody looks for a switch. Nothing is
+    # configured: `brokers_of()` in crates/fd-api/src/paper.rs reads
+    # data/live/ from DISK and not from the `runs` lists in this file, and the
+    # UI picks a record by LOGIN (ui/src/.../Analytics.tsx:516). So it shows
+    # under run `ai-xau-ds-plan-trigger-coin`, account `vantage-v10`,
+    # realised 766.85, closed 1 - and it keeps showing although the book has
+    # moved to another account. Deleting the directory is the only way to
+    # lose it.
+    #
+    # AND IT IS A COIN, so the sign means nothing. A seeded 50/50 side on a
+    # bracket has an expectancy of exactly zero before cost and minus the
+    # cost after it. One +766.85 is a sample of one; it is kept because the
+    # owner may need the record, not because it demonstrates anything.
+    # ------------------------------------------------------------------
 ]
 
 # ============================================================================
