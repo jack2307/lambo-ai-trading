@@ -675,7 +675,7 @@ runs = [
 # ---------------------------------------------------------------------------
 [[account]]
 id = "vantage-v12"
-label = "Lambo V12 - REAL MONEY"
+label = "Lambo V12 - coin controls, REAL MONEY"
 
 # A SECOND REAL ACCOUNT, ONE MODEL, 2026-09-21. The owner's plan is one model
 # per account, and this is the first of them: DeepSeek alone, on its own
@@ -689,7 +689,11 @@ label = "Lambo V12 - REAL MONEY"
 # mirrors at x1.0 and this one at x10, so the two records answer "does the
 # same rule behave the same when each trade is worth ten times more", which
 # no paper book can answer.
-login = 33708517
+# 2026-09-25, the owner's decision: "Cho tai khoan moi nay chay tren V12", with
+# the three coin books moved here off 35911458. The previous login on this block
+# was 33708517; it is named here rather than erased because it still holds open
+# positions on broker-side stops and every note below was written about it.
+login = 35911764
 server = "VantageMarkets-Live 21"
 
 # Its own install, cloned from the idle C:\MT5-live on 2026-09-21 because that
@@ -715,29 +719,39 @@ terminal = 'C:\MT5-v12\terminal64.exe'
 # account has and the opposite of the standard demo.
 symbol_suffix = ".sc"
 
-# TEN, AND THE TWO NUMBERS THAT SAY IT IS SAFE.
+# FIVE, NOT TEN, AND THE CHANGE IS THE POINT.
 #
-# The paper book runs on 100 USD and risks 1% - one dollar - per trade. This
-# account holds 100,000 USC = 1,000 USD, so x10 puts about 10 USD at risk per
-# trade, which is that same 1%. At x1.0 it would have been 0.1% and the curve
-# this account exists to show would have been a flat line.
+# This block said TEN and justified it against an account holding 100,000 USC =
+# 1,000 USD. That was login 33708517. The login on this block is now 35911764,
+# which holds 50,000 USC = 500 USD - half as much - so ten would put 2% of the
+# account at risk per trade rather than the 1% the paper books run, and three of
+# them together 6% rather than 3%. Left unchanged it would have doubled the risk
+# silently, because a scale is only safe relative to an equity and the equity
+# moved under it.
 #
-# The file's own rule is that a change of scale is checked against the ceiling
-# and the floor before it is written. At a 4363.71 price, the largest order
-# the book can produce is 0.07 lot, so x10 sends 0.70:
+# The rule this file states is that a change of scale OR of book count is
+# checked before it is written, and both changed at once here.
 #
-#   --max-notional-ratio 10.0   0.70 lot = 305,460 USC = 3.05x equity. The
-#                               ceiling binds at 2.29 lots, so 3.3x of
-#                               headroom. Does not bind. PER-ORDER, not
-#                               aggregate - but this account runs one book.
-#   --min-margin-level 500      611 USC of margin at 1:500, a margin level of
-#                               16,369%. Does not bind.
+# The paper books run on 100 USD at 1% - one dollar a trade. 500 USD at x5 is
+# about 5 USD a trade, the same 1%. Largest order the books produce is 0.07 lot,
+# so x5 sends 0.35:
 #
-# NOTE THE LEVERAGE IS 500 HERE, not the 2000 of 33705331 - MEASURED, not
-# assumed - so margin per lot is four times that account's. It still does not
-# come close to the floor, but the next person to change the scale has to run
-# the floor again with 500 and not with 2000.
-lot_scale = 10.0
+#   --max-notional-ratio 10.0   0.35 lot at 4280 = 149,800 USC = 3.00x equity.
+#                               The ceiling binds at 1.17 lots. Does not bind.
+#                               PER-ORDER, and this account runs THREE books, so
+#                               the aggregate is written beside `enabled` above
+#                               because this ceiling cannot see it.
+#   --min-margin-level 500      75.01 USC for that order - the broker's own
+#                               `order_calc_margin`, measured 2026-09-25, not
+#                               derived from a leverage figure. Three at once is
+#                               about 225 USC against 50,000, a margin level near
+#                               22,000%. Does not bind.
+#
+# LEVERAGE READ 2000 HERE, twice, on 2026-09-25. The note that used to stand on
+# this block said 500 and said it was measured; that reading is not reproducible
+# and the margin figures above avoid depending on it by using the broker's own
+# margin answer instead.
+lot_scale = 5.0
 
 real_money = true
 dry_run = false
@@ -770,17 +784,29 @@ dry_run = false
 # place nothing - which is exactly what 624 refused orders looked like the day
 # before. `enabled = false` so no session starts one believing it will work.
 #
-# ONE POSITION WAS OPEN ON THIS ACCOUNT WHEN IT STOOD DOWN. Its stop and target
-# are at the BROKER (mt5_executor sends sl and tp with the order), so it closes
-# at one of them with no executor watching. Nothing new can open.
-enabled = false
+# ONE POSITION WAS OPEN ON 33708517 WHEN IT STOOD DOWN, on broker-side stops, and
+# nothing mirrors that login any more.
+#
+# 2026-09-25, RE-ENABLED ON A NEW LOGIN, AND A CLAIM THAT STOOD HERE IS
+# WITHDRAWN. "Only one terminal per machine can serve Python" was built on
+# `MCP bind error on 127.0.0.1:22346`, which is real - one terminal binds that
+# port - but NOT fatal. Measured with both terminals up: `initialize(path=...)`
+# reaches each and returns its own account, V10 answering 35911458 and V12
+# answering 35911764. Two funded accounts on one VPS work.
+#
+# SIZING at lot_scale 5.0 with THREE books. Largest order 0.35 lot; the broker's
+# own order_calc_margin says 75.01 USC for it. Three at once is 1.05 lot, about
+# 225 USC of margin against 50,000 - a margin level near 22,000% against a 500%
+# floor. Notional 449,000 USC is 8.98x equity, and --max-notional-ratio is 10x
+# and PER-ORDER, so it cannot see that aggregate, which is why it is written
+# here. The real exposure is correlated risk: three independent coins can land
+# on the same side, so three stops in one day costs about 3% of the account.
+enabled = true
 
 runs = [
-    # STOPPED 2026-09-24 by the owner - "Stop chien luoc ben real money di, no
-    # dang di ko tot" - and NOT restarted when he moved the coin books here an
-    # hour later. Commented out rather than deleted: `runs` is the strategy
-    # selection, so leaving these listed would say this account mirrors them.
-    # He has not asked for either back; uncommenting one is his decision.
+    # Belonged to the OLD login 33708517 and stopped by the owner on 2026-09-24.
+    # Commented out rather than deleted: `runs` IS the strategy selection, so
+    # leaving them listed would say this account mirrors them.
     # "ai-xau-ds-ctx",
     # 2026-09-23, the owner's decision: "ap dung xau-macd-asia vao ben real
     # money". A SECOND BOOK on this account, and the first that is not the
@@ -918,12 +944,18 @@ symbol_suffix = ".sc"
 # account holds 50,000 USC = 500 USD, so x5 puts about 5 USD at risk per trade,
 # which is that same 1%.
 #
-# THE LEVERAGE IS 500, MEASURED, AND THE OWNER ASKED FOR 2000. `account_info()`
-# read 500 on 2026-09-25 at 21:44 with the terminal logged in and connected. The
-# note on `vantage-v12` warns in capitals that leverage here is measured and not
-# assumed, and it was right again: the broker assigns it, the request does not.
-# Margin below is therefore computed at 500, which is four times what 2000 would
-# have needed - and it still does not come close to the floor.
+# THE LEVERAGE READING CHANGED AND THE FIRST ONE IS WITHDRAWN. This said "the
+# leverage is 500, MEASURED" on the strength of one `account_info()` call at
+# 21:44 on 2026-09-25. Re-read twice later the same night, the same call on the
+# same account returns 2000, which is what the owner asked for. Two readings
+# disagree and the later is not automatically the truer: the honest statement is
+# that it read 500 once and 2000 twice, and the margin arithmetic below is left
+# at the WORSE of them so it holds either way.
+#
+# What is not in doubt is the broker's own answer. `order_calc_margin` for the
+# largest order this book can send, 0.35 lot, returns 75.01 USC - measured
+# directly rather than derived from a leverage figure - against 50,000 of
+# equity. The floor is nowhere near on any reading.
 #
 # Largest order the paper books produce is 0.07 lot, so x5 sends 0.35:
 #   --max-notional-ratio 10.0   0.35 lot at 4279 = 149,765 USC = 3.00x equity.
@@ -993,6 +1025,10 @@ runs = [
     #     same side and stopping out the same day costs about 5% of the
     #     account, 25 USD, against 2% and 10 USD for the two books alone.
     # ------------------------------------------------------------------
+    # The three coin books, here rather than on 35911458. On 2026-09-25 they were
+    # found mirroring onto the 500 USD account WITHOUT being declared there -
+    # five books and about 5% of correlated risk on a config that described two
+    # and 2%. The owner was asked and chose to stop them there and run them here.
     "ai-xau-terra-ctx-coin",
     "ai-xau-ds-ctx-htf-filter-coin",
     "ai-xau-ds-plan-trigger-coin",
