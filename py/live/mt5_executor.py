@@ -230,6 +230,19 @@ def log(path: Path, kind: str, **fields) -> None:
 COMMENT_MAX = 25
 
 
+# The longest OPENING comment this desk will send, two characters inside
+# COMMENT_MAX.
+#
+# 25 is measured-accepted, so 25 would probably work. The margin is here
+# because this file already argues against sitting on a measured boundary, in
+# the `wknd` note below: putting a string "exactly ON the longest string this
+# account has ever accepted" is what produced seven hours of closes that could
+# not be sent. An open that cannot be sent is worse than a close that cannot,
+# and two characters cost nothing in a field nobody reads outside a deal
+# history.
+OPEN_COMMENT_MAX = COMMENT_MAX - 2
+
+
 def close_comment(run: str, why: str) -> str:
     """The comment on a closing order, short enough to send.
 
@@ -267,6 +280,46 @@ def pending_comment(run: str) -> str:
     """
     tagged = f"{run} plan"
     return tagged if len(tagged) <= COMMENT_MAX else run[:COMMENT_MAX]
+
+
+def open_comment(run: str) -> str:
+    """The comment on an OPENING order, within the MEASURED limit.
+
+    This existed as `f"flowdesk {run}"[:31]` inline at the open, and 31 is the
+    limit MT5 DOCUMENTS, not the one this account has been measured at. The
+    note on `COMMENT_MAX` above records what happened the last time something
+    sat on 31: `order_send` returned None, 1,389 times, refusing the request
+    before it left the terminal. It happened again on 2026-09-24 the moment a
+    run id got longer than the two this account had been mirroring - the coin
+    books, at 27 and 29 characters against `ai-xau-ds-ctx`'s 13 - and cost 624
+    refused orders over 26 hours in which the account looked like it was
+    trading and was not.
+
+    Same rule as `pending_comment`: the `flowdesk ` prefix is decoration and is
+    dropped whole when it does not fit, because the run id is the field's one
+    job in a deal history.
+
+    THE LAST SEGMENT IS KEPT WHEN THE ID ITSELF IS TOO LONG. A plain
+    `run[:COMMENT_MAX]` would turn `ai-xau-ds-ctx-htf-filter-coin` into
+    `ai-xau-ds-ctx-htf-filter-`, which is the same string a plain truncation
+    gives `ai-xau-ds-ctx-htf-filter` - so a book and its own coin control would
+    be indistinguishable in the one place a person looks to tell them apart.
+    On this desk the discriminator is always the last `-` segment (`-coin`,
+    `-b`, `-otl`, `-trigger`), so that segment survives and the middle is what
+    gives way.
+    """
+    tagged = f"flowdesk {run}"
+    if len(tagged) <= OPEN_COMMENT_MAX:
+        return tagged
+    if len(run) <= OPEN_COMMENT_MAX:
+        return run
+    head, sep, tail = run.rpartition("-")
+    if sep and tail and len(tail) + 1 < OPEN_COMMENT_MAX:
+        # rstrip the separator: `head[:n]` can land on a `-` and produce
+        # `ai-xau-ds-ctx-htf--coin`, which is a string nobody meant to write.
+        kept = head[: OPEN_COMMENT_MAX - len(tail) - 1].rstrip("-")
+        return f"{kept}-{tail}"
+    return run[:OPEN_COMMENT_MAX]
 
 
 def pending_order_type(mt5, side, kind):
@@ -2382,7 +2435,7 @@ def main() -> int:
                 "action": mt5.TRADE_ACTION_DEAL, "symbol": args.symbol, "volume": vol,
                 "type": mt5.ORDER_TYPE_BUY if is_long else mt5.ORDER_TYPE_SELL,
                 "price": price, "deviation": args.deviation, "magic": magic,
-                "comment": f"flowdesk {args.run}"[:31], "type_time": mt5.ORDER_TIME_GTC, "type_filling": mt5.ORDER_FILLING_IOC,
+                "comment": open_comment(args.run), "type_time": mt5.ORDER_TIME_GTC, "type_filling": mt5.ORDER_FILLING_IOC,
             }
             # The book's stop is a real order only for engine-managed strategies;
             # a sizing-only stop (self-managed) is still sent as a hard stop —
