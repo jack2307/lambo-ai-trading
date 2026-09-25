@@ -107,25 +107,50 @@ numbers before moving on, and `tests/golden/` holds what it published.
   was CONNECTED, and **nothing at all** - not one line - for every instance
   launched while `query session` showed `Administrator 2 Disc`. Those hang before
   they can even write a log line.
-  So the rule is: **the terminal must be started while somebody is actually
-  CONNECTED to the RDP session, not merely logged on.** A disconnected session
-  keeps windows that already exist - which is why a terminal started while
-  connected keeps working for days after the owner disconnects - but gives a NEW
-  process no desktop to create one on. Sequence that works: connect, double-click,
-  WAIT for the quote window and the balance to appear, then disconnect.
-  Nothing automates the double-click. Three approaches were tried and all failed:
-  `Invoke-CimMethod` from SSH (session 0), `schtasks /IT /rl HIGHEST`, and
-  `schtasks /IT` un-elevated.
+  **THE RULE I DREW FROM THAT WAS WRONG AND IS WITHDRAWN.** It said "the
+  terminal must be started while somebody is actually CONNECTED to the RDP
+  session, not merely logged on." Falsified the same day: a terminal that had
+  been started while the session was `Disc` became reachable, without being
+  restarted and without anybody connecting, the moment it was LOGGED IN to a
+  trading account. The discriminator is **whether the terminal has an
+  authenticated account**, not the RDP connection state.
+  The three hypotheses that failed before that one, in order, so nobody spends
+  the time again: elevation (dropped `/rl HIGHEST`, no change), the 22346 port
+  conflict (gave one terminal the port alone, no change), and the RDP
+  connection state (above). A terminal sitting at its login dialog answers
+  `initialize` with an IPC error that looks exactly like a session problem.
+  **The empty log was also mis-read.** "Nothing at all, not one line - those
+  hang before they can write a log line" treated an absent log as proof of a
+  hang. It is not: a terminal that starts and waits at its login prompt writes
+  little or nothing, and it is running. Absence of log lines distinguishes
+  nothing.
+  Still true, and still not automated: **somebody has to be in RDP once** per
+  new account, to enter the credentials, enable AutoTrading and put the symbol
+  in Market Watch. Whether a scheduled task would then be enough on its own has
+  NOT been retested since the login cause was found - the earlier failures are
+  no longer evidence against it, because every one of them was a terminal with
+  no account.
   THE COST OF LEARNING THIS: killing the hand-started terminal to test the port
   hypothesis took the pollers down with it and froze every book for 96 minutes.
   Do not kill a working terminal to test anything - start a second installation
   instead, or test on the demo one.
-- **ONE TERMINAL PER MACHINE SERVES PYTHON.** Because of the fixed 22346 port,
-  a second funded account cannot have its own executor on the same VPS while
-  another terminal holds the bridge. `flowdesk-bars-export`'s task argument
-  names the terminal explicitly and `initialize()` relaunches it, so whichever
-  terminal that argument names will take the port back within five minutes -
-  point it at the terminal whose account the executors need.
+- **TWO TERMINALS DO SERVE PYTHON AT ONCE. "ONE TERMINAL PER MACHINE" WAS MY
+  CLAIM AND IT IS WITHDRAWN.** It said a second funded account "cannot have its
+  own executor on the same VPS while another terminal holds the bridge", reasoned
+  from the fixed 22346 port. Measured 2026-09-25 with both terminals up:
+  `mt5.initialize(path=...)` **honours the path** and reaches each installation
+  separately - asking for `C:\MT5-v10` returns login 35911458, asking for
+  `C:\MT5-v12` returns 35911764, in the same Python process, one after the other.
+  Five real-money executors then ran side by side for hours, two on 35911458 and
+  three on 35911764, `init-failed 0` on all five.
+  The `MCP bind error on 127.0.0.1:22346` is real and is what misled me: only one
+  terminal binds that port. It does not follow that the others are unreachable -
+  a client that names a path is not going through that port. **Do not infer the
+  bridge's reach from a bind error again.**
+  What remains true is narrower: `flowdesk-bars-export`'s task argument names one
+  terminal, so the POLLERS read bars from whichever terminal that argument names.
+  That is a choice about where market data comes from, not a limit on how many
+  accounts can trade.
 - **`CARGO_TARGET_DIR` is NOT set, and this line used to claim it was.** It
   said agent worktrees share `E:/rust/flowdesk/target` "so three of them
   cannot fill the disk". They do not share it — nothing sets the variable — so
