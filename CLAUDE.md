@@ -100,9 +100,22 @@ numbers before moving on, and `tests/golden/` holds what it published.
   `MCP bind error on 127.0.0.1:22346`, real - 22346 is the single port the
   MetaTrader5 package speaks over, so only ONE terminal per machine can serve
   Python - but giving v12 the port alone did not make it reachable).
-  What distinguishes a reachable terminal from an unreachable one, on the
-  evidence: the reachable one was started by a human double-click. So the
-  terminal is started by hand, in RDP, and nothing automates that step.
+  What distinguishes a reachable terminal from an unreachable one is NOT who
+  started it but WHAT THE SESSION WAS DOING at the time, and the terminal's own
+  log shows it: `C:\MT5-v12\logs\<date>.log` records
+  `MetaTrader 5 x64 build ... started` for the instance launched while the owner
+  was CONNECTED, and **nothing at all** - not one line - for every instance
+  launched while `query session` showed `Administrator 2 Disc`. Those hang before
+  they can even write a log line.
+  So the rule is: **the terminal must be started while somebody is actually
+  CONNECTED to the RDP session, not merely logged on.** A disconnected session
+  keeps windows that already exist - which is why a terminal started while
+  connected keeps working for days after the owner disconnects - but gives a NEW
+  process no desktop to create one on. Sequence that works: connect, double-click,
+  WAIT for the quote window and the balance to appear, then disconnect.
+  Nothing automates the double-click. Three approaches were tried and all failed:
+  `Invoke-CimMethod` from SSH (session 0), `schtasks /IT /rl HIGHEST`, and
+  `schtasks /IT` un-elevated.
   THE COST OF LEARNING THIS: killing the hand-started terminal to test the port
   hypothesis took the pollers down with it and froze every book for 96 minutes.
   Do not kill a working terminal to test anything - start a second installation
