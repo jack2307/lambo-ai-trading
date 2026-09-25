@@ -689,11 +689,14 @@ label = "Lambo V12 - coin controls, REAL MONEY"
 # mirrors at x1.0 and this one at x10, so the two records answer "does the
 # same rule behave the same when each trade is worth ten times more", which
 # no paper book can answer.
-# 2026-09-25, the owner's decision: "Cho tai khoan moi nay chay tren V12", with
-# the three coin books moved here off 35911458. The previous login on this block
-# was 33708517; it is named here rather than erased because it still holds open
-# positions on broker-side stops and every note below was written about it.
-login = 35911764
+# 2026-09-25: THIS BLOCK STAYS ON 33708517. Putting 35911764 here was my
+# mistake, and mt5_executor refused it before sending anything:
+#   "data/live/vantage-v12/ already holds the record of login 33708517; this
+#    terminal is 35911764. Use a new account id rather than writing two accounts
+#    into one history."
+# An account id owns a history directory. The new login has its own id,
+# `vantage-v12-coin`, at the end of this file: same terminal, separate record.
+login = 33708517
 server = "VantageMarkets-Live 21"
 
 # Its own install, cloned from the idle C:\MT5-live on 2026-09-21 because that
@@ -751,7 +754,11 @@ symbol_suffix = ".sc"
 # this block said 500 and said it was measured; that reading is not reproducible
 # and the margin figures above avoid depending on it by using the broker's own
 # margin answer instead.
-lot_scale = 5.0
+#
+# BACK TO TEN, because this block is 33708517's again and that account holds
+# 100,000 USC. The five was written for the 500 USD login that briefly sat here
+# by mistake. The account is disabled, so neither number trades today.
+lot_scale = 10.0
 
 real_money = true
 dry_run = false
@@ -787,8 +794,13 @@ dry_run = false
 # ONE POSITION WAS OPEN ON 33708517 WHEN IT STOOD DOWN, on broker-side stops, and
 # nothing mirrors that login any more.
 #
-# 2026-09-25, RE-ENABLED ON A NEW LOGIN, AND A CLAIM THAT STOOD HERE IS
-# WITHDRAWN. "Only one terminal per machine can serve Python" was built on
+# 2026-09-25: STILL DISABLED. The re-enable written here was for a login that
+# does not belong to this block - see the note by `login` above. What follows is
+# kept, because the claim it withdraws was wrong and the correction is worth
+# having wherever a reader lands.
+#
+# A CLAIM THAT STOOD HERE IS WITHDRAWN. "Only one terminal per machine can serve
+# Python" was built on
 # `MCP bind error on 127.0.0.1:22346`, which is real - one terminal binds that
 # port - but NOT fatal. Measured with both terminals up: `initialize(path=...)`
 # reaches each and returns its own account, V10 answering 35911458 and V12
@@ -801,7 +813,7 @@ dry_run = false
 # and PER-ORDER, so it cannot see that aggregate, which is why it is written
 # here. The real exposure is correlated risk: three independent coins can land
 # on the same side, so three stops in one day costs about 3% of the account.
-enabled = true
+enabled = false
 
 runs = [
     # Belonged to the OLD login 33708517 and stopped by the owner on 2026-09-24.
@@ -1025,10 +1037,74 @@ runs = [
     #     same side and stopping out the same day costs about 5% of the
     #     account, 25 USD, against 2% and 10 USD for the two books alone.
     # ------------------------------------------------------------------
-    # The three coin books, here rather than on 35911458. On 2026-09-25 they were
-    # found mirroring onto the 500 USD account WITHOUT being declared there -
-    # five books and about 5% of correlated risk on a config that described two
-    # and 2%. The owner was asked and chose to stop them there and run them here.
+    # The three coin books live on `vantage-v12-coin` at the end of this file:
+    # the same terminal, the new login, and a history of their own.
+]
+
+# ============================================================================
+[[account]]
+# 2026-09-25, the owner's decision: "3 chien luoc kia chay tren vantage-v12 di" -
+# the three coin books on the new login, through the V12 terminal.
+#
+# WHY A NEW ID AND NOT `vantage-v12`. An account id owns a history directory,
+# and data/live/vantage-v12/ already holds 33708517's trades. Pointing that id
+# at 35911764 would write two accounts into one record. mt5_executor refused it
+# and said so before sending anything - the guard working - and this id is the
+# fix rather than a way round it.
+id = "vantage-v12-coin"
+label = "Lambo V12 - coin controls on 35911764, REAL MONEY"
+login = 35911764
+server = "VantageMarkets-Live 21"
+
+# THE SAME TERMINAL as the retired vantage-v12 block, deliberately, and it works.
+# "Only one terminal per machine can serve the Python bridge" was my claim and it
+# is WRONG. Measured 2026-09-25 with both terminals up: mt5.initialize(path=...)
+# reaches each and returns its own account - V10 answers 35911458, V12 answers
+# 35911764. The MCP bind error on 127.0.0.1:22346 is real, only one terminal
+# binds that port, and it does not stop the other from serving a client that
+# names its path.
+terminal = 'C:\MT5-v12\terminal64.exe'
+symbol_suffix = ".sc"
+
+# FIVE, checked before it was written, as this file requires whenever a scale OR
+# a book count changes - both are new here.
+#
+# The paper books run on 100 USD at 1%, a dollar a trade. This account holds
+# 50,000 USC = 500 USD, so x5 risks about 5 USD a trade: the same 1%.
+#
+#   --max-notional-ratio 10.0   largest order 0.35 lot at 4280 = 149,800 USC,
+#                               3.00x equity; the ceiling binds at 1.17 lots.
+#                               Does not bind. PER-ORDER, and this account runs
+#                               THREE books, so the aggregate is below.
+#   --min-margin-level 500      75.02 USC for that order - the broker's own
+#                               order_calc_margin, measured, not derived from a
+#                               leverage figure. Three at once is about 225 USC
+#                               against 50,000, a margin level near 22,000%.
+#                               Does not bind.
+#   AGGREGATE                   three at maximum are 1.05 lot, 8.98x equity. The
+#                               ceiling cannot see this, which is why it is
+#                               written out. The real exposure is correlated
+#                               risk: three independent coins can land on the
+#                               same side, so three stops in one day costs about
+#                               3% of the account, 15 USD.
+#
+# Leverage reads 2000 here, twice on 2026-09-25. An earlier 500 on the other
+# funded account is not reproducible, which is why every margin figure above
+# comes from the broker's own answer instead of from leverage.
+lot_scale = 5.0
+
+real_money = true
+dry_run = false
+enabled = true
+
+# WHAT THESE ARE, so nobody reads them as strategies. Each is the CONTROL of an
+# AI book: a seeded 50/50 coin taking the same bar and the same stop distance
+# with a random side. They have no entry rule of their own, so the three parent
+# models must keep running - and keep costing API - for these to trade at all.
+# A coin's gross expectancy on a bracket is exactly zero by construction, so its
+# net expectancy is minus the cost, always. The owner has been told this more
+# than once and chose it; recorded as his decision, not as a finding.
+runs = [
     "ai-xau-terra-ctx-coin",
     "ai-xau-ds-ctx-htf-filter-coin",
     "ai-xau-ds-plan-trigger-coin",
