@@ -89,6 +89,30 @@ numbers before moving on, and `tests/golden/` holds what it published.
   Measured 2026-09-25, on a first attempt to bring up `C:\MT5-v10`: the copy
   succeeded, the login script read and deleted its password file, and then
   `initialize` sat for ten minutes with no terminal process ever appearing.
+- **A SCHEDULED TASK CANNOT SUBSTITUTE FOR THE DOUBLE-CLICK, and the line above
+  used to imply it could.** Registering the terminal as a task with
+  `schtasks /IT` (or an Interactive `LogonType`) DOES start it, in the logged-on
+  session, un-elevated, holding the Python bridge port - and Python still cannot
+  reach it: `(-10005, 'IPC timeout')` on every `initialize`, and
+  `(-10001, 'IPC send failed')` in the pollers. Measured 2026-09-25 by
+  falsifying two hypotheses in turn: elevation (dropped `/rl HIGHEST`, no
+  change) and a port conflict (the terminal's own log shows
+  `MCP bind error on 127.0.0.1:22346`, real - 22346 is the single port the
+  MetaTrader5 package speaks over, so only ONE terminal per machine can serve
+  Python - but giving v12 the port alone did not make it reachable).
+  What distinguishes a reachable terminal from an unreachable one, on the
+  evidence: the reachable one was started by a human double-click. So the
+  terminal is started by hand, in RDP, and nothing automates that step.
+  THE COST OF LEARNING THIS: killing the hand-started terminal to test the port
+  hypothesis took the pollers down with it and froze every book for 96 minutes.
+  Do not kill a working terminal to test anything - start a second installation
+  instead, or test on the demo one.
+- **ONE TERMINAL PER MACHINE SERVES PYTHON.** Because of the fixed 22346 port,
+  a second funded account cannot have its own executor on the same VPS while
+  another terminal holds the bridge. `flowdesk-bars-export`'s task argument
+  names the terminal explicitly and `initialize()` relaunches it, so whichever
+  terminal that argument names will take the port back within five minutes -
+  point it at the terminal whose account the executors need.
 - **`CARGO_TARGET_DIR` is NOT set, and this line used to claim it was.** It
   said agent worktrees share `E:/rust/flowdesk/target` "so three of them
   cannot fill the disk". They do not share it — nothing sets the variable — so
