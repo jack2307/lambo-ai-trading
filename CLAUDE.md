@@ -76,6 +76,19 @@ numbers before moving on, and `tests/golden/` holds what it published.
   exporter handles both; do not call the terminal directly.
 - The MT5 terminal on this machine is a **live** account. Read-only calls
   only (`copy_rates_*`, `symbol_info`); no order function is ever imported.
+- **A new MT5 terminal cannot be started over SSH on the VPS.** `mt5.initialize`
+  on a terminal that is not already running HANGS - no error, no timeout, no
+  log line - because MT5 needs the interactive session's window station and an
+  SSH command does not have one. `query session` on 103.19.29.194 shows
+  `Administrator  2  Disc`: a disconnected-but-alive interactive session, and
+  every working terminal (`MT5-cent`, `MT5-demo`, `MT5-v12`) lives inside it,
+  started by hand in RDP days ago. So a new account needs a person in RDP once:
+  launch the terminal, log in, enable AutoTrading, put the symbol in Market
+  Watch, then **disconnect rather than log off** - logging off destroys session
+  2 and every terminal in it.
+  Measured 2026-09-25, on a first attempt to bring up `C:\MT5-v10`: the copy
+  succeeded, the login script read and deleted its password file, and then
+  `initialize` sat for ten minutes with no terminal process ever appearing.
 - **`CARGO_TARGET_DIR` is NOT set, and this line used to claim it was.** It
   said agent worktrees share `E:/rust/flowdesk/target` "so three of them
   cannot fill the disk". They do not share it — nothing sets the variable — so
