@@ -1025,9 +1025,18 @@ runs = [
     # away. It is not.
     #
     #   order  597097500   LONG 0.35 lot XAUUSD.sc   magic 120037770
-    #   opened 2026-09-26 01:47:19 (VPS, UTC+7) at 4274.45
+    #   opened 2026-09-25 15:47:19 UTC at 4274.45
     #          comment 'ai-xau-ds-plan-tri-coin'
-    #   closed 2026-09-26 02:03:36 at 4296.36, broker-side target [tp 4296.18]
+    #   closed 2026-09-25 16:03:36 UTC at 4296.36, broker-side target [tp 4296.18]
+    #
+    #   THOSE TIMES ARE UTC, and the first version of this note said
+    #   "2026-09-26 01:47:19 (VPS, UTC+7)", which was neither. MEASURED
+    #   2026-09-26 against the desk's own UTC record of the same order:
+    #   MT5's deal epoch runs +3.0 h ahead of UTC - it reports SERVER time
+    #   (UTC+3) in a field that looks like a Unix timestamp - and
+    #   datetime.fromtimestamp then adds the VPS's +7, so a naive print is
+    #   UTC+10. Subtract ten hours from anything printed that way, or read
+    #   the desk's own executor.jsonl, which is already UTC.
     #   result +766.85 USC realised, plus 4.41 USC ESTIMATED rebate = 771.26
     #
     # +766.85 USC is the WHOLE of this account's gain: 50,000.00 transferred
