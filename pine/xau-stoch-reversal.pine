@@ -1,0 +1,272 @@
+// Stoch Reversal — a faithful port of the flowdesk book `xau-stoch`
+// ==================================================================
+//
+// WHAT THIS IS. The desk's `stoch-reversal` strategy, as it actually runs on
+// XAUUSD 15m, ported to Pine so it can be looked at on a chart. Ported from
+// the source, not from memory:
+//
+//   entry rule   crates/fd-strategy/src/screen.rs, `impl Strategy for StochReversal`
+//   %K and %D    crates/fd-indicators/src/lib.rs, `stochastic()`
+//   ATR          crates/fd-indicators/src/lib.rs, `atr()` = rma(true_range, n)
+//   bar order    crates/fd-backtest/src/engine.rs, the loop at line 466
+//   live params  /api/paper/status, run `xau-stoch`, 2026-09-26:
+//                period 14, smoothK 3, smoothD 3, level 20,
+//                stopAtr 1.5, riskReward 1.5, atrPeriod 14
+//
+// THE PART THAT IS EASY TO GET WRONG, and that the desk's own 45 trades pin
+// down exactly (checked bar by bar, 45 of 45):
+//
+//   * the signal is decided on the CLOSE of bar i;
+//   * the fill happens at the OPEN of the next tradable bar, at half the
+//     spread against you — long buys open+0.14, short sells open-0.14;
+//   * the stop and target are computed from the SIGNAL bar's close and the
+//     SIGNAL bar's ATR, never from the bar being filled on;
+//   * a trade CAN be stopped or targeted on its own entry bar, because the
+//     engine manages the position against that bar's range right after
+//     filling it;
+//   * when one bar's range covers both stop and target, the STOP is taken.
+//     OHLC cannot say which came first, so the pessimistic reading is used;
+//   * a gap through a level fills at the open, not at the level, so gapping
+//     through a stop loses more than 1R.
+//
+// WHAT THIS CANNOT REPRODUCE, so the trade list here will not match the
+// desk's exactly. Stated rather than hidden:
+//
+//   1. `news:60-30` — the live book stands aside from 60 minutes before to 30
+//      minutes after every high-impact (impact 3) calendar event. Pine has no
+//      economic calendar, so THIS SCRIPT TAKES TRADES THE BOOK REFUSED. It
+//      will therefore show MORE trades than the book took, and the extra ones
+//      are exactly the ones taken into news.
+//   2. The position guards. The live book's 45 closed trades exited STOP 19,
+//      TARGET 18, TIMEOUT 6, WEEKEND_FLAT 2 — the last two are guards. The
+//      4-hour clock and the Friday flat are reproduced below; the rest (daily
+//      loss limits, streak rules, notional caps) are not.
+//   3. Lot sizing, equity and money. This is an indicator: it counts R, not
+//      dollars. R is (exit - entry) / |entry - stop|, which is how every
+//      receipt on the desk is quoted.
+//
+// HOW THE PORT WAS CHECKED, because a port nobody checked is worse than none.
+// Pine cannot be run here, so the same state machine was written a second time
+// in Python, fed the same bars the desk itself is fed, and compared against the
+// 45 trades in data/paper/xau-stoch/trades.jsonl. Result, 2026-09-26:
+//
+//   45 of 45   signal bar located, and stop and target recovered exactly -
+//              stop = signalClose -/+ 1.5*ATR, target = signalClose +/- 2.25*ATR
+//   42 of 45   the port produced the same side, the same stop and the same target
+//   29 of 45   ALSO the same fill bar and the same entry price to the cent
+//   13 of 45   the desk filled ONE BAR LATER than the rule prescribes. Same
+//              signal, same levels, later fill - live-loop timing, not the rule
+//    2 of 45   the port could not take, because it was holding one of the trades
+//              the live news filter had refused
+//    0 of 45   unexplained
+//
+// It also takes about 20 trades the book refused, which is the news filter and
+// is listed above. Those extra trades make the two sequences DRIFT: while this
+// script is in a trade the book never took, it cannot take the next one the
+// book did. So read it as the mechanism faithfully drawn, not as a replay.
+//
+// AND THE THING WORTH KNOWING BEFORE READING ANY OF IT. On the desk's own
+// measured record this book is NOT good: 384 trades, profit factor 0.836,
+// expectancy -0.087R, 14th percentile against its own cost-matched null. The
+// live paper run is +14.33R over 45 trades, which is a small sample of the
+// same method that measured negative over 384. Use this script to look at the
+// mechanism, not as evidence for it.
+//
+//@version=6
+indicator("Stoch Reversal (flowdesk xau-stoch)", shorttitle="stoch-rev", overlay=true, max_labels_count=500)
+
+// ---------------------------------------------------------------- inputs
+grpS = "Signal — as the desk runs it"
+period    = input.int(14,  "Stochastic period",        minval=1, group=grpS)
+smoothK   = input.int(3,   "%K smoothing",             minval=1, group=grpS)
+smoothD   = input.int(3,   "%D smoothing",             minval=1, group=grpS)
+level     = input.float(20.0, "Level (long under it, short over 100 minus it)", minval=0.0, maxval=50.0, group=grpS)
+
+grpR = "Risk — stop and target"
+atrPeriod = input.int(14,  "ATR period",               minval=1, group=grpR)
+stopAtr   = input.float(1.5, "Stop, in ATR",           minval=0.1, step=0.1, group=grpR)
+rr        = input.float(1.5, "Target, in R",           minval=0.1, step=0.1, group=grpR)
+
+grpE = "Execution — what the engine actually does"
+spread     = input.float(0.28, "Spread charged, price units (half each side)", minval=0.0, step=0.01, group=grpE, tooltip="0.28 is the MEASURED XAUUSD.sc spread on VantageMarkets-Live 21, sampled 2,315 times. Half is charged on entry and half on exit.")
+maxHoldHrs = input.float(4.0, "Flat after (hours), 0 = never", minval=0.0, step=0.5, group=grpE, tooltip="The desk's max_hold_ms is 14,400,000 = 4 hours. Six of its 45 trades exited on this clock.")
+useWeekday = input.bool(true, "Weekdays only (Mon-Fri, New York)", group=grpE, tooltip="The `weekdays` filter, mask 0b0111110 = Mon..Fri, judged in New York time.")
+useWkFlat  = input.bool(true, "Flat for the weekend at 20:45 UTC Friday", group=grpE, tooltip="The executors run with --weekend-flat=20:45. Measured 2026-09-25: both funded accounts closed at 20:45:08Z and 20:45:14Z.")
+
+grpV = "View"
+showLevels = input.bool(true,  "Stop and target while in a trade", group=grpV)
+showMarks  = input.bool(true,  "Entry and exit marks",             group=grpV)
+showTable  = input.bool(true,  "Running tally",                    group=grpV)
+
+// ------------------------------------------------------- the indicators
+// Raw %K exactly as `stochastic()` computes it, including the flat-window
+// case: the Rust returns 50.0 when the high and low of the window are equal,
+// where a bare division would give na. That case is rare and it is not worth
+// a silent difference.
+hh  = ta.highest(high, period)
+ll  = ta.lowest(low, period)
+raw = hh == ll ? 50.0 : (close - ll) / (hh - ll) * 100.0
+k   = ta.sma(raw, smoothK)
+d   = ta.sma(k, smoothD)
+atr = ta.atr(atrPeriod)
+
+// In the data window rather than on the chart: this is a price overlay, and
+// an oscillator plotted on price is unreadable.
+plot(k,   "%K",  display=display.data_window)
+plot(d,   "%D",  display=display.data_window)
+plot(atr, "ATR", display=display.data_window)
+
+// --------------------------------------------------------- the filters
+// `tradable` gates BOTH ends in the engine: a signal is only produced on a
+// tradable bar (step 3) and only filled on one (step 1).
+nyDow    = dayofweek(time, "America/New_York")
+weekOk   = not useWeekday or (nyDow != dayofweek.saturday and nyDow != dayofweek.sunday)
+utcDow   = dayofweek(time, "UTC")
+utcMins  = hour(time, "UTC") * 60 + minute(time, "UTC")
+wkFlatOn = useWkFlat and utcDow == dayofweek.friday and utcMins >= 20 * 60 + 45
+tradable = weekOk
+
+// ---------------------------------------------------------- the signals
+ready    = not na(k) and not na(d) and not na(k[1]) and not na(d[1]) and not na(atr) and atr > 0
+longSig  = ready and k > d and k[1] <= d[1] and k[1] < level
+shortSig = ready and k < d and k[1] >= d[1] and k[1] > 100.0 - level
+
+// ------------------------------------------------------ position state
+var int   side      = 0        // 0 flat, 1 long, -1 short
+var float entryPx   = na
+var int   entryTime = na
+var float stopPx    = na
+var float tgtPx     = na
+var float riskPx    = na
+
+// What the previous bar decided, waiting for this bar's open. The stop and
+// target travel with it, because they were computed from that bar's close and
+// that bar's ATR.
+var int   pendSide = 0
+var float pendStop = na
+var float pendTgt  = na
+
+var int   nTrades = 0
+var int   nStop   = 0
+var int   nTarget = 0
+var int   nClock  = 0
+var int   nFlat   = 0
+var float sumR    = 0.0
+
+half = spread / 2.0
+maxHoldMs = maxHoldHrs * 60.0 * 60.0 * 1000.0
+
+// Marks are drawn from these, set inside the bar's logic.
+entryMark = 0
+exitMark  = 0
+exitR     = 0.0
+
+// --- 1. fill whatever the previous bar decided, at THIS bar's open
+if pendSide != 0 and side == 0 and tradable
+    entryPx   := pendSide == 1 ? open + half : open - half
+    stopPx    := pendStop
+    tgtPx     := pendTgt
+    riskPx    := math.abs(entryPx - stopPx)
+    entryTime := time
+    side      := pendSide
+    entryMark := pendSide
+pendSide := 0
+pendStop := na
+pendTgt  := na
+
+// --- 2. manage the position against THIS bar's range: stop first, then
+//        target, then the clock, then the Friday flat. Same bar as the fill
+//        is allowed, because that is what the engine does.
+if side != 0
+    long = side == 1
+    exitPx = float(na)
+    kind   = 0            // 1 stop, 2 target, 3 clock, 4 weekend
+
+    stopHit = long ? low <= stopPx : high >= stopPx
+    if stopHit
+        gapped = long ? open <= stopPx : open >= stopPx
+        exitPx := gapped ? open : stopPx
+        kind   := 1
+
+    if kind == 0
+        tgtHit = long ? high >= tgtPx : low <= tgtPx
+        if tgtHit
+            gapped = long ? open >= tgtPx : open <= tgtPx
+            exitPx := gapped ? open : tgtPx
+            kind   := 2
+
+    if kind == 0 and maxHoldMs > 0 and (time - entryTime) > maxHoldMs
+        exitPx := close
+        kind   := 3
+
+    if kind == 0 and wkFlatOn
+        exitPx := close
+        kind   := 4
+
+    if kind != 0
+        // Half the spread on the way out as well.
+        got = long ? exitPx - half : exitPx + half
+        r   = riskPx > 0 ? (long ? got - entryPx : entryPx - got) / riskPx : 0.0
+        nTrades += 1
+        sumR    += r
+        if kind == 1
+            nStop += 1
+        if kind == 2
+            nTarget += 1
+        if kind == 3
+            nClock += 1
+        if kind == 4
+            nFlat += 1
+        exitMark := side
+        exitR    := r
+        side      := 0
+        entryPx   := na
+        stopPx    := na
+        tgtPx     := na
+        riskPx    := na
+        entryTime := na
+
+// --- 3. ask the strategy, with this bar's closed values. It is asked only
+//        when flat, exactly as `on_bar` returns None while a position is open.
+if side == 0 and tradable and not wkFlatOn
+    if longSig
+        pendSide := 1
+        pendStop := close - atr * stopAtr
+        pendTgt  := close + math.abs(close - (close - atr * stopAtr)) * rr
+    else if shortSig
+        pendSide := -1
+        pendStop := close + atr * stopAtr
+        pendTgt  := close - math.abs(close - (close + atr * stopAtr)) * rr
+
+// ------------------------------------------------------------- drawing
+plot(showLevels and side != 0 ? stopPx : na, "Stop",   color=color.new(color.red, 20),  style=plot.style_linebr, linewidth=1)
+plot(showLevels and side != 0 ? tgtPx  : na, "Target", color=color.new(color.teal, 20), style=plot.style_linebr, linewidth=1)
+
+if showMarks and entryMark == 1
+    label.new(bar_index, low, "▲", style=label.style_label_up, color=color.new(color.teal, 25), textcolor=color.white, size=size.tiny, tooltip="long: %K up through %D from " + str.tostring(k[1], "#") )
+if showMarks and entryMark == -1
+    label.new(bar_index, high, "▼", style=label.style_label_down, color=color.new(color.red, 25), textcolor=color.white, size=size.tiny, tooltip="short: %K down through %D from " + str.tostring(k[1], "#"))
+if showMarks and exitMark != 0
+    label.new(bar_index, exitMark == 1 ? high : low, str.tostring(exitR, "+0.00") + "R", style=exitMark == 1 ? label.style_label_down : label.style_label_up, color=color.new(exitR >= 0 ? color.teal : color.red, 55), textcolor=color.white, size=size.tiny)
+
+if showTable and barstate.islast
+    var table t = table.new(position.top_right, 2, 8, border_width=1)
+    table.cell(t, 0, 0, "stoch-reversal", bgcolor=color.new(color.gray, 70), text_color=color.white, text_size=size.small)
+    table.cell(t, 1, 0, str.tostring(period) + "/" + str.tostring(smoothK) + "/" + str.tostring(smoothD) + "  lvl " + str.tostring(level, "#"), bgcolor=color.new(color.gray, 70), text_color=color.white, text_size=size.small)
+    table.cell(t, 0, 1, "trades",  text_size=size.small)
+    table.cell(t, 1, 1, str.tostring(nTrades), text_size=size.small)
+    table.cell(t, 0, 2, "sum R",   text_size=size.small)
+    table.cell(t, 1, 2, str.tostring(sumR, "+0.00"), text_size=size.small, text_color=sumR >= 0 ? color.teal : color.red)
+    table.cell(t, 0, 3, "mean R",  text_size=size.small)
+    table.cell(t, 1, 3, nTrades > 0 ? str.tostring(sumR / nTrades, "+0.000") : "-", text_size=size.small)
+    table.cell(t, 0, 4, "target",  text_size=size.small)
+    table.cell(t, 1, 4, str.tostring(nTarget), text_size=size.small)
+    table.cell(t, 0, 5, "stop",    text_size=size.small)
+    table.cell(t, 1, 5, str.tostring(nStop), text_size=size.small)
+    table.cell(t, 0, 6, "clock",   text_size=size.small)
+    table.cell(t, 1, 6, str.tostring(nClock), text_size=size.small)
+    table.cell(t, 0, 7, "no news filter", text_size=size.tiny, text_color=color.new(color.orange, 0))
+    table.cell(t, 1, 7, "shows extra trades", text_size=size.tiny, text_color=color.new(color.orange, 0))
+
+alertcondition(longSig,  "Stoch reversal: long signal",  "Long signal on the close; the book would fill at the next bar's open.")
+alertcondition(shortSig, "Stoch reversal: short signal", "Short signal on the close; the book would fill at the next bar's open.")
