@@ -242,7 +242,36 @@ $campaigns = @(
     # because a direct call spends 2,853 tokens on the question where the CLI
     # route spends 26,509 on the same one. It is here to answer whether model
     # quality matters for this task at all; see the amendment in AI-TRADER.md.
-    @{ model = 'deepseek-flash'; run = 'ai-xau-ds-ctx'; control = 'ai-xau-ds-ctx-coin'; seed = 23; log = 'ai_trader_ds' },
+    # ------------------------------------------------------------------
+    # RETIRED 2026-09-28, on the owner's instruction: "tat di cho do ton token".
+    # Four DeepSeek books that cost tokens every bar and lost money on paper.
+    # Measured that day, net USD on a 100 USD book / profit factor:
+    #     ai-xau-ds-smc       41 trades  -8.39  PF 0.408
+    #     ai-xau-ds-plan      43 trades  -4.21  PF 0.698
+    #     ai-xau-ds-ctx       59 trades  -3.94  PF 0.819
+    #     ai-xau-ds-ctx-htf   48 trades  -3.00  PF 0.829
+    #
+    # KEPT, and why, so nobody "finishes the job" by mistake:
+    #   ai-xau-ds-ctx-htf-filter (-2.79, PF 0.841) and ai-xau-ds-plan-trigger
+    #   (-5.93, PF 0.662) are LOSING TOO, and they stay because their coins
+    #   mirror REAL MONEY on 35911764. A coin has no entry rule of its own, so
+    #   stopping either parent stops the funded account. The owner excluded them
+    #   by name. The figures are here so that trade-off stays visible.
+    #   ai-xau-ds-ctx-otl (+0.71, PF 1.040) is the only DeepSeek book not
+    #   losing - which is not the same as winning; 52 trades at PF 1.04 is
+    #   break-even inside noise. Kept as the one surviving DeepSeek experiment.
+    #
+    # Each row below keeps its SEED. The seed is what makes a book's coin
+    # replayable: switching it back on with the same seed replays that coin
+    # sequence rather than diverging from it, so these are commented out and
+    # not deleted.
+    #
+    # NOTE also that DeepSeek was returning HTTP 402 Insufficient Balance from
+    # 2026-09-27 23:00Z, so none of the seven was actually spending when this
+    # was done. The saving lands when the balance is topped up: three DeepSeek
+    # books resume instead of seven.
+    # ------------------------------------------------------------------
+    # RETIRED 2026-09-28: @{ model = 'deepseek-flash'; run = 'ai-xau-ds-ctx'; control = 'ai-xau-ds-ctx-coin'; seed = 23; log = 'ai_trader_ds' },
     # THE SAME MODEL ON THE SAME BARS WITH ONE BLOCK ADDED: options-flow
     # positioning from the COMEX tape, inside the market-context section and
     # under its framing - context, not a signal. `ai-xau-ds-ctx` above keeps
@@ -291,7 +320,7 @@ $campaigns = @(
     # Seeds 37 and 41: distinct from each other and from 7, 11, 17, 23, 29 and
     # 31. Two books sharing a seed share a coin's luck on every bar where both
     # traded, which is the one thing a control may not do.
-    @{ model = 'deepseek-flash'; run = 'ai-xau-ds-ctx-htf'; control = 'ai-xau-ds-ctx-htf-coin'; seed = 37; log = 'ai_trader_ds_htf'; promptVariant = 'htf-context' },
+    # RETIRED 2026-09-28: @{ model = 'deepseek-flash'; run = 'ai-xau-ds-ctx-htf'; control = 'ai-xau-ds-ctx-htf-coin'; seed = 37; log = 'ai_trader_ds_htf'; promptVariant = 'htf-context' },
     @{ model = 'deepseek-flash'; run = 'ai-xau-ds-ctx-htf-filter'; control = 'ai-xau-ds-ctx-htf-filter-coin'; seed = 41; log = 'ai_trader_ds_htf_filter'; promptVariant = 'htf-filter' },
     # THE STRUCTURAL LEVELS BOOK. Registered at
     # docs/hypotheses/2026-09-18-smc-context.md before the route it reads
@@ -341,7 +370,7 @@ $campaigns = @(
     # Three books each holding a 10% disagreement gate are three chances at a
     # false positive, so a positive result here is read against three tests
     # and not one. docs/hypotheses/2026-09-18-smc-context.md
-    @{ model = 'deepseek-flash'; run = 'ai-xau-ds-smc'; control = 'ai-xau-ds-smc-coin'; seed = 53; log = 'ai_trader_ds_smc'; promptVariant = 'smc-context' },
+    # RETIRED 2026-09-28: @{ model = 'deepseek-flash'; run = 'ai-xau-ds-smc'; control = 'ai-xau-ds-smc-coin'; seed = 53; log = 'ai_trader_ds_smc'; promptVariant = 'smc-context' },
     # THE STAGED-ENTRY PAIR, stages 1 and 2 of
     # docs/plans/2026-09-18-staged-ai-entry.md. Registered at
     # docs/hypotheses/2026-09-18-plan-entry.md and 2026-09-18-plan-trigger.md
@@ -368,7 +397,7 @@ $campaigns = @(
     # The funded account does NOT follow these. `mt5_executor.py --mirror-
     # pending` exists and is off; it stays off until the stage-1 comparison
     # has 30 trades over two windows, which the registration says in advance.
-    @{ model = 'deepseek-flash'; run = 'ai-xau-ds-plan'; control = 'ai-xau-ds-plan-coin'; seed = 43; log = 'ai_trader_ds_plan'; promptVariant = 'plan' },
+    # RETIRED 2026-09-28: @{ model = 'deepseek-flash'; run = 'ai-xau-ds-plan'; control = 'ai-xau-ds-plan-coin'; seed = 43; log = 'ai_trader_ds_plan'; promptVariant = 'plan' },
     @{ model = 'deepseek-flash'; run = 'ai-xau-ds-plan-trigger'; control = 'ai-xau-ds-plan-trigger-coin'; seed = 47; log = 'ai_trader_ds_plan_trigger'; promptVariant = 'plan-trigger' }
 )
 
