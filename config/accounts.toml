@@ -1121,7 +1121,31 @@ lot_scale = 5.0
 
 real_money = true
 dry_run = false
-enabled = true
+
+# STOPPED 2026-10-01, the owner's decision: "Dung V12 di, danh do qua."
+#
+# THE CLOSING RECORD, from the broker and not from any desk file:
+#   63 closed trades, 2026-09-25 17:29Z .. 2026-10-01 10:36Z
+#   realised  -4,397.25 USC
+#   balance   50,000.00 -> 45,602.75  = -8.80% of the account
+#   flat when stopped: 0 positions, 0 pending orders, so nothing was left behind
+#
+# WHAT THAT NUMBER IS, AND IS NOT. About -69.8 USC a trade on roughly 455 USC of
+# risk, so -0.153 R. A coin on a bracket has a gross expectancy of exactly ZERO
+# by construction and a net expectancy of minus the cost - about 9.8 USC a round
+# trip, -0.022 R. The expected result was therefore a small negative, and
+# -0.153 R sits roughly 0.9 standard errors below that once the ~1.2 R spread of
+# one bracket trade across 63 trades is allowed for.
+#
+# So nothing broke. This is a coin flip paying costs, and the loss is ordinary
+# variance on top of a guaranteed small negative. That was said three times
+# before it ran; it was chosen anyway, and both the choosing and the stopping are
+# the owner's and are recorded as his.
+#
+# The three executors were stopped by PID on 2026-10-01, exact-name matched, and
+# V10's two books were verified still running afterwards. This flag is what stops
+# anything starting them again.
+enabled = false
 
 # WHAT THESE ARE, so nobody reads them as strategies. Each is the CONTROL of an
 # AI book: a seeded 50/50 coin taking the same bar and the same stop distance
