@@ -1,0 +1,15 @@
+cells: 247
+null median profit factor (the control's own p50): min 0.199  q1 0.821  median 0.867  q3 0.954  max 1.004
+cells whose null median is BELOW 1.000 (the control loses money): 240 of 247 (97.2%)
+cells at >= 95th of their null that LOSE money (PF < 1.000): 9
+   2026-09-13-friday-weekend-hold         close/1630-1815            PF 0.733  null p50 0.596  pct 99
+   2026-09-13-london-fix                  fix/pm-after               PF 0.932  null p50 0.821  pct 96
+   2026-09-13-recent-year-screen          orb/all                    PF 0.996  null p50 0.839  pct 98
+   2026-09-13-recent-year-screen-5m       ema-cross/all              PF 0.860  null p50 0.758  pct 99
+   2026-09-13-volume-thrust-gold          vt-gold/all                PF 0.986  null p50 0.863  pct 95
+   2026-09-14-close-reopen-guarded        close/fri-1630-1815        PF 0.827  null p50 0.535  pct 100
+   2026-09-14-fx-local-hours              fx/asia-long               PF 0.979  null p50 0.847  pct 98
+   2026-09-14-fx-local-hours              fx/us-long                 PF 0.983  null p50 0.879  pct 96
+   2026-09-14-volman-box                  box/b3                     PF 0.859  null p50 0.751  pct 100
+
+sigma of the null in PF units: median 0.1064 over 247 cells

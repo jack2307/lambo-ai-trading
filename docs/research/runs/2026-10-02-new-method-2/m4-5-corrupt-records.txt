@@ -1,0 +1,8 @@
+====================================================================================================
+M4.5 - corrupt trade records in the shared paper engine
+  trade records read: 66
+  records with hold_ms < 0: 0 (0.00% of all records)
+  of those, label STOP with r > 0 (label contradicts its own R): 0
+  by book: {}
+  the four claims' windows are 2010-06 -> 2026-09 BACKTEST receipts in
+  docs/research/runs/, produced by `search`, not by the paper engine.

@@ -1,0 +1,5 @@
+====================================================================================================
+M5.0 - gold's unconditional drift, restated in ATR20 per 5 sessions
+  XAUUSD   2025-09-13 -> 2026-09-12   287 sessions  mean +0.1427 ATR20 per 5 sessions, t +1.31
+  XAUDUKA  2018-06-16 -> 2025-04-10  2096 sessions  mean +0.2198 ATR20 per 5 sessions, t +6.20
+  XAUDUKA  2010-06-01 -> 2018-06-15  2479 sessions  mean +0.0224 ATR20 per 5 sessions, t +0.69

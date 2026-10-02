@@ -1,0 +1,7 @@
+====================================================================================================
+M4.1 - are the two windows of `fri` the same file segment?
+  XAUDUKA-15m.parquet       378749 bars  2010-05-31 20:00:00-04:00 -> 2026-05-31 19:45:00-04:00
+  XAUDUKA-15m.parquet.bak   186856 bars  2018-06-17 18:00:00-04:00 -> 2026-05-31 19:45:00-04:00
+  => window 1 of `fri` (2018-06 -> 2025-04) is inside the .bak; window 2 (2010-06 -> 2018-06)
+     exists only in the merged file, downloaded 2026-09-13. Two downloads, one file.
+  overlap 186856 bars; max |open diff| 0.000000, max |close diff| 0.000000 price units

@@ -1,0 +1,55 @@
+parsed cell lines: 627
+distinct (run,row) pairs fully parsed: 247
+pairs at >= 95th of their own null: 51  (20.6%)
+pairs at >= 99th: 36  (14.6%)
+pairs with >= 30 trades: 236
+of those, >= 95th: 47  (19.9%)
+
+the >=95th pairs with >=30 trades:
+  2026-09-13-close-reopen-drift            close/1630-1815          trades  1355 PF  1.254 p50 0.599 p95 0.706 pct 100
+  2026-09-13-close-reopen-drift            close/1630-2000          trades  1355 PF  1.237 p50 0.760 p95 0.859 pct 100
+  2026-09-13-close-reopen-drift            close/1630-2200          trades  1355 PF  1.258 p50 0.837 p95 0.936 pct 100
+  2026-09-13-close-reopen-drift            close/1815-2200          trades  1120 PF  1.061 p50 0.863 p95 0.990 pct 100
+  2026-09-13-close-reopen-drift            close/fri-1630-1815      trades   336 PF  2.064 p50 0.785 p95 1.177 pct 100
+  2026-09-13-friday-weekend-hold           close/1630-1815          trades  1621 PF  0.733 p50 0.596 p95 0.669 pct  99
+  2026-09-13-ict-sweep-mss-fvg             ict-B-allday             trades   157 PF  1.350 p50 0.883 p95 0.986 pct 100
+  2026-09-13-ict-sweep-mss-fvg             ict-B-balanced           trades    62 PF  1.261 p50 0.888 p95 1.058 pct 100
+  2026-09-13-ict-sweep-mss-fvg             ict-C-loose              trades   223 PF  1.005 p50 0.883 p95 0.986 pct  96
+  2026-09-13-london-fix                    fix/pm-after             trades  1401 PF  0.932 p50 0.821 p95 0.927 pct  96
+  2026-09-13-london-range                  london/early             trades   203 PF  1.309 p50 0.942 p95 1.293 pct  96
+  2026-09-13-london-range                  london/nyam              trades   257 PF  1.317 p50 0.956 p95 1.241 pct  98
+  2026-09-13-orb-ny                        orb/30m                  trades   394 PF  1.088 p50 0.843 p95 0.914 pct 100
+  2026-09-13-orb-ny                        orb/60m                  trades    84 PF  1.249 p50 0.941 p95 1.049 pct 100
+  2026-09-13-orb-ny                        orb/60m-expansion        trades   153 PF  1.115 p50 0.903 p95 1.000 pct 100
+  2026-09-13-orb-ny-matched-null           orb/60m-expansion        trades   153 PF  1.115 p50 0.909 p95 1.109 pct  96
+  2026-09-13-recent-year-hours             hold/04-06-long          trades   578 PF  1.139 p50 0.837 p95 0.994 pct 100
+  2026-09-13-recent-year-hours             hold/04-06-short         trades   205 PF  1.481 p50 0.963 p95 1.284 pct 100
+  2026-09-13-recent-year-hours             hold/16-18-long          trades   699 PF  1.359 p50 0.664 p95 0.813 pct 100
+  2026-09-13-recent-year-hours             hold/18-20-long          trades   580 PF  1.122 p50 0.745 p95 0.901 pct 100
+  2026-09-13-recent-year-hours             hold/20-22-long          trades   580 PF  1.122 p50 0.806 p95 0.980 pct 100
+  2026-09-13-recent-year-screen            orb/all                  trades   442 PF  0.996 p50 0.839 p95 0.969 pct  98
+  2026-09-13-recent-year-screen-5m         ema-cross/all            trades  3236 PF  0.860 p50 0.758 p95 0.844 pct  99
+  2026-09-13-recent-year-screen-5m         ict-sweep-mss-fvg/all    trades   363 PF  1.051 p50 0.764 p95 0.906 pct 100
+  2026-09-13-recent-year-screen-5m         ict-sweep-mss-fvg/ny     trades   110 PF  1.017 p50 0.828 p95 0.946 pct  99
+  2026-09-13-recent-year-screen-5m         orb/all                  trades   117 PF  1.050 p50 0.812 p95 0.878 pct 100
+  2026-09-13-recent-year-screen-5m         orb/ny                   trades   117 PF  1.050 p50 0.828 p95 0.946 pct 100
+  2026-09-13-recent-year-sessions          ema-cross/asia           trades    37 PF  1.632 p50 1.004 p95 1.441 pct  99
+  2026-09-13-recent-year-sessions          macd-cross/asia          trades   300 PF  1.556 p50 1.004 p95 1.441 pct  98
+  2026-09-13-recent-year-sessions-5m       ict-sweep-mss-fvg/asia   trades   107 PF  1.178 p50 0.731 p95 0.976 pct 100
+  2026-09-13-recent-year-sessions-5m       ict-sweep-mss-fvg/london trades   120 PF  1.107 p50 0.861 p95 0.959 pct 100
+  2026-09-13-recent-year-sessions-5m       orb/london               trades   119 PF  1.010 p50 0.861 p95 0.959 pct 100
+  2026-09-13-tsmom-2                       tsmom2/20d               trades   149 PF  1.325 p50 0.976 p95 1.301 pct  96
+  2026-09-13-tsmom-2                       tsmom2/60d               trades    75 PF  2.031 p50 0.982 p95 1.759 pct  98
+  2026-09-13-tsmom-silver                  tsmom/20d                trades   189 PF  1.341 p50 0.945 p95 1.199 pct 100
+  2026-09-13-volume-thrust                 vt-btc/all               trades   362 PF  1.119 p50 0.962 p95 1.112 pct  96
+  2026-09-13-volume-thrust-gold            vt-gold/all              trades    57 PF  0.986 p50 0.863 p95 0.978 pct  95
+  2026-09-14-close-reopen-guarded          close/1630-1815          trades  1355 PF  1.274 p50 0.562 p95 0.655 pct 100
+  2026-09-14-close-reopen-guarded          close/fri-1630-1815      trades   336 PF  0.827 p50 0.535 p95 0.668 pct 100
+  2026-09-14-fx-local-hours                fx/asia-long             trades  1669 PF  0.979 p50 0.847 p95 0.949 pct  98
+  2026-09-14-fx-local-hours                fx/eu-short              trades  2087 PF  1.069 p50 0.922 p95 1.027 pct 100
+  2026-09-14-fx-local-hours                fx/us-long               trades  2082 PF  0.983 p50 0.879 p95 0.971 pct  96
+  2026-09-14-fx-local-hours-news           fx/eu-short              trades  2087 PF  1.069 p50 0.922 p95 1.027 pct 100
+  2026-09-14-fx-local-hours-news           fx/eu-short-news         trades  2087 PF  1.069 p50 0.922 p95 1.027 pct 100
+  2026-09-14-fx-local-hours-news           fx/eu-short-newsday      trades  1455 PF  1.061 p50 0.917 p95 1.039 pct  98
+  2026-09-14-tsmom-eurusd                  tsmom/60d                trades   108 PF  1.809 p50 0.998 p95 1.445 pct 100
+  2026-09-14-volman-box                    box/b3                   trades   255 PF  0.859 p50 0.751 p95 0.795 pct 100

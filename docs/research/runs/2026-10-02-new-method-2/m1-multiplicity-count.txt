@@ -1,0 +1,45 @@
+receipt files read: 564
+run directories in [2026-09-12, 2026-09-19): 40
+distinct (run, row) pairs with a percentile printed: 249
+distinct row ids across those runs: 172
+
+2026-09-13-btc-m15-check                       2  m15/eq-open-60m m15/vwap-allday
+2026-09-13-btc-us-hours                        3  hold/asia hold/off-hours hold/us-hours
+2026-09-13-btc-us-open                         3  btc/data-0830-60m btc/eq-open-30m btc/eq-open-60m
+2026-09-13-close-reopen-drift                  6  close/1400-1630 close/1630-1815 close/1630-2000 close/1630-2200 close/1815-2200 close/fri-1630-1815
+2026-09-13-doji                                3  doji/allday doji/ny doji/strict
+2026-09-13-doji-2018                           1  doji/strict-2018
+2026-09-13-doji-btc                            2  doji/btc-allday doji/btc-us
+2026-09-13-friday-weekend-hold                 2  close/1630-1815 fri/1630-1815
+2026-09-13-gap-fade                            3  gap/1atr gap/2atr gap/wf
+2026-09-13-gold-m15-check                      4  m15/london m15/orb-60m m15/pdhl-break m15/pdhl-fade
+2026-09-13-ict-sweep-mss-fvg                   4  ict-A-tight ict-B-allday ict-B-balanced ict-C-loose
+2026-09-13-london-fix                          4  fix/am-after fix/am-into fix/pm-after fix/pm-into
+2026-09-13-london-range                        3  london/early london/expansion london/nyam
+2026-09-13-orb-ny                              3  orb/30m orb/60m orb/60m-expansion
+2026-09-13-orb-ny-matched-null                 3  orb/30m orb/60m orb/60m-expansion
+2026-09-13-pdhl                                3  pdhl/break-nyam pdhl/fade-allday pdhl/fade-asia
+2026-09-13-recent-year-gap                     2  gap-fade/reopen gap-fade/reopen-2atr
+2026-09-13-recent-year-hours                  24  hold/00-02-long hold/00-02-short hold/02-04-long hold/02-04-short hold/04-06-long hold/04-06-short hold/06-08-long hold/06-08-short ...
+2026-09-13-recent-year-screen                 33  bb-fade/all bb-fade/ny doji-reversal/all doji-reversal/ny donchian-breakout/all donchian-breakout/ny ema-cross/all ema-cross/ny ...
+2026-09-13-recent-year-screen-5m              32  bb-fade/all bb-fade/ny doji-reversal/all doji-reversal/ny donchian-breakout/all donchian-breakout/ny ema-cross/all ema-cross/ny ...
+2026-09-13-recent-year-sessions               31  bb-fade/asia bb-fade/london doji-reversal/asia doji-reversal/london donchian-breakout/asia donchian-breakout/london ema-cross/asia ema-cross/london ...
+2026-09-13-recent-year-sessions-5m            31  bb-fade/asia bb-fade/london doji-reversal/asia doji-reversal/london donchian-breakout/asia donchian-breakout/london ema-cross/asia ema-cross/london ...
+2026-09-13-trend-pullback                      3  tp/allday tp/fixed tp/ny
+2026-09-13-trend-pullback-btc                  3  tp-btc/all tp-btc/fixed tp-btc/us
+2026-09-13-tsmom                               3  tsmom/120d tsmom/20d tsmom/60d
+2026-09-13-tsmom-2                             3  tsmom2/120d tsmom2/20d tsmom2/60d
+2026-09-13-tsmom-silver                        3  tsmom/120d tsmom/20d tsmom/60d
+2026-09-13-volcond-breakout                    4  hivol/london hivol/orb60 lowvol/london lowvol/orb60
+2026-09-13-volume-thrust                       3  vt-btc/all vt-btc/fixed vt-btc/us
+2026-09-13-volume-thrust-gold                  3  vt-gold/all vt-gold/fixed vt-gold/ny
+2026-09-13-vwap-fade                           3  vwap/allday vwap/us-hours vwap/wide
+2026-09-14-close-reopen-guarded                2  close/1630-1815 close/fri-1630-1815
+2026-09-14-fx-local-hours                      3  fx/asia-long fx/eu-short fx/us-long
+2026-09-14-fx-local-hours-news                 3  fx/eu-short fx/eu-short-news fx/eu-short-newsday
+2026-09-14-fx-local-hours-sign                 1  fx/eu-short
+2026-09-14-intraday-momentum                   3  im/day im/first im/mid
+2026-09-14-tsmom-eurusd                        1  tsmom/60d
+2026-09-14-volman-box                          2  box/b2 box/b3
+2026-09-14-volman-box-vantage                  2  box/b2 box/b3
+2026-09-15-quote-asymmetry                     2  declared: no

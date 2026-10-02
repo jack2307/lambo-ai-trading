@@ -1,0 +1,48 @@
+========================================================================================================
+STRICTER TEST - gold long 16:30 -> 18:30 New York, Mon-Thu, 100%% long by construction
+drift control: each hold's raw move minus the window's own unconditional drift x the hold's hours
+cost: 0.28 price units a round turn, converted to basis points of the hold's own entry price
+========================================================================================================
+
+xauduka 2010-06-01 -> 2018-06-15   1666 holds, mean hold 1.72 h, mean entry price 1360.96 $/oz
+   unconditional drift of the window            +0.00116 $/oz per hour
+   raw move                                      +0.1523 $/oz    +1.1422 bp
+   DETRENDED excess                              +0.1504 $/oz (SE 0.0393, t +3.83)    +1.1273 bp (SE 0.2764, t +4.08)
+   cost                                          +0.2800 $/oz    +2.0934 bp
+   NET of cost  (F2)                             -0.1296 $/oz (t -3.30)         -0.9661 bp (t -3.50)
+   sides: long 1666, short 0.  SIDES FLIPPED detrended excess  -1.1273 bp (t -4.08)  (F3)
+   F2 verdict on this window: FAIL
+
+xauduka 2018-06-16 -> 2025-04-10   1408 holds, mean hold 1.69 h, mean entry price 1841.25 $/oz
+   unconditional drift of the window            +0.03089 $/oz per hour
+   raw move                                      +0.2770 $/oz    +1.5453 bp
+   DETRENDED excess                              +0.2249 $/oz (SE 0.0491, t +4.58)    +1.2487 bp (SE 0.2684, t +4.65)
+   cost                                          +0.2800 $/oz    +1.5929 bp
+   NET of cost  (F2)                             -0.0551 $/oz (t -1.12)         -0.3442 bp (t -1.28)
+   sides: long 1408, short 0.  SIDES FLIPPED detrended excess  -1.2487 bp (t -4.65)  (F3)
+   F2 verdict on this window: FAIL
+
+xauusd  2025-04-11 -> 2026-09-11   292 holds, mean hold 1.70 h, mean entry price 4103.63 $/oz
+   unconditional drift of the window            +0.08772 $/oz per hour
+   raw move                                      +1.0382 $/oz    +2.1166 bp
+   DETRENDED excess                              +0.8892 $/oz (SE 0.6296, t +1.41)    +1.7457 bp (SE 1.4056, t +1.24)
+   cost                                          +0.2800 $/oz    +0.6967 bp
+   NET of cost  (F2)                             +0.6092 $/oz (t +0.97)         +1.0490 bp (t +0.75)
+   sides: long 292, short 0.  SIDES FLIPPED detrended excess  -1.7457 bp (t -1.24)  (F3)
+   F2 verdict on this window: FAIL
+
+========================================================================================================
+F1 - is the effect fixed in dollars an ounce, or fixed in basis points of price?
+
+  detrended excess in dollars an ounce, inverse-variance weighted mean +0.1811 $/oz; chi-square across 3 windows, 2 d.f. = 2.673  (5.99 is the 5% point)
+     xauduka 2010-06-01 -> 2018-06-15    +0.1504 $/oz  SE 0.0393  -> -0.78 SE from the weighted mean INSIDE 2 SE
+     xauduka 2018-06-16 -> 2025-04-10    +0.2249 $/oz  SE 0.0491  -> +0.89 SE from the weighted mean INSIDE 2 SE
+     xauusd  2025-04-11 -> 2026-09-11    +0.8892 $/oz  SE 0.6296  -> +1.12 SE from the weighted mean INSIDE 2 SE
+
+  detrended excess in basis points, inverse-variance weighted mean +1.2000 bp; chi-square across 3 windows, 2 d.f. = 0.253  (5.99 is the 5% point)
+     xauduka 2010-06-01 -> 2018-06-15    +1.1273 bp  SE 0.2764  -> -0.26 SE from the weighted mean INSIDE 2 SE
+     xauduka 2018-06-16 -> 2025-04-10    +1.2487 bp  SE 0.2684  -> +0.18 SE from the weighted mean INSIDE 2 SE
+     xauusd  2025-04-11 -> 2026-09-11    +1.7457 bp  SE 1.4056  -> +0.39 SE from the weighted mean INSIDE 2 SE
+
+  dollars-an-ounce chi-square 2.673 ; basis-point chi-square 0.253
+  F1 UNDECIDED: neither unit is rejected at the 5%% point.

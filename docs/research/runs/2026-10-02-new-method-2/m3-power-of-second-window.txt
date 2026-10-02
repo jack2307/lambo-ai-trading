@@ -1,0 +1,44 @@
+M2 - power of the SECOND window to detect the FIRST window's own point estimate
+one-sided alpha = 0.05 against the second window's own published null (profit-factor units)
+
+fri   gold weekend hold        n2=  400  sigma_null 0.1356 PF
+    first window point estimate PF 2.064 -> power of window 2 = 1.000
+    window 2 observed PF 0.983 -> z = +1.36 (its own null)
+    smallest PF window 2 could detect at 0.80 power: 1.136 (null median 0.799)
+    source: runs/2026-09-13-friday-weekend-hold/in-sample-fixed.txt
+
+eu    EURUSD 03:00-11:00 NY    n2= 2057  sigma_null 0.0541 PF
+    first window point estimate PF 1.069 -> power of window 2 = 0.942
+    window 2 observed PF 0.926 -> z = +0.57 (its own null)
+    smallest PF window 2 could detect at 0.80 power: 1.030 (null median 0.895)
+    source: runs/2026-09-14-fx-local-hours-sign/in-sample-fixed.txt
+
+eu    same, direction null     n2= 2057  sigma_null 0.0614 PF
+    first window point estimate PF 1.069 -> power of window 2 = 0.859
+    window 2 observed PF 0.926 -> z = +0.39 (its own null)
+    smallest PF window 2 could detect at 0.80 power: 1.055 (null median 0.902)
+    source: decision 2026-09-14-fx-local-hours-sign.md
+
+xag20 silver 20-day sign       n2=  186  sigma_null 0.1726 PF
+    first window point estimate PF 1.341 -> power of window 2 = 0.734
+    window 2 observed PF 1.026 -> z = +0.45 (its own null)
+    smallest PF window 2 could detect at 0.80 power: 1.378 (null median 0.949)
+    source: runs/2026-09-13-tsmom-silver/out-of-sample-fixed.txt
+
+close gold 16:30-18:15 NY      n2=  282  sigma_null 0.2249 PF
+    first window point estimate PF 1.254 -> power of window 2 = 0.486
+    window 2 observed PF 1.299 -> z = +1.81 (its own null)
+    smallest PF window 2 could detect at 0.80 power: 1.451 (null median 0.892)
+    source: runs/2026-09-13-close-reopen-drift/out-of-sample-fixed.txt
+
+
+M2b - eu in the units its own registration declared: pips of detrended excess per hold
+published per-hold standard deviations 40.8 (window 1) and 27.5 (window 2) pips
+
+window 1  2010-06 -> 2018-06  n=2088  SD 40.8 pips  SE 0.8929 pips  observed -2.84 pips -> t = -3.18
+window 2  2018-06 -> 2026-05  n=2056  SD 27.5 pips  SE 0.6065 pips  observed -0.10 pips -> t = -0.16
+  window 2 power to detect a TRUE excess of -2.84 pips/hold (two-sided 0.05): 0.997  (t would be -4.68)
+  window 2 power to detect a TRUE excess of -1.50 pips/hold (two-sided 0.05): 0.696  (t would be -2.47)
+  window 2 power to detect a TRUE excess of -1.00 pips/hold (two-sided 0.05): 0.378  (t would be -1.65)
+  smallest excess window 2 could detect at 0.80 power (two-sided 0.05): -1.699 pips/hold
+  window 1 SE 0.8929 pips -> its own t -3.18, two-sided p 0.00147

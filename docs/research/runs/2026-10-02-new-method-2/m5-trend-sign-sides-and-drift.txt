@@ -1,0 +1,34 @@
+====================================================================================================
+XAGDUKA  4118 weekday decision bars at or after 16:15 New York, 2010-05-31 -> 2026-05-29
+  window 1  2010-06 -> 2018-06   2058 weekday steps
+      unconditional step -0.00043 $/oz silver per weekday (t -0.04)  -- what being long pays for nothing
+      sides held: long 1027 (49.9%), short 1031 (50.1%)
+      the sign's return   +0.01636 $/oz silver per step (t +1.50)
+      SIDES FLIPPED       -0.01636 $/oz silver per step (t -1.50)
+      minus the drift the held side rode  +0.01636 $/oz silver per step (t +1.50)
+      long steps +0.01597 (t +1.03) | short steps +0.01675 (t +1.10)
+  window 2  2018-06 -> 2026-05   2026 weekday steps
+      unconditional step +0.02942 $/oz silver per weekday (t +1.10)  -- what being long pays for nothing
+      sides held: long 1121 (55.3%), short 905 (44.7%)
+      the sign's return   +0.00899 $/oz silver per step (t +0.34)
+      SIDES FLIPPED       -0.00899 $/oz silver per step (t -0.34)
+      minus the drift the held side rode  +0.00585 $/oz silver per step (t +0.22)
+      long steps +0.03470 (t +0.84) | short steps -0.02287 (t -0.75)
+
+====================================================================================================
+XAUDUKA  4126 weekday decision bars at or after 16:15 New York, 2010-05-31 -> 2026-05-29
+  window 1  2010-06 -> 2018-06   2063 weekday steps
+      unconditional step +0.03427 $/oz gold per weekday (t +0.11)  -- what being long pays for nothing
+      sides held: long 1068 (51.8%), short 995 (48.2%)
+      the sign's return   +0.31030 $/oz gold per step (t +1.01)
+      SIDES FLIPPED       -0.31030 $/oz gold per step (t -1.01)
+      minus the drift the held side rode  +0.30909 $/oz gold per step (t +1.01)
+      long steps +0.33279 (t +0.80) | short steps +0.28616 (t +0.63)
+  window 2  2018-06 -> 2026-05   2031 weekday steps
+      unconditional step +1.62027 $/oz gold per weekday (t +2.27)  -- what being long pays for nothing
+      sides held: long 1200 (59.1%), short 831 (40.9%)
+      the sign's return   +0.56665 $/oz gold per step (t +0.79)
+      SIDES FLIPPED       -0.56665 $/oz gold per step (t -0.79)
+      minus the drift the held side rode  +0.27227 $/oz gold per step (t +0.38)
+      long steps +1.85068 (t +1.82) | short steps -1.28755 (t -1.37)
+

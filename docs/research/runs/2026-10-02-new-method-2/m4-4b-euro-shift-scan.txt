@@ -1,0 +1,38 @@
+M4.4b - euro clock shift scan, run with the repository's own committed scripts/fx_window_drift.py
+         shift 0 reproduces the published -2.84 / t -3.18 (window 1) and -0.10 / t -0.16 (window 2)
+         +/-7 h is the OTL utc_offset_hours trap; the offset was NOT removed anywhere.
+
+shift=-8 1900-0300 W1 :: eurduka 1900-0300 New York, 2010-06-01 -> 2018-06-15: 1675 weekday holds, window 8.0 h trend share per hold +0.58 pips; EXCESS (drift minus share) +1.05 pips per hold, t = +1.32 
+shift=-8 1900-0300 W2 :: eurduka 1900-0300 New York, 2018-06-16 -> 2026-05-31: 1651 weekday holds, window 8.0 h trend share per hold +0.19 pips; EXCESS (drift minus share) -0.70 pips per hold, t = -1.25 
+shift=-7 2000-0400 W1 :: eurduka 2000-0400 New York, 2010-06-01 -> 2018-06-15: 1675 weekday holds, window 8.0 h trend share per hold +0.58 pips; EXCESS (drift minus share) +1.55 pips per hold, t = +1.72 
+shift=-7 2000-0400 W2 :: eurduka 2000-0400 New York, 2018-06-16 -> 2026-05-31: 1649 weekday holds, window 8.0 h trend share per hold +0.16 pips; EXCESS (drift minus share) +0.16 pips per hold, t = +0.25 
+shift=-6 2100-0500 W1 :: eurduka 2100-0500 New York, 2010-06-01 -> 2018-06-15: 1675 weekday holds, window 8.0 h trend share per hold +0.58 pips; EXCESS (drift minus share) +1.60 pips per hold, t = +1.64 
+shift=-6 2100-0500 W2 :: eurduka 2100-0500 New York, 2018-06-16 -> 2026-05-31: 1649 weekday holds, window 8.0 h trend share per hold +0.16 pips; EXCESS (drift minus share) -0.68 pips per hold, t = -0.96 
+shift=-5 2200-0600 W1 :: eurduka 2200-0600 New York, 2010-06-01 -> 2018-06-15: 1675 weekday holds, window 8.0 h trend share per hold +0.58 pips; EXCESS (drift minus share) +0.40 pips per hold, t = +0.38 
+shift=-5 2200-0600 W2 :: eurduka 2200-0600 New York, 2018-06-16 -> 2026-05-31: 1649 weekday holds, window 8.0 h trend share per hold +0.16 pips; EXCESS (drift minus share) -0.73 pips per hold, t = -1.01 
+shift=-4 2300-0700 W1 :: eurduka 2300-0700 New York, 2010-06-01 -> 2018-06-15: 1675 weekday holds, window 8.0 h trend share per hold +0.58 pips; EXCESS (drift minus share) -1.96 pips per hold, t = -1.79 
+shift=-4 2300-0700 W2 :: eurduka 2300-0700 New York, 2018-06-16 -> 2026-05-31: 1649 weekday holds, window 8.0 h trend share per hold +0.16 pips; EXCESS (drift minus share) -1.51 pips per hold, t = -1.99 
+shift=-3 0000-0800 W1 :: eurduka 0000-0800 New York, 2010-06-01 -> 2018-06-15: 2092 weekday holds, window 8.0 h trend share per hold -0.11 pips; EXCESS (drift minus share) -2.45 pips per hold, t = -3.39 
+shift=-3 0000-0800 W2 :: eurduka 0000-0800 New York, 2018-06-16 -> 2026-05-31: 2062 weekday holds, window 8.0 h trend share per hold -0.26 pips; EXCESS (drift minus share) -1.41 pips per hold, t = -2.71 
+shift=-2 0100-0900 W1 :: eurduka 0100-0900 New York, 2010-06-01 -> 2018-06-15: 2092 weekday holds, window 8.0 h trend share per hold -0.11 pips; EXCESS (drift minus share) -2.52 pips per hold, t = -3.24 
+shift=-2 0100-0900 W2 :: eurduka 0100-0900 New York, 2018-06-16 -> 2026-05-31: 2062 weekday holds, window 8.0 h trend share per hold -0.26 pips; EXCESS (drift minus share) -0.46 pips per hold, t = -0.81 
+shift=-1 0200-1000 W1 :: eurduka 0200-1000 New York, 2010-06-01 -> 2018-06-15: 2092 weekday holds, window 8.0 h trend share per hold -0.11 pips; EXCESS (drift minus share) -2.35 pips per hold, t = -2.80 
+shift=-1 0200-1000 W2 :: eurduka 0200-1000 New York, 2018-06-16 -> 2026-05-31: 2062 weekday holds, window 8.0 h trend share per hold -0.26 pips; EXCESS (drift minus share) -0.30 pips per hold, t = -0.51 
+shift=0 0300-1100 W1 :: eurduka 0300-1100 New York, 2010-06-01 -> 2018-06-15: 2088 weekday holds, window 8.0 h trend share per hold -0.11 pips; EXCESS (drift minus share) -2.84 pips per hold, t = -3.18 
+shift=0 0300-1100 W2 :: eurduka 0300-1100 New York, 2018-06-16 -> 2026-05-31: 2056 weekday holds, window 8.0 h trend share per hold -0.27 pips; EXCESS (drift minus share) -0.10 pips per hold, t = -0.16 
+shift=1 0400-1200 W1 :: eurduka 0400-1200 New York, 2010-06-01 -> 2018-06-15: 2088 weekday holds, window 8.0 h trend share per hold -0.11 pips; EXCESS (drift minus share) -1.76 pips per hold, t = -2.00 
+shift=1 0400-1200 W2 :: eurduka 0400-1200 New York, 2018-06-16 -> 2026-05-31: 2056 weekday holds, window 8.0 h trend share per hold -0.27 pips; EXCESS (drift minus share) -1.16 pips per hold, t = -1.92 
+shift=2 0500-1300 W1 :: eurduka 0500-1300 New York, 2010-06-01 -> 2018-06-15: 2088 weekday holds, window 8.0 h trend share per hold -0.11 pips; EXCESS (drift minus share) -1.49 pips per hold, t = -1.79 
+shift=2 0500-1300 W2 :: eurduka 0500-1300 New York, 2018-06-16 -> 2026-05-31: 2056 weekday holds, window 8.0 h trend share per hold -0.27 pips; EXCESS (drift minus share) -1.01 pips per hold, t = -1.67 
+shift=3 0600-1400 W1 :: eurduka 0600-1400 New York, 2010-06-01 -> 2018-06-15: 2088 weekday holds, window 8.0 h trend share per hold -0.11 pips; EXCESS (drift minus share) -0.30 pips per hold, t = -0.35 
+shift=3 0600-1400 W2 :: eurduka 0600-1400 New York, 2018-06-16 -> 2026-05-31: 2056 weekday holds, window 8.0 h trend share per hold -0.27 pips; EXCESS (drift minus share) -0.93 pips per hold, t = -1.54 
+shift=4 0700-1500 W1 :: eurduka 0700-1500 New York, 2010-06-01 -> 2018-06-15: 2088 weekday holds, window 8.0 h trend share per hold -0.11 pips; EXCESS (drift minus share) +0.67 pips per hold, t = +0.80 
+shift=4 0700-1500 W2 :: eurduka 0700-1500 New York, 2018-06-16 -> 2026-05-31: 2056 weekday holds, window 8.0 h trend share per hold -0.27 pips; EXCESS (drift minus share) -0.21 pips per hold, t = -0.34 
+shift=5 0800-1600 W1 :: eurduka 0800-1600 New York, 2010-06-01 -> 2018-06-15: 2088 weekday holds, window 8.0 h trend share per hold -0.11 pips; EXCESS (drift minus share) +2.11 pips per hold, t = +2.55 
+shift=5 0800-1600 W2 :: eurduka 0800-1600 New York, 2018-06-16 -> 2026-05-31: 2056 weekday holds, window 8.0 h trend share per hold -0.27 pips; EXCESS (drift minus share) +0.88 pips per hold, t = +1.46 
+shift=6 0900-1700 W1 :: eurduka 0900-1700 New York, 2010-06-01 -> 2018-06-15: 2088 weekday holds, window 8.0 h trend share per hold -0.11 pips; EXCESS (drift minus share) +1.12 pips per hold, t = +1.42 
+shift=6 0900-1700 W2 :: eurduka 0900-1700 New York, 2018-06-16 -> 2026-05-31: 2056 weekday holds, window 8.0 h trend share per hold -0.27 pips; EXCESS (drift minus share) -1.68 pips per hold, t = -3.02 
+shift=7 1000-1800 W1 :: eurduka 1000-1800 New York, 2010-06-01 -> 2018-06-15: 2094 weekday holds, window 8.0 h trend share per hold -0.11 pips; EXCESS (drift minus share) +0.41 pips per hold, t = +0.57 
+shift=7 1000-1800 W2 :: eurduka 1000-1800 New York, 2018-06-16 -> 2026-05-31: 2066 weekday holds, window 8.0 h trend share per hold -0.26 pips; EXCESS (drift minus share) -1.05 pips per hold, t = -2.03 
+shift=8 1100-1900 W1 :: eurduka 1100-1900 New York, 2010-06-01 -> 2018-06-15: 2095 weekday holds, window 8.0 h trend share per hold -0.10 pips; EXCESS (drift minus share) +1.20 pips per hold, t = +1.73 
+shift=8 1100-1900 W2 :: eurduka 1100-1900 New York, 2018-06-16 -> 2026-05-31: 2066 weekday holds, window 8.0 h trend share per hold -0.26 pips; EXCESS (drift minus share) +0.31 pips per hold, t = +0.65 
