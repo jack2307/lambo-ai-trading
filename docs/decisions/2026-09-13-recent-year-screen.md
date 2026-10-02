@@ -275,3 +275,80 @@ anything was being size-matched.
 null.** Nineteen of the 24 percentiles move by a point or two, which is
 sampling noise on 200 seeds. Receipt:
 `docs/research/runs/2026-09-23-matched-null-repair/2026-09-13-recent-year-hours__in-sample.txt`.
+
+---
+
+## Appended 2026-10-02: the one row that passes does not pass, and the evening-drift registration this record names as next should not be opened
+
+Not a rewrite. Everything above stands as what was measured with the instrument
+that existed on 2026-09-13, and the two claims this note withdraws are withdrawn
+because the instrument was wrong, not because the arithmetic was.
+
+Full record and receipts: `docs/decisions/2026-10-02-drift-null.md`,
+registered at `docs/hypotheses/2026-10-02-drift-null.md`, receipts under
+`docs/research/runs/2026-10-02-drift-null/`.
+
+**The matched null this record was read against took its side from a coin**, so
+it carried an expected long share of 0.50 and an expected drift term of about
+zero whatever the row did. Every row of the `recent-year-hours` batch is a
+one-sided two-hour hold. Re-run against a control given the row's own measured
+signed share of time, its own trade count, its own hold and the same spread —
+count match **1.00**, cost match **1.00**, time in market ratio **1.00**, signed
+share **+1.000 against +1.000** on all 24 rows — the control's profit factor
+comes out **equal to the method's own**, because for a rule whose whole content
+is "be on this side during this window" the matched control IS that rule:
+
+| row | trades | PF | as published | drift-matched control's PF | now |
+|---|---:|---:|---:|---:|---|
+| `hold/18-20-long` | 164 | 1.362 | 95th → 96th, **SURVIVES** | **1.362** | **`null` — p50 = p95, one comparison, not a quantile** |
+| `hold/04-06-short` | 205 | 1.507 | 100th matched / 89th direction, **SURVIVES** | **1.507** | **`null`** |
+| `hold/16-18-long` | 197 | 1.374 | 94th | **1.374** | `null` |
+| the other 21 | 164–206 | 0.60–1.19 | 0th–92nd | each row's own | `null` |
+
+**So the opening sentence of this record — "one row of about 170 passes
+(`hold/18-20-long`)" — is withdrawn. None passes.** The gate figures are
+untouched: `hold/18-20-long` still has 164 trades at a profit factor of 1.362
+and an expectancy of 0.221R. What it does not have is a percentile, because
+there is nothing left to compare it against once its own exposure is held
+constant.
+
+The signature was in the published receipt and was not read that way: on all
+twelve windows the long and short percentiles sum to about 100 — 60/48, 58/46,
+1/99, 86/12, 61/24, 46/70, 30/72, 33/69, 92/8, 96/3, 33/78, 14/90. **A
+percentile that is one minus its mirror image's is a statement about direction,
+not about the rule.**
+
+**And the next registration this record names should not be opened.** Section
+"Outcome" above records, as the one structure the year did not invent: "long
+across the New York close and the evening — 16:00 to 22:00 — beats random holds
+and its own flipped sides at the 100th percentile on 460–560 sessions … it is
+the next registration, under the original rule." Re-run on that window
+(`xauduka` 15m, 2022-06-16 → 2025-04-10, 200 seeds), all four 100th-percentile
+blocks report `null`, on a control matched 1.00 / 1.00 / 1.00 and +1.000:
+
+| row | trades | PF | coin | the drift-matched control's PF |
+|---|---:|---:|---:|---:|
+| `hold/16-18-long` | 560 | 1.508 | 100% | 1.508 |
+| `hold/18-20-long` | 464 | 1.140 | 100% | **1.131** |
+| `hold/20-22-long` | 463 | 1.238 | 100% | 1.238 |
+| `hold/04-06-long` | 578 | 1.139 | 100% | 1.139 |
+
+`hold/18-20-long` adds **0.009 of profit factor** over being long that window
+every day at the same cost, which is **99.2% of the control's result reproduced
+and nothing beyond it**. The other three add nothing to four decimal places. The
+"evening drift" is the instrument's own drift exposure, measured on 460–578
+sessions.
+
+**What is NOT affected.** Nothing in this record about a method with a stop and
+a target moves: 26 of the 32 `recent-year-sessions` rows are inside 40–60% long,
+no verdict changes on either the sessions or the screen batch, and the three
+survivors stay `ema-cross/asia`, `keltner-break/asia` and `macd-cross/asia` with
+their percentiles at 100%, 98% and 100%. The funded books do not move.
+
+**The direction percentiles in the table above are also not a test for these
+rows**, and that is not fixed. `direction.rs` flips each entry on a coin too, so
+a one-sided row's direction null removes the same drift the matched null did;
+the ratio-preserving version is a permutation of the row's own side labels,
+which for a 100%-long row is the identity. The 89th and the 95th–100th direction
+figures tabulated above should be read as `null` on the same grounds, pending a
+registration that decides what a direction null means for a one-sided method.
