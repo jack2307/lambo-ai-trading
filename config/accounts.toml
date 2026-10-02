@@ -1203,11 +1203,24 @@ server = "VantageMarkets-Live 21"
 # 4,095 MB total with ~2,400 MB free at ~160 MB a terminal.
 #
 # THE OWNER LOGGED THIS TERMINAL IN BY HAND, 2026-10-02, and turned AutoTrading
-# on. That was the right call and not merely a convenience: building it over SSH
-# is possible in two steps, but while doing exactly that this afternoon both
-# running terminals went down - including the one feeding every book - and the
-# cause is STILL UNKNOWN. So until it is known, a new terminal is brought up from
-# RDP whenever a live position is being mirrored through another one.
+# on. A note written here an hour earlier blamed my own SSH work for taking both
+# running terminals down that afternoon. THAT WAS WRONG and is corrected here.
+# MT5's real journal - %APPDATA%\MetaQuotes\Terminal\<hash>\logs, not the
+# install's own logs folder, which was stale - says:
+#     12:18  both accounts: "connection to VantageMarkets-Live 21 lost"
+#     12:22  both re-authorized
+#     12:36  "Terminal stopped with 0" / "shutdown with 0", two seconds apart
+#     12:38  "Terminal MetaTrader 5 build 6230 started"
+# The old terminals were build 6182. A clean exit 0 followed by a new build is an
+# AUTO-UPDATE, pushed by the broker to both at once. My robocopy and initialize
+# merely coincided with it.
+#
+# THE REAL HAZARD, which is worse and is not mine: a terminal restarted by an
+# auto-update comes up NOT LOGGED IN, and nothing logs it back in. So any MT5
+# update blinds the desk - pollers lose the feed and a funded executor loops on
+# `IPC send failed`. What saved it was the executor's own guard refusing to act
+# on unreadable history rather than guessing. A watchdog for
+# "terminal running but not logged in" is the thing worth building.
 terminal = 'C:\MT5-v8\terminal64.exe'
 symbol_suffix = ".sc"
 
