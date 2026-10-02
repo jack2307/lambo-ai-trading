@@ -1177,3 +1177,85 @@ runs = [
     "ai-xau-ds-ctx-htf-filter-coin",
     "ai-xau-ds-plan-trigger-coin",
 ]
+
+# ============================================================================
+[[account]]
+# 2026-10-02, the owner's decision: "Cho chay macd cross voi ten la Lambo V8".
+# xau-macd-asia moves here off vantage-v10, where it had made +1,137.50 USC over
+# 8 closed trades - it is moving, not being retired, and the note in that block
+# says so too.
+#
+# WHY A NEW id. An id owns a history directory. data/live/vantage-v10/
+# xau-macd-asia/ holds those eight trades, and mt5_executor REFUSES to start when
+# an id's directory records a different login - measured 2026-09-25, when
+# `vantage-v12` was pointed at 35911764 and the executor stopped with "already
+# holds the record of login 33708517 ... Nothing was sent." That guard is why
+# this is a new block and not an edited one.
+id = "vantage-v8"
+label = "Lambo V8 - xau-macd-asia, REAL MONEY"
+login = 35916601
+server = "VantageMarkets-Live 21"
+
+# ITS OWN INSTALLATION, so a folder name never has to be read as a different
+# account. C:\MT5-v10 serves 35911458 and feeds the desk's bars; C:\MT5-v8
+# serves only this one. Three terminals coexist: measured 2026-09-25 that
+# initialize(path=...) honours the path and reaches each separately, and RAM is
+# 4,095 MB total with ~2,400 MB free at ~160 MB a terminal.
+#
+# THE OWNER LOGGED THIS TERMINAL IN BY HAND, 2026-10-02, and turned AutoTrading
+# on. That was the right call and not merely a convenience: building it over SSH
+# is possible in two steps, but while doing exactly that this afternoon both
+# running terminals went down - including the one feeding every book - and the
+# cause is STILL UNKNOWN. So until it is known, a new terminal is brought up from
+# RDP whenever a live position is being mirrored through another one.
+terminal = 'C:\MT5-v8\terminal64.exe'
+symbol_suffix = ".sc"
+
+# THREE, checked against the broker before it was written, as this file requires
+# whenever a scale or a book count changes. Both are new here.
+#
+# The paper books run on 100 USD risking about 1% a trade. This account holds
+# 30,000.00 USC = 300.00 USD, so x3 keeps that same 1%.
+#
+# ALL FIGURES BELOW ARE THE BROKER'S OWN, read 2026-10-02 with AutoTrading on at
+# ask 4187.28. Notional on a cent account is lots x price x 100, because one
+# price unit is 100 account units - the `per_price_unit: 100.0` the desk's rebate
+# terms already carry. An earlier read of mine multiplied by trade_contract_size
+# (1.0) instead and came out 100x too small; the numbers here are the corrected
+# ones.
+#
+#   THE ORDER THIS BOOK ACTUALLY SENDS  xau-macd-asia's largest paper order is
+#                               0.07 lot, so 0.21 lot here.
+#   --max-notional-ratio 10.0   0.21 lot = 87,933 USC = 2.93x equity. The ceiling
+#                               binds at about 0.72 lot. DOES NOT BIND.
+#   --min-margin-level 500      order_calc_margin says 175.87 USC for 0.21 lot,
+#                               a margin level near 17,058% against 30,000.
+#                               DOES NOT BIND.
+#   AGGREGATE                   one book, one position at a time, so the
+#                               aggregate is the per-order figure. Nothing to add.
+#   RISK PER TRADE              about 300 USC, 1% of the account, which is the
+#                               paper book's own 1% carried across unchanged.
+#
+# LEVERAGE HERE IS 1:500, NOT 1:2000. 35911458 and 35911764 both read 1:2000;
+# this account reads 1:500, so its margin per lot is four times theirs. It does
+# not bind at these sizes, and it is written down because leverage on this desk
+# has been misread before - which is why every margin figure above comes from
+# order_calc_margin and not from a leverage number.
+lot_scale = 3.0
+
+real_money = true
+dry_run = false
+enabled = true
+
+# ONE BOOK. xau-macd-asia is a mechanical MACD-cross book: no model, no API cost,
+# and it does not depend on any AI parent staying alive - unlike the coins that
+# went quiet on 35911764 for eleven hours when DeepSeek ran out of credit.
+#
+# Its measured record, stated so the decision to fund it is readable:
+#   on 35911458, 2026-09-28 .. 2026-10-02: 8 closed trades, +1,137.50 USC
+#   on the desk's own three-month gate: profit factor 1.134, 76th percentile
+#     against its own null - it PASSED nothing; it was never gated, and the
+#     owner chose to fund it anyway. Recorded as his decision.
+runs = [
+    "xau-macd-asia",
+]
