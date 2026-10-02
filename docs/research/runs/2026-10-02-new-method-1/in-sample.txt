@@ -1,0 +1,120 @@
+  E:/rust/flowdesk\data/bars/XAUDUKA-15m.parquet: 362803 bars kept, 15946 dropped at the 2025-09-23 cut, 2010-06-01 00:00:00+00:00 -> 2025-09-22 23:45:00+00:00
+====================================================================================================
+IN SAMPLE  XAUDUKA 15m  design window 2010-06-01 -> 2022-01-01
+hold-out cut: no bar at or after 2025-09-23 is read, from any file
+cost: 0.28 price units per ounce round trip (config [markets.xauusd] spread)
+====================================================================================================
+design window: 275470 bars, 3595 sessions, 2010-06-01 00:00:00+00:00 -> 2021-12-31 21:45:00+00:00
+ATR20d over the design window: mean 17.62 price units, median 15.76
+USD impact-3 events in window: 515
+name
+US Employment Situation (NFP)           139
+US CPI                                  139
+US Personal Income and Outlays (PCE)    138
+FOMC                                     92
+FOMC (unscheduled)                        7
+
+----------------------------------------------------------------------------------------------------
+METHOD A  slow-moving capital after a scheduled macro repricing
+  PRIMARY cell: release window 1 hour, hold 3 sessions, all four US impact-3 series
+----------------------------------------------------------------------------------------------------
+A PRIMARY rel=1h hold=3sess all-US             n=  512  gross 0.1364 ATR20d (2.404 px)  t=2.79 | net 0.1182 ATR20d (2.124 px) t=2.41
+      long/short split: 284 long / 231 short (55.1% long)   hold<=0 trades: 0
+  FLIPPED A PRIMARY rel=1h hold=3sess all-US   n=  512  gross -0.1364 ATR20d (-2.404 px)  t=-2.79 | net -0.1546 ATR20d (-2.684 px) t=-3.16
+      net mean ATR20d by sub-era: 2010-06-01:+0.2519(n=120)  2013-03-01:+0.1589(n=126)  2016-01-01:-0.0247(n=124)  2018-11-01:+0.0972(n=145)
+  GATE A primary: FAILS
+    leg 1 net mean >= 0.066 ATR20d : pass  (0.1182)
+    leg 2 t >= 3.0 : FAIL  (2.41)
+    leg 3 sign in >=3 of 4 sub-eras : pass  (3 of 4)
+
+  robustness cells (declared in advance; may break the primary, never rescue it)
+    A rel=1h hold=1sess all-US                 n=  512  gross 0.0268 ATR20d (0.394 px)  t=1.21 | net 0.0086 ATR20d (0.114 px) t=0.39
+    A rel=1h hold=3sess all-US                 n=  512  gross 0.1364 ATR20d (2.404 px)  t=2.79 | net 0.1182 ATR20d (2.124 px) t=2.41
+    A rel=1h hold=5sess all-US                 n=  512  gross 0.1769 ATR20d (3.279 px)  t=2.63 | net 0.1587 ATR20d (2.999 px) t=2.36
+    A rel=4h hold=1sess all-US                 n=  511  gross 0.0065 ATR20d (0.092 px)  t=0.39 | net -0.0117 ATR20d (-0.188 px) t=-0.71
+    A rel=4h hold=3sess all-US                 n=  511  gross 0.0821 ATR20d (1.581 px)  t=1.77 | net 0.0638 ATR20d (1.301 px) t=1.38
+    A rel=4h hold=5sess all-US                 n=  511  gross 0.1418 ATR20d (2.278 px)  t=2.21 | net 0.1236 ATR20d (1.998 px) t=1.93
+    A rel=1h hold=1sess FOMC                   n=   98  gross 0.1098 ATR20d (1.913 px)  t=3.66 | net 0.0917 ATR20d (1.633 px) t=3.06
+    A rel=1h hold=3sess FOMC                   n=   98  gross 0.5325 ATR20d (9.850 px)  t=3.89 | net 0.5144 ATR20d (9.570 px) t=3.76
+    A rel=1h hold=5sess FOMC                   n=   98  gross 0.5465 ATR20d (11.446 px)  t=3.26 | net 0.5284 ATR20d (11.166 px) t=3.15
+    A rel=4h hold=1sess FOMC                   n=   97  gross 0.0471 ATR20d (1.160 px)  t=0.99 | net 0.0289 ATR20d (0.880 px) t=0.60
+    A rel=4h hold=3sess FOMC                   n=   97  gross 0.5581 ATR20d (10.307 px)  t=4.42 | net 0.5399 ATR20d (10.027 px) t=4.28
+    A rel=4h hold=5sess FOMC                   n=   97  gross 0.6101 ATR20d (12.883 px)  t=4.03 | net 0.5919 ATR20d (12.603 px) t=3.91
+
+  mechanism diagnostic: per series, primary parameters (FOMC must not be weakest)
+    FOMC                                       n=   91  gross 0.5354 ATR20d (9.330 px)  t=3.70 | net 0.5165 ATR20d (9.050 px) t=3.56
+    FOMC (unscheduled)                         n=    7  gross 0.4956 ATR20d (16.607 px)  t=1.32 | net 0.4877 ATR20d (16.327 px) t=1.30
+    US CPI                                     n=  138  gross 0.0448 ATR20d (0.668 px)  t=0.42 | net 0.0265 ATR20d (0.388 px) t=0.25
+    US Employment Situation (NFP)              n=  138  gross 0.0281 ATR20d (1.642 px)  t=0.37 | net 0.0101 ATR20d (1.362 px) t=0.13
+    US Personal Income and Outlays (PCE)       n=  138  gross 0.0549 ATR20d (-0.387 px)  t=0.72 | net 0.0367 ATR20d (-0.667 px) t=0.48
+
+----------------------------------------------------------------------------------------------------
+METHOD B  the premium for carrying risk that cannot be hedged across a known instant
+  PRIMARY cell: pre leg 4h short, post leg 4h long starting 1h after the event
+----------------------------------------------------------------------------------------------------
+  pre-leg start hours (UTC): [8, 9, 11, 14, 15, 17] ; post-leg start hours (UTC): [13, 14, 16, 19, 20, 22]
+B pre leg  4h SHORT into the event             n=  503  gross 0.0132 ATR20d (0.187 px)  t=0.91 | net -0.0050 ATR20d (-0.093 px) t=-0.35
+      long/short split: 0 long / 506 short (0.0% long)   hold<=0 trades: 0
+  FLIPPED B pre leg  4h SHORT into the event   n=  503  gross -0.0132 ATR20d (-0.187 px)  t=-0.91 | net -0.0314 ATR20d (-0.467 px) t=-2.17
+      net mean ATR20d by sub-era: 2010-06-01:-0.0149(n=118)  2013-03-01:+0.0381(n=124)  2016-01-01:-0.0109(n=122)  2018-11-01:-0.0296(n=142)
+  CONTROL pre: same length, same hours, no-event days n=59376  gross 0.0070 ATR20d (0.137 px)  t=4.86 | net -0.0114 ATR20d (-0.143 px) t=-7.90
+      EXCESS pre leg over the hour-matched control: +0.0062 ATR20d (+0.050 px)
+B post leg 4h LONG from 1h after the event     n=  504  gross -0.0008 ATR20d (-0.283 px)  t=-0.04 | net -0.0189 ATR20d (-0.563 px) t=-0.93
+      long/short split: 507 long / 0 short (100.0% long)   hold<=0 trades: 0
+  FLIPPED B post leg 4h LONG from 1h after the event n=  504  gross 0.0008 ATR20d (0.283 px)  t=0.04 | net -0.0174 ATR20d (0.003 px) t=-0.86
+      net mean ATR20d by sub-era: 2010-06-01:+0.0051(n=118)  2013-03-01:-0.0144(n=124)  2016-01-01:-0.0046(n=122)  2018-11-01:-0.0544(n=143)
+  CONTROL post: same length, same hours, no-event days n=56545  gross 0.0033 ATR20d (0.069 px)  t=2.50 | net -0.0151 ATR20d (-0.211 px) t=-11.34
+      EXCESS post leg over the hour-matched control: -0.0041 ATR20d (-0.352 px)
+
+  GATE B pre leg (on the raw leg; the excess is printed above)
+  GATE B pre: FAILS
+    leg 1 net mean >= 0.066 ATR20d : FAIL  (-0.0050)
+    leg 2 t >= 3.0 : FAIL  (-0.35)
+    leg 3 sign in >=3 of 4 sub-eras : FAIL  (1 of 4)
+  GATE B post leg
+  GATE B post: FAILS
+    leg 1 net mean >= 0.066 ATR20d : FAIL  (-0.0189)
+    leg 2 t >= 3.0 : FAIL  (-0.93)
+    leg 3 sign in >=3 of 4 sub-eras : FAIL  (1 of 4)
+
+  drift-neutral combination (short pre + long post, equal lengths, net side 0)
+B combined (drift-neutral by construction)     n= 1007  gross 0.0062 ATR20d (-0.048 px)  t=0.50 | net -0.0120 ATR20d (-0.328 px) t=-0.96
+      long/short split: 507 long / 506 short (50.0% long)   hold<=0 trades: 0
+  FLIPPED B combined (drift-neutral by construction) n= 1007  gross -0.0062 ATR20d (0.048 px)  t=-0.50 | net -0.0244 ATR20d (-0.232 px) t=-1.96
+      net mean ATR20d by sub-era: 2010-06-01:-0.0049(n=236)  2013-03-01:+0.0118(n=248)  2016-01-01:-0.0078(n=244)  2018-11-01:-0.0420(n=285)
+
+  robustness cells
+    B pre 2h SHORT                             n=  503  gross 0.0182 ATR20d (0.211 px)  t=1.51 | net -0.0000 ATR20d (-0.069 px) t=-0.00
+    B pre 4h SHORT                             n=  503  gross 0.0132 ATR20d (0.187 px)  t=0.91 | net -0.0050 ATR20d (-0.093 px) t=-0.35
+    B pre 8h SHORT                             n=  503  gross 0.0282 ATR20d (0.373 px)  t=1.39 | net 0.0100 ATR20d (0.093 px) t=0.49
+    B post 4h LONG                             n=  504  gross -0.0008 ATR20d (-0.283 px)  t=-0.04 | net -0.0189 ATR20d (-0.563 px) t=-0.93
+    B post 1sess LONG                          n=  505  gross 0.0138 ATR20d (-0.062 px)  t=0.39 | net -0.0044 ATR20d (-0.342 px) t=-0.12
+
+----------------------------------------------------------------------------------------------------
+METHOD C  a reopen priced into the thinnest book of the week
+  PRIMARY cell: |gap| >= 0.5 ATR20d, fade it, hold 1 session
+----------------------------------------------------------------------------------------------------
+C PRIMARY gap>=0.5 ATR20d hold=1sess           n=   20  gross 0.0659 ATR20d (0.685 px)  t=1.03 | net 0.0476 ATR20d (0.405 px) t=0.75
+      long/short split: 9 long / 11 short (45.0% long)   hold<=0 trades: 0
+  FLIPPED C PRIMARY gap>=0.5 ATR20d hold=1sess n=   20  gross -0.0659 ATR20d (-0.685 px)  t=-1.03 | net -0.0842 ATR20d (-0.965 px) t=-1.31
+      net mean ATR20d by sub-era: 2010-06-01:-0.0677(n=3)  2013-03-01:-0.0417(n=4)  2016-01-01:+0.0961(n=6)  2018-11-01:+0.1064(n=7)
+  GATE C primary: FAILS
+    leg 1 net mean >= 0.066 ATR20d : FAIL  (0.0476)
+    leg 2 t >= 3.0 : FAIL  (0.75)
+    leg 3 sign in >=3 of 4 sub-eras : FAIL  (2 of 4)
+
+  robustness cells
+    C gap>=0.25 hold=4h                        n=   52  gross 0.0293 ATR20d (0.806 px)  t=0.57 | net 0.0115 ATR20d (0.526 px) t=0.22
+    C gap>=0.25 hold=1sess                     n=   52  gross -0.0011 ATR20d (-0.352 px)  t=-0.03 | net -0.0188 ATR20d (-0.632 px) t=-0.48
+    C gap>=0.50 hold=4h                        n=   20  gross 0.0905 ATR20d (2.159 px)  t=1.16 | net 0.0721 ATR20d (1.879 px) t=0.92
+    C gap>=0.50 hold=1sess                     n=   20  gross 0.0659 ATR20d (0.685 px)  t=1.03 | net 0.0476 ATR20d (0.405 px) t=0.75
+    C gap>=1.00 hold=4h    n=1 null
+    C gap>=1.00 hold=1sess n=1 null
+
+  MECHANISM FALSIFIER for C: the same fade on a same-size move in the DEEP
+  London hours (09-11 UTC). If this is as large, the overshoot is not liquidity.
+    C deep-hour control gap>=0.5 hold=1sess    n=   18  gross -0.2607 ATR20d (-4.666 px)  t=-0.65 | net -0.2785 ATR20d (-4.946 px) t=-0.69
+
+====================================================================================================
+IN-SAMPLE VERDICT  A=FAILS  B(pre)=FAILS  B(post)=FAILS  C=FAILS
+====================================================================================================

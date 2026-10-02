@@ -1,0 +1,40 @@
+  E:/rust/flowdesk\data/bars/XAUDUKA-15m.parquet: 362803 bars kept, 15946 dropped at the 2025-09-23 cut, 2010-06-01 00:00:00+00:00 -> 2025-09-22 23:45:00+00:00
+  E:/rust/flowdesk\data/bars/XAUDUKA-15m.parquet: 362803 bars kept, 15946 dropped at the 2025-09-23 cut, 2010-06-01 00:00:00+00:00 -> 2025-09-22 23:45:00+00:00
+
+====================================================================================================
+IN SAMPLE  XAUDUKA   2010-06-01 -> 2022-01-01
+====================================================================================================
+  FOMC events: 92, weekday: {'Wednesday': 81, 'Tuesday': 7, 'Thursday': 4}
+
+  ATTACK 10  accrual by session (net ATR20d, cost 0.28)
+  same entries, exit moved out one session at a time
+    exit at session +1                         n=   91  gross 0.1109 ATR20d (1.929 px)  t=3.80 | net 0.0920 ATR20d (1.649 px) t=3.15   exit weekday: {'Thursday': 81, 'Wednesday': 7, 'Friday': 4}
+    exit at session +2                         n=   91  gross 0.4390 ATR20d (7.895 px)  t=3.52 | net 0.4201 ATR20d (7.615 px) t=3.37   exit weekday: {'Friday': 81, 'Thursday': 7, 'Sunday': 4}
+    exit at session +3                         n=   91  gross 0.5354 ATR20d (9.330 px)  t=3.70 | net 0.5165 ATR20d (9.050 px) t=3.56   exit weekday: {'Sunday': 81, 'Friday': 6, 'Monday': 5}
+    exit at session +4                         n=   91  gross 0.4840 ATR20d (8.256 px)  t=3.15 | net 0.4651 ATR20d (7.976 px) t=3.03   exit weekday: {'Monday': 81, 'Sunday': 6, 'Tuesday': 5}
+    exit at session +5                         n=   91  gross 0.4841 ATR20d (8.126 px)  t=2.78 | net 0.4651 ATR20d (7.846 px) t=2.67   exit weekday: {'Tuesday': 81, 'Monday': 6, 'Wednesday': 5}
+
+  ATTACK 11  Wednesday placebo, same hours [18, 19], no FOMC that day, hold 3 sessions
+    NON-FOMC Wednesday, same rule              n= 1023  gross -0.0053 ATR20d (-0.068 px)  t=-0.16 | net -0.0235 ATR20d (-0.348 px) t=-0.68
+      long/short split: 504 long / 525 short (49.0% long)   hold<=0: 0
+    for comparison, the cell itself:
+    A-FOMC                                     n=   91  gross 0.5354 ATR20d (9.330 px)  t=3.70 | net 0.5165 ATR20d (9.050 px) t=3.56
+
+====================================================================================================
+OOS 1      XAUDUKA   2022-01-01 -> 2025-09-23
+====================================================================================================
+  FOMC events: 30, weekday: {'Wednesday': 29, 'Thursday': 1}
+
+  ATTACK 10  accrual by session (net ATR20d, cost 0.28)
+  same entries, exit moved out one session at a time
+    exit at session +1                         n=   29  gross 0.0825 ATR20d (1.446 px)  t=0.86 | net 0.0715 ATR20d (1.166 px) t=0.75   exit weekday: {'Thursday': 27, 'Friday': 3}
+    exit at session +2                         n=   29  gross 0.1434 ATR20d (2.901 px)  t=0.94 | net 0.1324 ATR20d (2.621 px) t=0.87   exit weekday: {'Friday': 27, 'Sunday': 3}
+    exit at session +3                         n=   29  gross -0.2827 ATR20d (-11.251 px)  t=-1.25 | net -0.2937 ATR20d (-11.531 px) t=-1.30   exit weekday: {'Sunday': 27, 'Monday': 3}
+    exit at session +4                         n=   29  gross -0.2127 ATR20d (-8.602 px)  t=-0.91 | net -0.2237 ATR20d (-8.882 px) t=-0.96   exit weekday: {'Monday': 27, 'Tuesday': 3}
+    exit at session +5                         n=   28  gross -0.1098 ATR20d (-6.213 px)  t=-0.37 | net -0.1210 ATR20d (-6.493 px) t=-0.41   exit weekday: {'Tuesday': 25, 'Wednesday': 4}
+
+  ATTACK 11  Wednesday placebo, same hours [18, 19], no FOMC that day, hold 3 sessions
+    NON-FOMC Wednesday, same rule              n=  316  gross -0.0344 ATR20d (0.282 px)  t=-0.50 | net -0.0458 ATR20d (0.002 px) t=-0.67
+      long/short split: 152 long / 170 short (47.2% long)   hold<=0: 0
+    for comparison, the cell itself:
+    A-FOMC                                     n=   29  gross -0.2827 ATR20d (-11.251 px)  t=-1.25 | net -0.2937 ATR20d (-11.531 px) t=-1.30
