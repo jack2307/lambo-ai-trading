@@ -30,7 +30,9 @@ use std::path::PathBuf;
 use fd_backtest::engine::{Range, TradingRules, run_backtest_guarded};
 use fd_strategy::registry::Strategy as _;
 use fd_backtest::sweep::{SelectBy, compare_strategies_guarded, sweep_strategy_guarded, verdict, walk_forward_guarded};
-use fd_backtest::hypotheses::{batch as hypothesis_batch, batch_from_file, run_hypothesis_fixed_guarded, run_hypothesis_guarded};
+use fd_backtest::hypotheses::{
+    NullSides, batch as hypothesis_batch, batch_from_file, run_hypothesis_fixed_sides, run_hypothesis_sides,
+};
 use fd_backtest::timeline::{TimelineOptions, build_timeline};
 use fd_backtest::{Guards, OptionsTimeline, PromisingGate};
 use fd_core::config::Config;
@@ -174,6 +176,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let guards = std::env::args().any(|a| a == "--guards").then(|| Guards::for_market(&config, &market)).transpose()?;
     let guards = guards.as_ref();
     println!("{}", guards_line(guards));
+    // `--null-sides=coin|ratio|exposure`: which sides the MATCHED NULL takes.
+    // `coin` is the default and is the null every percentile in
+    // `docs/decisions/` was read against; `ratio` gives the control the
+    // method's own measured long share; `exposure` also matches the hold
+    // control's trade count, so the control's time in the market follows the
+    // method's and not the gate's. Printed in the header of every run, not
+    // only a hypotheses one, because a receipt that does not say which null it
+    // used cannot be compared with one that does.
+    // `docs/hypotheses/2026-10-02-drift-null.md`.
+    let null_sides =
+        NullSides::parse(&arg("null-sides", "coin")).map_err(|e| -> Box<dyn std::error::Error> { e.into() })?;
+    println!("null sides: {} - {}", null_sides.as_str(), null_sides.describe());
     println!();
 
     let registry = Registry::with_builtins();
@@ -229,6 +243,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             // 87% of `struct-80`'s holds at four hours against 3-4% of the ATR
             // arm's, which is the finding of docs/research/runs/2026-09-24-repair-c.
             std::env::args().any(|a| a == "--exit-mix"),
+            null_sides,
         );
     }
     if mode == "null" {
@@ -906,6 +921,7 @@ fn run_hypotheses(
     guards: Option<&Guards>,
     also_registered_stop: bool,
     exit_mix: bool,
+    null_sides: NullSides,
 ) {
     let (batch, shown) = if batch_file.is_empty() {
         match hypothesis_batch(batch_name) {
@@ -929,6 +945,10 @@ fn run_hypotheses(
     } else {
         println!("== hypotheses `{shown}`: {} declared, walk-forward ({folds} folds), each against {seeds} matched null runs ==", batch.len());
     }
+    // In the receipt's own header, not only the run header: a percentile is
+    // meaningless without the null it was read against, and these files are
+    // quoted on their own.
+    println!("null sides: {} ({})", null_sides.as_str(), null_sides.describe());
     println!("swap: long {:.2} / short {:.2} USD per lot per night; spread {}", rules.swap_long_per_lot, rules.swap_short_per_lot, rules.spread);
     println!("{}", news_line());
     println!("{}", news_scope_line(rules));
@@ -941,9 +961,11 @@ fn run_hypotheses(
     let mut survivors = Vec::new();
     for hypothesis in &batch {
         let outcome = if fixed {
-            run_hypothesis_fixed_guarded(registry, hypothesis, bars, rules, gate, seeds, guards).map(Some)
+            run_hypothesis_fixed_sides(registry, hypothesis, bars, rules, gate, seeds, guards, null_sides).map(Some)
         } else {
-            run_hypothesis_guarded(registry, hypothesis, bars, rules, folds, select_by, min_trades_per_cell, gate, seeds, guards)
+            run_hypothesis_sides(
+                registry, hypothesis, bars, rules, folds, select_by, min_trades_per_cell, gate, seeds, guards, null_sides,
+            )
         };
         let report = match outcome {
             Ok(Some(report)) => report,
@@ -965,7 +987,7 @@ fn run_hypotheses(
             format!("fail: {}", report.verdict.reasons.join("; "))
         };
         println!(
-            "{:<12} {:<18} {:>6} {:>7.3} {:>7.3} {:>8.3} {:>8.3} {:>8.0} {:>4.0}%  {verdict}",
+            "{:<12} {:<18} {:>6} {:>7.3} {:>7.3} {:>8.3} {:>8.3} {:>8.0} {:>5}  {verdict}",
             report.label,
             report.base,
             m.trades,
@@ -974,7 +996,14 @@ fn run_hypotheses(
             report.null_quantile(0.5),
             report.null_quantile(0.95),
             report.swap_usd,
-            report.percentile
+            // A percentile read against a null whose seeds all agree is one
+            // comparison dressed as a quantile, so the column says `null`
+            // rather than a number it cannot support. It is not 0 and it is
+            // not 100; the line below says why.
+            match report.percentile_or_null() {
+                Some(p) => format!("{p:.0}%"),
+                None => "null".to_string(),
+            }
         );
         println!("{:<12} {:<18} {}  — {}", "", "", report.filters, report.why);
         // What the count-matching ACHIEVED, printed on every row rather than
@@ -991,6 +1020,102 @@ fn run_hypotheses(
             report.count_match(),
             if report.count_matched() { "" } else { "  ** outside the band: this percentile is unmatched **" },
         );
+        // The SIDE ratio, method against control, on every row and whichever
+        // null ran. On a coin-flip run this line is what shows the defect: a
+        // long-only method read against a 50%-long control, on an instrument
+        // whose unconditional drift is +0.3946 ATR20 per 5 sessions at
+        // t = +6.74. On a matched run it is the achieved match, measured rather
+        // than assumed, for the same reason the count match above is.
+        println!(
+            "{:<12} {:<18} long share: method {:.3} vs the null's median {:.3}{}",
+            "",
+            "",
+            report.long_share,
+            report.null_long_share_median(),
+            match (
+                null_sides.matches_ratio(),
+                fd_backtest::hypotheses::side_ratio_is_one_sided(report.long_share),
+                report.side_matched(),
+            ) {
+                (false, true, _) =>
+                    "  ** outside 40-60% long against a coin: this percentile carries the instrument's drift **",
+                (true, _, false) => "  ** the control's side ratio is not the method's **",
+                _ => "",
+            },
+        );
+        // The COST, measured in what was paid rather than inferred from the
+        // stop — which is the only form the hold branch has, since it has no
+        // stop at all and its cost is its trade count times the spread.
+        println!(
+            "{:<12} {:<18} spread paid: method {:.2} USD vs the null's median {:.2} USD — cost match {:.2}{}",
+            "",
+            "",
+            report.cost_usd,
+            fd_backtest::hypotheses::median_f64(&report.null_cost_usd),
+            report.cost_match(),
+            if report.cost_match().is_nan() {
+                "  (nothing to compare)"
+            } else if report.cost_matched() {
+                ""
+            } else {
+                "  ** outside the band: the control did not pay what the method paid **"
+            },
+        );
+        // And the EXPOSURE, which is the quantity the drift is actually
+        // collected in. TWO figures, because it has two factors and either one
+        // alone is an instrument that lies: the SIGNED SHARE of time (+1.000 is
+        // long the whole time) says which way the exposure pointed, and the
+        // GROSS TIME IN MARKET says how much of it there was. A control with
+        // the method's side ratio exactly, in the market 1.35x as long,
+        // collects 35% more drift and has a signed share difference of zero.
+        println!(
+            "{:<12} {:<18} exposure: signed share of time method {:+.3} vs the null's {:+.3}; time in market method {:.0} min vs the null's median {:.0} min — ratio {:.2}{}",
+            "",
+            "",
+            report.signed_share(),
+            report.null_signed_share_median(),
+            report.gross_minutes,
+            fd_backtest::hypotheses::median_f64(&report.null_gross_minutes),
+            report.time_in_market_match(),
+            if report.exposure_matched() {
+                ""
+            } else {
+                "  ** the control did not collect the drift the method did **"
+            },
+        );
+        // WHAT A PERCENTILE AGAINST THIS NULL DOES AND DOES NOT MEAN. Measured
+        // 2026-10-02 by `agent/new-method-2`: the existing nulls' own median
+        // profit factor is 0.867 and is below 1.000 in 240 of 247 published
+        // cells, and nine of those cells sat at or above the 95th percentile
+        // while LOSING money. Beating a losing null is beating a loss. The
+        // absolute gate (PF 1.2, expectancy 0.05R, 30 trades) is what carries
+        // profitability and `survives()` requires it as well as the 95th - but
+        // the percentile is the number a reader takes, so the row says in
+        // words what its own percentile is a comparison against.
+        if report.null_quantile(0.5).is_finite() && report.null_quantile(0.5) < 1.0 {
+            println!(
+                "{:<12} {:<18} the null's own median LOSES money (p50 {:.3} < 1.000): a high percentile here means \"loses less than random entry at the same cost, count and side ratio\", NOT \"makes money\" - the gate leg is what says that",
+                "",
+                "",
+                report.null_quantile(0.5),
+            );
+        }
+        // A null whose seeds all produce the same profit factor is not a
+        // distribution and its percentile is one comparison, not a quantile.
+        // A window hold at `entryRate = 1.0` with a fixed hold has the side
+        // coin as its ONLY random input, so matching a 0% or 100% long share
+        // leaves nothing random — which also means the coin-flip null's whole
+        // spread on such a row WAS the side lottery, a lottery the method
+        // never faced.
+        if !report.null_has_spread() && !report.null_pf.is_empty() {
+            println!(
+                "{:<12} {:<18} ** the null has no spread across {} seeds (p50 = p95 = {:.3}): this is one comparison, not a quantile, and the percentile is reported as null **",
+                "",
+                "",
+                report.null_pf.len(),
+                report.null_quantile(0.5),
+            );
+        }
         // And what the COST matching achieved, printed the same way and for
         // the same reason: cost as a fraction of risk is `spread / stop`, so
         // a control at a different stop is a control at a different cost, and
@@ -1034,6 +1159,7 @@ fn run_hypotheses(
                     seeds,
                     guards,
                     fd_backtest::hypotheses::CostMatch::RegisteredStop,
+                    null_sides,
                 ) {
                     Ok(before) => {
                         let moved = if before.percentile.is_nan() && report.percentile.is_nan() {

@@ -45,6 +45,28 @@ fn draw(seed: u64, bar: u64, stream: u64) -> f64 {
     (value >> 11) as f64 / (1u64 << 53) as f64
 }
 
+/// The probability an entry is a long, read fail-safe.
+///
+/// **A missing or non-finite `longShare` reads as 0.5, not as NaN.**
+/// `Params::get` answers NaN for a parameter the strategy never declared, and
+/// `draw(..) < NaN` is always `false` — so reading it raw would turn a control
+/// whose caller forgot the parameter into one that is 100% short, silently,
+/// and the percentile read against it would be wrong in a direction set only
+/// by the method's own side. The coin is the failure mode this control had
+/// before the parameter existed, so the coin is what it falls back to. Shared
+/// by [`RandomEntry`] and [`crate::control_hold::RandomHold`].
+///
+/// 0.5 is the coin, and the instrument's unconditional drift is the reason
+/// anything else exists: gold's is +0.3946 ATR20 per 5 sessions at t = +6.74,
+/// so a control at 0.5 carries an expected drift term of about zero whatever
+/// the method it is a control for collected. See
+/// `docs/hypotheses/2026-10-02-drift-null.md`.
+#[must_use]
+pub fn long_share(p: &Params) -> f64 {
+    let v = p.get("longShare");
+    if v.is_finite() { v } else { 0.5 }
+}
+
 pub struct RandomEntry;
 
 impl Strategy for RandomEntry {
@@ -61,8 +83,21 @@ impl Strategy for RandomEntry {
          Not a trading method: the distribution of its results is what any real method has to beat."
     }
 
+    /// `longShare` is the probability an entry is a long, and **0.5 is the
+    /// coin this control has always flipped**: at that value `on_bar` makes
+    /// bit-for-bit the same side decision it made before the parameter
+    /// existed. Anything else is an exposure-matched control and is only ever
+    /// set from a method's own measured long share — see
+    /// `hypotheses::side_distribution` and
+    /// `docs/hypotheses/2026-10-02-drift-null.md`.
     fn default_params(&self) -> Params {
-        Params::new(&[("entryRate", 0.02), ("atrPeriod", 14.0), ("stopAtr", 1.5), ("seed", 1.0)])
+        Params::new(&[
+            ("entryRate", 0.02),
+            ("atrPeriod", 14.0),
+            ("stopAtr", 1.5),
+            ("longShare", 0.5),
+            ("seed", 1.0),
+        ])
     }
 
     fn grid(&self) -> BTreeMap<String, Vec<f64>> {
@@ -102,7 +137,8 @@ impl Strategy for RandomEntry {
         if draw(seed, bar, 0) >= p.get("entryRate") {
             return Intent::None;
         }
-        let side = if draw(seed, bar, 1) < 0.5 { Side::Long } else { Side::Short };
+        let share = long_share(p);
+        let side = if draw(seed, bar, 1) < share { Side::Long } else { Side::Short };
         let stop_atr = p.get("stopAtr");
         Intent::Enter {
             side,
@@ -112,7 +148,10 @@ impl Strategy for RandomEntry {
                 ctx.bar.close + atr * stop_atr
             }),
             target: None,
-            reason: "coin flip".into(),
+            // The receipt has to say which control it was. "coin flip" is
+            // reserved for the 0.5 draw, so an exposure-matched run cannot be
+            // read as the unconditional one.
+            reason: if share == 0.5 { "coin flip".into() } else { format!("{share:.3} long draw") },
         }
     }
 }
@@ -148,6 +187,54 @@ mod tests {
         let entries: Vec<f64> = (0..32).map(|i| draw(3, i * 900_000, 0)).collect();
         let sides: Vec<f64> = (0..32).map(|i| draw(3, i * 900_000, 1)).collect();
         assert_ne!(entries, sides);
+    }
+
+    /// The property that makes the drift control checkable rather than a
+    /// matter of opinion: at `longShare = 0.5` the side decision is the coin
+    /// this control always flipped, on the same stream, bar for bar.
+    #[test]
+    fn a_half_long_share_is_the_old_coin_flip_bit_for_bit() {
+        let mut p = RandomEntry.default_params();
+        assert_eq!(p.get("longShare"), 0.5, "the default is the coin");
+        for i in 0..5_000u64 {
+            let bar = 1_600_000_000_000 + i * 900_000;
+            let old = draw(7, bar, 1) < 0.5;
+            let new = draw(7, bar, 1) < long_share(&p);
+            assert_eq!(old, new, "bar {bar}");
+        }
+        // And a parameter set that never heard of `longShare` still flips the
+        // coin rather than going 100% short on a NaN comparison.
+        let bare = Params::new(&[("entryRate", 0.02)]);
+        assert_eq!(long_share(&bare), 0.5, "an undeclared longShare is the coin, not NaN");
+        p.set("longShare", f64::NAN);
+        assert_eq!(long_share(&p), 0.5, "a NaN longShare is the coin");
+    }
+
+    #[test]
+    fn a_long_share_of_one_is_long_only_and_zero_is_short_only() {
+        let mut p = RandomEntry.default_params();
+        p.set("longShare", 1.0);
+        let all: Vec<bool> = (0..2_000u64).map(|i| draw(3, i * 900_000, 1) < long_share(&p)).collect();
+        assert!(all.iter().all(|long| *long), "longShare 1.0 takes no shorts");
+        p.set("longShare", 0.0);
+        let none: Vec<bool> = (0..2_000u64).map(|i| draw(3, i * 900_000, 1) < long_share(&p)).collect();
+        assert!(none.iter().all(|long| !*long), "longShare 0.0 takes no longs");
+    }
+
+    /// The match is on the ratio, so the realised share has to land near the
+    /// share asked for — that is the only sense in which this control is
+    /// "matched", and it is measured rather than assumed.
+    #[test]
+    fn the_realised_long_share_lands_near_the_share_asked_for() {
+        for share in [0.1, 0.3, 0.72, 0.9] {
+            let mut p = RandomEntry.default_params();
+            p.set("longShare", share);
+            let n = 40_000u64;
+            let longs = (0..n).filter(|i| draw(13, i * 60_000, 1) < long_share(&p)).count();
+            let got = longs as f64 / n as f64;
+            // Five sigma on a binomial at n = 40,000 is under 0.013 of share.
+            assert!((got - share).abs() < 0.015, "asked {share}, got {got:.4}");
+        }
     }
 
     #[test]

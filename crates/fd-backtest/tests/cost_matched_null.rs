@@ -42,7 +42,7 @@
 
 use fd_backtest::engine::TradingRules;
 use fd_backtest::hypotheses::{
-    CostMatch, Hypothesis, STOP_GOVERNS_BAND, StopSource, run_hypothesis_fixed_as, run_hypothesis_fixed_guarded,
+    CostMatch, Hypothesis, NullSides, STOP_GOVERNS_BAND, StopSource, run_hypothesis_fixed_as, run_hypothesis_fixed_guarded,
 };
 use fd_backtest::sweep::PromisingGate;
 use fd_core::types::Bar;
@@ -109,9 +109,9 @@ fn a_method_already_at_the_controls_stop_is_read_against_a_bit_identical_null() 
     let (rules, bars, registry, gate) = (rules(), bars(4000), Registry::with_builtins(), PromisingGate::default());
     let h = hypothesis("at-1.5", "ema-cross", &[]);
 
-    let corrected = run_hypothesis_fixed_as(&registry, &h, &bars, &rules, &gate, SEEDS, None, CostMatch::Method)
+    let corrected = run_hypothesis_fixed_as(&registry, &h, &bars, &rules, &gate, SEEDS, None, CostMatch::Method, NullSides::CoinFlip)
         .expect("a well-formed hypothesis");
-    let record = run_hypothesis_fixed_as(&registry, &h, &bars, &rules, &gate, SEEDS, None, CostMatch::RegisteredStop)
+    let record = run_hypothesis_fixed_as(&registry, &h, &bars, &rules, &gate, SEEDS, None, CostMatch::RegisteredStop, NullSides::CoinFlip)
         .expect("a well-formed hypothesis");
 
     let stop = corrected.control_stop.expect("an engine-exit method's control has a stop");
@@ -141,9 +141,9 @@ fn a_wider_named_stop_is_copied_onto_the_control_and_changes_its_distribution() 
     let (rules, bars, registry, gate) = (rules(), bars(4000), Registry::with_builtins(), PromisingGate::default());
     let h = hypothesis("at-2.0", "donchian-breakout", &[]);
 
-    let corrected = run_hypothesis_fixed_as(&registry, &h, &bars, &rules, &gate, SEEDS, None, CostMatch::Method)
+    let corrected = run_hypothesis_fixed_as(&registry, &h, &bars, &rules, &gate, SEEDS, None, CostMatch::Method, NullSides::CoinFlip)
         .expect("a well-formed hypothesis");
-    let record = run_hypothesis_fixed_as(&registry, &h, &bars, &rules, &gate, SEEDS, None, CostMatch::RegisteredStop)
+    let record = run_hypothesis_fixed_as(&registry, &h, &bars, &rules, &gate, SEEDS, None, CostMatch::RegisteredStop, NullSides::CoinFlip)
         .expect("a well-formed hypothesis");
 
     let stop = corrected.control_stop.expect("an engine-exit method's control has a stop");
@@ -227,9 +227,9 @@ fn the_cost_match_cannot_move_a_gate_figure() {
         hypothesis("struct", "far-stop-break", &[("period", 80.0), ("stopMode", 0.0), ("riskReward", 1.0)]),
         hypothesis("at-2.0", "donchian-breakout", &[]),
     ] {
-        let corrected = run_hypothesis_fixed_as(&registry, &h, &bars, &rules, &gate, 8, None, CostMatch::Method)
+        let corrected = run_hypothesis_fixed_as(&registry, &h, &bars, &rules, &gate, 8, None, CostMatch::Method, NullSides::CoinFlip)
             .expect("a well-formed hypothesis");
-        let record = run_hypothesis_fixed_as(&registry, &h, &bars, &rules, &gate, 8, None, CostMatch::RegisteredStop)
+        let record = run_hypothesis_fixed_as(&registry, &h, &bars, &rules, &gate, 8, None, CostMatch::RegisteredStop, NullSides::CoinFlip)
             .expect("a well-formed hypothesis");
         assert_eq!(corrected.oos.trades, record.oos.trades, "{}: the trade count is the method's", h.label);
         for (name, a, b) in [

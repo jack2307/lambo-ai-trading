@@ -1,0 +1,211 @@
+market:   xauusd 15m
+data:     E:/rust/flowdesk/data (bars from E:/rust/flowdesk/data\bars\XAUUSD-15m.parquet)
+bounds:   --from=2025-09-13 --to=2026-09-12 kept 23531 of 100586 bars
+spread:   0.28 per round trip
+trail:    off
+max hold: 4 h (14400000 ms) from [trading] max_hold_ms, no per-market override
+bars:     23531 from 2025-09-14 22:00 to 2026-09-11 20:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+companion: none loaded — every cmp series is NaN
+guards: off (every number unguarded)
+null sides: exposure - the method's measured long share AND its trade count on the hold branch
+
+== hypotheses `E:/rust/flowdesk/docs/hypotheses/2026-09-13-recent-year-hours.toml`: 24 declared, walk-forward (4 folds), each against 200 matched null runs ==
+null sides: exposure (the method's measured long share AND its trade count on the hold branch)
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+guards: off (every number unguarded)
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+hold/00-02-long session-hold          206   0.985  -0.018    0.985    0.985        0  null  fail: profit factor 0.985 < 1.2; expectancy -0.018R < 0.05R
+                                MoTuWeThFr + NY 00:00-00:05  — long from 00:00 to 02:00 New York; the null holds random sides from the same bar
+                                matched null 206 trades median vs the method's 206 — count match 1.00
+                                long share: method 1.000 vs the null's median 1.000
+                                spread paid: method 5.29 USD vs the null's median 5.29 USD — cost match 1.00
+                                exposure: signed share of time method +1.000 vs the null's +1.000; time in market method 24720 min vs the null's median 24720 min — ratio 1.00
+                                the null's own median LOSES money (p50 0.985 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                ** the null has no spread across 200 seeds (p50 = p95 = 0.985): this is one comparison, not a quantile, and the percentile is reported as null **
+hold/00-02-short session-hold          206   0.943  -0.037    0.943    0.943        0  null  fail: profit factor 0.943 < 1.2; expectancy -0.037R < 0.05R
+                                MoTuWeThFr + NY 00:00-00:05  — short from 00:00 to 02:00 New York; the null holds random sides from the same bar
+                                matched null 206 trades median vs the method's 206 — count match 1.00
+                                long share: method 0.000 vs the null's median 0.000
+                                spread paid: method 5.36 USD vs the null's median 5.36 USD — cost match 1.00
+                                exposure: signed share of time method -1.000 vs the null's -1.000; time in market method 24720 min vs the null's median 24720 min — ratio 1.00
+                                the null's own median LOSES money (p50 0.943 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                ** the null has no spread across 200 seeds (p50 = p95 = 0.943): this is one comparison, not a quantile, and the percentile is reported as null **
+hold/02-04-long session-hold          206   0.969  -0.015    0.969    0.969        0  null  fail: profit factor 0.969 < 1.2; expectancy -0.015R < 0.05R
+                                MoTuWeThFr + NY 02:00-02:05  — long from 02:00 to 04:00 New York; the null holds random sides from the same bar
+                                matched null 206 trades median vs the method's 206 — count match 1.00
+                                long share: method 1.000 vs the null's median 1.000
+                                spread paid: method 5.34 USD vs the null's median 5.34 USD — cost match 1.00
+                                exposure: signed share of time method +1.000 vs the null's +1.000; time in market method 24840 min vs the null's median 24840 min — ratio 1.00
+                                the null's own median LOSES money (p50 0.969 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                ** the null has no spread across 200 seeds (p50 = p95 = 0.969): this is one comparison, not a quantile, and the percentile is reported as null **
+hold/02-04-short session-hold          206   0.921  -0.040    0.921    0.921        0  null  fail: profit factor 0.921 < 1.2; expectancy -0.040R < 0.05R
+                                MoTuWeThFr + NY 02:00-02:05  — short from 02:00 to 04:00 New York; the null holds random sides from the same bar
+                                matched null 206 trades median vs the method's 206 — count match 1.00
+                                long share: method 0.000 vs the null's median 0.000
+                                spread paid: method 5.31 USD vs the null's median 5.31 USD — cost match 1.00
+                                exposure: signed share of time method -1.000 vs the null's -1.000; time in market method 24840 min vs the null's median 24840 min — ratio 1.00
+                                the null's own median LOSES money (p50 0.921 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                ** the null has no spread across 200 seeds (p50 = p95 = 0.921): this is one comparison, not a quantile, and the percentile is reported as null **
+hold/04-06-long session-hold          205   0.599  -0.227    0.599    0.599        0  null  fail: profit factor 0.599 < 1.2; expectancy -0.227R < 0.05R
+                                MoTuWeThFr + NY 04:00-04:05  — long from 04:00 to 06:00 New York; the null holds random sides from the same bar
+                                matched null 205 trades median vs the method's 205 — count match 1.00
+                                long share: method 1.000 vs the null's median 1.000
+                                spread paid: method 4.94 USD vs the null's median 4.94 USD — cost match 1.00
+                                exposure: signed share of time method +1.000 vs the null's +1.000; time in market method 24600 min vs the null's median 24600 min — ratio 1.00
+                                the null's own median LOSES money (p50 0.599 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                ** the null has no spread across 200 seeds (p50 = p95 = 0.599): this is one comparison, not a quantile, and the percentile is reported as null **
+hold/04-06-short session-hold          205   1.507   0.173    1.507    1.507        0  null  gate pass, inside the noise
+                                MoTuWeThFr + NY 04:00-04:05  — short from 04:00 to 06:00 New York; the null holds random sides from the same bar
+                                matched null 205 trades median vs the method's 205 — count match 1.00
+                                long share: method 0.000 vs the null's median 0.000
+                                spread paid: method 5.62 USD vs the null's median 5.62 USD — cost match 1.00
+                                exposure: signed share of time method -1.000 vs the null's -1.000; time in market method 24600 min vs the null's median 24600 min — ratio 1.00
+                                ** the null has no spread across 200 seeds (p50 = p95 = 1.507): this is one comparison, not a quantile, and the percentile is reported as null **
+hold/06-08-long session-hold          206   1.192   0.118    1.192    1.192        0  null  fail: profit factor 1.192 < 1.2
+                                MoTuWeThFr + NY 06:00-06:05  — long from 06:00 to 08:00 New York; the null holds random sides from the same bar
+                                matched null 206 trades median vs the method's 206 — count match 1.00
+                                long share: method 1.000 vs the null's median 1.000
+                                spread paid: method 5.95 USD vs the null's median 5.95 USD — cost match 1.00
+                                exposure: signed share of time method +1.000 vs the null's +1.000; time in market method 24645 min vs the null's median 24645 min — ratio 1.00
+                                ** the null has no spread across 200 seeds (p50 = p95 = 1.192): this is one comparison, not a quantile, and the percentile is reported as null **
+hold/06-08-short session-hold          206   0.726  -0.176    0.726    0.726        0  null  fail: profit factor 0.726 < 1.2; expectancy -0.176R < 0.05R
+                                MoTuWeThFr + NY 06:00-06:05  — short from 06:00 to 08:00 New York; the null holds random sides from the same bar
+                                matched null 206 trades median vs the method's 206 — count match 1.00
+                                long share: method 0.000 vs the null's median 0.000
+                                spread paid: method 5.29 USD vs the null's median 5.29 USD — cost match 1.00
+                                exposure: signed share of time method -1.000 vs the null's -1.000; time in market method 24645 min vs the null's median 24645 min — ratio 1.00
+                                the null's own median LOSES money (p50 0.726 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                ** the null has no spread across 200 seeds (p50 = p95 = 0.726): this is one comparison, not a quantile, and the percentile is reported as null **
+hold/08-10-long session-hold          206   1.038   0.071    1.038    1.038        0  null  fail: profit factor 1.038 < 1.2
+                                MoTuWeThFr + NY 08:00-08:05  — long from 08:00 to 10:00 New York; the null holds random sides from the same bar
+                                matched null 206 trades median vs the method's 206 — count match 1.00
+                                long share: method 1.000 vs the null's median 1.000
+                                spread paid: method 5.52 USD vs the null's median 5.52 USD — cost match 1.00
+                                exposure: signed share of time method +1.000 vs the null's +1.000; time in market method 24720 min vs the null's median 24720 min — ratio 1.00
+                                ** the null has no spread across 200 seeds (p50 = p95 = 1.038): this is one comparison, not a quantile, and the percentile is reported as null **
+hold/08-10-short session-hold          206   0.860  -0.128    0.860    0.860        0  null  fail: profit factor 0.860 < 1.2; expectancy -0.128R < 0.05R
+                                MoTuWeThFr + NY 08:00-08:05  — short from 08:00 to 10:00 New York; the null holds random sides from the same bar
+                                matched null 206 trades median vs the method's 206 — count match 1.00
+                                long share: method 0.000 vs the null's median 0.000
+                                spread paid: method 5.46 USD vs the null's median 5.46 USD — cost match 1.00
+                                exposure: signed share of time method -1.000 vs the null's -1.000; time in market method 24720 min vs the null's median 24720 min — ratio 1.00
+                                the null's own median LOSES money (p50 0.860 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                ** the null has no spread across 200 seeds (p50 = p95 = 0.860): this is one comparison, not a quantile, and the percentile is reported as null **
+hold/10-12-long session-hold          206   0.926  -0.057    0.926    0.926        0  null  fail: profit factor 0.926 < 1.2; expectancy -0.057R < 0.05R
+                                MoTuWeThFr + NY 10:00-10:05  — long from 10:00 to 12:00 New York; the null holds random sides from the same bar
+                                matched null 206 trades median vs the method's 206 — count match 1.00
+                                long share: method 1.000 vs the null's median 1.000
+                                spread paid: method 4.01 USD vs the null's median 4.01 USD — cost match 1.00
+                                exposure: signed share of time method +1.000 vs the null's +1.000; time in market method 24720 min vs the null's median 24720 min — ratio 1.00
+                                the null's own median LOSES money (p50 0.926 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                ** the null has no spread across 200 seeds (p50 = p95 = 0.926): this is one comparison, not a quantile, and the percentile is reported as null **
+hold/10-12-short session-hold          206   1.015   0.014    1.015    1.015        0  null  fail: profit factor 1.015 < 1.2; expectancy 0.014R < 0.05R
+                                MoTuWeThFr + NY 10:00-10:05  — short from 10:00 to 12:00 New York; the null holds random sides from the same bar
+                                matched null 206 trades median vs the method's 206 — count match 1.00
+                                long share: method 0.000 vs the null's median 0.000
+                                spread paid: method 4.06 USD vs the null's median 4.06 USD — cost match 1.00
+                                exposure: signed share of time method -1.000 vs the null's -1.000; time in market method 24720 min vs the null's median 24720 min — ratio 1.00
+                                ** the null has no spread across 200 seeds (p50 = p95 = 1.015): this is one comparison, not a quantile, and the percentile is reported as null **
+hold/12-14-long session-hold          206   0.816  -0.084    0.816    0.816        0  null  fail: profit factor 0.816 < 1.2; expectancy -0.084R < 0.05R
+                                MoTuWeThFr + NY 12:00-12:05  — long from 12:00 to 14:00 New York; the null holds random sides from the same bar
+                                matched null 206 trades median vs the method's 206 — count match 1.00
+                                long share: method 1.000 vs the null's median 1.000
+                                spread paid: method 3.95 USD vs the null's median 3.95 USD — cost match 1.00
+                                exposure: signed share of time method +1.000 vs the null's +1.000; time in market method 32640 min vs the null's median 32640 min — ratio 1.00
+                                the null's own median LOSES money (p50 0.816 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                ** the null has no spread across 200 seeds (p50 = p95 = 0.816): this is one comparison, not a quantile, and the percentile is reported as null **
+hold/12-14-short session-hold          206   1.074   0.043    1.074    1.074        0  null  fail: profit factor 1.074 < 1.2; expectancy 0.043R < 0.05R
+                                MoTuWeThFr + NY 12:00-12:05  — short from 12:00 to 14:00 New York; the null holds random sides from the same bar
+                                matched null 206 trades median vs the method's 206 — count match 1.00
+                                long share: method 0.000 vs the null's median 0.000
+                                spread paid: method 3.87 USD vs the null's median 3.87 USD — cost match 1.00
+                                exposure: signed share of time method -1.000 vs the null's -1.000; time in market method 32640 min vs the null's median 32640 min — ratio 1.00
+                                ** the null has no spread across 200 seeds (p50 = p95 = 1.074): this is one comparison, not a quantile, and the percentile is reported as null **
+hold/14-16-long session-hold          203   0.877  -0.067    0.877    0.877        0  null  fail: profit factor 0.877 < 1.2; expectancy -0.067R < 0.05R
+                                MoTuWeThFr + NY 14:00-14:05  — long from 14:00 to 16:00 New York; the null holds random sides from the same bar
+                                matched null 203 trades median vs the method's 203 — count match 1.00
+                                long share: method 1.000 vs the null's median 1.000
+                                spread paid: method 4.40 USD vs the null's median 4.40 USD — cost match 1.00
+                                exposure: signed share of time method +1.000 vs the null's +1.000; time in market method 27960 min vs the null's median 27960 min — ratio 1.00
+                                the null's own median LOSES money (p50 0.877 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                ** the null has no spread across 200 seeds (p50 = p95 = 0.877): this is one comparison, not a quantile, and the percentile is reported as null **
+hold/14-16-short session-hold          203   1.054   0.021    1.054    1.054        0  null  fail: profit factor 1.054 < 1.2; expectancy 0.021R < 0.05R
+                                MoTuWeThFr + NY 14:00-14:05  — short from 14:00 to 16:00 New York; the null holds random sides from the same bar
+                                matched null 203 trades median vs the method's 203 — count match 1.00
+                                long share: method 0.000 vs the null's median 0.000
+                                spread paid: method 4.44 USD vs the null's median 4.44 USD — cost match 1.00
+                                exposure: signed share of time method -1.000 vs the null's -1.000; time in market method 27960 min vs the null's median 27960 min — ratio 1.00
+                                ** the null has no spread across 200 seeds (p50 = p95 = 1.054): this is one comparison, not a quantile, and the percentile is reported as null **
+hold/16-18-long session-hold          197   1.374   0.150    1.374    1.374        0  null  gate pass, inside the noise
+                                MoTuWeThFr + NY 16:00-16:05  — long from 16:00 to 18:00 New York; the null holds random sides from the same bar
+                                matched null 197 trades median vs the method's 197 — count match 1.00
+                                long share: method 1.000 vs the null's median 1.000
+                                spread paid: method 4.87 USD vs the null's median 4.87 USD — cost match 1.00
+                                exposure: signed share of time method +1.000 vs the null's +1.000; time in market method 135810 min vs the null's median 135810 min — ratio 1.00
+                                ** the null has no spread across 200 seeds (p50 = p95 = 1.374): this is one comparison, not a quantile, and the percentile is reported as null **
+hold/16-18-short session-hold          197   0.643  -0.201    0.643    0.643        0  null  fail: profit factor 0.643 < 1.2; expectancy -0.201R < 0.05R
+                                MoTuWeThFr + NY 16:00-16:05  — short from 16:00 to 18:00 New York; the null holds random sides from the same bar
+                                matched null 197 trades median vs the method's 197 — count match 1.00
+                                long share: method 0.000 vs the null's median 0.000
+                                spread paid: method 4.62 USD vs the null's median 4.62 USD — cost match 1.00
+                                exposure: signed share of time method -1.000 vs the null's -1.000; time in market method 135810 min vs the null's median 135810 min — ratio 1.00
+                                the null's own median LOSES money (p50 0.643 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                ** the null has no spread across 200 seeds (p50 = p95 = 0.643): this is one comparison, not a quantile, and the percentile is reported as null **
+hold/18-20-long session-hold          164   1.362   0.221    1.362    1.362        0  null  gate pass, inside the noise
+                                MoTuWeThFr + NY 18:00-18:05  — long from 18:00 to 20:00 New York; the null holds random sides from the same bar
+                                matched null 164 trades median vs the method's 164 — count match 1.00
+                                long share: method 1.000 vs the null's median 1.000
+                                spread paid: method 4.61 USD vs the null's median 4.61 USD — cost match 1.00
+                                exposure: signed share of time method +1.000 vs the null's +1.000; time in market method 19680 min vs the null's median 19680 min — ratio 1.00
+                                ** the null has no spread across 200 seeds (p50 = p95 = 1.362): this is one comparison, not a quantile, and the percentile is reported as null **
+hold/18-20-short session-hold          164   0.651  -0.278    0.651    0.651        0  null  fail: profit factor 0.651 < 1.2; expectancy -0.278R < 0.05R
+                                MoTuWeThFr + NY 18:00-18:05  — short from 18:00 to 20:00 New York; the null holds random sides from the same bar
+                                matched null 164 trades median vs the method's 164 — count match 1.00
+                                long share: method 0.000 vs the null's median 0.000
+                                spread paid: method 4.23 USD vs the null's median 4.23 USD — cost match 1.00
+                                exposure: signed share of time method -1.000 vs the null's -1.000; time in market method 19680 min vs the null's median 19680 min — ratio 1.00
+                                the null's own median LOSES money (p50 0.651 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                ** the null has no spread across 200 seeds (p50 = p95 = 0.651): this is one comparison, not a quantile, and the percentile is reported as null **
+hold/20-22-long session-hold          164   0.862  -0.147    0.862    0.862        0  null  fail: profit factor 0.862 < 1.2; expectancy -0.147R < 0.05R
+                                MoTuWeThFr + NY 20:00-20:05  — long from 20:00 to 22:00 New York; the null holds random sides from the same bar
+                                matched null 164 trades median vs the method's 164 — count match 1.00
+                                long share: method 1.000 vs the null's median 1.000
+                                spread paid: method 4.55 USD vs the null's median 4.55 USD — cost match 1.00
+                                exposure: signed share of time method +1.000 vs the null's +1.000; time in market method 19605 min vs the null's median 19605 min — ratio 1.00
+                                the null's own median LOSES money (p50 0.862 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                ** the null has no spread across 200 seeds (p50 = p95 = 0.862): this is one comparison, not a quantile, and the percentile is reported as null **
+hold/20-22-short session-hold          164   1.135   0.089    1.135    1.135        0  null  fail: profit factor 1.135 < 1.2
+                                MoTuWeThFr + NY 20:00-20:05  — short from 20:00 to 22:00 New York; the null holds random sides from the same bar
+                                matched null 164 trades median vs the method's 164 — count match 1.00
+                                long share: method 0.000 vs the null's median 0.000
+                                spread paid: method 4.53 USD vs the null's median 4.53 USD — cost match 1.00
+                                exposure: signed share of time method -1.000 vs the null's -1.000; time in market method 19605 min vs the null's median 19605 min — ratio 1.00
+                                ** the null has no spread across 200 seeds (p50 = p95 = 1.135): this is one comparison, not a quantile, and the percentile is reported as null **
+hold/22-00-long session-hold          165   0.746  -0.120    0.746    0.746        0  null  fail: profit factor 0.746 < 1.2; expectancy -0.120R < 0.05R
+                                MoTuWeThFr + NY 22:00-22:05  — long from 22:00 to 00:00 New York; the null holds random sides from the same bar
+                                matched null 165 trades median vs the method's 165 — count match 1.00
+                                long share: method 1.000 vs the null's median 1.000
+                                spread paid: method 3.82 USD vs the null's median 3.82 USD — cost match 1.00
+                                exposure: signed share of time method +1.000 vs the null's +1.000; time in market method 19800 min vs the null's median 19800 min — ratio 1.00
+                                the null's own median LOSES money (p50 0.746 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                ** the null has no spread across 200 seeds (p50 = p95 = 0.746): this is one comparison, not a quantile, and the percentile is reported as null **
+hold/22-00-short session-hold          165   1.174   0.069    1.174    1.174        0  null  fail: profit factor 1.174 < 1.2
+                                MoTuWeThFr + NY 22:00-22:05  — short from 22:00 to 00:00 New York; the null holds random sides from the same bar
+                                matched null 165 trades median vs the method's 165 — count match 1.00
+                                long share: method 0.000 vs the null's median 0.000
+                                spread paid: method 4.08 USD vs the null's median 4.08 USD — cost match 1.00
+                                exposure: signed share of time method -1.000 vs the null's -1.000; time in market method 19800 min vs the null's median 19800 min — ratio 1.00
+                                ** the null has no spread across 200 seeds (p50 = p95 = 1.174): this is one comparison, not a quantile, and the percentile is reported as null **
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+
