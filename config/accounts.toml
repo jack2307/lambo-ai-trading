@@ -989,7 +989,25 @@ dry_run = false
 enabled = true
 
 runs = [
-    "xau-macd-asia",
+    # MOVED OFF THIS ACCOUNT 2026-10-02, the owner's decision: "dung chien luoc
+    # MACD cross tren V10 de toi chuyen sang 1 tai khoan khac". Commented rather
+    # than deleted so the next reader sees it left and why.
+    #
+    # IT WAS WINNING HERE. From the broker, before it was stopped:
+    #   8 closed trades, 2026-09-28 04:45Z .. 2026-10-02 04:31Z, +1,137.50 USC,
+    #   flat when stopped (0 positions, 0 pending), so nothing was abandoned.
+    # A commented row usually means a book failed. This one did not.
+    #
+    # WHEN IT IS POINTED AT THE NEW ACCOUNT, IT NEEDS A NEW ACCOUNT ID. An id
+    # owns a history directory: data/live/vantage-v10/xau-macd-asia/ holds those
+    # eight trades, and mt5_executor REFUSES to start if an id's directory
+    # already records a different login - measured on 2026-09-25, when
+    # `vantage-v12` was pointed at 35911764 and the executor stopped with
+    # "already holds the record of login 33708517 ... Nothing was sent."
+    # So: new [[account]] block, new `id`, same book name in its `runs`.
+    # And DO NOT delete the directory above - it is the only record of the
+    # +1,137.50 and `brokers_of()` reads it from disk to keep showing it.
+    #   "xau-macd-asia",
     "xau-stoch",
 
     # ------------------------------------------------------------------
