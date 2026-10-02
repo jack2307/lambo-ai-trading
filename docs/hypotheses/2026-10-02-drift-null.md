@@ -207,3 +207,126 @@ programme's own test of the repair.
 - A control that is drift-matched on paper while its trade count or its cost
   share has drifted out of band — trading one defect for another, which is the
   mistake the last two repairs each had to be checked for.
+
+---
+
+## Amendment, 2026-10-02, appended before any measurement on this branch was read
+
+Two reports arrived from the coordinator while this branch's code was being
+written and its tests were passing: from `agent/new-method-1`
+(`docs/decisions/2026-10-02-new-method-1.md`) and `agent/new-method-2`
+(`docs/decisions/2026-10-02-new-method-2.md`). Both bear on the figure this
+registration quotes as its motivation, and one bears on how a percentile is to
+be read. Appended rather than merged into the text above, so the git trail keeps
+what was pre-registered separate from what was learned.
+
+### 1. The +0.3946 ATR20 / t = +6.74 has no committed computation in this repository
+
+Checked before anything else, because the registration above quotes it four
+times. Searched `docs/`, `crates/`, `scripts/` and `py/` for the figure and for
+anything that would produce it:
+
+- The only places it appears are prose: `docs/decisions/2026-09-24-designed-methods.md:133`,
+  `docs/hypotheses/2026-09-24-what-the-record-cannot-see.md:44`, and its origin at
+  `docs/research/designs/2026-09-23-designed-3-quiet-swing.md:449`.
+- **There is no script, no binary, no test and no receipt that computes it.**
+  `designed_3.rs` prints a side split and discusses the drift in comments; it
+  does not measure one. `docs/research/runs/` contains no file carrying the
+  number.
+
+So the figure is an uncommitted ad-hoc measurement that four documents and two
+registrations now rest on, including this one, and **it cannot be reproduced
+from its own receipt** — which is the first item on this registration's own list
+of what would make a piece of work wrong. `agent/new-method-1` predicts its `t`
+is inflated by sqrt(5) = 2.24 by 5-session windows started every session rather
+than every fifth, and measures t = 2.94 on strictly non-overlapping windows
+against a reproduced magnitude of +0.3579 ATR20d; 6.74 / 2.94 = 2.29. It
+demonstrated the identical mechanism on itself at a 4-hour horizon, where
+stride-1 windows gave t = 4.33 and stride-16 gave t = 1.08 with the mean
+unchanged to four decimals. I have not verified its arithmetic and I am not
+re-deriving the gold figure here, because — see 2 — it is not a parameter of
+anything on this branch.
+
+**Consequence for this registration:** every figure of the form "+0.3946 ATR20
+per 5 sessions, t = +6.74" in the text above and in the code comments on this
+branch is a MOTIVATION that is now known to be unreproducible, and is to be
+read as "gold has a positive unconditional drift of roughly a third of a
+20-session ATR per 5 sessions, whose significance is disputed and is probably
+nearer t = 3 than t = 7". The magnitude is corroborated twice independently; the
+`t` is not. No number this branch produces changes if the `t` is 2.94.
+
+### 2. Three constraints the two reports ask for, and why this control already meets all three by construction rather than by calibration
+
+This is the reason the finding above does not move the design, and it is the
+single most important thing in this amendment. **The control is non-parametric
+in the drift. No drift estimate enters it anywhere.** It is given, per row, from
+the method's own realised trades on the same bars:
+
+- its measured **long share** (`side_distribution`),
+- its realised **hold distribution** (`hold_distribution`),
+- its **trade count** (`matched_rate` on the entry branch, `matched_hold_rate`
+  on the hold branch),
+- its **stop** on the entry branch (`control_stop`), and the same spread on
+  both,
+
+and it runs inside the method's own `Filtered` gates over the method's own
+window. So:
+
+- **"Build the control at the method's own horizon."** Met: the control's holds
+  are drawn from the method's realised hold distribution, log-median and
+  log-sd. A 4-hour method gets a 4-hour control and a 20-session method gets a
+  20-session one, with no horizon chosen by anybody.
+- **"Control for drift NET of cost, not gross."** Met: the control pays the same
+  spread on the same number of trades at the same stop, which is what the cost
+  match and the count match are for. The benchmark the method is read against is
+  therefore net drift at its own horizon, never gross. This is why the reports'
+  figures — net drift negative below about one session, positive above — change
+  nothing here: whichever sign the net drift has on those bars at that horizon,
+  the control is exposed to it in the same signed amount.
+- **"Never establish the drift from overlapping windows."** Met trivially: this
+  control never establishes a drift at all. It does not estimate the quantity it
+  neutralises, which is the whole reason the overlap question cannot reach it.
+
+And **non-stationarity, which `agent/new-method-2` measures at a factor of ten
+between eras (+0.2198 ATR20 per 5 sessions, t +6.20 on 2010-06..2018-06 against
++0.0224, t +0.69 on 2018-06..2025-04)**: also met by construction, and this is
+the strongest case for a non-parametric control over a calibrated one. There is
+no pooled estimate to over-correct one era with, because the control trades the
+same bars the row does. A row measured on 2018-2025 is read against a control
+exposed to 2018-2025's drift, whatever that is.
+
+The registration's "per-era or pooled" question therefore does not arise, and
+the answer is recorded as **neither**: per row, measured, never estimated.
+
+### 3. A percentile against a losing null is not a test of profitability, and the receipt now says so
+
+`agent/new-method-2` measures the existing nulls' own median profit factor at
+**0.867, below 1.000 in 240 of 247 cells**, with nine cells at or above the 95th
+percentile while losing money (`close/1630-1815` at PF 0.733 and the 99th;
+`box/b3` at PF 0.859 and the 100th).
+
+The desk's `SURVIVES` verdict already requires both legs — `verdict.promising`
+carries the absolute gate of PF 1.2 / expectancy 0.05R / 30 trades, and
+`HypothesisReport::survives` requires it *and* the 95th — so no row has ever
+been promoted on a percentile alone. But the percentile is the number a reader
+takes, and nine published cells carry one without the absolute leg beside it.
+
+**One change, registered here before it is run:** when a row's own null median
+profit factor is below 1.000, the receipt prints a line saying so and saying
+what the percentile then means — "loses less than random entry at the same cost,
+count and side ratio", not "makes money". It is a line of output. It moves no
+threshold, changes no control and cannot move a number.
+
+### 4. The draw count floors the resolvable p, and this branch does not fix it
+
+`agent/new-method-2` measures 247 distinct (run, row) pairs carrying a
+percentile against 6 declared, and 51 of 247 (20.6%) at or above the 95th where
+12 would be expected. At 300 seeds the finest resolvable p is 0.00332, so
+corrected for 247 looks the best the instrument can produce is 0.82.
+
+**This branch inherits that ceiling and does not repair it.** `seeds` is a
+command-line argument and nothing here changes its default. The re-runs below
+are run at the seed counts the receipts they are compared against used, because
+a corrected figure beside an original has to differ in one thing only. That is
+a limitation of this work and is named in the decision record as one, not fixed
+in it.
