@@ -1011,6 +1011,63 @@ runs = [
     "xau-stoch",
 
     # ------------------------------------------------------------------
+    # 2026-10-03, the owner's decision: "Cho v10 danh them BTC vao cuoi tuan",
+    # then "Bat luon" after being shown the cost measurement below. ENABLED
+    # WITHOUT A MEASURED RECORD on this instrument - there was no BTC book on
+    # the desk at all until today, so this one starts at zero trades. Recorded
+    # as his decision, not as a finding.
+    #
+    # THE RATIONALE IS SOUND AND WORTH SAYING: gold is shut at the weekend, so
+    # this account's capital sits idle Sat-Sun while BTC quotes 24/7. Measured
+    # on 35911458 at 04:48Z Saturday: BTCUSD.sc trade_mode 4, quoting live,
+    # bid 84,578.59 / ask 84,595.66. The market really is open.
+    #
+    # AND THE COST IS THE PROBLEM, measured from 4,000 MT5 15m bars
+    # (2026-08-22 .. 2026-10-03), median ATR14, against the live spread 17.07:
+    #
+    #                 ATR14      stop (1.5 ATR)   spread as % of R
+    #   weekday       220.5 pts     330.7 pts          5.16%
+    #   WEEKEND       114.2 pts     171.4 pts          9.96%
+    #   gold, to compare                               1.06%
+    #
+    # Weekend ATR is 0.52x the weekday ATR - volatility halves while the spread
+    # does not - so the weekend is the WORST time on this instrument, not a free
+    # one. At 9.96% of R a round trip this book pays about nine times what the
+    # gold books pay, and on a 1.5 R target it needs roughly four percentage
+    # points more win rate than its own geometry implies just to break even.
+    # That is the same arithmetic the 2026-10-02 research programme established
+    # on gold: a fixed cost flips the sign of anything whose stop is small.
+    #
+    # THE SIZING, checked against the broker before it was written, as this file
+    # requires. 1.00 lot = 0.040000 BTC = 3,383.80 USD of notional; one price
+    # unit moves 0.04 USD per lot; order_calc_margin says 169.19 USC per lot.
+    #   paper lot at weekend ATR   0.146  ->  x5.0 = 0.73 lot on this account
+    #   margin                     123.5 USC -> margin level about 43,500%
+    #   notional                   2,470 USD = 4.6x equity (10x ceiling: no bind)
+    #   risk per trade             5.00 USD = about 1% of 537 USD. Unchanged.
+    #   spread paid per round trip 0.498 USD, i.e. 9.96% of the 5.00 risked.
+    #
+    # TWO OPERATIONAL FACTS, both of which will surprise somebody later:
+    #   1. ITS EXECUTOR MUST NOT CARRY `--weekend-flat`. The xau-stoch executor
+    #      runs with --weekend-flat=20:45, which flattens and blocks over the
+    #      weekend. On this book that flag would shut it off at precisely the
+    #      hours it exists to trade.
+    #   2. THERE IS NO BTC BAR STORE. `flowdesk-bars-export` names only
+    #      XAUUSD.sc, so /api/chart/bars?market=btcusd returns 404 and no
+    #      parquet exists. Consequences: this book has no warm-up history and
+    #      cannot size anything until ~14 live 15m bars have accumulated, and
+    #      IT CANNOT BE BACKTESTED AT ALL until BTC is added to that task. If
+    #      the owner ever wants this measured rather than merely run, adding
+    #      BTCUSD.sc to the exporter is the first step and nothing else works
+    #      before it.
+    #
+    # The poller was already feeding btcusd:15m into a 404 - "no paper run for
+    # btcusd:15m" - for an unknown length of time. Creating this book stopped
+    # that too.
+    "btc-macd-weekend",
+    # ------------------------------------------------------------------
+
+    # ------------------------------------------------------------------
     # THE THREE COIN BOOKS ARE NOT HERE ANY MORE, and the note that stood in
     # this spot is withdrawn rather than deleted, because two of its three
     # arguments were wrong and a reader who only saw them removed would
