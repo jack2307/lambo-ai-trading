@@ -11,6 +11,7 @@
 
 pub mod builtin;
 pub mod companion_unconfirmed;
+pub mod crt;
 pub mod doji;
 pub mod gap_fade;
 pub mod filter;
