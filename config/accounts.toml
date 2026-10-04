@@ -1038,14 +1038,30 @@ runs = [
     # That is the same arithmetic the 2026-10-02 research programme established
     # on gold: a fixed cost flips the sign of anything whose stop is small.
     #
-    # THE SIZING, checked against the broker before it was written, as this file
-    # requires. 1.00 lot = 0.040000 BTC = 3,383.80 USD of notional; one price
-    # unit moves 0.04 USD per lot; order_calc_margin says 169.19 USC per lot.
-    #   paper lot at weekend ATR   0.146  ->  x5.0 = 0.73 lot on this account
-    #   margin                     123.5 USC -> margin level about 43,500%
-    #   notional                   2,470 USD = 4.6x equity (10x ceiling: no bind)
-    #   risk per trade             5.00 USD = about 1% of 537 USD. Unchanged.
-    #   spread paid per round trip 0.498 USD, i.e. 9.96% of the 5.00 risked.
+    # THE SIZING WRITTEN HERE WAS WRONG BY A FACTOR OF FOUR AND IS CORRECTED
+    # BELOW. What it said: "1.00 lot = 0.040000 BTC = 3,383.80 USD of notional;
+    # one price unit moves 0.04 USD per lot", and from that a 0.73 lot risking
+    # 5.00 USD. The notional came from `margin x account_leverage`, and that
+    # derivation does not hold on crypto.
+    #
+    # HOW IT WAS CAUGHT, 2026-10-04: the same symbol reports margin 169.19 USC
+    # per lot on this account at 1:2000 and 169.64 USC per lot on 35916601 at
+    # 1:500. Four times the leverage, the same margin - so BTCUSD.sc does NOT
+    # take the account's leverage; crypto carries its own fixed one. Two accounts
+    # cannot give one symbol two contract sizes, so the derivation was the thing
+    # that was wrong.
+    #
+    # THE CORRECT ARITHMETIC, from `trade_contract_size` = 0.01 and the quote:
+    #   1.00 lot = 0.01 BTC = about 848 USD of notional at 84,820
+    #   one price unit = 0.01 USD per lot, not 0.04
+    # So the 0.73 lot this account was sized to actually risked about 1.25 USD,
+    # not 5.00 - a quarter of the intended 1%, i.e. wrong in the SAFE direction,
+    # and wrong all the same. The margin figures were never wrong: they came from
+    # order_calc_margin, which is measured, not derived.
+    #
+    # THE COST IN R IS UNAFFECTED, because it is spread divided by stop and has
+    # no lot in it: 5.16% of R on a weekday, 9.96% at a weekend, against gold's
+    # 1.06%. Everything this file says about cost stands.
     #
     # TWO OPERATIONAL FACTS, both of which will surprise somebody later:
     #   1. ITS EXECUTOR MUST NOT CARRY `--weekend-flat`. The xau-stoch executor
@@ -1103,7 +1119,16 @@ runs = [
     # The poller was already feeding btcusd:15m into a 404 - "no paper run for
     # btcusd:15m" - for an unknown length of time. Creating this book stopped
     # that too.
-    "btc-macd",
+    # MOVED TO vantage-v8, 2026-10-04, the owner's choice of the three I put to
+    # him: "Ok chot 1". He had spotted the muddle - this account's gold book is
+    # stoch-reversal, and I had put a macd-cross book on it the same day macd
+    # itself moved to V8. So V8 is now the macd account for both instruments and
+    # this one is pure stoch. The measured reason macd stayed macd rather than
+    # being switched to stoch: against the new drift-controlled null,
+    # macd-cross/asia sits at the 100th percentile and stoch-reversal/asia at the
+    # 26th, and xau-stoch's own longer record is -0.087 R over 384 trades at the
+    # 14th percentile. Tidiness was not worth the worse mechanism.
+    #   "btc-macd",   -> see the vantage-v8 block
     # ------------------------------------------------------------------
 
     # ------------------------------------------------------------------
@@ -1367,4 +1392,47 @@ enabled = true
 #     owner chose to fund it anyway. Recorded as his decision.
 runs = [
     "xau-macd-asia",
+
+    # ------------------------------------------------------------------
+    # 2026-10-04, the owner's choice: "Ok chot 1". BTC moves here off
+    # vantage-v10 so that ONE mechanism lives on ONE account - this is the
+    # macd-cross account now, gold and BTC; V10 is pure stoch-reversal.
+    #
+    # STILL NOT MEASURED ON THIS INSTRUMENT. There was no BTC book on the desk
+    # at all before 2026-10-03 and there is no BTC bar store, so it cannot be
+    # backtested; it starts at zero trades. The owner was shown the cost first
+    # and chose to run it. Recorded as his decision.
+    #
+    # SIZING AT lot_scale 3.0, from the broker on 35916601, 2026-10-04:
+    #   order_calc_margin   169.64 USC per lot
+    #   contract            0.01 BTC per lot = about 848 USD of notional
+    #   one price unit      0.01 USD per lot
+    #   weekday ATR14 220.5 -> stop 330.8 pts -> 0.91 lot
+    #       margin 154.37 USC, margin level about 19,400%; notional 772 USD =
+    #       2.57x equity (10x ceiling: no bind); risk 3.00 USD = 1% of 300 USD
+    #   weekend ATR14 114.2 -> stop 171.3 pts -> 1.75 lot
+    #       margin 296.87 USC, margin level about 10,100%; notional 1,484 USD =
+    #       4.95x equity; risk 3.00 USD
+    #   spread cost         5.13% of R on a weekday, 9.90% at a weekend
+    #
+    # BTCUSD.sc WAS NOT IN THIS TERMINAL'S MARKET WATCH and had to be selected
+    # before it would quote - bid/ask read 0.0 and order_calc_margin returned
+    # `None` until it did. If this account is ever rebuilt, that selection is a
+    # step, and a symbol that is merely "offered" is not yet tradeable.
+    #
+    # LEVERAGE HERE IS 1:500 and that does NOT change the margin on this symbol:
+    # 169.64 USC per lot here against 169.19 on a 1:2000 account. Crypto carries
+    # its own leverage. This is what caught the factor-of-four error recorded in
+    # the vantage-v10 block above, and it is why every figure here comes from
+    # order_calc_margin rather than from a leverage number.
+    #
+    # THE WEEKEND IS STILL BLOCKED, and this book cannot reach it: the engine's
+    # `flat_before_weekend_hhmm = 1640` refuses every entry from Friday 20:45Z to
+    # Sunday 21:00Z for every market, with no per-market override. The weekend
+    # book that preceded this one found four entries and had all four refused
+    # (`skipped_by_guard {"WEEKEND_FLAT": 4}`). Opening the weekend needs a Rust
+    # change, a rebuild and a redeploy of fd-api, plus an exception to the
+    # owner's 2026-09-19 rule - his decision, not taken here.
+    "btc-macd",
+    # ------------------------------------------------------------------
 ]
