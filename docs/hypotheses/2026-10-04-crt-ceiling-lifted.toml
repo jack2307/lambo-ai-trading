@@ -1,0 +1,85 @@
+# DIAGNOSTIC D2 for docs/hypotheses/2026-10-04-crt.md, declared in that file's
+# amendment of 2026-10-04 BEFORE it was run.
+#
+# NINE ROWS THAT CANNOT PRODUCE A SURVIVOR. Each is the cell of the same name
+# in 2026-10-04-crt.toml with ONE change: `maxRiskAtr` lifted from 3.0 to
+# 1000.0, a value that cannot bind.
+#
+# WHY IT EXISTS. Windows A and B both returned 15 and 14 trades on the three 1D
+# cells, over four years and four and a quarter years respectively, against
+# about 1,460 and 1,540 completed daily candles. That is not a thin result, it
+# is a defect: the ATR is measured on FIFTEEN-MINUTE bars while a 1D cell's
+# stop spans a DAILY sweep, so `maxRiskAtr = 3.0` is a tiny absolute distance
+# at daily scale and refuses almost every 1D setup. The receipts say so
+# directly - the 1D cells' realised median stop is 2.738 ATR against a ceiling
+# of 3.000, pressed against the limit.
+#
+# WHAT IT CAN AND CANNOT SHOW. It can count how many CRT setups exist per range
+# timeframe once the ceiling is removed, which is the number the registration's
+# `rangeTf` axis needed and did not have. It CANNOT produce a survivor: lifting
+# a declared parameter after seeing a result is exactly the move this
+# programme's discipline forbids, so no verdict of "survives" may be read off
+# any row here whatever it prints, and these nine rows are counted as nine more
+# looks in the multiplicity ledger.
+
+[run]
+in_sample = { market = "xauduka", interval = "15m", from = "2018-06-16", to = "2022-06-16" }
+out_of_sample = { market = "xauusd", interval = "15m", from = "2022-06-16", to = "2026-09-18" }
+seeds = 300
+null_sides = "exposure"
+fixed = true
+
+[[hypothesis]]
+label = "crt-nocap/1h-opposite"
+base = "crt"
+filters = []
+overrides = { rangeTf = 4, target = 0, maxRiskAtr = 1000 }
+why = "D2: how many CRT setups the 15m-ATR risk ceiling was refusing at the 1H range candle; diagnostic, never a survivor"
+[[hypothesis]]
+label = "crt-nocap/1h-mid"
+base = "crt"
+filters = []
+overrides = { rangeTf = 4, target = 1, maxRiskAtr = 1000 }
+why = "D2: how many CRT setups the 15m-ATR risk ceiling was refusing at the 1H range candle; diagnostic, never a survivor"
+[[hypothesis]]
+label = "crt-nocap/1h-rr15"
+base = "crt"
+filters = []
+overrides = { rangeTf = 4, target = 2, maxRiskAtr = 1000 }
+why = "D2: how many CRT setups the 15m-ATR risk ceiling was refusing at the 1H range candle; diagnostic, never a survivor"
+[[hypothesis]]
+label = "crt-nocap/4h-opposite"
+base = "crt"
+filters = []
+overrides = { rangeTf = 16, target = 0, maxRiskAtr = 1000 }
+why = "D2: how many CRT setups the 15m-ATR risk ceiling was refusing at the 4H range candle; diagnostic, never a survivor"
+[[hypothesis]]
+label = "crt-nocap/4h-mid"
+base = "crt"
+filters = []
+overrides = { rangeTf = 16, target = 1, maxRiskAtr = 1000 }
+why = "D2: how many CRT setups the 15m-ATR risk ceiling was refusing at the 4H range candle; diagnostic, never a survivor"
+[[hypothesis]]
+label = "crt-nocap/4h-rr15"
+base = "crt"
+filters = []
+overrides = { rangeTf = 16, target = 2, maxRiskAtr = 1000 }
+why = "D2: how many CRT setups the 15m-ATR risk ceiling was refusing at the 4H range candle; diagnostic, never a survivor"
+[[hypothesis]]
+label = "crt-nocap/1d-opposite"
+base = "crt"
+filters = []
+overrides = { rangeTf = 96, target = 0, maxRiskAtr = 1000 }
+why = "D2: how many CRT setups the 15m-ATR risk ceiling was refusing at the 1D range candle; diagnostic, never a survivor"
+[[hypothesis]]
+label = "crt-nocap/1d-mid"
+base = "crt"
+filters = []
+overrides = { rangeTf = 96, target = 1, maxRiskAtr = 1000 }
+why = "D2: how many CRT setups the 15m-ATR risk ceiling was refusing at the 1D range candle; diagnostic, never a survivor"
+[[hypothesis]]
+label = "crt-nocap/1d-rr15"
+base = "crt"
+filters = []
+overrides = { rangeTf = 96, target = 2, maxRiskAtr = 1000 }
+why = "D2: how many CRT setups the 15m-ATR risk ceiling was refusing at the 1D range candle; diagnostic, never a survivor"
