@@ -1061,10 +1061,49 @@ runs = [
     #      BTCUSD.sc to the exporter is the first step and nothing else works
     #      before it.
     #
+    # ------------------------------------------------------------------
+    # 2026-10-04: WEEKENDS-ONLY MEANT NEVER, and the full week replaces it.
+    # Owner: "Tai sao chua thay lenh nao mo nhi / Ap dung chay full tuan di."
+    #
+    # WHY NOTHING OPENED, measured rather than guessed. The weekend book saw 91
+    # bars, `skipped_no_atr` 0 - so ATR was warm and the method worked: it found
+    # FOUR entries. The desk refused all four:
+    #     skipped_by_guard {"WEEKEND_FLAT": 4}
+    # That is the ENGINE's guard, `flat_before_weekend_hhmm = 1640` in
+    # config/default.toml, which blocks Friday 20:45Z to Sunday 21:00Z for every
+    # market. So a book filtered to `weekdays:SaSu` could only ever fire inside
+    # the one window the engine forbids. The name has changed with the filter:
+    # `btc-macd`, no weekday filter, trades whenever the engine permits.
+    #
+    # WHAT TRADING THE WEEKEND WOULD ACTUALLY TAKE, so nobody thinks a flag does
+    # it. THREE things, not one:
+    #   1. the engine guard above - and it has NO per-market override. Only
+    #      `max_hold_ms` does (fd-core/src/config.rs, the
+    #      `a_per_market_max_hold_override_is_scoped_to_that_market` test). So
+    #      this is a Rust change following that precedent, then a rebuild and a
+    #      redeploy of fd-api, which serves two funded accounts.
+    #   2. the executor's own backstop, `--weekend-flat`, which defaults to
+    #      20:45 UTC and is NOT off when the flag is omitted - `off` is the
+    #      value that disables it.
+    #   3. the owner's standing rule of 2026-09-19, "nguyen tac la khong bao gio
+    #      giu qua tuan", which both layers exist to enforce after fourteen
+    #      books and two real positions went into a weekend unnoticed on
+    #      2026-09-18 because layer one is bar-driven and its bar never came.
+    # Turning the guard off globally is not an option: gold gaps over a weekend
+    # and that is what the rule is for. BTC does not, which is the argument for
+    # a per-market exception - but it is an exception to a safety rule the owner
+    # wrote after being hurt, so it stays his decision and is not taken here.
+    #
+    # THE COST, unchanged and still the thing to watch: weekday ATR14 is 220.5
+    # points and the spread is 17.07, so a 1.5-ATR stop pays 5.16% of R per
+    # round trip against gold's 1.06%. Full-week trading therefore pays about
+    # five times what the gold books pay, not nine - the weekend was the
+    # expensive half, at 9.96%.
+    # ------------------------------------------------------------------
     # The poller was already feeding btcusd:15m into a 404 - "no paper run for
     # btcusd:15m" - for an unknown length of time. Creating this book stopped
     # that too.
-    "btc-macd-weekend",
+    "btc-macd",
     # ------------------------------------------------------------------
 
     # ------------------------------------------------------------------
