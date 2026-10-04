@@ -1,0 +1,96 @@
+# The batch for docs/hypotheses/2026-10-04-crt.md — the NINE CLAIMABLE CELLS.
+#
+# THIS FILE IS NOT THE REGISTRATION. The registration is the markdown beside
+# it, and its falsifier, its multiplicity statement (nine cells, no tenth) and
+# its two windows are not adjustable. This file is only what the runner reads.
+#
+# Nine rows, and nine is the declared multiplicity. Two axes:
+#   rangeTf  — which candle defines the range: 1H (4 bars), 4H (16), 1D (96)
+#   target   — 0 the opposite extreme of candle 1 (CRT's own exit)
+#              1 the 50% midpoint of candle 1
+#              2 a constant 1.5 x risk (pdhl mode 0's exit — the control arm)
+#
+# `filters = []` on every row, deliberately: a session gate, a weekday gate or
+# a volatility gate would each be another fork, and the registration closed
+# all three. The engine's standing guards are unchanged.
+#
+# bufferPips, maxRiskAtr, atrPeriod and pipSize are pdhl's own defaults, so a
+# row differs from pdhl mode 0 on the range candle and the exit and nothing
+# else.
+
+[run]
+# Window A, in-sample, opened first. Four years of Dukascopy gold, ending
+# before the broker series begins, so the two windows cannot overlap.
+in_sample = { market = "xauduka", interval = "15m", from = "2018-06-16", to = "2022-06-16" }
+# Window B, out-of-sample, the decider. Opened only after Window A's table is
+# written down and committed.
+out_of_sample = { market = "xauusd", interval = "15m", from = "2022-06-16", to = "2026-09-18" }
+seeds = 300
+null_sides = "exposure"
+fixed = true
+# The corrected threshold the registration declares. The code's own gate stays
+# at the 95th and is NOT moved; this is the harder bar applied on reading.
+corrected_percentile = 99.44
+
+[[hypothesis]]
+label = "crt/1h-opposite"
+base = "crt"
+filters = []
+overrides = { rangeTf = 4, target = 0 }
+why = "the 1H candle is the timeframe CRT is most often drawn on, and the opposite extreme is CRT's own target; this is the cell the owner asked for"
+
+[[hypothesis]]
+label = "crt/1h-mid"
+base = "crt"
+filters = []
+overrides = { rangeTf = 4, target = 1 }
+why = "the 50% of the range is the other target CRT practitioners use, and it is nearer, so it should convert more often at a smaller reward"
+
+[[hypothesis]]
+label = "crt/1h-rr15"
+base = "crt"
+filters = []
+overrides = { rangeTf = 4, target = 2 }
+why = "the control arm: CRT's structure with pdhl mode 0's constant 1.5R exit, so the variable target can be charged for what it adds"
+
+[[hypothesis]]
+label = "crt/4h-opposite"
+base = "crt"
+filters = []
+overrides = { rangeTf = 16, target = 0 }
+why = "4H is the other timeframe CRT is drawn on, and a 4H range is wide enough that the opposite extreme is a reward worth the spread"
+
+[[hypothesis]]
+label = "crt/4h-mid"
+base = "crt"
+filters = []
+overrides = { rangeTf = 16, target = 1 }
+why = "the midpoint of a 4H range at a 4H horizon, the nearer target on the wider candle"
+
+[[hypothesis]]
+label = "crt/4h-rr15"
+base = "crt"
+filters = []
+overrides = { rangeTf = 16, target = 2 }
+why = "the control arm on 4H"
+
+[[hypothesis]]
+label = "crt/1d-opposite"
+base = "crt"
+filters = []
+overrides = { rangeTf = 96, target = 0 }
+why = "the daily range is pdhl's own granularity, so this cell isolates the exit: same candle, CRT's target instead of a multiple of risk"
+
+[[hypothesis]]
+label = "crt/1d-mid"
+base = "crt"
+filters = []
+overrides = { rangeTf = 96, target = 1 }
+why = "the midpoint of the daily range, the nearest of the three targets on the widest candle"
+
+[[hypothesis]]
+label = "crt/1d-rr15"
+base = "crt"
+filters = []
+overrides = { rangeTf = 96, target = 2 }
+why = "the control arm on 1D, and the row nearest to pdhl mode 0 anywhere in this batch — it differs from pdhl only in using a UTC day bucket and in requiring the sweep to happen in the candle immediately after the range candle"

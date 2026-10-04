@@ -1,0 +1,81 @@
+# The FLIPPED-SIDES DIAGNOSTIC for docs/hypotheses/2026-10-04-crt.md.
+#
+# NINE ROWS THAT CANNOT PRODUCE A SURVIVOR. Each is the cell of the same name
+# in 2026-10-04-crt.toml with both sides reversed: a sweep of candle 1's HIGH
+# is taken LONG and a sweep of its LOW is taken SHORT. The stop and the target
+# are mirrored with them, so the row is a complete trading rule and not a
+# broken one.
+#
+# WHY IT EXISTS. Falsifier F4. docs/decisions/2026-10-02-drift-null.md found
+# that a rule and its own mirror image sat 56 percentile points apart against a
+# coin-flip null and 1 point apart against a drift-matched one, and that on
+# twelve published windows the long and short percentiles summed to about 100.
+# A percentile that is one minus its mirror's is a statement about gold's
+# direction and not about the rule. These nine rows are how this branch checks
+# itself for the same signature.
+#
+# These rows are DIAGNOSTIC. They are counted in the registration's record of
+# what was looked at, and no verdict of "survives" may be read off any of them,
+# whatever figure they print.
+
+[run]
+in_sample = { market = "xauduka", interval = "15m", from = "2018-06-16", to = "2022-06-16" }
+out_of_sample = { market = "xauusd", interval = "15m", from = "2022-06-16", to = "2026-09-18" }
+seeds = 300
+null_sides = "exposure"
+fixed = true
+
+[[hypothesis]]
+label = "crt-flip/1h-opposite"
+base = "crt"
+filters = []
+overrides = { rangeTf = 4, target = 0, flipSides = 1 }
+why = "F4: the mirror image of crt/1h-opposite, to see whether its percentile is a statement about the rule or about gold's direction"
+[[hypothesis]]
+label = "crt-flip/1h-mid"
+base = "crt"
+filters = []
+overrides = { rangeTf = 4, target = 1, flipSides = 1 }
+why = "F4: the mirror image of crt/1h-mid, to see whether its percentile is a statement about the rule or about gold's direction"
+[[hypothesis]]
+label = "crt-flip/1h-rr15"
+base = "crt"
+filters = []
+overrides = { rangeTf = 4, target = 2, flipSides = 1 }
+why = "F4: the mirror image of crt/1h-rr15, to see whether its percentile is a statement about the rule or about gold's direction"
+[[hypothesis]]
+label = "crt-flip/4h-opposite"
+base = "crt"
+filters = []
+overrides = { rangeTf = 16, target = 0, flipSides = 1 }
+why = "F4: the mirror image of crt/4h-opposite, to see whether its percentile is a statement about the rule or about gold's direction"
+[[hypothesis]]
+label = "crt-flip/4h-mid"
+base = "crt"
+filters = []
+overrides = { rangeTf = 16, target = 1, flipSides = 1 }
+why = "F4: the mirror image of crt/4h-mid, to see whether its percentile is a statement about the rule or about gold's direction"
+[[hypothesis]]
+label = "crt-flip/4h-rr15"
+base = "crt"
+filters = []
+overrides = { rangeTf = 16, target = 2, flipSides = 1 }
+why = "F4: the mirror image of crt/4h-rr15, to see whether its percentile is a statement about the rule or about gold's direction"
+[[hypothesis]]
+label = "crt-flip/1d-opposite"
+base = "crt"
+filters = []
+overrides = { rangeTf = 96, target = 0, flipSides = 1 }
+why = "F4: the mirror image of crt/1d-opposite, to see whether its percentile is a statement about the rule or about gold's direction"
+[[hypothesis]]
+label = "crt-flip/1d-mid"
+base = "crt"
+filters = []
+overrides = { rangeTf = 96, target = 1, flipSides = 1 }
+why = "F4: the mirror image of crt/1d-mid, to see whether its percentile is a statement about the rule or about gold's direction"
+[[hypothesis]]
+label = "crt-flip/1d-rr15"
+base = "crt"
+filters = []
+overrides = { rangeTf = 96, target = 2, flipSides = 1 }
+why = "F4: the mirror image of crt/1d-rr15, to see whether its percentile is a statement about the rule or about gold's direction"
