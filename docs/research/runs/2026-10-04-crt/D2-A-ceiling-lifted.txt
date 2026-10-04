@@ -1,0 +1,128 @@
+market:   xauduka 15m
+data:     E:/rust/flowdesk/data (bars from E:/rust/flowdesk/data\bars\XAUDUKA-15m.parquet)
+bounds:   --from=2018-06-16 --to=2022-06-16 kept 94125 of 378749 bars
+spread:   0.28 per round trip
+trail:    off
+max hold: 4 h (14400000 ms) from [trading] max_hold_ms, no per-market override
+bars:     94125 from 2018-06-17 22:00 to 2022-06-14 23:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+companion: none loaded — every cmp series is NaN
+guards: on — max_open_loss_r 2.0, notional 300%, weekend flat 16:40 NY, news flat 60/30 (impact≥3, USD), daily cap 20, loss limit $300, cooldown 30 min
+null sides: exposure - the method's measured long share AND its trade count on the hold branch
+
+== hypotheses `docs/hypotheses/2026-10-04-crt-ceiling-lifted.toml`: 9 declared, FIXED parameters over the whole window (no selection), each against 300 matched null runs ==
+null sides: exposure (the method's measured long share AND its trade count on the hold branch)
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+guards: on — max_open_loss_r 2.0, notional 300%, weekend flat 16:40 NY, news flat 60/30 (impact≥3, USD), daily cap 20, loss limit $300, cooldown 30 min
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+crt-nocap/1h-opposite crt                  5378   0.725  -0.141    0.785    0.843        0    5%  fail: profit factor 0.725 < 1.2; expectancy -0.141R < 0.05R
+                                  — D2: how many CRT setups the 15m-ATR risk ceiling was refusing at the 1H range candle; diagnostic, never a survivor
+                                matched null 4098 trades median vs the method's 5378 — count match 0.76
+                                long share: method 0.498 vs the null's median 0.516
+                                spread paid: method 9767.71 USD vs the null's median 8682.51 USD — cost match 0.89
+                                exposure: signed share of time method +0.034 vs the null's +0.041; time in market method 446445 min vs the null's median 530325 min — ratio 1.19
+                                the null's own median LOSES money (p50 0.785 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 1.391 ATR = 2.26 points, cost 12.39% of R (realised median, structural)
+                                the method's own realised stop: median 1.391 ATR = 2.26 points over 5378 trades
+                                guards: refused NEWS_FLAT 52, WEEKEND_FLAT 68; closed NEWS_FLAT 53, WEEKEND_FLAT 83; sized down 4930
+                                exits: END_OF_DATA 1, NEWS_FLAT 53, STOP 2497, TARGET 2206, TIMEOUT 538, WEEKEND_FLAT 83; mean hold 83.0 min
+crt-nocap/1h-mid crt                  5351   0.536  -0.180    0.770    0.827        0    0%  fail: profit factor 0.536 < 1.2; expectancy -0.180R < 0.05R
+                                  — D2: how many CRT setups the 15m-ATR risk ceiling was refusing at the 1H range candle; diagnostic, never a survivor
+                                matched null 4219 trades median vs the method's 5351 — count match 0.79
+                                long share: method 0.492 vs the null's median 0.475
+                                spread paid: method 8706.35 USD vs the null's median 8725.17 USD — cost match 1.00
+                                exposure: signed share of time method -0.050 vs the null's -0.039; time in market method 182280 min vs the null's median 471570 min — ratio 2.59  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.770 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 1.215 ATR = 2.00 points, cost 14.00% of R (realised median, structural)
+                                the method's own realised stop: median 1.215 ATR = 2.00 points over 5351 trades
+                                guards: refused NEWS_FLAT 45, WEEKEND_FLAT 56; closed NEWS_FLAT 15, WEEKEND_FLAT 39; sized down 5072
+                                exits: NEWS_FLAT 15, STOP 1886, TARGET 3284, TIMEOUT 127, WEEKEND_FLAT 39; mean hold 34.1 min
+crt-nocap/1h-rr15 crt                  4953   0.757  -0.154    0.784    0.845        0   22%  fail: profit factor 0.757 < 1.2; expectancy -0.154R < 0.05R
+                                  — D2: how many CRT setups the 15m-ATR risk ceiling was refusing at the 1H range candle; diagnostic, never a survivor
+                                matched null 3886 trades median vs the method's 4953 — count match 0.78
+                                long share: method 0.497 vs the null's median 0.512
+                                spread paid: method 8961.63 USD vs the null's median 8467.76 USD — cost match 0.94
+                                exposure: signed share of time method +0.025 vs the null's +0.035; time in market method 510015 min vs the null's median 498165 min — ratio 0.98
+                                the null's own median LOSES money (p50 0.784 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 1.375 ATR = 2.26 points, cost 12.39% of R (realised median, structural)
+                                the method's own realised stop: median 1.375 ATR = 2.26 points over 4953 trades
+                                guards: refused NEWS_FLAT 51, WEEKEND_FLAT 68; closed NEWS_FLAT 58, WEEKEND_FLAT 87; sized down 4542
+                                exits: END_OF_DATA 1, NEWS_FLAT 58, STOP 2475, TARGET 1518, TIMEOUT 814, WEEKEND_FLAT 87; mean hold 103.0 min
+crt-nocap/4h-opposite crt                  1494   0.764  -0.115    0.837    0.931        0    9%  fail: profit factor 0.764 < 1.2; expectancy -0.115R < 0.05R
+                                  — D2: how many CRT setups the 15m-ATR risk ceiling was refusing at the 4H range candle; diagnostic, never a survivor
+                                matched null 1513 trades median vs the method's 1494 — count match 1.01
+                                long share: method 0.517 vs the null's median 0.535
+                                spread paid: method 4931.98 USD vs the null's median 5247.08 USD — cost match 1.06
+                                exposure: signed share of time method +0.070 vs the null's +0.070; time in market method 230100 min vs the null's median 297398 min — ratio 1.29  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.837 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 2.356 ATR = 3.87 points, cost 7.24% of R (realised median, structural)
+                                the method's own realised stop: median 2.356 ATR = 3.87 points over 1494 trades
+                                guards: refused NEWS_FLAT 22; closed NEWS_FLAT 26, WEEKEND_FLAT 53; sized down 1045
+                                exits: NEWS_FLAT 26, STOP 527, TARGET 409, TIMEOUT 479, WEEKEND_FLAT 53; mean hold 154.0 min
+crt-nocap/4h-mid crt                  1312   0.708  -0.122    0.837    0.924        0    2%  fail: profit factor 0.708 < 1.2; expectancy -0.122R < 0.05R
+                                  — D2: how many CRT setups the 15m-ATR risk ceiling was refusing at the 4H range candle; diagnostic, never a survivor
+                                matched null 1358 trades median vs the method's 1312 — count match 1.04
+                                long share: method 0.512 vs the null's median 0.481
+                                spread paid: method 4754.62 USD vs the null's median 4944.75 USD — cost match 1.04
+                                exposure: signed share of time method -0.037 vs the null's -0.034; time in market method 116115 min vs the null's median 249540 min — ratio 2.15  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.837 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 2.094 ATR = 3.35 points, cost 8.35% of R (realised median, structural)
+                                the method's own realised stop: median 2.094 ATR = 3.35 points over 1312 trades
+                                guards: refused NEWS_FLAT 18; closed NEWS_FLAT 10, WEEKEND_FLAT 49; sized down 1008
+                                exits: NEWS_FLAT 10, STOP 397, TARGET 667, TIMEOUT 189, WEEKEND_FLAT 49; mean hold 88.5 min
+crt-nocap/4h-rr15 crt                  1461   0.829  -0.084    0.833    0.931        0   47%  fail: profit factor 0.829 < 1.2; expectancy -0.084R < 0.05R
+                                  — D2: how many CRT setups the 15m-ATR risk ceiling was refusing at the 4H range candle; diagnostic, never a survivor
+                                matched null 1485 trades median vs the method's 1461 — count match 1.02
+                                long share: method 0.520 vs the null's median 0.554
+                                spread paid: method 5044.77 USD vs the null's median 5194.07 USD — cost match 1.03
+                                exposure: signed share of time method +0.106 vs the null's +0.107; time in market method 253455 min vs the null's median 292162 min — ratio 1.15
+                                the null's own median LOSES money (p50 0.833 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 2.354 ATR = 3.85 points, cost 7.27% of R (realised median, structural)
+                                the method's own realised stop: median 2.354 ATR = 3.85 points over 1461 trades
+                                guards: refused NEWS_FLAT 22; closed NEWS_FLAT 33, WEEKEND_FLAT 45; sized down 1023
+                                exits: NEWS_FLAT 33, STOP 515, TARGET 290, TIMEOUT 578, WEEKEND_FLAT 45; mean hold 173.5 min
+crt-nocap/1d-opposite crt                   220   0.724  -0.053    0.841    1.124        0   20%  fail: profit factor 0.724 < 1.2; expectancy -0.053R < 0.05R
+                                  — D2: how many CRT setups the 15m-ATR risk ceiling was refusing at the 1D range candle; diagnostic, never a survivor
+                                matched null 278 trades median vs the method's 220 — count match 1.26  ** outside the band: this percentile is unmatched **
+                                long share: method 0.532 vs the null's median 0.530
+                                spread paid: method 631.72 USD vs the null's median 609.98 USD — cost match 0.97
+                                exposure: signed share of time method +0.067 vs the null's +0.063; time in market method 52455 min vs the null's median 71445 min — ratio 1.36  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.841 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 7.976 ATR = 11.04 points, cost 2.54% of R (realised median, structural)
+                                the method's own realised stop: median 7.976 ATR = 11.04 points over 220 trades
+                                guards: refused none; closed none; sized down 31
+                                exits: STOP 12, TARGET 11, TIMEOUT 197; mean hold 238.4 min
+crt-nocap/1d-mid crt                   168   0.662  -0.067    0.840    1.193        0   10%  fail: profit factor 0.662 < 1.2; expectancy -0.067R < 0.05R
+                                  — D2: how many CRT setups the 15m-ATR risk ceiling was refusing at the 1D range candle; diagnostic, never a survivor
+                                matched null 215 trades median vs the method's 168 — count match 1.28  ** outside the band: this percentile is unmatched **
+                                long share: method 0.500 vs the null's median 0.518
+                                spread paid: method 528.47 USD vs the null's median 528.35 USD — cost match 1.00
+                                exposure: signed share of time method +0.042 vs the null's +0.026; time in market method 32625 min vs the null's median 54780 min — ratio 1.68  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.840 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 7.097 ATR = 9.42 points, cost 2.97% of R (realised median, structural)
+                                the method's own realised stop: median 7.097 ATR = 9.42 points over 168 trades
+                                guards: refused none; closed none; sized down 31
+                                exits: STOP 11, TARGET 48, TIMEOUT 109; mean hold 194.2 min
+crt-nocap/1d-rr15 crt                   220   0.792  -0.040    0.837    1.124        0   36%  fail: profit factor 0.792 < 1.2; expectancy -0.040R < 0.05R
+                                  — D2: how many CRT setups the 15m-ATR risk ceiling was refusing at the 1D range candle; diagnostic, never a survivor
+                                matched null 278 trades median vs the method's 220 — count match 1.26  ** outside the band: this percentile is unmatched **
+                                long share: method 0.532 vs the null's median 0.529
+                                spread paid: method 636.24 USD vs the null's median 610.09 USD — cost match 0.96
+                                exposure: signed share of time method +0.065 vs the null's +0.062; time in market method 53865 min vs the null's median 71445 min — ratio 1.33  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.837 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 7.976 ATR = 11.04 points, cost 2.54% of R (realised median, structural)
+                                the method's own realised stop: median 7.976 ATR = 11.04 points over 220 trades
+                                guards: refused none; closed none; sized down 31
+                                exits: STOP 12, TARGET 6, TIMEOUT 202; mean hold 244.8 min
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+
