@@ -271,3 +271,225 @@ the argument is simply never read. Any job that reaches for the shared binary
 with a flag introduced on another branch gets a silently market-entry run with a
 resting-entry filename. Brief section 4.iv's rule — change the value and see
 whether the number changes — caught it; nothing in the output would have.
+
+## RESULT 2026-10-07 — the falsifier did not fire, nothing came through the gate, and the confirmation a stop order buys is the UNCONDITIONAL base rate
+
+144 rows, 24 invocations, `xauusd` 15m, both windows, `--fixed --exit-mix
+--seeds=200 --null-sides=coin`, receipts `receipts/stopentry-*.txt`, table
+`receipts/stopentry-SUMMARY.txt`, 1m audit
+`receipts/stopentry-1m-fillbar-audit.txt`.
+
+### 1. The gate: ZERO
+
+**0 of 144 rows clear PF >= 1.200 AND expectancy >= +0.050R AND >= 40 trades on
+BOTH windows.** Seventh programme, still none. `wrong_side_stop` is **0 on all
+144 rows**, so nothing here is unreadable for that reason.
+
+The closest row in the family, and it is the whole story in four lines:
+`orb`, unguarded, TRANSLATED 0.25 ATR — window A **40 trades, PF 1.436,
+expectancy +0.149R, "gate pass, inside the noise", percentile 83, null p50
+0.939, null p95 1.917**; window B **35 trades, PF 1.006, expectancy +0.022R**.
+One window, and PF 1.436 sits under its own null's 95th percentile of 1.917.
+
+### 2. The falsifier: did NOT fire, on either arm
+
+Best offset in the family per pairing, sum net R, against the market arm:
+
+| arm family | breakout beat market | failed to beat | fires at |
+|---|---|---|---|
+| TRANSLATED (the registration's question) | **12 of 24** | 12 | 16 |
+| TRANSLATED, resolution-unsafe mechanism dropped | **12 of 20** | 8 | 14 |
+| ANCHORED (a WIDER-stopped method) | 20 of 24 | 4 | 16 |
+| ANCHORED, resolution-unsafe dropped | 16 of 20 | 4 | 14 |
+
+So the desk may NOT close the "enter on a stop so the move is confirmed"
+direction on this evidence either, and the two halves of the resting-order
+family stay open together. The threshold was n3's, unchanged, and it was not met
+on either side.
+
+**But 12-of-24 is not a coin either.** Of the 12 pairings the breakout arm beat,
+**11 have a market arm that LOSES money** and the breakout arm loses less — the
+trap n3's record names for percentiles, restated for differences. Only `orb`
+window A has a market arm that makes money at a readable sample, and the
+breakout arm beat it there: +5.97R against +4.43R unguarded, +5.36R against
++3.90R guarded, both at TRANSLATED 0.25 ATR.
+
+### 3. THE NUMBER WORTH KEEPING: a stop order's confirmation is the base rate
+
+Method fill rate minus its matched null's, over the 120 arm-rows that printed
+both:
+
+**median −0.25 points of rate, mean −0.23, and the method filled LESS than its
+null in 62 of 120 rows.**
+
+Set beside n3's pullback half — **median +0.40, less than its null in 35 of
+105** — this is the finding of the night, and it closes something the falsifier
+could not:
+
+> A resting order on the **pullback** side fills no more often than a coin flip
+> does. A resting order on the **breakout** side fills no more often than a coin
+> flip does either, and if anything slightly less. **These six mechanisms'
+> signals carry no information about whether price comes back AND no information
+> about whether price runs.** Two opposite selection mechanisms, each measured
+> against its own null on the same tape, and both read the unconditional base
+> rate.
+
+That is a statement about the mechanisms, not about the orders, and it is why
+neither half of the family can be the missing edge. Per arm:
+
+| arm | rows | median diff | mean diff | worst |
+|---|---|---|---|---|
+| breakout 0.00 anchored | 24 | +0.00 | −1.31 | −28.60 |
+| breakout 0.25 anchored | 24 | −1.55 | −2.06 | −32.40 |
+| breakout 0.50 anchored | 24 | +1.35 | +2.00 | −16.70 |
+| breakout 0.25 translated | 24 | −1.75 | −2.04 | −32.40 |
+| breakout 0.50 translated | 24 | +2.15 | +2.25 | −16.70 |
+
+And on the one mechanism with a readable market arm the sign **flips between
+adjacent windows**, which is brief section 3.2 arriving in a new place: `orb`
+TRANSLATED 0.25, fill rate **88.9% vs the null's 83.3%** on window A and
+**70.0% vs 81.5%** on window B.
+
+### 4. The cost of confirmation is the OFFSET, and it is 3.6x to 7.3x the spread
+
+n3's half of the family found the spread term real and recoverable. This half
+pays that term and adds a second one that is much larger. `offset / stop`, with
+each mechanism's realised market-arm stop and the spread cost of R the receipts
+print:
+
+| mechanism | realised stop | spread cost of R | 0.25 ATR offset | 0.50 ATR offset |
+|---|---|---|---|---|
+| `volume-thrust` | 4.210 ATR = 14.08 pts | 1.99% | 5.9% | 11.9% |
+| `rsi-reversal-vol` | 3.310 ATR = 16.14 pts | 1.73% | 7.6% | 15.1% |
+| `orb` | 2.681 ATR = 12.59 pts | 2.22% | 9.3% | 18.6% |
+| `vwap-fade` | 1.000 ATR = 3.89 pts | 7.21% | 25.0% | 50.0% |
+| `pdhl` | 0.714 ATR = 3.12 pts | 8.97% | 35.0% | 70.0% |
+| `trend-pullback` | 0.378 ATR = 1.35 pts | 20.74% | 66.1% | 132.3% |
+
+**Median spread cost 4.71% of R; median 0.25 ATR offset 17.2% of R (3.6x);
+median 0.50 ATR offset 34.3% of R (7.3x).** Brief section 3.3 again with a new
+numerator: the offset is a horizon quantity exactly as the spread is,
+`offset / stop`, and at `trend-pullback`'s stop a 0.50 ATR order costs **more
+than the whole risk unit** before the trade begins.
+
+### 5. The breakeven fill rate, where the market arm makes money
+
+`f* = E_market / E_breakout`. Only `orb` window A qualifies at a readable sample
+(44 and 45 market-arm trades):
+
+| pairing | arm | E_market | E_breakout | f* | actual fill rate |
+|---|---|---|---|---|---|
+| orb / A / guards | t025 | +0.0890R | +0.1380R | **64.5%** | 86.7% |
+| orb / A / guards | t050 | +0.0890R | +0.1060R | 84.0% | 80.0% |
+| orb / A / noguards | t025 | +0.0980R | +0.1490R | **65.8%** | 88.9% |
+| orb / A / noguards | t050 | +0.0980R | +0.1220R | 80.3% | 82.2% |
+
+This is the one place the two halves of the family genuinely differ. n3's limit
+arm on the same pairing needed **138% to 387%** — above 100%, so no fill rate
+could close its gap. The breakout arm needs **64.5–65.8%** at 0.25 ATR and fills
+**86.7–88.9%**: it clears its own breakeven. It does so on **one window**, at a
+sample of 40 trades, with a profit factor under its own null's 95th percentile,
+and the same arm reads +0.022R on the window next to it. Clearing a breakeven is
+not clearing the gate.
+
+(`rsi-reversal-vol` window A also has a positive market arm, at **9 trades**: no
+conclusion, counted.)
+
+### 6. The resolution audit — the error is a FAKE LOSS, the mirror of n3's
+
+1m audit, `XAUDUKA`, window A, 8,518 bars of 15m against 127,739 of 1m, breakout
+side. Agreement between the 15m fill-bar verdict and the 1m sequence, by the stop
+the mechanism actually uses, LONG side:
+
+| stop | which mechanism | offset 0.25 | offset 0.50 |
+|---|---|---|---|
+| 0.3 ATR | `trend-pullback` (0.378) | 73.4% agree, **26.6% FAKE LOSS** | 67.7%, **32.3%** |
+| 0.7 ATR | `pdhl` (0.714) | 91.5%, 8.5% | 67.3%, **32.7%** |
+| 1.0 ATR | `vwap-fade` (1.000) | 97.8%, 2.2% | 90.6%, 9.4% |
+| 1.2 ATR | the config default | 99.0%, 1.0% | 95.9%, 4.1% |
+| 2.7 ATR | `orb` (2.681) | 99.9%, 0.1% | 100.0%, 0.0% |
+
+**Fake WINS are 0.0% in every cell**, on both sides, at every stop — the exact
+mirror of n3's pullback arm, where the fake wins ran to 24.8% and the fake-loss
+column was the empty one. A long limit rests above its stop, so the stop cannot
+be reached without passing the order; a long stop order rests above a stop the
+bar can print **first**. Same artifact of 15m resolution, sign flipped with the
+order.
+
+**The engine's own count agrees, row by row.** 42 of the 144 rows carry
+`exit_priced_before_the_fill > 0`, concentrated exactly where the audit says:
+
+| arm | rows with any | median share of fills | worst |
+|---|---|---|---|
+| market, breakout 0.00 | 0 | 0% | 0% |
+| breakout 0.25 / 0.50 anchored | 7 each | 0% | 6% |
+| breakout 0.25 translated | 12 | 0.5% | **44%** |
+| breakout 0.50 translated | 12 | 1.0% | **70%** |
+
+Every one of the eight worst rows is `trend-pullback`, at 37–70% of its fills.
+**Its TRANSLATED rows (−182R to −318R of sum net R, expectancy down to
+−2.487R) are not evidence of anything**, and they are also the only reason the
+TRANSLATED tally is 12-of-24 rather than 12-of-20. Dropping the mechanism
+entirely leaves 20 pairings, **12 beats and 8 failures** — the falsifier still
+does not fire, so the conclusion does not rest on them. That is the check n3 ran
+and the answer is the same.
+
+### 7. The null often beats these rows
+
+**41 of the 73 rows with >= 40 trades sit BELOW their own matched null's median
+profit factor** (n3: 36). The market arm is among them — `orb` window B, PF
+0.760 against null p50 0.987 — so this is not something the resting order
+introduced. The gap is widest on the arms that refused the most orders:
+`trend-pullback` ANCHORED 0.50, PF 0.634 against null p50 **1.054**, on 47
+trades with **120 orders refused for no room**.
+
+### 8. What was NOT measured
+
+* **`news-pulse`, and therefore the one direction the prior was FOR.** Section 5
+  declares why and it stands: the strategy is on `agent/n1` and not in this
+  worktree, and the `agent/n1` binary that has it silently ignores `--limit=`.
+  This is the gap in the night's work; it is a merge, not a measurement, and
+  **no cell was spent pretending otherwise.** The hypothesis of section 1 was
+  built on n1's continuation rule, and the arm that would test a stop entry on a
+  continuation signal was not run.
+* **One instrument, one timeframe.** `xauusd` 15m. The offset cost of R is a
+  horizon quantity exactly as the spread is, so 5m or 1h is a different answer.
+* **Slippage through the level.** A real stop order is filled THROUGH its level,
+  not at it; here a touch fills at the level and a gap fills at the open and
+  nothing worse. Every breakout row is flattered by an unknown amount and the
+  direction is known.
+* **The signal set is still the market arm's.** One working order at a time,
+  signals dropped while in position.
+* **`XAUUSD-1m` covers neither window** (2026-06-02 to 2026-09-11). The audit
+  ran on `XAUDUKA-1m`, a different venue, so section 6's rates are an estimate
+  FOR this tape rather than a measurement OF it.
+* **TTL** is 4 bars throughout and was not swept, as declared.
+
+### 9. Multiple-testing ledger
+
+| | declared | looked at |
+|---|---|---|
+| gate rows | 144 | **168** |
+| invocations | 24 | **28** |
+
+168 = 144 declared + 18 from a three-arm one-month smoke run at `--seeds=20`
+(which is what found amendment (1)(b)) + 6 from the 10-day probe of the
+`agent/n1` binary that established it ignores `--limit=`. 28 = 24 + 3 + 1.
+Nothing outside the declared offsets, TTL, arms or windows was run. The 1m audit
+(5 stop sizes x 3 offsets x 2 sides = 30 descriptive cells) carries no gate and
+is counted apart.
+
+### 10. Verdict
+
+The mirror is built, it is one field on one struct, the null goes through it
+untouched, and it buys nothing a gate can read. **Both directions of the
+resting-order family stay OPEN on the registered falsifier** — neither fired —
+but the family has now been measured from both sides, and the two halves agree
+on something that matters more than either falsifier:
+
+**the fill rate of a resting order on these mechanisms' signals is the fill rate
+of a coin flip, whichever side of the close it rests on.** A pullback order
+keeps the signals that retraced; a breakout order keeps the signals that ran;
+neither subset is one the signals knew anything about. Until a mechanism exists
+whose fill rate under one of these orders departs from its null's by more than a
+point of rate, there is nothing for either order to select.

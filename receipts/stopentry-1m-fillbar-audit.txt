@@ -1,0 +1,80 @@
+### stop_atr=0.3
+XAUDUKA 2025-07-01 to 2025-10-01: 8518 bars of 15m, 127739 of 1m; BREAKOUT side, stop 0.3 ATR, target 1.8 R
+fill-bar verdict, 15m OHLC (what the engine reads) against the 1m sequence
+
+side  offset    fills      agree  FAKE LOSS   fake win    15m TGT   15m STOP  gapfills
+LONG  0.00       5879      96.2%       3.8%       0.0%      1223      3675      2321
+LONG  0.25       3935      73.4%      26.6%       0.0%       124      3695        32
+LONG  0.50       2336      67.7%      32.3%       0.0%         6      2330        17
+SHORT 0.00       5863      96.0%       4.0%       0.0%      1156      3802      2443
+SHORT 0.25       3809      74.4%      25.6%       0.0%       102      3628        14
+SHORT 0.50       2276      72.8%      27.2%       0.0%         0      2276         7
+
+FAKE LOSS = the 15m bar recorded a STOP whose level was only reached
+BEFORE the order filled. It is the look-ahead a breakout entry adds,
+and unlike the limit arm's fake win it points AGAINST the method.
+
+### stop_atr=0.7
+XAUDUKA 2025-07-01 to 2025-10-01: 8518 bars of 15m, 127739 of 1m; BREAKOUT side, stop 0.7 ATR, target 1.8 R
+fill-bar verdict, 15m OHLC (what the engine reads) against the 1m sequence
+
+side  offset    fills      agree  FAKE LOSS   fake win    15m TGT   15m STOP  gapfills
+LONG  0.00       5879      99.5%       0.5%       0.0%       362      1589      2321
+LONG  0.25       3935      91.5%       8.5%       0.0%       204      1258        32
+LONG  0.50       2336      67.3%      32.7%       0.0%        91      1280        17
+SHORT 0.00       5863      99.6%       0.4%       0.0%       392      1615      2443
+SHORT 0.25       3809      92.1%       7.9%       0.0%       219      1213        14
+SHORT 0.50       2276      66.5%      33.5%       0.0%        99      1319         7
+
+FAKE LOSS = the 15m bar recorded a STOP whose level was only reached
+BEFORE the order filled. It is the look-ahead a breakout entry adds,
+and unlike the limit arm's fake win it points AGAINST the method.
+
+### stop_atr=1.0
+XAUDUKA 2025-07-01 to 2025-10-01: 8518 bars of 15m, 127739 of 1m; BREAKOUT side, stop 1.0 ATR, target 1.8 R
+fill-bar verdict, 15m OHLC (what the engine reads) against the 1m sequence
+
+side  offset    fills      agree  FAKE LOSS   fake win    15m TGT   15m STOP  gapfills
+LONG  0.00       5879      99.8%       0.2%       0.0%       133       852      2321
+LONG  0.25       3935      97.8%       2.2%       0.0%        78       544        32
+LONG  0.50       2336      90.6%       9.4%       0.0%        44       455        17
+SHORT 0.00       5863      99.8%       0.2%       0.0%       139       839      2443
+SHORT 0.25       3809      97.8%       2.2%       0.0%        90       527        14
+SHORT 0.50       2276      92.0%       8.0%       0.0%        48       455         7
+
+FAKE LOSS = the 15m bar recorded a STOP whose level was only reached
+BEFORE the order filled. It is the look-ahead a breakout entry adds,
+and unlike the limit arm's fake win it points AGAINST the method.
+
+### stop_atr=1.2
+XAUDUKA 2025-07-01 to 2025-10-01: 8518 bars of 15m, 127739 of 1m; BREAKOUT side, stop 1.2 ATR, target 1.8 R
+fill-bar verdict, 15m OHLC (what the engine reads) against the 1m sequence
+
+side  offset    fills      agree  FAKE LOSS   fake win    15m TGT   15m STOP  gapfills
+LONG  0.00       5879      99.9%       0.1%       0.0%        63       554      2321
+LONG  0.25       3935      99.0%       1.0%       0.0%        38       339        32
+LONG  0.50       2336      95.9%       4.1%       0.0%        25       239        17
+SHORT 0.00       5863      99.9%       0.1%       0.0%        66       542      2443
+SHORT 0.25       3809      98.9%       1.1%       0.0%        41       310        14
+SHORT 0.50       2276      96.4%       3.6%       0.0%        29       246         7
+
+FAKE LOSS = the 15m bar recorded a STOP whose level was only reached
+BEFORE the order filled. It is the look-ahead a breakout entry adds,
+and unlike the limit arm's fake win it points AGAINST the method.
+
+### stop_atr=2.7
+XAUDUKA 2025-07-01 to 2025-10-01: 8518 bars of 15m, 127739 of 1m; BREAKOUT side, stop 2.7 ATR, target 1.8 R
+fill-bar verdict, 15m OHLC (what the engine reads) against the 1m sequence
+
+side  offset    fills      agree  FAKE LOSS   fake win    15m TGT   15m STOP  gapfills
+LONG  0.00       5879     100.0%       0.0%       0.0%         5        36      2321
+LONG  0.25       3935      99.9%       0.1%       0.0%         4        17        32
+LONG  0.50       2336     100.0%       0.0%       0.0%         4        12        17
+SHORT 0.00       5863     100.0%       0.0%       0.0%         3        38      2443
+SHORT 0.25       3809      99.9%       0.1%       0.0%         2        22        14
+SHORT 0.50       2276      99.9%       0.1%       0.0%         1        18         7
+
+FAKE LOSS = the 15m bar recorded a STOP whose level was only reached
+BEFORE the order filled. It is the look-ahead a breakout entry adds,
+and unlike the limit arm's fake win it points AGAINST the method.
+

@@ -94,7 +94,10 @@ def main() -> int:
     data = {}
     for path in sorted(glob.glob(os.path.join(RECEIPTS, PREFIX + "*.txt"))):
         stem = os.path.basename(path)[len(PREFIX):-len(".txt")]
-        win, arm, g = stem.split("-")
+        parts = stem.split("-")
+        if len(parts) != 3:
+            continue
+        win, arm, g = parts
         data[(win, arm, g)] = parse(path)
     if not data:
         print("no receipts under %s" % RECEIPTS)
