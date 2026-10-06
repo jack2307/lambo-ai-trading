@@ -272,6 +272,26 @@ pub struct HypothesisReport {
     pub skipped_by_guard: BTreeMap<String, usize>,
     pub closed_by_guard: BTreeMap<String, usize>,
     pub sized_down_by_guard: usize,
+    /// What the method's RESTING entry orders did, when the run asked for
+    /// them (`--limit=`). All zero on a market-entry run, which is every run
+    /// before 2026-10-06.
+    ///
+    /// This is not decoration. A limit entry buys its better price with the
+    /// signals it never gets into, and it is adversely selected by
+    /// construction — it fills on the moves that come back and misses the ones
+    /// that run. **A profit factor read on the fills alone is a profit factor
+    /// on a subset the market chose**, so the share of signals that subset is
+    /// has to sit on the same row as the profit factor.
+    pub fills: crate::engine::LimitFills,
+    /// The fill rates the NULL runs achieved, ascending.
+    ///
+    /// The one number that separates "the limit order is cheap" from "the
+    /// limit order is selective": a random entry under the same price rule has
+    /// no information in it, so its fill rate is the unconditional base rate.
+    /// A method whose fill rate is BELOW its null's is one whose signals lead
+    /// moves that do not come back — and the trades it is missing are the ones
+    /// it was right about.
+    pub null_fill_rate: Vec<f64>,
 }
 
 /// Which sides the matched null takes, and on what terms.
@@ -1581,7 +1601,7 @@ pub fn run_hypothesis_fixed_as(
     // This path never sweeps — the control is run at the explicit params
     // below — so the pin costs nothing here and is carried only so that the
     // two paths build their control the same way.
-    let mut null: Vec<(f64, usize, f64, f64, f64, f64)> = (0..seeds)
+    let mut null: Vec<(f64, usize, f64, f64, f64, f64, Option<f64>)> = (0..seeds)
         .into_par_iter()
         .filter_map(|seed| {
             let built = matched_control_for(
@@ -1606,6 +1626,9 @@ pub fn run_hypothesis_fixed_as(
                 signed_exposure_minutes(&run.trades).unwrap_or(f64::NAN),
                 gross_cost_usd(&run.trades, rules),
                 gross_exposure_minutes(&run.trades).unwrap_or(f64::NAN),
+                // The control's OWN fill rate under the same resting order.
+                // `None` on a market-entry run, where there is no order.
+                run.fills.rate(),
             ))
         })
         .collect();
@@ -1624,6 +1647,11 @@ pub fn run_hypothesis_fixed_as(
     null_cost_usd.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
     let mut null_trades: Vec<usize> = null.iter().map(|p| p.1).collect();
     null_trades.sort_unstable();
+    // Sorted on its own, like `null_trades`: a median is all that is read off
+    // it, and pairing it with a run's profit factor is a different question
+    // from the one this row asks.
+    let mut null_fill_rate: Vec<f64> = null.iter().filter_map(|p| p.6).collect();
+    null_fill_rate.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
 
     let pf = result.metrics.profit_factor;
     let percentile = if null_pf.is_empty() || !pf.is_finite() {
@@ -1655,6 +1683,8 @@ pub fn run_hypothesis_fixed_as(
         skipped_by_guard: result.skipped_by_guard,
         closed_by_guard: result.closed_by_guard,
         sized_down_by_guard: result.sized_down_by_guard,
+        fills: result.fills,
+        null_fill_rate,
     })
 }
 
@@ -1861,6 +1891,12 @@ pub fn run_hypothesis_sides(
         skipped_by_guard: result.skipped_by_guard,
         closed_by_guard: result.closed_by_guard,
         sized_down_by_guard: result.sized_down_by_guard,
+        // The walk-forward path aggregates folds and does not carry the
+        // per-run order counts. Left at zero rather than guessed: the
+        // limit-entry registration reads `--fixed`, and a fill rate this path
+        // cannot measure must print as absent and not as 0%.
+        fills: crate::engine::LimitFills::default(),
+        null_fill_rate: Vec::new(),
     }))
 }
 
@@ -2282,6 +2318,8 @@ why = "the first hour's range is the day's liquidity"
             skipped_by_guard: BTreeMap::new(),
             closed_by_guard: BTreeMap::new(),
             sized_down_by_guard: 0,
+            fills: crate::engine::LimitFills::default(),
+            null_fill_rate: Vec::new(),
         };
         assert_eq!(report.null_quantile(0.5), 1.0);
         assert!(report.survives());
@@ -2449,6 +2487,8 @@ why = "the first hour's range is the day's liquidity"
             skipped_by_guard: BTreeMap::new(),
             closed_by_guard: BTreeMap::new(),
             sized_down_by_guard: 0,
+            fills: crate::engine::LimitFills::default(),
+            null_fill_rate: Vec::new(),
         };
         assert!(!row(vec![]).null_has_spread(), "no runs is not a distribution");
         assert!(!row(vec![1.07]).null_has_spread(), "one run is not a distribution");
@@ -2492,6 +2532,8 @@ why = "the first hour's range is the day's liquidity"
             skipped_by_guard: BTreeMap::new(),
             closed_by_guard: BTreeMap::new(),
             sized_down_by_guard: 0,
+            fills: crate::engine::LimitFills::default(),
+            null_fill_rate: Vec::new(),
         };
         let r = |m: f64, n: Vec<f64>| row(m, n, 600.0, vec![600.0]);
         assert_eq!(r(1.0, vec![0.98, 1.0, 1.0]).null_long_share_median(), 1.0);
@@ -2573,6 +2615,8 @@ why = "the first hour's range is the day's liquidity"
             skipped_by_guard: BTreeMap::new(),
             closed_by_guard: BTreeMap::new(),
             sized_down_by_guard: 0,
+            fills: crate::engine::LimitFills::default(),
+            null_fill_rate: Vec::new(),
         };
         assert!(row(vec![100]).count_matched());
         assert!(row(vec![75]).count_matched(), "a quarter under is the edge and the edge is inside");

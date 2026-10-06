@@ -126,7 +126,41 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let s: f64 = v.trim().parse().map_err(|_| format!("--spread wants a number, got `{v}`"))?;
         rules.spread = s;
     }
+    // `--limit=<offset_atr>,<ttl_bars>` enters with a RESTING order instead of
+    // taking the next bar's open, for this run only — the method AND its
+    // matched null, because the order lives in the rules and the null emits
+    // `Intent::Enter` like everything else. `off`, and absent, is the fill
+    // model every receipt before 2026-10-06 was measured under.
+    // `docs/decisions/2026-10-06-limit-entry.md`.
+    if let Some(spec) = std::env::args().find_map(|a| a.strip_prefix("--limit=").map(str::to_string)) {
+        if spec == "off" {
+            rules.limit_entry = None;
+        } else {
+            let mut parts = spec.split(',');
+            let bad = || format!("--limit wants <offset_atr>,<ttl_bars> or `off`, got `{spec}`");
+            let offset: f64 = parts.next().unwrap_or("").trim().parse().map_err(|_| bad())?;
+            let ttl: f64 = parts.next().unwrap_or("").trim().parse().map_err(|_| bad())?;
+            if !(offset >= 0.0) || !(ttl >= 1.0) {
+                return Err(format!("--limit wants offset >= 0 and ttl >= 1, got `{spec}`").into());
+            }
+            rules.limit_entry =
+                Some(fd_backtest::engine::LimitEntry { offset_atr: offset, ttl_bars: ttl as usize });
+        }
+    }
     println!("spread:   {} per round trip", rules.spread);
+    // WHICH FILL MODEL, in the receipt, right under the spread whose sign it
+    // reverses. A market-entry receipt and a limit-entry receipt are not
+    // comparable and must not look alike.
+    println!(
+        "entry:    {}",
+        match rules.limit_entry {
+            None => "MARKET at the next bar's open, PAYING half the spread".to_string(),
+            Some(l) => format!(
+                "LIMIT resting {} ATR on the pullback side of the signal close, working {} bar(s), EARNING half the spread",
+                l.offset_atr, l.ttl_bars
+            ),
+        }
+    );
     println!(
         "trail:    {}",
         if rules.trail.enabled {
@@ -950,6 +984,34 @@ fn run_hypotheses(
     // quoted on their own.
     println!("null sides: {} ({})", null_sides.as_str(), null_sides.describe());
     println!("swap: long {:.2} / short {:.2} USD per lot per night; spread {}", rules.swap_long_per_lot, rules.swap_short_per_lot, rules.spread);
+    // WHICH FILL MODEL, and what it does to the spread arithmetic, in the
+    // receipt's own header. A limit row and a market row are not comparable
+    // and must not look alike; and the `cost ... % of R` line further down is
+    // `spread / stop`, which is the MARKET round trip whatever this run did.
+    match rules.limit_entry {
+        None => println!(
+            "entry: MARKET at the next bar's open. PAYS {:.3} in and {:.3} out = {:.3} per round trip.",
+            rules.spread / 2.0, rules.spread / 2.0, rules.spread
+        ),
+        Some(l) => {
+            println!(
+                "entry: LIMIT resting {} ATR on the pullback side of the signal close, working {} bar(s).",
+                l.offset_atr, l.ttl_bars
+            );
+            println!(
+                "       It is PAID {:.3} in and pays {:.3} out = {:.3} per round trip, so the spread term is REVERSED, not reduced.",
+                rules.spread / 2.0,
+                rules.spread / 2.0,
+                0.0
+            );
+            println!(
+                "       The `cost ... % of R` line on each row is spread/stop and reads the market round trip: on these rows it is the cost the method did NOT pay."
+            );
+            println!(
+                "       Queue priority is NOT modelled: price touching the level is a fill. That flatters these rows."
+            );
+        }
+    }
     println!("{}", news_line());
     println!("{}", news_scope_line(rules));
     println!("{}", guards_line(guards));
@@ -1020,6 +1082,45 @@ fn run_hypotheses(
             report.count_match(),
             if report.count_matched() { "" } else { "  ** outside the band: this percentile is unmatched **" },
         );
+        // SUM NET R OVER THE WINDOW, on every row. Expectancy is per TRADE and
+        // the two entry arms do not take the same number of trades - a limit
+        // arm takes only the signals price came back to - so expectancy alone
+        // cannot answer "which book made more". This can.
+        println!(
+            "{:<12} {:<18} sum net R over the window: {:+.3} across {} trades",
+            "",
+            "",
+            m.expectancy * m.trades as f64,
+            m.trades,
+        );
+        // THE FILL RATE, beside the profit factor, whenever the run rested its
+        // entries. A limit entry is adversely selected by construction: it
+        // fills on the moves that come back and misses the ones that run, so
+        // its profit factor is a profit factor on a subset the market chose.
+        // The row says what share of the signals that subset is - and what
+        // share a RANDOM entry under the same order got, which is the only
+        // base rate the method's figure means anything against.
+        if report.fills.placed > 0 {
+            let f = report.fills;
+            let pct = |r: Option<f64>| r.map_or("n/a".to_string(), |v| format!("{:.1}%", 100.0 * v));
+            println!(
+                "{:<12} {:<18} resting entry: {} orders placed, {} FILLED, {} expired unfilled, {} replaced by a later signal{} - fill rate {} of the orders that decided ({} of all placed) vs the null's median {}",
+                "",
+                "",
+                f.placed,
+                f.filled,
+                f.expired,
+                f.replaced,
+                if f.no_atr > 0 { format!(", {} refused for an unwarm ATR", f.no_atr) } else { String::new() },
+                pct(f.rate()),
+                pct(f.rate_of_placed()),
+                if report.null_fill_rate.is_empty() {
+                    "n/a".to_string()
+                } else {
+                    format!("{:.1}%", 100.0 * fd_backtest::hypotheses::median_f64(&report.null_fill_rate))
+                },
+            );
+        }
         // The SIDE ratio, method against control, on every row and whichever
         // null ran. On a coin-flip run this line is what shows the defect: a
         // long-only method read against a 50%-long control, on an instrument

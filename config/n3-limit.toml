@@ -1,0 +1,44 @@
+# The six mechanisms the limit-entry family is measured on, at their PUBLISHED
+# default parameters with one filter — weekdays, so a Friday leg does not run
+# into a weekend the fill model cannot see.
+#
+# No parameter is swept and no override is set. This batch is not a search for
+# a method; it is a fixed set of signal generators, run twice (market entry and
+# resting entry) so the DIFFERENCE between the two arms is the measurement.
+# Registered in docs/decisions/2026-10-06-limit-entry.md.
+
+[[hypothesis]]
+label = "orb"
+base = "orb"
+filters = ["weekdays"]
+why = "an opening-range break is a signal that leads a move, so it is the hardest case for an order that only fills on a move back"
+
+[[hypothesis]]
+label = "pullback"
+base = "trend-pullback"
+filters = ["weekdays"]
+why = "a pullback entry already waits for a move back, so it should be the kindest case for a resting order"
+
+[[hypothesis]]
+label = "vwap-fade"
+base = "vwap-fade"
+filters = ["weekdays"]
+why = "a mean-reversion fade wants the worst available price, which is what a limit on the pullback side asks for"
+
+[[hypothesis]]
+label = "thrust"
+base = "volume-thrust"
+filters = ["weekdays"]
+why = "a volume thrust is a continuation signal — if any mechanism is punished by waiting, this is it"
+
+[[hypothesis]]
+label = "pdhl"
+base = "pdhl"
+filters = ["weekdays"]
+why = "a prior-day level gives an absolute price to rest an order against, so the offset has structural meaning here"
+
+[[hypothesis]]
+label = "rsi-rev"
+base = "rsi-reversal-vol"
+filters = ["weekdays"]
+why = "a reversal with its own target, so a better entry shortens the distance to a target the strategy set itself"

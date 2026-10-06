@@ -69,10 +69,80 @@ pub struct TradingRules {
     /// Two by default, which is what every run before 2026-09-14 used.
     #[serde(default = "two")]
     pub price_decimals: u32,
+    /// Enter with a RESTING order instead of taking the next bar's open.
+    ///
+    /// `None` is the fill model every receipt before 2026-10-06 was measured
+    /// under and is what `Default` gives, so a config that has never heard of
+    /// this field reproduces its own numbers
+    /// (`tests/limit_entry.rs::off_is_the_old_engine`).
+    ///
+    /// It lives here, in the RULES, and NOT in a strategy on purpose: the
+    /// matched null (`control::RandomEntry`) emits `Intent::Enter` like any
+    /// method, so putting the order in the engine is what makes a null that
+    /// enters by limit under the same price rule and the same fill selection
+    /// — without one line of null-specific code. See
+    /// `docs/decisions/2026-10-06-limit-entry.md`.
+    #[serde(default)]
+    pub limit_entry: Option<LimitEntry>,
 }
 
 const fn two() -> u32 {
     2
+}
+
+/// A resting entry order, in the only two numbers it needs.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct LimitEntry {
+    /// How far on the PULLBACK side of the signal bar's close the order rests,
+    /// in units of the run's sizing ATR at that bar. Zero rests at the close
+    /// itself, which still earns half the spread and is the cheapest version
+    /// of the question.
+    pub offset_atr: f64,
+    /// How many bars after the signal bar the order works for, inclusive.
+    /// One is "the next bar only" and is the nearest thing to the market arm.
+    pub ttl_bars: usize,
+}
+
+/// What a resting order did, over a whole run.
+///
+/// Reported because the fill RATE is the measurement and not an incidental: a
+/// limit entry buys a better price with the trades it never gets into, and a
+/// profit factor read on the fills alone says nothing without the share of
+/// signals they are. All zero when `limit_entry` is off.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Serialize, Deserialize)]
+pub struct LimitFills {
+    /// Orders placed — one per `Intent::Enter` the engine accepted.
+    pub placed: usize,
+    /// Orders price came back to. These are the trades.
+    pub filled: usize,
+    /// Orders that expired unfilled, one left working at the last bar
+    /// included. **These are the signals that became nothing.**
+    pub expired: usize,
+    /// Orders cancelled because the strategy signalled again while they
+    /// worked. Counted apart from `expired` because the order was not given
+    /// its full `ttl_bars`.
+    pub replaced: usize,
+    /// Orders that could not be placed because the sizing ATR was not finite
+    /// at the signal bar. The market arm refuses the same entry at fill time
+    /// and counts it in `skipped_no_atr`; this is the same refusal moved one
+    /// bar earlier, because the order's PRICE needs the ATR too.
+    pub no_atr: usize,
+}
+
+impl LimitFills {
+    /// Fills over the orders that were allowed to live or die on their own
+    /// terms. `None` when no order was placed.
+    #[must_use]
+    pub fn rate(&self) -> Option<f64> {
+        let decided = self.filled + self.expired;
+        (decided > 0).then(|| self.filled as f64 / decided as f64)
+    }
+
+    /// Fills over every order placed, replacements included.
+    #[must_use]
+    pub fn rate_of_placed(&self) -> Option<f64> {
+        (self.placed > 0).then(|| self.filled as f64 / self.placed as f64)
+    }
 }
 
 impl Default for TradingRules {
@@ -99,6 +169,10 @@ impl Default for TradingRules {
             swap_short_per_lot: 0.0,
             news_currencies: Vec::new(),
             price_decimals: 2,
+            // Off, for the same reason the trail is off: a fill model that
+            // moves every number in docs/decisions/ does not arrive switched
+            // on.
+            limit_entry: None,
         }
     }
 }
@@ -208,6 +282,10 @@ pub struct BacktestResult {
     /// Entries whose lots the notional cap reduced (not refused).
     #[serde(default)]
     pub sized_down_by_guard: usize,
+    /// What the resting entry order did, when `rules.limit_entry` asked for
+    /// one. All zero otherwise, which is every run before 2026-10-06.
+    #[serde(default)]
+    pub fills: LimitFills,
 }
 
 /// Restrict trading to a window. Indicators still warm up on earlier bars.
@@ -328,6 +406,10 @@ pub fn trading_rules_for(config: &Config, market: &str) -> Result<TradingRules, 
         reward_risk: config.trading.reward_risk,
         trail: config.trading.trail.clone(),
         fallback_atr_period: config.backtest.fallback_atr_period,
+        // Not configurable: a resting entry is an experiment, set per run by
+        // `--limit=`, so no config edit can leave one switched on behind a
+        // receipt that does not mention it.
+        limit_entry: None,
     })
 }
 
@@ -447,6 +529,11 @@ pub fn run_backtest_guarded(
     let mut equity = rules.starting_equity_usd;
     let mut position: Option<Live> = None;
     let mut pending: Option<Intent> = None;
+    // The resting order, when `rules.limit_entry` asked for one. It replaces
+    // `pending` for an `Enter` and leaves `pending` to carry `Exit`, which is
+    // a market order in both arms.
+    let mut working: Option<Working> = None;
+    let mut fills = LimitFills::default();
     let mut skipped_no_atr = 0usize;
     let mut skipped_by_guard: BTreeMap<String, usize> = BTreeMap::new();
     let mut closed_by_guard: BTreeMap<String, usize> = BTreeMap::new();
@@ -475,6 +562,11 @@ pub fn run_backtest_guarded(
             && let Some(open) = position.take()
         {
             pending = None;
+            // A resting order outlives the window no more than a pending
+            // market one does; it dies here and is counted, not dropped.
+            if working.take().is_some() {
+                fills.expired += 1;
+            }
             let exit = apply_costs(bar.open, open.side, false, rules);
             let entry_reason = open.reason.clone();
             let trade = close_position(open, exit, bar.time, ExitKind::EndOfData, ExitKind::EndOfData.label(), rules, &entry_reason);
@@ -542,6 +634,72 @@ pub fn run_backtest_guarded(
             }
         }
 
+        // 1b. The resting order, in the same slot of the bar the market fill
+        // uses — before the position is managed, so a fill is managed against
+        // the rest of its own bar under the engine's stop-before-target
+        // pessimism. THAT is the one thing 15m OHLC cannot settle: whether the
+        // limit filled before or after the stop level was reached inside the
+        // bar. Taking the stop is the pessimistic reading, the same reading
+        // `check_exit` has always taken, and it is audited on 1m separately
+        // (`docs/decisions/2026-10-06-limit-entry.md`).
+        if tradable && let Some(order) = working.take() {
+            if position.is_some() {
+                // The book is busy, exactly as a `pending` Enter is discarded
+                // when it is. Counted as expired: the signal became nothing.
+                fills.expired += 1;
+            } else if i > order.expires_at {
+                fills.expired += 1;
+            } else if let Some(raw) = order.fill_on(bar) {
+                // A resting order fills at the price it asked for and on the
+                // right side of the quote — it is hit, it does not pay to get
+                // in. This is the sign flip the whole family is about, and the
+                // ONE place a limit arm can flatter itself: queue priority is
+                // not modelled, so price touching the level is a fill.
+                let entry = limit_fill_price(raw, order.side, rules);
+                let refused = guards.and_then(|g| {
+                    guard_state
+                        .refusal(g, bar.time, 0)
+                        .or_else(|| g.calendar_refusal(order.signal_time, bar.time, bar_ms))
+                });
+                if let Some(why) = refused {
+                    *skipped_by_guard.entry(why.label().to_string()).or_default() += 1;
+                    fills.expired += 1;
+                } else {
+                    match open_position_at(
+                        order.side,
+                        order.stop,
+                        order.target,
+                        order.reason.clone(),
+                        bar.time,
+                        entry,
+                        Some(order.atr),
+                        equity,
+                        rules,
+                        self_managed,
+                        guards,
+                    ) {
+                        Ok((opened, sized_down)) => {
+                            fills.filled += 1;
+                            sized_down_by_guard += usize::from(sized_down);
+                            guard_state.opened(opened.entry_time);
+                            position = Some(opened);
+                        }
+                        Err(Refused::NoRisk) => {
+                            skipped_no_atr += 1;
+                            fills.expired += 1;
+                        }
+                        Err(Refused::Guard(why)) => {
+                            *skipped_by_guard.entry(why.label().to_string()).or_default() += 1;
+                            fills.expired += 1;
+                        }
+                    }
+                }
+            } else {
+                // Still working: put it back and let the next bar try.
+                working = Some(order);
+            }
+        }
+
         // 2. Manage an open position against this bar's range: the engine's
         // own stop, target and clock first, then the position guards — which
         // is what can close a self-managed hold, and the only thing that can.
@@ -585,9 +743,46 @@ pub fn run_backtest_guarded(
             };
             match strategy.on_bar(&ctx) {
                 Intent::None => {}
+                // With a resting entry asked for, an `Enter` becomes an order
+                // rather than a market fill on the next open. Everything else
+                // — `Exit` above all — stays a market order in both arms.
+                Intent::Enter { side, stop, target, reason }
+                    if rules.limit_entry.is_some() && position.is_none() =>
+                {
+                    // Gated on `position.is_none()` to make the counts
+                    // readable, and that is not a change of behaviour: step 1
+                    // discards a pending `Enter` whose book is still busy, and
+                    // a position open at step 3 of bar `i` is still open at
+                    // step 1 of bar `i+1` — nothing between them can close it.
+                    let order = rules.limit_entry.and_then(|spec| {
+                        Working::place(spec, side, stop, target, &reason, bar, i, atr_series.get(i).copied())
+                    });
+                    match order {
+                        Some(order) => {
+                            // An order still working when the strategy speaks
+                            // again is cancelled, not queued. One order at a
+                            // time is what `pending` has always been.
+                            if working.is_some() {
+                                fills.replaced += 1;
+                            }
+                            fills.placed += 1;
+                            working = Some(order);
+                        }
+                        // No finite ATR: no risk unit and no price to rest at.
+                        // The market arm refuses the same entry one bar later.
+                        None => fills.no_atr += 1,
+                    }
+                }
                 intent => pending = Some(intent),
             }
         }
+    }
+
+    // An order still working when the data runs out never decided. It is
+    // counted, because a fill rate whose denominator quietly drops its last
+    // few orders is not a fill rate.
+    if working.take().is_some() {
+        fills.expired += 1;
     }
 
     // Close anything still open, so the record carries no ghost trade.
@@ -624,7 +819,93 @@ pub fn run_backtest_guarded(
         skipped_by_guard,
         closed_by_guard,
         sized_down_by_guard,
+        fills,
     }
+}
+
+/// A resting entry order while it waits.
+///
+/// Carries what the SIGNAL bar knew — the ATR, the stop, the target, the bar's
+/// own instant — because that is what a trader placing the order could see,
+/// and because it is what the market arm reads too: `open_position` there is
+/// handed `atr_series[i - 1]`, which is this bar.
+#[derive(Debug, Clone, PartialEq)]
+struct Working {
+    side: Side,
+    /// The level on the tape the order rests at. The order's own price is half
+    /// a spread better than this; see [`limit_fill_price`].
+    level: f64,
+    stop: Option<f64>,
+    target: Option<f64>,
+    reason: String,
+    atr: f64,
+    /// The signal bar's instant, for the calendar guard — which asks what the
+    /// gap between deciding and filling crossed.
+    signal_time: i64,
+    /// Last bar index the order may fill on.
+    expires_at: usize,
+}
+
+impl Working {
+    /// `None` when the sizing ATR is not usable: the order's own price needs
+    /// it, so an unwarm ATR means no order rather than an order at a guessed
+    /// price.
+    fn place(
+        spec: LimitEntry,
+        side: Side,
+        stop: Option<f64>,
+        target: Option<f64>,
+        reason: &str,
+        bar: &Bar,
+        i: usize,
+        atr: Option<f64>,
+    ) -> Option<Self> {
+        let atr = atr.filter(|v| v.is_finite() && *v > 0.0)?;
+        let offset = if spec.offset_atr.is_finite() { spec.offset_atr.max(0.0) } else { return None };
+        // On the PULLBACK side of the close, always: that is what makes it a
+        // limit rather than a stop entry, and it is why the order is adversely
+        // selected — it only ever fills on a move back against the trade.
+        let level = if side.is_long() { bar.close - offset * atr } else { bar.close + offset * atr };
+        if !level.is_finite() {
+            return None;
+        }
+        Some(Self {
+            side,
+            level,
+            stop,
+            target,
+            reason: reason.to_string(),
+            atr,
+            signal_time: bar.time,
+            expires_at: i + spec.ttl_bars.max(1),
+        })
+    }
+
+    /// The tape level the order fills at on this bar, or `None` if price never
+    /// came to it.
+    ///
+    /// **A gap through the level never improves the fill.** The order gets the
+    /// price it asked for and nothing better, which is the same direction
+    /// `check_exit` takes a gapped stop in: gaps do not pay here.
+    fn fill_on(&self, bar: &Bar) -> Option<f64> {
+        let touched = if self.side.is_long() { bar.low <= self.level } else { bar.high >= self.level };
+        touched.then_some(self.level)
+    }
+}
+
+/// What a resting order actually pays, against what a market order pays.
+///
+/// A market entry is charged half the spread (`apply_costs(.., true, ..)`): it
+/// lifts the offer. A resting order **is** the offer, so it is paid half the
+/// spread instead. That sign flip is the whole arithmetic of this family, and
+/// at gold's measured cost of 3.00–11.57% of R it is not a rounding term — it
+/// is larger than the +0.050R the gate asks for.
+///
+/// The exit is untouched and still pays half.
+#[must_use]
+pub fn limit_fill_price(level: f64, side: Side, rules: &TradingRules) -> f64 {
+    let half = rules.spread / 2.0;
+    if side.is_long() { level - half } else { level + half }
 }
 
 /// Why `open_position` did not open one.
@@ -657,8 +938,43 @@ pub fn open_position(
     self_managed: bool,
     guards: Option<&Guards>,
 ) -> Result<(Live, bool), Refused> {
-    let entry = apply_costs(bar_open, side, true, rules);
+    open_position_at(
+        side,
+        stop,
+        target,
+        reason,
+        bar_time,
+        apply_costs(bar_open, side, true, rules),
+        atr,
+        equity,
+        rules,
+        self_managed,
+        guards,
+    )
+}
 
+/// The same, from an entry price the caller has already charged costs on.
+///
+/// Split out so a resting order can say what it filled at — the one thing
+/// `open_position` could not express, because it derived the entry from the
+/// bar's open and the half-spread a market order pays. Everything after the
+/// entry price (the stop fallback, the risk unit, the sizing, the notional
+/// cap, the target) is the SAME code both arms run, which is what makes the
+/// two comparable.
+#[allow(clippy::too_many_arguments)]
+pub fn open_position_at(
+    side: Side,
+    stop: Option<f64>,
+    target: Option<f64>,
+    reason: String,
+    bar_time: i64,
+    entry: f64,
+    atr: Option<f64>,
+    equity: f64,
+    rules: &TradingRules,
+    self_managed: bool,
+    guards: Option<&Guards>,
+) -> Result<(Live, bool), Refused> {
     let stop = match stop.filter(|s| s.is_finite()) {
         Some(explicit) => Some(explicit),
         None => {

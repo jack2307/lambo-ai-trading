@@ -143,6 +143,9 @@ pub fn rules_from_manifest(market: &str) -> Option<TradingRules> {
         swap_short_per_lot: 0.0,
         // And no news calendar, so the scope is moot; every currency.
         news_currencies: Vec::new(),
+        // The oracle filled at the next bar's open and had no concept of a
+        // resting order; parity is that fill model, so this must stay off.
+        limit_entry: None,
         // The oracle rounded every price to two decimals; parity depends on it.
         price_decimals: 2,
     })
