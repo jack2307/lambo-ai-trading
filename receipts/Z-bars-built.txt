@@ -1,0 +1,8 @@
+source rows: 100586 2022-06-16 10:30:00+00:00 -> 2026-09-17 13:00:00+00:00
+source 15m step: min 15 median 15 max 4395 minutes
+1h: 25166 buckets kept of 37300 spanned; full buckets (n==4) 25127 = 99.8%; partial 39; min n 1
+   wrote E:/rust/fd-a3/data/bars/XAUUSD-1h.parquet rows=25166
+   cols: ['time', 'open', 'high', 'low', 'close', 'volume'] ['timestamp[ms, tz=UTC]', 'double', 'double', 'double', 'double', 'double']
+4h: 6807 buckets kept of 9326 spanned; full buckets (n==16) 5451 = 80.1%; partial 1356; min n 3
+   wrote E:/rust/fd-a3/data/bars/XAUUSD-4h.parquet rows=6807
+   cols: ['time', 'open', 'high', 'low', 'close', 'volume'] ['timestamp[ms, tz=UTC]', 'double', 'double', 'double', 'double', 'double']
