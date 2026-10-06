@@ -441,3 +441,114 @@ disbelieves a number (brief section 4: the same rule, same window, PF 1.753 at
 guarded record is inflated, and the percentile read against it was read
 against the wrong n.** Neither arm of D1 is a survivor and neither is claimed
 as one.
+
+## D2 — the four-hour cap DOES manufacture edge on the rows it binds hardest
+
+98 receipts in `receipts/nocap/`, 652 row-readings, arm G, both windows, the
+`xauusd` hold cap lifted from 4 hours to 7 days by a per-market override in
+`config-nocap/` and nothing else changed. Every receipt prints
+`max hold: 168 h (604800000 ms) from [markets.<id>.trading] max_hold_ms = 604800000`,
+so the override is in the receipt and not only in the plan.
+
+638 rows pair one-to-one with the capped sweep on `(window, batch, label)`.
+
+| band, by TIMEOUT share UNDER the cap | rows | median PF change when the cap is lifted | PF lower | higher | unchanged | median hold, capped to uncapped |
+|---|---:|---:|---:|---:|---:|---|
+| TIMEOUT = 0% (the control) | 112 | **+0.000** | 0 | 0 | **112** | 111 to 111 min |
+| 0 < TIMEOUT <= 5% | 72 | -0.001 | 38 | 30 | 4 | 51 to 54 min |
+| 5 < TIMEOUT <= 25% | 157 | -0.002 | 83 | 71 | 3 | 108 to 128 min |
+| 25 < TIMEOUT <= 50% | 39 | **+0.022** | 11 | 27 | 1 | 152 to 226 min |
+| TIMEOUT > 50% | 18 | **-0.065** | **13** | 5 | 0 | 188 to 329 min |
+
+The first row is the integrity check: 112 rows whose positions the cap never
+closed have a profit factor change of exactly zero, on all 112. The config
+change touched only what it was supposed to touch.
+
+**The registered D2 falsifier did not fire on the band that matters.** On the
+18 rows the cap bound hardest, lifting it made the profit factor **worse on 13
+of 18** and the median fell 0.065. So on those rows the truncation was
+flattering the rule, not destroying it, and
+`docs/decisions/2026-10-04-crt.md`'s *"a truncated hold can destroy a passing
+row, never manufacture one"* is **false as stated**. The mechanism is not
+mysterious: a breakout that is 188 minutes old and in profit gets marked out
+at the bar's close instead of being left to give the move back, and the median
+hold of those rows more than doubles (188 to 329 minutes) once it is allowed
+to run.
+
+**But the size of the problem is small, and that has to be said as plainly as
+the direction.** Of the **56** rows that pass the gate under the cap with >= 40
+trades, **4 stop passing when it is lifted** — three distinct cells:
+
+| window | cell | base | PF capped to uncapped | expectancy capped to uncapped |
+|---|---|---|---|---|
+| A | `crt/4h-opposite` | crt | 1.225 to **0.997** | +0.075R to **-0.068R** |
+| A | `crt/4h-rr15` | crt | 1.250 to **1.054** | +0.141R to +0.123R |
+| A | `box/b2` (in `volman-box.toml` and `volman-box-vantage.toml`) | volman-box | 1.376 to **1.279** | +0.063R to **+0.035R** |
+
+And **3 rows pass only once the cap is lifted**, all CRT 4H cells in window B:
+`crt/4h-opposite`, `crt-flip/4h-opposite`, `crt-nocap/4h-rr15`.
+
+So the honest reading is: the cap moves roughly **7% of the record's
+gate-passing rows across the gate line**, in both directions, and it moves the
+CRT 4H cells across it in *opposite* directions in the two windows. The four
+largest profit factors in the record — the `orb` London cells at 71-72%
+TIMEOUT — still pass without the cap (2.548 to 2.295 and 2.345 to 2.142), so
+they are not artefacts of it; they are just small samples that disagree
+between windows.
+
+**The consequence for the CRT branch.** That record reports 1D as NOT
+MEASURED and 1H/4H as refuted. D2 says the 4H cells also cross the gate line
+when the hold cap moves — losing a pass in window A, gaining one in window B.
+The refutation at 4H is therefore softer than the record states: it survives
+on direction (the cap flattered 4H in window A and 4H still failed overall)
+but the 4H verdict is cap-sensitive and deserves the same "measured under a
+cap that bound 30% of its positions" caveat the 1D rows got. The 1H verdict,
+at 9.8% TIMEOUT, is not affected.
+
+# Multiple-testing book — actual against declared
+
+| item | declared | actually read |
+|---|---:|---:|
+| main sweep: 326 rows x 2 windows x 2 arms | 1,304 | **1,304** |
+| D1 (`tsmom`, long window, arm G) | 3 | **3** |
+| D1-U (same, guards off) | 3 | **3** |
+| D2 (326 rows x 2 windows, cap lifted, arm G) | 652 | **652** |
+| **total** | **1,962** | **1,962** |
+
+No overrun. Of the 1,304 main row-readings, 1,276 are distinct on
+`(arm, window, batch, label)`; the 28 repeats are labels that appear twice
+inside one batch file. 319 distinct `(batch, label)` record rows were read,
+spanning 236 distinct `(mechanism, cell)` pairs — the duplication is real and
+it is the record's own: `orb/60m` at 44 trades and PF 1.341 appears under five
+different names in five different batch files, and a reader counting receipts
+would count it five times.
+
+**Nothing was selected.** This axis has no gate and proposed no cell. The gate
+appears in these tables only as a way of saying where the record's passing
+rows sit, and every row it touches was already in the record.
+
+# What this axis could NOT measure
+
+1. **A zero-trade row.** 106 of the 1,304 main row-readings took no trade, so
+   their exit mix is `null`. `--exit-mix` reports how positions closed; it is
+   silent on why none opened. The `tsmom` zeros needed a second window to
+   explain and the `gap-fade` (20 rows) and `orb` (16 rows) zeros are still
+   unexplained here.
+2. **The `SIGNAL` bucket is not one thing.** The exit map is keyed on
+   `Trade::exit_reason`, so a strategy's own wording and the `flat:` filter's
+   `flat window` both land there. I split `flat window` out because its
+   wording is fixed, but a rule with several exit reasons of its own cannot be
+   separated from a rule with one. 13.96% of exits are in that bucket.
+3. **Per-trade attribution.** The mix is counts, not R. A row where the cap
+   closed 20% of positions may have had 80% of its profit in those 20%, and
+   nothing here can say so. D2 answers the question at row level, which is
+   coarser.
+4. **BTC and the other markets.** Everything here is `xauusd` 15m, as the
+   brief set. Rows designed for BTC, EUR and silver (`btc-us-hours`,
+   `tsmom-eurusd`, `tsmom-silver`, `fx-local-hours`, …) were re-measured on
+   gold, so their exit mixes describe how those mechanisms behave on gold and
+   are **not** reproductions of the original receipts. The 67%
+   `OPEN_LOSS_CAP` figure is the clearest case: that is `btc-us-hours/hold/asia`
+   run on gold.
+5. **Whether any of this would survive out of sample.** Nothing here was
+   proposed, so nothing needed to.

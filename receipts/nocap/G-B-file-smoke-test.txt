@@ -1,0 +1,40 @@
+market:   xauusd 15m
+data:     E:/rust/flowdesk/data (bars from E:/rust/flowdesk/data\bars\XAUUSD-15m.parquet)
+bounds:   --from=2025-04-01 --to=2025-07-01 kept 5862 of 100586 bars
+spread:   0.28 per round trip
+trail:    off
+max hold: 168 h (604800000 ms) from [markets.<id>.trading] max_hold_ms = 604800000
+bars:     5862 from 2025-04-01 00:00 to 2025-06-30 23:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+companion: none loaded — every cmp series is NaN
+guards: on — max_open_loss_r 2.0, notional 300%, weekend flat 16:40 NY, news flat 60/30 (impact≥3, USD), daily cap 20, loss limit $300, cooldown 30 min
+null sides: coin - 50/50, carries no drift; the null every published percentile was read against
+
+== hypotheses `E:/rust/fd-a9/docs/hypotheses/smoke-test.toml`: 1 declared, FIXED parameters over the whole window (no selection), each against 200 matched null runs ==
+null sides: coin (50/50, carries no drift; the null every published percentile was read against)
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+guards: on — max_open_loss_r 2.0, notional 300%, weekend flat 16:40 NY, news flat 60/30 (impact≥3, USD), daily cap 20, loss limit $300, cooldown 30 min
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+smoke        ema-cross              24   0.312  -0.417    0.923    1.721        0    2%  fail: only 24 trades (need 30); profit factor 0.312 < 1.2; expectancy -0.417R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 08:00-12:00  — exercise every code path of the runner with a run that finishes in seconds
+                                matched null 22 trades median vs the method's 24 — count match 0.92
+                                long share: method 0.458 vs the null's median 0.500
+                                spread paid: method 0.52 USD vs the null's median 0.48 USD — cost match 0.92
+                                exposure: signed share of time method -0.021 vs the null's +0.047; time in market method 3525 min vs the null's median 3412 min — ratio 0.97  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.923 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 1.500 ATR = 9.51 points, cost 2.95% of R (named stopAtr, copied)
+                                the method's own realised stop: median 1.517 ATR = 9.62 points over 24 trades
+                                guards: refused NEWS_FLAT 2; closed NEWS_FLAT 1, WEEKEND_FLAT 2; sized down 14
+                                exits: NEWS_FLAT 1, STOP 11, TARGET 2, WEEKEND_FLAT 2, flat window 2, opposite cross 6; mean hold 146.9 min
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+
