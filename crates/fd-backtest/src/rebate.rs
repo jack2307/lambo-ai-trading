@@ -146,6 +146,15 @@ impl Rebate {
                 if let Some(per_r) = usd_per_r(t, rules) {
                     out.r = t.r + credit / per_r;
                 }
+                // `r_net` is credited through its OWN denominator — the risk
+                // unit the trade recorded at the fill — and not through
+                // `usd_per_r`, which recovers one from a stop a trail may have
+                // moved. A trade carrying no risk unit keeps `None`: a credit
+                // expressed in an R that is not known is not a number.
+                out.r_net = match (t.r_net, t.risk_usd) {
+                    (Some(r_net), Some(risk_usd)) if risk_usd > 0.0 => Some(r_net + credit / risk_usd),
+                    _ => t.r_net,
+                };
                 out
             })
             .collect()
@@ -246,6 +255,10 @@ mod tests {
             reason: "test".to_string(),
             contract_size: Some(1.0),
             spread: Some(0.28),
+            // One R in USD on this fixture, and `r_net` equal to `r`: these
+            // rules charge no commission and no swap, so the two agree.
+            risk_usd: Some((entry - stop).abs() * lots),
+            r_net: Some(r),
         }
     }
 

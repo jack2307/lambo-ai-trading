@@ -1919,6 +1919,16 @@ pub struct RescoreRow {
     pub dir_self_managed: bool,
     pub verdict_gross: Verdict,
     pub verdict_net: Verdict,
+    /// What the matched control's stop was set to, and therefore what this
+    /// row's cost as a fraction of R is — `cost/R = spread / stop`.
+    ///
+    /// Computed by this function since the cost-matched null was built and,
+    /// until 2026-10-07, dropped on the floor here: `--mode=rescore` was the
+    /// one scoring mode that printed no `cost ... % of R` line, so every
+    /// receipt of `2026-09-23-rebate-rescore.md` credits a rebate as a share
+    /// of a cost it never states. `None` on a self-managed hold, which has no
+    /// stop to divide by — not 0%.
+    pub control_stop: Option<ControlStop>,
 }
 
 impl RescoreRow {
@@ -2106,6 +2116,7 @@ pub fn rescore_hypothesis(
         matched_null_trades,
         dir_null_gross,
         dir_null_net,
+        control_stop: stop,
     }))
 }
 
@@ -2159,6 +2170,8 @@ mod tests {
             reason: "test".into(),
             contract_size: Some(1.0),
             spread: Some(0.0),
+            risk_usd: Some(1.0),
+            r_net: Some(0.0),
         }
     }
 

@@ -46,6 +46,75 @@ fn arg(name: &str, fallback: &str) -> String {
         .unwrap_or_else(|| fallback.to_string())
 }
 
+/// The flags every mode reads: the market, the window, the cost model and the
+/// run header. Passing one of these changes the numbers whatever `--mode=` is.
+const ALWAYS: &[&str] =
+    &["market", "mode", "data", "config", "interval", "from", "to", "spread", "trail", "companion", "guards"];
+
+/// Every other flag, with the `--mode=` values that actually read it.
+///
+/// **Five flags have been found being ignored in silence** — `--exit-mix` and
+/// the `cost % of R` line in `rescore`, `--samples=` and
+/// `--direction-samples=` under `hypotheses`, `--rebate-share=` outside
+/// `rescore` — so a receipt that passed one of them was a receipt whose header
+/// claimed a setting the run never applied. This table is what
+/// [`flag_audit`] reads to say so in the header, and what the test below it
+/// holds against the binary's own source so that the table cannot go stale
+/// without the test suite failing. `docs/decisions/2026-10-07-instrument-repair.md`.
+///
+/// `--mode=all` runs compare, sweep and walk-forward and therefore reads NONE
+/// of these; that is a fact about `all`, not an omission here.
+const BY_MODE: &[(&str, &[&str])] = &[
+    // The matched null's side rule reaches `run_hypotheses` and nothing else.
+    // `rescore` keeps the coin-flip null it published on purpose
+    // (`hypotheses.rs`, `rescore_hypothesis`) — so on that mode this flag is
+    // read by the HEADER and by no run, which is the sixth case of the class
+    // and is now stated instead of implied.
+    ("null-sides", &["hypotheses"]),
+    ("seeds", &["hypotheses", "null", "rescore"]),
+    ("samples", &["null-dir"]),
+    ("direction-samples", &["rescore"]),
+    ("strategy", &["null-dir"]),
+    ("params", &["null-dir"]),
+    ("filters", &["null-dir"]),
+    ("batch", &["hypotheses"]),
+    ("batch-file", &["hypotheses", "rescore"]),
+    ("rebate-share", &["rescore"]),
+    ("fixed", &["hypotheses"]),
+    ("exit-mix", &["hypotheses", "rescore"]),
+    ("null-registered-stop", &["hypotheses"]),
+];
+
+/// What this mode will IGNORE out of what was passed, as lines for the receipt
+/// header.
+///
+/// A receipt must denounce itself: the reader of
+/// `2026-09-23-rebate-rescore.md` cannot tell whether `--exit-mix` was passed
+/// and dropped or never passed at all, and that ambiguity is what made a row
+/// whose own rule fired zero times unfalsifiable from its receipt.
+fn flag_audit(mode: &str, args: &[String]) -> Vec<String> {
+    let mut out = Vec::new();
+    for raw in args {
+        let Some(body) = raw.strip_prefix("--") else {
+            out.push(format!("** `{raw}` is not a flag — this binary reads `--name=value` and `--name` only, and ignored it **"));
+            continue;
+        };
+        let name = body.split('=').next().unwrap_or_default();
+        if ALWAYS.contains(&name) {
+            continue;
+        }
+        match BY_MODE.iter().find(|(flag, _)| *flag == name) {
+            None => out.push(format!("** --{name} is not a flag this binary has; it changed nothing in this run **")),
+            Some((_, modes)) if modes.contains(&mode) => {}
+            Some((_, modes)) => out.push(format!(
+                "** --{name} IS NOT READ BY --mode={mode} — only by --mode={} — so nothing below was changed by it **",
+                modes.join(" / --mode=")
+            )),
+        }
+    }
+    out
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let market = arg("market", "btc");
     let mode = arg("mode", "all");
@@ -188,6 +257,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let null_sides =
         NullSides::parse(&arg("null-sides", "coin")).map_err(|e| -> Box<dyn std::error::Error> { e.into() })?;
     println!("null sides: {} - {}", null_sides.as_str(), null_sides.describe());
+    // WHICH OF THE FLAGS PASSED THIS MODE ACTUALLY READS, in the header,
+    // before a single number. A flag a mode ignores has been found five times
+    // and was silent every time; from here a receipt says it itself.
+    let passed: Vec<String> = std::env::args().skip(1).collect();
+    let ignored = flag_audit(&mode, &passed);
+    if ignored.is_empty() {
+        println!("flags:    {} passed, every one of them read by --mode={mode}", passed.len());
+    } else {
+        for line in &ignored {
+            println!("flags:    {line}");
+        }
+    }
     println!();
 
     let registry = Registry::with_builtins();
@@ -283,6 +364,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             arg("batch-file", "").as_str(),
             rebate,
             guards,
+            // `--exit-mix` HERE TOO. Until 2026-10-07 this mode took no such
+            // parameter, so every receipt of
+            // `docs/decisions/2026-09-23-rebate-rescore.md` and of `agent/n6`
+            // was printed without an exit mix whether or not the flag was
+            // passed — and a row whose own rule fires zero times
+            // (`tsmom/120d`: PF 2.236, `SURVIVES`, exits all `NEWS_FLAT` /
+            // `WEEKEND_FLAT`) cannot be ruled out of such a receipt by anyone.
+            std::env::args().any(|a| a == "--exit-mix"),
         );
     }
     if mode == "costs" {
@@ -1006,6 +1095,42 @@ fn run_hypotheses(
             }
         );
         println!("{:<12} {:<18} {}  — {}", "", "", report.filters, report.why);
+        // EXPECTANCY WITH THE FINANCING IN IT, on every row that paid any.
+        //
+        // `expectancy` above is the mean of `r = points / risk`, which is
+        // PRICE over price: the spread is inside it because `apply_costs`
+        // moved both fills, but commission and swap are not. `profit_factor`
+        // reads `pnl_usd` and sees all three. Measured 2026-10-06 by
+        // `agent/n5`: `qs-h15` printed expectancy +0.130R identically at swap
+        // 0.00 and at -0.83 per lot-night while its profit factor fell
+        // 1.262 -> 0.594 against -$6,166 of financing. Half the gate could not
+        // see the largest cost of an overnight hold.
+        //
+        // Printed ONLY where it can differ, so a zero-swap, zero-commission
+        // receipt — every receipt this record holds — is unchanged, and
+        // `r_net == r` there by construction. The old column is never
+        // overwritten; this is a second column beside it.
+        // `docs/decisions/2026-10-07-instrument-repair.md`.
+        if report.swap_usd != 0.0 || rules.commission_per_lot != 0.0 {
+            if m.expectancy_net.is_finite() {
+                println!(
+                    "{:<12} {:<18} expectancy_net {:+.3} R and total_r_net {:+.2} R (pnl_usd / risk_usd: commission and swap IN) \
+                     vs expectancy {:+.3} R and total_r {:+.2} R (points / risk: spread only) — the gap is {:+.3} R per trade of financing and commission",
+                    "",
+                    "",
+                    m.expectancy_net,
+                    m.total_r_net,
+                    m.expectancy,
+                    m.total_r,
+                    m.expectancy_net - m.expectancy,
+                );
+            } else {
+                println!(
+                    "{:<12} {:<18} expectancy_net: NOT MEASURED — at least one trade on this row carries no risk unit in USD, so its result cannot be put in R with the costs in it (this is not 0.000 R)",
+                    "", "",
+                );
+            }
+        }
         // What the count-matching ACHIEVED, printed on every row rather than
         // assumed: the control's median out-of-sample trade count against the
         // method's. The registration of 2026-09-23 calls anything outside a
@@ -1256,6 +1381,7 @@ fn run_rescore(
     batch_file: &str,
     rebate: Option<fd_backtest::Rebate>,
     guards: Option<&Guards>,
+    exit_mix: bool,
 ) {
     let Some(rebate) = rebate else {
         println!("no [rebate] table in the config directory's accounts.toml, and no --rebate-share=.");
@@ -1363,6 +1489,57 @@ fn run_rescore(
             row.count_match(),
             if row.count_matched() { "" } else { "  ** outside the band: this percentile is unmatched **" },
         );
+        // THE COST AS A FRACTION OF R, which this mode never printed. Cost/R
+        // is `spread / stop` and follows the HORIZON, not the instrument —
+        // 0.67% of R at a 41.57-point stop against 14.0% at a 2.00-point stop
+        // on the same instrument at the same spread. A rebate column read
+        // without it is a credit of an unknown share of an unknown cost.
+        // `rescore_hypothesis` has computed this control stop all along and
+        // simply did not carry it out of the function.
+        match &row.control_stop {
+            Some(stop) => {
+                println!(
+                    "{:<22} cost-matched null: control stop {:.3} ATR = {:.2} points, cost {:.2}% of R ({})",
+                    "",
+                    stop.atr,
+                    stop.points(),
+                    100.0 * stop.cost_fraction_of_r(rules),
+                    stop.source.as_str(),
+                );
+                println!(
+                    "{:<22} the method's own realised stop: median {:.3} ATR = {:.2} points over {} trades",
+                    "", stop.realised_atr, stop.realised_points, stop.measured_trades,
+                );
+            }
+            // Not 0% and not absent: a self-managed hold has no stop, so its
+            // control is the drift null and `cost/R` has no denominator here.
+            None => println!(
+                "{:<22} cost/R: NOT MEASURABLE on this row — it manages its own exits, so it has no stop to divide the spread by; its cost is the spread column above",
+                "",
+            ),
+        }
+        // How each position left, and the mean hold — the same line the
+        // hypotheses branch prints, from the same `Metrics`.
+        if exit_mix {
+            let mix = if row.oos.exits.is_empty() {
+                "no exits recorded".to_string()
+            } else {
+                row.oos.exits.iter().map(|(k, n)| format!("{k} {n}")).collect::<Vec<_>>().join(", ")
+            };
+            println!(
+                "{:<22} exits (walk-forward, out of sample): {mix}; mean hold {:.1} min",
+                "", row.oos.avg_hold_min,
+            );
+            let whole_mix = if row.whole.exits.is_empty() {
+                "no exits recorded".to_string()
+            } else {
+                row.whole.exits.iter().map(|(k, n)| format!("{k} {n}")).collect::<Vec<_>>().join(", ")
+            };
+            println!(
+                "{:<22} exits (whole window, what the direction null is a percentile OF): {whole_mix}; mean hold {:.1} min",
+                "", row.whole.avg_hold_min,
+            );
+        }
         if row.passes_net() {
             passed.push(format!("{} ({})", row.label, if row.passes_gross() { "passed gross too" } else { "the credit moved it" }));
         }
@@ -1525,4 +1702,134 @@ fn iso(ms: i64) -> String {
     let month = if mp < 10 { mp + 3 } else { mp - 9 };
     let year = if month <= 2 { year + 1 } else { year };
     format!("{year:04}-{month:02}-{day:02} {:02}:{:02}", rest / 3_600_000, (rest / 60_000) % 60)
+}
+
+#[cfg(test)]
+mod flag_tests {
+    use super::{ALWAYS, BY_MODE, flag_audit};
+
+    /// THIS BINARY'S OWN SOURCE.
+    ///
+    /// The warning line is the symptom; this is the cure. A flag can only be
+    /// ignored in silence while the set of flags the code READS and the set it
+    /// DECLARES are allowed to drift apart, so the test reads the first set out
+    /// of the source text itself.
+    const SOURCE: &str = include_str!("search.rs");
+
+    /// The source WITHOUT this test module.
+    ///
+    /// The module below deliberately contains `--exitmix`, a flag that does
+    /// not exist, as the fixture proving a misspelling is not silent. Scanning
+    /// it would make the table's own test demand that the typo be declared.
+    fn production_source() -> &'static str {
+        let marker = concat!("\n#[cfg", "(test)]\nmod flag_tests");
+        let at = SOURCE
+            .find(marker)
+            .expect("this test module's own header must be findable, or the scan reads its fixtures as flags");
+        &SOURCE[..at]
+    }
+
+    fn declared(name: &str) -> bool {
+        ALWAYS.contains(&name) || BY_MODE.iter().any(|(flag, _)| *flag == name)
+    }
+
+    fn leading_flag_name(rest: &str) -> String {
+        rest.chars().take_while(|c| c.is_ascii_lowercase() || *c == '-').collect()
+    }
+
+    /// Every flag literal the source reads is in the table.
+    ///
+    /// Add `arg("widen-grid", ...)` or `a == "--widen-grid"` without saying
+    /// which modes read it and this test fails. That is the whole mechanism:
+    /// the fifth instance of this defect class could be written in silence,
+    /// the sixth cannot.
+    #[test]
+    fn every_flag_the_source_reads_is_declared_in_the_table() {
+        let mut found: Vec<String> = Vec::new();
+        let src = production_source();
+        for (at, _) in src.match_indices("arg(") {
+            let rest = &src[at + 4..];
+            if !rest.starts_with('"') {
+                continue;
+            }
+            let name: String = rest[1..].chars().take_while(|c| *c != '"').collect();
+            if !name.is_empty() && name.chars().all(|c| c.is_ascii_lowercase() || c == '-') {
+                found.push(name);
+            }
+        }
+        let quote_dashdash = ['"', '-', '-'].iter().collect::<String>();
+        for (at, _) in src.match_indices(quote_dashdash.as_str()) {
+            let name = leading_flag_name(&src[at + 3..]);
+            if !name.is_empty() {
+                found.push(name);
+            }
+        }
+        found.sort();
+        found.dedup();
+        assert!(
+            found.len() >= 20,
+            "the scanner found only {} flag literals in {} bytes of source; it has stopped seeing them and would pass vacuously: {found:?}",
+            found.len(),
+            src.len(),
+        );
+        let missing: Vec<&String> = found.iter().filter(|name| !declared(name)).collect();
+        assert!(
+            missing.is_empty(),
+            "these flags are READ by search.rs and not DECLARED in ALWAYS/BY_MODE, so no receipt can say whether a mode ignored them: {missing:?}",
+        );
+    }
+
+    /// And nothing is declared that the source does not read, or the table
+    /// would promise a flag that does not exist.
+    #[test]
+    fn nothing_in_the_table_is_a_flag_the_source_never_reads() {
+        for name in ALWAYS.iter().chain(BY_MODE.iter().map(|(flag, _)| flag)) {
+            let as_arg = format!("arg(\"{name}\"");
+            let as_long = format!("\"--{name}");
+            assert!(
+                production_source().contains(&as_arg) || production_source().contains(&as_long),
+                "--{name} is declared in the table but no literal in search.rs reads it",
+            );
+        }
+    }
+
+    #[test]
+    fn a_mode_that_does_not_read_a_flag_says_so_in_the_header() {
+        let one = |mode: &str, flag: &str| flag_audit(mode, &[flag.to_string()]);
+
+        // The two cases the brief names, which were silent until today.
+        let hyp = one("hypotheses", "--direction-samples=1000");
+        assert_eq!(hyp.len(), 1, "a mode that ignores --direction-samples= must say so: {hyp:?}");
+        assert!(hyp[0].contains("--mode=rescore"), "and must name the mode that does read it: {hyp:?}");
+        assert_eq!(one("hypotheses", "--samples=2000").len(), 1, "--samples= is read by null-dir only");
+        assert_eq!(one("hypotheses", "--rebate-share=0.5").len(), 1, "--rebate-share= is read by rescore only");
+
+        // The sixth case, found while fixing the fifth: the header prints
+        // `null sides:` whatever the mode, and only `hypotheses` runs a null
+        // that reads it.
+        assert_eq!(one("rescore", "--null-sides=exposure").len(), 1, "rescore keeps the coin-flip null it published");
+
+        // And the repair itself: rescore now reads --exit-mix, so passing it
+        // there is silent BECAUSE IT WORKS.
+        assert!(one("rescore", "--exit-mix").is_empty(), "--exit-mix is read by rescore as of 2026-10-07");
+        assert!(one("hypotheses", "--exit-mix").is_empty(), "--exit-mix is read by hypotheses");
+
+        // A flag every mode reads, and one that does not exist at all.
+        assert!(one("rescore", "--spread=0.22").is_empty(), "--spread= reprices every mode");
+        let typo = one("hypotheses", "--exitmix");
+        assert_eq!(typo.len(), 1, "a misspelt flag must not be silent: {typo:?}");
+        assert!(typo[0].contains("not a flag this binary has"), "{typo:?}");
+        let bare = flag_audit("hypotheses", &["exit-mix".to_string()]);
+        assert_eq!(bare.len(), 1, "an argument with no leading dashes is ignored and must say so: {bare:?}");
+    }
+
+    /// `--mode=all` runs compare, sweep and walk-forward and reads none of the
+    /// per-mode flags. A receipt of `--mode=all --seeds=500` was a receipt at
+    /// 200 seeds, and said nothing.
+    #[test]
+    fn mode_all_admits_it_reads_none_of_the_scoring_flags() {
+        let lines = flag_audit("all", &["--seeds=500".to_string(), "--exit-mix".to_string(), "--market=xauduka".to_string()]);
+        assert_eq!(lines.len(), 2, "--seeds= and --exit-mix are both ignored by --mode=all: {lines:?}");
+        assert!(lines.iter().all(|l| l.contains("IS NOT READ BY --mode=all")), "{lines:?}");
+    }
 }

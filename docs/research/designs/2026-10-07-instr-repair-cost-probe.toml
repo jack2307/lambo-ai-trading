@@ -1,0 +1,9 @@
+# Format probe only: a STOP-BASED base, so the rescore `cost ... % of R` line
+# has a denominator to print. No number from this row is read as a result.
+
+[[hypothesis]]
+label = "ema-cross-probe"
+base = "ema-cross"
+filters = []
+overrides = {}
+why = "format probe for the cost/R line that --mode=rescore never printed"

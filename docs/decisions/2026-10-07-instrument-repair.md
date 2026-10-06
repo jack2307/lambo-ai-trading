@@ -146,3 +146,47 @@ worktree, tests at `--release` and only `-p fd-backtest -p fd-core`.
 ## 8. Amendments
 
 Dated notes appended below. No line above is rewritten.
+
+### 2026-10-07, while patching section 5 — a SEVENTH case of the same class, found and NOT fixed
+
+`fn arg(name, fallback)` returns the FIRST match in `std::env::args()`, so a
+command line carrying the same flag twice silently uses the earlier value:
+`--seeds=200 ... --seeds=20` runs 200 seeds and the receipt's header says
+nothing. It is the same shape of defect as the five in section 5 — a value was
+passed and changed nothing, in silence — and it is recorded here rather than
+repaired, because repairing it is a second change to the same surface in the
+same job and would make an unattributable result. `flag_audit` as written does
+not detect it: it checks WHICH flags a mode reads, not how many times each was
+given. Named for the next job.
+
+### 2026-10-07, from the coordinator mid-job — an EIGHTH case, measured by `agent/news-tf`, recorded and NOT repaired
+
+**`null p50` prints `0.000` where the true state is "the control could not be
+calibrated".** Same class as the seven above, running the other way: §7's own
+rule (`null != 0 != []`) is being broken by the instrument itself, so a reader
+takes a missing measurement for a measured zero.
+
+`agent/news-tf` measured it on two adjacent windows of the same row with the
+same binary, and the defect is NOT the "months vs years" story of brief §4(v) —
+it is a coin flip at about seventy admitted bars:
+
+| window | events admitted | count match | `null p50` printed |
+|---|---|---|---|
+| I1 | 69 | 1.13-1.17 | a number, calibrated |
+| I2 | 70 | **0.03-0.04** (control took **2** trades against the method's **61**) | **0.000** |
+
+`0.000` reads as "the median control made no money at all", while the truth is
+"the control drew 2 trades, so there is no null distribution to take a median
+of". A reader of that receipt concludes the exact opposite of the fact.
+
+**Not repaired here, deliberately.** The natural fix is the same shape as this
+job's own mechanism — print `null: NOT CALIBRATED (control took N trades vs
+method M)` in place of a number when the count match leaves the band or the
+control falls under a trade floor, and leave the calibrated case byte-identical
+— but it is a THIRD surface in a job registered for two, it invalidates all
+five receipts this branch published, and it costs a full release test cycle on
+a disk that touched 9.5 GB free during this job against an 8 GB floor. Recorded
+with its numbers so it cannot be lost, and handed on.
+
+**Cells spent on it: 0.** Nothing was run for it on this branch; the 69-vs-70
+measurement is `agent/news-tf`'s, not reproduced here.

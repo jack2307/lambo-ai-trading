@@ -1,0 +1,42 @@
+market:   xauduka 15m
+data:     E:/rust/flowdesk/data (bars from E:/rust/flowdesk/data\bars\XAUDUKA-15m.parquet)
+bounds:   --from=2016-06-01 --to=2018-06-01 kept 47249 of 378749 bars
+spread:   0.28 per round trip
+trail:    off
+max hold: 4 h (14400000 ms) from [trading] max_hold_ms, no per-market override
+bars:     47249 from 2016-06-01 00:00 to 2018-05-31 23:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+companion: none loaded — every cmp series is NaN
+guards: off (every number unguarded)
+null sides: coin - 50/50, carries no drift; the null every published percentile was read against
+flags:    12 passed, every one of them read by --mode=rescore
+
+== rebate rescore `E:/rust/fd-instr-repair/docs/research/designs/2026-10-07-instr-repair-cost-probe.toml`: 1 constructs, walk-forward (4 folds) ==
+rebate:   0.45 of the round-turn spread, credited BESIDE the book
+          gross columns are unchanged; the cost model is untouched
+nulls:    matched null 10 runs and direction null 20 draws, BOTH carrying the same credit
+swap:     long 0.00 / short 0.00 USD per lot per night; spread 0.28
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+guards: off (every number unguarded)
+
+construct              trades PF gross   PF net  rebate$   reb/R  mnullG  mnullN    dirN  verdict
+ema-cross-probe           407    1.066    1.211  2759.47   6.63%    100%    100%     55%  gate pass, inside a null (matched 100, dir 55)
+                       whole window 789 trades, PF 0.778 gross / 0.884 net; direction null p95 0.828 gross / 0.938 net
+                       matched null p50 0.769 / p95 0.878 gross, p50 0.868 / p95 0.987 net over 10 runs
+                       matched null 626 trades median vs the method's 407 — count match 1.54  ** outside the band: this percentile is unmatched **
+                       cost-matched null: control stop 1.500 ATR = 1.78 points, cost 15.74% of R (named stopAtr, copied)
+                       the method's own realised stop: median 1.619 ATR = 1.92 points over 789 trades
+                       exits (walk-forward, out of sample): END_OF_DATA 1, STOP 178, TARGET 108, TIMEOUT 110, opposite cross 10; mean hold 249.8 min
+                       exits (whole window, what the direction null is a percentile OF): STOP 384, TARGET 169, TIMEOUT 201, opposite cross 35; mean hold 168.7 min
+
+ran 1 of 1 constructs in the batch; 0 not run
+
+0 of 1 passed all three legs; noise at the 95th percentile yields about 0.1 of 1 by luck.
+Nothing crossed. The rebate lowers the bar and the bar was not the binding constraint.
+

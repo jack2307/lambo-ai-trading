@@ -5491,6 +5491,10 @@ mod carried_basis {
             reason: "window 0245-1045 New York".into(),
             contract_size,
             spread,
+            // A trade booked before the field existed: its risk unit is NOT
+            // KNOWN, which is what this fixture is about.
+            risk_usd: None,
+            r_net: None,
         }
     }
 

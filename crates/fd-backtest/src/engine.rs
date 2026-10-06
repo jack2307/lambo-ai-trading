@@ -154,6 +154,46 @@ pub struct Trade {
     /// `None` on a trade closed before the field existed.
     #[serde(default)]
     pub spread: Option<f64>,
+    /// One R in USD on this trade: `risk x lots x contract_size`, read off the
+    /// position at the fill.
+    ///
+    /// It exists so that `pnl_usd` can be expressed in R without inverting
+    /// anything. `r` above is `points / risk` — PRICE over price — so the
+    /// spread is inside it (`apply_costs` moved both fills) but **commission
+    /// and swap are not**, while `pnl_usd` and therefore `profit_factor`
+    /// carry all three. Measured 2026-10-06 by `agent/n5`: one row printed
+    /// expectancy +0.130 R identically at swap 0.00 and at -0.83 per lot-night
+    /// while its profit factor fell 1.262 -> 0.594 and -$6,166 of financing
+    /// was booked. See [`Trade::r_net`] and
+    /// `docs/decisions/2026-10-07-instrument-repair.md`.
+    ///
+    /// `None` on a trade closed before the field existed. That trade's risk
+    /// unit is UNKNOWN, which is not zero and not the current config's.
+    ///
+    /// Stored rounded to the cent, like every other USD figure on this struct,
+    /// while `r_net` below is computed from the UNROUNDED unit. So dividing
+    /// the two stored figures reproduces `r_net` to about 1e-5 R rather than
+    /// exactly; `r_net` is the figure to read, and this is its unit.
+    #[serde(default)]
+    pub risk_usd: Option<f64>,
+    /// `pnl_usd / risk_usd`: the same result as `r`, in the same unit, **with
+    /// commission and swap in it**.
+    ///
+    /// The companion to `r`, never a replacement for it. `r` is the price-only
+    /// figure every published receipt and every golden parity file holds and it
+    /// keeps that meaning exactly.
+    ///
+    /// Computed as `points / risk + (swap - commission) / risk_usd`, which is
+    /// the quotient above rearranged, and rearranged on purpose: `pnl_usd` is
+    /// rounded to the cent before it is stored, so dividing the STORED figure
+    /// would perturb the fourth decimal of a costless trade and restate
+    /// receipts this patch exists not to touch. Written this way, a trade with
+    /// `swap = 0` and `commission = 0` has `r_net` bit-identical to `r`.
+    ///
+    /// `None` when `risk_usd` is unknown or is not a usable denominator — not
+    /// 0, and not `r` standing in for it.
+    #[serde(default)]
+    pub r_net: Option<f64>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -910,6 +950,17 @@ pub fn close_position(
     // does the current rule stand in — see `Live::contract_size`.
     let contract_size = position.contract_size.unwrap_or(rules.contract_size);
     let pnl = points * position.lots * contract_size - commission + swap;
+    // One R in USD, from the same two numbers the P&L above is built from and
+    // the sizing unit the position was born with. Recorded rather than
+    // re-derived later: `rebate::usd_per_r` recovers it from `entry - stop`,
+    // which a TRAILED stop has already moved, and from an inversion of the
+    // P&L identity for a self-managed position. This is the figure itself.
+    let risk_usd = position.risk * position.lots * contract_size;
+    let risk_usd = (risk_usd.is_finite() && risk_usd > 0.0).then_some(risk_usd);
+    // `r` WITH the two costs it cannot see. The addend is exactly zero on a
+    // trade that paid neither, so this is `r` itself on every receipt the
+    // record already holds.
+    let r_net = risk_usd.map(|unit| round4(points / position.risk + (swap - commission) / unit));
 
     Trade {
         direction: position.side,
@@ -935,6 +986,11 @@ pub fn close_position(
         // basis is not known, and saying otherwise here would invent one.
         contract_size: position.contract_size,
         spread: position.spread,
+        // `None`, not 0.0, when the sizing unit does not survive as a usable
+        // denominator — a zero-risk or non-finite position has no R to be
+        // measured in, and a 0 here would read as "it cost nothing".
+        risk_usd: risk_usd.map(round2),
+        r_net,
     }
 }
 
@@ -949,6 +1005,18 @@ pub struct Metrics {
     pub profit_factor: f64,
     pub expectancy: f64,
     pub total_r: f64,
+    /// `expectancy` and `total_r` over [`Trade::r_net`] instead of `Trade::r`:
+    /// the same two statistics **with commission and swap in them**.
+    ///
+    /// Printed BESIDE the old pair, never in place of it, and only where it
+    /// can differ (a row that paid financing or commission). `NaN` — not 0 —
+    /// when any trade in the set cannot report an `r_net`, because a mean over
+    /// the subset that can is a mean over a different population and must not
+    /// be printed as this one's.
+    #[serde(default = "nan")]
+    pub expectancy_net: f64,
+    #[serde(default = "nan")]
+    pub total_r_net: f64,
     pub net_pnl_usd: f64,
     pub return_pct: f64,
     pub max_drawdown_usd: f64,
@@ -958,6 +1026,12 @@ pub struct Metrics {
     pub avg_mfe: f64,
     pub avg_hold_min: f64,
     pub exits: BTreeMap<String, usize>,
+}
+
+/// The serde default for a figure that was never written: "not measured",
+/// which is not 0.
+fn nan() -> f64 {
+    f64::NAN
 }
 
 impl Metrics {
@@ -972,6 +1046,8 @@ impl Metrics {
             profit_factor: f64::NAN,
             expectancy: f64::NAN,
             total_r: 0.0,
+            expectancy_net: f64::NAN,
+            total_r_net: 0.0,
             net_pnl_usd: 0.0,
             return_pct: 0.0,
             max_drawdown_usd: 0.0,
@@ -1001,6 +1077,15 @@ pub fn metrics_of(trades: &[Trade], starting_equity: f64) -> Metrics {
     let variance = rs.iter().map(|r| (r - mean) * (r - mean)).sum::<f64>() / (rs.len().max(2) - 1) as f64;
     let sd = variance.sqrt();
 
+    // The same two statistics over `r_net`, and `NaN` the moment ONE trade in
+    // the set cannot report one. Averaging the subset that can would answer a
+    // question nobody asked — "the expectancy of the trades whose risk unit
+    // survived" — under the name of this set's expectancy.
+    let (total_r_net, expectancy_net) = match trades.iter().map(|t| t.r_net).sum::<Option<f64>>() {
+        Some(sum) => (round4(sum), round4(sum / trades.len() as f64)),
+        None => (f64::NAN, f64::NAN),
+    };
+
     let mut equity = starting_equity;
     let mut peak = starting_equity;
     let mut max_dd = 0.0_f64;
@@ -1029,6 +1114,8 @@ pub fn metrics_of(trades: &[Trade], starting_equity: f64) -> Metrics {
         profit_factor: if gross_loss > 0.0 { round4(gross_win / gross_loss) } else { f64::INFINITY },
         expectancy: round4(mean),
         total_r: round4(rs.iter().sum::<f64>()),
+        expectancy_net,
+        total_r_net,
         net_pnl_usd: round2(net),
         return_pct: round4(net / starting_equity * 100.0),
         max_drawdown_usd: round2(max_dd),
@@ -1181,5 +1268,131 @@ mod trail_tests {
         let (price, kind) = check_exit(&open, &next, &rules).expect("the trail is hit on the next bar");
         assert!(matches!(kind, ExitKind::Stop));
         assert!((price - 96.0).abs() < 1e-9, "gapped through the trail, so it fills at the open: {price}");
+    }
+}
+
+/// `r_net`: the result in R **with commission and swap in it**.
+///
+/// `r = points / risk` is price over price, so the spread is inside it (both
+/// fills were moved by `apply_costs`) and commission and swap are not, while
+/// `pnl_usd` and therefore `profit_factor` carry all three. Measured
+/// 2026-10-06 by `agent/n5`: one row printed expectancy +0.130 R identically
+/// at swap 0.00 and at -0.83 per lot-night while its profit factor fell
+/// 1.262 -> 0.594 and -$6,166 of financing was booked.
+/// `docs/decisions/2026-10-07-instrument-repair.md`.
+#[cfg(test)]
+mod net_r_tests {
+    use super::*;
+
+    /// One night held, so a swap rate has something to charge.
+    fn overnight_long() -> Live {
+        Live {
+            side: Side::Long,
+            // 2026-09-14 20:00 UTC to 2026-09-15 20:00 UTC: one rollover.
+            entry_time: 1_789_502_400_000,
+            entry_price: 2000.0,
+            stop: Some(1990.0),
+            target: None,
+            lots: 2.0,
+            risk: 10.0,
+            reason: "t".into(),
+            mae: 0.0,
+            mfe: 0.0,
+            self_managed: false,
+            contract_size: Some(1.0),
+            spread: Some(0.0),
+        }
+    }
+
+    fn costless() -> TradingRules {
+        TradingRules {
+            spread: 0.0,
+            commission_per_lot: 0.0,
+            swap_long_per_lot: 0.0,
+            swap_short_per_lot: 0.0,
+            contract_size: 1.0,
+            price_decimals: 2,
+            ..TradingRules::default()
+        }
+    }
+
+    fn closed(rules: &TradingRules) -> Trade {
+        close_position(
+            overnight_long(),
+            2005.0,
+            overnight_long().entry_time + 86_400_000,
+            ExitKind::Signal,
+            "TARGET",
+            rules,
+            "t",
+        )
+    }
+
+    /// THE PROPERTY THAT KEEPS EVERY PUBLISHED RECEIPT: with no commission and
+    /// no swap, `r_net` IS `r`. If this ever fails, the patch has restated the
+    /// record and must be reverted, not adjusted.
+    #[test]
+    fn r_net_is_r_when_nothing_but_the_spread_was_paid() {
+        let rules = costless();
+        let trade = closed(&rules);
+        assert_eq!(trade.swap_usd, 0.0, "the costless arm must charge no financing");
+        assert_eq!(trade.r, 0.5, "5 points on a 10-point risk is 0.5 R");
+        assert_eq!(trade.r_net, Some(0.5), "and `r_net` is the same number: {:?}", trade.r_net);
+        assert_eq!(trade.r_net.unwrap().to_bits(), trade.r.to_bits(), "bit-identical, not merely close");
+        assert_eq!(trade.risk_usd, Some(20.0), "one R is risk x lots x contract = 10 x 2 x 1 USD");
+        // And the same at the aggregate, which is what the gate reads.
+        let m = metrics_of(&[trade], 10_000.0);
+        assert_eq!(m.expectancy_net.to_bits(), m.expectancy.to_bits(), "expectancy_net == expectancy at zero cost");
+        assert_eq!(m.total_r_net.to_bits(), m.total_r.to_bits(), "total_r_net == total_r at zero cost");
+    }
+
+    /// AND THE DEFECT, DEMONSTRATED: charge the financing and `r` does not
+    /// move while `r_net` does.
+    #[test]
+    fn r_net_falls_when_financing_is_charged_and_r_does_not() {
+        let free = closed(&costless());
+        let charged = closed(&TradingRules { swap_long_per_lot: -0.83, ..costless() });
+
+        assert_eq!(charged.swap_usd, -1.66, "one night x 2 lots x -0.83 USD");
+        assert_eq!(charged.r, free.r, "`r` is blind to the financing — this is the defect, kept as it was");
+        assert!(
+            charged.r_net.unwrap() < free.r_net.unwrap(),
+            "`r_net` must see it: {:?} is not below {:?}",
+            charged.r_net,
+            free.r_net,
+        );
+        // -1.66 USD over a 20.00 USD risk unit is -0.083 R, exactly.
+        assert_eq!(charged.r_net, Some(0.417), "0.500 R - 0.083 R = 0.417 R, got {:?}", charged.r_net);
+
+        let (free_m, charged_m) = (metrics_of(&[free], 10_000.0), metrics_of(&[charged], 10_000.0));
+        assert_eq!(charged_m.expectancy, free_m.expectancy, "the old column is identical across the two arms");
+        assert!(
+            charged_m.expectancy_net < free_m.expectancy_net,
+            "the new column separates them: {} vs {}",
+            charged_m.expectancy_net,
+            free_m.expectancy_net,
+        );
+    }
+
+    /// Commission too, which `r` is equally blind to.
+    #[test]
+    fn r_net_sees_commission() {
+        let charged = closed(&TradingRules { commission_per_lot: 3.0, ..costless() });
+        assert_eq!(charged.r, 0.5, "`r` does not see a round turn of commission either");
+        // 3.00 x 2 lots x 2 sides = 12.00 USD over a 20.00 USD risk unit.
+        assert_eq!(charged.r_net, Some(-0.1), "0.500 R - 0.600 R = -0.100 R, got {:?}", charged.r_net);
+    }
+
+    /// "Not measured" is never 0: a set holding one trade without a risk unit
+    /// has no `expectancy_net`, and says so.
+    #[test]
+    fn a_set_with_one_unknown_risk_unit_reports_nan_not_zero() {
+        let mut unknown = closed(&costless());
+        unknown.risk_usd = None;
+        unknown.r_net = None;
+        let m = metrics_of(&[closed(&costless()), unknown], 10_000.0);
+        assert!(m.expectancy_net.is_nan(), "expectancy_net must be NaN, got {}", m.expectancy_net);
+        assert!(m.total_r_net.is_nan(), "total_r_net must be NaN, got {}", m.total_r_net);
+        assert!(m.expectancy.is_finite(), "and the old column is unaffected: {}", m.expectancy);
     }
 }

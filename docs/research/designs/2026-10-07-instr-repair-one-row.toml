@@ -1,0 +1,18 @@
+# ONE ROW, and it is not a search.
+#
+# `qs-h15` is the row `agent/n5` measured printing expectancy +0.130 R
+# identically at swap 0.00 and at -0.83 per lot-night while its profit factor
+# fell 1.262 -> 0.594 (receipts/n5/A-duka-is.txt vs B-duka-is.txt). It is
+# re-run here as the INSTRUMENT TEST of
+# docs/decisions/2026-10-07-instrument-repair.md: its published figures are the
+# oracle, and the new `expectancy_net` has to separate the two swap arms that
+# `expectancy` could not.
+#
+# No gate cell is spent. No percentile from this run is read as a result.
+
+[[hypothesis]]
+label = "qs-h15"
+base = "quiet-swing"
+filters = []
+overrides = { holdSessions = 15 }
+why = "three weeks: does the drift term keep paying as the horizon lengthens"

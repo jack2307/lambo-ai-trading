@@ -1,0 +1,39 @@
+market:   xauduka 15m
+data:     E:/rust/flowdesk/data (bars from E:/rust/flowdesk/data\bars\XAUDUKA-15m.parquet)
+bounds:   --from=2010-06-01 --to=2018-06-01 kept 190889 of 378749 bars
+spread:   0.28 per round trip
+trail:    off
+max hold: 4 h (14400000 ms) from [trading] max_hold_ms, no per-market override
+bars:     190889 from 2010-06-01 00:00 to 2018-05-31 23:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+companion: none loaded — every cmp series is NaN
+guards: off (every number unguarded)
+null sides: exposure - the method's measured long share AND its trade count on the hold branch
+flags:    ** --direction-samples IS NOT READ BY --mode=hypotheses — only by --mode=rescore — so nothing below was changed by it **
+flags:    ** --rebate-share IS NOT READ BY --mode=hypotheses — only by --mode=rescore — so nothing below was changed by it **
+flags:    ** --exitmix is not a flag this binary has; it changed nothing in this run **
+
+== hypotheses `E:/rust/fd-instr-repair/docs/research/designs/2026-10-07-instr-repair-one-row.toml`: 1 declared, FIXED parameters over the whole window (no selection), each against 20 matched null runs ==
+null sides: exposure (the method's measured long share AND its trade count on the hold branch)
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+guards: off (every number unguarded)
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+qs-h15       quiet-swing           190   1.262   0.130    0.948    1.251        0   95%  SURVIVES
+                                  — three weeks: does the drift term keep paying as the horizon lengthens
+                                matched null 200 trades median vs the method's 190 — count match 1.05
+                                long share: method 0.516 vs the null's median 0.543
+                                spread paid: method 252.78 USD vs the null's median 217.88 USD — cost match 0.86
+                                exposure: signed share of time method +0.080 vs the null's +0.065; time in market method 2456250 min vs the null's median 2974628 min — ratio 1.21
+                                the null's own median LOSES money (p50 0.948 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                exits: 10-session return flipped to +0.05% 2, 10-session return flipped to +0.09% 1, 10-session return flipped to +0.14% 1, 10-session return flipped to +0.15% 1, 10-session return flipped to +0.16% 1, 10-session return flipped to +0.19% 2, 10-session return flipped to +0.20% 2, 10-session return flipped to +0.21% 2, 10-session return flipped to +0.25% 1, 10-session return flipped to +0.26% 2, 10-session return flipped to +0.27% 2, 10-session return flipped to +0.30% 1, 10-session return flipped to +0.32% 1, 10-session return flipped to +0.41% 1, 10-session return flipped to +0.43% 3, 10-session return flipped to +0.44% 2, 10-session return flipped to +0.48% 1, 10-session return flipped to +0.49% 1, 10-session return flipped to +0.50% 1, 10-session return flipped to +0.52% 1, 10-session return flipped to +0.56% 2, 10-session return flipped to +0.64% 1, 10-session return flipped to +0.67% 1, 10-session return flipped to +0.69% 1, 10-session return flipped to +0.71% 1, 10-session return flipped to +0.72% 2, 10-session return flipped to +0.77% 3, 10-session return flipped to +0.78% 1, 10-session return flipped to +0.80% 1, 10-session return flipped to +0.82% 1, 10-session return flipped to +0.85% 1, 10-session return flipped to +0.86% 1, 10-session return flipped to +0.89% 1, 10-session return flipped to +0.90% 1, 10-session return flipped to +0.91% 1, 10-session return flipped to +1.01% 1, 10-session return flipped to +1.11% 1, 10-session return flipped to +1.14% 1, 10-session return flipped to +1.28% 1, 10-session return flipped to +1.30% 1, 10-session return flipped to +1.36% 1, 10-session return flipped to +1.37% 1, 10-session return flipped to +1.42% 1, 10-session return flipped to +1.52% 1, 10-session return flipped to +1.55% 1, 10-session return flipped to +1.59% 1, 10-session return flipped to +1.67% 1, 10-session return flipped to +1.88% 1, 10-session return flipped to +2.14% 1, 10-session return flipped to +2.58% 1, 10-session return flipped to -0.01% 1, 10-session return flipped to -0.02% 1, 10-session return flipped to -0.03% 1, 10-session return flipped to -0.04% 1, 10-session return flipped to -0.05% 1, 10-session return flipped to -0.07% 2, 10-session return flipped to -0.09% 1, 10-session return flipped to -0.10% 1, 10-session return flipped to -0.11% 1, 10-session return flipped to -0.16% 1, 10-session return flipped to -0.21% 1, 10-session return flipped to -0.24% 2, 10-session return flipped to -0.29% 1, 10-session return flipped to -0.30% 1, 10-session return flipped to -0.31% 1, 10-session return flipped to -0.32% 3, 10-session return flipped to -0.33% 2, 10-session return flipped to -0.36% 1, 10-session return flipped to -0.38% 1, 10-session return flipped to -0.40% 1, 10-session return flipped to -0.41% 2, 10-session return flipped to -0.42% 2, 10-session return flipped to -0.43% 2, 10-session return flipped to -0.45% 1, 10-session return flipped to -0.46% 1, 10-session return flipped to -0.53% 1, 10-session return flipped to -0.55% 1, 10-session return flipped to -0.57% 1, 10-session return flipped to -0.58% 1, 10-session return flipped to -0.62% 1, 10-session return flipped to -0.75% 1, 10-session return flipped to -0.82% 1, 10-session return flipped to -0.86% 1, 10-session return flipped to -0.90% 2, 10-session return flipped to -0.97% 1, 10-session return flipped to -0.99% 1, 10-session return flipped to -1.04% 1, 10-session return flipped to -1.07% 1, 10-session return flipped to -1.08% 1, 10-session return flipped to -1.09% 1, 10-session return flipped to -1.11% 1, 10-session return flipped to -1.19% 1, 10-session return flipped to -1.48% 1, 10-session return flipped to -1.50% 1, 10-session return flipped to -1.52% 1, 10-session return flipped to -1.56% 1, 10-session return flipped to -1.82% 1, 10-session return flipped to -2.35% 1, 10-session return flipped to -2.39% 1, 10-session return flipped to -2.46% 1, 10-session return flipped to -2.69% 1, END_OF_DATA 1, held 15 sessions of 15 51, held 17 sessions of 15 15; mean hold 12927.6 min
+
+Survivors: qs-h15/quiet-swing — worth a decision record and a direction null before anything else.
+
