@@ -18,6 +18,7 @@ pub mod filter;
 pub mod ict;
 pub mod intraday_momentum;
 pub mod news;
+pub mod news_pulse;
 pub mod orb;
 pub mod pdhl;
 pub mod rsi_reversal_vol;

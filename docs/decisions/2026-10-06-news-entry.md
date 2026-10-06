@@ -329,3 +329,183 @@ hold for four hours"**; the stop and target geometry of §4 is very nearly
 decorative. Any reading of the survivor that credits the invalidation rule is
 wrong, and the brief's §8 trap is half-fired here: the rule's own exits fire,
 but in under 10% of its trades.
+
+---
+
+## Note added 2026-10-06, results and the multiple-testing ledger
+
+Append-only. No line above is altered.
+
+### The gate
+
+One row of twelve passes on **both** windows in **both** guard arms:
+
+| row | window | trades | PF | expectancy | pct (null p50) | exit mix |
+|---|---|---|---|---|---|---|
+| `np-brk-p4-m15` | A' no guards | 96 | **1.636** | **+0.106R** | 99% (0.940) | STOP 6 / TARGET 3 / TIMEOUT 87 |
+| `np-brk-p4-m15` | B' no guards | 90 | **1.734** | **+0.114R** | 94% (0.873) | STOP 7 / TARGET 3 / TIMEOUT 80 |
+| `np-brk-p4-m15` | A' guards | 96 | **1.647** | **+0.107R** | 99% (0.940) | NEWS_FLAT 1 / STOP 6 / TARGET 3 / TIMEOUT 86 |
+| `np-brk-p4-m15` | B' guards | 90 | **1.730** | **+0.114R** | 94% (0.873) | STOP 7 / TARGET 3 / TIMEOUT 80 |
+
+`np-brk-p4-m05` passes A' (PF 1.768 / +0.137R / 107 trades) and **fails** B' on
+expectancy in the fourth decimal (PF 1.220 / +0.0499R / 118 trades) — one
+window, so it is not a pass. Count match 1.15, cost match 0.99 and long share
+0.561 on that A' row: inside every band, so its percentile is readable.
+`np-brk-p4-m15`'s count match is 1.28, just outside `COUNT_MATCH_BAND`, so its
+99% / 94% is reported as **unmatched** and the gate alone carries it.
+
+**The breakout branch is monotone in the probe, and the reversion branch is its
+mirror.** On A' no guards: breakout PF 1.042 (probe 1) then 1.102 / 1.245
+(probe 2) then **1.768 / 1.636** (probe 4); reversion, on the *same entries with
+the side flipped*, 1.113 / 1.015 then 0.835 / 0.726 then **0.562 / 0.560**.
+Flipping the side of 96 identical entries takes PF 1.636 to 0.560. That is the
+direction test, and it is not a coin.
+
+### Falsifier 1 — did NOT fire
+
+Both branches were to pass 0 cells on both windows. The reversion branch did
+exactly that: 0 of 24 cells, PF 0.22–1.11, every percentile at or below 68%.
+The breakout branch did not. **The family is not closed.** The registration's
+own §1 prediction — "both branches produce zero surviving cells" — is wrong,
+and is left standing above exactly as it was written.
+
+### Falsifiers 2 and 3 — the cost fan, and the first measurement of the spread at a release
+
+`np-brk-p4-m15`, both windows, gate = PF >= 1.200 AND expectancy >= +0.050R:
+
+| spread | A' PF / exp | B' PF / exp | both windows |
+|---|---|---|---|
+| 0.00 | 1.741 / +0.120 | 1.951 / +0.140 | pass |
+| 0.14 | 1.687 / +0.113 | 1.839 / +0.127 | pass |
+| **0.28** (config) | 1.636 / +0.106 | 1.734 / +0.114 | **pass** |
+| 0.56 | 1.486 / +0.083 | 1.540 / +0.089 | pass |
+| 1.12 | 1.300 / +0.054 | 1.220 / **+0.042** | **BREAKS** (B' expectancy) |
+| 2.24 | 0.992 / -0.000 | 0.791 / -0.045 | breaks |
+
+**The conclusion breaks between 0.56 and 1.12 — two to four times the
+configured spread.** Falsifier 3 does not fire: it passes at zero cost too, so
+the survival is not an artefact of mispricing in the other direction either.
+
+Whether falsifier 2 fires turns on the spread this rule actually pays, and §7
+said the desk had no per-minute series for it. **It does.**
+`data/spreads/XAUUSD_sc.csv` is 8,967 timestamped bid/ask reads off the live
+account's own `XAUUSD.sc`, 2026-09-15 02:01 to 2026-09-17 03:50, and that span
+contains FOMC at 2026-09-16 18:00 UTC and its press conference at 18:30.
+Measured, in price units:
+
+| window around FOMC 18:00 | p50 | p90 | max |
+|---|---|---|---|
+| -120 to -60 min | 0.215 | 0.220 | 0.220 |
+| -15 to 0 min | 0.220 | 0.250 | 0.260 |
+| +0 to +5 min | 0.220 | 0.260 | 0.260 |
+| +5 to +15 min | 0.250 | 0.260 | 0.260 |
+| **+45 to +60 min** (this row's entry) | **0.250** | **0.260** | **0.260** |
+
+The spread widens around the release by about 14–18%, from 0.22 to 0.25–0.26,
+and **its maximum anywhere near the release, 0.260, is below the 0.28 the
+engine already charges.** On this evidence falsifier 2 does **not** fire: the
+break point, 0.56 to 1.12, sits two to four times above the worst spread
+measured at the minute this rule enters.
+
+**That evidence is thin and must not be quoted as settled.** The logger takes
+one read about every 20 seconds (n = 3 a minute), so a blowout lasting seconds
+is invisible to it; it is one FOMC, not a sample of releases; and it is 2026
+data priced against 2018–2026 bars. What it does establish is the **sustained**
+spread at +45 to +60 minutes after a release, which is the minute this row
+trades, and that is the quantity the fan needed. A rule entering at +0 min
+would need the first-seconds spread, which this log cannot see — and two
+thirds of the rows that would have needed it take no trades under the guard
+anyway.
+
+One accident worth naming: `probeBars = 4` is simultaneously the only probe the
+desk's own news guard permits (its blackout ends at +30 min) and the only probe
+whose entry minute is far enough from the release for the spread to have come
+back. Nothing in §4 chose it for either reason.
+
+### Falsifier 4 — fired, in two places, and both are instrument findings
+
+1. **`matched_rate` cannot calibrate a control on a gate this narrow.** The
+   smoke run (one calendar year, about 32 admissible bars a row) produced count
+   matches of 0.61, 0.60, 0.29, 0.27 and **0.04** — the control took 1 trade
+   against the method's 25. The cause is structural and was declared in §5:
+   `matched_rate` probes once at `entryRate = 0.02` and scales linearly, so on
+   about 32 admissible bars the probe draws 0 to 1 trades and the scaling has
+   no purchase. On the four-year windows (about 127 admissible bars) the
+   matches land at 0.82 to 1.52, most inside the band. **`matched_rate` was
+   not touched**, as §5 promised; the consequence is that a `newsonly:` row
+   needs years, not months, before its percentile is readable at all. This is
+   a previously unrecorded limit of the measuring instrument, found by this
+   axis.
+2. **The registered invalidation almost never fires.** 80 to 97 of 90 to 118
+   trades on every `probeBars = 4` row leave by the engine's four-hour cap.
+   Recorded in the previous note; repeated here because it is the single most
+   important qualification on the surviving number.
+
+### The brief's own windows, run and published
+
+`xauusd` 15m, `--from=2025-07-01 --to=2025-10-01`, no guards, all 12 rows:
+**6 to 9 trades a row**, against a 40-trade floor — the §6 arithmetic,
+confirmed by the tool. The spread of outcomes at that size is the §5 warning
+made visible: `np-brk-p2-m05` reads PF **4.200** on 9 trades and
+`np-rev-p2-m05` reads PF **0.077** on the same 9 bars with the side flipped.
+Neither number means anything. Receipt: `receipts/n1_briefwindowA_xauusd.txt`.
+
+### Multiple-testing ledger
+
+| block | declared | looked at |
+|---|---|---|
+| A' 2022-01-01 to 2026-01-01, 12 rows x 2 guard arms | 24 | 24 |
+| B' 2018-01-01 to 2022-01-01, 12 rows x 2 guard arms | 24 | 24 |
+| spread fan A', 12 rows x 5 further spreads | 60 | 60 |
+| spread fan B', 12 rows x 5 further spreads (added in the note above) | 60 | 60 |
+| brief window A on `xauusd`, 12 rows, no guards | 12 | 12 |
+| **plumbing smoke run, `xauduka` 2025-01-01 to 2026-01-01, 12 rows, seeds 40 — NOT DECLARED** | 0 | **12** |
+| **total** | **180** | **192** |
+
+**Twelve cells beyond the declaration.** They are the single smoke run that
+checked the new filter and the new strategy against the real store before the
+registered windows were touched. It sits on a window that is neither A' nor B'
+and overlaps A', its seeds were 40 rather than 200, and its numbers are quoted
+nowhere above except as the `matched_rate` evidence in falsifier 4. It should
+have been declared in §11 as a plumbing cell and was not. Recorded here rather
+than left out.
+
+`--null-sides=exposure` was **not** used and its 12 contingent cells were not
+spent: every row's long share landed inside the 0.40–0.60 band on the
+four-year windows (0.407 to 0.593), which is where
+`docs/hypotheses/2026-10-02-drift-null.md` says the drift control should not
+move a row. The one-year smoke run did read 0.64 to 0.93 long, which is worth
+knowing on its own: over a single bull year the direction of the first move
+after a release is itself long-biased, and only over four years does it come
+back inside the band.
+
+### Outcome
+
+The family is **not** closed. One pre-registered rule — *45 minutes after a
+high-impact USD release, take the direction of the move so far and hold* —
+clears the desk's gate on two non-overlapping four-year windows, in both guard
+arms, survives to twice the configured spread, and inverts to PF 0.56 when its
+side is flipped on identical entries.
+
+It is **not** a candidate. Its invalidation rule fires in under 10% of its
+trades, so what has been measured is a four-hour directional hold and not the
+geometry that was registered; its percentile is unmatched on count; it has
+never been read on a second instrument, a second timeframe, or with a fill
+model that reflects what a market order does in those minutes. The next step is
+a direction null and a decision record, not a position.
+
+### Receipts
+
+    receipts/news-entry.toml                 the 12 registered rows
+    receipts/n1_A_noguards.txt               A' 2022-01-01 to 2026-01-01
+    receipts/n1_A_guards.txt                 the same, --guards
+    receipts/n1_B_noguards.txt               B' 2018-01-01 to 2022-01-01
+    receipts/n1_B_guards.txt                 the same, --guards
+    receipts/n1_fan_{A,B}_s{0.00,0.14,0.56,1.12,2.24}.txt   the cost fan
+    receipts/n1_briefwindowA_xauusd.txt      the brief's window A, not read at the gate
+
+Every receipt's header carries `news: 747 events (2010-01-08 to 2027-12-08)
+from E:/rust/flowdesk/data/news/events.parquet` and
+`news scope: USD (news_currencies)`, so the calendar and the scope each run
+read are quotable rather than assumed. `data-sealed/` was not opened, read or
+counted.

@@ -28,6 +28,19 @@
 //! it is *not* blocked. Pad `before` by one bar if that matters to a
 //! hypothesis.
 //!
+//! [`in_news_window`]`(t, from, to, …)` is the same arithmetic with **signed**
+//! offsets and the opposite sense: true when `t` is inside
+//! `[event + from, event + to)`. It is what a gate that **requires** an event
+//! reads ([`crate::filter::Filter::NewsOnly`]), and it is what
+//! [`in_blackout`] is implemented as, at `(-before, +after)` — so the two can
+//! never drift apart. Until 2026-10-06 this file could only say "stay away
+//! from a release"; a method that enters *because* of one could not be
+//! spelled, so it had never been measured.
+//! [`last_event_at_or_before`] is the third piece: a window tells a bar that
+//! it is near some release, and only this tells it **which**, which is what a
+//! rule anchored on the release itself needs
+//! (`docs/decisions/2026-10-06-news-entry.md`).
+//!
 //! # Currencies
 //!
 //! The calendar carries every currency, and until 2026-09-14 every reader
@@ -93,10 +106,10 @@ pub fn in_blackout(t_ms: i64, before_ms: i64, after_ms: i64, min_impact: u8, cur
 
 /// The arithmetic behind [`in_blackout`] over an explicit, time-sorted list.
 ///
-/// Binary search for the first event whose window has not yet closed
-/// (`time > t - after`), then scan forward while the window has opened
-/// (`time - before <= t`). The scan is bounded by how many events share one
-/// span, which is a handful on any real calendar.
+/// A blackout is the window `[event - before, event + after)`, so this is
+/// [`window_in`] at offsets `(-before, +after)` and the offset arithmetic
+/// lives in exactly one place. Semantics are unchanged: the front edge is
+/// closed, the back edge open, and `before = after = 0` blocks nothing.
 #[must_use]
 pub fn blackout_in(
     events: &[NewsEvent],
@@ -106,11 +119,75 @@ pub fn blackout_in(
     min_impact: u8,
     currencies: Option<&[String]>,
 ) -> bool {
-    let first = events.partition_point(|e| e.time <= t_ms - after_ms);
+    window_in(events, t_ms, -before_ms, after_ms, min_impact, currencies)
+}
+
+/// True when `t_ms` is inside `[event + from_ms, event + to_ms)` of some
+/// installed event the market cares about — the **requirement** a blackout is
+/// the negation of, and the thing no filter could say before 2026-10-06.
+///
+/// False when nothing is installed, like every other reader here, so a
+/// `newsonly:` gate on a run with no calendar takes **no** trades rather than
+/// every trade.
+///
+/// Offsets are **signed** and measured from the release: `(0, 15 min)` is the
+/// release bar of a 15m series, `(45 min, 60 min)` the fourth bar after it,
+/// `(-30 min, 0)` the half hour before. `from_ms > to_ms` is an empty window
+/// and is never inside.
+#[must_use]
+pub fn in_news_window(t_ms: i64, from_ms: i64, to_ms: i64, min_impact: u8, currencies: Option<&[String]>) -> bool {
+    window_in(events(), t_ms, from_ms, to_ms, min_impact, currencies)
+}
+
+/// The arithmetic behind [`in_news_window`] over an explicit, time-sorted
+/// list.
+///
+/// Binary search for the first event whose window has not yet closed
+/// (`event + to > t`), then scan forward while it has opened
+/// (`event + from <= t`). Both bounds are monotone in `event.time`, which is
+/// what makes the search valid on a list sorted by time; the scan is bounded
+/// by how many events share one span, a handful on any real calendar.
+#[must_use]
+pub fn window_in(
+    events: &[NewsEvent],
+    t_ms: i64,
+    from_ms: i64,
+    to_ms: i64,
+    min_impact: u8,
+    currencies: Option<&[String]>,
+) -> bool {
+    if from_ms > to_ms {
+        return false;
+    }
+    let first = events.partition_point(|e| e.time.saturating_add(to_ms) <= t_ms);
     events[first..]
         .iter()
-        .take_while(|e| e.time - before_ms <= t_ms)
+        .take_while(|e| e.time.saturating_add(from_ms) <= t_ms)
         .any(|e| e.impact >= min_impact && e.concerns(currencies))
+}
+
+/// The time of the newest installed event at or before `t_ms` that passes
+/// `min_impact` and the market's currency scope; `None` when there is none
+/// (including when no calendar is installed).
+///
+/// What a strategy that **anchors on a release** needs, as opposed to one that
+/// only asks whether it is inside a window: an entry offset has to be counted
+/// from the release itself, and a bar cannot ask "which event am I after?"
+/// through [`in_news_window`].
+#[must_use]
+pub fn last_event_at_or_before(t_ms: i64, min_impact: u8, currencies: Option<&[String]>) -> Option<i64> {
+    last_event_in(events(), t_ms, min_impact, currencies)
+}
+
+/// [`last_event_at_or_before`] over an explicit, time-sorted list.
+#[must_use]
+pub fn last_event_in(events: &[NewsEvent], t_ms: i64, min_impact: u8, currencies: Option<&[String]>) -> Option<i64> {
+    let end = events.partition_point(|e| e.time <= t_ms);
+    events[..end]
+        .iter()
+        .rev()
+        .find(|e| e.impact >= min_impact && e.concerns(currencies))
+        .map(|e| e.time)
 }
 
 /// The one-line receipt a binary prints after trying to load the calendar:
@@ -290,6 +367,84 @@ mod tests {
         assert!(in_blackout(cad, 60 * MIN, 30 * MIN, 3, None));
         assert!(!in_blackout(cad, 60 * MIN, 30 * MIN, 3, Some(&usd)));
         assert!(in_blackout(release, 60 * MIN, 30 * MIN, 3, Some(&usd)));
+    }
+
+    /// The requirement is the exact negation of the blackout on the same
+    /// offsets — which is the whole point of adding it, and the one property
+    /// that keeps `newsonly:` from drifting away from `news:`.
+    #[test]
+    fn a_required_window_is_the_negation_of_the_blackout_on_the_same_offsets() {
+        let events = vec![ev(1000 * MIN, 3), ev(2000 * MIN, 2), ev(2030 * MIN, 3)];
+        let (before, after) = (60 * MIN, 30 * MIN);
+        for t in (0..3_000).map(|m| m * MIN) {
+            for impact in 1..=3 {
+                let blocked = blackout_in(&events, t, before, after, impact, None);
+                let required = window_in(&events, t, -before, after, impact, None);
+                assert_eq!(blocked, required, "t = {t}, impact = {impact}");
+            }
+        }
+    }
+
+    /// Signed offsets are what let a row admit exactly the bar its own probe
+    /// fires on: `[0, 15)` is the release bar of a 15m series, `[45, 60)` the
+    /// fourth bar after it, and the two windows never overlap.
+    #[test]
+    fn signed_offsets_name_one_bar_of_a_fifteen_minute_series() {
+        let release = 1000 * MIN;
+        let events = vec![ev(release, 3)];
+        let bar = |n: i64| release + n * 15 * MIN;
+        let hit = |t: i64, from: i64, to: i64| window_in(&events, t, from * MIN, to * MIN, 3, None);
+
+        // `newsonly:0/15` — the release bar, and only it.
+        assert!(hit(bar(0), 0, 15));
+        assert!(!hit(bar(1), 0, 15));
+        assert!(!hit(bar(-1), 0, 15));
+        // `newsonly:15/30` — the bar after.
+        assert!(hit(bar(1), 15, 30));
+        assert!(!hit(bar(0), 15, 30));
+        assert!(!hit(bar(2), 15, 30));
+        // `newsonly:45/60` — the fourth bar.
+        assert!(hit(bar(3), 45, 60));
+        assert!(!hit(bar(2), 45, 60));
+        assert!(!hit(bar(4), 45, 60));
+        // A window entirely before the release, which `news:` cannot express
+        // either way round.
+        assert!(hit(bar(-2), -30, 0));
+        assert!(!hit(bar(0), -30, 0), "the back edge is open, so the release bar itself is out");
+        // An inverted window is empty rather than everything.
+        assert!(!hit(bar(0), 60, 0));
+        // Nothing installed is nothing required: a `newsonly:` gate with no
+        // calendar must take no trades, not every trade.
+        assert!(!window_in(&[], bar(0), 0, 15 * MIN, 3, None));
+    }
+
+    #[test]
+    fn the_required_window_honours_impact_and_currency_like_the_blackout() {
+        let events = vec![ev_ccy(1000 * MIN, 3, "USD"), ev_ccy(2000 * MIN, 2, "USD"), ev_ccy(3000 * MIN, 3, "CAD")];
+        let usd = list(&["USD"]);
+        let hit = |t: i64, imp: u8, ccy: Option<&[String]>| window_in(&events, t, 0, 15 * MIN, imp, ccy);
+        assert!(hit(1000 * MIN, 3, Some(&usd)));
+        assert!(!hit(2000 * MIN, 3, Some(&usd)), "medium is invisible at impact 3");
+        assert!(hit(2000 * MIN, 2, Some(&usd)));
+        assert!(!hit(3000 * MIN, 3, Some(&usd)), "a Canadian release is not a USD market's business");
+        assert!(hit(3000 * MIN, 3, None));
+    }
+
+    #[test]
+    fn the_newest_qualifying_event_at_or_before_a_time_is_found() {
+        let events = vec![ev_ccy(1000 * MIN, 3, "USD"), ev_ccy(2000 * MIN, 2, "USD"), ev_ccy(3000 * MIN, 3, "CAD")];
+        let usd = list(&["USD"]);
+        let at = |t: i64, imp: u8, ccy: Option<&[String]>| last_event_in(&events, t, imp, ccy);
+        // The release instant itself counts: `at or before`.
+        assert_eq!(at(1000 * MIN, 3, None), Some(1000 * MIN));
+        assert_eq!(at(1000 * MIN - 1, 3, None), None, "nothing before the first one");
+        // A later time skips back over events the scope rejects.
+        assert_eq!(at(2500 * MIN, 3, None), Some(1000 * MIN), "the medium one is not high-impact");
+        assert_eq!(at(2500 * MIN, 2, None), Some(2000 * MIN));
+        assert_eq!(at(3500 * MIN, 3, Some(&usd)), Some(1000 * MIN), "the CAD one is out of scope");
+        assert_eq!(at(3500 * MIN, 3, None), Some(3000 * MIN));
+        // And no calendar is no event, rather than a panic or a zero.
+        assert_eq!(last_event_in(&[], 3500 * MIN, 3, None), None);
     }
 
     #[test]

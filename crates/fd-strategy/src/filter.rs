@@ -63,6 +63,34 @@ pub enum Filter {
     /// does not, [`Filter::parse_for_market`] fills in the market's
     /// configured list, so a `news:60-30` on gold reads USD releases only.
     News { before_min: u32, after_min: u32, min_impact: u8, currencies: Vec<String> },
+    /// Entries **only** while the signal bar's open time is inside
+    /// `[event + from_min, event + to_min)` of a scheduled event of
+    /// `impact >= min_impact` in the installed calendar — the inverse of
+    /// [`Self::News`], and the gate this file could not spell until
+    /// 2026-10-06.
+    ///
+    /// Offsets are **signed minutes measured from the release**, so a window
+    /// can name one bar of a series: on 15m bars `newsonly:0/15` is the
+    /// release bar, `newsonly:45/60` the fourth bar after it, and
+    /// `newsonly:-30/0` the half hour before. The front edge is closed and
+    /// the back edge open, exactly as [`Self::News`]; `from_min > to_min` is
+    /// an empty window and admits nothing. Exits are not gated, for the same
+    /// reason they are not gated by a blackout.
+    ///
+    /// **With no calendar installed this takes no trades at all** (the
+    /// receipt says `news: none loaded`). That is the opposite of the
+    /// blackout's no-op, and it is the only safe direction: a requirement
+    /// that silently stopped requiring would turn a news method into an
+    /// every-bar method and the run would look like a result.
+    ///
+    /// Why it exists: the matched null in `fd_backtest::hypotheses` is the
+    /// random-entry control wrapped in **the hypothesis's own filters**, so a
+    /// row carrying this gate gets a control that draws from the same bar
+    /// after the same release. Without it a calendar-anchored method would be
+    /// read against a null that spends almost every entry in ordinary hours,
+    /// and the percentile would measure "higher volatility" rather than
+    /// "mechanism" (`docs/decisions/2026-10-06-news-entry.md`).
+    NewsOnly { from_min: i32, to_min: i32, min_impact: u8, currencies: Vec<String> },
 }
 
 impl Filter {
@@ -93,8 +121,12 @@ impl Filter {
     /// `flat:1630-1815`, `vol:14/100:1.2-99`, `volabs:14:0.075-9`,
     /// `news:60-30` (60 min before to 30 min after high-impact news),
     /// `news:60-30:2` (impact ≥ 2) or `news:60-30:3:USD|EUR` (those
-    /// currencies only; the impact is required when currencies are given).
-    /// Times are New York `hhmm`; news widths are minutes.
+    /// currencies only; the impact is required when currencies are given),
+    /// `newsonly:0/15` (entries ONLY on the release bar of a 15m series),
+    /// `newsonly:45/60:3:USD` or `newsonly:-30/0` (the half hour before).
+    /// Times are New York `hhmm`; news widths are minutes, and a
+    /// `newsonly:` range is **signed minutes from the release**, separated by
+    /// `/` so a negative offset can be written at all.
     ///
     /// A `news:` filter parsed here with no currency list reads **every**
     /// currency. Callers that know the market use [`Filter::parse_for_market`].
@@ -160,27 +192,31 @@ impl Filter {
                     .ok_or_else(|| format!("filter `{spec}`: expected news:before-after[:impact[:CCY|CCY]] in minutes"))?;
                 let minutes = |t: &str| t.trim().parse::<u32>().map_err(|_| format!("filter `{spec}`: `{t}` is not a number of minutes"));
                 let (before_min, after_min) = (minutes(b)?, minutes(a)?);
-                let min_impact = match impact {
-                    None => 3,
-                    Some(i) => match i.trim().parse::<u8>() {
-                        Ok(v @ 1..=3) => v,
-                        _ => return bad("impact must be 1, 2 or 3 (3 = high)"),
-                    },
-                };
-                let currencies = match currencies {
-                    None => Vec::new(),
-                    Some(list) => {
-                        let codes: Vec<String> = list.split('|').map(|c| c.trim().to_ascii_uppercase()).filter(|c| !c.is_empty()).collect();
-                        if codes.is_empty() {
-                            return bad("expected currencies such as USD|EUR after the impact");
-                        }
-                        if let Some(odd) = codes.iter().find(|c| !c.chars().all(|ch| ch.is_ascii_alphabetic())) {
-                            return Err(format!("filter `{spec}`: `{odd}` is not a currency code"));
-                        }
-                        codes
-                    }
-                };
+                let (min_impact, currencies) = news_scope(spec, impact, currencies)?;
                 Ok(Self::News { before_min, after_min, min_impact, currencies })
+            }
+            // `newsonly:F/T[:I[:C1|C2]]` — entries ONLY inside
+            // `[event + F, event + T)`, minutes, SIGNED, measured from the
+            // release. `/` separates the two offsets rather than `-`, which
+            // `news:` uses, because a signed range written with `-` cannot be
+            // split (`newsonly:-60--30`); the two spellings therefore cannot
+            // be confused for one another either.
+            Some(("newsonly", rest)) => {
+                let mut parts = rest.splitn(3, ':');
+                let offsets = parts.next().unwrap_or("");
+                let impact = parts.next();
+                let currencies = parts.next();
+                let (f, t) = offsets
+                    .split_once('/')
+                    .ok_or_else(|| format!("filter `{spec}`: expected newsonly:from/to[:impact[:CCY|CCY]] in signed minutes"))?;
+                let minutes =
+                    |t: &str| t.trim().parse::<i32>().map_err(|_| format!("filter `{spec}`: `{t}` is not a number of minutes"));
+                let (from_min, to_min) = (minutes(f)?, minutes(t)?);
+                if from_min > to_min {
+                    return bad("from must not be after to (an empty window admits nothing)");
+                }
+                let (min_impact, currencies) = news_scope(spec, impact, currencies)?;
+                Ok(Self::NewsOnly { from_min, to_min, min_impact, currencies })
             }
             Some(("vol", rest)) => {
                 let (periods, range) = rest.split_once(':').ok_or_else(|| format!("filter `{spec}`: expected vol:F/S:min-max"))?;
@@ -212,6 +248,12 @@ impl Filter {
             Self::News { before_min, after_min, min_impact, currencies } if currencies.is_empty() => Self::News {
                 before_min,
                 after_min,
+                min_impact,
+                currencies: news_currencies.iter().map(|c| c.to_ascii_uppercase()).collect(),
+            },
+            Self::NewsOnly { from_min, to_min, min_impact, currencies } if currencies.is_empty() => Self::NewsOnly {
+                from_min,
+                to_min,
                 min_impact,
                 currencies: news_currencies.iter().map(|c| c.to_ascii_uppercase()).collect(),
             },
@@ -247,8 +289,46 @@ impl Filter {
                 let scope = if currencies.is_empty() { String::new() } else { format!(" ({})", currencies.join("|")) };
                 format!("no entries {before_min} min before to {after_min} min after {which} news{scope}")
             }
+            Self::NewsOnly { from_min, to_min, min_impact, currencies } => {
+                let which = match min_impact {
+                    3 => "high-impact".to_string(),
+                    i => format!("impact≥{i}"),
+                };
+                let scope = if currencies.is_empty() { String::new() } else { format!(" ({})", currencies.join("|")) };
+                format!("entries ONLY {from_min:+} to {to_min:+} min from a {which} release{scope}")
+            }
         }
     }
+}
+
+/// The `[:impact[:CCY|CCY]]` tail both calendar filters take, parsed once so
+/// `news:` and `newsonly:` cannot drift apart on what an impact or a currency
+/// code is. Defaults: impact 3 (high) and no currency list, which
+/// [`Filter::for_market`] later fills in from the market's own scope.
+fn news_scope(spec: &str, impact: Option<&str>, currencies: Option<&str>) -> Result<(u8, Vec<String>), String> {
+    let bad = |why: &str| Err(format!("filter `{spec}`: {why}"));
+    let min_impact = match impact {
+        None => 3,
+        Some(i) => match i.trim().parse::<u8>() {
+            Ok(v @ 1..=3) => v,
+            _ => return bad("impact must be 1, 2 or 3 (3 = high)"),
+        },
+    };
+    let currencies = match currencies {
+        None => Vec::new(),
+        Some(list) => {
+            let codes: Vec<String> =
+                list.split('|').map(|c| c.trim().to_ascii_uppercase()).filter(|c| !c.is_empty()).collect();
+            if codes.is_empty() {
+                return bad("expected currencies such as USD|EUR after the impact");
+            }
+            if let Some(odd) = codes.iter().find(|c| !c.chars().all(|ch| ch.is_ascii_alphabetic())) {
+                return Err(format!("filter `{spec}`: `{odd}` is not a currency code"));
+            }
+            codes
+        }
+    };
+    Ok((min_impact, currencies))
 }
 
 const fn hhmm(v: u32) -> u32 {
@@ -389,6 +469,17 @@ impl Strategy for Filtered<'_> {
                     ctx.bar.time,
                     i64::from(*before_min) * 60_000,
                     i64::from(*after_min) * 60_000,
+                    *min_impact,
+                    Some(currencies),
+                ),
+                // The mirror image, on the same signal-bar time. With no
+                // calendar installed `in_news_window` is false, so this
+                // takes no trades — see the variant's doc for why that
+                // direction is the only safe one.
+                Filter::NewsOnly { from_min, to_min, min_impact, currencies } => news::in_news_window(
+                    ctx.bar.time,
+                    i64::from(*from_min) * 60_000,
+                    i64::from(*to_min) * 60_000,
                     *min_impact,
                     Some(currencies),
                 ),
@@ -628,6 +719,90 @@ mod tests {
         // And the filter adds no series or warm-up of its own.
         assert!(f.series(&Params::default()).is_empty());
         assert_eq!(f.warmup(&Params::default()), 0);
+    }
+
+    fn news_only(from_min: i32, to_min: i32, min_impact: u8, currencies: &[&str]) -> Filter {
+        Filter::NewsOnly { from_min, to_min, min_impact, currencies: currencies.iter().map(|c| (*c).to_string()).collect() }
+    }
+
+    #[test]
+    fn the_newsonly_filter_parses_signed_offsets_separated_by_a_slash() {
+        assert_eq!(Filter::parse("newsonly:0/15").unwrap(), news_only(0, 15, 3, &[]));
+        assert_eq!(Filter::parse("newsonly:45/60:3:USD").unwrap(), news_only(45, 60, 3, &["USD"]));
+        assert_eq!(Filter::parse("newsonly:-30/0:2").unwrap(), news_only(-30, 0, 2, &[]), "a window before the release");
+        assert_eq!(Filter::parse("newsonly:-60/-30").unwrap(), news_only(-60, -30, 3, &[]), "both offsets negative");
+        // The failures, each with a message that says which part was wrong.
+        assert!(Filter::parse("newsonly:0-15").unwrap_err().contains("from/to"), "a `-` range is not a newsonly range");
+        assert!(Filter::parse("newsonly:0").unwrap_err().contains("from/to"));
+        assert!(Filter::parse("newsonly:x/15").unwrap_err().contains("minutes"));
+        assert!(Filter::parse("newsonly:60/0").unwrap_err().contains("empty window"));
+        assert!(Filter::parse("newsonly:0/15:0").unwrap_err().contains("impact"));
+        assert!(Filter::parse("newsonly:0/15:3:US1").unwrap_err().contains("currency code"));
+        // And the label a receipt prints says ONLY, so it cannot be read as a
+        // blackout at a glance.
+        assert_eq!(
+            Filter::parse("newsonly:0/15").unwrap().describe(),
+            "entries ONLY +0 to +15 min from a high-impact release"
+        );
+        assert_eq!(
+            Filter::parse("newsonly:-30/0:2:USD|EUR").unwrap().describe(),
+            "entries ONLY -30 to +0 min from a impact≥2 release (USD|EUR)"
+        );
+    }
+
+    #[test]
+    fn parse_for_market_scopes_an_unscoped_newsonly_filter_too() {
+        let usd = vec!["usd".to_string()];
+        assert_eq!(Filter::parse_for_market("newsonly:0/15", &usd).unwrap(), news_only(0, 15, 3, &["USD"]));
+        assert_eq!(Filter::parse_for_market("newsonly:0/15:3:EUR", &usd).unwrap(), news_only(0, 15, 3, &["EUR"]));
+        assert_eq!(Filter::parse_for_market("newsonly:0/15", &[]).unwrap(), news_only(0, 15, 3, &[]));
+    }
+
+    /// The gate that makes a calendar-anchored null possible: a `newsonly:`
+    /// row admits exactly the bar its own probe fires on, so the random-entry
+    /// control wrapped in the same filter draws from the same bar after the
+    /// same release.
+    #[test]
+    fn the_newsonly_filter_admits_only_the_bars_after_a_release() {
+        news::install(news::test_events()).expect("shared install");
+        let release = monday_utc(12, 30); // the high-impact USD slot
+        let bar = |n: i64| release + n * 15 * 60_000;
+
+        let on_release = Filtered { inner: &Always, filters: vec![Filter::parse("newsonly:0/15").unwrap()] };
+        assert!(matches!(intent_at(&on_release, bar(0), None), Intent::Enter { .. }), "the release bar");
+        assert!(matches!(intent_at(&on_release, bar(1), None), Intent::None), "one bar later is out");
+        assert!(matches!(intent_at(&on_release, bar(-1), None), Intent::None), "one bar earlier is out");
+        assert!(matches!(intent_at(&on_release, monday_utc(20, 0), None), Intent::None), "an ordinary hour is out");
+
+        let fourth = Filtered { inner: &Always, filters: vec![Filter::parse("newsonly:45/60").unwrap()] };
+        assert!(matches!(intent_at(&fourth, bar(3), None), Intent::Enter { .. }));
+        assert!(matches!(intent_at(&fourth, bar(2), None), Intent::None));
+        assert!(matches!(intent_at(&fourth, bar(4), None), Intent::None));
+
+        // Scope: the high CAD release at 15:00 admits an unscoped row and not
+        // a USD one, the same way round as the blackout.
+        let cad = monday_utc(15, 0);
+        assert!(matches!(intent_at(&on_release, cad, None), Intent::Enter { .. }));
+        let usd = Filtered {
+            inner: &Always,
+            filters: vec![Filter::parse_for_market("newsonly:0/15", &["USD".to_string()]).unwrap()],
+        };
+        assert!(matches!(intent_at(&usd, cad, None), Intent::None), "a Canadian release is not gold's business");
+        assert!(matches!(intent_at(&usd, release, None), Intent::Enter { .. }));
+
+        // Impact: the medium EUR release at 09:00 is invisible at 3 and
+        // admitted at 2.
+        let medium = monday_utc(9, 0);
+        assert!(matches!(intent_at(&on_release, medium, None), Intent::None));
+        let any = Filtered { inner: &Always, filters: vec![Filter::parse("newsonly:0/15:2").unwrap()] };
+        assert!(matches!(intent_at(&any, medium, None), Intent::Enter { .. }));
+
+        // Exits are not gated, and the filter adds no series or warm-up.
+        let g = Filtered { inner: &ExitNow, filters: vec![Filter::parse("newsonly:0/15").unwrap()] };
+        let open = OpenPosition { side: Side::Long, entry_price: 100.0, entry_time: 0, stop: None, target: None };
+        assert!(matches!(intent_at(&g, monday_utc(20, 0), Some(open)), Intent::Exit { .. }));
+        assert!(on_release.series(&Params::default()).is_empty());
+        assert_eq!(on_release.warmup(&Params::default()), 0);
     }
 
     #[test]

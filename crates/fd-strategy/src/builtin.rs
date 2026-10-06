@@ -59,6 +59,12 @@ pub fn register_all(registry: &mut Registry) {
     // Candle Range Theory. Registered in docs/hypotheses/2026-10-04-crt.md
     // before this line existed; nine declared cells, no grid.
     registry.register(Box::new(crate::crt::CandleRangeTheory));
+    // Entering ON the economic calendar, not around it. The one calendar
+    // mechanism `Filter::News` could never express, because that filter only
+    // knows how to black a window out; registered in
+    // docs/decisions/2026-10-06-news-entry.md before this line existed.
+    // Twelve declared rows, no grid.
+    registry.register(Box::new(crate::news_pulse::NewsPulse));
     registry.register(Box::new(crate::external::External));
     registry.register(Box::new(crate::session_hold::SessionHold));
     registry.register(Box::new(crate::intraday_momentum::IntradayMomentum));
