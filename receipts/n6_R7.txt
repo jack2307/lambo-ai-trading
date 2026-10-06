@@ -1,0 +1,121 @@
+market:   xauusd 15m
+data:     E:/rust/flowdesk/data (bars from E:/rust/flowdesk/data\bars\XAUUSD-15m.parquet)
+bounds:   --from=2025-04-01 --to=2025-07-01 kept 5862 of 100586 bars
+spread:   0.28 per round trip
+trail:    off
+max hold: 4 h (14400000 ms) from [trading] max_hold_ms, no per-market override
+bars:     5862 from 2025-04-01 00:00 to 2025-06-30 23:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+companion: none loaded — every cmp series is NaN
+guards: on — max_open_loss_r 2.0, notional 300%, weekend flat 16:40 NY, news flat 60/30 (impact≥3, USD), daily cap 20, loss limit $300, cooldown 30 min
+null sides: coin - 50/50, carries no drift; the null every published percentile was read against
+
+== rebate rescore `docs/hypotheses/2026-10-06-rebate-optimal-family.toml`: 22 constructs, walk-forward (4 folds) ==
+rebate:   0.45 of the round-turn spread, credited BESIDE the book
+          gross columns are unchanged; the cost model is untouched
+nulls:    matched null 200 runs and direction null 1000 draws, BOTH carrying the same credit
+swap:     long 0.00 / short 0.00 USD per lot per night; spread 0.28
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+guards: on — max_open_loss_r 2.0, notional 300%, weekend flat 16:40 NY, news flat 60/30 (impact≥3, USD), daily cap 20, loss limit $300, cooldown 30 min
+
+construct              trades PF gross   PF net  rebate$   reb/R  mnullG  mnullN    dirN  verdict
+n6/ema-cross               31    0.872    0.895     0.31   1.43%     38%     36%     85%  fail: profit factor 0.895 < 1.2; expectancy -0.062R < 0.05R
+                       whole window 87 trades, PF 1.243 gross / 1.279 net; direction null p95 1.406 gross / 1.445 net
+                       matched null p50 0.962 / p95 1.446 gross, p50 0.989 / p95 1.488 net over 200 runs
+                       matched null 71 trades median vs the method's 31 — count match 2.29  ** outside the band: this percentile is unmatched **
+n6/rsi-reversion          252    1.022    1.062     2.59   1.52%     64%     66%     63%  fail: profit factor 1.062 < 1.2; expectancy 0.028R < 0.05R
+                       whole window 142 trades, PF 0.837 gross / 0.859 net; direction null p95 0.994 gross / 1.035 net
+                       matched null p50 0.952 / p95 1.319 gross, p50 0.979 / p95 1.354 net over 200 runs
+                       matched null 107 trades median vs the method's 252 — count match 0.42  ** outside the band: this percentile is unmatched **
+n6/donchian-breakout      147    1.021    1.044     1.15   0.88%     56%     55%     65%  fail: profit factor 1.044 < 1.2; expectancy 0.019R < 0.05R
+                       whole window 276 trades, PF 1.030 gross / 1.055 net; direction null p95 1.174 gross / 1.217 net
+                       matched null p50 0.988 / p95 1.292 gross, p50 1.012 / p95 1.323 net over 200 runs
+                       matched null 168 trades median vs the method's 147 — count match 1.14
+n6/bb-fade                181    0.894    0.917     1.78   1.32%     34%     32%     28%  fail: profit factor 0.917 < 1.2; expectancy -0.042R < 0.05R
+                       whole window 367 trades, PF 0.890 gross / 0.914 net; direction null p95 1.123 gross / 1.166 net
+                       matched null p50 0.973 / p95 1.228 gross, p50 1.002 / p95 1.259 net over 200 runs
+                       matched null 206 trades median vs the method's 181 — count match 1.14
+n6/keltner-break           79    1.039    1.063     0.52   0.74%     62%     62%     96%  fail: profit factor 1.063 < 1.2; expectancy 0.020R < 0.05R
+                       whole window 248 trades, PF 1.145 gross / 1.173 net; direction null p95 1.127 gross / 1.155 net
+                       matched null p50 0.987 / p95 1.294 gross, p50 1.010 / p95 1.329 net over 200 runs
+                       matched null 160 trades median vs the method's 79 — count match 2.03  ** outside the band: this percentile is unmatched **
+n6/macd-cross             237    1.188    1.220     2.52   1.46%     88%     88%    100%  gate pass, inside a null (matched 88, dir 100)
+                       whole window 296 trades, PF 1.121 gross / 1.151 net; direction null p95 1.049 gross / 1.077 net
+                       matched null p50 0.949 / p95 1.258 gross, p50 0.981 / p95 1.289 net over 200 runs
+                       matched null 183 trades median vs the method's 237 — count match 0.77
+n6/rsi2-pullback          175    0.932    0.960     1.62   1.11%     38%     40%     61%  fail: profit factor 0.960 < 1.2; expectancy -0.011R < 0.05R
+                       whole window 221 trades, PF 0.986 gross / 1.011 net; direction null p95 1.239 gross / 1.272 net
+                       matched null p50 0.982 / p95 1.314 gross, p50 1.009 / p95 1.346 net over 200 runs
+                       matched null 146 trades median vs the method's 175 — count match 0.83
+n6/squeeze-break           53    1.396    1.433     0.55   1.66%     86%     86%     78%  gate pass, inside a null (matched 86, dir 78)
+                       whole window 56 trades, PF 0.958 gross / 0.986 net; direction null p95 1.163 gross / 1.197 net
+                       matched null p50 0.961 / p95 1.690 gross, p50 0.987 / p95 1.749 net over 200 runs
+                       matched null 49 trades median vs the method's 53 — count match 0.92
+n6/stoch-reversal         331    0.793    0.817     3.35   1.46%      8%      9%      1%  fail: profit factor 0.817 < 1.2; expectancy -0.082R < 0.05R
+                       whole window 388 trades, PF 0.731 gross / 0.751 net; direction null p95 1.066 gross / 1.095 net
+                       matched null p50 0.970 / p95 1.236 gross, p50 0.997 / p95 1.272 net over 200 runs
+                       matched null 214 trades median vs the method's 331 — count match 0.65  ** outside the band: this percentile is unmatched **
+n6/orb                     36    0.597    0.610     0.22   0.70%      9%      8%     17%  fail: profit factor 0.610 < 1.2; expectancy -0.165R < 0.05R
+                       whole window 50 trades, PF 0.796 gross / 0.810 net; direction null p95 1.544 gross / 1.573 net
+                       matched null p50 1.014 / p95 1.782 gross, p50 1.040 / p95 1.818 net over 200 runs
+                       matched null 45 trades median vs the method's 36 — count match 1.25
+n6/pdhl                    41    1.210    1.257     0.43   2.65%     84%     84%     84%  fail: expectancy -0.010R < 0.05R
+                       whole window 50 trades, PF 1.253 gross / 1.303 net; direction null p95 1.437 gross / 1.496 net
+                       matched null p50 0.871 / p95 1.533 gross, p50 0.907 / p95 1.599 net over 200 runs
+                       matched null 42 trades median vs the method's 41 — count match 1.02
+n6/ict-sweep-mss-fvg        9    0.639    0.659     0.07   0.88%     31%     31%     38%  fail: only 9 trades (need 30); profit factor 0.659 < 1.2; expectancy -0.115R < 0.05R
+                       whole window 17 trades, PF 0.987 gross / 1.015 net; direction null p95 3.979 gross / 4.136 net
+                       matched null p50 0.955 / p95 4.552 gross, p50 0.986 / p95 4.665 net over 199 runs
+                       matched null 14 trades median vs the method's 9 — count match 1.56  ** outside the band: this percentile is unmatched **
+n6/vwap-fade              160    0.956    0.984     1.70   1.78%     60%     58%     18%  fail: profit factor 0.984 < 1.2; expectancy -0.041R < 0.05R
+                       whole window 258 trades, PF 0.894 gross / 0.922 net; direction null p95 1.294 gross / 1.336 net
+                       matched null p50 0.919 / p95 1.210 gross, p50 0.950 / p95 1.252 net over 200 runs
+                       matched null 182 trades median vs the method's 160 — count match 1.14
+n6/doji-reversal           54    0.563    0.587     0.56   3.90%      8%      8%      5%  fail: profit factor 0.587 < 1.2; expectancy -0.429R < 0.05R
+                       whole window 61 trades, PF 0.599 gross / 0.626 net; direction null p95 1.634 gross / 1.708 net
+                       matched null p50 0.913 / p95 1.457 gross, p50 0.950 / p95 1.521 net over 200 runs
+                       matched null 50 trades median vs the method's 54 — count match 0.93
+n6/gap-fade                 0      NaN      NaN     0.00    NaN%    NaN%    NaN%    NaN%  fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+                       whole window 0 trades, PF NaN gross / NaN net; direction null p95 NaN gross / NaN net
+                       matched null p50 0.962 / p95 1.427 gross, p50 0.987 / p95 1.468 net over 200 runs
+                       matched null 73 trades median vs the method's 0 — count match NaN  ** outside the band: this percentile is unmatched **
+n6/trend-pullback         157    0.700    0.762     1.65   8.74%     22%     24%     70%  fail: profit factor 0.762 < 1.2; expectancy -0.286R < 0.05R
+                       whole window 184 trades, PF 0.744 gross / 0.814 net; direction null p95 0.868 gross / 0.951 net
+                       matched null p50 0.797 / p95 1.040 gross, p50 0.866 / p95 1.129 net over 200 runs
+                       matched null 144 trades median vs the method's 157 — count match 0.92
+n6/volume-thrust           17    1.141    1.163     0.13   0.86%     64%     63%     44%  fail: only 17 trades (need 30); profit factor 1.163 < 1.2
+                       whole window 13 trades, PF 0.602 gross / 0.617 net; direction null p95 1.837 gross / 1.882 net
+                       matched null p50 0.948 / p95 5.840 gross, p50 0.976 / p95 6.037 net over 195 runs
+                       matched null 9 trades median vs the method's 17 — count match 0.53  ** outside the band: this percentile is unmatched **
+n6/volman-box               0      NaN      NaN     0.00    NaN%    NaN%    NaN%    NaN%  fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+                       whole window 0 trades, PF NaN gross / NaN net; direction null p95 NaN gross / NaN net
+                       matched null p50 0.962 / p95 1.427 gross, p50 0.987 / p95 1.468 net over 200 runs
+                       matched null 73 trades median vs the method's 0 — count match NaN  ** outside the band: this percentile is unmatched **
+n6/tsmom                    0      NaN      NaN     0.00    NaN%    NaN%    NaN%    NaN%  fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+                       whole window 0 trades, PF NaN gross / NaN net; direction null p95 NaN gross / NaN net (own sides permuted)
+                       matched null p50 0.962 / p95 1.427 gross, p50 0.987 / p95 1.468 net over 200 runs
+                       matched null 73 trades median vs the method's 0 — count match NaN  ** outside the band: this percentile is unmatched **
+n6/intraday-momentum       50    0.921    0.972     0.07   0.18%     44%     54%     64%  fail: profit factor 0.972 < 1.2; expectancy 0.001R < 0.05R
+                       whole window 57 trades, PF 1.008 gross / 1.067 net; direction null p95 1.669 gross / 1.768 net (own sides permuted)
+                       matched null p50 0.931 / p95 1.083 gross, p50 0.968 / p95 1.124 net over 200 runs
+                       matched null 699 trades median vs the method's 50 — count match 13.98  ** outside the band: this percentile is unmatched **
+n6/atr/hivol-london        37    1.072    1.095     0.14   0.45%     57%     57%     53%  fail: profit factor 1.095 < 1.2; expectancy 0.027R < 0.05R
+                       whole window 46 trades, PF 0.999 gross / 1.018 net; direction null p95 1.667 gross / 1.700 net
+                       matched null p50 0.971 / p95 2.238 gross, p50 0.990 / p95 2.290 net over 200 runs
+                       matched null 27 trades median vs the method's 37 — count match 0.73  ** outside the band: this percentile is unmatched **
+n6/atr/hivol-orb60         41    0.578    0.590     0.24   0.67%     18%     18%     13%  fail: profit factor 0.590 < 1.2; expectancy -0.166R < 0.05R
+                       whole window 55 trades, PF 0.767 gross / 0.780 net; direction null p95 1.520 gross / 1.549 net
+                       matched null p50 0.873 / p95 2.160 gross, p50 0.895 / p95 2.207 net over 200 runs
+                       matched null 31 trades median vs the method's 41 — count match 0.76
+
+ran 22 of 22 constructs in the batch; 0 not run
+
+0 of 22 passed all three legs; noise at the 95th percentile yields about 1.1 of 22 by luck.
+Nothing crossed. The rebate lowers the bar and the bar was not the binding constraint.
+

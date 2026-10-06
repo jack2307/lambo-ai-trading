@@ -151,3 +151,32 @@ got 0/22, on the **2025-09-13 -> 2026-09-12** year, at share 0.45 only, spread
 and B** of the brief (never rescored), **both rebate models**, **both guard
 arms**, and **the trade-count ordering** rather than the profit-factor
 ordering. Where it agrees with 2026-09-23 it says so.
+
+---
+
+## Amendment, 2026-10-06 (appended after the runs; nothing above was rewritten)
+
+1. **Section 5 promised `--exit-mix` on every run. The tool cannot honour it.**
+   `--mode=rescore` reads the flag nowhere: it is parsed at
+   `crates/fd-backtest/src/bin/search.rs:245` for the hypotheses path only,
+   the printer is at `:1208` inside that runner, and `run_rescore` (`:1246`)
+   takes no `exit_mix` parameter. The flag was passed on all 12 runs and was
+   silently ignored. **The receipts of this axis carry no exit mix**, and
+   neither do those of `docs/decisions/2026-09-23-rebate-rescore.md`. This is
+   a defect of the mode, not a choice of mine, and it is reported as a result.
+
+2. **Section 5 also expected a printed cost-of-R line (brief §7.1). The mode
+   prints none.** Stops and `cost/R` in the result record are derived from the
+   printed `reb/R` by identity (I), `cost/R = (reb/R) / share`, which is exact.
+   No stop figure in the result record is a printed figure.
+
+3. **No code was written and nothing was built.** The axis needed no new
+   mechanism, so the prebuilt binary named in brief §2,
+   `/e/rust/fd-wt-crt/target/release/search.exe` (2026-10-04 15:13), was used
+   throughout. `df -h /e` is therefore unchanged by this agent: 26 GB free
+   before and 26 GB after, against the 6 GB floor.
+
+4. **The cell count held exactly.** 264 declared, 264 printed and read.
+
+5. **Outcome:** the registered falsifier fired, as the registered prediction in
+   section 2 said it would. The result is `2026-10-06-rebate-optimal-family-result.md`.
