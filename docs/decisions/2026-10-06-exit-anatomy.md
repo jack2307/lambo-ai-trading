@@ -112,3 +112,38 @@ Exit labels are the engine's own (`ExitKind::label`, `GuardKind::label`):
 strategy's own wording (for example `flat window`, which the `flat:HHMM-HHMM`
 filter emits as an `Intent::Exit`) appears under that wording and is reported
 separately from `SIGNAL`. "Not measured" is printed as `null`, never as 0.
+
+## Note 2026-10-06 (a) — seed reduction abandoned, and it cost nothing
+
+The integrity check ran `gold-intraday`, window A, arm G at `--seeds=1` and at
+`--seeds=200`: the thirteen `exits:` lines are byte-identical, which is what
+the design predicted (the exit mix is a property of the method's own trades).
+But the 200-seed run took 1.96 s against 0.79 s, so the reduction buys
+nothing. **The whole sweep therefore runs at `--seeds=200`, the record's own
+setting.** Nothing else in the protocol changes, and I still publish no
+percentile — this axis has no gate and reads none.
+
+## Note 2026-10-06 (b) — DIAGNOSTIC D1, declared before it is run
+
+Reading the source while the sweep ran turned up something the brief gets
+wrong, and it has to be checked rather than asserted.
+
+`Exits::Strategy` (`crates/fd-strategy/src/registry.rs:113`) means the engine
+imposes nothing, and `engine_exit` returns early on a self-managed position
+(`crates/fd-backtest/src/engine.rs:737`, *"A stop on a self-managed entry is a
+risk unit for sizing and R, not an order"*). Four mechanisms declare it:
+`tsmom`, `session-hold`, `intraday-momentum`, `quiet-swing`. **For those four
+the 4-hour ceiling cannot bind at all** — so the brief's "`max_hold_ms`
+silently killed `tsmom` (0 trades in all 3 cells)" cannot be the mechanism of
+those zeros, whatever else is.
+
+D1 asks what the zeros are instead: run `2026-09-13-tsmom.toml` on a window
+long enough that a 60-day and a 120-day lookback can warm up on 15m bars.
+**It cannot produce a survivor and will not be read as one** — it is a
+longer window chosen after seeing a zero, which is exactly the move the gate
+exists to refuse. It can only say whether the zeros are a warm-up artefact of
+the three-month bounds. Falsifier for D1: if the rows are still at 0 trades
+with the lookback fully warmed, the warm-up explanation is dead too and I
+report the zeros as unexplained.
+
+D1 adds 3 rows x 1 window x 1 arm = **3 row-readings** to the declared book.
