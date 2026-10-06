@@ -1,0 +1,59 @@
+market:   xauusd 15m
+data:     E:/rust/flowdesk/data (bars from E:/rust/flowdesk/data\bars\XAUUSD-15m.parquet)
+bounds:   --from=2025-04-01 --to=2025-07-01 kept 5862 of 100586 bars
+spread:   0.28 per round trip
+trail:    off
+max hold: 4 h (14400000 ms) from [trading] max_hold_ms, no per-market override
+bars:     5862 from 2025-04-01 00:00 to 2025-06-30 23:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+companion: none loaded — every cmp series is NaN
+guards: off (every number unguarded)
+null sides: coin - 50/50, carries no drift; the null every published percentile was read against
+
+== hypotheses `docs/hypotheses/2026-10-06-trail-grid.toml`: 3 declared, walk-forward (4 folds), each against 200 matched null runs ==
+null sides: coin (50/50, carries no drift; the null every published percentile was read against)
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+guards: off (every number unguarded)
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+compression  bb-fade                75   1.320   0.092    0.824    1.673        0   87%  gate pass, inside the noise
+                                MoTuWeThFr + flat 16:30-18:15 + ATR14/ATR100 in [0, 0.8]  — ô gần cổng nhất trên cả hai cửa sổ khi không trail; fade khi range hẹp
+                                matched null 19 trades median vs the method's 75 — count match 0.25  ** outside the band: this percentile is unmatched **
+                                long share: method 0.373 vs the null's median 0.476  ** outside 40-60% long against a coin: this percentile carries the instrument's drift **
+                                spread paid: method 3.08 USD vs the null's median 0.80 USD — cost match 0.26  ** outside the band: the control did not pay what the method paid **
+                                exposure: signed share of time method -0.483 vs the null's -0.004; time in market method 3600 min vs the null's median 1575 min — ratio 0.44  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.824 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 1.500 ATR = 6.17 points, cost 4.54% of R (named stopAtr, copied)
+                                the method's own realised stop: median 1.534 ATR = 6.31 points over 35 trades
+                                exits: END_OF_DATA 1, STOP 19, TARGET 32, flat window 15, middle band reached 8; mean hold 48.0 min
+intraday     donchian-breakout     155   1.023   0.017    0.978    1.303        0   61%  fail: profit factor 1.023 < 1.2; expectancy 0.017R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15  — ô gần cổng thứ hai; breakout không giữ qua đêm, cỡ mẫu lớn nhất trong ba
+                                matched null 170 trades median vs the method's 155 — count match 1.10
+                                long share: method 0.548 vs the null's median 0.503
+                                spread paid: method 3.46 USD vs the null's median 3.83 USD — cost match 1.11
+                                exposure: signed share of time method +0.095 vs the null's +0.008; time in market method 21045 min vs the null's median 25890 min — ratio 1.23  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.978 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 2.000 ATR = 12.18 points, cost 2.30% of R (named stopAtr, copied)
+                                the method's own realised stop: median 2.024 ATR = 12.33 points over 280 trades
+                                exits: END_OF_DATA 2, STOP 53, TARGET 30, TIMEOUT 41, flat window 16, lost the channel midline 6, reclaimed the channel midline 7; mean hold 135.8 min
+intraday     bb-fade               439   0.778  -0.104    0.955    1.211        0   10%  fail: profit factor 0.778 < 1.2; expectancy -0.104R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15  — ô gần cổng thứ ba; 396/439 lệnh — cỡ mẫu đủ để một hiệu ứng trail nhỏ nhìn thấy được
+                                matched null 212 trades median vs the method's 439 — count match 0.48  ** outside the band: this percentile is unmatched **
+                                long share: method 0.515 vs the null's median 0.502
+                                spread paid: method 12.52 USD vs the null's median 6.03 USD — cost match 0.48  ** outside the band: the control did not pay what the method paid **
+                                exposure: signed share of time method -0.031 vs the null's +0.001; time in market method 28935 min vs the null's median 27112 min — ratio 0.94
+                                the null's own median LOSES money (p50 0.955 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 1.500 ATR = 8.99 points, cost 3.11% of R (named stopAtr, copied)
+                                the method's own realised stop: median 1.524 ATR = 9.13 points over 385 trades
+                                exits: END_OF_DATA 1, STOP 207, TARGET 106, TIMEOUT 9, flat window 25, middle band reached 91; mean hold 65.9 min
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+

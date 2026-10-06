@@ -131,3 +131,21 @@ trên cả hai cửa sổ. **4 run × 3 row = 12 row thêm.**
 Sổ đa phép thử cập nhật: khai 86 + 12 = **98 ô**. Phép đo phụ này là một
 phép CHẨN ĐOÁN, không phải một lần chọn: nó không thể cứu được ô nào, vì
 falsifier 1 và 2 đã bắn trên lưới đã khai trước.
+
+---
+
+## Kết luận 2026-10-06 (ghi thêm, không viết lại dòng nào ở trên)
+
+**Trục luật thoát CHẾT.** 0 trong 27 ô trail qua cổng trên cả hai cửa sổ.
+Falsifier 1 bắn, falsifier 2 bắn (ô thắng A `d=1,5/a=0,33` khác ô thắng B
+`d=0,5/a=1,0` ở cả hai tham số), falsifier 3 bắn một phần (15 trong 17 dòng
+trơ nằm ở cột `activate_r = 2,0R` — target cố định chốt trước khi MFE tới
+2,0R nên trail ở đó không có cơ hội bắn).
+
+Số đáng giữ: `intraday/donchian-breakout`, `--fixed`, cửa sổ A, trail
+0,5R/0,33R đổi expectancy **+0,054R → −0,019R** trong khi TARGET tụt 49 →
+17 và thời gian giữ 128,4 → 63,1 phút. Trail đổi cách lệnh đóng rất mạnh và
+đổi theo chiều xấu: phần đuôi bị cắt đắt hơn phần quay lại giữ được.
+
+Sổ đa phép thử: khai 98, xem 98.
+Receipt đầy đủ (cả 9 cặp, không chỉ ô thắng): `receipts/m4-trail-grid.md`.
