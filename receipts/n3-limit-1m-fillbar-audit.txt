@@ -1,0 +1,75 @@
+XAUDUKA 2025-07-01 to 2025-10-01: 8518 bars of 15m, 127739 of 1m; stop 0.3 ATR, target 1.8 R
+fill-bar verdict, 15m OHLC (what the engine reads) against 1m sequence
+
+side  offset    fills      agree   FAKE WIN  fake loss    15m TGT   15m STOP
+LONG  0.00       5863      96.1%       0.2%       3.7%      1558      3212
+LONG  0.25       3809      85.3%       9.1%       5.6%      1252      1901
+LONG  0.50       2276      66.0%      24.8%       9.2%      1116      1124
+SHORT 0.00       5879      95.7%       0.3%       4.0%      1510      3275
+SHORT 0.25       3935      86.8%       8.6%       4.6%      1251      1943
+SHORT 0.50       2336      63.0%      28.9%       8.1%      1175      1114
+
+FAKE WIN = the 15m bar recorded a TARGET whose level was only reached
+before the order filled. It is the one new look-ahead a resting entry
+adds, and it flatters the limit arm.
+
+XAUDUKA 2025-07-01 to 2025-10-01: 8518 bars of 15m, 127739 of 1m; stop 0.7 ATR, target 1.8 R
+fill-bar verdict, 15m OHLC (what the engine reads) against 1m sequence
+
+side  offset    fills      agree   FAKE WIN  fake loss    15m TGT   15m STOP
+LONG  0.00       5863      99.8%       0.1%       0.1%       429      1378
+LONG  0.25       3809      99.1%       0.8%       0.1%       249       813
+LONG  0.50       2276      97.9%       1.9%       0.1%       174       503
+SHORT 0.00       5879      99.8%       0.1%       0.2%       463      1381
+SHORT 0.25       3935      99.1%       0.7%       0.2%       249       811
+SHORT 0.50       2336      97.2%       2.6%       0.2%       163       472
+
+FAKE WIN = the 15m bar recorded a TARGET whose level was only reached
+before the order filled. It is the one new look-ahead a resting entry
+adds, and it flatters the limit arm.
+
+XAUDUKA 2025-07-01 to 2025-10-01: 8518 bars of 15m, 127739 of 1m; stop 1.0 ATR, target 1.8 R
+fill-bar verdict, 15m OHLC (what the engine reads) against 1m sequence
+
+side  offset    fills      agree   FAKE WIN  fake loss    15m TGT   15m STOP
+LONG  0.00       5863     100.0%       0.0%       0.0%       156       726
+LONG  0.25       3809      99.9%       0.1%       0.0%        76       450
+LONG  0.50       2276      99.5%       0.5%       0.0%        58       264
+SHORT 0.00       5879     100.0%       0.0%       0.0%       163       718
+SHORT 0.25       3935      99.8%       0.1%       0.1%        77       420
+SHORT 0.50       2336      99.7%       0.3%       0.0%        35       262
+
+FAKE WIN = the 15m bar recorded a TARGET whose level was only reached
+before the order filled. It is the one new look-ahead a resting entry
+adds, and it flatters the limit arm.
+
+XAUDUKA 2025-07-01 to 2025-10-01: 8518 bars of 15m, 127739 of 1m; stop 1.2 ATR, target 1.8 R
+fill-bar verdict, 15m OHLC (what the engine reads) against 1m sequence
+
+side  offset    fills      agree   FAKE WIN  fake loss    15m TGT   15m STOP
+LONG  0.00       5863     100.0%       0.0%       0.0%        70       503
+LONG  0.25       3809      99.9%       0.1%       0.0%        39       292
+LONG  0.50       2276      99.8%       0.1%       0.0%        26       192
+SHORT 0.00       5879     100.0%       0.0%       0.0%        81       472
+SHORT 0.25       3935      99.9%       0.1%       0.0%        36       288
+SHORT 0.50       2336      99.8%       0.1%       0.0%        17       189
+
+FAKE WIN = the 15m bar recorded a TARGET whose level was only reached
+before the order filled. It is the one new look-ahead a resting entry
+adds, and it flatters the limit arm.
+
+XAUDUKA 2025-07-01 to 2025-10-01: 8518 bars of 15m, 127739 of 1m; stop 2.7 ATR, target 1.8 R
+fill-bar verdict, 15m OHLC (what the engine reads) against 1m sequence
+
+side  offset    fills      agree   FAKE WIN  fake loss    15m TGT   15m STOP
+LONG  0.00       5863     100.0%       0.0%       0.0%         4        34
+LONG  0.25       3809     100.0%       0.0%       0.0%         2        25
+LONG  0.50       2276     100.0%       0.0%       0.0%         2        22
+SHORT 0.00       5879     100.0%       0.0%       0.0%         3        36
+SHORT 0.25       3935     100.0%       0.0%       0.0%         2        30
+SHORT 0.50       2336     100.0%       0.0%       0.0%         1        21
+
+FAKE WIN = the 15m bar recorded a TARGET whose level was only reached
+before the order filled. It is the one new look-ahead a resting entry
+adds, and it flatters the limit arm.
+

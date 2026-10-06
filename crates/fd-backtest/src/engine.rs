@@ -101,6 +101,24 @@ pub struct LimitEntry {
     /// How many bars after the signal bar the order works for, inclusive.
     /// One is "the next bar only" and is the nearest thing to the market arm.
     pub ttl_bars: usize,
+    /// Whether the stop and the target MOVE WITH the entry.
+    ///
+    /// This is not a detail; it decides what is being measured.
+    ///
+    /// `false` (ANCHORED) leaves a strategy absolute stop where the signal bar
+    /// put it. A better entry then shrinks the risk unit, so the arm does not
+    /// isolate the spread at all - it converts the mechanism into a
+    /// tighter-stopped, nearer-targeted version of itself. Measured 2026-10-06
+    /// on `trend-pullback`: the realised median stop fell from 0.378 ATR
+    /// (1.35 points) to 0.284 ATR (0.94 points) at 0.5 ATR of offset. That is
+    /// a different method, not a cheaper entry.
+    ///
+    /// `true` (TRANSLATED) shifts the stop and an absolute target by the same
+    /// amount the entry moved, so the trade geometry is identical and the ONLY
+    /// differences left are the sign of the half spread and the fact that the
+    /// trade happens only when price came back. That is the question the
+    /// registration asks, and it is the arm its falsifier should be read on.
+    pub carry_stop: bool,
 }
 
 /// What a resting order did, over a whole run.
@@ -125,8 +143,22 @@ pub struct LimitFills {
     /// Orders that could not be placed because the sizing ATR was not finite
     /// at the signal bar. The market arm refuses the same entry at fill time
     /// and counts it in `skipped_no_atr`; this is the same refusal moved one
-    /// bar earlier, because the order's PRICE needs the ATR too.
+    /// bar earlier, because the order PRICE needs the ATR too.
     pub no_atr: usize,
+    /// Orders REFUSED because the order would have rested on the far side of
+    /// its own stop or its own target.
+    ///
+    /// This is the defect that invalidated the first run of 2026-10-06 and it
+    /// is worth stating in full. `trend-pullback` stops at a recent swing low,
+    /// often a fraction of an ATR from the close. An order resting 0.5 ATR
+    /// below that close lands BELOW the stop, so `(entry - stop).abs()` is
+    /// still a positive risk unit while the "stop" now sits ABOVE a long
+    /// entry - and `check_exit` books hitting it as an exit at a PROFIT. The
+    /// row read 139 STOP exits, 7 TARGET, and a profit factor of 1.512 where
+    /// the market arm read 0.544. **Every one of those stops was a fabricated
+    /// win.** An order with no room is not an order a desk can place, so it is
+    /// refused here and counted.
+    pub no_room: usize,
 }
 
 impl LimitFills {
@@ -286,6 +318,14 @@ pub struct BacktestResult {
     /// one. All zero otherwise, which is every run before 2026-10-06.
     #[serde(default)]
     pub fills: LimitFills,
+    /// Positions opened with their own stop on the WRONG side of their entry.
+    ///
+    /// Each one is a trade that can only end in profit at its "stop". See
+    /// [`stop_is_wrong_side`]: a defect of the next-open fill model, found
+    /// 2026-10-06 while building the resting-order arm, counted here rather
+    /// than corrected because correcting it restates the record.
+    #[serde(default)]
+    pub wrong_side_stop: usize,
 }
 
 /// Restrict trading to a window. Indicators still warm up on earlier bars.
@@ -534,6 +574,7 @@ pub fn run_backtest_guarded(
     // a market order in both arms.
     let mut working: Option<Working> = None;
     let mut fills = LimitFills::default();
+    let mut wrong_side_stop = 0usize;
     let mut skipped_no_atr = 0usize;
     let mut skipped_by_guard: BTreeMap<String, usize> = BTreeMap::new();
     let mut closed_by_guard: BTreeMap<String, usize> = BTreeMap::new();
@@ -609,6 +650,7 @@ pub fn run_backtest_guarded(
                         match open_position(side, stop, target, reason, bar.time, bar.open, atr, equity, rules, self_managed, guards) {
                             Ok((opened, sized_down)) => {
                                 sized_down_by_guard += usize::from(sized_down);
+                                wrong_side_stop += usize::from(stop_is_wrong_side(&opened));
                                 guard_state.opened(opened.entry_time);
                                 position = Some(opened);
                             }
@@ -681,6 +723,7 @@ pub fn run_backtest_guarded(
                         Ok((opened, sized_down)) => {
                             fills.filled += 1;
                             sized_down_by_guard += usize::from(sized_down);
+                            wrong_side_stop += usize::from(stop_is_wrong_side(&opened));
                             guard_state.opened(opened.entry_time);
                             position = Some(opened);
                         }
@@ -754,11 +797,11 @@ pub fn run_backtest_guarded(
                     // discards a pending `Enter` whose book is still busy, and
                     // a position open at step 3 of bar `i` is still open at
                     // step 1 of bar `i+1` — nothing between them can close it.
-                    let order = rules.limit_entry.and_then(|spec| {
-                        Working::place(spec, side, stop, target, &reason, bar, i, atr_series.get(i).copied())
+                    let order = rules.limit_entry.map_or(Err(NoOrder::NoAtr), |spec| {
+                        Working::place(spec, side, stop, target, &reason, bar, i, atr_series.get(i).copied(), rules)
                     });
                     match order {
-                        Some(order) => {
+                        Ok(order) => {
                             // An order still working when the strategy speaks
                             // again is cancelled, not queued. One order at a
                             // time is what `pending` has always been.
@@ -770,7 +813,11 @@ pub fn run_backtest_guarded(
                         }
                         // No finite ATR: no risk unit and no price to rest at.
                         // The market arm refuses the same entry one bar later.
-                        None => fills.no_atr += 1,
+                        Err(NoOrder::NoAtr) => fills.no_atr += 1,
+                        // No room between the order and its own stop or
+                        // target. Not a trade any desk could place, and the
+                        // one refusal this family cannot be measured without.
+                        Err(NoOrder::NoRoom) => fills.no_room += 1,
                     }
                 }
                 intent => pending = Some(intent),
@@ -820,7 +867,25 @@ pub fn run_backtest_guarded(
         closed_by_guard,
         sized_down_by_guard,
         fills,
+        wrong_side_stop,
     }
+}
+
+/// Does this position stop sit on the WRONG side of its own entry?
+///
+/// Counted, not corrected, because correcting it would restate every published
+/// receipt and the oracle parity files with them. It is a PRE-EXISTING defect
+/// of the market fill model and not of the resting order: a long whose fill bar
+/// GAPPED below the strategy absolute stop opens with that stop above its
+/// entry, `risk` is still `(entry - stop).abs()`, and `check_exit` then books
+/// hitting the stop as an exit at a profit - a guaranteed +1R the market never
+/// offered. The resting arm refuses such an order outright
+/// ([`LimitFills::no_room`]); the market arm takes it, and this is how often.
+#[must_use]
+fn stop_is_wrong_side(position: &Live) -> bool {
+    position.stop.is_some_and(|s| {
+        s.is_finite() && if position.side.is_long() { s >= position.entry_price } else { s <= position.entry_price }
+    })
 }
 
 /// A resting entry order while it waits.
@@ -846,10 +911,24 @@ struct Working {
     expires_at: usize,
 }
 
+/// Why an order could not be placed, so the receipt can tell the two apart.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum NoOrder {
+    /// The sizing ATR was not finite at the signal bar.
+    NoAtr,
+    /// The order would have rested beyond its own stop or its own target.
+    NoRoom,
+}
+
 impl Working {
-    /// `None` when the sizing ATR is not usable: the order's own price needs
+    /// `Err(NoAtr)` when the sizing ATR is not usable: the order price needs
     /// it, so an unwarm ATR means no order rather than an order at a guessed
     /// price.
+    ///
+    /// `Err(NoRoom)` when the order would rest on the far side of its own stop
+    /// or target. See [`LimitFills::no_room`] - this is the check whose absence
+    /// turned 139 stop-outs into 139 wins on the first run of this family.
+    #[allow(clippy::too_many_arguments)]
     fn place(
         spec: LimitEntry,
         side: Side,
@@ -859,17 +938,45 @@ impl Working {
         bar: &Bar,
         i: usize,
         atr: Option<f64>,
-    ) -> Option<Self> {
-        let atr = atr.filter(|v| v.is_finite() && *v > 0.0)?;
-        let offset = if spec.offset_atr.is_finite() { spec.offset_atr.max(0.0) } else { return None };
+        rules: &TradingRules,
+    ) -> Result<Self, NoOrder> {
+        let atr = atr.filter(|v| v.is_finite() && *v > 0.0).ok_or(NoOrder::NoAtr)?;
+        if !spec.offset_atr.is_finite() {
+            return Err(NoOrder::NoAtr);
+        }
+        let offset = spec.offset_atr.max(0.0);
         // On the PULLBACK side of the close, always: that is what makes it a
         // limit rather than a stop entry, and it is why the order is adversely
-        // selected — it only ever fills on a move back against the trade.
+        // selected - it only ever fills on a move back against the trade.
         let level = if side.is_long() { bar.close - offset * atr } else { bar.close + offset * atr };
         if !level.is_finite() {
-            return None;
+            return Err(NoOrder::NoAtr);
         }
-        Some(Self {
+        // TRANSLATED: the whole trade moves down (or up) with the entry, so the
+        // risk unit and the reward are the ones the signal designed and the
+        // only thing the order changed is the price and whether it happened.
+        let shift = level - bar.close;
+        let (stop, target) = if spec.carry_stop {
+            (stop.map(|v| v + shift), target.map(|v| v + shift))
+        } else {
+            (stop, target)
+        };
+        // Room, measured against the price the order would actually fill at.
+        let entry = limit_fill_price(level, side, rules);
+        let long = side.is_long();
+        let above = |v: f64| v - entry > 0.0;
+        let below = |v: f64| entry - v > 0.0;
+        if let Some(v) = stop.filter(|v| v.is_finite()) {
+            if !(if long { below(v) } else { above(v) }) {
+                return Err(NoOrder::NoRoom);
+            }
+        }
+        if let Some(v) = target.filter(|v| v.is_finite()) {
+            if !(if long { above(v) } else { below(v) }) {
+                return Err(NoOrder::NoRoom);
+            }
+        }
+        Ok(Self {
             side,
             level,
             stop,

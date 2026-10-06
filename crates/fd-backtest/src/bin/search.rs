@@ -140,11 +140,27 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let bad = || format!("--limit wants <offset_atr>,<ttl_bars> or `off`, got `{spec}`");
             let offset: f64 = parts.next().unwrap_or("").trim().parse().map_err(|_| bad())?;
             let ttl: f64 = parts.next().unwrap_or("").trim().parse().map_err(|_| bad())?;
+            // The third field decides WHAT IS BEING MEASURED, so it is named
+            // in words and has no default that could be read as neutral:
+            // `anchored` leaves the stop where the signal bar put it (a better
+            // entry then shrinks the risk unit, which is a different method),
+            // `carry` moves the stop and the target with the entry (the trade
+            // geometry is identical and only the spread sign and the fill
+            // selection are left). See LimitEntry::carry_stop.
+            let mode = parts.next().unwrap_or("anchored").trim().to_string();
+            let carry = match mode.as_str() {
+                "anchored" => false,
+                "carry" => true,
+                _ => return Err(format!("--limit wants `anchored` or `carry` as its third field, got `{mode}`").into()),
+            };
             if !(offset >= 0.0) || !(ttl >= 1.0) {
                 return Err(format!("--limit wants offset >= 0 and ttl >= 1, got `{spec}`").into());
             }
-            rules.limit_entry =
-                Some(fd_backtest::engine::LimitEntry { offset_atr: offset, ttl_bars: ttl as usize });
+            rules.limit_entry = Some(fd_backtest::engine::LimitEntry {
+                offset_atr: offset,
+                ttl_bars: ttl as usize,
+                carry_stop: carry,
+            });
         }
     }
     println!("spread:   {} per round trip", rules.spread);
@@ -156,8 +172,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         match rules.limit_entry {
             None => "MARKET at the next bar's open, PAYING half the spread".to_string(),
             Some(l) => format!(
-                "LIMIT resting {} ATR on the pullback side of the signal close, working {} bar(s), EARNING half the spread",
-                l.offset_atr, l.ttl_bars
+                "LIMIT resting {} ATR on the pullback side of the signal close, working {} bar(s), stop {}, EARNING half the spread",
+                l.offset_atr,
+                l.ttl_bars,
+                if l.carry_stop { "CARRIED with the entry (risk unit preserved)" } else { "ANCHORED at the signal bar (risk unit shrinks)" }
             ),
         }
     );
@@ -999,6 +1017,14 @@ fn run_hypotheses(
                 l.offset_atr, l.ttl_bars
             );
             println!(
+                "       stop and target: {}",
+                if l.carry_stop {
+                    "CARRIED - shifted by the same amount the entry moved, so the risk unit and the reward are the ones the signal designed. Only the spread sign and the fill selection differ from the market arm."
+                } else {
+                    "ANCHORED - left where the signal bar put them, so a better entry SHRINKS the risk unit. This arm measures a tighter-stopped version of the mechanism, not a cheaper entry."
+                }
+            );
+            println!(
                 "       It is PAID {:.3} in and pays {:.3} out = {:.3} per round trip, so the spread term is REVERSED, not reduced.",
                 rules.spread / 2.0,
                 rules.spread / 2.0,
@@ -1093,6 +1119,21 @@ fn run_hypotheses(
             m.expectancy * m.trades as f64,
             m.trades,
         );
+        // FREE MONEY, if there is any on this row. A position whose own stop
+        // sits on the wrong side of its entry can only end in profit at that
+        // stop: a guaranteed +1R the market never offered. It happens when the
+        // fill bar GAPS through a structural stop, it is a defect of the
+        // next-open fill model rather than of anything measured here, and a
+        // row carrying any of them is not a row to read.
+        if report.wrong_side_stop > 0 {
+            println!(
+                "{:<12} {:<18} ** {} of {} positions opened with their own stop on the WRONG SIDE of the entry - each can only end in PROFIT at that stop. This row carries free money. **",
+                "",
+                "",
+                report.wrong_side_stop,
+                m.trades,
+            );
+        }
         // THE FILL RATE, beside the profit factor, whenever the run rested its
         // entries. A limit entry is adversely selected by construction: it
         // fills on the moves that come back and misses the ones that run, so
@@ -1111,7 +1152,19 @@ fn run_hypotheses(
                 f.filled,
                 f.expired,
                 f.replaced,
-                if f.no_atr > 0 { format!(", {} refused for an unwarm ATR", f.no_atr) } else { String::new() },
+                {
+                    let mut why = String::new();
+                    if f.no_atr > 0 {
+                        why.push_str(&format!(", {} refused for an unwarm ATR", f.no_atr));
+                    }
+                    if f.no_room > 0 {
+                        why.push_str(&format!(
+                            ", {} REFUSED for no room between the order and its own stop or target",
+                            f.no_room
+                        ));
+                    }
+                    why
+                },
                 pct(f.rate()),
                 pct(f.rate_of_placed()),
                 if report.null_fill_rate.is_empty() {

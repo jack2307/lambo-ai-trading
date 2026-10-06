@@ -1,0 +1,279 @@
+====================================================================================================================================
+EVERY ROW.  sumR = expectancy x trades over the window.  fill% is of the orders that decided.
+stop = the method's OWN realised median stop in this arm (how much the risk unit moved).
+====================================================================================================================================
+mech       win guards    arm     trades      PF   expect      sumR   fill% nullfill  null50  stopATR noroom  wrng
+orb        A   guards    market      44   1.341    0.089     +3.90       -        -   0.945    2.659      0     0
+orb        A   guards    a000        44   1.431    0.115     +5.08    97.8    97.9%   0.989    2.581      0     0
+orb        A   guards    a025        35   1.330    0.063     +2.19    77.8    81.2%   1.017    2.371      0     0
+orb        A   guards    a050        30   1.294    0.039     +1.16    66.7    65.1%   1.054    2.133      0     0
+orb        A   guards    c025        35   1.242    0.055     +1.91    77.8    80.8%   1.060    2.621      0     0
+orb        A   guards    c050        30   1.146    0.023     +0.70    66.7    64.8%   1.070    2.634      0     0
+orb        A   noguards  market      45   1.263    0.098     +4.43       -        -   0.966    2.681      0     0
+orb        A   noguards  a000        45   1.343    0.125     +5.64   100.0   100.0%   1.005    2.600      0     0
+orb        A   noguards  a025        36   1.187    0.079     +2.85    80.0    83.0%   0.981    2.385      0     0
+orb        A   noguards  a050        31   1.224    0.100     +3.09    68.9    66.7%   1.024    2.146      0     0
+orb        A   noguards  c025        36   1.165    0.066     +2.39    80.0    83.0%   1.025    2.634      0     0
+orb        A   noguards  c050        31   1.163    0.071     +2.22    68.9    66.1%   1.021    2.647      0     0
+orb        B   guards    market      50   0.796   -0.107     -5.35       -        -   0.991    2.718      0     0
+orb        B   guards    a000        48   0.721   -0.149     -7.14    96.0    98.2%   1.026    2.677      0     0
+orb        B   guards    a025        38   0.394   -0.361    -13.71    76.0    80.7%   1.021    2.416      0     0
+orb        B   guards    a050        34   0.306   -0.450    -15.28    68.0    65.6%   0.971    2.134      0     0
+orb        B   guards    c025        38   0.365   -0.363    -13.79    76.0    80.5%   1.016    2.667      0     0
+orb        B   guards    c050        34   0.421   -0.305    -10.36    68.0    65.6%   0.953    2.633      0     0
+orb        B   noguards  market      50   0.760   -0.115     -5.75       -        -   0.987    2.718      0     0
+orb        B   noguards  a000        48   0.674   -0.157     -7.55    96.0   100.0%   1.009    2.677      0     0
+orb        B   noguards  a025        38   0.357   -0.373    -14.16    76.0    81.9%   1.019    2.416      0     0
+orb        B   noguards  a050        34   0.284   -0.465    -15.80    68.0    66.7%   0.951    2.134      0     0
+orb        B   noguards  c025        38   0.378   -0.339    -12.90    76.0    81.8%   1.020    2.667      0     0
+orb        B   noguards  c050        34   0.432   -0.279     -9.47    68.0    66.7%   0.920    2.633      0     0
+
+pullback   A   guards    market     220   0.663   -0.324    -71.17       -        -   0.737    0.374      0     0
+pullback   A   guards    a000       219   0.836   -0.184    -40.36    97.3    94.9%   0.756    0.295      0     0
+pullback   A   guards    a025       108   0.888   -0.437    -47.19    81.8      n/a     nan    0.257     94     0
+pullback   A   guards    a050        45   0.906   -0.222     -9.98    68.2      n/a     nan    0.295    160     0
+pullback   A   guards    c025       178   0.893   -0.087    -15.56    79.5    80.5%   1.185    0.319      0     0
+pullback   A   guards    c050       143   1.052    0.123    +17.62    64.1    66.2%   1.790    0.318      0     0
+pullback   A   noguards  market     225   0.544   -0.341    -76.79       -        -   0.729    0.378      0     0
+pullback   A   noguards  a000       224   0.745   -0.207    -46.32    99.6    99.5%   0.724    0.297      0     0
+pullback   A   noguards  a025       113   0.655   -0.455    -51.39    85.6      n/a     nan    0.262     94     0
+pullback   A   noguards  a050        49   0.718   -0.317    -15.52    74.2      n/a     nan    0.295    160     0
+pullback   A   noguards  c025       183   0.853   -0.116    -21.17    81.7    84.2%   1.124    0.325      0     0
+pullback   A   noguards  c050       149   1.076    0.073    +10.91    66.8    68.9%   1.692    0.336      0     0
+pullback   B   guards    market     192   0.739   -0.376    -72.13       -        -   0.736    0.301      0     0
+pullback   B   guards    a000       191   0.889   -0.324    -61.83    97.9    94.8%   0.730    0.259      0     0
+pullback   B   guards    a025        78   1.221    0.010     +0.79    78.0      n/a     nan    0.242     95     0
+pullback   B   guards    a050        22   0.000   -1.200    -26.39    51.2      n/a     nan    0.183    151     0
+pullback   B   guards    c025       154   0.927   -0.008     -1.17    78.6    80.3%   1.045    0.260      0     0
+pullback   B   guards    c050       119   1.170    0.510    +60.67    61.0    65.9%   1.693    0.234      0     0
+pullback   B   noguards  market     194   0.578   -0.328    -63.71       -        -   0.710    0.299      0     0
+pullback   B   noguards  a000       193   0.666   -0.274    -52.80    99.5    99.5%   0.696    0.258      0     0
+pullback   B   noguards  a025        79   1.149    0.213    +16.84    79.0      n/a     nan    0.246     95     0
+pullback   B   noguards  a050        22   0.000   -1.200    -26.39    51.2      n/a     nan    0.183    151     0
+pullback   B   noguards  c025       159   0.974    0.013     +2.05    81.1    83.4%   1.001    0.252      0     0
+pullback   B   noguards  c050       123   1.505    0.457    +56.21    63.1    68.1%   1.543    0.239      0     0
+
+vwap-fade  A   guards    market     264   1.032   -0.006     -1.53       -        -   0.871    1.037      0     0
+vwap-fade  A   guards    a000       260   1.125    0.053    +13.70    95.6    96.8%   0.985    0.964      0     0
+vwap-fade  A   guards    a025       233   1.341    0.195    +45.34    83.5    81.6%   1.123    0.714      0     0
+vwap-fade  A   guards    a050       195   1.363    0.198    +38.69    68.2      n/a     nan    0.464      0     0
+vwap-fade  A   guards    c025       227   1.335    0.181    +41.02    83.5    83.1%   1.003    0.965      0     0
+vwap-fade  A   guards    c050       191   1.162    0.064    +12.21    67.7    68.2%   0.987    0.965      0     0
+vwap-fade  A   noguards  market     270   0.985   -0.000     -0.05       -        -   0.838    1.037      0     0
+vwap-fade  A   noguards  a000       266   1.058    0.046    +12.34    98.5    99.6%   0.938    0.964      0     0
+vwap-fade  A   noguards  a025       239   1.203    0.155    +37.07    86.0    85.0%   1.101    0.714      0     0
+vwap-fade  A   noguards  a050       199   1.143    0.140    +27.90    69.8      n/a     nan    0.464      0     0
+vwap-fade  A   noguards  c025       234   1.232    0.154    +35.99    86.0    85.4%   0.981    0.965      0     0
+vwap-fade  A   noguards  c050       195   1.042    0.040     +7.86    69.1    70.4%   0.976    0.965      0     0
+vwap-fade  B   guards    market     261   0.884   -0.083    -21.56       -        -   0.945    1.024      0     0
+vwap-fade  B   guards    a000       259   0.917   -0.050    -12.87    95.9    97.0%   0.972    0.976      0     0
+vwap-fade  B   guards    a025       224   0.787   -0.130    -29.07    81.2    80.9%   1.060    0.727      0     0
+vwap-fade  B   guards    a050       198   0.703   -0.171    -33.82    71.2      n/a     nan    0.478      0     0
+vwap-fade  B   guards    c025       221   0.858   -0.068    -14.92    82.8    82.4%   0.970    0.977      0     0
+vwap-fade  B   guards    c050       191   0.873   -0.050     -9.55    73.2    67.8%   0.967    0.978      0     0
+vwap-fade  B   noguards  market     268   0.891   -0.060    -16.16       -        -   0.940    1.024      0     0
+vwap-fade  B   noguards  a000       265   0.948   -0.026     -6.92    98.9    99.6%   0.967    0.976      0     0
+vwap-fade  B   noguards  a025       230   0.844   -0.111    -25.51    83.9    84.2%   1.022    0.727      0     0
+vwap-fade  B   noguards  a050       204   0.791   -0.151    -30.86    73.6      n/a     nan    0.478      0     0
+vwap-fade  B   noguards  c025       227   0.917   -0.049    -11.17    85.7    84.7%   0.937    0.977      0     0
+vwap-fade  B   noguards  c050       194   0.893   -0.067    -12.92    74.9    69.5%   0.922    0.978      0     0
+
+thrust     A   guards    market      10   0.616   -0.154     -1.54       -        -   0.891    3.561      0     0
+thrust     A   guards    a000        10   0.665   -0.137     -1.37    71.4   100.0%   0.959    3.478      0     0
+thrust     A   guards    a025         8   0.541   -0.213     -1.71    57.1    80.0%   1.023    2.908      0     0
+thrust     A   guards    a050         8   0.657   -0.175     -1.40    57.1    64.7%   0.939    2.687      0     0
+thrust     A   guards    c025         8   0.537   -0.214     -1.71    57.1    80.0%   1.022    3.159      0     0
+thrust     A   guards    c050         8   0.562   -0.210     -1.68    57.1    64.7%   0.958    3.194      0     0
+thrust     A   noguards  market      14   0.717   -0.082     -1.14       -        -   1.002    4.210      0     0
+thrust     A   noguards  a000        14   0.735   -0.067     -0.93   100.0   100.0%   1.022    4.151      0     0
+thrust     A   noguards  a025        12   0.710   -0.089     -1.07    85.7    81.2%   0.952    3.842      0     0
+thrust     A   noguards  a050        11   0.737   -0.106     -1.17    78.6    65.2%   0.986    3.120      0     0
+thrust     A   noguards  c025        12   0.693   -0.092     -1.11    85.7    81.2%   0.990    4.092      0     0
+thrust     A   noguards  c050        11   0.619   -0.134     -1.47    78.6    65.0%   1.085    3.620      0     0
+thrust     B   guards    market      13   0.602   -0.150     -1.95       -        -   0.965    2.855      0     0
+thrust     B   guards    a000        13   0.641   -0.136     -1.76   100.0   100.0%   0.939    2.777      0     0
+thrust     B   guards    a025        12   0.698   -0.136     -1.64    92.3    82.1%   0.952    2.498      0     0
+thrust     B   guards    a050        10   1.017   -0.036     -0.36    76.9    66.7%   0.914    2.247      0     0
+thrust     B   guards    c025        12   0.547   -0.166     -1.99    92.3    82.5%   0.988    2.747      0     0
+thrust     B   guards    c050        10   0.651   -0.130     -1.30    76.9    66.7%   0.864    2.747      0     0
+thrust     B   noguards  market      13   0.577   -0.150     -1.95       -        -   0.939    2.855      0     0
+thrust     B   noguards  a000        13   0.605   -0.136     -1.76   100.0   100.0%   1.010    2.777      0     0
+thrust     B   noguards  a025        12   0.653   -0.136     -1.64    92.3    83.3%   0.948    2.498      0     0
+thrust     B   noguards  a050        10   0.913   -0.036     -0.36    76.9    67.9%   0.905    2.247      0     0
+thrust     B   noguards  c025        12   0.512   -0.166     -1.99    92.3    83.3%   0.975    2.747      0     0
+thrust     B   noguards  c050        10   0.609   -0.130     -1.30    76.9    67.9%   0.885    2.747      0     0
+
+pdhl       A   guards    market      49   0.755   -0.245    -11.99       -        -   0.832    0.704      0     0
+pdhl       A   guards    a000        49   0.901   -0.170     -8.31    96.1    97.8%   0.986    0.614      0     0
+pdhl       A   guards    a025        39   0.677   -0.941    -36.68    79.6    80.8%   0.691    0.358      2     0
+pdhl       A   guards    a050        22   0.321   -1.184    -26.05    66.7      n/a     nan    0.440     17     0
+pdhl       A   guards    c025        41   0.416   -0.493    -20.23    80.4    81.0%   1.108    0.596      0     0
+pdhl       A   guards    c050        35   0.575   -0.069     -2.40    70.0    65.1%   1.297    0.593      0     0
+pdhl       A   noguards  market      51   0.659   -0.227    -11.56       -        -   0.821    0.714      0     0
+pdhl       A   noguards  a000        51   0.770   -0.153     -7.83   100.0   100.0%   0.957    0.629      0     0
+pdhl       A   noguards  a025        41   0.459   -0.877    -35.96    83.7    83.2%   0.636    0.363      2     0
+pdhl       A   noguards  a050        24   0.336   -1.043    -25.04    72.7      n/a     nan    0.501     17     0
+pdhl       A   noguards  c025        43   0.445   -0.459    -19.75    84.3    82.7%   1.035    0.607      0     0
+pdhl       A   noguards  c050        37   0.905   -0.052     -1.92    74.0    66.1%   1.200    0.612      0     0
+pdhl       B   guards    market      51   1.017   -0.074     -3.77       -        -   0.902    0.838      0     0
+pdhl       B   guards    a000        51   1.103   -0.027     -1.38    98.1    98.1%   0.949    0.811      0     0
+pdhl       B   guards    a025        44   1.200   -0.011     -0.49    88.0    80.3%   1.109    0.589      2     0
+pdhl       B   guards    a050        30   1.256    0.032     +0.95    71.4      n/a     nan    0.496     10     0
+pdhl       B   guards    c025        46   0.966   -0.115     -5.29    88.5    80.6%   0.939    0.833      0     0
+pdhl       B   guards    c050        38   1.301    0.059     +2.23    73.1    65.7%   0.987    0.833      0     0
+pdhl       B   noguards  market      52   0.887   -0.060     -3.12       -        -   0.894    0.855      0     0
+pdhl       B   noguards  a000        52   0.965   -0.014     -0.71   100.0   100.0%   0.959    0.823      0     0
+pdhl       B   noguards  a025        45   0.982    0.008     +0.37    90.0    82.0%   1.090    0.593      2     0
+pdhl       B   noguards  a050        31   1.022    0.066     +2.03    73.8    81.1%   0.001    0.513     10     0
+pdhl       B   noguards  c025        47   0.823   -0.096     -4.52    90.4    81.9%   0.942    0.835      0     0
+pdhl       B   noguards  c050        39   1.120    0.079     +3.10    75.0    66.2%   0.987    0.835      0     0
+
+rsi-rev    A   guards    market       9   1.052    0.008     +0.07       -        -   0.926    3.310      0     0
+rsi-rev    A   guards    a000         9   1.176    0.027     +0.24   100.0   100.0%   0.972    3.257      0     0
+rsi-rev    A   guards    a025         8   1.342    0.056     +0.45    88.9    80.0%   0.965    3.143      0     0
+rsi-rev    A   guards    a050         6   1.270    0.056     +0.33    66.7    64.3%   0.926    2.874      0     0
+rsi-rev    A   guards    c025         8   1.417    0.066     +0.53    88.9    80.0%   1.005    3.393      0     0
+rsi-rev    A   guards    c050         6   1.150    0.029     +0.17    66.7    64.0%   0.891    3.370      0     0
+rsi-rev    A   noguards  market       9   1.052    0.008     +0.07       -        -   0.964    3.310      0     0
+rsi-rev    A   noguards  a000         9   1.176    0.027     +0.24   100.0   100.0%   1.018    3.257      0     0
+rsi-rev    A   noguards  a025         8   1.342    0.056     +0.45    88.9    82.4%   0.987    3.143      0     0
+rsi-rev    A   noguards  a050         6   1.270    0.056     +0.33    66.7    66.7%   0.880    2.874      0     0
+rsi-rev    A   noguards  c025         8   1.417    0.066     +0.53    88.9    81.8%   0.982    3.393      0     0
+rsi-rev    A   noguards  c050         6   1.150    0.029     +0.17    66.7    66.7%   0.948    3.370      0     0
+rsi-rev    B   guards    market       8   0.363   -0.327     -2.61       -        -   0.933    2.554      0     0
+rsi-rev    B   guards    a000         8   0.375   -0.315     -2.52   100.0   100.0%   0.971    2.513      0     0
+rsi-rev    B   guards    a025         7   0.450   -0.323     -2.26    87.5    81.8%   1.016    2.191      0     0
+rsi-rev    B   guards    a050         6   0.204   -0.612     -3.67    75.0    66.7%   0.841    1.918      0     0
+rsi-rev    B   guards    c025         7   0.500   -0.216     -1.51    87.5    81.8%   0.980    2.454      0     0
+rsi-rev    B   guards    c050         6   0.750   -0.084     -0.51    75.0    66.7%   0.947    2.418      0     0
+rsi-rev    B   noguards  market       8   0.363   -0.327     -2.61       -        -   0.934    2.554      0     0
+rsi-rev    B   noguards  a000         8   0.375   -0.315     -2.52   100.0   100.0%   0.975    2.513      0     0
+rsi-rev    B   noguards  a025         7   0.450   -0.323     -2.26    87.5    83.3%   1.006    2.191      0     0
+rsi-rev    B   noguards  a050         6   0.230   -0.612     -3.67    75.0    67.7%   0.896    1.918      0     0
+rsi-rev    B   noguards  c025         7   0.500   -0.216     -1.51    87.5    83.3%   1.009    2.454      0     0
+rsi-rev    B   noguards  c050         6   0.750   -0.084     -0.51    75.0    69.2%   0.897    2.418      0     0
+
+====================================================================================================================================
+FALSIFIER on TRANSLATED (stop carried - the registration's question)
+Best offset in the family per pairing, against the market arm, on sum net R.
+====================================================================================================================================
+mech       win guards    market sumR        best which    difference   beat?
+orb        A   guards          +3.90       +1.91 c025          -1.99      NO
+orb        A   noguards        +4.43       +2.39 c025          -2.04      NO
+orb        B   guards          -5.35      -10.36 c050          -5.01      NO
+orb        B   noguards        -5.75       -9.47 c050          -3.73      NO
+pullback   A   guards         -71.17      +17.62 c050         +88.79     yes
+pullback   A   noguards       -76.79      +10.91 c050         +87.70     yes
+pullback   B   guards         -72.13      +60.67 c050        +132.80     yes
+pullback   B   noguards       -63.71      +56.21 c050        +119.92     yes
+vwap-fade  A   guards          -1.53      +41.02 c025         +42.55     yes
+vwap-fade  A   noguards        -0.05      +35.99 c025         +36.04     yes
+vwap-fade  B   guards         -21.56       -9.55 c050         +12.01     yes
+vwap-fade  B   noguards       -16.16      -11.17 c025          +4.99     yes
+thrust     A   guards          -1.54       -1.68 c050          -0.13      NO
+thrust     A   noguards        -1.14       -1.11 c025          +0.03     yes
+thrust     B   guards          -1.95       -1.30 c050          +0.65     yes
+thrust     B   noguards        -1.95       -1.30 c050          +0.65     yes
+pdhl       A   guards         -11.99       -2.40 c050          +9.60     yes
+pdhl       A   noguards       -11.56       -1.92 c050          +9.63     yes
+pdhl       B   guards          -3.77       +2.23 c050          +6.00     yes
+pdhl       B   noguards        -3.12       +3.10 c050          +6.21     yes
+rsi-rev    A   guards          +0.07       +0.53 c025          +0.45     yes
+rsi-rev    A   noguards        +0.07       +0.53 c025          +0.45     yes
+rsi-rev    B   guards          -2.61       -0.51 c050          +2.11     yes
+rsi-rev    B   noguards        -2.61       -0.51 c050          +2.11     yes
+
+pairings 24: limit beat market in 19, FAILED to beat in 5
+threshold: fires if it failed in >= 16 of 24. FALSIFIER does NOT fire
+
+====================================================================================================================================
+FALSIFIER on ANCHORED (stop left at the signal bar - a tighter method)
+Best offset in the family per pairing, against the market arm, on sum net R.
+====================================================================================================================================
+mech       win guards    market sumR        best which    difference   beat?
+orb        A   guards          +3.90       +5.08 a000          +1.18     yes
+orb        A   noguards        +4.43       +5.64 a000          +1.21     yes
+orb        B   guards          -5.35       -7.14 a000          -1.79      NO
+orb        B   noguards        -5.75       -7.55 a000          -1.80      NO
+pullback   A   guards         -71.17       -9.98 a050         +61.19     yes
+pullback   A   noguards       -76.79      -15.52 a050         +61.28     yes
+pullback   B   guards         -72.13       +0.79 a025         +72.92     yes
+pullback   B   noguards       -63.71      +16.84 a025         +80.55     yes
+vwap-fade  A   guards          -1.53      +45.34 a025         +46.87     yes
+vwap-fade  A   noguards        -0.05      +37.07 a025         +37.12     yes
+vwap-fade  B   guards         -21.56      -12.87 a000          +8.69     yes
+vwap-fade  B   noguards       -16.16       -6.92 a000          +9.24     yes
+thrust     A   guards          -1.54       -1.37 a000          +0.18     yes
+thrust     A   noguards        -1.14       -0.93 a000          +0.21     yes
+thrust     B   guards          -1.95       -0.36 a050          +1.59     yes
+thrust     B   noguards        -1.95       -0.36 a050          +1.59     yes
+pdhl       A   guards         -11.99       -8.31 a000          +3.69     yes
+pdhl       A   noguards       -11.56       -7.83 a000          +3.73     yes
+pdhl       B   guards          -3.77       +0.95 a050          +4.72     yes
+pdhl       B   noguards        -3.12       +2.03 a050          +5.14     yes
+rsi-rev    A   guards          +0.07       +0.45 a025          +0.37     yes
+rsi-rev    A   noguards        +0.07       +0.45 a025          +0.37     yes
+rsi-rev    B   guards          -2.61       -2.26 a025          +0.35     yes
+rsi-rev    B   noguards        -2.61       -2.26 a025          +0.35     yes
+
+pairings 24: limit beat market in 22, FAILED to beat in 2
+threshold: fires if it failed in >= 16 of 24. FALSIFIER does NOT fire
+
+====================================================================================================================================
+GATE: PF >= 1.200 AND expectancy >= +0.050R AND >= 40 trades, on BOTH windows.
+====================================================================================================================================
+cells through the gate on BOTH windows: 0
+
+====================================================================================================================================
+BREAKEVEN FILL RATE on the TRANSLATED arms, where the market arm has a positive expectancy.
+f* = E_market / E_limit: the share of signals a limit must fill to match the market arm per signal.
+====================================================================================================================================
+mech       win guards    arm       E_market    E_limit        f*    actual
+orb        A   guards    c025        0.0890     0.0550    161.8%     77.8%
+orb        A   guards    c050        0.0890     0.0230    387.0%     66.7%
+orb        A   noguards  c025        0.0980     0.0660    148.5%     80.0%
+orb        A   noguards  c050        0.0980     0.0710    138.0%     68.9%
+orb        B   guards    c025       -0.1070    -0.3630      nan%     76.0%
+orb        B   guards    c050       -0.1070    -0.3050      nan%     68.0%
+orb        B   noguards  c025       -0.1150    -0.3390      nan%     76.0%
+orb        B   noguards  c050       -0.1150    -0.2790      nan%     68.0%
+pullback   A   guards    c025       -0.3240    -0.0870      nan%     79.5%
+pullback   A   guards    c050       -0.3240     0.1230   -263.4%     64.1%
+pullback   A   noguards  c025       -0.3410    -0.1160      nan%     81.7%
+pullback   A   noguards  c050       -0.3410     0.0730   -467.1%     66.8%
+pullback   B   guards    c025       -0.3760    -0.0080      nan%     78.6%
+pullback   B   guards    c050       -0.3760     0.5100    -73.7%     61.0%
+pullback   B   noguards  c025       -0.3280     0.0130  -2523.1%     81.1%
+pullback   B   noguards  c050       -0.3280     0.4570    -71.8%     63.1%
+vwap-fade  A   guards    c025       -0.0060     0.1810     -3.3%     83.5%
+vwap-fade  A   guards    c050       -0.0060     0.0640     -9.4%     67.7%
+vwap-fade  A   noguards  c025       -0.0000     0.1540     -0.0%     86.0%
+vwap-fade  A   noguards  c050       -0.0000     0.0400     -0.0%     69.1%
+vwap-fade  B   guards    c025       -0.0830    -0.0680      nan%     82.8%
+vwap-fade  B   guards    c050       -0.0830    -0.0500      nan%     73.2%
+vwap-fade  B   noguards  c025       -0.0600    -0.0490      nan%     85.7%
+vwap-fade  B   noguards  c050       -0.0600    -0.0670      nan%     74.9%
+thrust     A   guards    c025       -0.1540    -0.2140      nan%     57.1%
+thrust     A   guards    c050       -0.1540    -0.2100      nan%     57.1%
+thrust     A   noguards  c025       -0.0820    -0.0920      nan%     85.7%
+thrust     A   noguards  c050       -0.0820    -0.1340      nan%     78.6%
+thrust     B   guards    c025       -0.1500    -0.1660      nan%     92.3%
+thrust     B   guards    c050       -0.1500    -0.1300      nan%     76.9%
+thrust     B   noguards  c025       -0.1500    -0.1660      nan%     92.3%
+thrust     B   noguards  c050       -0.1500    -0.1300      nan%     76.9%
+pdhl       A   guards    c025       -0.2450    -0.4930      nan%     80.4%
+pdhl       A   guards    c050       -0.2450    -0.0690      nan%     70.0%
+pdhl       A   noguards  c025       -0.2270    -0.4590      nan%     84.3%
+pdhl       A   noguards  c050       -0.2270    -0.0520      nan%     74.0%
+pdhl       B   guards    c025       -0.0740    -0.1150      nan%     88.5%
+pdhl       B   guards    c050       -0.0740     0.0590   -125.4%     73.1%
+pdhl       B   noguards  c025       -0.0600    -0.0960      nan%     90.4%
+pdhl       B   noguards  c050       -0.0600     0.0790    -75.9%     75.0%
+rsi-rev    A   guards    c025        0.0080     0.0660     12.1%     88.9%
+rsi-rev    A   guards    c050        0.0080     0.0290     27.6%     66.7%
+rsi-rev    A   noguards  c025        0.0080     0.0660     12.1%     88.9%
+rsi-rev    A   noguards  c050        0.0080     0.0290     27.6%     66.7%
+rsi-rev    B   guards    c025       -0.3270    -0.2160      nan%     87.5%
+rsi-rev    B   guards    c050       -0.3270    -0.0840      nan%     75.0%
+rsi-rev    B   noguards  c025       -0.3270    -0.2160      nan%     87.5%
+rsi-rev    B   noguards  c050       -0.3270    -0.0840      nan%     75.0%

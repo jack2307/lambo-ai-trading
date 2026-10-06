@@ -292,6 +292,12 @@ pub struct HypothesisReport {
     /// moves that do not come back — and the trades it is missing are the ones
     /// it was right about.
     pub null_fill_rate: Vec<f64>,
+    /// Positions this method opened with their stop on the WRONG side of
+    /// their entry - each one a trade that can only end in profit at its own
+    /// stop. See `engine::BacktestResult::wrong_side_stop`: a defect of the
+    /// next-open fill model, reported on the row because a row carrying any
+    /// of these is carrying free money.
+    pub wrong_side_stop: usize,
 }
 
 /// Which sides the matched null takes, and on what terms.
@@ -1685,6 +1691,7 @@ pub fn run_hypothesis_fixed_as(
         sized_down_by_guard: result.sized_down_by_guard,
         fills: result.fills,
         null_fill_rate,
+        wrong_side_stop: result.wrong_side_stop,
     })
 }
 
@@ -1897,6 +1904,7 @@ pub fn run_hypothesis_sides(
         // cannot measure must print as absent and not as 0%.
         fills: crate::engine::LimitFills::default(),
         null_fill_rate: Vec::new(),
+        wrong_side_stop: 0,
     }))
 }
 
@@ -2320,6 +2328,7 @@ why = "the first hour's range is the day's liquidity"
             sized_down_by_guard: 0,
             fills: crate::engine::LimitFills::default(),
             null_fill_rate: Vec::new(),
+            wrong_side_stop: 0,
         };
         assert_eq!(report.null_quantile(0.5), 1.0);
         assert!(report.survives());
@@ -2489,6 +2498,7 @@ why = "the first hour's range is the day's liquidity"
             sized_down_by_guard: 0,
             fills: crate::engine::LimitFills::default(),
             null_fill_rate: Vec::new(),
+            wrong_side_stop: 0,
         };
         assert!(!row(vec![]).null_has_spread(), "no runs is not a distribution");
         assert!(!row(vec![1.07]).null_has_spread(), "one run is not a distribution");
@@ -2534,6 +2544,7 @@ why = "the first hour's range is the day's liquidity"
             sized_down_by_guard: 0,
             fills: crate::engine::LimitFills::default(),
             null_fill_rate: Vec::new(),
+            wrong_side_stop: 0,
         };
         let r = |m: f64, n: Vec<f64>| row(m, n, 600.0, vec![600.0]);
         assert_eq!(r(1.0, vec![0.98, 1.0, 1.0]).null_long_share_median(), 1.0);
@@ -2617,6 +2628,7 @@ why = "the first hour's range is the day's liquidity"
             sized_down_by_guard: 0,
             fills: crate::engine::LimitFills::default(),
             null_fill_rate: Vec::new(),
+            wrong_side_stop: 0,
         };
         assert!(row(vec![100]).count_matched());
         assert!(row(vec![75]).count_matched(), "a quarter under is the edge and the edge is inside");

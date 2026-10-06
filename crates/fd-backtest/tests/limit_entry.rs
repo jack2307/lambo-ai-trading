@@ -144,10 +144,10 @@ fn a_resting_order_is_paid_half_the_spread_instead_of_paying_it() {
     let bars = flat_then(&[[4000.0, 4001.0, 3999.0, 4000.0]; 4]);
     // Offset zero: the order rests AT the signal bar's close, so the only
     // thing that separates the two arms is the sign of the half spread.
-    let limit = run(&bars, &[SIGNAL_BAR], Some(LimitEntry { offset_atr: 0.0, ttl_bars: 1 }));
+    let limit = run(&bars, &[SIGNAL_BAR], Some(LimitEntry { offset_atr: 0.0, ttl_bars: 1, carry_stop: false }));
     let market = run(&bars, &[SIGNAL_BAR], None);
     assert_eq!(limit.trades.len(), 1, "bar 31 traded down through 4000, so the order filled");
-    assert_eq!(limit.fills, LimitFills { placed: 1, filled: 1, expired: 0, replaced: 0, no_atr: 0 });
+    assert_eq!(limit.fills, LimitFills { placed: 1, filled: 1, expired: 0, replaced: 0, no_atr: 0, no_room: 0 });
     let (l, m) = (limit.trades[0].entry_price, market.trades[0].entry_price);
     assert!((l - (4000.0 - HALF)).abs() < 1e-9, "limit entry {l} should be the level less half the spread");
     // THE WHOLE ARITHMETIC OF THE FAMILY, in one assertion: at the same level,
@@ -159,12 +159,12 @@ fn a_resting_order_is_paid_half_the_spread_instead_of_paying_it() {
 #[test]
 fn an_order_price_never_comes_to_takes_no_trade_and_the_market_arm_takes_it() {
     let bars = flat_then(&runs_away());
-    let limit = run(&bars, &[SIGNAL_BAR], Some(LimitEntry { offset_atr: 1.0, ttl_bars: 4 }));
+    let limit = run(&bars, &[SIGNAL_BAR], Some(LimitEntry { offset_atr: 1.0, ttl_bars: 4, carry_stop: false }));
     // THE COST THE FAMILY HAS TO PAY, and it is not a cost at all in R — it is
     // a missing trade. The signal was right about direction (price left
     // without it) and the order is adversely selected by construction.
     assert!(limit.trades.is_empty(), "the level 3998.00 was never touched");
-    assert_eq!(limit.fills, LimitFills { placed: 1, filled: 0, expired: 1, replaced: 0, no_atr: 0 });
+    assert_eq!(limit.fills, LimitFills { placed: 1, filled: 0, expired: 1, replaced: 0, no_atr: 0, no_room: 0 });
     assert_eq!(limit.fills.rate(), Some(0.0));
     let market = run(&bars, &[SIGNAL_BAR], None);
     assert_eq!(market.trades.len(), 1, "the market arm is always in");
@@ -177,10 +177,10 @@ fn the_ttl_bounds_the_wait() {
     tail.push([4010.0, 4011.0, 3990.0, 3995.0]);
     tail.extend(vec![[3995.0, 3996.0, 3994.0, 3995.0]; 4]);
     let bars = flat_then(&tail);
-    let short_wait = run(&bars, &[SIGNAL_BAR], Some(LimitEntry { offset_atr: 1.0, ttl_bars: 2 }));
+    let short_wait = run(&bars, &[SIGNAL_BAR], Some(LimitEntry { offset_atr: 1.0, ttl_bars: 2, carry_stop: false }));
     assert!(short_wait.trades.is_empty(), "two bars of life, and the dip came on the fourth");
     assert_eq!(short_wait.fills.expired, 1);
-    let long_wait = run(&bars, &[SIGNAL_BAR], Some(LimitEntry { offset_atr: 1.0, ttl_bars: 4 }));
+    let long_wait = run(&bars, &[SIGNAL_BAR], Some(LimitEntry { offset_atr: 1.0, ttl_bars: 4, carry_stop: false }));
     assert_eq!(long_wait.trades.len(), 1, "four bars of life reaches the dip");
     assert!((long_wait.trades[0].entry_price - (3998.0 - HALF)).abs() < 1e-9);
 }
@@ -193,7 +193,7 @@ fn a_gap_through_the_level_does_not_improve_the_fill() {
     let mut tail = vec![[3990.0, 3992.0, 3985.0, 3991.0]];
     tail.extend(vec![[3991.0, 3992.0, 3990.0, 3991.0]; 4]);
     let bars = flat_then(&tail);
-    let limit = run(&bars, &[SIGNAL_BAR], Some(LimitEntry { offset_atr: 1.0, ttl_bars: 1 }));
+    let limit = run(&bars, &[SIGNAL_BAR], Some(LimitEntry { offset_atr: 1.0, ttl_bars: 1, carry_stop: false }));
     assert_eq!(limit.trades.len(), 1);
     assert!(
         (limit.trades[0].entry_price - (3998.0 - HALF)).abs() < 1e-9,
@@ -205,11 +205,11 @@ fn a_gap_through_the_level_does_not_improve_the_fill() {
 #[test]
 fn a_fresh_signal_cancels_a_working_order() {
     let bars = flat_then(&runs_away());
-    let limit = run(&bars, &[SIGNAL_BAR, SIGNAL_BAR + 1], Some(LimitEntry { offset_atr: 1.0, ttl_bars: 4 }));
+    let limit = run(&bars, &[SIGNAL_BAR, SIGNAL_BAR + 1], Some(LimitEntry { offset_atr: 1.0, ttl_bars: 4, carry_stop: false }));
     // Two orders placed, the first cancelled by the second, the second left to
     // expire. One order at a time is what `pending` has always been, and the
     // replacement is counted apart because it never got its full life.
-    assert_eq!(limit.fills, LimitFills { placed: 2, filled: 0, expired: 1, replaced: 1, no_atr: 0 });
+    assert_eq!(limit.fills, LimitFills { placed: 2, filled: 0, expired: 1, replaced: 1, no_atr: 0, no_room: 0 });
 }
 
 #[test]
@@ -238,7 +238,7 @@ fn the_matched_null_rests_its_orders_too() {
         &bars,
         &RandomEntry,
         &p,
-        &cycling(Some(LimitEntry { offset_atr: 1.0, ttl_bars: 4 })),
+        &cycling(Some(LimitEntry { offset_atr: 1.0, ttl_bars: 4, carry_stop: false })),
         None,
         Range::default(),
     );
@@ -248,4 +248,50 @@ fn the_matched_null_rests_its_orders_too() {
     assert_eq!(limit.trades.len(), limit.fills.filled, "every fill is a trade and every trade is a fill");
     let rate = limit.fills.rate().expect("orders were placed");
     assert!(rate > 0.0 && rate < 1.0, "the control's own fill rate is {rate}, which is the base rate to read a method's against");
+}
+
+#[test]
+fn an_order_beyond_its_own_stop_is_refused_and_not_filled_at_a_profit() {
+    // THE DEFECT THAT INVALIDATED THE FIRST RUN OF THIS FAMILY, pinned.
+    //
+    // `LongAt` stops 30.00 under the close. An order resting 20 ATR under it
+    // (ATR is 2.00, so 40.00) lands BELOW that stop. Fill it and the "stop"
+    // sits ABOVE a long entry: `(entry - stop).abs()` is still a positive risk
+    // unit, and `check_exit` books hitting the stop as an exit at a PROFIT.
+    // On `trend-pullback` that read 139 STOP exits and a profit factor of
+    // 1.512 where the market arm read 0.544 - every one of them free money.
+    let mut tail = vec![[3960.0, 3962.0, 3950.0, 3955.0]];
+    tail.extend(vec![[3955.0, 3956.0, 3954.0, 3955.0]; 4]);
+    let bars = flat_then(&tail);
+    let limit = run(&bars, &[SIGNAL_BAR], Some(LimitEntry { offset_atr: 20.0, ttl_bars: 4, carry_stop: false }));
+    assert!(limit.trades.is_empty(), "an order below its own stop is not an order a desk can place");
+    assert_eq!(limit.fills, LimitFills { placed: 0, filled: 0, expired: 0, replaced: 0, no_atr: 0, no_room: 1 });
+    assert_eq!(limit.wrong_side_stop, 0);
+}
+
+#[test]
+fn carrying_the_stop_preserves_the_risk_unit_and_anchoring_it_does_not() {
+    // The two arms of the amendment, side by side. The signal stops 30.00
+    // under its close; the order rests 1.0 ATR = 2.00 under it.
+    //
+    // ANCHORED leaves the stop at 3970.00, so the risk unit shrinks from 30.00
+    // to 27.80 - a tighter-stopped version of the mechanism, not a cheaper
+    // entry. CARRIED moves the stop to 3968.00, so the risk is the 30.00 the
+    // signal designed LESS the half spread the order was paid: 29.80. That
+    // residual IS the benefit, and it is the only thing carrying leaves.
+    let mut tail = vec![[4000.0, 4001.0, 3997.0, 3999.0]];
+    tail.extend(vec![[3999.0, 4000.0, 3998.0, 3999.0]; 6]);
+    let bars = flat_then(&tail);
+    let anchored = run(&bars, &[SIGNAL_BAR], Some(LimitEntry { offset_atr: 1.0, ttl_bars: 4, carry_stop: false }));
+    let carried = run(&bars, &[SIGNAL_BAR], Some(LimitEntry { offset_atr: 1.0, ttl_bars: 4, carry_stop: true }));
+    assert_eq!(anchored.trades.len(), 1);
+    assert_eq!(carried.trades.len(), 1);
+    // Same fill price in both arms: the order rests at the same level.
+    let entry = 3998.0 - HALF;
+    for r in [&anchored, &carried] {
+        assert!((r.trades[0].entry_price - entry).abs() < 1e-9, "entry {}", r.trades[0].entry_price);
+    }
+    // And a different risk unit, which is the whole point of the distinction.
+    assert!(((anchored.trades[0].entry_price - anchored.trades[0].stop) - (entry - 3970.0)).abs() < 1e-9, "anchored risk {}", anchored.trades[0].entry_price - anchored.trades[0].stop);
+    assert!(((carried.trades[0].entry_price - carried.trades[0].stop) - (30.0 - HALF)).abs() < 1e-9, "carried risk {}", carried.trades[0].entry_price - carried.trades[0].stop);
 }

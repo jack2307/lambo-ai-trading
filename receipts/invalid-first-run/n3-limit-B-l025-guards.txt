@@ -1,0 +1,107 @@
+market:   xauusd 15m
+data:     E:/rust/flowdesk/data (bars from E:/rust/flowdesk/data\bars\XAUUSD-15m.parquet)
+bounds:   --from=2025-04-01 --to=2025-07-01 kept 5862 of 100586 bars
+spread:   0.28 per round trip
+entry:    LIMIT resting 0.25 ATR on the pullback side of the signal close, working 4 bar(s), EARNING half the spread
+trail:    off
+max hold: 4 h (14400000 ms) from [trading] max_hold_ms, no per-market override
+bars:     5862 from 2025-04-01 00:00 to 2025-06-30 23:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+companion: none loaded — every cmp series is NaN
+guards: on — max_open_loss_r 2.0, notional 300%, weekend flat 16:40 NY, news flat 60/30 (impact≥3, USD), daily cap 20, loss limit $300, cooldown 30 min
+null sides: coin - 50/50, carries no drift; the null every published percentile was read against
+
+== hypotheses `E:/rust/fd-b3/config/n3-limit.toml`: 6 declared, FIXED parameters over the whole window (no selection), each against 200 matched null runs ==
+null sides: coin (50/50, carries no drift; the null every published percentile was read against)
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+entry: LIMIT resting 0.25 ATR on the pullback side of the signal close, working 4 bar(s).
+       It is PAID 0.140 in and pays 0.140 out = 0.000 per round trip, so the spread term is REVERSED, not reduced.
+       The `cost ... % of R` line on each row is spread/stop and reads the market round trip: on these rows it is the cost the method did NOT pay.
+       Queue priority is NOT modelled: price touching the level is a fill. That flatters these rows.
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+guards: on — max_open_loss_r 2.0, notional 300%, weekend flat 16:40 NY, news flat 60/30 (impact≥3, USD), daily cap 20, loss limit $300, cooldown 30 min
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+orb          orb                    38   0.394  -0.361    1.021    1.678        0    0%  fail: profit factor 0.394 < 1.2; expectancy -0.361R < 0.05R
+                                MoTuWeThFr  — an opening-range break is a signal that leads a move, so it is the hardest case for an order that only fills on a move back
+                                matched null 44 trades median vs the method's 38 — count match 1.16
+                                sum net R over the window: -13.707 across 38 trades
+                                resting entry: 50 orders placed, 38 FILLED, 12 expired unfilled, 0 replaced by a later signal - fill rate 76.0% of the orders that decided (76.0% of all placed) vs the null's median 80.7%
+                                long share: method 0.474 vs the null's median 0.505
+                                spread paid: method 0.58 USD vs the null's median 0.86 USD — cost match 1.48  ** outside the band: the control did not pay what the method paid **
+                                exposure: signed share of time method -0.068 vs the null's +0.013; time in market method 5955 min vs the null's median 7845 min — ratio 1.32  ** the control did not collect the drift the method did **
+                                cost-matched null: control stop 2.416 ATR = 16.91 points, cost 1.66% of R (realised median, structural)
+                                the method's own realised stop: median 2.416 ATR = 16.91 points over 38 trades
+                                guards: refused none; closed NEWS_FLAT 1; sized down 6
+                                exits: NEWS_FLAT 1, STOP 18, TARGET 1, TIMEOUT 18; mean hold 156.7 min
+pullback     trend-pullback        153   1.786   0.283   66.429  979.000        0    0%  gate pass, inside the noise
+                                MoTuWeThFr  — a pullback entry already waits for a move back, so it should be the kindest case for a resting order
+                                matched null 160 trades median vs the method's 153 — count match 1.05
+                                sum net R over the window: +43.360 across 153 trades
+                                resting entry: 195 orders placed, 153 FILLED, 42 expired unfilled, 0 replaced by a later signal - fill rate 78.5% of the orders that decided (78.5% of all placed) vs the null's median 80.5%
+                                long share: method 0.451 vs the null's median 0.506
+                                spread paid: method 3.86 USD vs the null's median 4.04 USD — cost match 1.05
+                                exposure: signed share of time method -0.313 vs the null's NaN; time in market method 1005 min vs the null's median 0 min — ratio 0.00  ** the control did not collect the drift the method did **
+                                cost-matched null: control stop 0.149 ATR = 0.84 points, cost 33.33% of R (realised median, structural)
+                                the method's own realised stop: median 0.149 ATR = 0.84 points over 153 trades
+                                guards: refused COOLDOWN 2, NEWS_FLAT 1, WEEKEND_FLAT 2; closed WEEKEND_FLAT 1; sized down 152
+                                exits: STOP 134, TARGET 18, WEEKEND_FLAT 1; mean hold 6.6 min
+vwap-fade    vwap-fade             224   0.787  -0.130    1.060    1.335        0    2%  fail: profit factor 0.787 < 1.2; expectancy -0.130R < 0.05R
+                                MoTuWeThFr  — a mean-reversion fade wants the worst available price, which is what a limit on the pullback side asks for
+                                matched null 227 trades median vs the method's 224 — count match 1.01
+                                sum net R over the window: -29.075 across 224 trades
+                                resting entry: 288 orders placed, 224 FILLED, 52 expired unfilled, 12 replaced by a later signal - fill rate 81.2% of the orders that decided (77.8% of all placed) vs the null's median 80.9%
+                                long share: method 0.540 vs the null's median 0.500
+                                spread paid: method 4.89 USD vs the null's median 5.52 USD — cost match 1.13
+                                exposure: signed share of time method +0.025 vs the null's -0.038; time in market method 11010 min vs the null's median 3675 min — ratio 0.33  ** the control did not collect the drift the method did **
+                                cost-matched null: control stop 0.727 ATR = 4.25 points, cost 6.59% of R (realised median, structural); the method DECLARES stopAtr 1.00 and does not use it
+                                the method's own realised stop: median 0.727 ATR = 4.25 points over 224 trades
+                                guards: refused COOLDOWN 3, NEWS_FLAT 3, WEEKEND_FLAT 2; closed NEWS_FLAT 2, WEEKEND_FLAT 2; sized down 223
+                                exits: NEWS_FLAT 2, STOP 168, TARGET 45, TIMEOUT 7, WEEKEND_FLAT 2; mean hold 49.1 min
+thrust       volume-thrust          12   0.698  -0.136    0.952    2.651        0   32%  fail: only 12 trades (need 30); profit factor 0.698 < 1.2; expectancy -0.136R < 0.05R
+                                MoTuWeThFr  — a volume thrust is a continuation signal — if any mechanism is punished by waiting, this is it
+                                matched null 15 trades median vs the method's 12 — count match 1.25
+                                sum net R over the window: -1.637 across 12 trades
+                                resting entry: 13 orders placed, 12 FILLED, 1 expired unfilled, 0 replaced by a later signal - fill rate 92.3% of the orders that decided (92.3% of all placed) vs the null's median 82.1%
+                                long share: method 0.417 vs the null's median 0.500
+                                spread paid: method 0.21 USD vs the null's median 0.29 USD — cost match 1.40  ** outside the band: the control did not pay what the method paid **
+                                exposure: signed share of time method -0.189 vs the null's -0.028; time in market method 2145 min vs the null's median 2685 min — ratio 1.25  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.952 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 2.498 ATR = 13.81 points, cost 2.03% of R (realised median, structural)
+                                the method's own realised stop: median 2.498 ATR = 13.81 points over 12 trades
+                                guards: refused none; closed none; sized down 3
+                                exits: STOP 4, TARGET 1, TIMEOUT 7; mean hold 178.8 min
+pdhl         pdhl                   46   1.201   0.000    1.152    1.709        0   57%  fail: expectancy 0.000R < 0.05R
+                                MoTuWeThFr  — a prior-day level gives an absolute price to rest an order against, so the offset has structural meaning here
+                                matched null 51 trades median vs the method's 46 — count match 1.11
+                                sum net R over the window: +0.014 across 46 trades
+                                resting entry: 52 orders placed, 46 FILLED, 6 expired unfilled, 0 replaced by a later signal - fill rate 88.5% of the orders that decided (88.5% of all placed) vs the null's median 80.4%
+                                long share: method 0.500 vs the null's median 0.500
+                                spread paid: method 1.09 USD vs the null's median 1.24 USD — cost match 1.14
+                                exposure: signed share of time method -0.129 vs the null's +0.000; time in market method 2550 min vs the null's median 240 min — ratio 0.09  ** the control did not collect the drift the method did **
+                                cost-matched null: control stop 0.580 ATR = 3.40 points, cost 8.22% of R (realised median, structural)
+                                the method's own realised stop: median 0.580 ATR = 3.40 points over 46 trades
+                                guards: refused NEWS_FLAT 1; closed none; sized down 44
+                                exits: STOP 31, TARGET 11, TIMEOUT 4; mean hold 55.4 min
+rsi-rev      rsi-reversal-vol        7   0.450  -0.323    1.016    3.125        0   21%  fail: only 7 trades (need 30); profit factor 0.450 < 1.2; expectancy -0.323R < 0.05R
+                                MoTuWeThFr  — a reversal with its own target, so a better entry shortens the distance to a target the strategy set itself
+                                matched null 9 trades median vs the method's 7 — count match 1.29  ** outside the band: this percentile is unmatched **
+                                sum net R over the window: -2.264 across 7 trades
+                                resting entry: 8 orders placed, 7 FILLED, 1 expired unfilled, 0 replaced by a later signal - fill rate 87.5% of the orders that decided (87.5% of all placed) vs the null's median 81.8%
+                                long share: method 0.571 vs the null's median 0.500
+                                spread paid: method 0.13 USD vs the null's median 0.19 USD — cost match 1.49  ** outside the band: the control did not pay what the method paid **
+                                exposure: signed share of time method -0.154 vs the null's -0.017; time in market method 390 min vs the null's median 1440 min — ratio 3.69  ** the control did not collect the drift the method did **
+                                cost-matched null: control stop 2.191 ATR = 14.16 points, cost 1.98% of R (realised median, structural)
+                                the method's own realised stop: median 2.191 ATR = 14.16 points over 7 trades
+                                guards: nothing acted
+                                exits: STOP 4, TARGET 3; mean hold 55.7 min
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+
