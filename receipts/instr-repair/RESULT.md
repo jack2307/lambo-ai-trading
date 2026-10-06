@@ -160,7 +160,27 @@ disk that touched 9.5 GB free during this job against an 8 GB floor. Full
 numbers are in the registration's amendments. **Nothing was run for it: 0 cells,
 and the 69-vs-70 measurement is `agent/news-tf`'s, not reproduced here.**
 
-## 4. Multiplicity ledger
+## 4. Tests, at `--release`, on the crates touched
+
+`cargo +stable-x86_64-pc-windows-gnu test --release -p fd-backtest -p fd-core`,
+per brief §1(b) — never `--workspace` and never at debug. All green, 0 failed:
+
+| target | tests | of which new |
+|---|---|---|
+| `fd-backtest` lib | **106 passed** | 4 (`engine::net_r_tests::*`) |
+| `search` bin | **4 passed** | 4 (`flag_tests::*`) |
+| parity / timeline-parity / the other suites | 3+5+5+5+4+10+3+4+4+7+2+3+3+2+6 passed | 0 |
+| `fd-core` | **38 passed** | 0 |
+
+**The golden parity gate passes unchanged**, which is the other half of F1: the
+new fields are additive and the oracle comparison is field-by-field, so no
+golden file moved.
+
+Disk: `df -h /e` **24 GB free at start, 24 GB free at finish**, 8 GB floor never
+breached — but it touched **9.5 GB** mid-job, from other worktrees rather than
+this one (this `target/` is 1.1 GB). Checked mid-way, as §1(c) asks.
+
+## 5. Multiplicity ledger
 
 | | declared | spent |
 |---|---|---|
@@ -168,7 +188,7 @@ and the 69-vs-70 measurement is `agent/news-tf`'s, not reproduced here.**
 | instrument-test rows | 1 row x 2 swap arms | 2 |
 | header/format probes, explicitly not readings | — | 3 (`C`, `D`, `E`) |
 
-## 5. What was NOT touched
+## 6. What was NOT touched
 
 `wrong_side_stop` (brief 4(vi)) — left exactly as it is, the owner's decision.
 `r`, `expectancy`, `total_r`, `profit_factor`, `usd_per_r`, the golden parity
@@ -176,7 +196,7 @@ files, `config/accounts.toml` outside this worktree, `config/local.toml`,
 `data-sealed/`, the two `collect.exe` processes,
 `/e/rust/flowdesk/target/release/`, and `main`.
 
-## 6. What was NOT measured, and why
+## 7. What was NOT measured, and why
 
 * **Whether `expectancy_net` changes any verdict in the record.** It cannot:
   every published receipt of this workspace ran at `swap = 0` and
