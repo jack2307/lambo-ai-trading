@@ -1,0 +1,68 @@
+market:   xauduka 15m
+data:     E:/rust/flowdesk/data (bars from E:/rust/flowdesk/data\bars\XAUDUKA-15m.parquet)
+bounds:   --from=2022-01-01 --to=2026-01-01 kept 93733 of 378749 bars
+spread:   0.28 per round trip
+trail:    off
+max hold: 24 h (86400000 ms) from [markets.<id>.trading] max_hold_ms = 86400000
+bars:     93733 from 2022-01-02 23:00 to 2025-12-31 21:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+companion: none loaded — every cmp series is NaN
+guards: off (every number unguarded)
+null sides: coin - 50/50, carries no drift; the null every published percentile was read against
+
+== hypotheses `receipts/newsgeom-rows.toml`: 4 declared, FIXED parameters over the whole window (no selection), each against 200 matched null runs ==
+null sides: coin (50/50, carries no drift; the null every published percentile was read against)
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+guards: off (every number unguarded)
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+np-brk-p4-m05 news-pulse            106   1.635   0.185    0.899    1.252        0  100%  SURVIVES
+                                entries ONLY +45 to +60 min from a high-impact release (USD)  — the first move after a scheduled release persists; probe 4 bar(s), gate 0.5 pre-release ATR. The filter admits exactly the bar this probe fires on, so the matched null draws from the same bar after the same release.
+                                matched null 123 trades median vs the method's 106 — count match 1.16
+                                long share: method 0.566 vs the null's median 0.492
+                                spread paid: method 170.88 USD vs the null's median 160.06 USD — cost match 0.94
+                                exposure: signed share of time method +0.128 vs the null's -0.016; time in market method 187950 min vs the null's median 222975 min — ratio 1.19  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.899 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 4.921 ATR = 22.65 points, cost 1.24% of R (realised median, structural)
+                                the method's own realised stop: median 4.921 ATR = 22.65 points over 106 trades
+                                exits: STOP 22, TARGET 16, TIMEOUT 68; mean hold 1773.1 min
+np-brk-p4-m15 news-pulse             95   1.606   0.165    0.923    1.281        0  100%  SURVIVES
+                                entries ONLY +45 to +60 min from a high-impact release (USD)  — the first move after a scheduled release persists; probe 4 bar(s), gate 1.5 pre-release ATR. The filter admits exactly the bar this probe fires on, so the matched null draws from the same bar after the same release.
+                                matched null 123 trades median vs the method's 95 — count match 1.29  ** outside the band: this percentile is unmatched **
+                                long share: method 0.589 vs the null's median 0.492
+                                spread paid: method 144.38 USD vs the null's median 156.90 USD — cost match 1.09
+                                exposure: signed share of time method +0.162 vs the null's +0.003; time in market method 178500 min vs the null's median 227130 min — ratio 1.27  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.923 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 5.046 ATR = 23.06 points, cost 1.21% of R (realised median, structural)
+                                the method's own realised stop: median 5.046 ATR = 23.06 points over 95 trades
+                                exits: STOP 17, TARGET 12, TIMEOUT 66; mean hold 1879.0 min
+np-rev-p4-m05 news-pulse            106   0.620  -0.152    0.900    1.253        0    4%  fail: profit factor 0.620 < 1.2; expectancy -0.152R < 0.05R
+                                entries ONLY +45 to +60 min from a high-impact release (USD)  — the first move after a scheduled release overshoots and gives it back; probe 4 bar(s), gate 0.5 pre-release ATR. The filter admits exactly the bar this probe fires on, so the matched null draws from the same bar after the same release.
+                                matched null 123 trades median vs the method's 106 — count match 1.16
+                                long share: method 0.434 vs the null's median 0.492
+                                spread paid: method 142.64 USD vs the null's median 160.96 USD — cost match 1.13
+                                exposure: signed share of time method -0.159 vs the null's -0.016; time in market method 178500 min vs the null's median 222968 min — ratio 1.25  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.900 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 4.895 ATR = 22.56 points, cost 1.24% of R (realised median, structural)
+                                the method's own realised stop: median 4.895 ATR = 22.56 points over 106 trades
+                                exits: STOP 31, TARGET 6, TIMEOUT 69; mean hold 1684.0 min
+np-rev-p4-m15 news-pulse             95   0.659  -0.124    0.923    1.281        0    6%  fail: profit factor 0.659 < 1.2; expectancy -0.124R < 0.05R
+                                entries ONLY +45 to +60 min from a high-impact release (USD)  — the first move after a scheduled release overshoots and gives it back; probe 4 bar(s), gate 1.5 pre-release ATR. The filter admits exactly the bar this probe fires on, so the matched null draws from the same bar after the same release.
+                                matched null 123 trades median vs the method's 95 — count match 1.29  ** outside the band: this percentile is unmatched **
+                                long share: method 0.411 vs the null's median 0.492
+                                spread paid: method 124.71 USD vs the null's median 157.15 USD — cost match 1.26  ** outside the band: the control did not pay what the method paid **
+                                exposure: signed share of time method -0.153 vs the null's +0.003; time in market method 169860 min vs the null's median 227115 min — ratio 1.34  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.923 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 5.039 ATR = 22.95 points, cost 1.22% of R (realised median, structural)
+                                the method's own realised stop: median 5.039 ATR = 22.95 points over 95 trades
+                                exits: STOP 23, TARGET 5, TIMEOUT 67; mean hold 1788.0 min
+
+Survivors: np-brk-p4-m05/news-pulse, np-brk-p4-m15/news-pulse — worth a decision record and a direction null before anything else.
+

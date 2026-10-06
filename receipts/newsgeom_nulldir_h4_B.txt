@@ -1,0 +1,28 @@
+market:   xauduka 15m
+data:     E:/rust/flowdesk/data (bars from E:/rust/flowdesk/data\bars\XAUDUKA-15m.parquet)
+bounds:   --from=2018-01-01 --to=2022-01-01 kept 94387 of 378749 bars
+spread:   0.28 per round trip
+trail:    off
+max hold: 4 h (14400000 ms) from [trading] max_hold_ms, no per-market override
+bars:     94387 from 2018-01-01 23:00 to 2021-12-31 21:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+companion: none loaded — every cmp series is NaN
+guards: off (every number unguarded)
+null sides: coin - 50/50, carries no drift; the null every published percentile was read against
+
+  filters: entries ONLY +45 to +60 min from a high-impact release (USD)
+== direction control: news-pulse, 90 trades, 4000 coin-flip assignments ==
+  preset: probeBars=4,mode=0,minMoveAtr=1.5,stopImpulse=1.0,minImpact=3,atrPeriod=14,maxLagMin=15
+  entries, stops and targets held fixed; only the side is randomised
+  profit factor of the same trades with random direction:
+    p05 0.574   p25 0.777   p50 0.946   p75 1.149   p95 1.526   max 2.220
+
+  actual: 1.734  ->  98th percentile  (p = 0.020)
+
+  Outside its own null. That is a finding worth taking further.
+

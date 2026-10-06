@@ -1,0 +1,40 @@
+# The ceiling scan — the FOUR probe-4 rows of `receipts/news-entry.toml`,
+# copied byte for byte from it (labels, base, filters, overrides, why).
+#
+# Why only four of the twelve: every probe-4 row left by the engine's 4-hour
+# cap in 80-97 of 90-118 trades, so these are the rows whose registered
+# invalidation was measured almost never. The probe-1 and probe-2 rows already
+# fire their own stops (STOP 37 / TARGET 12 / TIMEOUT 55 on np-brk-p1-m05) and
+# are not what this scan asks about; giving them four more ceilings would be
+# eight more chances for a row to pass, which is the multiple-testing tax this
+# desk exists to refuse.
+#
+# Registration: docs/decisions/2026-10-07-news-geom.md. Run with --fixed.
+
+[[hypothesis]]
+label = "np-brk-p4-m05"
+base = "news-pulse"
+filters = ["newsonly:45/60:3:USD"]
+overrides = { probeBars = 4, mode = 0, minMoveAtr = 0.5, stopImpulse = 1.0, minImpact = 3, atrPeriod = 14, maxLagMin = 15 }
+why = "the first move after a scheduled release persists; probe 4 bar(s), gate 0.5 pre-release ATR. The filter admits exactly the bar this probe fires on, so the matched null draws from the same bar after the same release."
+
+[[hypothesis]]
+label = "np-brk-p4-m15"
+base = "news-pulse"
+filters = ["newsonly:45/60:3:USD"]
+overrides = { probeBars = 4, mode = 0, minMoveAtr = 1.5, stopImpulse = 1.0, minImpact = 3, atrPeriod = 14, maxLagMin = 15 }
+why = "the first move after a scheduled release persists; probe 4 bar(s), gate 1.5 pre-release ATR. The filter admits exactly the bar this probe fires on, so the matched null draws from the same bar after the same release."
+
+[[hypothesis]]
+label = "np-rev-p4-m05"
+base = "news-pulse"
+filters = ["newsonly:45/60:3:USD"]
+overrides = { probeBars = 4, mode = 1, minMoveAtr = 0.5, stopImpulse = 1.0, minImpact = 3, atrPeriod = 14, maxLagMin = 15 }
+why = "the first move after a scheduled release overshoots and gives it back; probe 4 bar(s), gate 0.5 pre-release ATR. The filter admits exactly the bar this probe fires on, so the matched null draws from the same bar after the same release."
+
+[[hypothesis]]
+label = "np-rev-p4-m15"
+base = "news-pulse"
+filters = ["newsonly:45/60:3:USD"]
+overrides = { probeBars = 4, mode = 1, minMoveAtr = 1.5, stopImpulse = 1.0, minImpact = 3, atrPeriod = 14, maxLagMin = 15 }
+why = "the first move after a scheduled release overshoots and gives it back; probe 4 bar(s), gate 1.5 pre-release ATR. The filter admits exactly the bar this probe fires on, so the matched null draws from the same bar after the same release."
