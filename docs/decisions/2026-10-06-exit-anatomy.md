@@ -147,3 +147,25 @@ with the lookback fully warmed, the warm-up explanation is dead too and I
 report the zeros as unexplained.
 
 D1 adds 3 rows x 1 window x 1 arm = **3 row-readings** to the declared book.
+
+## Note 2026-10-06 (c) — D1 answered, and it forces D1-U, declared here before running
+
+D1 (`receipts/D1-tsmom-long-window.txt`, 2022-01-01 → 2025-07-01, arm G):
+the three `tsmom` rows return **163, 206 and 106 trades**, so the three zeros
+on the three-month window were a warm-up artefact of the bounds, not the hold
+ceiling. **D1's falsifier did not fire.** Mean hold 3,895 / 3,626 / 4,107
+minutes — 65 to 68 hours, against a 4-hour ceiling — which is the measured
+proof that a self-managed position bypasses `max_hold_ms` entirely.
+
+The binary printed `SURVIVES` on two of those rows. **They are not
+survivors**, for the reason declared in note (b) — a longer window chosen
+after seeing a zero — and now for a second reason the exit mix supplies:
+`tsmom/120d`'s 106 exits are 47 `NEWS_FLAT` + 58 `WEEKEND_FLAT` + 1
+`END_OF_DATA`, and its own rule (`120-day return flipped`) fired **zero
+times**. A row whose every exit was placed by the news window and the Friday
+cut-off is not a measurement of the rule.
+
+**D1-U, declared before running:** the same batch, same window, `--guards`
+off. One arm, 3 rows, **3 row-readings** added to the book. It can show what
+the rule's own exit does when nothing else is closing the position. It cannot
+produce a survivor either, for the same window reason.
