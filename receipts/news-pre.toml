@@ -1,0 +1,143 @@
+# Entering BEFORE a scheduled release — the 12 rows registered in
+# docs/decisions/2026-10-07-news-pre.md, written before the first run.
+#
+# Each row carries the `newsonly:` gate that admits its own signal bar, and
+# that is not decoration: the matched null in hypotheses.rs is the random-entry
+# control wrapped in THIS filter list, so the control draws its entries from
+# the same pre-release bar of the same releases. A percentile read against a
+# null free to enter any bar would measure "the half hour before a release is
+# more volatile", which is already known (1.33x the day's median at -30 min,
+# 1.78x at -15) and is not the claim.
+#
+# Why -30/-15 and not the job's literal -30/0 for branches 1 and 3:
+# `newsonly:-30/-15` admits ONLY the bar opening at -30, whose next-open fill
+# lands at -15 -- fifteen minutes of pre-release exposure, one entry per
+# release. `newsonly:-30/0` would also admit the bar at -15, whose fill lands
+# at offset +0, i.e. the release bar's open: that is n1's `probeBars = 1`
+# entry and not a pre-release entry at all. Branch 2 uses -30/0 on purpose,
+# because it needs both bars as chances for the break to fire, and its
+# position is closed at the release by the same exit rule.
+#
+# ROWS 9-12 ARE ROWS 1-4 WITH ONLY THE EXIT CHANGED. Same entry bar, same
+# side, same stop, same sizing; `holdThrough = 1` keeps the position open when
+# the release prints. That pairing is the whole point of the job: if the
+# control passes while branches 1 and 2 fail, the measured thing is exposure
+# to the event, not a mechanism for entering before it.
+#
+# `news-pre` declares no grid: nothing is chosen from the data and every row is
+# a separately declared rule. Run with --fixed.
+#
+# NOT HERE, and dropped before any run on counts measured off the store
+# (registration section 2d and 2c, brief section 6 -- no gate cell spent):
+#   * minMoveAtr = 1.5, every spelling: 6 to 31 trades against a 40 floor.
+#   * maxSqueeze at the p25 of its own distribution (0.55 / 0.35): squeeze AND
+#     break caps the book at 23 to 30 trades against a 40 floor.
+
+# ---------------------------------------------------------------------------
+# BRANCH 1 -- pre-news breakout: enter with the pre-release drift, flat at the
+# release. Max trades A'/B' counted on the store before declaring the row.
+# ---------------------------------------------------------------------------
+
+[[hypothesis]]
+label = "npre-brk-p2-m00"
+base = "news-pre"
+filters = ["newsonly:-30/-15:3:USD"]
+overrides = { preBars = 2, mode = 0, minMoveAtr = 0.0, stopImpulse = 1.0, holdThrough = 0, minImpact = 3, atrPeriod = 14 }
+why = "positioning before a scheduled release is directional, so the drift of the last 30 min continues for the last 15; no size gate, the maximum-sample form (A' 123 / B' 129). Flat at the release, so the 5.96x bar is not taken."
+
+[[hypothesis]]
+label = "npre-brk-p2-m05"
+base = "news-pre"
+filters = ["newsonly:-30/-15:3:USD"]
+overrides = { preBars = 2, mode = 0, minMoveAtr = 0.5, stopImpulse = 1.0, holdThrough = 0, minImpact = 3, atrPeriod = 14 }
+why = "the same, gated on the drift being worth at least 0.5 of the pre-span ATR(14) (A' 64 / B' 74). The median pre-release drift is only 0.59 ATR, so this gate keeps about half."
+
+[[hypothesis]]
+label = "npre-brk-p4-m00"
+base = "news-pre"
+filters = ["newsonly:-30/-15:3:USD"]
+overrides = { preBars = 4, mode = 0, minMoveAtr = 0.0, stopImpulse = 1.0, holdThrough = 0, minImpact = 3, atrPeriod = 14 }
+why = "the same claim read over the last hour instead of the last half hour; no size gate (A' 123 / B' 129)."
+
+[[hypothesis]]
+label = "npre-brk-p4-m05"
+base = "news-pre"
+filters = ["newsonly:-30/-15:3:USD"]
+overrides = { preBars = 4, mode = 0, minMoveAtr = 0.5, stopImpulse = 1.0, holdThrough = 0, minImpact = 3, atrPeriod = 14 }
+why = "the hour-long drift, gated at 0.5 of the pre-span ATR(14) (A' 68 / B' 87). Median drift over four bars is 0.74 ATR."
+
+# ---------------------------------------------------------------------------
+# BRANCH 1b -- runway: enter 30 minutes before the print instead of 15, to
+# separate "the drift continues" from "the last bar before a print is special".
+# ---------------------------------------------------------------------------
+
+[[hypothesis]]
+label = "npre-brk-e45-p4-m00"
+base = "news-pre"
+filters = ["newsonly:-45/-30:3:USD"]
+overrides = { preBars = 4, mode = 0, minMoveAtr = 0.0, stopImpulse = 1.0, holdThrough = 0, minImpact = 3, atrPeriod = 14 }
+why = "the same rule entering at -30 rather than -15, so the position has 30 minutes of pre-release runway; no size gate (A' 123 / B' 129)."
+
+[[hypothesis]]
+label = "npre-brk-e45-p4-m05"
+base = "news-pre"
+filters = ["newsonly:-45/-30:3:USD"]
+overrides = { preBars = 4, mode = 0, minMoveAtr = 0.5, stopImpulse = 1.0, holdThrough = 0, minImpact = 3, atrPeriod = 14 }
+why = "the 30-minute runway, gated at 0.5 of the pre-span ATR(14) (A' 70 / B' 72)."
+
+# ---------------------------------------------------------------------------
+# BRANCH 2 -- compression break. maxSqueeze is the p50 of its OWN measured
+# distribution, which selects the quieter HALF of a window whose median is
+# already 1.56x the same-day median span. It is therefore not a volatility
+# contraction and a pass may not be described as one. The strict p25
+# thresholds reach only 23 to 30 trades and were dropped before any run.
+# ---------------------------------------------------------------------------
+
+[[hypothesis]]
+label = "npre-sqz-q2-s069"
+base = "news-pre"
+filters = ["newsonly:-30/0:3:USD"]
+overrides = { quietBars = 2, mode = 1, maxSqueeze = 0.69, stopImpulse = 1.0, holdThrough = 0, minImpact = 3, atrPeriod = 14 }
+why = "price leaving the quieter half of a 2-bar pre-release band carries the direction of the positioning that broke it; both bars of -30..0 get a chance to break (A' 55 / B' 52). Flat at the release."
+
+[[hypothesis]]
+label = "npre-sqz-q4-s046"
+base = "news-pre"
+filters = ["newsonly:-30/0:3:USD"]
+overrides = { quietBars = 4, mode = 1, maxSqueeze = 0.46, stopImpulse = 1.0, holdThrough = 0, minImpact = 3, atrPeriod = 14 }
+why = "the same over a 4-bar band, whose p50 ratio is 0.46 (A' 52 / B' 45). The band's own height is the stop, so this is the tightest stop in the job and will print the largest cost as a fraction of R."
+
+# ---------------------------------------------------------------------------
+# BRANCH 3 -- THE CONTROL. Rows 1-4 with holdThrough = 1 and nothing else
+# changed: same entry bar, same side, same stop, same sizing, position open
+# when the release prints. The engine's stop, 1.8R target and 4-hour cap
+# govern the exit.
+# ---------------------------------------------------------------------------
+
+[[hypothesis]]
+label = "npre-hold-p2-m00"
+base = "news-pre"
+filters = ["newsonly:-30/-15:3:USD"]
+overrides = { preBars = 2, mode = 0, minMoveAtr = 0.0, stopImpulse = 1.0, holdThrough = 1, minImpact = 3, atrPeriod = 14 }
+why = "npre-brk-p2-m00 held THROUGH the release on purpose. Pairs with it to separate exposure to the 5.96x bar from the entry rule."
+
+[[hypothesis]]
+label = "npre-hold-p2-m05"
+base = "news-pre"
+filters = ["newsonly:-30/-15:3:USD"]
+overrides = { preBars = 2, mode = 0, minMoveAtr = 0.5, stopImpulse = 1.0, holdThrough = 1, minImpact = 3, atrPeriod = 14 }
+why = "npre-brk-p2-m05 held THROUGH the release on purpose."
+
+[[hypothesis]]
+label = "npre-hold-p4-m00"
+base = "news-pre"
+filters = ["newsonly:-30/-15:3:USD"]
+overrides = { preBars = 4, mode = 0, minMoveAtr = 0.0, stopImpulse = 1.0, holdThrough = 1, minImpact = 3, atrPeriod = 14 }
+why = "npre-brk-p4-m00 held THROUGH the release on purpose."
+
+[[hypothesis]]
+label = "npre-hold-p4-m05"
+base = "news-pre"
+filters = ["newsonly:-30/-15:3:USD"]
+overrides = { preBars = 4, mode = 0, minMoveAtr = 0.5, stopImpulse = 1.0, holdThrough = 1, minImpact = 3, atrPeriod = 14 }
+why = "npre-brk-p4-m05 held THROUGH the release on purpose."

@@ -64,6 +64,7 @@ pub fn register_all(registry: &mut Registry) {
     // knows how to black a window out; registered in
     // docs/decisions/2026-10-06-news-entry.md before this line existed.
     // Twelve declared rows, no grid.
+    registry.register(Box::new(crate::news_pre::NewsPre));
     registry.register(Box::new(crate::news_pulse::NewsPulse));
     registry.register(Box::new(crate::external::External));
     registry.register(Box::new(crate::session_hold::SessionHold));

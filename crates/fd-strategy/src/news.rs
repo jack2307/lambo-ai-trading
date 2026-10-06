@@ -190,6 +190,35 @@ pub fn last_event_in(events: &[NewsEvent], t_ms: i64, min_impact: u8, currencies
         .map(|e| e.time)
 }
 
+/// The time of the oldest installed event at or after `t_ms` that passes
+/// `min_impact` and the market's currency scope; `None` when there is none
+/// (including when no calendar is installed).
+///
+/// The mirror of [`last_event_at_or_before`], and what a strategy that has to
+/// be **flat by** a release needs: a position opened before a print can only
+/// know when to leave if it can ask which release is coming next. Asking "am
+/// I inside a window?" cannot answer that, because the answer is the same on
+/// every bar of the window while the deadline moves one bar closer.
+///
+/// `None` when nothing is installed, like every other reader here. A caller
+/// that must flatten before a release therefore flattens **never** rather
+/// than always when the calendar is missing — the same fail-closed direction
+/// [`in_news_window`] takes, so a run with no calendar cannot invent exits.
+#[must_use]
+pub fn next_event_at_or_after(t_ms: i64, min_impact: u8, currencies: Option<&[String]>) -> Option<i64> {
+    next_event_in(events(), t_ms, min_impact, currencies)
+}
+
+/// [`next_event_at_or_after`] over an explicit, time-sorted list.
+#[must_use]
+pub fn next_event_in(events: &[NewsEvent], t_ms: i64, min_impact: u8, currencies: Option<&[String]>) -> Option<i64> {
+    let start = events.partition_point(|e| e.time < t_ms);
+    events[start..]
+        .iter()
+        .find(|e| e.impact >= min_impact && e.concerns(currencies))
+        .map(|e| e.time)
+}
+
 /// The one-line receipt a binary prints after trying to load the calendar:
 /// `news: N events (YYYY-MM-DD → YYYY-MM-DD) from <source>` or, when nothing
 /// is installed, `news: none loaded — news: filters are no-ops`.
@@ -445,6 +474,37 @@ mod tests {
         assert_eq!(at(3500 * MIN, 3, None), Some(3000 * MIN));
         // And no calendar is no event, rather than a panic or a zero.
         assert_eq!(last_event_in(&[], 3500 * MIN, 3, None), None);
+    }
+
+    #[test]
+    fn the_oldest_qualifying_event_at_or_after_a_time_is_found() {
+        let events = vec![ev_ccy(1000 * MIN, 3, "USD"), ev_ccy(2000 * MIN, 2, "USD"), ev_ccy(3000 * MIN, 3, "CAD")];
+        let usd = list(&["USD"]);
+        let at = |t: i64, imp: u8, ccy: Option<&[String]>| next_event_in(&events, t, imp, ccy);
+        // The release instant itself counts: `at or after`.
+        assert_eq!(at(1000 * MIN, 3, None), Some(1000 * MIN));
+        assert_eq!(at(1000 * MIN + 1, 3, None), Some(3000 * MIN), "past it, so the next high one");
+        // Forward scan skips events the scope rejects.
+        assert_eq!(at(1500 * MIN, 3, None), Some(3000 * MIN), "the medium one is not high-impact");
+        assert_eq!(at(1500 * MIN, 2, None), Some(2000 * MIN));
+        assert_eq!(at(1500 * MIN, 3, Some(&usd)), None, "the CAD one is out of scope and nothing follows");
+        assert_eq!(at(3000 * MIN + 1, 3, None), None, "nothing after the last one");
+        // And no calendar is no event, rather than a panic or a zero: a rule
+        // that flattens before a release must then flatten never, not always.
+        assert_eq!(next_event_in(&[], 1500 * MIN, 3, None), None);
+    }
+
+    #[test]
+    fn the_two_directions_bracket_the_same_instant() {
+        // `last_event_at_or_before` and `next_event_at_or_after` both include
+        // the instant, so on a release bar they agree -- which is what makes
+        // "the release is in the next bar" testable without an off-by-one.
+        let events = vec![ev(1000 * MIN, 3), ev(2000 * MIN, 3)];
+        assert_eq!(last_event_in(&events, 1000 * MIN, 3, None), Some(1000 * MIN));
+        assert_eq!(next_event_in(&events, 1000 * MIN, 3, None), Some(1000 * MIN));
+        // Strictly between them, each points its own way.
+        assert_eq!(last_event_in(&events, 1500 * MIN, 3, None), Some(1000 * MIN));
+        assert_eq!(next_event_in(&events, 1500 * MIN, 3, None), Some(2000 * MIN));
     }
 
     #[test]
