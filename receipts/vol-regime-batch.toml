@@ -1,0 +1,218 @@
+# Khai truoc trong docs/decisions/2026-10-06-vol-regime.md (commit f4eb7fd).
+# 9 co che x (3 dai + 1 arm gop) = 36 hang; chay tren ca hai cua so = 72 o.
+
+[[hypothesis]]
+label = "gop/m1"
+base = "ema-cross"
+filters = ["weekdays", "flat:1630-1815"]
+why = "xu huong, khong cua gio - arm gop: moc so sanh, khong dieu kien hoa theo bien dong"
+
+[[hypothesis]]
+label = "co/m1"
+base = "ema-cross"
+filters = ["weekdays", "flat:1630-1815", "vol:14/100:0.0-0.8999"]
+why = "xu huong, khong cua gio - dai co: ATR14/ATR100 duoi 0,9"
+
+[[hypothesis]]
+label = "th/m1"
+base = "ema-cross"
+filters = ["weekdays", "flat:1630-1815", "vol:14/100:0.9-1.1999"]
+why = "xu huong, khong cua gio - dai binh thuong: ATR14/ATR100 trong 0,9-1,2"
+
+[[hypothesis]]
+label = "gian/m1"
+base = "ema-cross"
+filters = ["weekdays", "flat:1630-1815", "vol:14/100:1.2-99.0"]
+why = "xu huong, khong cua gio - dai gian: ATR14/ATR100 tren 1,2"
+
+[[hypothesis]]
+label = "gop/m2"
+base = "rsi-reversion"
+filters = ["weekdays", "flat:1630-1815"]
+why = "dao chieu, khong cua gio - arm gop: moc so sanh, khong dieu kien hoa theo bien dong"
+
+[[hypothesis]]
+label = "co/m2"
+base = "rsi-reversion"
+filters = ["weekdays", "flat:1630-1815", "vol:14/100:0.0-0.8999"]
+why = "dao chieu, khong cua gio - dai co: ATR14/ATR100 duoi 0,9"
+
+[[hypothesis]]
+label = "th/m2"
+base = "rsi-reversion"
+filters = ["weekdays", "flat:1630-1815", "vol:14/100:0.9-1.1999"]
+why = "dao chieu, khong cua gio - dai binh thuong: ATR14/ATR100 trong 0,9-1,2"
+
+[[hypothesis]]
+label = "gian/m2"
+base = "rsi-reversion"
+filters = ["weekdays", "flat:1630-1815", "vol:14/100:1.2-99.0"]
+why = "dao chieu, khong cua gio - dai gian: ATR14/ATR100 tren 1,2"
+
+[[hypothesis]]
+label = "gop/m3"
+base = "donchian-breakout"
+filters = ["weekdays", "flat:1630-1815"]
+why = "pha vo, khong cua gio - arm gop: moc so sanh, khong dieu kien hoa theo bien dong"
+
+[[hypothesis]]
+label = "co/m3"
+base = "donchian-breakout"
+filters = ["weekdays", "flat:1630-1815", "vol:14/100:0.0-0.8999"]
+why = "pha vo, khong cua gio - dai co: ATR14/ATR100 duoi 0,9"
+
+[[hypothesis]]
+label = "th/m3"
+base = "donchian-breakout"
+filters = ["weekdays", "flat:1630-1815", "vol:14/100:0.9-1.1999"]
+why = "pha vo, khong cua gio - dai binh thuong: ATR14/ATR100 trong 0,9-1,2"
+
+[[hypothesis]]
+label = "gian/m3"
+base = "donchian-breakout"
+filters = ["weekdays", "flat:1630-1815", "vol:14/100:1.2-99.0"]
+why = "pha vo, khong cua gio - dai gian: ATR14/ATR100 tren 1,2"
+
+[[hypothesis]]
+label = "gop/m4"
+base = "bb-fade"
+filters = ["weekdays", "flat:1630-1815"]
+why = "fade dai, khong cua gio - arm gop: moc so sanh, khong dieu kien hoa theo bien dong"
+
+[[hypothesis]]
+label = "co/m4"
+base = "bb-fade"
+filters = ["weekdays", "flat:1630-1815", "vol:14/100:0.0-0.8999"]
+why = "fade dai, khong cua gio - dai co: ATR14/ATR100 duoi 0,9"
+
+[[hypothesis]]
+label = "th/m4"
+base = "bb-fade"
+filters = ["weekdays", "flat:1630-1815", "vol:14/100:0.9-1.1999"]
+why = "fade dai, khong cua gio - dai binh thuong: ATR14/ATR100 trong 0,9-1,2"
+
+[[hypothesis]]
+label = "gian/m4"
+base = "bb-fade"
+filters = ["weekdays", "flat:1630-1815", "vol:14/100:1.2-99.0"]
+why = "fade dai, khong cua gio - dai gian: ATR14/ATR100 tren 1,2"
+
+[[hypothesis]]
+label = "gop/m5"
+base = "ema-cross"
+filters = ["weekdays", "flat:1630-1815", "hours:0800-1200"]
+why = "xu huong trong phien NY sang - arm gop: moc so sanh, khong dieu kien hoa theo bien dong"
+
+[[hypothesis]]
+label = "co/m5"
+base = "ema-cross"
+filters = ["weekdays", "flat:1630-1815", "hours:0800-1200", "vol:14/100:0.0-0.8999"]
+why = "xu huong trong phien NY sang - dai co: ATR14/ATR100 duoi 0,9"
+
+[[hypothesis]]
+label = "th/m5"
+base = "ema-cross"
+filters = ["weekdays", "flat:1630-1815", "hours:0800-1200", "vol:14/100:0.9-1.1999"]
+why = "xu huong trong phien NY sang - dai binh thuong: ATR14/ATR100 trong 0,9-1,2"
+
+[[hypothesis]]
+label = "gian/m5"
+base = "ema-cross"
+filters = ["weekdays", "flat:1630-1815", "hours:0800-1200", "vol:14/100:1.2-99.0"]
+why = "xu huong trong phien NY sang - dai gian: ATR14/ATR100 tren 1,2"
+
+[[hypothesis]]
+label = "gop/m6"
+base = "donchian-breakout"
+filters = ["weekdays", "flat:1630-1815", "hours:0800-1200"]
+why = "pha vo trong phien NY sang - arm gop: moc so sanh, khong dieu kien hoa theo bien dong"
+
+[[hypothesis]]
+label = "co/m6"
+base = "donchian-breakout"
+filters = ["weekdays", "flat:1630-1815", "hours:0800-1200", "vol:14/100:0.0-0.8999"]
+why = "pha vo trong phien NY sang - dai co: ATR14/ATR100 duoi 0,9"
+
+[[hypothesis]]
+label = "th/m6"
+base = "donchian-breakout"
+filters = ["weekdays", "flat:1630-1815", "hours:0800-1200", "vol:14/100:0.9-1.1999"]
+why = "pha vo trong phien NY sang - dai binh thuong: ATR14/ATR100 trong 0,9-1,2"
+
+[[hypothesis]]
+label = "gian/m6"
+base = "donchian-breakout"
+filters = ["weekdays", "flat:1630-1815", "hours:0800-1200", "vol:14/100:1.2-99.0"]
+why = "pha vo trong phien NY sang - dai gian: ATR14/ATR100 tren 1,2"
+
+[[hypothesis]]
+label = "gop/m7"
+base = "donchian-breakout"
+filters = ["weekdays", "flat:1630-1815", "hours:0200-0600"]
+why = "pha vo o cua London - arm gop: moc so sanh, khong dieu kien hoa theo bien dong"
+
+[[hypothesis]]
+label = "co/m7"
+base = "donchian-breakout"
+filters = ["weekdays", "flat:1630-1815", "hours:0200-0600", "vol:14/100:0.0-0.8999"]
+why = "pha vo o cua London - dai co: ATR14/ATR100 duoi 0,9"
+
+[[hypothesis]]
+label = "th/m7"
+base = "donchian-breakout"
+filters = ["weekdays", "flat:1630-1815", "hours:0200-0600", "vol:14/100:0.9-1.1999"]
+why = "pha vo o cua London - dai binh thuong: ATR14/ATR100 trong 0,9-1,2"
+
+[[hypothesis]]
+label = "gian/m7"
+base = "donchian-breakout"
+filters = ["weekdays", "flat:1630-1815", "hours:0200-0600", "vol:14/100:1.2-99.0"]
+why = "pha vo o cua London - dai gian: ATR14/ATR100 tren 1,2"
+
+[[hypothesis]]
+label = "gop/m8"
+base = "rsi-reversion"
+filters = ["weekdays", "flat:1630-1815", "hours:1900-0200"]
+why = "dao chieu trong gio Asia thin - arm gop: moc so sanh, khong dieu kien hoa theo bien dong"
+
+[[hypothesis]]
+label = "co/m8"
+base = "rsi-reversion"
+filters = ["weekdays", "flat:1630-1815", "hours:1900-0200", "vol:14/100:0.0-0.8999"]
+why = "dao chieu trong gio Asia thin - dai co: ATR14/ATR100 duoi 0,9"
+
+[[hypothesis]]
+label = "th/m8"
+base = "rsi-reversion"
+filters = ["weekdays", "flat:1630-1815", "hours:1900-0200", "vol:14/100:0.9-1.1999"]
+why = "dao chieu trong gio Asia thin - dai binh thuong: ATR14/ATR100 trong 0,9-1,2"
+
+[[hypothesis]]
+label = "gian/m8"
+base = "rsi-reversion"
+filters = ["weekdays", "flat:1630-1815", "hours:1900-0200", "vol:14/100:1.2-99.0"]
+why = "dao chieu trong gio Asia thin - dai gian: ATR14/ATR100 tren 1,2"
+
+[[hypothesis]]
+label = "gop/m9"
+base = "bb-fade"
+filters = ["weekdays", "flat:1630-1815", "hours:1900-0200"]
+why = "fade dai trong gio Asia thin - arm gop: moc so sanh, khong dieu kien hoa theo bien dong"
+
+[[hypothesis]]
+label = "co/m9"
+base = "bb-fade"
+filters = ["weekdays", "flat:1630-1815", "hours:1900-0200", "vol:14/100:0.0-0.8999"]
+why = "fade dai trong gio Asia thin - dai co: ATR14/ATR100 duoi 0,9"
+
+[[hypothesis]]
+label = "th/m9"
+base = "bb-fade"
+filters = ["weekdays", "flat:1630-1815", "hours:1900-0200", "vol:14/100:0.9-1.1999"]
+why = "fade dai trong gio Asia thin - dai binh thuong: ATR14/ATR100 trong 0,9-1,2"
+
+[[hypothesis]]
+label = "gian/m9"
+base = "bb-fade"
+filters = ["weekdays", "flat:1630-1815", "hours:1900-0200", "vol:14/100:1.2-99.0"]
+why = "fade dai trong gio Asia thin - dai gian: ATR14/ATR100 tren 1,2"

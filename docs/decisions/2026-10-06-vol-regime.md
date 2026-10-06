@@ -115,3 +115,21 @@ falsifier (1) bắn vì "không đo được" chứ không vì "đo được và
 - Không nâng ngưỡng cổng, không nới cỡ mẫu tối thiểu, không dịch biên dải sau
   khi thấy kết quả. Nếu buộc phải thêm dải thì ô cũ vẫn tính là một "look" và
   phải ghi thêm ghi chú có ngày vào cuối file này, không viết lại dòng cũ.
+
+---
+
+## Ghi chú thêm — 06/10/2026, SAU khi chạy (không viết lại dòng nào ở trên)
+
+1. **Sổ đa phép thử đã chốt**: khai 72 ô, đã xem **đúng 72 ô** (36 hàng × 2 lần
+   gọi `search.exe`). Lệch 0. Không hàng nào thêm, không biên dải nào dịch.
+2. **Arm điều kiện `volabs:14` KHÔNG chạy**: điều kiện khai trước là "một dải
+   `vol:14/100` qua cổng ở cả hai cửa sổ với >= 40 lệnh". Điều kiện không thoả
+   (0 của 54 ô dải), nên arm này là **không đo**, không phải 0.
+3. **Một điều khai ở trên hoá ra SAI, và tôi để nguyên dòng cũ**: tôi khai
+   "tổng số lệnh ba dải <= số lệnh arm gộp". Đo được là tổng ba dải có thể
+   **vượt** arm gộp, tới **+36 lệnh** (`m3` cửa sổ B: 280 gộp vs 316 ba dải).
+   Nguyên nhân: engine giữ một vị thế (`crates/fd-backtest/src/engine.rs:490`),
+   nên chặn một lệnh vào làm sổ rỗng và một tín hiệu muộn hơn được vào. Ba dải
+   không phải một phân hoạch của tập lệnh pooled.
+4. **Falsifier đã bắn ở cả hai nhánh.** Kết quả đầy đủ:
+   `docs/research/runs/2026-10-06-vol-regime.md`.
