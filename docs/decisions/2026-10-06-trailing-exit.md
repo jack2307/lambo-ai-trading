@@ -104,3 +104,30 @@ chọn riêng từng cửa sổ.
   (`self_managed`). Cơ chế nào tự quản thoát thì trail không tác động — nếu
   ba cơ chế được chọn thuộc loại đó, falsifier 3 bắn và trục chết vì không
   đo được, không vì đo ra số xấu.
+
+---
+
+## Ghi chú thêm 2026-10-06 (sau khi chạy lưới, KHÔNG viết lại dòng nào ở trên)
+
+Lưới đã chạy xong và falsifier 1 + 2 đã bắn (chi tiết ở
+`receipts/m4-trail-grid.md`). Trong lúc đọc lưới, một điều ngoài dự đoán lộ
+ra và cần một phép đo phụ để đọc cho đúng:
+
+Cột `activate_r = 2,0R` cho kết quả **y nguyên** `--trail=off` ở
+`compression/bb-fade` và `intraday/donchian-breakout` trên cả hai cửa sổ,
+nhưng ở `intraday/bb-fade` cửa sổ A thì `d=0,5/a=2,0` y nguyên off (396 lệnh)
+còn `d=1,0/a=2,0` lại khác (413 lệnh). Nếu trail chỉ đổi cách THOÁT thì không
+thể như vậy: distance rộng hơn phải ít ràng buộc hơn, không phải nhiều hơn.
+
+Lời giải thích nghi là: `--mode=hypotheses` **chọn tham số theo từng fold**
+(walk-forward, 4 fold) chứ không giữ tham số cố định, nên trail đổi cả kết
+quả in-sample ⇒ đổi cả ô tham số mà fold chọn ⇒ đổi hẳn tập lệnh
+out-of-sample. Phần đổi đó KHÔNG phải tác động của luật thoát.
+
+Phép đo phụ, khai trước khi chạy: `--fixed` (tham số cố định cả cửa sổ, không
+chọn gì) với `--trail=off` và với `--trail=0.5,0.33` (ô trail gặm mạnh nhất),
+trên cả hai cửa sổ. **4 run × 3 row = 12 row thêm.**
+
+Sổ đa phép thử cập nhật: khai 86 + 12 = **98 ô**. Phép đo phụ này là một
+phép CHẨN ĐOÁN, không phải một lần chọn: nó không thể cứu được ô nào, vì
+falsifier 1 và 2 đã bắn trên lưới đã khai trước.
