@@ -1,0 +1,16 @@
+signal bar TR/ATR terciles over 22279 entries: 33.3% = 0.712, 66.7% = 1.067, max = 6.76
+
+========================================================================================================
+DISAGREEMENT RATE BY THE SIGNAL BAR'S RANGE  (4 h cap, both sides, rr 1.0/1.5/1.8 pooled, % of all trades in the tercile)
+========================================================================================================
+  stop         quiet        middle     expansion   floor claim
+ 0.300         2.96%         4.71%         7.92%   expansion vs quiet: +4.96 pts -> HOLDS
+ 0.378         1.75%         2.90%         5.36%   expansion vs quiet: +3.61 pts -> HOLDS
+ 0.450         1.05%         1.82%         3.60%   expansion vs quiet: +2.55 pts -> HOLDS
+ 0.500         0.80%         1.31%         2.67%   expansion vs quiet: +1.87 pts -> HOLDS
+ 0.600         0.54%         0.79%         1.56%   expansion vs quiet: +1.03 pts -> HOLDS
+ 0.714         0.35%         0.45%         0.93%   expansion vs quiet: +0.58 pts -> HOLDS
+ 1.000         0.17%         0.22%         0.36%   expansion vs quiet: +0.19 pts -> HOLDS
+ 1.500         0.12%         0.11%         0.20%   expansion vs quiet: +0.08 pts -> HOLDS
+
+The claim under test: a mechanism that enters on expansion bars sits ABOVE the pooled table, so the pooled table is a floor for it.

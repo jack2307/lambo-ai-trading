@@ -1,0 +1,289 @@
+rows parsed: 6906;  rows carrying a realised stop: 5424
+distinct published rows (file+label+trades+stop+market+tf): 3781
+
+========================================================================================================
+THE PUBLISHED RECORD, BINNED BY THE STOP IT ACTUALLY RAN AT
+========================================================================================================
+NOT EVIDENCE  (>5% of verdicts are resolution artifacts)      31 rows  (29 with >= 40 trades)
+caveat        (1-5%)                                          82 rows  (67 with >= 40 trades)
+readable      (<=1%)                                        3668 rows  (2698 with >= 40 trades)
+--------------------------------------------------------------------------------------------------------
+TOTAL                                                       3781 rows;  113 (3.0%) sit below the 0.600 ATR threshold
+
+========================================================================================================
+EVERY ROW BELOW 0.600 ATR, BY NAME  (stop | ATR | pts | trades | PF | expect | pct | market tf | label / base)
+========================================================================================================
+ 0.149    0.84pt    153 PF  1.786 exp   0.283 pct    0%   xauusd  15m  pullback / trend-pullback  [branch-receipts:n3-limit-B-l025-guards.txt]
+ 0.149    0.84pt    158 PF  1.325 exp   0.269 pct    2%   xauusd  15m  pullback / trend-pullback  [branch-receipts:n3-limit-B-l025-noguards.txt]
+ 0.151    0.56pt    178 PF  1.006 exp  -0.204 pct    0%   xauusd  15m  pullback / trend-pullback  [branch-receipts:n3-limit-A-l025-guards.txt]
+ 0.154    0.56pt    183 PF  0.737 exp  -0.222 pct    0%   xauusd  15m  pullback / trend-pullback  [branch-receipts:n3-limit-A-l025-noguards.txt]
+ 0.231    0.78pt     35 PF  0.509 exp  -0.529 pct    0%   xauusd  15m  pdhl / pdhl  [branch-receipts:n3-limit-A-l050-guards.txt]
+ 0.234    1.39pt    119 PF  1.170 exp   0.510 pct    8%   xauusd  15m  pullback / trend-pullback  [branch-receipts:n3-limit-B-c050-guards.txt]
+ 0.239    1.38pt    123 PF  1.505 exp   0.457 pct   46%   xauusd  15m  pullback / trend-pullback  [branch-receipts:n3-limit-B-c050-noguards.txt]
+ 0.249    0.88pt     37 PF  0.544 exp  -0.473 pct    0%   xauusd  15m  pdhl / pdhl  [branch-receipts:n3-limit-A-l050-noguards.txt]
+ 0.252    1.57pt    159 PF  0.974 exp   0.013 pct   44%   xauusd  15m  pullback / trend-pullback  [branch-receipts:n3-limit-B-c025-noguards.txt]
+ 0.258    1.57pt    193 PF  0.666 exp  -0.274 pct   40%   xauusd  15m  pullback / trend-pullback  [branch-receipts:n3-limit-B-a000-noguards.txt]
+ 0.258    1.57pt    193 PF  0.666 exp  -0.274 pct   40%   xauusd  15m  pullback / trend-pullback  [branch-receipts:n3-limit-B-l000-noguards.txt]
+ 0.259    1.60pt    191 PF  0.889 exp  -0.324 pct   94%   xauusd  15m  pullback / trend-pullback  [branch-receipts:n3-limit-B-a000-guards.txt]
+ 0.259    1.60pt    191 PF  0.889 exp  -0.324 pct   94%   xauusd  15m  pullback / trend-pullback  [branch-receipts:n3-limit-B-l000-guards.txt]
+ 0.260    1.58pt    154 PF  0.927 exp  -0.008 pct   25%   xauusd  15m  pullback / trend-pullback  [branch-receipts:n3-limit-B-c025-guards.txt]
+ 0.264    1.51pt     55 PF  0.630 exp  -0.528 pct   44%   xauusd  15m  trend-pullback/asia / trend-pullback  [branch-receipts:G-B-file-2026-09-13-recent-year-sessions-5m.txt]
+ 0.264    1.51pt     55 PF  0.630 exp  -0.528 pct   44%   xauusd  15m  trend-pullback/asia / trend-pullback  [branch-receipts:G-B-file-2026-09-13-recent-year-sessions.txt]
+ 0.264    1.51pt     55 PF  0.369 exp  -0.528 pct   10%   xauusd  15m  trend-pullback/asia / trend-pullback  [branch-receipts:U-B-file-2026-09-13-recent-year-sessions-5m.txt]
+ 0.264    1.51pt     55 PF  0.369 exp  -0.528 pct   10%   xauusd  15m  trend-pullback/asia / trend-pullback  [branch-receipts:U-B-file-2026-09-13-recent-year-sessions.txt]
+ 0.284    0.95pt    141 PF  2.176 exp   0.332 pct    0%   xauusd  15m  pullback / trend-pullback  [branch-receipts:n3-limit-A-l050-guards.txt]
+ 0.284    0.94pt    147 PF  1.512 exp   0.287 pct    0%   xauusd  15m  pullback / trend-pullback  [branch-receipts:n3-limit-A-l050-noguards.txt]
+ 0.293    1.84pt     78 PF  0.786 exp  -0.322 pct   70%   xauusd  15m  trend-pullback/london / trend-pullback  [branch-receipts:G-B-file-2026-09-13-recent-year-sessions-5m.txt]
+ 0.293    1.84pt     78 PF  0.786 exp  -0.322 pct   70%   xauusd  15m  trend-pullback/london / trend-pullback  [branch-receipts:G-B-file-2026-09-13-recent-year-sessions.txt]
+ 0.293    1.82pt     79 PF  0.557 exp  -0.332 pct   24%   xauusd  15m  trend-pullback/london / trend-pullback  [branch-receipts:U-B-file-2026-09-13-recent-year-sessions-5m.txt]
+ 0.293    1.82pt     79 PF  0.557 exp  -0.332 pct   24%   xauusd  15m  trend-pullback/london / trend-pullback  [branch-receipts:U-B-file-2026-09-13-recent-year-sessions.txt]
+ 0.294    1.67pt    118 PF  3.622 exp   0.311 pct    1%   xauusd  15m  pullback / trend-pullback  [branch-receipts:n3-limit-B-l050-guards.txt]
+ 0.294    1.66pt    122 PF  1.702 exp   0.307 pct    0%   xauusd  15m  pullback / trend-pullback  [branch-receipts:n3-limit-B-l050-noguards.txt]
+ 0.295    1.05pt    219 PF  0.836 exp  -0.184 pct   76%   xauusd  15m  pullback / trend-pullback  [branch-receipts:n3-limit-A-a000-guards.txt]
+ 0.295    1.05pt    219 PF  0.836 exp  -0.184 pct   76%   xauusd  15m  pullback / trend-pullback  [branch-receipts:n3-limit-A-l000-guards.txt]
+ 0.297    1.06pt    224 PF  0.745 exp  -0.207 pct   57%   xauusd  15m  pullback / trend-pullback  [branch-receipts:n3-limit-A-a000-noguards.txt]
+ 0.297    1.06pt    224 PF  0.745 exp  -0.207 pct   57%   xauusd  15m  pullback / trend-pullback  [branch-receipts:n3-limit-A-l000-noguards.txt]
+ 0.299    1.87pt    194 PF  0.578 exp  -0.328 pct   10%   xauusd  15m  pullback / trend-pullback  [branch-receipts:n3-limit-B-market-noguards.txt]
+ 0.300    1.85pt    185 PF  0.506 exp  -0.372 pct    2%   xauusd  15m  trend-pullback/all / trend-pullback  [branch-receipts:U-B-file-2026-09-13-recent-year-screen-5m.txt]
+ 0.300    1.85pt    185 PF  0.506 exp  -0.372 pct    2%   xauusd  15m  trend-pullback/all / trend-pullback  [branch-receipts:U-B-file-2026-09-13-recent-year-screen.txt]
+ 0.300    1.85pt    185 PF  0.506 exp  -0.372 pct    2%   xauusd  15m  tp/fixed / trend-pullback  [branch-receipts:U-B-file-2026-09-13-trend-pullback.txt]
+ 0.300    1.85pt    185 PF  0.506 exp  -0.372 pct    2%   xauusd  15m  tp/allday / trend-pullback  [branch-receipts:U-B-file-2026-09-13-trend-pullback.txt]
+ 0.300    1.85pt    185 PF  0.506 exp  -0.372 pct    2%   xauusd  15m  trend-pullback / trend-pullback  [branch-receipts:U-B-file-2026-09-23-rebate-rescore.txt]
+ 0.301    1.86pt    184 PF  0.744 exp  -0.368 pct   56%   xauusd  15m  trend-pullback/all / trend-pullback  [branch-receipts:G-B-file-2026-09-13-recent-year-screen-5m.txt]
+ 0.301    1.86pt    184 PF  0.744 exp  -0.368 pct   56%   xauusd  15m  trend-pullback/all / trend-pullback  [branch-receipts:G-B-file-2026-09-13-recent-year-screen.txt]
+ 0.301    1.86pt    184 PF  0.744 exp  -0.368 pct   56%   xauusd  15m  tp/fixed / trend-pullback  [branch-receipts:G-B-file-2026-09-13-trend-pullback.txt]
+ 0.301    1.86pt    184 PF  0.744 exp  -0.368 pct   56%   xauusd  15m  tp/allday / trend-pullback  [branch-receipts:G-B-file-2026-09-13-trend-pullback.txt]
+ 0.301    1.86pt    184 PF  0.744 exp  -0.368 pct   56%   xauusd  15m  trend-pullback / trend-pullback  [branch-receipts:G-B-file-2026-09-23-rebate-rescore.txt]
+ 0.301    1.88pt    192 PF  0.739 exp  -0.376 pct   52%   xauusd  15m  pullback / trend-pullback  [branch-receipts:n3-limit-B-market-guards.txt]
+ 0.318    1.18pt    143 PF  1.052 exp   0.123 pct    0%   xauusd  15m  pullback / trend-pullback  [branch-receipts:n3-limit-A-c050-guards.txt]
+ 0.319    1.14pt    178 PF  0.893 exp  -0.087 pct    4%   xauusd  15m  pullback / trend-pullback  [branch-receipts:n3-limit-A-c025-guards.txt]
+ 0.323    2.59pt    173 PF  0.540 exp  -0.387 pct    1%   xauusd  15m  trend-pullback/asia / trend-pullback  [docs/research/runs (HEAD):sessions-in-sample-coin.txt]
+ 0.323    2.59pt    173 PF  0.540 exp  -0.387 pct    0%   xauusd  15m  trend-pullback/asia / trend-pullback  [docs/research/runs (HEAD):sessions-in-sample-exposure.txt]
+ 0.325    1.16pt    183 PF  0.853 exp  -0.116 pct    4%   xauusd  15m  pullback / trend-pullback  [branch-receipts:n3-limit-A-c025-noguards.txt]
+ 0.325    2.81pt    687 PF  0.629 exp  -0.278 pct    0%   xauusd  15m  trend-pullback/all / trend-pullback  [docs/research/runs (HEAD):screen-in-sample-coin.txt]
+ 0.325    2.81pt    687 PF  0.629 exp  -0.278 pct    0%   xauusd  15m  trend-pullback/all / trend-pullback  [docs/research/runs (HEAD):screen-in-sample-exposure.txt]
+ 0.334    2.30pt     38 PF  1.354 exp   0.177 pct    0%   xauusd  15m  pdhl / pdhl  [branch-receipts:n3-limit-B-l050-guards.txt]
+ 0.335    2.32pt     39 PF  1.247 exp   0.200 pct   11%   xauusd  15m  pdhl / pdhl  [branch-receipts:n3-limit-B-l050-noguards.txt]
+ 0.336    1.20pt    149 PF  1.076 exp   0.073 pct    0%   xauusd  15m  pullback / trend-pullback  [branch-receipts:n3-limit-A-c050-noguards.txt]
+ 0.341    3.36pt    260 PF  0.656 exp  -0.261 pct    4%   xauusd  15m  trend-pullback/ny / trend-pullback  [docs/research/runs (HEAD):screen-in-sample-coin.txt]
+ 0.341    3.36pt    260 PF  0.656 exp  -0.261 pct    2%   xauusd  15m  trend-pullback/ny / trend-pullback  [docs/research/runs (HEAD):screen-in-sample-exposure.txt]
+ 0.346    1.29pt     41 PF  0.691 exp  -0.858 pct   50%   xauusd  15m  pdhl / pdhl  [branch-receipts:n3-limit-A-l025-guards.txt]
+ 0.356    1.21pt     68 PF  0.884 exp  -0.272 pct   80%   xauusd  15m  trend-pullback/asia / trend-pullback  [branch-receipts:G-A-file-2026-09-13-recent-year-sessions-5m.txt]
+ 0.356    1.21pt     68 PF  0.884 exp  -0.272 pct   80%   xauusd  15m  trend-pullback/asia / trend-pullback  [branch-receipts:G-A-file-2026-09-13-recent-year-sessions.txt]
+ 0.356    1.21pt     68 PF  0.604 exp  -0.272 pct   40%   xauusd  15m  trend-pullback/asia / trend-pullback  [branch-receipts:U-A-file-2026-09-13-recent-year-sessions-5m.txt]
+ 0.356    1.21pt     68 PF  0.604 exp  -0.272 pct   40%   xauusd  15m  trend-pullback/asia / trend-pullback  [branch-receipts:U-A-file-2026-09-13-recent-year-sessions.txt]
+ 0.358    1.44pt     39 PF  0.677 exp  -0.941 pct   48%   xauusd  15m  pdhl / pdhl  [branch-receipts:n3-limit-A-a025-guards.txt]
+ 0.358    1.44pt     43 PF  0.481 exp  -0.801 pct   29%   xauusd  15m  pdhl / pdhl  [branch-receipts:n3-limit-A-l025-noguards.txt]
+ 0.363    2.58pt     78 PF  0.552 exp  -0.323 pct    8%   xauusd  15m  trend-pullback/ny / trend-pullback  [branch-receipts:U-B-file-2026-09-13-recent-year-screen-5m.txt]
+ 0.363    2.58pt     78 PF  0.552 exp  -0.323 pct    8%   xauusd  15m  trend-pullback/ny / trend-pullback  [branch-receipts:U-B-file-2026-09-13-recent-year-screen.txt]
+ 0.363    2.58pt     78 PF  0.552 exp  -0.323 pct    8%   xauusd  15m  tp/ny / trend-pullback  [branch-receipts:U-B-file-2026-09-13-trend-pullback.txt]
+ 0.363    1.44pt     41 PF  0.459 exp  -0.877 pct   26%   xauusd  15m  pdhl / pdhl  [branch-receipts:n3-limit-A-a025-noguards.txt]
+ 0.363    2.95pt    284 PF  0.769 exp  -0.157 pct   30%   xauusd  15m  trend-pullback/london / trend-pullback  [docs/research/runs (HEAD):sessions-in-sample-coin.txt]
+ 0.363    2.95pt    284 PF  0.769 exp  -0.157 pct   26%   xauusd  15m  trend-pullback/london / trend-pullback  [docs/research/runs (HEAD):sessions-in-sample-exposure.txt]
+ 0.364    2.65pt     77 PF  0.816 exp  -0.313 pct   51%   xauusd  15m  trend-pullback/ny / trend-pullback  [branch-receipts:G-B-file-2026-09-13-recent-year-screen-5m.txt]
+ 0.364    2.65pt     77 PF  0.816 exp  -0.313 pct   51%   xauusd  15m  trend-pullback/ny / trend-pullback  [branch-receipts:G-B-file-2026-09-13-recent-year-screen.txt]
+ 0.364    2.65pt     77 PF  0.816 exp  -0.313 pct   51%   xauusd  15m  tp/ny / trend-pullback  [branch-receipts:G-B-file-2026-09-13-trend-pullback.txt]
+ 0.374    1.34pt    220 PF  0.663 exp  -0.324 pct   26%   xauusd  15m  pullback / trend-pullback  [branch-receipts:n3-limit-A-market-guards.txt]
+ 0.378    1.35pt    225 PF  0.544 exp  -0.341 pct    5%   xauusd  15m  pullback / trend-pullback  [branch-receipts:n3-limit-A-market-noguards.txt]
+ 0.381    1.37pt    213 PF  0.658 exp  -0.334 pct   24%   xauusd  15m  trend-pullback/all / trend-pullback  [branch-receipts:G-A-file-2026-09-13-recent-year-screen-5m.txt]
+ 0.381    1.37pt    213 PF  0.658 exp  -0.334 pct   24%   xauusd  15m  trend-pullback/all / trend-pullback  [branch-receipts:G-A-file-2026-09-13-recent-year-screen.txt]
+ 0.381    1.37pt    213 PF  0.658 exp  -0.334 pct   24%   xauusd  15m  tp/fixed / trend-pullback  [branch-receipts:G-A-file-2026-09-13-trend-pullback.txt]
+ 0.381    1.37pt    213 PF  0.658 exp  -0.334 pct   24%   xauusd  15m  tp/allday / trend-pullback  [branch-receipts:G-A-file-2026-09-13-trend-pullback.txt]
+ 0.381    1.37pt    213 PF  0.658 exp  -0.334 pct   24%   xauusd  15m  trend-pullback / trend-pullback  [branch-receipts:G-A-file-2026-09-23-rebate-rescore.txt]
+ 0.386    1.39pt    218 PF  0.528 exp  -0.351 pct    4%   xauusd  15m  trend-pullback/all / trend-pullback  [branch-receipts:U-A-file-2026-09-13-recent-year-screen-5m.txt]
+ 0.386    1.39pt    218 PF  0.528 exp  -0.351 pct    4%   xauusd  15m  trend-pullback/all / trend-pullback  [branch-receipts:U-A-file-2026-09-13-recent-year-screen.txt]
+ 0.386    1.39pt    218 PF  0.528 exp  -0.351 pct    4%   xauusd  15m  tp/fixed / trend-pullback  [branch-receipts:U-A-file-2026-09-13-trend-pullback.txt]
+ 0.386    1.39pt    218 PF  0.528 exp  -0.351 pct    4%   xauusd  15m  tp/allday / trend-pullback  [branch-receipts:U-A-file-2026-09-13-trend-pullback.txt]
+ 0.386    1.39pt    218 PF  0.528 exp  -0.351 pct    4%   xauusd  15m  trend-pullback / trend-pullback  [branch-receipts:U-A-file-2026-09-23-rebate-rescore.txt]
+ 0.412    1.74pt     68 PF  0.496 exp  -0.382 pct    2%   xauusd  15m  trend-pullback/ny / trend-pullback  [branch-receipts:G-A-file-2026-09-13-recent-year-screen-5m.txt]
+ 0.412    1.74pt     68 PF  0.496 exp  -0.382 pct    2%   xauusd  15m  trend-pullback/ny / trend-pullback  [branch-receipts:G-A-file-2026-09-13-recent-year-screen.txt]
+ 0.412    1.74pt     68 PF  0.496 exp  -0.382 pct    2%   xauusd  15m  tp/ny / trend-pullback  [branch-receipts:G-A-file-2026-09-13-trend-pullback.txt]
+ 0.429    1.67pt     94 PF  0.582 exp  -0.440 pct    4%   xauusd  15m  trend-pullback/london / trend-pullback  [branch-receipts:G-A-file-2026-09-13-recent-year-sessions-5m.txt]
+ 0.429    1.67pt     94 PF  0.582 exp  -0.440 pct    4%   xauusd  15m  trend-pullback/london / trend-pullback  [branch-receipts:G-A-file-2026-09-13-recent-year-sessions.txt]
+ 0.438    1.68pt     97 PF  0.421 exp  -0.459 pct    0%   xauusd  15m  trend-pullback/london / trend-pullback  [branch-receipts:U-A-file-2026-09-13-recent-year-sessions-5m.txt]
+ 0.438    1.68pt     97 PF  0.421 exp  -0.459 pct    0%   xauusd  15m  trend-pullback/london / trend-pullback  [branch-receipts:U-A-file-2026-09-13-recent-year-sessions.txt]
+ 0.443    1.81pt     72 PF  0.447 exp  -0.419 pct    1%   xauusd  15m  trend-pullback/ny / trend-pullback  [branch-receipts:U-A-file-2026-09-13-recent-year-screen-5m.txt]
+ 0.443    1.81pt     72 PF  0.447 exp  -0.419 pct    1%   xauusd  15m  trend-pullback/ny / trend-pullback  [branch-receipts:U-A-file-2026-09-13-recent-year-screen.txt]
+ 0.443    1.81pt     72 PF  0.447 exp  -0.419 pct    1%   xauusd  15m  tp/ny / trend-pullback  [branch-receipts:U-A-file-2026-09-13-trend-pullback.txt]
+ 0.464    1.82pt    195 PF  1.363 exp   0.198 pct    3%   xauusd  15m  vwap-fade / vwap-fade  [branch-receipts:n3-limit-A-l050-guards.txt]
+ 0.464    1.82pt    199 PF  1.143 exp   0.140 pct    7%   xauusd  15m  vwap-fade / vwap-fade  [branch-receipts:n3-limit-A-l050-noguards.txt]
+ 0.478    2.79pt    198 PF  0.703 exp  -0.171 pct    2%   xauusd  15m  vwap-fade / vwap-fade  [branch-receipts:n3-limit-B-l050-guards.txt]
+ 0.478    2.80pt    204 PF  0.791 exp  -0.151 pct   34%   xauusd  15m  vwap-fade / vwap-fade  [branch-receipts:n3-limit-B-l050-noguards.txt]
+ 0.513    2.59pt     31 PF  1.022 exp   0.066 pct   98%   xauusd  15m  pdhl / pdhl  [branch-receipts:n3-limit-B-a050-noguards.txt]
+ 0.534    2.13pt     18 PF  0.413 exp  -0.535 pct    4%   xauusd  15m  m15/pdhl-break / pdhl  [branch-receipts:G-A-file-2026-09-13-gold-m15-check.txt]
+ 0.534    2.13pt     18 PF  0.413 exp  -0.535 pct    4%   xauusd  15m  pdhl/break-nyam / pdhl  [branch-receipts:G-A-file-2026-09-13-pdhl.txt]
+ 0.539    2.18pt     21 PF  0.393 exp  -0.489 pct    2%   xauusd  15m  m15/pdhl-break / pdhl  [branch-receipts:U-A-file-2026-09-13-gold-m15-check.txt]
+ 0.539    2.18pt     21 PF  0.393 exp  -0.489 pct    2%   xauusd  15m  pdhl/break-nyam / pdhl  [branch-receipts:U-A-file-2026-09-13-pdhl.txt]
+ 0.574    2.47pt     14 PF  0.912 exp  -0.104 pct   54%   xauusd  15m  pdhl/fade-asia / pdhl  [branch-receipts:G-A-file-2026-09-13-pdhl.txt]
+ 0.574    2.47pt     14 PF  0.820 exp  -0.104 pct   55%   xauusd  15m  pdhl/fade-asia / pdhl  [branch-receipts:U-A-file-2026-09-13-pdhl.txt]
+ 0.580    3.40pt     46 PF  1.201 exp   0.000 pct   57%   xauusd  15m  pdhl / pdhl  [branch-receipts:n3-limit-B-l025-guards.txt]
+ 0.581    2.58pt     15 PF  1.193 exp  -0.005 pct   67%   xauusd  15m  pdhl/asia / pdhl  [branch-receipts:G-A-file-2026-09-13-recent-year-sessions-5m.txt]
+ 0.581    2.58pt     15 PF  1.193 exp  -0.005 pct   67%   xauusd  15m  pdhl/asia / pdhl  [branch-receipts:G-A-file-2026-09-13-recent-year-sessions.txt]
+ 0.581    2.58pt     15 PF  0.967 exp  -0.005 pct   58%   xauusd  15m  pdhl/asia / pdhl  [branch-receipts:U-A-file-2026-09-13-recent-year-sessions-5m.txt]
+ 0.581    2.58pt     15 PF  0.967 exp  -0.005 pct   58%   xauusd  15m  pdhl/asia / pdhl  [branch-receipts:U-A-file-2026-09-13-recent-year-sessions.txt]
+ 0.586    3.45pt     47 PF  1.001 exp   0.018 pct   34%   xauusd  15m  pdhl / pdhl  [branch-receipts:n3-limit-B-l025-noguards.txt]
+ 0.589    3.50pt     44 PF  1.200 exp  -0.011 pct   57%   xauusd  15m  pdhl / pdhl  [branch-receipts:n3-limit-B-a025-guards.txt]
+ 0.593    2.22pt     35 PF  0.575 exp  -0.069 pct    4%   xauusd  15m  pdhl / pdhl  [branch-receipts:n3-limit-A-c050-guards.txt]
+ 0.593    3.55pt     45 PF  0.982 exp   0.008 pct   36%   xauusd  15m  pdhl / pdhl  [branch-receipts:n3-limit-B-a025-noguards.txt]
+ 0.596    2.39pt     41 PF  0.416 exp  -0.493 pct    0%   xauusd  15m  pdhl / pdhl  [branch-receipts:n3-limit-A-c025-guards.txt]
+
+========================================================================================================
+DISTINCT STOP SIZES IN THE RECORD, with the row count at each (rounded to 0.05 ATR)
+========================================================================================================
+  0.15 ATR      4 rows  ####
+  0.25 ATR     14 rows  ##############
+  0.30 ATR     31 rows  ###############################
+  0.35 ATR     22 rows  ######################
+  0.40 ATR     14 rows  ##############
+  0.45 ATR      9 rows  #########
+  0.50 ATR      3 rows  ###
+  0.55 ATR      6 rows  ######
+  0.60 ATR     14 rows  ##############
+  0.65 ATR      2 rows  ##
+  0.70 ATR     24 rows  ########################
+  0.75 ATR     35 rows  ###################################
+  0.80 ATR     13 rows  #############
+  0.85 ATR     50 rows  ##################################################
+  0.90 ATR      8 rows  ########
+  0.95 ATR     12 rows  ############
+  1.00 ATR     65 rows  ############################################################
+  1.05 ATR     44 rows  ############################################
+  1.10 ATR     12 rows  ############
+  1.15 ATR     19 rows  ###################
+  1.20 ATR     28 rows  ############################
+  1.25 ATR     32 rows  ################################
+  1.30 ATR      5 rows  #####
+  1.35 ATR      7 rows  #######
+  1.40 ATR      6 rows  ######
+  1.45 ATR     12 rows  ############
+  1.50 ATR    509 rows  ############################################################
+  1.55 ATR    439 rows  ############################################################
+  1.60 ATR    260 rows  ############################################################
+  1.65 ATR     22 rows  ######################
+  1.70 ATR      3 rows  ###
+  1.75 ATR     32 rows  ################################
+  1.80 ATR     32 rows  ################################
+  1.85 ATR     25 rows  #########################
+  1.90 ATR     25 rows  #########################
+  1.95 ATR     11 rows  ###########
+  2.00 ATR    323 rows  ############################################################
+  2.05 ATR    250 rows  ############################################################
+  2.10 ATR    238 rows  ############################################################
+  2.15 ATR     16 rows  ################
+  2.20 ATR      6 rows  ######
+  2.25 ATR     10 rows  ##########
+  2.30 ATR     11 rows  ###########
+  2.35 ATR     12 rows  ############
+  2.40 ATR     11 rows  ###########
+  2.45 ATR      6 rows  ######
+  2.50 ATR     14 rows  ##############
+  2.55 ATR     12 rows  ############
+  2.60 ATR     21 rows  #####################
+  2.65 ATR     16 rows  ################
+  2.70 ATR     43 rows  ###########################################
+  2.75 ATR     34 rows  ##################################
+  2.80 ATR     20 rows  ####################
+  2.85 ATR     12 rows  ############
+  2.90 ATR     18 rows  ##################
+  2.95 ATR     12 rows  ############
+  3.00 ATR    112 rows  ############################################################
+  3.05 ATR    147 rows  ############################################################
+  3.10 ATR    237 rows  ############################################################
+  3.15 ATR      8 rows  ########
+  3.20 ATR      9 rows  #########
+  3.25 ATR     18 rows  ##################
+  3.30 ATR      6 rows  ######
+  3.35 ATR      2 rows  ##
+  3.40 ATR     25 rows  #########################
+  3.50 ATR      4 rows  ####
+  3.55 ATR      4 rows  ####
+  3.60 ATR      3 rows  ###
+  3.65 ATR      4 rows  ####
+  3.70 ATR      1 rows  #
+  3.80 ATR      6 rows  ######
+  3.85 ATR      2 rows  ##
+  3.95 ATR      5 rows  #####
+  4.00 ATR      1 rows  #
+  4.05 ATR      8 rows  ########
+  4.10 ATR      8 rows  ########
+  4.15 ATR      4 rows  ####
+  4.20 ATR     10 rows  ##########
+  4.25 ATR      3 rows  ###
+  4.30 ATR      5 rows  #####
+  4.35 ATR      7 rows  #######
+  4.40 ATR      5 rows  #####
+  4.45 ATR      5 rows  #####
+  4.50 ATR     11 rows  ###########
+  4.55 ATR      2 rows  ##
+  4.60 ATR     27 rows  ###########################
+  4.65 ATR     12 rows  ############
+  4.70 ATR      2 rows  ##
+  4.75 ATR      6 rows  ######
+  4.80 ATR      8 rows  ########
+  4.85 ATR      7 rows  #######
+  4.90 ATR      5 rows  #####
+  4.95 ATR     13 rows  #############
+  5.00 ATR     16 rows  ################
+  5.05 ATR     11 rows  ###########
+  5.10 ATR      6 rows  ######
+  5.15 ATR     12 rows  ############
+  5.20 ATR      4 rows  ####
+  5.25 ATR      9 rows  #########
+  5.30 ATR      5 rows  #####
+  5.35 ATR      2 rows  ##
+  5.40 ATR      4 rows  ####
+  5.45 ATR      2 rows  ##
+  5.50 ATR      4 rows  ####
+  5.60 ATR      2 rows  ##
+  5.75 ATR      1 rows  #
+  5.80 ATR      3 rows  ###
+  6.15 ATR      1 rows  #
+  6.45 ATR      4 rows  ####
+  6.85 ATR      2 rows  ##
+  7.10 ATR      1 rows  #
+  7.15 ATR      2 rows  ##
+  7.65 ATR      4 rows  ####
+  8.00 ATR      2 rows  ##
+  8.45 ATR      2 rows  ##
+  8.50 ATR      1 rows  #
+  8.55 ATR      1 rows  #
+  8.85 ATR      1 rows  #
+  8.90 ATR      1 rows  #
+  8.95 ATR      1 rows  #
+  9.25 ATR      1 rows  #
+
+========================================================================================================
+BY BASE STRATEGY: the realised stop range the record actually used
+========================================================================================================
+trend-pullback             101 rows  min  0.149  median  0.356  max  1.180  -> caveat        (1-5%)
+pdhl                       103 rows  min  0.231  median  0.758  max  1.219  -> readable      (<=1%)
+vwap-fade                  109 rows  min  0.464  median  1.023  max  1.058  -> readable      (<=1%)
+doji-reversal               68 rows  min  0.684  median  0.836  max  1.455  -> readable      (<=1%)
+crt                        208 rows  min  0.991  median  1.813  max  7.976  -> readable      (<=1%)
+far-stop-break              32 rows  min  1.208  median  4.171  max  9.269  -> readable      (<=1%)
+squeeze-break               47 rows  min  1.259  median  1.516  max  1.630  -> readable      (<=1%)
+volman-box                  29 rows  min  1.329  median  3.054  max  3.088  -> readable      (<=1%)
+ema-cross                  210 rows  min  1.498  median  1.525  max  1.628  -> readable      (<=1%)
+rsi-reversion              207 rows  min  1.500  median  1.523  max  1.689  -> readable      (<=1%)
+bb-fade                    224 rows  min  1.500  median  1.527  max  1.685  -> readable      (<=1%)
+macd-cross                  63 rows  min  1.514  median  1.526  max  1.571  -> readable      (<=1%)
+stoch-reversal              59 rows  min  1.514  median  1.526  max  1.557  -> readable      (<=1%)
+ratio-reversion           1296 rows  min  1.519  median  2.095  max  3.125  -> readable      (<=1%)
+donchian-breakout          305 rows  min  1.559  median  2.024  max  3.061  -> readable      (<=1%)
+keltner-break               63 rows  min  1.761  median  1.821  max  1.949  -> readable      (<=1%)
+volume-thrust              132 rows  min  1.844  median  3.159  max  5.492  -> readable      (<=1%)
+rsi-reversal-vol            36 rows  min  1.918  median  2.874  max  3.393  -> readable      (<=1%)
+orb                        147 rows  min  1.990  median  2.718  max  5.123  -> readable      (<=1%)
+rsi2-pullback               61 rows  min  2.014  median  2.023  max  2.059  -> readable      (<=1%)
+ict-sweep-mss-fvg          101 rows  min  2.127  median  3.034  max  3.791  -> readable      (<=1%)
+gap-fade                    20 rows  min  2.371  median  3.409  max  5.137  -> readable      (<=1%)
+news-pulse                 160 rows  min  3.965  median  4.863  max  5.595  -> readable      (<=1%)
+
+receipts whose own `data:` header names data-sealed: 5
+  E:/rust/fd-intrabar/docs/research/runs\2026-09-24-cost-matched-null\registry-stops-guarded.txt
+  E:/rust/fd-intrabar/docs/research/runs\2026-09-24-cost-matched-null\xauduka-15y-guarded-corrected.txt
+  E:/rust/fd-intrabar/docs/research/runs\2026-09-24-cost-matched-null\xauduka-same-dates-guarded-corrected.txt
+  E:/rust/fd-intrabar/docs/research/runs\2026-09-24-cost-matched-null\xauusd-guarded-corrected.txt
+  E:/rust/fd-intrabar/docs/research/runs\2026-09-24-cost-matched-null\xauusd-unguarded-corrected.txt
+
+3781 rows -> receipts/intrabar-published-rows.json

@@ -1,0 +1,12 @@
+15m rows 378749  span 2010-06-01T00:00:00.000 -> 2026-05-31T23:45:00.000
+1m  rows 5635777  span 2010-06-01T00:00:00.000 -> 2026-05-31T23:59:00.000
+15m bar spacing: median 900000 ms, 3661 of 378748 gaps != 15m
+1m  bar spacing: median 60000 ms, 31679 of 5635776 gaps != 1m
+
+sampled 20000 15m bars: 20000 had 1m bars under them, 0 had none
+1m bars per 15m bar: min 1 median 15 max 15
+high mismatch > 0.01 pts: 0 of 20000 = 0.000%  worst 0.0000 pts
+low  mismatch > 0.01 pts: 0 of 20000 = 0.000%  worst 0.0000 pts
+open mismatch > 0.01 pts: 0 of 20000 = 0.000%  worst 0.0000 pts
+
+P2 verdict: PASS (threshold 0.5% of sampled bars; got 0.000%)

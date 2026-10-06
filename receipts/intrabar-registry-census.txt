@@ -1,0 +1,101 @@
+`builtin::register_all` registers 32 strategies.
+
+id                     stop it places                     declared stopAtr       stopAtr grid           exits
+------------------------------------------------------------------------------------------------------------------------------------
+ema-cross              ATR multiple (declared)            stopAtr=1.5            -                      Engine (default)
+rsi-reversion          ATR multiple (declared)            stopAtr=1.5            -                      Engine (default)
+donchian-breakout      ATR multiple (declared)            stopAtr=2.0            stopAtr=[1.5/2.0/3.0]  Engine (default)
+bb-fade                ATR multiple (declared)            stopAtr=1.5            -                      Engine (default)
+level-reversion        ATR multiple (declared)            stopAtr=1.5            -                      Engine (default)
+maxpain-magnet         ATR multiple (declared)            stopAtr=2.0            -                      Engine (default)
+flow-momentum          ATR multiple (declared)            stopAtr=1.5            -                      Engine (default)
+flow-at-level          ATR multiple (declared)            stopAtr=1.5            -                      Engine (default)
+buy-and-hold           none / engine fallback 1.2 ATR     -                      -                      Engine (default)
+ict-sweep-mss-fvg      price level (STRUCTURAL)           -                      -                      Engine
+orb                    price level (STRUCTURAL)           stopMode=0.0           -                      Engine
+pdhl                   price level (STRUCTURAL)           -                      -                      Engine
+crt                    price level (STRUCTURAL)           -                      -                      Engine
+external               none / engine fallback 1.2 ATR     -                      -                      Engine
+session-hold           none / engine fallback 1.2 ATR     -                      -                      Strategy
+intraday-momentum      price level (STRUCTURAL)           -                      -                      Strategy
+vwap-fade              ATR multiple (declared)            stopAtr=1.0            stopAtr=[1.0/1.5/2.0]  Engine
+tsmom                  price level (STRUCTURAL)           -                      -                      Strategy
+doji-reversal          price level (STRUCTURAL)           -                      -                      Engine
+gap-fade               price level (STRUCTURAL)           stopGapMult=1.0        stopGapMult=[0.5/1.0/2.0] Engine
+trend-pullback         price level (STRUCTURAL)           -                      -                      Engine
+volume-thrust          price level (STRUCTURAL)           -                      -                      Engine
+keltner-break          none / engine fallback 1.2 ATR     -                      -                      Engine
+macd-cross             ATR multiple (declared)            stopAtr=1.5            -                      Engine
+rsi2-pullback          ATR multiple (declared)            stopAtr=2.0            -                      Engine
+squeeze-break          none / engine fallback 1.2 ATR     -                      -                      Engine
+stoch-reversal         ATR multiple (declared)            stopAtr=1.5            -                      Engine
+volman-box             none / engine fallback 1.2 ATR     -                      -                      Engine
+far-stop-break         ATR multiple (declared)            stopMode=0.0, stopAtr=1.2, minStopPoints=0.0 -                      Engine (default)
+companion-unconfirmed  ATR multiple (declared)            stopAtr=4.0            stopAtr=[2.0/4.0/6.0]  Engine
+quiet-swing            price level (STRUCTURAL)           -                      -                      Strategy
+rsi-reversal-vol       none / engine fallback 1.2 ATR     stopPrice=16.0         -                      Engine
+
+declares an ATR stop: 14  structural (stop is a price level): 11  no stop of its own: 7
+
+====================================================================================================================================
+EVERY DECLARED STOP VALUE IN THE REGISTRY, AGAINST THE 0.600 ATR THRESHOLD THIS AXIS MEASURED
+====================================================================================================================================
+  1.00 ATR  readable         vwap-fade
+  1.20 ATR  readable         far-stop-break
+  1.50 ATR  readable         bb-fade, donchian-breakout, ema-cross, flow-at-level, flow-momentum, level-reversion, macd-cross, rsi-reversion, stoch-reversal, vwap-fade
+  2.00 ATR  readable         companion-unconfirmed, donchian-breakout, maxpain-magnet, rsi2-pullback, vwap-fade
+  3.00 ATR  readable         donchian-breakout
+  4.00 ATR  readable         companion-unconfirmed
+  6.00 ATR  readable         companion-unconfirmed
+
+registered mechanisms whose DECLARED ATR stop (default or grid) is below 0.600 ATR: 0 (NONE)
+
+stop parameters in the registry that are NOT in ATR and so cannot be binned against this table:
+  minStopPoints = 0.0    a floor in price points                          far-stop-break
+  stopGapMult = 0.5    a multiple of the GAP, not of ATR                gap-fade
+  stopGapMult = 1.0    a multiple of the GAP, not of ATR                gap-fade
+  stopGapMult = 2.0    a multiple of the GAP, not of ATR                gap-fade
+  stopMode = 0.0    a switch (0 = structural channel edge, 1 = stopAtr x ATR) far-stop-break, orb
+  stopPrice = 16.0   a distance in price points                       rsi-reversal-vol
+
+[trading] stop_atr fallback (used when a strategy gives no stop and the engine derives one): 1.2 ATR -> readable
+
+====================================================================================================================================
+EACH REGISTERED MECHANISM PLACED ON THE TABLE BY ITS REALISED STOP (median over every published row of it); `null` = never measured
+====================================================================================================================================
+ema-cross              median  1.525 ATR  (min 1.498 max 1.628, 210 rows)  -> readable
+rsi-reversion          median  1.523 ATR  (min 1.500 max 1.689, 207 rows)  -> readable
+donchian-breakout      median  2.024 ATR  (min 1.559 max 3.061, 305 rows)  -> readable
+bb-fade                median  1.527 ATR  (min 1.500 max 1.685, 224 rows)  -> readable
+level-reversion        null  - no published row carries a realised stop for it
+maxpain-magnet         null  - no published row carries a realised stop for it
+flow-momentum          null  - no published row carries a realised stop for it
+flow-at-level          null  - no published row carries a realised stop for it
+buy-and-hold           null  - no published row carries a realised stop for it
+ict-sweep-mss-fvg      median  3.034 ATR  (min 2.127 max 3.791, 101 rows)  -> readable
+orb                    median  2.718 ATR  (min 1.990 max 5.123, 147 rows)  -> readable
+pdhl                   median  0.758 ATR  (min 0.231 max 1.219, 103 rows)  -> readable
+crt                    median  1.813 ATR  (min 0.991 max 7.976, 208 rows)  -> readable
+external               null  - no published row carries a realised stop for it
+session-hold           null  - no published row carries a realised stop for it
+intraday-momentum      null  - no published row carries a realised stop for it
+vwap-fade              median  1.023 ATR  (min 0.464 max 1.058, 109 rows)  -> readable
+tsmom                  null  - no published row carries a realised stop for it
+doji-reversal          median  0.836 ATR  (min 0.684 max 1.455, 68 rows)  -> readable
+gap-fade               median  3.409 ATR  (min 2.371 max 5.137, 20 rows)  -> readable
+trend-pullback         median  0.356 ATR  (min 0.149 max 1.180, 101 rows)  -> caveat
+volume-thrust          median  3.159 ATR  (min 1.844 max 5.492, 132 rows)  -> readable
+keltner-break          median  1.821 ATR  (min 1.761 max 1.949, 63 rows)  -> readable
+macd-cross             median  1.526 ATR  (min 1.514 max 1.571, 63 rows)  -> readable
+rsi2-pullback          median  2.023 ATR  (min 2.014 max 2.059, 61 rows)  -> readable
+squeeze-break          median  1.516 ATR  (min 1.259 max 1.630, 47 rows)  -> readable
+stoch-reversal         median  1.526 ATR  (min 1.514 max 1.557, 59 rows)  -> readable
+volman-box             median  3.054 ATR  (min 1.329 max 3.088, 29 rows)  -> readable
+far-stop-break         median  4.171 ATR  (min 1.208 max 9.269, 32 rows)  -> readable
+companion-unconfirmed  null  - no published row carries a realised stop for it
+quiet-swing            null  - no published row carries a realised stop for it
+rsi-reversal-vol       median  2.874 ATR  (min 1.918 max 3.393, 36 rows)  -> readable
+news-pulse             median  4.863 ATR  (160 rows)  -> readable   ** in the record but NOT in register_all on this branch **
+ratio-reversion        median  2.095 ATR  (1296 rows)  -> readable   ** in the record but NOT in register_all on this branch **
+
+registered mechanisms with a measured stop: 21; never measured: 11; measured BELOW 0.600 ATR: 1 -> trend-pullback
