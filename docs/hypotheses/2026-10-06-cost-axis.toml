@@ -1,0 +1,150 @@
+# The thirteen `gold-intraday` hypotheses, transcribed so `--mode=rescore`
+# can be asked for them.
+#
+# THIS FILE IS NOT THE REGISTRATION. The registration is
+# docs/decisions/2026-10-06-cost-axis.md, committed with it.
+#
+# WHY IT EXISTS. `--rebate-share=` is read in `--mode=rescore` only
+# (crates/fd-backtest/src/bin/search.rs:265), and `rescore` takes
+# `--batch-file=<toml>` and has no way to name a built-in batch. So the batch
+# that `--batch=gold-intraday` builds in code
+# (crates/fd-backtest/src/hypotheses.rs:137-168) is written out here field for
+# field.
+#
+# WHAT WAS CHANGED AND WHAT WAS NOT. `base`, `filters` and `overrides` are
+# verbatim. Only the LABELS differ: the built-in reuses `intraday` for four
+# rows, `ny-morning` for two, `asia` for two, `expansion` for two and
+# `compression` for two, which a rescore table prints as five pairs of
+# identical names. The label is cosmetic - nothing in `rescore_hypothesis`
+# keys off it - so each row is named `<label>/<base>` here and the run is the
+# same run.
+#
+# THE FILTER SPELLINGS. `Filter::hours`/`flat` take hhmm and convert
+# (crates/fd-strategy/src/filter.rs:76-83), so the code's `hours(800, 1200)`
+# is `hours:0800-1200` and `hours(1900, 200)` is `hours:1900-0200`. The two
+# `VolRegime` gates are `fast: 14, slow: 100` with ratio bands 1.2-99.0
+# (expansion) and 0.0-0.8 (compression), which parse as `vol:14/100:1.2-99`
+# and `vol:14/100:0.0-0.8`.
+#
+# Filter ORDER follows the code: weekdays, then the flat window, then the one
+# extra gate. Order is cosmetic to the engine and load-bearing to a reader
+# comparing this table with the source.
+
+[run]
+market = "xauusd:15m"
+# Window A of the shared brief. Window B is the same batch at
+# --from=2025-04-01 --to=2025-07-01; the window is a flag, not a file.
+in_sample_from = "2025-07-01"
+in_sample_to = "2025-10-01"
+seeds = 200
+direction_samples = 1000
+# The configured cost, the one every receipt in docs/decisions/ was measured
+# at. The spread logger's p50 is 0.220; repricing lives on the --spread= arm
+# of this axis and is never done here.
+spread = 0.28
+# config/accounts.toml, [rebate] share_of_spread. Swept 0.0 / 0.45 / 0.9 by
+# --rebate-share= on the command line.
+rebate_share_of_spread = 0.45
+
+# ---------------------------------------------------------------------------
+# The flat rule on its own, on every base method: does removing the overnight
+# hold change the picture at all?
+
+[[hypothesis]]
+label = "intraday/ema-cross"
+base = "ema-cross"
+filters = ["weekdays", "flat:1630-1815"]
+overrides = {}
+why = "the swap-free version of the trend baseline"
+
+[[hypothesis]]
+label = "intraday/rsi-reversion"
+base = "rsi-reversion"
+filters = ["weekdays", "flat:1630-1815"]
+overrides = {}
+why = "the swap-free version of the reversion baseline"
+
+[[hypothesis]]
+label = "intraday/donchian"
+base = "donchian-breakout"
+filters = ["weekdays", "flat:1630-1815"]
+overrides = {}
+why = "the swap-free version of the breakout baseline"
+
+[[hypothesis]]
+label = "intraday/bb-fade"
+base = "bb-fade"
+filters = ["weekdays", "flat:1630-1815"]
+overrides = {}
+why = "the swap-free version of the fade baseline"
+
+# ---------------------------------------------------------------------------
+# Sessions. Gold's volume lives in the New York morning; London's open sets
+# the day's range; Asia is thin and mean-reverting by repute.
+
+[[hypothesis]]
+label = "ny-morning/ema-cross"
+base = "ema-cross"
+filters = ["weekdays", "flat:1630-1815", "hours:0800-1200"]
+overrides = {}
+why = "trend into the session with the volume"
+
+[[hypothesis]]
+label = "ny-morning/donchian"
+base = "donchian-breakout"
+filters = ["weekdays", "flat:1630-1815", "hours:0800-1200"]
+overrides = {}
+why = "breakouts where the liquidity is"
+
+[[hypothesis]]
+label = "london-open/donchian"
+base = "donchian-breakout"
+filters = ["weekdays", "flat:1630-1815", "hours:0200-0600"]
+overrides = {}
+why = "London sets the range; trade the break of the Asian one"
+
+[[hypothesis]]
+label = "asia/rsi-reversion"
+base = "rsi-reversion"
+filters = ["weekdays", "flat:1630-1815", "hours:1900-0200"]
+overrides = {}
+why = "thin hours are said to mean-revert"
+
+[[hypothesis]]
+label = "asia/bb-fade"
+base = "bb-fade"
+filters = ["weekdays", "flat:1630-1815", "hours:1900-0200"]
+overrides = {}
+why = "same claim, band-based"
+
+# ---------------------------------------------------------------------------
+# Regimes. The same signal reads differently when the range is expanding
+# versus compressing.
+
+[[hypothesis]]
+label = "expansion/donchian"
+base = "donchian-breakout"
+filters = ["weekdays", "flat:1630-1815", "vol:14/100:1.2-99"]
+overrides = {}
+why = "breakouts only when volatility is already rising"
+
+[[hypothesis]]
+label = "expansion/ema-cross"
+base = "ema-cross"
+filters = ["weekdays", "flat:1630-1815", "vol:14/100:1.2-99"]
+overrides = {}
+why = "trend only when there is range to trend in"
+
+[[hypothesis]]
+label = "compression/rsi-reversion"
+base = "rsi-reversion"
+filters = ["weekdays", "flat:1630-1815", "vol:14/100:0.0-0.8"]
+overrides = {}
+why = "fade only when the range is tight"
+
+[[hypothesis]]
+label = "compression/bb-fade"
+base = "bb-fade"
+filters = ["weekdays", "flat:1630-1815", "vol:14/100:0.0-0.8"]
+overrides = {}
+why = "same, band-based"
