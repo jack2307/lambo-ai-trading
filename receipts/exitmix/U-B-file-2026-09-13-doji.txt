@@ -1,0 +1,59 @@
+market:   xauusd 15m
+data:     E:/rust/flowdesk/data (bars from E:/rust/flowdesk/data\bars\XAUUSD-15m.parquet)
+bounds:   --from=2025-04-01 --to=2025-07-01 kept 5862 of 100586 bars
+spread:   0.28 per round trip
+trail:    off
+max hold: 4 h (14400000 ms) from [trading] max_hold_ms, no per-market override
+bars:     5862 from 2025-04-01 00:00 to 2025-06-30 23:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+companion: none loaded — every cmp series is NaN
+guards: off (every number unguarded)
+null sides: coin - 50/50, carries no drift; the null every published percentile was read against
+
+== hypotheses `E:/rust/fd-a9/docs/hypotheses/2026-09-13-doji.toml`: 3 declared, FIXED parameters over the whole window (no selection), each against 200 matched null runs ==
+null sides: coin (50/50, carries no drift; the null every published percentile was read against)
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+guards: off (every number unguarded)
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+doji/allday  doji-reversal          62   0.612  -0.270    0.886    1.326        0    7%  fail: profit factor 0.612 < 1.2; expectancy -0.270R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15  — the pattern wherever it prints
+                                matched null 64 trades median vs the method's 62 — count match 1.03
+                                long share: method 0.645 vs the null's median 0.508  ** outside 40-60% long against a coin: this percentile carries the instrument's drift **
+                                spread paid: method 4.39 USD vs the null's median 3.78 USD — cost match 0.86
+                                exposure: signed share of time method +0.490 vs the null's +0.036; time in market method 2175 min vs the null's median 2678 min — ratio 1.23  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.886 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 0.751 ATR = 4.84 points, cost 5.79% of R (realised median, structural)
+                                the method's own realised stop: median 0.751 ATR = 4.84 points over 62 trades
+                                exits: STOP 41, TARGET 17, TIMEOUT 3, flat window 1; mean hold 35.1 min
+doji/ny      doji-reversal          23   0.369  -0.495    0.902    1.825        0    4%  fail: only 23 trades (need 30); profit factor 0.369 < 1.2; expectancy -0.495R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 08:00-16:00  — only in New York hours, where a full-ATR bar means participation
+                                matched null 21 trades median vs the method's 23 — count match 0.91
+                                long share: method 0.565 vs the null's median 0.524
+                                spread paid: method 1.29 USD vs the null's median 1.21 USD — cost match 0.94
+                                exposure: signed share of time method +0.125 vs the null's +0.070; time in market method 1200 min vs the null's median 1042 min — ratio 0.87  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.902 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 0.726 ATR = 5.26 points, cost 5.32% of R (realised median, structural)
+                                the method's own realised stop: median 0.726 ATR = 5.26 points over 23 trades
+                                exits: STOP 17, TARGET 4, TIMEOUT 1, flat window 1; mean hold 52.2 min
+doji/strict  doji-reversal           7   0.215  -0.706    0.790    2.946        0   14%  fail: only 7 trades (need 30); profit factor 0.215 < 1.2; expectancy -0.706R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15  — a stricter doji: near-zero body on a large bar
+                                matched null 8 trades median vs the method's 7 — count match 1.14
+                                long share: method 0.571 vs the null's median 0.500
+                                spread paid: method 0.66 USD vs the null's median 0.33 USD — cost match 0.51  ** outside the band: the control did not pay what the method paid **
+                                exposure: signed share of time method +1.000 vs the null's +0.000; time in market method 75 min vs the null's median 600 min — ratio 8.00  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.790 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 1.080 ATR = 4.89 points, cost 5.73% of R (realised median, structural)
+                                the method's own realised stop: median 1.080 ATR = 4.89 points over 7 trades
+                                exits: STOP 6, TARGET 1; mean hold 10.7 min
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+

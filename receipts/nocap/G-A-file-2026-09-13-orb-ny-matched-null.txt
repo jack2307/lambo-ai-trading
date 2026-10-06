@@ -1,0 +1,60 @@
+market:   xauusd 15m
+data:     E:/rust/flowdesk/data (bars from E:/rust/flowdesk/data\bars\XAUUSD-15m.parquet)
+bounds:   --from=2025-07-01 --to=2025-10-01 kept 6044 of 100586 bars
+spread:   0.28 per round trip
+trail:    off
+max hold: 168 h (604800000 ms) from [markets.<id>.trading] max_hold_ms = 604800000
+bars:     6044 from 2025-07-01 00:00 to 2025-09-30 23:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+companion: none loaded — every cmp series is NaN
+guards: on — max_open_loss_r 2.0, notional 300%, weekend flat 16:40 NY, news flat 60/30 (impact≥3, USD), daily cap 20, loss limit $300, cooldown 30 min
+null sides: coin - 50/50, carries no drift; the null every published percentile was read against
+
+== hypotheses `E:/rust/fd-a9/docs/hypotheses/2026-09-13-orb-ny-matched-null.toml`: 3 declared, FIXED parameters over the whole window (no selection), each against 200 matched null runs ==
+null sides: coin (50/50, carries no drift; the null every published percentile was read against)
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+guards: on — max_open_loss_r 2.0, notional 300%, weekend flat 16:40 NY, news flat 60/30 (impact≥3, USD), daily cap 20, loss limit $300, cooldown 30 min
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+orb/60m      orb                    44   1.455   0.131    0.989    1.607        0   91%  gate pass, inside the noise
+                                MoTuWeThFr + flat 16:30-18:15 + NY 09:20-12:00  — the classic: the first hour's range, broken before midday
+                                matched null 52 trades median vs the method's 44 — count match 1.18
+                                long share: method 0.568 vs the null's median 0.500
+                                spread paid: method 0.87 USD vs the null's median 0.97 USD — cost match 1.11
+                                exposure: signed share of time method +0.204 vs the null's +0.013; time in market method 10590 min vs the null's median 16778 min — ratio 1.58  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.989 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 2.659 ATR = 12.72 points, cost 2.20% of R (realised median, structural)
+                                the method's own realised stop: median 2.659 ATR = 12.72 points over 44 trades
+                                guards: refused NEWS_FLAT 1; closed NEWS_FLAT 1, WEEKEND_FLAT 3; sized down 17
+                                exits: NEWS_FLAT 1, STOP 12, TARGET 11, WEEKEND_FLAT 3, flat window 17; mean hold 240.7 min
+orb/30m      orb                    27   1.222   0.079    1.054    1.822        0   67%  fail: only 27 trades (need 30)
+                                MoTuWeThFr + flat 16:30-18:15 + NY 09:20-12:00  — a tighter range gives more breaks and earlier entries; does the extra noise pay?
+                                matched null 38 trades median vs the method's 27 — count match 1.41  ** outside the band: this percentile is unmatched **
+                                long share: method 0.593 vs the null's median 0.488
+                                spread paid: method 0.54 USD vs the null's median 0.77 USD — cost match 1.42  ** outside the band: the control did not pay what the method paid **
+                                exposure: signed share of time method +0.284 vs the null's +0.022; time in market method 5115 min vs the null's median 11325 min — ratio 2.21  ** the control did not collect the drift the method did **
+                                cost-matched null: control stop 2.317 ATR = 12.59 points, cost 2.22% of R (realised median, structural)
+                                the method's own realised stop: median 2.317 ATR = 12.59 points over 27 trades
+                                guards: refused none; closed NEWS_FLAT 1, WEEKEND_FLAT 2; sized down 11
+                                exits: NEWS_FLAT 1, STOP 10, TARGET 7, WEEKEND_FLAT 2, flat window 7; mean hold 189.4 min
+orb/60m-expansion orb                    21   1.491   0.159    1.065    2.475        0   78%  fail: only 21 trades (need 30)
+                                MoTuWeThFr + flat 16:30-18:15 + NY 09:20-12:00 + ATR14/ATR100 in [1.2, 99]  — only on days where volatility is already expanding: a break needs range to run into
+                                matched null 21 trades median vs the method's 21 — count match 1.00
+                                long share: method 0.571 vs the null's median 0.500
+                                spread paid: method 0.36 USD vs the null's median 0.34 USD — cost match 0.94
+                                exposure: signed share of time method +0.006 vs the null's +0.014; time in market method 5430 min vs the null's median 6180 min — ratio 1.14
+                                cost-matched null: control stop 2.905 ATR = 14.55 points, cost 1.92% of R (realised median, structural)
+                                the method's own realised stop: median 2.905 ATR = 14.55 points over 21 trades
+                                guards: refused none; closed NEWS_FLAT 1, WEEKEND_FLAT 1; sized down 4
+                                exits: NEWS_FLAT 1, STOP 5, TARGET 5, WEEKEND_FLAT 1, flat window 9; mean hold 258.6 min
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+

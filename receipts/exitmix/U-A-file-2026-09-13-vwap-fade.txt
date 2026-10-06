@@ -1,0 +1,59 @@
+market:   xauusd 15m
+data:     E:/rust/flowdesk/data (bars from E:/rust/flowdesk/data\bars\XAUUSD-15m.parquet)
+bounds:   --from=2025-07-01 --to=2025-10-01 kept 6044 of 100586 bars
+spread:   0.28 per round trip
+trail:    off
+max hold: 4 h (14400000 ms) from [trading] max_hold_ms, no per-market override
+bars:     6044 from 2025-07-01 00:00 to 2025-09-30 23:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+companion: none loaded — every cmp series is NaN
+guards: off (every number unguarded)
+null sides: coin - 50/50, carries no drift; the null every published percentile was read against
+
+== hypotheses `E:/rust/fd-a9/docs/hypotheses/2026-09-13-vwap-fade.toml`: 3 declared, FIXED parameters over the whole window (no selection), each against 200 matched null runs ==
+null sides: coin (50/50, carries no drift; the null every published percentile was read against)
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+guards: off (every number unguarded)
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+vwap/allday  vwap-fade             282   0.964  -0.011    0.845    1.106        0   78%  fail: profit factor 0.964 < 1.2; expectancy -0.011R < 0.05R
+                                  — reversion to the UTC-day VWAP, any hour
+                                matched null 242 trades median vs the method's 282 — count match 0.86
+                                long share: method 0.465 vs the null's median 0.496
+                                spread paid: method 18.59 USD vs the null's median 15.31 USD — cost match 0.82
+                                exposure: signed share of time method +0.031 vs the null's -0.027; time in market method 25965 min vs the null's median 30728 min — ratio 1.18  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.845 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 1.000 ATR = 3.92 points, cost 7.14% of R (named stopAtr, copied)
+                                the method's own realised stop: median 1.037 ATR = 4.07 points over 282 trades
+                                exits: STOP 169, TARGET 96, TIMEOUT 17; mean hold 92.1 min
+vwap/us-hours vwap-fade              60   0.875  -0.059    0.924    1.503        0   42%  fail: profit factor 0.875 < 1.2; expectancy -0.059R < 0.05R
+                                NY 09:30-16:00  — only where the benchmarked flow is; the null trades the same hours
+                                matched null 58 trades median vs the method's 60 — count match 0.97
+                                long share: method 0.433 vs the null's median 0.490
+                                spread paid: method 2.96 USD vs the null's median 3.31 USD — cost match 1.12
+                                exposure: signed share of time method +0.248 vs the null's -0.054; time in market method 7935 min vs the null's median 15090 min — ratio 1.90  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.924 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 1.000 ATR = 5.07 points, cost 5.52% of R (named stopAtr, copied)
+                                the method's own realised stop: median 1.028 ATR = 5.21 points over 60 trades
+                                exits: STOP 34, TARGET 16, TIMEOUT 10; mean hold 132.2 min
+vwap/wide    vwap-fade             171   0.568  -0.343    0.851    1.151        0    0%  fail: profit factor 0.568 < 1.2; expectancy -0.343R < 0.05R
+                                  — a wider stretch: fewer, larger dislocations
+                                matched null 159 trades median vs the method's 171 — count match 0.93
+                                long share: method 0.409 vs the null's median 0.497
+                                spread paid: method 8.64 USD vs the null's median 10.33 USD — cost match 1.20
+                                exposure: signed share of time method +0.144 vs the null's -0.011; time in market method 15870 min vs the null's median 20332 min — ratio 1.28  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.851 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 1.000 ATR = 4.23 points, cost 6.62% of R (named stopAtr, copied)
+                                the method's own realised stop: median 1.036 ATR = 4.38 points over 171 trades
+                                exits: STOP 132, TARGET 24, TIMEOUT 15; mean hold 92.8 min
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+

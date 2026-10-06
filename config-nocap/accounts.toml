@@ -1,0 +1,1274 @@
+# The broker accounts a paper book can be mirrored into.
+#
+# THIS FILE IS WHERE YOU ADD AN ACCOUNT. Nothing else needs editing: the
+# launcher reads it to know what to start, and the desk reads it to know what
+# to list, so an account added here appears in both.
+#
+# One entry is one MetaTrader terminal logged into one login. That pairing is
+# not a convention, it is what MetaTrader allows: a terminal holds one account
+# at a time, so two accounts means two INSTALLATIONS, each with its own
+# directory. `MetaTrader5` in Python reaches a specific one by `path=`, and it
+# reaches them independently - measured 2026-09-16, with the demo and the live
+# terminal running side by side.
+#
+# So to add a second account:
+#
+#   1. Install (or copy) a terminal into its own directory, e.g. C:\MT5-demo2.
+#      A copy made from `C:\Program Files\MetaTrader 5` starts with an EMPTY
+#      server list, because a normal install keeps its servers in AppData and
+#      not in Program Files; it then cannot resolve the broker's server name,
+#      the login silently does nothing and NOTHING IS LOGGED. Copy
+#      `%APPDATA%\MetaQuotes\Terminal\<hash>\config\servers.dat` into the new
+#      terminal's `config\` and it will log in. This cost an afternoon once.
+#   2. Log that terminal into the account, by hand or with a start config.
+#   3. TURN AUTOTRADING ON, AND DO IT AFTER STEP 2, NOT BEFORE.
+#
+#      MetaTrader switches automated trading OFF whenever the account
+#      changes - deliberately, and it says so in its own log:
+#
+#        Experts  automated trading is disabled because the account
+#                 has been changed
+#
+#      So a start config carrying `[Experts] AllowLiveTrading=1` sets it at
+#      launch and then LOSES it the moment someone logs in. Measured
+#      2026-09-17 on the cent account: config applied at 13:59, account
+#      changed at 14:00, AutoTrading off ever since, and `terminal_info()
+#      .trade_allowed` was the only place saying so.
+#
+#      With it off, every order comes back retcode 10027 "AutoTrading
+#      disabled by client" and the executor looks exactly like a strategy
+#      that never fires. That cost 36 refused orders on the demo.
+#
+#      Click Algo Trading in the toolbar, or restart the terminal from its
+#      shortcut now that it remembers the account - with no account change
+#      to follow, the start config's setting survives.
+#   4. Add an `[[account]]` block here.
+#   5. `powershell -File py\live\start_executors.ps1 -Account <id>`
+#
+# Each account keeps its OWN record of every book it mirrors, under
+# data/live/<id>/<book>/ - the fills, the slippage, the account snapshot, the
+# executor's own output, and a STOP file that pauses that book on that account
+# alone. This matters because one book may run on several accounts at once,
+# which is the comparison most worth making: the same rule, a demo and a small
+# real account, and the difference is the fill. A shared file per book would
+# have let the second account overwrite the first's record.
+#
+# data/paper/<book>/STOP still stops a book on EVERY account - reach for it
+# when the book itself is wrong rather than one account's execution.
+#
+# No password belongs in this file. The terminal holds its own credentials;
+# the executor only ever attaches to a terminal that is ALREADY logged in, and
+# refuses outright if the account it finds is not the `login` named here.
+
+# ------------------------------------------------------------ the price feed
+#
+# WHERE THE DESK'S BARS COME FROM. One key, read by everything that needs a
+# price terminal, so the 15-minute bars a book decides on and the H4/D1 bars it
+# reads for context can never come from different terminals.
+#
+# Read by `deploy/start-desk.ps1` (which passes it to the pollers), and by
+# `deploy/run-htf-export.cmd` and `deploy/install-tasks.ps1` for the higher
+# timeframe export. Before this key existed those three carried the answer
+# separately and agreed only by memory: on 2026-09-18 the pollers were reading
+# `C:\MT5-cent` and the export was pointed at the same path by hand, correctly,
+# and nothing in the repo made that a guarantee. Moving the feed is now one
+# key and a restart instead of a hunt through three files, and a move that
+# misses one of them is not possible rather than merely unlikely.
+#
+# THE TRADEOFF, WHICH IS REAL AND UNRESOLVED.
+#
+# This currently names the terminal the funded account trades on, and there is
+# a written rule against exactly that, a few lines below on the cent account:
+# "it would put the desk's whole price feed on the same login that is carrying
+# money, so a re-login here would blind the desk. Separate installs keep the
+# two failures separate." That rule is good and it was written for the home
+# desktop, where the pollers read a third terminal in Program Files that
+# carries no account of the desk's at all.
+#
+# The VPS has no such terminal. It has the demo install and the funded one, and
+# the argument FOR the funded one is that the books' bars must be the series
+# the account actually fills against: the demo quotes the same gold to the tick
+# but a different contract, which is the kind of "very nearly right" that
+# nobody would ever trace. So the desk trades the feed's independence for the
+# feed matching the fills, on purpose.
+#
+# It is not settled. If the demo terminal is made to carry the `.sc` symbols it
+# becomes the better answer - same series, separate failure - and this key is
+# where that change happens. a5 is taking the question to the owner. Whoever
+# changes it should change this comment with it rather than leave the argument
+# describing a decision that has moved.
+[prices]
+# The terminal the pollers and the higher-timeframe export both read.
+terminal = 'C:\MT5-cent\terminal64.exe'
+# The suffix that terminal's symbols carry: `.sc` on a cent account, empty on a
+# standard one. It belongs to the TERMINAL and not to the market, for the same
+# reason `symbol_suffix` does on an account: `xauusd` is the same gold on both
+# and only the name differs.
+symbol_suffix = ".sc"
+# Fill a book's pending entry at the OPEN of the next bar the moment that bar
+# opens, instead of when it closes fifteen minutes later. Same price, earlier
+# knowledge: the mirror then enters on the same bar the book did rather than
+# one behind it. Built 2026-09-17 (docs/decisions/2026-09-17-entry-lag.md),
+# off until the owner turned it on 2026-09-18 as stage 0 of
+# docs/plans/2026-09-18-staged-ai-entry.md. start_pollers.ps1 reads this key
+# itself, so every launcher path (start-desk, update, by hand) agrees.
+fill_on_open = true
+
+# THE WEEKEND BACKSTOP'S CUT, AND THE ONE PLACE IT IS TYPED.
+#
+# The UTC time on FRIDAY from which every executor closes what it holds and
+# refuses to open, until the Sunday reopen at 21:00Z. The owner's rule of
+# 2026-09-19: the account NEVER holds a position over a weekend.
+# docs/decisions/2026-09-19-weekend-flat-never-fires.md is the whole story.
+#
+# WHY 20:45 AND NOT SOMETHING ROUNDER. It is 16:45 New York in summer, fifteen
+# minutes before Friday's close, and - this is the part that matters - it is
+# AFTER the engine's own guard has acted. `flat_before_weekend_hhmm = 1640`
+# flattens the paper book on the 20:30Z bar, which closes at 20:45Z, and the
+# mirror follows within a poll. So by the time this window opens the account
+# should already be flat and this should find nothing to close. That is the
+# intended order: the backstop checks layer one's work rather than forming a
+# second opinion about how much of Friday to give up.
+#
+# THE DATE IT HAS TO CHANGE: before Friday 2026-11-06, the first Friday after
+# New York leaves daylight saving on Sunday 1 November. The close moves to
+# 22:00Z; the engine's 1640 is anchored in New York and needs no edit, but
+# 1640 NY then falls at 21:40Z while this would still fire at 20:45Z - an hour
+# EARLIER than the engine's guard, which would make the backstop the operative
+# rule and cost about 75 minutes of Friday instead of 15. The fix is to type
+# 21:45 here. One edit, one file: start_executors.ps1 reads this key itself and
+# deploy/sunday-reopen.ps1 checks the running executors against it, so neither
+# carries a second copy of the number to forget.
+#
+# Absent means "pass nothing", so the executor keeps its own default (20:45)
+# and a registry written before this key existed behaves exactly as it did. An
+# empty string reads as absent too, NOT as off: disabling the backstop takes
+# the word `off`, typed, because a half-finished edit must not silently
+# disable it. Anything else refuses - accounts.py stops the launcher before it
+# has killed a single executor.
+weekend_flat = "20:45"
+
+# ---------------------------------------------------------------------------
+# THE INTRODUCING-BROKER REBATE. A CREDIT, NOT A COST.
+# ---------------------------------------------------------------------------
+#
+# The owner is the introducing broker on his own accounts, so part of the
+# spread his trading pays comes back to him. His instruction, 2026-09-20:
+# "tinh them tien backcom se bang 45% cua spread" - count the Backcom money
+# too, it will be 45% of the spread.
+#
+# HE WAS OFFERED THREE WAYS AND PICKED A SEPARATE CREDIT LINE, on live and on
+# paper. Not a cost-model change. So NOTHING that already had a number has a
+# different one because this key exists: `config/default.toml`'s `spread`
+# still charges what the venue charges, every `net_usd` and every `realised`
+# still means what it meant, and every receipt in docs/decisions/ still
+# reproduces. The rebate is published BESIDE those figures with a
+# net-of-rebate figure next to it, so a reader can always see how much of a
+# result is the strategy and how much is the commercial arrangement. Folding
+# it into the cost model would destroy exactly that, which is why it was not
+# the option chosen.
+#
+# WHY HERE AND NOT IN config/default.toml. That file is the COST MODEL: what
+# the venue charges anybody who trades this symbol, measured from the
+# terminal. This is not a property of gold, of Vantage's spread, or of any
+# market - it is a term of the owner's own IB agreement, and it attaches to
+# the LOGIN, exactly like `real_money` and `lot_scale` below. A second desk
+# trading the same config with no IB link would pay the same spread and
+# receive nothing. `config/default.toml` describes the market; this file
+# describes the relationship, and the rebate is a relationship.
+#
+# TOP-LEVEL RATHER THAN PER-ACCOUNT, and that is an argument that can be lost.
+# There is one agreement today, and the paper books belong to no account at
+# all - a paper book is a market and a strategy, and it would have nowhere to
+# read a per-account rate from. So the rate sits beside [prices], which is the
+# other table here that is a fact about the DESK rather than about one
+# account. An account that negotiates its own terms adds its own key to its
+# own [[account]] block when that day comes; nothing here has to move.
+[rebate]
+# The share of the ROUND-TURN spread that comes back. 0.45 is the owner's
+# figure and is the only number he has given.
+#
+# ROUND TURN, AND THE WORD IS LOAD-BEARING. A position pays the spread once
+# between the ask it enters at and the bid it leaves at; the engine charges
+# half of it on each side (crates/fd-backtest/src/engine.rs, `apply_costs`)
+# and the two halves are one spread. So the credit on one trade is
+#
+#     0.45 x spread x lots x (money per unit of price, per lot)
+#
+# and NOT 0.45 of each side, which would be twice this. On XAUUSD.sc at the
+# configured 0.28 spread, 0.07 lots, contract 1 oz, tick 0.01 / tick value
+# 1.00 USC (so 1.00 of price is 100 USC a lot): the spread costs 1.96 USC and
+# this credits 0.88 USC, which on a book risking about 0.82 USD a trade is
+# about 0.011 R. Those are the numbers to check an implementation against.
+#
+# 0.0 IS A RATE AND MEANS "the rebate is zero". Deleting this table means "no
+# arrangement is recorded", and every figure derived from it then reports
+# null rather than nought. They are different states and the desk shows them
+# differently.
+share_of_spread = 0.45
+
+# per_lot = 11.0
+# per_lot_currency = "USD"
+#
+# NOT IMPLEMENTED, AND LEFT WRITTEN DOWN BECAUSE IT IS THE LIKELIER TRUTH. An
+# IB rebate is USUALLY quoted per standard lot - the figure in
+# docs/decisions/2026-09-13-close-reopen-drift.md is $10-12 per standard lot
+# from this owner's own book - and a per-lot rebate and a share of the spread
+# are NOT the same number wearing two hats. A share of the spread moves with
+# the spread and pays nothing when the spread is nothing; a flat per-lot
+# figure pays the same in a quiet hour as in a violent one. At 0.28 on gold
+# the two can be made to agree; at 0.21 (the spread logger's measured median,
+# which this desk deliberately does not charge yet) they do not.
+#
+# A standard lot is 100x this workspace's gold contract, so $11 per standard
+# lot is $0.11 per lot here - worth saying out loud before anyone types the
+# broker's own number into a file whose lots are ounces.
+#
+# When the owner supplies the real per-lot figure it goes here, the reader
+# prefers it over `share_of_spread`, and whichever was used travels with every
+# number it produced. It is not implemented today because guessing which form
+# the agreement takes would produce a confident figure from an invented term,
+# and an invented term is worse than no rebate line at all.
+
+[[account]]
+# Short, stable, and what you type at the launcher. It is also the name the
+# desk shows, so it is worth reading well.
+id = "vantage-demo"
+label = "Vantage demo - cent mirror"
+
+# The account the terminal must already be logged into. Checked against
+# `account_info().login` before any order is sent: a terminal that is not the
+# one you named is not the one you meant, and the executor exits rather than
+# trade the wrong account.
+login = 26108386
+server = "VantageMarkets-Demo"
+terminal = 'C:\MT5-demo\terminal64.exe'
+
+# Let the launcher hand this terminal its own autologin file, so it comes up
+# logged in without somebody typing a password into an RDP session.
+#
+# Opt-in, and off everywhere it is not written. Before 2026-09-18 the launcher
+# passed `/config:` to this terminal by hard-coded path and to nothing else;
+# deriving it from "does the file exist" would have extended it to the funded
+# terminal, whose autologin nobody has read. The default protects the account
+# with money in it; this key is one account saying yes.
+autologin = true
+
+# Terminal volume = the book's lots x this.
+#
+# 1.0 is right for a CENT paper book mirrored into a STANDARD account, and that
+# is not a coincidence to be re-derived per account. Every pair's contract is
+# exactly 100x larger on the standard symbol (MEASURED 2026-09-16: XAUUSD
+# 1 -> 100, BTCUSD 0.01 -> 1, EURUSD 1000 -> 100000) and this account's 10,000
+# USD is exactly 100x the book's 10,000 USC. Both sides of the ratio scale
+# together, so the same lot number is the same fraction of equity on either.
+# Change it only to trade this account SMALLER or LARGER than the book on
+# purpose.
+lot_scale = 1.0
+
+# Reconcile and record, send nothing. The account still appears on the desk and
+# still reports its balance; what it will not do is place an order.
+#
+# Turned off 2026-09-16 on the owner's explicit instruction, after a day of dry
+# runs on this account in which every book reconciled, the sizes came out right
+# and nothing was refused. This is a DEMO account.
+#
+# It said "and the executor refuses a real-money one outright, whatever this
+# file says" until 2026-09-17, which stopped being true the day the owner
+# funded a real account: the wall became a permission, and a real account now
+# runs when `real_money = true` here and `-AllowReal` is typed. See the block
+# below. Corrected rather than deleted because it is the sentence the day's
+# reasoning rested on.
+#
+# It still takes `-Live` on the command line for an order to leave the machine:
+# the file grants permission, the command line spends it.
+dry_run = false
+
+# False means this account does not run. Nothing is deleted: what you worked
+# out to set it up stays here, and the launcher skips it.
+#
+# Off since 2026-09-17, on the owner's word: the demo had done its job and a
+# real cent account took over. Everything that made it work is still written
+# down here, and every fill it ever took is still in data/live/vantage-demo/.
+#
+# There is a second reason to leave it off, and it is the stronger one. This
+# desk now runs on ONE machine, and the desktop it moved from still has a
+# terminal logged into this same demo. Two machines mirroring one account send
+# every order twice, and the launcher's mutex is system-wide, not world-wide -
+# it cannot see the other machine at all.
+#
+# THIS LINE USED TO SAY "an account that is off cannot be started by accident
+# on either", AND THAT WAS FALSE FROM THE DAY IT WAS WRITTEN UNTIL 2026-09-17.
+# `-Account <id>` reaches accounts.py as `--id`, which answers for a disabled
+# account by design, and start_executors.ps1 never read this field - so
+# `start_executors.ps1 -Account vantage-demo -Live` started this account's
+# mirrors, on either machine, exactly as though the line above were absent.
+# The launcher now checks it. The wrong sentence is recorded rather than
+# quietly replaced because it was believed, and by the person who wrote it.
+#
+# What it still cannot do is see the other machine. `enabled = false` is one
+# file on one disk; the desktop has its own copy of this repository and its own
+# copy of this file. Turning an account off here stops it HERE. The only thing
+# that stops it there is that file being off there too, or the terminal not
+# being logged in.
+enabled = false
+
+# Which books this account mirrors. This IS the strategy selection: a book not
+# named here is paper only, on this account.
+#
+# Each book gets its own process and its own magic number, so one account can
+# carry several books without their results running together - the executor
+# matches positions and history by magic, never by symbol alone. Checked for
+# collisions across these eight on 2026-09-16: none.
+#
+# THE COIN CONTROLS ARE NOT HERE, AND THE CAMPAIGN STILL HAS THEM.
+#
+# They were listed here until 2026-09-17. The owner's objection was not that
+# the coin measures nothing - it was that a coin taking real positions is
+# money spent to learn something a paper book already knows. He is right, and
+# the text this replaces had the two things welded together.
+#
+# Measuring and mirroring are separate. Every `-coin` book still runs, still
+# takes its seeded flip, still records its own trades. What it no longer does
+# is spend margin on this account. The comparison the campaign exists to make
+# - does the model's direction beat a coin's, over the same bars, under the
+# same guards - is a PAPER comparison, and it is untouched.
+#
+# What IS lost, stated rather than glossed: the coin no longer pays a real
+# spread or takes real slippage, so "the model beat the coin" can be checked
+# in the book but no longer at the broker. That would matter if execution cost
+# turned out to differ by direction. It has not in the record so far, and it
+# is a smaller thing than paying for random trades to find out.
+#
+# Removed while all three were FLAT on this account - the condition the note
+# below insists on, checked before the edit and not after. Realised up to that
+# point: ds-coin -116.35, opus-coin 0.00, sol-coin +77.04.
+#
+# What this account CANNOT reproduce is that each paper book has its own 10,000
+# USC while all five share this one account. Each still sizes as though it
+# owned the whole thing, so their risk adds up here and does not there: five
+# books at the desk's 300% notional cap is 15x this account's equity in
+# notional at once, about 5% of it at risk. Safe at 1:500 - margin level near
+# 3000% against a 30% stop-out - but safe by arithmetic, which is why the
+# executor now also refuses any open that would take the ACCOUNT below a 500%
+# margin level.
+runs = [
+    "xau-ema",
+    "xau-macd-asia",
+    "ai-xau-ds-ctx",
+    "ai-xau-opus-ctx",
+    "ai-xau-terra-ctx",
+]
+
+# sol out, terra in, 2026-09-17. See the same swap on the cent account below
+# for the whole of it - this account is disabled and mirrors nothing today, so
+# the entry that costs money is that one and the reasoning is written there.
+
+# Opus came out on 2026-09-16 and went back in the same day, both on the
+# owner's word. Its coin went with it each time, under a rule that no longer
+# applies: while coins were mirrored, a coin here without its model would have
+# put random-direction positions on the account with nothing to compare them
+# against. No coin is mirrored now, so that pairing rule is spent - a model
+# enters and leaves this list on its own, and its coin keeps running on paper
+# either way.
+#
+# Being listed here does nothing on its own. The mirror can only copy decisions
+# that exist, so a book whose `ai_trader` is not running is simply flat here.
+# Opus's trader was stopped to save quota and has to be started again before
+# any of this reaches the account.
+#
+# Removing a book from `runs` only stops the mirror from OPENING. Check it is
+# flat on the account first: the launcher stops every executor, so a book
+# dropped while it holds a position leaves that position behind with nobody
+# reconciling it. Both Opus books were flat when this was done.
+
+
+# ---------------------------------------------------------------------------
+# REAL MONEY. Read this block before changing anything in it.
+# ---------------------------------------------------------------------------
+[[account]]
+id = "vantage-cent"
+label = "Vantage cent - REAL MONEY"
+
+# Standard STP Cent, on the same server the desk already reads prices from.
+# A cent account quotes the `.sc` book the paper desk has used since the
+# beginning - XAUUSD.sc contract 1, BTCUSD.sc 0.01, EURUSD.sc 1000, which is
+# exactly what config/default.toml already says. So this account needs no unit
+# conversion at all. That is the opposite of the demo below it, where a
+# standard account meant every contract was 100x the book's and the mapping
+# had to be worked out; here the paper books ARE cent books.
+login = 33705331
+server = "VantageMarkets-Live 21"
+
+# Its own terminal, and deliberately NOT the one in Program Files.
+#
+# A terminal holds one account at a time, and the Program Files install is
+# what the pollers read prices from. Pointing it at this account would work -
+# same broker, same symbols - but it would put the desk's whole price feed on
+# the same login that is carrying money, so a re-login here would blind the
+# desk. Separate installs keep the two failures separate.
+terminal = 'C:\MT5-cent\terminal64.exe'
+
+# This account lists XAUUSD.sc, not XAUUSD. The demo below lists the opposite
+# and sets no suffix. It belongs to the account and not to the market because
+# `xauusd` is the same gold on both - only the name differs.
+symbol_suffix = ".sc"
+
+# 1% AT 10,000 USC, TO BE RE-SET WHEN THE BALANCE MOVES BY A FIFTH.
+#
+# That is the honest name for this number and the heading is the caveat: a
+# fixed scale does not track the balance. At 12,000 USC it is 0.83% of the
+# account, at 8,000 USC it is 1.25%. Re-set it, do not let it drift.
+#
+# THE ARITHMETIC. Each paper book runs on 10,000 USC = USD 100 and risks 1% -
+# one dollar - per trade, sized against the stop at contract 1. The cent
+# account is also 10,000 USC, so 1% of it is 100 USC, the same dollar. One
+# book's lots therefore map to this account 1:1 and the scale is 1.0.
+#
+# WHY IT WAS 0.2 UNTIL 2026-09-18, AND WHAT THAT ACTUALLY DID. The fifth was
+# chosen on the reasoning that five books each sizing as though they owned the
+# whole account would risk five times one book's risk. True of the aggregate.
+# What it did per trade was worse than small: a fifth of 0.05-0.07 lots is
+# 0.01, the broker's minimum, so almost every trade landed on the floor -
+# and a floor is a FLAT size, which inverts risk-based sizing. Measured over
+# the 74 stops these books have actually taken:
+#
+#     at 0.2   stop  5.5 pts -> 0.01 lot ->  6 USC risked = 0.06%
+#              stop 11.7 pts -> 0.01 lot -> 12 USC        = 0.12%
+#              stop 92.0 pts -> 0.01 lot -> 92 USC        = 0.92%
+#
+# The widest stop risked fifteen times what the tightest did. Risk-based
+# sizing exists to make those equal, and the floor reversed it.
+#
+#     at 1.0   stop  5.5 pts -> 0.07 lot -> 39 USC        = 0.39%
+#              stop 11.7 pts -> 0.07 lot -> 82 USC        = 0.82%
+#              stop 21.0 pts -> 0.05 lot -> 105 USC       = 1.05%
+#              stop 92.0 pts -> 0.01 lot -> 92 USC        = 0.92%
+#
+# NOT A FLAT 1%, AND THE COMMENT SAYS SO RATHER THAN CLAIMING IT. Two other
+# constraints bite before the risk rule does:
+#
+#   * the ENGINE's own cap of 300% of book equity in notional binds on every
+#     stop below about 13.6 points at a 4400 price - and the median stop these
+#     books take is 12.0, with a quarter below 9.5. So on more than half of
+#     trades the size is set by the notional cap, not by the 1% rule, and the
+#     trade risks less than 1%.
+#   * the broker's 0.01 lot grid rounds the rest.
+#
+# The delivered range is 0.4% to 1.05%, median about 0.82%. Under 1% far more
+# often than over it, which is the direction to be wrong in.
+#
+# THE EXECUTOR'S GUARDS WERE CHECKED AGAINST THIS BEFORE IT WAS CHANGED, at a
+# 4400 price on 10,019 USC of equity:
+#
+#   --max-notional-ratio 10.0   the largest order this can produce is 0.07
+#                               lot = 30,800 USC = 3.07x equity. The ceiling
+#                               binds at 0.23 lot, so there is 3x of headroom.
+#                               Note it is a PER-ORDER check, not an aggregate.
+#   --min-margin-level 500      five books at maximum size is 0.35 lot, 352
+#                               USC of margin at 1:500, a margin level of
+#                               2,846%. The floor binds at 2.28 lots total,
+#                               6x what five books can ask for. This is the
+#                               account-wide guard and it is the one that
+#                               would catch the aggregate.
+#
+# Neither refuses this size. If a later change moves the scale again, run the
+# same two numbers first: the ceiling and the floor are the only things
+# between a sizing mistake and the balance.
+#
+# This is the number that decides how much money an idea costs to be wrong
+# about. Nothing else in this file is closer to the money.
+lot_scale = 1.0
+
+# THE KEY THAT LIVES IN A FILE. Without it the executor exits 3 on a REAL
+# account however the command line reads. The executor makes three checks in
+# all: this one, `--allow-real` on the command line, and `--login` matching the
+# account the terminal is actually holding.
+#
+# THEY ARE THREE CHECKS AND NOT THREE INDEPENDENT DECISIONS, and this file said
+# otherwise until 2026-09-17. Started the documented way, through
+# `start_executors.ps1`, the launcher reads THIS line and adds `--allow-real`
+# itself, and `--login` comes from the `login =` field a few lines above - so
+# one edit to this block plus one typed `-AllowReal` spends the whole
+# permission, and the third check is asked a question this same block supplied
+# the answer to. Only an executor started by hand puts three separate hands
+# on it.
+#
+# What the third check IS worth, on every path: it is the only one of the three
+# that asks the TERMINAL rather than a file. A registry that grants
+# `vantage-cent` cannot reach an account the terminal is not holding, so a
+# terminal logged into the wrong account still stops everything, whatever this
+# file says and whatever was typed. That is a real guarantee, and it is the one
+# to say out loud instead of a count.
+#
+# The split between a file and a command line is still worth what it was worth:
+# a config was edited once by someone who has gone to bed, a command line is
+# typed by someone who is awake.
+real_money = true
+
+# Off since 2026-09-17, on the owner's explicit word.
+#
+# The demo spent a full day recording before it was turned off, and that day
+# is what caught two contract sizes being wrong by a factor of a thousand. I
+# put the same day to the owner here and he asked to go straight to it; that
+# is his call to make and it is written down as his.
+#
+# What stood in for the day: the mirrors ran dry against this account first
+# and reported the symbol, the contract size and the magic they would use, and
+# the volume arithmetic was checked by hand. At lot_scale 0.2 a book asking
+# 0.06 lots sends 0.01 - the broker's minimum, and a 17% trim - so on this
+# account the 0.01 floor is doing part of the sizing. A book wanting less than
+# 0.05 lots is pushed UP to 0.01, which the executor marks `clipped` rather
+# than absorbing quietly.
+#
+# The file grants; the command line still has to spend it. `-Live` and
+# `-AllowReal` are both required, and neither is in this file.
+dry_run = false
+
+# OFF SINCE 2026-09-21, on the owner's word: "ben 33705331 dung lun di".
+#
+# The money left. This account's balance is 382.57 USC - the funds moved to
+# 33708517 ("Lambo V12"), where the same DeepSeek book now runs at ten times
+# the size. An account holding under four dollars is not a desk, and leaving
+# it enabled would put an executor on it at every launcher run for nothing.
+#
+# NOT A JUDGEMENT ON WHAT RAN HERE. ai-xau-ds-ctx finished +204.03 USC over 9
+# closed trades and was the only one of the six books this account ever
+# carried to end in profit. Its record under data/live/vantage-cent/ stays
+# exactly where it is, as does every other book's, and a STOP file sits in
+# its directory so that the book cannot be mirrored here again without
+# someone removing it deliberately.
+#
+# Turning this back on means checking three things first: the balance, the
+# STOP file, and whether the terminal at C:\MT5-cent is still logged into
+# 33705331 - it is also the price feed's terminal, which is a tension this
+# file documents further up.
+enabled = false
+
+# The same five books the demo mirrors. The coin controls are not here and are
+# not coming here - see the demo's note above.
+#
+# ---------------------------------------------------------------------------
+# sol OUT, terra IN. 2026-09-17, on the owner's explicit decision, AGAINST the
+# advice he was given. Both halves of that sentence are here on purpose.
+# ---------------------------------------------------------------------------
+#
+# WHY SOL CAME OUT. Its model became unreachable on the machine the desk runs
+# on. The book was STOPPED rather than repointed at a different model, for the
+# reason this file already gives for account ids and directories: an id has to
+# keep meaning one thing. `ai-xau-sol-ctx` is the record of what gpt-5.6-sol
+# decided; a different model writing into it would leave every number intact
+# and none of them comparable. Its 99 decisions stay exactly as they are.
+#
+# It was FLAT when this edit was made - the paper book's position was None and
+# its last line was a stand-aside at 05:00Z - which is the condition the note
+# further down insists on. Dropping a book that holds a position leaves that
+# position on the account with nobody reconciling it.
+#
+# WHY TERRA GOING IN WAS ADVISED AGAINST, and what the advice was:
+#
+#   1. It starts with ZERO decisions. Nothing anyone has read. Every other
+#      book on this list was mirrored after someone had looked at its paper
+#      record.
+#   2. Nothing transfers from sol. By the vendor's own ordering terra ranks
+#      BELOW sol - priority 7 against 4, from the account's own
+#      models_cache.json - so it is a substitution and not an upgrade, and
+#      sol's 99 decisions say nothing about how this one will behave.
+#   3. The cost of waiting was one line in this file. The cost of not waiting
+#      is real orders on a hundred-dollar account already carrying five books
+#      whose risk adds up in one place, which is the arithmetic the
+#      lot_scale note above exists for.
+#
+# The owner was given that recommendation, with support for it, and chose to
+# mirror terra anyway. It is his account and his call, and it is recorded as
+# his rather than smoothed into a tidy-up.
+#
+# WHAT THIS MEANS FOR ANYONE READING TERRA'S CURVE LATER, which is the only
+# reason this paragraph is as long as it is: it started COLD. Not merely new -
+# cold, with no paper history behind it and none inherited from the book it
+# replaced. Its magic number is its own (4,609,806, against sol's 208,709,589
+# - checked for collision across all five on 2026-09-17, none), so it cannot
+# adopt a single one of sol's positions at the broker either. Whatever that
+# curve shows after a month is the first thing anyone has ever known about
+# this model on this task. Do not read it as continuing anything.
+runs = [
+    # ONE BOOK. 2026-09-21, the owner's decision: "ben tai khoan 331 real se
+    # cho deepseek chay thoi / Toi se tach rieng tai khoan chay tung model 1"
+    # - this account carries DeepSeek alone, and each model gets an account of
+    # its own from here.
+    #
+    # WHAT CAME OFF, AND WHERE EACH STOOD WHEN IT DID. Realised on this
+    # account, in USC, at the moment of the change:
+    #
+    #     ai-xau-ds-ctx       +204.03 over 9 closed   KEPT
+    #     ai-xau-terra-ctx     +20.55 over 9 closed   off
+    #     xau-stoch              0.00 over 0 closed   off
+    #     xau-macd-asia         -33.45 over 3 closed  off
+    #     xau-ema               -82.46 over 2 closed  off
+    #     ai-xau-opus-ctx-b     -97.08 over 5 closed  off
+    #
+    # The kept book is also the only one of the six in profit, which is worth
+    # writing down beside a decision made for a different reason - one account
+    # per model - so that nobody later reads the profit as the reason.
+    #
+    # TERRA HELD A POSITION AND WAS CLOSED DELIBERATELY. LONG 0.06, ticket
+    # 584090677, sitting at -1.86 USC. Removing a book that holds one leaves
+    # the position with nobody reconciling it, which the launcher refuses
+    # outright, so a STOP file was written to
+    # data/live/vantage-cent/ai-xau-terra-ctx/ and the executor closed it and
+    # exited: "close STOP file", retcode 10009, closing ticket 584106430. The
+    # account read margin 0.0 and margin_level null afterwards. Terra came off
+    # +20.55 and is NOT off for failing.
+    #
+    # EVERY BOOK REMOVED HERE KEEPS RUNNING ON PAPER. This list is what the
+    # account follows, not what the desk thinks; and every removed book's
+    # data/live/vantage-cent/<book>/ record stays exactly where it is, which
+    # is the same rule `ai-xau-opus-ctx` has been living under since
+    # 2026-09-18 and `ai-xau-sol-ctx` since 2026-09-17.
+    #
+    # The STOP file under terra's directory is NOT cleared by the launcher and
+    # should stay: it stops that book ON THIS ACCOUNT only, so it is exactly
+    # the right thing to leave behind when terra moves to an account of its
+    # own - a different directory, which this file cannot reach.
+    "ai-xau-ds-ctx",
+]
+
+# The directory data/live/vantage-cent/ is stamped with this login the first
+# time an executor runs, and refuses to hold any other afterwards. That is the
+# guard on the owner's standing requirement that the record reads as one
+# unbroken history: deleting it was never the danger - `data/` is gitignored
+# and no deploy script touches it - but writing two accounts into one file
+# would leave every number intact and none of them meaningful.
+
+# A second account looks like this. Note the separate terminal directory - two
+# entries pointing at one terminal would be two executors fighting over one
+# account, and the launcher refuses that.
+#
+# [[account]]
+# id = "demo-two"
+# label = "Second demo - half size"
+# login = 12345678
+# server = "VantageMarkets-Demo"
+# terminal = 'C:\MT5-demo2\terminal64.exe'
+# lot_scale = 0.5
+# dry_run = true
+# enabled = false
+# runs = ["xau-ema"]
+#
+# The example is a second DEMO on purpose. A real login sitting here would be
+# one uncommented line away from pointing the desk at real money, and an
+# example is exactly the thing people uncomment without reading.
+#
+# This paragraph used to end "the executor refuses a real-money account
+# outright, whatever this file says", and that has been untrue since
+# 2026-09-17. A real account now runs on `real_money = true` here plus
+# `-AllowReal` typed at the launcher. An example block that quietly relied on a
+# lock which no longer exists is the worst possible place for a stale comment,
+# so it is corrected here rather than left to be read as reassurance.
+#
+# What is still true, and is the reason the example stays a DEMO: a live
+# account reached by a book that has never been verified against a demo is the
+# one mistake in this file that costs real money. The defence is now a
+# permission spent in two places rather than a wall, which means reading before
+# uncommenting matters more than it did, not less.
+
+# ---------------------------------------------------------------------------
+[[account]]
+id = "vantage-v12"
+label = "Lambo V12 - coin controls, REAL MONEY"
+
+# A SECOND REAL ACCOUNT, ONE MODEL, 2026-09-21. The owner's plan is one model
+# per account, and this is the first of them: DeepSeek alone, on its own
+# login, on its own terminal, with its own record under data/live/vantage-v12/.
+# The broker's own name for the account is "Lambo V12", which is the product
+# name it will be shown under.
+#
+# It runs THE SAME BOOK as vantage-cent. That is not duplication by accident -
+# this file has always said one book may run on several accounts at once and
+# that the comparison is the point. What differs here is the SIZE: 33705331
+# mirrors at x1.0 and this one at x10, so the two records answer "does the
+# same rule behave the same when each trade is worth ten times more", which
+# no paper book can answer.
+# 2026-09-25: THIS BLOCK STAYS ON 33708517. Putting 35911764 here was my
+# mistake, and mt5_executor refused it before sending anything:
+#   "data/live/vantage-v12/ already holds the record of login 33708517; this
+#    terminal is 35911764. Use a new account id rather than writing two accounts
+#    into one history."
+# An account id owns a history directory. The new login has its own id,
+# `vantage-v12-coin`, at the end of this file: same terminal, separate record.
+login = 33708517
+server = "VantageMarkets-Live 21"
+
+# Its own install, cloned from the idle C:\MT5-live on 2026-09-21 because that
+# copy already carried config\servers.dat - a fresh copy of Program Files
+# starts with an EMPTY server list, cannot resolve the broker name, and fails
+# to log in while writing nothing to any log. That trap is described at the
+# top of this file and it was avoided rather than survived.
+#
+# One terminal holds one login, so this cannot be C:\MT5-cent, and it must not
+# be the price feed's terminal either.
+#
+# THE EXE, NOT THE DIRECTORY. This first read 'C:\MT5-v12' and the executor
+# exited at once with `initialize(C:\MT5-v12) failed: (-10003, "IPC initialize
+# failed, Process create failed")` - MetaTrader5's `path=` launches a process,
+# so it wants the binary. The two accounts above always had the full path and
+# this one was written short.
+terminal = 'C:\MT5-v12\terminal64.exe'
+
+# A cent account, the same as 33705331: XAUUSD.sc at contract 1.0, tick 0.01,
+# tick value 1.0. MEASURED on the terminal 2026-09-21 right after login, with
+# XAUUSD (no suffix) coming back as not listed at all. So the paper books' own
+# units carry over with no conversion, which is the same happy case the cent
+# account has and the opposite of the standard demo.
+symbol_suffix = ".sc"
+
+# FIVE, NOT TEN, AND THE CHANGE IS THE POINT.
+#
+# This block said TEN and justified it against an account holding 100,000 USC =
+# 1,000 USD. That was login 33708517. The login on this block is now 35911764,
+# which holds 50,000 USC = 500 USD - half as much - so ten would put 2% of the
+# account at risk per trade rather than the 1% the paper books run, and three of
+# them together 6% rather than 3%. Left unchanged it would have doubled the risk
+# silently, because a scale is only safe relative to an equity and the equity
+# moved under it.
+#
+# The rule this file states is that a change of scale OR of book count is
+# checked before it is written, and both changed at once here.
+#
+# The paper books run on 100 USD at 1% - one dollar a trade. 500 USD at x5 is
+# about 5 USD a trade, the same 1%. Largest order the books produce is 0.07 lot,
+# so x5 sends 0.35:
+#
+#   --max-notional-ratio 10.0   0.35 lot at 4280 = 149,800 USC = 3.00x equity.
+#                               The ceiling binds at 1.17 lots. Does not bind.
+#                               PER-ORDER, and this account runs THREE books, so
+#                               the aggregate is written beside `enabled` above
+#                               because this ceiling cannot see it.
+#   --min-margin-level 500      75.01 USC for that order - the broker's own
+#                               `order_calc_margin`, measured 2026-09-25, not
+#                               derived from a leverage figure. Three at once is
+#                               about 225 USC against 50,000, a margin level near
+#                               22,000%. Does not bind.
+#
+# LEVERAGE READ 2000 HERE, twice, on 2026-09-25. The note that used to stand on
+# this block said 500 and said it was measured; that reading is not reproducible
+# and the margin figures above avoid depending on it by using the broker's own
+# margin answer instead.
+#
+# BACK TO TEN, because this block is 33708517's again and that account holds
+# 100,000 USC. The five was written for the 500 USD login that briefly sat here
+# by mistake. The account is disabled, so neither number trades today.
+lot_scale = 10.0
+
+real_money = true
+dry_run = false
+# 2026-09-24, the owner's decision, in his words: "Stop chien luoc ben real
+# money di, no dang di ko tot." Both executors on this account were stopped the
+# same minute (PIDs 8764 ai-xau-ds-ctx and 7764 xau-macd-asia) and verified
+# gone, so no new order can reach 33708517.
+#
+# WHAT THIS LINE DOES AND DOES NOT DO. `mt5_executor.py` never reads it - it
+# takes `--account` and `--allow-real` from its command line - so this is a
+# DECLARATION for fd-api and for whoever reads this file next, not an interlock.
+# The thing that actually stopped the trading is that the two processes are
+# dead, and nothing restarts them: `flowdesk-traders` starts the paper AI
+# traders only and `flowdesk-watch` runs the Telegram watcher, so a reboot
+# leaves this account flat. Starting an executor by hand would still work and
+# would still be wrong.
+#
+# 2026-09-24, LATER THE SAME DAY, the owner's decision: "Toi bao la cho may
+# chien luoc coin co hieu suat tot sang chay tai khoan REAL ay." Re-enabled with
+# three coin books added below. He was told the argument against it, twice, and
+# chose this; it is his account and his call, and it is recorded as his rather
+# than presented as a finding.
+#
+# 2026-09-25: STOOD DOWN AGAIN, and this time not by preference but by a machine
+# limit. The owner chose "Cho chay truoc 35911458" - the new account first - and
+# ONLY ONE TERMINAL PER MACHINE CAN SERVE THE PYTHON BRIDGE. The MetaTrader5
+# package speaks over a single port, 22346; the second terminal to start logs
+# `MCP bind error on 127.0.0.1:22346` and is useless to Python. C:\MT5-v10 holds
+# it, so an executor pointed at C:\MT5-v12 would sit in an IPC timeout loop and
+# place nothing - which is exactly what 624 refused orders looked like the day
+# before. `enabled = false` so no session starts one believing it will work.
+#
+# ONE POSITION WAS OPEN ON 33708517 WHEN IT STOOD DOWN, on broker-side stops, and
+# nothing mirrors that login any more.
+#
+# 2026-09-25: STILL DISABLED. The re-enable written here was for a login that
+# does not belong to this block - see the note by `login` above. What follows is
+# kept, because the claim it withdraws was wrong and the correction is worth
+# having wherever a reader lands.
+#
+# A CLAIM THAT STOOD HERE IS WITHDRAWN. "Only one terminal per machine can serve
+# Python" was built on
+# `MCP bind error on 127.0.0.1:22346`, which is real - one terminal binds that
+# port - but NOT fatal. Measured with both terminals up: `initialize(path=...)`
+# reaches each and returns its own account, V10 answering 35911458 and V12
+# answering 35911764. Two funded accounts on one VPS work.
+#
+# SIZING at lot_scale 5.0 with THREE books. Largest order 0.35 lot; the broker's
+# own order_calc_margin says 75.01 USC for it. Three at once is 1.05 lot, about
+# 225 USC of margin against 50,000 - a margin level near 22,000% against a 500%
+# floor. Notional 449,000 USC is 8.98x equity, and --max-notional-ratio is 10x
+# and PER-ORDER, so it cannot see that aggregate, which is why it is written
+# here. The real exposure is correlated risk: three independent coins can land
+# on the same side, so three stops in one day costs about 3% of the account.
+enabled = false
+
+runs = [
+    # Belonged to the OLD login 33708517 and stopped by the owner on 2026-09-24.
+    # Commented out rather than deleted: `runs` IS the strategy selection, so
+    # leaving them listed would say this account mirrors them.
+    # "ai-xau-ds-ctx",
+    # 2026-09-23, the owner's decision: "ap dung xau-macd-asia vao ben real
+    # money". A SECOND BOOK on this account, and the first that is not the
+    # model this account was opened for.
+    #
+    # WHAT THE PAPER CURVE SHOWS: 8 trades, +$5.10, profit factor 4.52,
+    # reward-to-risk median 1.47. Eight trades.
+    #
+    # WHAT THE RECORD SAYS, AND IT IS ABOUT THIS EXACT ROW. `macd-cross` is
+    # killed: 923 trades over the recent Vantage year at profit factor 1.010,
+    # the 66th percentile. The ASIAN-SESSION row - this book, filters
+    # hours:1800-0200 - was the best thing the whole screen found: 300 trades
+    # at PF 1.556, the 98th percentile. It was closed anyway, because its
+    # DIRECTION NULL came in at the 93rd against a threshold of 95 declared
+    # before the test was run, and on the 2022-25 window the same null is
+    # 92nd at PF 0.908. Verdict `macd` in ui/src/lib/verdicts.ts; record
+    # docs/decisions/2026-09-13-recent-year-screen.md.
+    #
+    # That is a sharper objection than the one against xau-stoch. Stoch lost
+    # from the start. This one WON in sample and failed the gate the desk had
+    # already committed to. A rule that clears every bar except the one it
+    # promised to clear is the shape an overfit takes.
+    #
+    # IT HAS ALSO ALREADY TRADED REAL MONEY AND LOST: -33.45 USC over 3
+    # closed on 33705331, two stops against one target.
+    #
+    # THE SIZING WAS CHECKED BEFORE THIS LINE WAS WRITTEN, as this file
+    # requires whenever the scale or the book count changes. At x10 its
+    # largest order is 0.70 lots: 303,800 USC of notional, 3.09x equity
+    # against a 10x per-order ceiling. Both books at maximum together are
+    # 1.40 lots, 1,215 USC of margin at 1:500, a margin level of 8,100%
+    # against a 500% floor. Neither binds. Both stopping out on the same day
+    # costs about 2% of the account.
+    #
+    # Context the owner has: this account is down 1,111 USC over 10 closed
+    # trades as this is written.
+    #
+    # ALSO STOPPED 2026-09-24 with the line above, and separately: this book
+    # failed its own gate on the most recent three months - 97 trades, PF 1.134,
+    # 76th percentile against a gate of 1.2 and the 95th - which the owner was
+    # told the day before (docs/decisions/2026-09-23-three-month-search.md).
+    # "xau-macd-asia",
+
+    # ------------------------------------------------------------------
+    # 2026-09-24, the owner's decision, in his words: "Toi bao la cho may chien
+    # luoc coin co hieu suat tot sang chay tai khoan REAL ay." He asked first
+    # whether it was sensible, was given the arithmetic against it, and chose
+    # it anyway. The three highest-profit-factor coin books at the moment he
+    # chose. Recorded as his decision, not as a result.
+    #
+    # WHAT THESE ARE. Each is the CONTROL of an AI book: a seeded 50/50 coin
+    # that takes the same bar and the same stop distance with a random side.
+    # They have no entry rule of their own, so the three parent models must
+    # keep running - and keep costing DeepSeek and Opus API - for these to
+    # trade at all. The API is paid for an opinion that is then discarded by a
+    # coin flip. That is the arrangement, stated plainly.
+    #
+    # WHAT THE RECORD SAYS ABOUT THEM. A coin's gross expectancy on a bracket
+    # is exactly zero by construction, so its net expectancy is minus the cost,
+    # always. The backtest's random-entry null has a median profit factor of
+    # 0.856-0.874 across 11 measurements of 200 seeds each. At today's ATR14 of
+    # 8.92 points the cost is only 1.65% of R, so the honest projection is
+    # about -2% of the account a month rather than the -11% first quoted to the
+    # owner, which was computed at a historical median ATR and was wrong by
+    # about five times. He has the corrected figure.
+    #
+    # AND THE SELECTION IS MEASURED TO BE UNSTABLE. Between two reads sixty
+    # minutes apart, on one to three new trades each: terra-ctx-coin 2.178 ->
+    # 1.831, plan-trigger-coin 1.312 -> 1.592, htf-filter-coin 1.476 -> 1.686,
+    # plan-coin 1.228 -> 1.057, and smc-coin 1.034 -> 0.928, which left the
+    # "good" group entirely. The membership of this list changed within an hour.
+    #
+    # THE SIZING, RECHECKED BECAUSE THE BOOK COUNT CHANGED, which this file
+    # requires. Per-order is unchanged and does not bind: 0.70 lot, about 3.05x
+    # equity against a 10x per-order ceiling. THE AGGREGATE IS NEW AND THE
+    # CEILING DOES NOT SEE IT - `--max-notional-ratio` is per-order, and the
+    # note above says so because the account then ran one book. THREE books
+    # run - the two above are stopped and commented out - so at maximum together
+    # they are 2.10 lots, about 9.15x equity in notional and 1,833 USC of margin
+    # at the MEASURED 1:500, a margin level of about 5,237% against a 500%
+    # floor. Margin does not bind. What is new is correlated risk: three
+    # independent coins can land on the same side, so three stops on the same
+    # day costs about 3% of the account against 2% for the two books this
+    # replaces. Corrected in place - the first version of this note computed the
+    # aggregate for five books, having left the two stopped ones in `runs`.
+    #
+    # MOVED TO vantage-v10 ON 2026-09-25, on the owner's "Cho chay lai V12 voi
+    # tai khoan moi nay". They run on 35911458 now, which is the account that
+    # has the one terminal this machine can give the Python bridge.
+    #
+    # COMMENTED OUT RATHER THAN DELETED, and it matters more here than usual.
+    # `runs` is the strategy selection, so leaving these listed would say this
+    # account still mirrors them - and if anyone ever sets `enabled = true`
+    # again, two REAL accounts would take the same three signals at once, on
+    # one terminal that can only serve one of them. That is a double position
+    # on live money produced by a line nobody edited. The record of what they
+    # did here stays under data/live/vantage-v12/ either way.
+    # "ai-xau-terra-ctx-coin",
+    # "ai-xau-ds-ctx-htf-filter-coin",
+    # "ai-xau-ds-plan-trigger-coin",
+]
+
+
+# ============================================================================
+[[account]]
+# 2026-09-25, the owner's decision, in his words: "Gio toi se chay 1 tk khac voi
+# chien luoc xau macd asia va xau stoch", funded with "50k cent duong tuong
+# 500$", and then "Cho chay truoc 35911458" when told that only one terminal per
+# machine can serve the Python bridge. He picked the name's family; V10 is V12's
+# smaller sibling, and the label carries what the id cannot.
+#
+# WHAT THE RECORD SAYS ABOUT BOTH BOOKS, because it is his decision and not a
+# finding of mine:
+#   `xau-stoch`      384 trades, PF 0.836, expectancy -0.087R, 14th percentile
+#                    of its matched null - below the median of RANDOM ENTRY over
+#                    nearly 400 trades. All nine stoch-reversal grid cells lost
+#                    over the whole window, worst -28.23%.
+#   `xau-macd-asia`  fails its own gate on the most recent three months: 97
+#                    trades, PF 1.134, 76th percentile, against a gate of 1.2 and
+#                    the 95th (docs/decisions/2026-09-23-three-month-search.md).
+#                    The record's headline of PF 1.56 at the 100th does not
+#                    reproduce on the window the owner made primary on 09-13.
+# He was told both, twice. Recorded as his call.
+id = "vantage-v10"
+label = "Lambo V10 - screen books, REAL MONEY"
+login = 35911458
+server = "VantageMarkets-Live 21"
+terminal = 'C:\MT5-v10\terminal64.exe'
+symbol_suffix = ".sc"
+
+# FIVE, AND THE NUMBERS THAT SAY IT IS SAFE - checked before this line was
+# written, as this file requires whenever a scale or a book count changes.
+#
+# The paper books run on 100 USD and risk 1% - one dollar - per trade. This
+# account holds 50,000 USC = 500 USD, so x5 puts about 5 USD at risk per trade,
+# which is that same 1%.
+#
+# THE LEVERAGE READING CHANGED AND THE FIRST ONE IS WITHDRAWN. This said "the
+# leverage is 500, MEASURED" on the strength of one `account_info()` call at
+# 21:44 on 2026-09-25. Re-read twice later the same night, the same call on the
+# same account returns 2000, which is what the owner asked for. Two readings
+# disagree and the later is not automatically the truer: the honest statement is
+# that it read 500 once and 2000 twice, and the margin arithmetic below is left
+# at the WORSE of them so it holds either way.
+#
+# What is not in doubt is the broker's own answer. `order_calc_margin` for the
+# largest order this book can send, 0.35 lot, returns 75.01 USC - measured
+# directly rather than derived from a leverage figure - against 50,000 of
+# equity. The floor is nowhere near on any reading.
+#
+# Largest order the paper books produce is 0.07 lot, so x5 sends 0.35:
+#   --max-notional-ratio 10.0   0.35 lot at 4279 = 149,765 USC = 3.00x equity.
+#                               The ceiling binds at 1.17 lots, 3.3x of
+#                               headroom. Does not bind. PER-ORDER, not
+#                               aggregate.
+#   --min-margin-level 500      299.5 USC of margin at 1:500, a margin level of
+#                               16,694%. Does not bind.
+#   AGGREGATE, because this account runs TWO books and the ceiling cannot see
+#                               it: 0.70 lot together, 5.99x equity, 599 USC of
+#                               margin, margin level 8,347%. Margin still does
+#                               not bind. What is real is correlated risk - both
+#                               books stopping out on the same day costs about
+#                               2% of the account, 10 USD.
+lot_scale = 5.0
+
+real_money = true
+dry_run = false
+enabled = true
+
+runs = [
+    # MOVED OFF THIS ACCOUNT 2026-10-02, the owner's decision: "dung chien luoc
+    # MACD cross tren V10 de toi chuyen sang 1 tai khoan khac". Commented rather
+    # than deleted so the next reader sees it left and why.
+    #
+    # IT WAS WINNING HERE. From the broker, before it was stopped:
+    #   8 closed trades, 2026-09-28 04:45Z .. 2026-10-02 04:31Z, +1,137.50 USC,
+    #   flat when stopped (0 positions, 0 pending), so nothing was abandoned.
+    # A commented row usually means a book failed. This one did not.
+    #
+    # WHEN IT IS POINTED AT THE NEW ACCOUNT, IT NEEDS A NEW ACCOUNT ID. An id
+    # owns a history directory: data/live/vantage-v10/xau-macd-asia/ holds those
+    # eight trades, and mt5_executor REFUSES to start if an id's directory
+    # already records a different login - measured on 2026-09-25, when
+    # `vantage-v12` was pointed at 35911764 and the executor stopped with
+    # "already holds the record of login 33708517 ... Nothing was sent."
+    # So: new [[account]] block, new `id`, same book name in its `runs`.
+    # And DO NOT delete the directory above - it is the only record of the
+    # +1,137.50 and `brokers_of()` reads it from disk to keep showing it.
+    #   "xau-macd-asia",
+    "xau-stoch",
+
+    # ------------------------------------------------------------------
+    # THE THREE COIN BOOKS ARE NOT HERE ANY MORE, and the note that stood in
+    # this spot is withdrawn rather than deleted, because two of its three
+    # arguments were wrong and a reader who only saw them removed would
+    # rebuild them.
+    #
+    # 2026-09-25, the owner's decision: "3 chien luoc kia chay tren
+    # vantage-v12 di". They now run on `vantage-v12-coin` (login 35911764,
+    # the same C:\MT5-v12 terminal, a history directory of its own) at the
+    # end of this file. This account keeps the two screen books only, so the
+    # sizing note that was recalculated here for FIVE books no longer
+    # applies; `vantage-v12-coin` carries its own, for three.
+    #
+    # WHAT WAS WRONG IN IT. It said they had to be here because "only ONE
+    # terminal per machine can serve the Python bridge". That claim was mine
+    # and it is false: mt5.initialize(path=...) honours the path, and on
+    # 2026-09-25 five real-money executors ran side by side, two on this
+    # account through C:\MT5-v10 and three on 35911764 through C:\MT5-v12,
+    # init-failed 0 on all five. The `MCP bind error on 127.0.0.1:22346` is
+    # real - one terminal binds that port - and it does not stop a client
+    # that names a path. See CLAUDE.md, where the same claim is withdrawn.
+    #
+    # ------------------------------------------------------------------
+    # DO NOT DELETE data/live/vantage-v10/ai-xau-ds-plan-trigger-coin/.
+    # THE OWNER ASKED FOR THIS, 2026-09-26: "cai lenh ben v10 lay nham ay,
+    # cu cho hien thi o lich su di, sau toi co the se can toi."
+    #
+    # That directory is the only record on this machine of the one real order
+    # this account took by mistake, and it belongs to a book that no longer
+    # runs here - which is exactly what makes it look like something to tidy
+    # away. It is not.
+    #
+    #   order  597097500   LONG 0.35 lot XAUUSD.sc   magic 120037770
+    #   opened 2026-09-25 15:47:19 UTC at 4274.45
+    #          comment 'ai-xau-ds-plan-tri-coin'
+    #   closed 2026-09-25 16:03:36 UTC at 4296.36, broker-side target [tp 4296.18]
+    #
+    #   THOSE TIMES ARE UTC, and the first version of this note said
+    #   "2026-09-26 01:47:19 (VPS, UTC+7)", which was neither. MEASURED
+    #   2026-09-26 against the desk's own UTC record of the same order:
+    #   MT5's deal epoch runs +3.0 h ahead of UTC - it reports SERVER time
+    #   (UTC+3) in a field that looks like a Unix timestamp - and
+    #   datetime.fromtimestamp then adds the VPS's +7, so a naive print is
+    #   UTC+10. Subtract ten hours from anything printed that way, or read
+    #   the desk's own executor.jsonl, which is already UTC.
+    #   result +766.85 USC realised, plus 4.41 USC ESTIMATED rebate = 771.26
+    #
+    # +766.85 USC is the WHOLE of this account's gain: 50,000.00 transferred
+    # in from 33708517 plus 766.85 is the 50,766.85 balance standing now.
+    #
+    # HOW IT CAME TO BE TAKEN. The coin books were mirroring onto this account
+    # while it was the only one with a working terminal; five executors were
+    # started over SSH, the session closed, Windows OpenSSH killed the whole
+    # process tree, and this order had already been sent. So it sat with
+    # nobody mirroring it - and closed at the target the broker was already
+    # holding, which is why an executor dying did not decide the outcome.
+    # The 32 `already-taken` lines in its executor.jsonl are the guard
+    # afterwards refusing to mirror a position the account had already taken.
+    #
+    # WHAT MAKES IT VISIBLE, so nobody looks for a switch. Nothing is
+    # configured: `brokers_of()` in crates/fd-api/src/paper.rs reads
+    # data/live/ from DISK and not from the `runs` lists in this file, and the
+    # UI picks a record by LOGIN (ui/src/.../Analytics.tsx:516). So it shows
+    # under run `ai-xau-ds-plan-trigger-coin`, account `vantage-v10`,
+    # realised 766.85, closed 1 - and it keeps showing although the book has
+    # moved to another account. Deleting the directory is the only way to
+    # lose it.
+    #
+    # AND IT IS A COIN, so the sign means nothing. A seeded 50/50 side on a
+    # bracket has an expectancy of exactly zero before cost and minus the
+    # cost after it. One +766.85 is a sample of one; it is kept because the
+    # owner may need the record, not because it demonstrates anything.
+    # ------------------------------------------------------------------
+]
+
+# ============================================================================
+[[account]]
+# 2026-09-25, the owner's decision: "3 chien luoc kia chay tren vantage-v12 di" -
+# the three coin books on the new login, through the V12 terminal.
+#
+# WHY A NEW ID AND NOT `vantage-v12`. An account id owns a history directory,
+# and data/live/vantage-v12/ already holds 33708517's trades. Pointing that id
+# at 35911764 would write two accounts into one record. mt5_executor refused it
+# and said so before sending anything - the guard working - and this id is the
+# fix rather than a way round it.
+id = "vantage-v12-coin"
+label = "Lambo V12 - coin controls on 35911764, REAL MONEY"
+login = 35911764
+server = "VantageMarkets-Live 21"
+
+# THE SAME TERMINAL as the retired vantage-v12 block, deliberately, and it works.
+# "Only one terminal per machine can serve the Python bridge" was my claim and it
+# is WRONG. Measured 2026-09-25 with both terminals up: mt5.initialize(path=...)
+# reaches each and returns its own account - V10 answers 35911458, V12 answers
+# 35911764. The MCP bind error on 127.0.0.1:22346 is real, only one terminal
+# binds that port, and it does not stop the other from serving a client that
+# names its path.
+terminal = 'C:\MT5-v12\terminal64.exe'
+symbol_suffix = ".sc"
+
+# FIVE, checked before it was written, as this file requires whenever a scale OR
+# a book count changes - both are new here.
+#
+# The paper books run on 100 USD at 1%, a dollar a trade. This account holds
+# 50,000 USC = 500 USD, so x5 risks about 5 USD a trade: the same 1%.
+#
+#   --max-notional-ratio 10.0   largest order 0.35 lot at 4280 = 149,800 USC,
+#                               3.00x equity; the ceiling binds at 1.17 lots.
+#                               Does not bind. PER-ORDER, and this account runs
+#                               THREE books, so the aggregate is below.
+#   --min-margin-level 500      75.02 USC for that order - the broker's own
+#                               order_calc_margin, measured, not derived from a
+#                               leverage figure. Three at once is about 225 USC
+#                               against 50,000, a margin level near 22,000%.
+#                               Does not bind.
+#   AGGREGATE                   three at maximum are 1.05 lot, 8.98x equity. The
+#                               ceiling cannot see this, which is why it is
+#                               written out. The real exposure is correlated
+#                               risk: three independent coins can land on the
+#                               same side, so three stops in one day costs about
+#                               3% of the account, 15 USD.
+#
+# Leverage reads 2000 here, twice on 2026-09-25. An earlier 500 on the other
+# funded account is not reproducible, which is why every margin figure above
+# comes from the broker's own answer instead of from leverage.
+lot_scale = 5.0
+
+real_money = true
+dry_run = false
+
+# STOPPED 2026-10-01, the owner's decision: "Dung V12 di, danh do qua."
+#
+# THE CLOSING RECORD, from the broker and not from any desk file:
+#   63 closed trades, 2026-09-25 17:29Z .. 2026-10-01 10:36Z
+#   realised  -4,397.25 USC
+#   balance   50,000.00 -> 45,602.75  = -8.80% of the account
+#   flat when stopped: 0 positions, 0 pending orders, so nothing was left behind
+#
+# WHAT THAT NUMBER IS, AND IS NOT. About -69.8 USC a trade on roughly 455 USC of
+# risk, so -0.153 R. A coin on a bracket has a gross expectancy of exactly ZERO
+# by construction and a net expectancy of minus the cost - about 9.8 USC a round
+# trip, -0.022 R. The expected result was therefore a small negative, and
+# -0.153 R sits roughly 0.9 standard errors below that once the ~1.2 R spread of
+# one bracket trade across 63 trades is allowed for.
+#
+# So nothing broke. This is a coin flip paying costs, and the loss is ordinary
+# variance on top of a guaranteed small negative. That was said three times
+# before it ran; it was chosen anyway, and both the choosing and the stopping are
+# the owner's and are recorded as his.
+#
+# The three executors were stopped by PID on 2026-10-01, exact-name matched, and
+# V10's two books were verified still running afterwards. This flag is what stops
+# anything starting them again.
+enabled = false
+
+# WHAT THESE ARE, so nobody reads them as strategies. Each is the CONTROL of an
+# AI book: a seeded 50/50 coin taking the same bar and the same stop distance
+# with a random side. They have no entry rule of their own, so the three parent
+# models must keep running - and keep costing API - for these to trade at all.
+# A coin's gross expectancy on a bracket is exactly zero by construction, so its
+# net expectancy is minus the cost, always. The owner has been told this more
+# than once and chose it; recorded as his decision, not as a finding.
+runs = [
+    "ai-xau-terra-ctx-coin",
+    "ai-xau-ds-ctx-htf-filter-coin",
+    "ai-xau-ds-plan-trigger-coin",
+]
+
+# ============================================================================
+[[account]]
+# 2026-10-02, the owner's decision: "Cho chay macd cross voi ten la Lambo V8".
+# xau-macd-asia moves here off vantage-v10, where it had made +1,137.50 USC over
+# 8 closed trades - it is moving, not being retired, and the note in that block
+# says so too.
+#
+# WHY A NEW id. An id owns a history directory. data/live/vantage-v10/
+# xau-macd-asia/ holds those eight trades, and mt5_executor REFUSES to start when
+# an id's directory records a different login - measured 2026-09-25, when
+# `vantage-v12` was pointed at 35911764 and the executor stopped with "already
+# holds the record of login 33708517 ... Nothing was sent." That guard is why
+# this is a new block and not an edited one.
+id = "vantage-v8"
+label = "Lambo V8 - xau-macd-asia, REAL MONEY"
+login = 35916601
+server = "VantageMarkets-Live 21"
+
+# ITS OWN INSTALLATION, so a folder name never has to be read as a different
+# account. C:\MT5-v10 serves 35911458 and feeds the desk's bars; C:\MT5-v8
+# serves only this one. Three terminals coexist: measured 2026-09-25 that
+# initialize(path=...) honours the path and reaches each separately, and RAM is
+# 4,095 MB total with ~2,400 MB free at ~160 MB a terminal.
+#
+# THE OWNER LOGGED THIS TERMINAL IN BY HAND, 2026-10-02, and turned AutoTrading
+# on. A note written here an hour earlier blamed my own SSH work for taking both
+# running terminals down that afternoon. THAT WAS WRONG and is corrected here.
+# MT5's real journal - %APPDATA%\MetaQuotes\Terminal\<hash>\logs, not the
+# install's own logs folder, which was stale - says:
+#     12:18  both accounts: "connection to VantageMarkets-Live 21 lost"
+#     12:22  both re-authorized
+#     12:36  "Terminal stopped with 0" / "shutdown with 0", two seconds apart
+#     12:38  "Terminal MetaTrader 5 build 6230 started"
+# The old terminals were build 6182. A clean exit 0 followed by a new build is an
+# AUTO-UPDATE, pushed by the broker to both at once. My robocopy and initialize
+# merely coincided with it.
+#
+# THE REAL HAZARD, which is worse and is not mine: a terminal restarted by an
+# auto-update comes up NOT LOGGED IN, and nothing logs it back in. So any MT5
+# update blinds the desk - pollers lose the feed and a funded executor loops on
+# `IPC send failed`. What saved it was the executor's own guard refusing to act
+# on unreadable history rather than guessing. A watchdog for
+# "terminal running but not logged in" is the thing worth building.
+terminal = 'C:\MT5-v8\terminal64.exe'
+symbol_suffix = ".sc"
+
+# THREE, checked against the broker before it was written, as this file requires
+# whenever a scale or a book count changes. Both are new here.
+#
+# The paper books run on 100 USD risking about 1% a trade. This account holds
+# 30,000.00 USC = 300.00 USD, so x3 keeps that same 1%.
+#
+# ALL FIGURES BELOW ARE THE BROKER'S OWN, read 2026-10-02 with AutoTrading on at
+# ask 4187.28. Notional on a cent account is lots x price x 100, because one
+# price unit is 100 account units - the `per_price_unit: 100.0` the desk's rebate
+# terms already carry. An earlier read of mine multiplied by trade_contract_size
+# (1.0) instead and came out 100x too small; the numbers here are the corrected
+# ones.
+#
+#   THE ORDER THIS BOOK ACTUALLY SENDS  xau-macd-asia's largest paper order is
+#                               0.07 lot, so 0.21 lot here.
+#   --max-notional-ratio 10.0   0.21 lot = 87,933 USC = 2.93x equity. The ceiling
+#                               binds at about 0.72 lot. DOES NOT BIND.
+#   --min-margin-level 500      order_calc_margin says 175.87 USC for 0.21 lot,
+#                               a margin level near 17,058% against 30,000.
+#                               DOES NOT BIND.
+#   AGGREGATE                   one book, one position at a time, so the
+#                               aggregate is the per-order figure. Nothing to add.
+#   RISK PER TRADE              about 300 USC, 1% of the account, which is the
+#                               paper book's own 1% carried across unchanged.
+#
+# LEVERAGE HERE IS 1:500, NOT 1:2000. 35911458 and 35911764 both read 1:2000;
+# this account reads 1:500, so its margin per lot is four times theirs. It does
+# not bind at these sizes, and it is written down because leverage on this desk
+# has been misread before - which is why every margin figure above comes from
+# order_calc_margin and not from a leverage number.
+lot_scale = 3.0
+
+real_money = true
+dry_run = false
+enabled = true
+
+# ONE BOOK. xau-macd-asia is a mechanical MACD-cross book: no model, no API cost,
+# and it does not depend on any AI parent staying alive - unlike the coins that
+# went quiet on 35911764 for eleven hours when DeepSeek ran out of credit.
+#
+# Its measured record, stated so the decision to fund it is readable:
+#   on 35911458, 2026-09-28 .. 2026-10-02: 8 closed trades, +1,137.50 USC
+#   on the desk's own three-month gate: profit factor 1.134, 76th percentile
+#     against its own null - it PASSED nothing; it was never gated, and the
+#     owner chose to fund it anyway. Recorded as his decision.
+runs = [
+    "xau-macd-asia",
+]

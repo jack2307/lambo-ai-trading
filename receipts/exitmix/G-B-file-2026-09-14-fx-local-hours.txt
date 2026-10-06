@@ -1,0 +1,56 @@
+market:   xauusd 15m
+data:     E:/rust/flowdesk/data (bars from E:/rust/flowdesk/data\bars\XAUUSD-15m.parquet)
+bounds:   --from=2025-04-01 --to=2025-07-01 kept 5862 of 100586 bars
+spread:   0.28 per round trip
+trail:    off
+max hold: 4 h (14400000 ms) from [trading] max_hold_ms, no per-market override
+bars:     5862 from 2025-04-01 00:00 to 2025-06-30 23:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+companion: none loaded — every cmp series is NaN
+guards: on — max_open_loss_r 2.0, notional 300%, weekend flat 16:40 NY, news flat 60/30 (impact≥3, USD), daily cap 20, loss limit $300, cooldown 30 min
+null sides: coin - 50/50, carries no drift; the null every published percentile was read against
+
+== hypotheses `E:/rust/fd-a9/docs/hypotheses/2026-09-14-fx-local-hours.toml`: 3 declared, FIXED parameters over the whole window (no selection), each against 200 matched null runs ==
+null sides: coin (50/50, carries no drift; the null every published percentile was read against)
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+guards: on — max_open_loss_r 2.0, notional 300%, weekend flat 16:40 NY, news flat 60/30 (impact≥3, USD), daily cap 20, loss limit $300, cooldown 30 min
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+fx/eu-short  session-hold           59   0.789  -0.027    0.978    1.667        0   26%  fail: profit factor 0.789 < 1.2; expectancy -0.027R < 0.05R
+                                MoTuWeThFr + NY 02:45-02:50  — the test: short the euro through European hours, 03:00 to 11:00 New York (08:00 to 16:00 London)
+                                matched null 59 trades median vs the method's 59 — count match 1.00
+                                long share: method 0.000 vs the null's median 0.492  ** outside 40-60% long against a coin: this percentile carries the instrument's drift **
+                                spread paid: method 0.17 USD vs the null's median 0.17 USD — cost match 1.00
+                                exposure: signed share of time method -1.000 vs the null's -0.010; time in market method 27270 min vs the null's median 27270 min — ratio 1.00  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.978 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                guards: refused none; closed NEWS_FLAT 5; sized down 0
+                                exits: NEWS_FLAT 5, window closed 54; mean hold 462.2 min
+fx/us-long   session-hold           59   1.685   0.046    0.948    1.957        0   92%  fail: expectancy 0.046R < 0.05R
+                                MoTuWeThFr + NY 10:45-10:50  — the test's other half: long the euro through American hours, 11:00 to 17:00 New York
+                                matched null 59 trades median vs the method's 59 — count match 1.00
+                                long share: method 1.000 vs the null's median 0.508  ** outside 40-60% long against a coin: this percentile carries the instrument's drift **
+                                spread paid: method 0.17 USD vs the null's median 0.17 USD — cost match 1.00
+                                exposure: signed share of time method +1.000 vs the null's +0.041; time in market method 27540 min vs the null's median 27540 min — ratio 1.00  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.948 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                guards: refused none; closed NEWS_FLAT 2, WEEKEND_FLAT 11; sized down 0
+                                exits: NEWS_FLAT 2, WEEKEND_FLAT 11, window closed 46; mean hold 466.8 min
+fx/asia-long session-hold           47   0.822  -0.035    0.992    1.694        0   27%  fail: profit factor 0.822 < 1.2; expectancy -0.035R < 0.05R
+                                MoTuWeThFr + NY 18:45-18:50  — the contrast: outside both currencies' local hours, 19:00 to 03:00 New York, the paper predicts little
+                                matched null 47 trades median vs the method's 47 — count match 1.00
+                                long share: method 1.000 vs the null's median 0.511  ** outside 40-60% long against a coin: this percentile carries the instrument's drift **
+                                spread paid: method 0.13 USD vs the null's median 0.13 USD — cost match 1.00
+                                exposure: signed share of time method +1.000 vs the null's +0.002; time in market method 22125 min vs the null's median 22125 min — ratio 1.00  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.992 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                guards: nothing acted
+                                exits: END_OF_DATA 1, window closed 46; mean hold 470.7 min
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+

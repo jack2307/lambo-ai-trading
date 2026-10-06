@@ -1,0 +1,58 @@
+market:   xauusd 15m
+data:     E:/rust/flowdesk/data (bars from E:/rust/flowdesk/data\bars\XAUUSD-15m.parquet)
+bounds:   --from=2025-07-01 --to=2025-10-01 kept 6044 of 100586 bars
+spread:   0.28 per round trip
+trail:    off
+max hold: 4 h (14400000 ms) from [trading] max_hold_ms, no per-market override
+bars:     6044 from 2025-07-01 00:00 to 2025-09-30 23:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+companion: none loaded — every cmp series is NaN
+guards: off (every number unguarded)
+null sides: coin - 50/50, carries no drift; the null every published percentile was read against
+
+== hypotheses `E:/rust/fd-a9/docs/hypotheses/2026-09-13-volume-thrust-gold.toml`: 3 declared, FIXED parameters over the whole window (no selection), each against 200 matched null runs ==
+null sides: coin (50/50, carries no drift; the null every published percentile was read against)
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+guards: off (every number unguarded)
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+vt-gold/fixed volume-thrust          14   1.010   0.003    0.985    3.144        0   51%  fail: only 14 trades (need 30); profit factor 1.010 < 1.2; expectancy 0.003R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15  — the defaults pinned on the broker's tick volume, all hours
+                                matched null 16 trades median vs the method's 14 — count match 1.14
+                                long share: method 0.571 vs the null's median 0.500
+                                spread paid: method 0.33 USD vs the null's median 0.31 USD — cost match 0.94
+                                exposure: signed share of time method +0.136 vs the null's -0.003; time in market method 2640 min vs the null's median 3428 min — ratio 1.30  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.985 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 3.601 ATR = 11.38 points, cost 2.46% of R (realised median, structural)
+                                the method's own realised stop: median 3.601 ATR = 11.38 points over 14 trades
+                                exits: STOP 3, TARGET 2, TIMEOUT 9; mean hold 188.6 min
+vt-gold/all  volume-thrust          14   1.010   0.003    0.985    3.144        0   51%  fail: only 14 trades (need 30); profit factor 1.010 < 1.2; expectancy 0.003R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15  — the grid walked forward, all hours
+                                matched null 16 trades median vs the method's 14 — count match 1.14
+                                long share: method 0.571 vs the null's median 0.500
+                                spread paid: method 0.33 USD vs the null's median 0.31 USD — cost match 0.94
+                                exposure: signed share of time method +0.136 vs the null's -0.003; time in market method 2640 min vs the null's median 3428 min — ratio 1.30  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.985 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 3.601 ATR = 11.38 points, cost 2.46% of R (realised median, structural)
+                                the method's own realised stop: median 3.601 ATR = 11.38 points over 14 trades
+                                exits: STOP 3, TARGET 2, TIMEOUT 9; mean hold 188.6 min
+vt-gold/ny   volume-thrust           5   0.900  -0.023    1.127    8.154        0   44%  fail: only 5 trades (need 30); profit factor 0.900 < 1.2; expectancy -0.023R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 08:00-16:00  — New York hours, where tick volume means participation rather than a thin print
+                                matched null 6 trades median vs the method's 5 — count match 1.20
+                                long share: method 0.600 vs the null's median 0.500
+                                spread paid: method 0.04 USD vs the null's median 0.07 USD — cost match 1.79  ** outside the band: the control did not pay what the method paid **
+                                exposure: signed share of time method +0.200 vs the null's +0.048; time in market method 1275 min vs the null's median 1215 min — ratio 0.95  ** the control did not collect the drift the method did **
+                                cost-matched null: control stop 4.969 ATR = 29.04 points, cost 0.96% of R (realised median, structural)
+                                the method's own realised stop: median 4.969 ATR = 29.04 points over 5 trades
+                                exits: TIMEOUT 5; mean hold 255.0 min
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+

@@ -1,0 +1,56 @@
+market:   xauusd 15m
+data:     E:/rust/flowdesk/data (bars from E:/rust/flowdesk/data\bars\XAUUSD-15m.parquet)
+bounds:   --from=2025-07-01 --to=2025-10-01 kept 6044 of 100586 bars
+spread:   0.28 per round trip
+trail:    off
+max hold: 4 h (14400000 ms) from [trading] max_hold_ms, no per-market override
+bars:     6044 from 2025-07-01 00:00 to 2025-09-30 23:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+companion: none loaded — every cmp series is NaN
+guards: on — max_open_loss_r 2.0, notional 300%, weekend flat 16:40 NY, news flat 60/30 (impact≥3, USD), daily cap 20, loss limit $300, cooldown 30 min
+null sides: coin - 50/50, carries no drift; the null every published percentile was read against
+
+== hypotheses `E:/rust/fd-a9/docs/hypotheses/2026-09-14-fx-local-hours-news.toml`: 3 declared, FIXED parameters over the whole window (no selection), each against 200 matched null runs ==
+null sides: coin (50/50, carries no drift; the null every published percentile was read against)
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+guards: on — max_open_loss_r 2.0, notional 300%, weekend flat 16:40 NY, news flat 60/30 (impact≥3, USD), daily cap 20, loss limit $300, cooldown 30 min
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+fx/eu-short  session-hold           61   0.588  -0.097    0.935    1.671        0    6%  fail: profit factor 0.588 < 1.2; expectancy -0.097R < 0.05R
+                                MoTuWeThFr + NY 02:45-02:50  — the closed row, unchanged, as the baseline in the same run
+                                matched null 61 trades median vs the method's 61 — count match 1.00
+                                long share: method 0.000 vs the null's median 0.492  ** outside 40-60% long against a coin: this percentile carries the instrument's drift **
+                                spread paid: method 0.33 USD vs the null's median 0.34 USD — cost match 1.03
+                                exposure: signed share of time method -1.000 vs the null's -0.005; time in market method 28110 min vs the null's median 28110 min — ratio 1.00  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.935 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                guards: refused none; closed NEWS_FLAT 6; sized down 0
+                                exits: NEWS_FLAT 6, window closed 55; mean hold 460.8 min
+fx/eu-short-news session-hold           61   0.588  -0.097    0.935    1.671        0    6%  fail: profit factor 0.588 < 1.2; expectancy -0.097R < 0.05R
+                                MoTuWeThFr + NY 02:45-02:50 + no entries 60 min before to 30 min after high-impact news (USD)  — the same row with no entry from 60 min before to 30 min after a high-impact release: the 02:45 signal is blocked when an event falls 01:45-03:15 New York; a release inside the hold is not avoided by an entry gate
+                                matched null 61 trades median vs the method's 61 — count match 1.00
+                                long share: method 0.000 vs the null's median 0.492  ** outside 40-60% long against a coin: this percentile carries the instrument's drift **
+                                spread paid: method 0.33 USD vs the null's median 0.34 USD — cost match 1.03
+                                exposure: signed share of time method -1.000 vs the null's -0.005; time in market method 28110 min vs the null's median 28110 min — ratio 1.00  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.935 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                guards: refused none; closed NEWS_FLAT 6; sized down 0
+                                exits: NEWS_FLAT 6, window closed 55; mean hold 460.8 min
+fx/eu-short-newsday session-hold           55   0.533  -0.115    0.939    1.681        0    6%  fail: profit factor 0.533 < 1.2; expectancy -0.115R < 0.05R
+                                MoTuWeThFr + NY 02:45-02:50 + no entries 600 min before to 600 min after high-impact news (USD)  — the same row skipping the whole day of a high-impact release (10 h either side of the 02:45 signal covers ECB 07:45/08:15 and US 08:30/14:00 New York): the drift between release days
+                                matched null 55 trades median vs the method's 55 — count match 1.00
+                                long share: method 0.000 vs the null's median 0.491  ** outside 40-60% long against a coin: this percentile carries the instrument's drift **
+                                spread paid: method 0.29 USD vs the null's median 0.31 USD — cost match 1.04
+                                exposure: signed share of time method -1.000 vs the null's -0.018; time in market method 26400 min vs the null's median 26400 min — ratio 1.00  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.939 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                guards: nothing acted
+                                exits: window closed 55; mean hold 480.0 min
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+

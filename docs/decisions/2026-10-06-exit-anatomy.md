@@ -200,3 +200,244 @@ is not a cell of the record, and nothing here is selected.
 Falsifier for D2: if lifting the cap leaves the profit factor of
 ceiling-dominated rows unchanged or higher, then the cap is not inflating
 those numbers and the CRT record's sentence stands.
+
+# RESULTS, 2026-10-06
+
+196 receipts in `receipts/exitmix/`, 1,304 row-readings, 103,005 exits
+accounted for. Integrity check on the parse: the exit counts sum to
+**103,005** and the rows' own trade counts sum to **103,005** — every trade is
+in exactly one bucket, none invented, none lost.
+
+Every receipt's `news:` line reads
+`747 events (2010-01-08 to 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet`,
+which is `--data=/e/rust/flowdesk/data`, the store this axis was told to use.
+`data-sealed/` was not opened.
+
+## Table 1 — how each mechanism's positions close
+
+Arm G (guards on, the footing the record was produced on), both windows
+pooled, `xauusd` 15m. `*` marks a mechanism that declares `Exits::Strategy`
+and therefore has no engine stop, no engine target and **no hold ceiling** —
+for those rows `%TIMEOUT` is 0 by construction, not by behaviour.
+`rows w/o` is rows that took no trade at all, where the exit mix is `null`
+rather than 0.
+
+| mechanism | exits | rows w/ trades | rows w/o | %STOP | %TARGET | %TIMEOUT | %FLAT_WINDOW | %WEEKEND_FLAT | %NEWS_FLAT | %OPEN_LOSS_CAP | %SIGNAL | mean hold min |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| bb-fade | 4883 | 24 | 0 | 49.9 | 20.2 | 3.6 | 4.0 | 1.2 | 0.8 | 0.0 | 20.2 | 80 |
+| crt | 7324 | 48 | 6 | 46.3 | 40.7 | 11.5 | 0.0 | 1.0 | 0.5 | 0.0 | 0.0 | 75 |
+| doji-reversal | 1125 | 30 | 0 | 68.4 | 25.0 | 4.2 | 1.2 | 0.0 | 1.2 | 0.0 | 0.0 | 40 |
+| donchian-breakout | 3872 | 26 | 0 | 27.2 | 18.2 | **22.9** | 5.8 | 1.5 | 1.1 | 0.0 | 23.0 | 130 |
+| ema-cross | 1284 | 26 | 0 | 50.7 | 22.4 | 14.8 | 6.1 | 0.0 | 1.9 | 0.0 | 4.1 | 129 |
+| gap-fade | 49 | 10 | 10 | 46.9 | 42.9 | 10.2 | 0.0 | 0.0 | 0.0 | 0.0 | 0.0 | 81 |
+| ict-sweep-mss-fvg | 403 | 44 | 2 | 19.9 | 14.1 | **53.1** | 5.7 | 3.0 | 4.2 | 0.0 | 0.0 | 201 |
+| intraday-momentum * | 468 | 8 | 0 | 0.0 | 0.0 | 0.0 | 20.1 | **19.7** | 0.0 | 0.0 | 60.3 | 72 |
+| keltner-break | 2585 | 18 | 0 | 38.7 | 27.4 | **23.9** | 6.9 | 1.7 | 1.0 | 0.0 | 0.0 | 126 |
+| macd-cross | 3282 | 18 | 0 | 49.2 | 29.0 | 9.7 | 9.1 | 1.7 | 1.0 | 0.0 | 0.0 | 102 |
+| orb | 1972 | 52 | 8 | 26.0 | 13.6 | **57.8** | 0.0 | 0.2 | 2.4 | 0.0 | 0.0 | 185 |
+| pdhl | 912 | 30 | 0 | 58.7 | 35.5 | 4.3 | 1.5 | 0.0 | 0.0 | 0.0 | 0.0 | 41 |
+| rsi-reversion | 1808 | 24 | 0 | 47.1 | 5.8 | 6.7 | 7.9 | 1.8 | 0.7 | 0.0 | 29.6 | 103 |
+| rsi2-pullback | 2307 | 18 | 0 | 35.9 | 37.4 | 14.5 | 8.5 | 2.2 | 1.5 | 0.0 | 0.0 | 121 |
+| session-hold * | 5246 | 90 | 6 | 0.0 | 0.0 | 0.0 | 0.0 | 1.8 | 1.6 | **13.3** | 83.0 | 188 |
+| squeeze-break | 499 | 18 | 0 | 46.3 | 35.5 | 9.0 | 6.6 | 1.6 | 1.0 | 0.0 | 0.0 | 73 |
+| stoch-reversal | 4006 | 18 | 0 | 51.1 | 27.1 | 11.1 | 8.1 | 1.6 | 0.9 | 0.0 | 0.0 | 107 |
+| trend-pullback | 3939 | 30 | 0 | 63.2 | 32.6 | 1.8 | 1.0 | 1.4 | 0.0 | 0.0 | 0.0 | 24 |
+| tsmom * | 0 | 0 | 22 | null | null | null | null | null | null | null | null | null |
+| volman-box | 366 | 8 | 2 | 28.4 | 34.4 | **33.9** | 0.0 | 2.2 | 1.1 | 0.0 | 0.0 | 150 |
+| volume-thrust | 223 | 30 | 0 | 29.1 | 8.5 | **62.3** | 0.0 | 0.0 | 0.0 | 0.0 | 0.0 | 185 |
+| vwap-fade | 4311 | 26 | 0 | 62.0 | 29.9 | 4.3 | 2.0 | 0.7 | 1.0 | 0.0 | 0.0 | 58 |
+
+Arm U (guards off) reproduces every figure within about one point on every
+mechanism, with the four guard columns at exactly 0 — which is the check that
+the guard columns are the guards and nothing else. The arm-U table is in
+`receipts/exitmix/U-*`; the one place the two arms differ by a lot is
+`session-hold`, whose mean hold is **188 min with guards and 303 min without**
+because the open-loss cap is ending 13.3% of its holds early.
+
+## Answer 1 — the ceiling is NOT a broad contamination, and the registered falsifier FIRED
+
+Rows with at least 40 trades whose positions were closed by the four-hour
+ceiling more than half the time:
+
+| arm | window | rows >= 40 trades | TIMEOUT > 50% | share | TIMEOUT > 25% | share |
+|---|---|---:|---:|---:|---:|---:|
+| G | A | 206 | 11 | 5.3% | 32 | 15.5% |
+| G | B | 201 | 7 | 3.5% | 27 | 13.4% |
+| U | A | 207 | 10 | 4.8% | 33 | 15.9% |
+| U | B | 202 | 8 | 4.0% | 27 | 13.4% |
+
+The registered falsifier was *"fewer than 5% of measured rows with >= 40
+trades show TIMEOUT > 50%"*. Three of the four arm-window combinations are
+under 5% (3.5%, 4.0%, 4.8%) and one is just over (5.3%). Under the brief's
+own both-windows rule a claim needs both windows, and window B gives 3.5% and
+4.0%. **So the falsifier fired: the claim that the four-hour ceiling broadly
+contaminates the desk's record is dead.** About 95% of the record's
+well-sampled rows are not ceiling-dominated, and that is the headline answer
+to question 1.
+
+Dropping the sample floor looks worse (arm G: 91 of 596 rows with any trade,
+15.3%), but those are rows of 1 to 20 trades where a single timeout is 5-50%
+of the mix, and the brief's own 40-trade rule says they carry no conclusion.
+The floor is kept.
+
+**At mechanism level, six mechanisms are materially ceiling-bound and two of
+them the brief did not name.** `volume-thrust` 62.3%, `orb` 57.8%,
+`ict-sweep-mss-fvg` 53.1%, `volman-box` 33.9%, `keltner-break` 23.9%,
+`donchian-breakout` 22.9%. `orb` and `ict-sweep-mss-fvg` are the two nobody
+flagged — and `ict-sweep-mss-fvg` is the ICT expert's three presets, a named
+line of the record, whose mean hold is 201 minutes against a 240-minute cap.
+
+## Answer 1b — NOT PRE-REGISTERED, and the most consequential number here
+
+Found after the fact, by looking. It was not a declared prediction, it has had
+no out-of-sample test of its own, and it is reported as an observation rather
+than as a result.
+
+Arm G, >= 40 trades, both windows pooled, banded by the share of positions the
+ceiling closed. "Pass gate" is `PF >= 1.200 AND expectancy >= +0.050R` —
+applied only to describe where passing rows sit, never to select one.
+
+| band | rows | median PF | pass gate | pass rate |
+|---|---:|---:|---:|---:|
+| TIMEOUT = 0% | 112 | 0.856 | 13 | 11.6% |
+| 0 < TIMEOUT <= 5% | 73 | 0.814 | 0 | 0.0% |
+| 5 < TIMEOUT <= 25% | 163 | 0.917 | 19 | 11.7% |
+| 25 < TIMEOUT <= 50% | 41 | 1.056 | 14 | 34.1% |
+| TIMEOUT > 50% | 18 | **1.462** | 11 | **61.1%** |
+
+Arm U, independently: median PF 0.822 / 0.787 / 0.918 / 1.062 / 1.331, pass
+rates 14.3% / 0.0% / 9.1% / 40.5% / 55.6%. **Two arms, two windows, the same
+ordering across the top three bands.**
+
+So the ceiling is rare, but it is not randomly placed. **11 of the 57 rows
+that pass the gate in arm G (19.3%) are rows where the ceiling closed more
+than half the positions, and 25 of 57 (43.9%) where it closed more than a
+quarter.** The highest profit factors in the whole sweep are `orb` London
+cells at TIMEOUT 71-85%:
+
+| window | cell | trades | TIMEOUT | PF | expectancy |
+|---|---|---:|---:|---:|---:|
+| A | `gold-m15-check/m15/london`, which is byte-identical to `london-range/london/nyam`, `volcond-breakout/hivol/london` and `rebate-rescore/atr/hivol-london` | 51 | 71% | 2.548 | +0.250R |
+| A | `volcond-breakout/hivol/london` | 50 | 72% | 2.345 | +0.226R |
+| B | the first cell again, window B | 46 | 85% | 0.999 | -0.002R |
+
+The same cell is **PF 2.548 at 71% timeout in window A and PF 0.999 at 85% in
+window B**, which is also the cleanest demonstration in this sweep of why one
+window is not a result.
+
+`docs/decisions/2026-10-04-crt.md` states the direction of this bias as
+settled: *"a truncated hold can destroy a passing row, never manufacture
+one."* The table above is consistent with the opposite. That sentence needs a
+measurement rather than an argument, and that is D2.
+
+## Answer 2 — targets ARE reachable; the registered falsifier FIRED
+
+49 to 51 rows per window with >= 40 trades record zero `TARGET`. **Almost all
+of them are mechanisms that have no engine target at all**: `session-hold` and
+`intraday-momentum` declare `Exits::Strategy`, so there is no engine target to
+reach, and a zero there is a fact about the engine's contract rather than
+about the rule's reach.
+
+Restricted to the 309 arm-G rows with >= 40 trades whose mechanism is
+engine-exited, the rows with zero `TARGET` number **2** — and they are one
+cell counted twice, `rsi-reversion/ny` in window B, which appears identically
+in `recent-year-screen.toml` and `recent-year-screen-5m.toml`: 56 trades,
+STOP 24, SIGNAL 15, FLAT_WINDOW 9, TIMEOUT 6, WEEKEND_FLAT 2, TARGET 0,
+PF 0.625. Its own `RSI back to midline` exit fires first, which is why.
+
+**So the CRT `1d-opposite` row — 0 targets in 29 trades across two windows —
+is not a pattern in this record. It is the exception.** Every other
+engine-exited, well-sampled row in the desk's record reaches its target at
+least once, and no profit factor in the record has to be thrown away on that
+ground.
+
+`rsi-reversion` is nonetheless the one mechanism whose target is nearly
+decorative: **5.8% of its 1,808 exits**, against 47.1% stops. Not out of
+reach; very rarely reached.
+
+## Answer 3 — the calendar cuts 3.8% of exits overall, and up to 67% of one row
+
+Arm G, all 596 rows with trades, 50,864 exits:
+
+| bucket | exits | share |
+|---|---:|---:|
+| STOP | 21,350 | 41.97% |
+| TARGET | 12,517 | 24.61% |
+| SIGNAL (the rule's own wording) | 7,101 | 13.96% |
+| TIMEOUT | 5,941 | 11.68% |
+| FLAT_WINDOW (a batch's own `flat:` filter) | 1,946 | 3.83% |
+| WEEKEND_FLAT | **749** | **1.47%** |
+| OPEN_LOSS_CAP | 698 | 1.37% |
+| NEWS_FLAT | 502 | 0.99% |
+| END_OF_DATA | 60 | 0.12% |
+
+`WEEKEND_FLAT + NEWS_FLAT + OPEN_LOSS_CAP = 3.83%` of all exits, so the
+registered falsifier (*under 1% and the calendar claim is dead*) **did not
+fire**. In arm U all three are exactly 0, which is the control. Note that
+`FLAT_WINDOW` is a further 3.83% of exits placed by a clock, and it is not a
+guard at all — it is the `flat:1630-1815` filter the batches carry, and it
+reaches the exit map under the strategy's own wording rather than under a
+guard label.
+
+The aggregate is small; the concentration is not. Per row:
+
+- **67%** of `btc-us-hours/hold/asia`'s 51 positions in window B were closed
+  by the open-loss cap (34 of 51) — two thirds of a row's trades ended on a
+  risk guard, not on the rule.
+- `session-hold` pooled: **13.3%** `OPEN_LOSS_CAP`.
+- 17 rows with >= 10 trades carry `WEEKEND_FLAT` at 19-20% of their exits —
+  every Friday, by construction, on any rule still holding at 16:40 New York.
+- `intraday-momentum`: 19.7% `WEEKEND_FLAT` plus 20.1% `FLAT_WINDOW`, so
+  **40% of its exits are placed by a clock** and 0% by a stop or a target.
+
+**23 of 398 paired rows (5.8%) cross the gate's PF 1.200 line when the guards
+are switched on or off, with nothing else changed.** The largest single move:
+`btc-us-hours/hold/off-hours`, window A, **PF 2.328 unguarded against 0.894
+guarded, on identical 64 trades** — a factor of 2.6 on one row from the guard
+configuration alone. In the other direction
+`recent-year-hours/hold/02-04-long` window B goes 0.980 to 1.210, so a guard
+setting moves a row from failing to passing.
+
+Any receipt in this record that does not state its guard arm is therefore
+unreadable at the gate. The three-month search's own record does state it
+(`--fixed`, 200 seeds, guards on), so that one is safe.
+
+## tsmom: the brief's claim about it is wrong, and D1 says what the zeros were
+
+`tsmom` declares `Exits::Strategy`, and `engine_exit` returns early on a
+self-managed position (`crates/fd-backtest/src/engine.rs:737`) — **the
+four-hour ceiling cannot touch it.** All 22 `tsmom` row-readings in this sweep
+returned 0 trades, so their exit mix is `null`, and `--exit-mix` is
+structurally unable to explain a zero-trade row.
+
+D1 (`receipts/D1-tsmom-long-window.txt`, 2022-01-01 to 2025-07-01, arm G; not
+a gate cell and not read as one): the same three rows return **163, 206 and
+106 trades** with mean holds of **3,895 / 3,626 / 4,107 minutes** — 65 to 68
+hours under a 4-hour cap, measured. The zeros were the three-month bounds
+failing to warm up a 20/60/120-day lookback on 15m bars, not the ceiling.
+
+D1 then produced the most striking exit mix in this axis. `tsmom/120d`, 106
+trades, PF 2.236, printed `SURVIVES` by the binary:
+
+    exits: END_OF_DATA 1, NEWS_FLAT 47, WEEKEND_FLAT 58; mean hold 4106.8 min
+
+**Its own rule — `120-day return flipped` — fired zero times.** Every closed
+position was closed by the news window or the Friday cut-off. D1-U
+(`receipts/D1U-tsmom-long-window-unguarded.txt`) is the same rule and window
+with the guards off:
+
+| row | arm G trades | arm G PF | arm U trades | arm U PF | arm U exits |
+|---|---:|---:|---:|---:|---|
+| tsmom/60d | 163 | 1.339 | 27 | 3.608 | `60-day return flipped 26, END_OF_DATA 1` |
+| tsmom/20d | 206 | 1.209 | 61 | 1.488 | `20-day return flipped 60, END_OF_DATA 1` |
+| tsmom/120d | 106 | 2.236 | 1 | inf | `END_OF_DATA 1` |
+
+**The guards multiply the trade count of a hold mechanism by 6.0x, 3.4x and
+106x** by flattening the position and letting it be re-entered afterwards. A
+row reporting "163 trades" contains **27** decisions the rule itself ever
+made. Since sample size is the whole basis on which this desk believes or
+disbelieves a number (brief section 4: the same rule, same window, PF 1.753 at
+14 trades and PF 0.682 at 178), **every trade count on a hold mechanism in the
+guarded record is inflated, and the percentile read against it was read
+against the wrong n.** Neither arm of D1 is a survivor and neither is claimed
+as one.

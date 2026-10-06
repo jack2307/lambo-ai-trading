@@ -1,0 +1,53 @@
+market:   xauusd 15m
+data:     E:/rust/flowdesk/data (bars from E:/rust/flowdesk/data\bars\XAUUSD-15m.parquet)
+bounds:   --from=2022-01-01 --to=2025-07-01 kept 71786 of 100586 bars
+spread:   0.28 per round trip
+trail:    off
+max hold: 4 h (14400000 ms) from [trading] max_hold_ms, no per-market override
+bars:     71786 from 2022-06-16 10:30 to 2025-06-30 23:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+companion: none loaded — every cmp series is NaN
+guards: off (every number unguarded)
+null sides: coin - 50/50, carries no drift; the null every published percentile was read against
+
+== hypotheses `docs/hypotheses/2026-09-13-tsmom.toml`: 3 declared, FIXED parameters over the whole window (no selection), each against 200 matched null runs ==
+null sides: coin (50/50, carries no drift; the null every published percentile was read against)
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+guards: off (every number unguarded)
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+tsmom/60d    tsmom                  27   3.608   0.711    0.955    3.242        0   95%  fail: only 27 trades (need 30)
+                                MoTuWeThFr + NY 18:00-19:00  — the canonical lookback; the null holds random sides from the same rebalance bar
+                                matched null 37 trades median vs the method's 27 — count match 1.37  ** outside the band: this percentile is unmatched **
+                                long share: method 0.481 vs the null's median 0.481
+                                spread paid: method 0.11 USD vs the null's median 0.15 USD — cost match 1.34  ** outside the band: the control did not pay what the method paid **
+                                exposure: signed share of time method +0.469 vs the null's -0.013; time in market method 1129050 min vs the null's median 1528568 min — ratio 1.35  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.955 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                exits: 60-day return flipped 26, END_OF_DATA 1; mean hold 41816.7 min
+tsmom/20d    tsmom                  61   1.488   0.144    0.964    2.123        0   85%  gate pass, inside the noise
+                                MoTuWeThFr + NY 18:00-19:00  — a one-month lookback: more flips, more cost
+                                matched null 56 trades median vs the method's 61 — count match 0.92
+                                long share: method 0.508 vs the null's median 0.491
+                                spread paid: method 0.22 USD vs the null's median 0.23 USD — cost match 1.03
+                                exposure: signed share of time method +0.278 vs the null's -0.002; time in market method 1296150 min vs the null's median 1499250 min — ratio 1.16  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.964 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                exits: 20-day return flipped 60, END_OF_DATA 1; mean hold 21248.4 min
+tsmom/120d   tsmom                   1     inf  22.581    0.386  208.625        0  null  fail: only 1 trades (need 30)
+                                MoTuWeThFr + NY 18:00-19:00  — a half-year lookback: nearly buy-and-hold in a rising sample, which the drift null must expose
+                                matched null 3 trades median vs the method's 1 — count match 3.00  ** outside the band: this percentile is unmatched **
+                                long share: method 1.000 vs the null's median 0.333  ** outside 40-60% long against a coin: this percentile carries the instrument's drift **
+                                spread paid: method 0.00 USD vs the null's median 0.01 USD — cost match 4.00  ** outside the band: the control did not pay what the method paid **
+                                exposure: signed share of time method +1.000 vs the null's -0.002; time in market method 796350 min vs the null's median 1586955 min — ratio 1.99  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.386 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                exits: END_OF_DATA 1; mean hold 796350.0 min
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+

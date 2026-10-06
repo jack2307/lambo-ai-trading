@@ -1,0 +1,62 @@
+market:   xauusd 15m
+data:     E:/rust/flowdesk/data (bars from E:/rust/flowdesk/data\bars\XAUUSD-15m.parquet)
+bounds:   --from=2025-07-01 --to=2025-10-01 kept 6044 of 100586 bars
+spread:   0.28 per round trip
+trail:    off
+max hold: 168 h (604800000 ms) from [markets.<id>.trading] max_hold_ms = 604800000
+bars:     6044 from 2025-07-01 00:00 to 2025-09-30 23:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+companion: none loaded — every cmp series is NaN
+guards: on — max_open_loss_r 2.0, notional 300%, weekend flat 16:40 NY, news flat 60/30 (impact≥3, USD), daily cap 20, loss limit $300, cooldown 30 min
+null sides: coin - 50/50, carries no drift; the null every published percentile was read against
+
+== hypotheses `E:/rust/fd-a9/docs/hypotheses/2026-09-13-trend-pullback-btc.toml`: 3 declared, FIXED parameters over the whole window (no selection), each against 200 matched null runs ==
+null sides: coin (50/50, carries no drift; the null every published percentile was read against)
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+guards: on — max_open_loss_r 2.0, notional 300%, weekend flat 16:40 NY, news flat 60/30 (impact≥3, USD), daily cap 20, loss limit $300, cooldown 30 min
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+tp-btc/fixed trend-pullback        205   0.962  -0.024    0.913    1.211        0   62%  fail: profit factor 0.962 < 1.2; expectancy -0.024R < 0.05R
+                                  — the defaults pinned on BTC, 24/7
+                                matched null 175 trades median vs the method's 205 — count match 0.85
+                                long share: method 0.629 vs the null's median 0.493  ** outside 40-60% long against a coin: this percentile carries the instrument's drift **
+                                spread paid: method 4.56 USD vs the null's median 3.89 USD — cost match 0.85
+                                exposure: signed share of time method +0.346 vs the null's -0.030; time in market method 17190 min vs the null's median 23490 min — ratio 1.37  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.913 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 1.178 ATR = 4.07 points, cost 6.88% of R (realised median, structural)
+                                the method's own realised stop: median 1.178 ATR = 4.07 points over 205 trades
+                                guards: refused NEWS_FLAT 4, WEEKEND_FLAT 1; closed NEWS_FLAT 1, WEEKEND_FLAT 3; sized down 201
+                                exits: NEWS_FLAT 1, STOP 118, TARGET 83, WEEKEND_FLAT 3; mean hold 83.8 min
+tp-btc/all   trend-pullback        205   0.962  -0.024    0.913    1.211        0   62%  fail: profit factor 0.962 < 1.2; expectancy -0.024R < 0.05R
+                                  — the grid walked forward, 24/7
+                                matched null 175 trades median vs the method's 205 — count match 0.85
+                                long share: method 0.629 vs the null's median 0.493  ** outside 40-60% long against a coin: this percentile carries the instrument's drift **
+                                spread paid: method 4.56 USD vs the null's median 3.89 USD — cost match 0.85
+                                exposure: signed share of time method +0.346 vs the null's -0.030; time in market method 17190 min vs the null's median 23490 min — ratio 1.37  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.913 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 1.178 ATR = 4.07 points, cost 6.88% of R (realised median, structural)
+                                the method's own realised stop: median 1.178 ATR = 4.07 points over 205 trades
+                                guards: refused NEWS_FLAT 4, WEEKEND_FLAT 1; closed NEWS_FLAT 1, WEEKEND_FLAT 3; sized down 201
+                                exits: NEWS_FLAT 1, STOP 118, TARGET 83, WEEKEND_FLAT 3; mean hold 83.8 min
+tp-btc/us    trend-pullback         51   0.854  -0.033    0.942    1.639        0   38%  fail: profit factor 0.854 < 1.2; expectancy -0.033R < 0.05R
+                                MoTuWeThFr + NY 09:30-16:00  — US equity hours, where BTC has its volume
+                                matched null 50 trades median vs the method's 51 — count match 0.98
+                                long share: method 0.588 vs the null's median 0.490
+                                spread paid: method 1.15 USD vs the null's median 1.13 USD — cost match 0.99
+                                exposure: signed share of time method +0.536 vs the null's -0.006; time in market method 7245 min vs the null's median 8940 min — ratio 1.23  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.942 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 1.007 ATR = 4.51 points, cost 6.21% of R (realised median, structural)
+                                the method's own realised stop: median 1.007 ATR = 4.51 points over 51 trades
+                                guards: refused NEWS_FLAT 1; closed NEWS_FLAT 1, WEEKEND_FLAT 2; sized down 48
+                                exits: NEWS_FLAT 1, STOP 29, TARGET 19, WEEKEND_FLAT 2; mean hold 142.1 min
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+

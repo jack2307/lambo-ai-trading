@@ -1,0 +1,39 @@
+market:   xauusd 15m
+data:     E:/rust/flowdesk/data (bars from E:/rust/flowdesk/data\bars\XAUUSD-15m.parquet)
+bounds:   --from=2025-07-01 --to=2025-10-01 kept 6044 of 100586 bars
+spread:   0.28 per round trip
+trail:    off
+max hold: 4 h (14400000 ms) from [trading] max_hold_ms, no per-market override
+bars:     6044 from 2025-07-01 00:00 to 2025-09-30 23:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+companion: none loaded — every cmp series is NaN
+guards: off (every number unguarded)
+null sides: coin - 50/50, carries no drift; the null every published percentile was read against
+
+== hypotheses `E:/rust/fd-a9/docs/hypotheses/2026-10-04-crt-pdhl-reference.toml`: 1 declared, FIXED parameters over the whole window (no selection), each against 200 matched null runs ==
+null sides: coin (50/50, carries no drift; the null every published percentile was read against)
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+guards: off (every number unguarded)
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+pdhl/mode0-bare pdhl                   60   0.715  -0.186    0.844    1.351        0   32%  fail: profit factor 0.715 < 1.2; expectancy -0.186R < 0.05R
+                                  — D3: the published method CRT is nearest to, on CRT's own two windows with CRT's own settings, so the two can be compared on trade count and on figures and not only on source
+                                matched null 58 trades median vs the method's 60 — count match 0.96
+                                long share: method 0.417 vs the null's median 0.500
+                                spread paid: method 6.26 USD vs the null's median 4.93 USD — cost match 0.79
+                                exposure: signed share of time method -0.644 vs the null's -0.003; time in market method 2025 min vs the null's median 5632 min — ratio 2.78  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.844 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 0.807 ATR = 3.29 points, cost 8.51% of R (realised median, structural)
+                                the method's own realised stop: median 0.807 ATR = 3.29 points over 60 trades
+                                exits: STOP 38, TARGET 21, TIMEOUT 1; mean hold 33.8 min
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+

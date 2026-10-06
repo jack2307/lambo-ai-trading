@@ -1,0 +1,59 @@
+market:   xauusd 15m
+data:     E:/rust/flowdesk/data (bars from E:/rust/flowdesk/data\bars\XAUUSD-15m.parquet)
+bounds:   --from=2025-04-01 --to=2025-07-01 kept 5862 of 100586 bars
+spread:   0.28 per round trip
+trail:    off
+max hold: 4 h (14400000 ms) from [trading] max_hold_ms, no per-market override
+bars:     5862 from 2025-04-01 00:00 to 2025-06-30 23:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+companion: none loaded — every cmp series is NaN
+guards: off (every number unguarded)
+null sides: coin - 50/50, carries no drift; the null every published percentile was read against
+
+== hypotheses `E:/rust/fd-a9/docs/hypotheses/2026-09-13-orb-ny-matched-null.toml`: 3 declared, FIXED parameters over the whole window (no selection), each against 200 matched null runs ==
+null sides: coin (50/50, carries no drift; the null every published percentile was read against)
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+guards: off (every number unguarded)
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+orb/60m      orb                    50   0.760  -0.115    0.931    2.005        0   30%  fail: profit factor 0.760 < 1.2; expectancy -0.115R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 09:20-12:00  — the classic: the first hour's range, broken before midday
+                                matched null 36 trades median vs the method's 50 — count match 0.72  ** outside the band: this percentile is unmatched **
+                                long share: method 0.460 vs the null's median 0.514
+                                spread paid: method 0.73 USD vs the null's median 0.46 USD — cost match 0.63  ** outside the band: the control did not pay what the method paid **
+                                exposure: signed share of time method -0.094 vs the null's +0.013; time in market method 8340 min vs the null's median 8205 min — ratio 0.98  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.931 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 2.718 ATR = 19.17 points, cost 1.46% of R (realised median, structural)
+                                the method's own realised stop: median 2.718 ATR = 19.17 points over 50 trades
+                                exits: STOP 19, TARGET 6, TIMEOUT 25; mean hold 166.8 min
+orb/30m      orb                    25   0.538  -0.279    0.967    2.293        0   12%  fail: only 25 trades (need 30); profit factor 0.538 < 1.2; expectancy -0.279R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 09:20-12:00  — a tighter range gives more breaks and earlier entries; does the extra noise pay?
+                                matched null 21 trades median vs the method's 25 — count match 0.84
+                                long share: method 0.360 vs the null's median 0.524  ** outside 40-60% long against a coin: this percentile carries the instrument's drift **
+                                spread paid: method 0.47 USD vs the null's median 0.38 USD — cost match 0.80
+                                exposure: signed share of time method -0.388 vs the null's +0.039; time in market method 2940 min vs the null's median 4148 min — ratio 1.41  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.967 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 1.990 ATR = 15.63 points, cost 1.79% of R (realised median, structural)
+                                the method's own realised stop: median 1.990 ATR = 15.63 points over 25 trades
+                                exits: STOP 14, TARGET 2, TIMEOUT 9; mean hold 117.6 min
+orb/60m-expansion orb                    17   0.924  -0.018    0.903    2.048        0   53%  fail: only 17 trades (need 30); profit factor 0.924 < 1.2; expectancy -0.018R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 09:20-12:00 + ATR14/ATR100 in [1.2, 99]  — only on days where volatility is already expanding: a break needs range to run into
+                                matched null 19 trades median vs the method's 17 — count match 1.12
+                                long share: method 0.353 vs the null's median 0.500  ** outside 40-60% long against a coin: this percentile carries the instrument's drift **
+                                spread paid: method 0.20 USD vs the null's median 0.20 USD — cost match 1.01
+                                exposure: signed share of time method -0.400 vs the null's -0.002; time in market method 3150 min vs the null's median 4342 min — ratio 1.38  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.903 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 2.761 ATR = 20.10 points, cost 1.39% of R (realised median, structural)
+                                the method's own realised stop: median 2.761 ATR = 20.10 points over 17 trades
+                                exits: STOP 5, TARGET 2, TIMEOUT 10; mean hold 185.3 min
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+

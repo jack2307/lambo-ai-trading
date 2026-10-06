@@ -1,0 +1,69 @@
+market:   xauusd 15m
+data:     E:/rust/flowdesk/data (bars from E:/rust/flowdesk/data\bars\XAUUSD-15m.parquet)
+bounds:   --from=2025-07-01 --to=2025-10-01 kept 6044 of 100586 bars
+spread:   0.28 per round trip
+trail:    off
+max hold: 168 h (604800000 ms) from [markets.<id>.trading] max_hold_ms = 604800000
+bars:     6044 from 2025-07-01 00:00 to 2025-09-30 23:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+companion: none loaded — every cmp series is NaN
+guards: on — max_open_loss_r 2.0, notional 300%, weekend flat 16:40 NY, news flat 60/30 (impact≥3, USD), daily cap 20, loss limit $300, cooldown 30 min
+null sides: coin - 50/50, carries no drift; the null every published percentile was read against
+
+== hypotheses `E:/rust/fd-a9/docs/hypotheses/2026-09-13-ict-sweep-mss-fvg.toml`: 4 declared, FIXED parameters over the whole window (no selection), each against 200 matched null runs ==
+null sides: coin (50/50, carries no drift; the null every published percentile was read against)
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+guards: on — max_open_loss_r 2.0, notional 300%, weekend flat 16:40 NY, news flat 60/30 (impact≥3, USD), daily cap 20, loss limit $300, cooldown 30 min
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+ict-A-tight  ict-sweep-mss-fvg       5   0.000  -0.816    1.003    5.692        0    0%  fail: only 5 trades (need 30); profit factor 0.000 < 1.2; expectancy -0.816R < 0.05R
+                                MoTuWeThFr + NY 01:00-05:00|06:00-10:00  — the expert's strict preset, kill zones only
+                                matched null 6 trades median vs the method's 5 — count match 1.20
+                                long share: method 0.800 vs the null's median 0.500  ** outside 40-60% long against a coin: this percentile carries the instrument's drift **
+                                spread paid: method 0.09 USD vs the null's median 0.11 USD — cost match 1.26  ** outside the band: the control did not pay what the method paid **
+                                exposure: signed share of time method +0.908 vs the null's +0.063; time in market method 4545 min vs the null's median 3622 min — ratio 0.80  ** the control did not collect the drift the method did **
+                                cost-matched null: control stop 3.791 ATR = 13.89 points, cost 2.02% of R (realised median, structural)
+                                the method's own realised stop: median 3.791 ATR = 13.89 points over 5 trades
+                                guards: refused none; closed WEEKEND_FLAT 1; sized down 1
+                                exits: STOP 4, WEEKEND_FLAT 1; mean hold 909.0 min
+ict-B-balanced ict-sweep-mss-fvg       6   1.743   0.213    1.037    4.599        0   75%  fail: only 6 trades (need 30)
+                                MoTuWeThFr + NY 01:00-05:00|06:00-10:00  — the expert's default preset, kill zones only
+                                matched null 7 trades median vs the method's 6 — count match 1.17
+                                long share: method 0.833 vs the null's median 0.500  ** outside 40-60% long against a coin: this percentile carries the instrument's drift **
+                                spread paid: method 0.12 USD vs the null's median 0.14 USD — cost match 1.19
+                                exposure: signed share of time method +0.892 vs the null's +0.016; time in market method 2505 min vs the null's median 2970 min — ratio 1.19  ** the control did not collect the drift the method did **
+                                cost-matched null: control stop 3.034 ATR = 12.44 points, cost 2.25% of R (realised median, structural)
+                                the method's own realised stop: median 3.034 ATR = 12.44 points over 6 trades
+                                guards: refused none; closed NEWS_FLAT 1, WEEKEND_FLAT 1; sized down 2
+                                exits: NEWS_FLAT 1, STOP 2, TARGET 2, WEEKEND_FLAT 1; mean hold 417.5 min
+ict-C-loose  ict-sweep-mss-fvg      12   1.563   0.070    1.045    2.475        0   83%  fail: only 12 trades (need 30)
+                                MoTuWeThFr  — the expert's loose preset, sessions off as it ships
+                                matched null 21 trades median vs the method's 12 — count match 1.75  ** outside the band: this percentile is unmatched **
+                                long share: method 0.583 vs the null's median 0.490
+                                spread paid: method 0.23 USD vs the null's median 0.41 USD — cost match 1.79  ** outside the band: the control did not pay what the method paid **
+                                exposure: signed share of time method +0.458 vs the null's +0.045; time in market method 7305 min vs the null's median 12398 min — ratio 1.70  ** the control did not collect the drift the method did **
+                                cost-matched null: control stop 3.034 ATR = 13.64 points, cost 2.05% of R (realised median, structural)
+                                the method's own realised stop: median 3.034 ATR = 13.64 points over 12 trades
+                                guards: refused none; closed NEWS_FLAT 2, WEEKEND_FLAT 2; sized down 4
+                                exits: NEWS_FLAT 2, STOP 4, TARGET 4, WEEKEND_FLAT 2; mean hold 608.8 min
+ict-B-allday ict-sweep-mss-fvg       8   1.015  -0.034    1.038    2.842        0   48%  fail: only 8 trades (need 30); profit factor 1.015 < 1.2; expectancy -0.034R < 0.05R
+                                MoTuWeThFr  — the default preset without the session gate: is the kill zone doing anything?
+                                matched null 14 trades median vs the method's 8 — count match 1.75  ** outside the band: this percentile is unmatched **
+                                long share: method 0.750 vs the null's median 0.500  ** outside 40-60% long against a coin: this percentile carries the instrument's drift **
+                                spread paid: method 0.15 USD vs the null's median 0.27 USD — cost match 1.77  ** outside the band: the control did not pay what the method paid **
+                                exposure: signed share of time method +0.747 vs the null's +0.061; time in market method 2970 min vs the null's median 9278 min — ratio 3.12  ** the control did not collect the drift the method did **
+                                cost-matched null: control stop 3.227 ATR = 12.44 points, cost 2.25% of R (realised median, structural)
+                                the method's own realised stop: median 3.227 ATR = 12.44 points over 8 trades
+                                guards: refused none; closed NEWS_FLAT 1, WEEKEND_FLAT 2; sized down 3
+                                exits: NEWS_FLAT 1, STOP 3, TARGET 2, WEEKEND_FLAT 2; mean hold 371.2 min
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+

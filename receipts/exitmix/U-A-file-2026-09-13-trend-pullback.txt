@@ -1,0 +1,59 @@
+market:   xauusd 15m
+data:     E:/rust/flowdesk/data (bars from E:/rust/flowdesk/data\bars\XAUUSD-15m.parquet)
+bounds:   --from=2025-07-01 --to=2025-10-01 kept 6044 of 100586 bars
+spread:   0.28 per round trip
+trail:    off
+max hold: 4 h (14400000 ms) from [trading] max_hold_ms, no per-market override
+bars:     6044 from 2025-07-01 00:00 to 2025-09-30 23:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+companion: none loaded — every cmp series is NaN
+guards: off (every number unguarded)
+null sides: coin - 50/50, carries no drift; the null every published percentile was read against
+
+== hypotheses `E:/rust/fd-a9/docs/hypotheses/2026-09-13-trend-pullback.toml`: 3 declared, FIXED parameters over the whole window (no selection), each against 200 matched null runs ==
+null sides: coin (50/50, carries no drift; the null every published percentile was read against)
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+guards: off (every number unguarded)
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+tp/fixed     trend-pullback        218   0.528  -0.351    0.731    0.927        0    4%  fail: profit factor 0.528 < 1.2; expectancy -0.351R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15  — the defaults pinned: EMA20 pullbacks in an EMA200 trend, 1.5R, wherever they print
+                                matched null 198 trades median vs the method's 218 — count match 0.91
+                                long share: method 0.628 vs the null's median 0.496  ** outside 40-60% long against a coin: this percentile carries the instrument's drift **
+                                spread paid: method 35.20 USD vs the null's median 28.94 USD — cost match 0.82
+                                exposure: signed share of time method +0.291 vs the null's +0.054; time in market method 3090 min vs the null's median 2100 min — ratio 0.68  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.731 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 0.386 ATR = 1.39 points, cost 20.14% of R (realised median, structural)
+                                the method's own realised stop: median 0.386 ATR = 1.39 points over 218 trades
+                                exits: STOP 141, TARGET 71, TIMEOUT 1, flat window 5; mean hold 14.2 min
+tp/allday    trend-pullback        218   0.528  -0.351    0.731    0.927        0    4%  fail: profit factor 0.528 < 1.2; expectancy -0.351R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15  — the grid (fast EMA x reward) walked forward, all hours
+                                matched null 198 trades median vs the method's 218 — count match 0.91
+                                long share: method 0.628 vs the null's median 0.496  ** outside 40-60% long against a coin: this percentile carries the instrument's drift **
+                                spread paid: method 35.20 USD vs the null's median 28.94 USD — cost match 0.82
+                                exposure: signed share of time method +0.291 vs the null's +0.054; time in market method 3090 min vs the null's median 2100 min — ratio 0.68  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.731 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 0.386 ATR = 1.39 points, cost 20.14% of R (realised median, structural)
+                                the method's own realised stop: median 0.386 ATR = 1.39 points over 218 trades
+                                exits: STOP 141, TARGET 71, TIMEOUT 1, flat window 5; mean hold 14.2 min
+tp/ny        trend-pullback         72   0.447  -0.419    0.768    1.121        0    1%  fail: profit factor 0.447 < 1.2; expectancy -0.419R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 08:00-16:00  — New York hours only, where a pullback has participants to continue it
+                                matched null 77 trades median vs the method's 72 — count match 1.07
+                                long share: method 0.597 vs the null's median 0.497
+                                spread paid: method 11.49 USD vs the null's median 9.63 USD — cost match 0.84
+                                exposure: signed share of time method +0.723 vs the null's +0.000; time in market method 1410 min vs the null's median 1552 min — ratio 1.10  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.768 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 0.443 ATR = 1.81 points, cost 15.47% of R (realised median, structural)
+                                the method's own realised stop: median 0.443 ATR = 1.81 points over 72 trades
+                                exits: STOP 49, TARGET 19, TIMEOUT 1, flat window 3; mean hold 19.6 min
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+

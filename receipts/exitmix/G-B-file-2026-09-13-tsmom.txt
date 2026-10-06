@@ -1,0 +1,53 @@
+market:   xauusd 15m
+data:     E:/rust/flowdesk/data (bars from E:/rust/flowdesk/data\bars\XAUUSD-15m.parquet)
+bounds:   --from=2025-04-01 --to=2025-07-01 kept 5862 of 100586 bars
+spread:   0.28 per round trip
+trail:    off
+max hold: 4 h (14400000 ms) from [trading] max_hold_ms, no per-market override
+bars:     5862 from 2025-04-01 00:00 to 2025-06-30 23:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+companion: none loaded — every cmp series is NaN
+guards: on — max_open_loss_r 2.0, notional 300%, weekend flat 16:40 NY, news flat 60/30 (impact≥3, USD), daily cap 20, loss limit $300, cooldown 30 min
+null sides: coin - 50/50, carries no drift; the null every published percentile was read against
+
+== hypotheses `E:/rust/fd-a9/docs/hypotheses/2026-09-13-tsmom.toml`: 3 declared, FIXED parameters over the whole window (no selection), each against 200 matched null runs ==
+null sides: coin (50/50, carries no drift; the null every published percentile was read against)
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+guards: on — max_open_loss_r 2.0, notional 300%, weekend flat 16:40 NY, news flat 60/30 (impact≥3, USD), daily cap 20, loss limit $300, cooldown 30 min
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+tsmom/60d    tsmom                   0     NaN     NaN    1.020    2.519       -0  null  fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+                                MoTuWeThFr + NY 18:00-19:00  — the canonical lookback; the null holds random sides from the same rebalance bar
+                                matched null 17 trades median vs the method's 0 — count match NaN  ** outside the band: this percentile is unmatched **
+                                long share: method NaN vs the null's median 0.529
+                                spread paid: method -0.00 USD vs the null's median 0.05 USD — cost match NaN  (nothing to compare)
+                                exposure: signed share of time method NaN vs the null's -0.002; time in market method NaN min vs the null's median 67290 min — ratio NaN  ** the control did not collect the drift the method did **
+                                guards: nothing acted
+                                exits: no exits recorded; mean hold NaN min
+tsmom/20d    tsmom                   0     NaN     NaN    1.002    2.707       -0  null  fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+                                MoTuWeThFr + NY 18:00-19:00  — a one-month lookback: more flips, more cost
+                                matched null 18 trades median vs the method's 0 — count match NaN  ** outside the band: this percentile is unmatched **
+                                long share: method NaN vs the null's median 0.500
+                                spread paid: method -0.00 USD vs the null's median 0.05 USD — cost match NaN  (nothing to compare)
+                                exposure: signed share of time method NaN vs the null's +0.009; time in market method NaN min vs the null's median 67275 min — ratio NaN  ** the control did not collect the drift the method did **
+                                guards: nothing acted
+                                exits: no exits recorded; mean hold NaN min
+tsmom/120d   tsmom                   0     NaN     NaN    1.020    2.519       -0  null  fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+                                MoTuWeThFr + NY 18:00-19:00  — a half-year lookback: nearly buy-and-hold in a rising sample, which the drift null must expose
+                                matched null 17 trades median vs the method's 0 — count match NaN  ** outside the band: this percentile is unmatched **
+                                long share: method NaN vs the null's median 0.529
+                                spread paid: method -0.00 USD vs the null's median 0.05 USD — cost match NaN  (nothing to compare)
+                                exposure: signed share of time method NaN vs the null's -0.002; time in market method NaN min vs the null's median 67290 min — ratio NaN  ** the control did not collect the drift the method did **
+                                guards: nothing acted
+                                exits: no exits recorded; mean hold NaN min
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+

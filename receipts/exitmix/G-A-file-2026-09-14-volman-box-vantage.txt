@@ -1,0 +1,50 @@
+market:   xauusd 15m
+data:     E:/rust/flowdesk/data (bars from E:/rust/flowdesk/data\bars\XAUUSD-15m.parquet)
+bounds:   --from=2025-07-01 --to=2025-10-01 kept 6044 of 100586 bars
+spread:   0.28 per round trip
+trail:    off
+max hold: 4 h (14400000 ms) from [trading] max_hold_ms, no per-market override
+bars:     6044 from 2025-07-01 00:00 to 2025-09-30 23:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+companion: none loaded — every cmp series is NaN
+guards: on — max_open_loss_r 2.0, notional 300%, weekend flat 16:40 NY, news flat 60/30 (impact≥3, USD), daily cap 20, loss limit $300, cooldown 30 min
+null sides: coin - 50/50, carries no drift; the null every published percentile was read against
+
+== hypotheses `E:/rust/fd-a9/docs/hypotheses/2026-09-14-volman-box-vantage.toml`: 2 declared, FIXED parameters over the whole window (no selection), each against 200 matched null runs ==
+null sides: coin (50/50, carries no drift; the null every published percentile was read against)
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+guards: on — max_open_loss_r 2.0, notional 300%, weekend flat 16:40 NY, news flat 60/30 (impact≥3, USD), daily cap 20, loss limit $300, cooldown 30 min
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+box/b2       volman-box             56   1.376   0.063    0.978    1.635        0   82%  gate pass, inside the noise
+                                MoTuWeThFr  — context: box 2 target on the last seventeen months of Vantage 5m bars
+                                matched null 57 trades median vs the method's 56 — count match 1.02
+                                long share: method 0.446 vs the null's median 0.492
+                                spread paid: method 1.22 USD vs the null's median 1.15 USD — cost match 0.94
+                                exposure: signed share of time method -0.225 vs the null's -0.005; time in market method 6735 min vs the null's median 12420 min — ratio 1.84  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.978 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 3.072 ATR = 10.68 points, cost 2.62% of R (realised median, structural)
+                                the method's own realised stop: median 3.072 ATR = 10.68 points over 56 trades
+                                guards: refused WEEKEND_FLAT 1; closed NEWS_FLAT 1, WEEKEND_FLAT 2; sized down 28
+                                exits: NEWS_FLAT 1, STOP 14, TARGET 28, TIMEOUT 11, WEEKEND_FLAT 2; mean hold 120.3 min
+box/b3       volman-box             55   1.663   0.146    0.983    1.616        0   97%  SURVIVES
+                                MoTuWeThFr  — context: box 3 target on the same
+                                matched null 56 trades median vs the method's 55 — count match 1.02
+                                long share: method 0.455 vs the null's median 0.492
+                                spread paid: method 1.21 USD vs the null's median 1.13 USD — cost match 0.93
+                                exposure: signed share of time method -0.128 vs the null's -0.003; time in market method 9495 min vs the null's median 12158 min — ratio 1.28  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.983 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 3.056 ATR = 10.55 points, cost 2.65% of R (realised median, structural)
+                                the method's own realised stop: median 3.056 ATR = 10.55 points over 55 trades
+                                guards: refused WEEKEND_FLAT 1; closed NEWS_FLAT 1, WEEKEND_FLAT 2; sized down 29
+                                exits: NEWS_FLAT 1, STOP 15, TARGET 9, TIMEOUT 28, WEEKEND_FLAT 2; mean hold 172.6 min
+
+Survivors: box/b3/volman-box — worth a decision record and a direction null before anything else.
+

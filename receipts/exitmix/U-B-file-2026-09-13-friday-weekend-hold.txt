@@ -1,0 +1,45 @@
+market:   xauusd 15m
+data:     E:/rust/flowdesk/data (bars from E:/rust/flowdesk/data\bars\XAUUSD-15m.parquet)
+bounds:   --from=2025-04-01 --to=2025-07-01 kept 5862 of 100586 bars
+spread:   0.28 per round trip
+trail:    off
+max hold: 4 h (14400000 ms) from [trading] max_hold_ms, no per-market override
+bars:     5862 from 2025-04-01 00:00 to 2025-06-30 23:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+companion: none loaded — every cmp series is NaN
+guards: off (every number unguarded)
+null sides: coin - 50/50, carries no drift; the null every published percentile was read against
+
+== hypotheses `E:/rust/fd-a9/docs/hypotheses/2026-09-13-friday-weekend-hold.toml`: 2 declared, FIXED parameters over the whole window (no selection), each against 200 matched null runs ==
+null sides: coin (50/50, carries no drift; the null every published percentile was read against)
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+guards: off (every number unguarded)
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+fri/1630-1815 session-hold           11   0.836  -0.024    0.944    3.943        0   42%  fail: only 11 trades (need 30); profit factor 0.836 < 1.2; expectancy -0.024R < 0.05R
+                                Fr + NY 16:15-16:20  — the test: long from Friday's last bars before the close to Sunday's first after the reopen, on eight years no run has read
+                                matched null 11 trades median vs the method's 11 — count match 1.00
+                                long share: method 1.000 vs the null's median 0.545  ** outside 40-60% long against a coin: this percentile carries the instrument's drift **
+                                spread paid: method 0.03 USD vs the null's median 0.03 USD — cost match 1.00
+                                exposure: signed share of time method +1.000 vs the null's +0.091; time in market method 33000 min vs the null's median 32835 min — ratio 0.99  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.944 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                exits: window closed 11; mean hold 3000.0 min
+close/1630-1815 session-hold           46   0.990  -0.002    0.844    1.851        0   62%  fail: profit factor 0.990 < 1.2; expectancy -0.002R < 0.05R
+                                MoTuWeTh + NY 16:15-16:20  — the prediction, not the test: the weekday break at $1,050-1,900 gold should have the side right (direction >= 95th) and net near zero, if the closed record's spread reading is right
+                                matched null 46 trades median vs the method's 46 — count match 1.00
+                                long share: method 1.000 vs the null's median 0.500  ** outside 40-60% long against a coin: this percentile carries the instrument's drift **
+                                spread paid: method 0.13 USD vs the null's median 0.13 USD — cost match 1.00
+                                exposure: signed share of time method +1.000 vs the null's -0.380; time in market method 9840 min vs the null's median 9150 min — ratio 0.93  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.844 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                exits: window closed 46; mean hold 213.9 min
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+

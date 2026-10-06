@@ -1,0 +1,49 @@
+market:   xauusd 15m
+data:     E:/rust/flowdesk/data (bars from E:/rust/flowdesk/data\bars\XAUUSD-15m.parquet)
+bounds:   --from=2025-04-01 --to=2025-07-01 kept 5862 of 100586 bars
+spread:   0.28 per round trip
+trail:    off
+max hold: 4 h (14400000 ms) from [trading] max_hold_ms, no per-market override
+bars:     5862 from 2025-04-01 00:00 to 2025-06-30 23:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+companion: none loaded — every cmp series is NaN
+guards: off (every number unguarded)
+null sides: coin - 50/50, carries no drift; the null every published percentile was read against
+
+== hypotheses `E:/rust/fd-a9/docs/hypotheses/2026-09-13-btc-m15-check.toml`: 2 declared, FIXED parameters over the whole window (no selection), each against 200 matched null runs ==
+null sides: coin (50/50, carries no drift; the null every published percentile was read against)
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+guards: off (every number unguarded)
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+m15/eq-open-60m orb                    16   0.948   0.003    0.954    3.260        0   50%  fail: only 16 trades (need 30); profit factor 0.948 < 1.2; expectancy 0.003R < 0.05R
+                                MoTuWeThFr + NY 10:30-13:00  — the equity-open range on 15-minute closes
+                                matched null 14 trades median vs the method's 16 — count match 0.88
+                                long share: method 0.562 vs the null's median 0.500
+                                spread paid: method 0.12 USD vs the null's median 0.15 USD — cost match 1.20
+                                exposure: signed share of time method +0.105 vs the null's +0.040; time in market method 3990 min vs the null's median 4328 min — ratio 1.08  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.954 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 3.313 ATR = 27.47 points, cost 1.02% of R (realised median, structural)
+                                the method's own realised stop: median 3.313 ATR = 27.47 points over 16 trades
+                                exits: STOP 1, TIMEOUT 15; mean hold 249.4 min
+m15/vwap-allday vwap-fade             287   0.921  -0.040    0.936    1.178        0   44%  fail: profit factor 0.921 < 1.2; expectancy -0.040R < 0.05R
+                                  — VWAP reversion on 15-minute closes
+                                matched null 261 trades median vs the method's 287 — count match 0.91
+                                long share: method 0.530 vs the null's median 0.504
+                                spread paid: method 12.17 USD vs the null's median 11.12 USD — cost match 0.91
+                                exposure: signed share of time method -0.316 vs the null's +0.066; time in market method 25290 min vs the null's median 33248 min — ratio 1.31  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.936 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 1.000 ATR = 6.01 points, cost 4.66% of R (named stopAtr, copied)
+                                the method's own realised stop: median 1.024 ATR = 6.15 points over 287 trades
+                                exits: STOP 181, TARGET 95, TIMEOUT 11; mean hold 88.1 min
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+

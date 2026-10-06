@@ -1,0 +1,61 @@
+market:   xauusd 15m
+data:     E:/rust/flowdesk/data (bars from E:/rust/flowdesk/data\bars\XAUUSD-15m.parquet)
+bounds:   --from=2025-04-01 --to=2025-07-01 kept 5862 of 100586 bars
+spread:   0.28 per round trip
+trail:    off
+max hold: 4 h (14400000 ms) from [trading] max_hold_ms, no per-market override
+bars:     5862 from 2025-04-01 00:00 to 2025-06-30 23:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+companion: none loaded — every cmp series is NaN
+guards: off (every number unguarded)
+null sides: coin - 50/50, carries no drift; the null every published percentile was read against
+
+== hypotheses `E:/rust/fd-a9/docs/hypotheses/2026-09-13-london-fix.toml`: 4 declared, FIXED parameters over the whole window (no selection), each against 200 matched null runs ==
+null sides: coin (50/50, carries no drift; the null every published percentile was read against)
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+guards: off (every number unguarded)
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+fix/pm-into  session-hold           64   1.085   0.055    0.895    1.474        0   71%  fail: profit factor 1.085 < 1.2
+                                MoTuWeThFr + NY 09:30-09:35  — short into the afternoon fix: the published drift
+                                matched null 64 trades median vs the method's 64 — count match 1.00
+                                long share: method 0.000 vs the null's median 0.500  ** outside 40-60% long against a coin: this percentile carries the instrument's drift **
+                                spread paid: method 2.11 USD vs the null's median 2.10 USD — cost match 0.99
+                                exposure: signed share of time method -1.000 vs the null's +0.000; time in market method 1920 min vs the null's median 1920 min — ratio 1.00  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.895 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                exits: window closed 64; mean hold 30.0 min
+fix/pm-after session-hold           64   1.449   0.137    0.945    1.477        0   94%  gate pass, inside the noise
+                                MoTuWeThFr + NY 10:00-10:05  — long out of the afternoon fix: the published recovery
+                                matched null 64 trades median vs the method's 64 — count match 1.00
+                                long share: method 1.000 vs the null's median 0.492  ** outside 40-60% long against a coin: this percentile carries the instrument's drift **
+                                spread paid: method 2.08 USD vs the null's median 1.96 USD — cost match 0.94
+                                exposure: signed share of time method +1.000 vs the null's -0.016; time in market method 1920 min vs the null's median 1920 min — ratio 1.00  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.945 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                exits: window closed 64; mean hold 30.0 min
+fix/am-into  session-hold           64   0.663  -0.096    0.790    1.502        0   29%  fail: profit factor 0.663 < 1.2; expectancy -0.096R < 0.05R
+                                MoTuWeThFr + NY 05:30-05:35  — the contrast: the morning fix, where the literature found little
+                                matched null 64 trades median vs the method's 64 — count match 1.00
+                                long share: method 0.000 vs the null's median 0.500  ** outside 40-60% long against a coin: this percentile carries the instrument's drift **
+                                spread paid: method 2.49 USD vs the null's median 2.50 USD — cost match 1.00
+                                exposure: signed share of time method -1.000 vs the null's +0.000; time in market method 1920 min vs the null's median 1920 min — ratio 1.00  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.790 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                exits: window closed 64; mean hold 30.0 min
+fix/am-after session-hold           64   0.805  -0.067    0.878    1.494        0   38%  fail: profit factor 0.805 < 1.2; expectancy -0.067R < 0.05R
+                                MoTuWeThFr + NY 06:00-06:05  — its complement
+                                matched null 64 trades median vs the method's 64 — count match 1.00
+                                long share: method 1.000 vs the null's median 0.500  ** outside 40-60% long against a coin: this percentile carries the instrument's drift **
+                                spread paid: method 2.48 USD vs the null's median 2.55 USD — cost match 1.03
+                                exposure: signed share of time method +1.000 vs the null's +0.000; time in market method 1920 min vs the null's median 1920 min — ratio 1.00  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.878 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                exits: window closed 64; mean hold 30.0 min
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+

@@ -1,0 +1,49 @@
+market:   xauusd 15m
+data:     E:/rust/flowdesk/data (bars from E:/rust/flowdesk/data\bars\XAUUSD-15m.parquet)
+bounds:   --from=2025-07-01 --to=2025-10-01 kept 6044 of 100586 bars
+spread:   0.28 per round trip
+trail:    off
+max hold: 4 h (14400000 ms) from [trading] max_hold_ms, no per-market override
+bars:     6044 from 2025-07-01 00:00 to 2025-09-30 23:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+companion: none loaded — every cmp series is NaN
+guards: off (every number unguarded)
+null sides: coin - 50/50, carries no drift; the null every published percentile was read against
+
+== hypotheses `E:/rust/fd-a9/docs/hypotheses/2026-09-14-volman-box-vantage.toml`: 2 declared, FIXED parameters over the whole window (no selection), each against 200 matched null runs ==
+null sides: coin (50/50, carries no drift; the null every published percentile was read against)
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+guards: off (every number unguarded)
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+box/b2       volman-box             57   1.143   0.054    0.985    1.673        0   66%  fail: profit factor 1.143 < 1.2
+                                MoTuWeThFr  — context: box 2 target on the last seventeen months of Vantage 5m bars
+                                matched null 58 trades median vs the method's 57 — count match 1.02
+                                long share: method 0.439 vs the null's median 0.500
+                                spread paid: method 1.55 USD vs the null's median 1.31 USD — cost match 0.85
+                                exposure: signed share of time method -0.597 vs the null's +0.009; time in market method 12960 min vs the null's median 18435 min — ratio 1.42  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.985 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 3.088 ATR = 10.81 points, cost 2.59% of R (realised median, structural)
+                                the method's own realised stop: median 3.088 ATR = 10.81 points over 57 trades
+                                exits: STOP 15, TARGET 29, TIMEOUT 13; mean hold 227.4 min
+box/b3       volman-box             56   1.331   0.122    0.984    1.687        0   80%  gate pass, inside the noise
+                                MoTuWeThFr  — context: box 3 target on the same
+                                matched null 57 trades median vs the method's 56 — count match 1.02
+                                long share: method 0.446 vs the null's median 0.500
+                                spread paid: method 1.57 USD vs the null's median 1.30 USD — cost match 0.83
+                                exposure: signed share of time method -0.473 vs the null's +0.005; time in market method 15720 min vs the null's median 18045 min — ratio 1.15  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.984 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 3.072 ATR = 10.68 points, cost 2.62% of R (realised median, structural)
+                                the method's own realised stop: median 3.072 ATR = 10.68 points over 56 trades
+                                exits: STOP 16, TARGET 9, TIMEOUT 31; mean hold 280.7 min
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+

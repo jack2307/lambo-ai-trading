@@ -1,0 +1,49 @@
+market:   xauusd 15m
+data:     E:/rust/flowdesk/data (bars from E:/rust/flowdesk/data\bars\XAUUSD-15m.parquet)
+bounds:   --from=2025-07-01 --to=2025-10-01 kept 6044 of 100586 bars
+spread:   0.28 per round trip
+trail:    off
+max hold: 4 h (14400000 ms) from [trading] max_hold_ms, no per-market override
+bars:     6044 from 2025-07-01 00:00 to 2025-09-30 23:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+companion: none loaded — every cmp series is NaN
+guards: off (every number unguarded)
+null sides: coin - 50/50, carries no drift; the null every published percentile was read against
+
+== hypotheses `E:/rust/fd-a9/docs/hypotheses/2026-09-13-doji-btc.toml`: 2 declared, FIXED parameters over the whole window (no selection), each against 200 matched null runs ==
+null sides: coin (50/50, carries no drift; the null every published percentile was read against)
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+guards: off (every number unguarded)
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+doji/btc-allday doji-reversal          69   0.563  -0.276    0.943    1.426        0    6%  fail: profit factor 0.563 < 1.2; expectancy -0.276R < 0.05R
+                                  — the same pattern on BTC 15-minute bars
+                                matched null 66 trades median vs the method's 69 — count match 0.96
+                                long share: method 0.536 vs the null's median 0.493
+                                spread paid: method 3.09 USD vs the null's median 3.21 USD — cost match 1.04
+                                exposure: signed share of time method +0.035 vs the null's -0.002; time in market method 5940 min vs the null's median 13605 min — ratio 2.29  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.943 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 1.455 ATR = 5.79 points, cost 4.84% of R (realised median, structural)
+                                the method's own realised stop: median 1.455 ATR = 5.79 points over 69 trades
+                                exits: STOP 42, TARGET 18, TIMEOUT 9; mean hold 86.1 min
+doji/btc-us  doji-reversal          34   0.500  -0.340    0.905    1.599        0    6%  fail: profit factor 0.500 < 1.2; expectancy -0.340R < 0.05R
+                                NY 08:00-16:00  — US hours only
+                                matched null 35 trades median vs the method's 34 — count match 1.03
+                                long share: method 0.559 vs the null's median 0.485
+                                spread paid: method 1.50 USD vs the null's median 1.54 USD — cost match 1.03
+                                exposure: signed share of time method -0.084 vs the null's -0.053; time in market method 2490 min vs the null's median 10020 min — ratio 4.02  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.905 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 1.344 ATR = 6.27 points, cost 4.47% of R (realised median, structural)
+                                the method's own realised stop: median 1.344 ATR = 6.27 points over 34 trades
+                                exits: STOP 22, TARGET 8, TIMEOUT 4; mean hold 73.2 min
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+

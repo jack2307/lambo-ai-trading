@@ -1,0 +1,59 @@
+market:   xauusd 15m
+data:     E:/rust/flowdesk/data (bars from E:/rust/flowdesk/data\bars\XAUUSD-15m.parquet)
+bounds:   --from=2025-04-01 --to=2025-07-01 kept 5862 of 100586 bars
+spread:   0.28 per round trip
+trail:    off
+max hold: 4 h (14400000 ms) from [trading] max_hold_ms, no per-market override
+bars:     5862 from 2025-04-01 00:00 to 2025-06-30 23:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+companion: none loaded — every cmp series is NaN
+guards: off (every number unguarded)
+null sides: coin - 50/50, carries no drift; the null every published percentile was read against
+
+== hypotheses `E:/rust/fd-a9/docs/hypotheses/2026-09-13-trend-pullback-btc.toml`: 3 declared, FIXED parameters over the whole window (no selection), each against 200 matched null runs ==
+null sides: coin (50/50, carries no drift; the null every published percentile was read against)
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+guards: off (every number unguarded)
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+tp-btc/fixed trend-pullback        200   0.944  -0.031    0.919    1.171        0   60%  fail: profit factor 0.944 < 1.2; expectancy -0.031R < 0.05R
+                                  — the defaults pinned on BTC, 24/7
+                                matched null 197 trades median vs the method's 200 — count match 0.98
+                                long share: method 0.490 vs the null's median 0.505
+                                spread paid: method 12.60 USD vs the null's median 10.84 USD — cost match 0.86
+                                exposure: signed share of time method -0.309 vs the null's -0.002; time in market method 20115 min vs the null's median 18345 min — ratio 0.91  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.919 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 0.788 ATR = 4.48 points, cost 6.24% of R (realised median, structural)
+                                the method's own realised stop: median 0.788 ATR = 4.48 points over 200 trades
+                                exits: STOP 115, TARGET 77, TIMEOUT 8; mean hold 100.6 min
+tp-btc/all   trend-pullback        200   0.944  -0.031    0.919    1.171        0   60%  fail: profit factor 0.944 < 1.2; expectancy -0.031R < 0.05R
+                                  — the grid walked forward, 24/7
+                                matched null 197 trades median vs the method's 200 — count match 0.98
+                                long share: method 0.490 vs the null's median 0.505
+                                spread paid: method 12.60 USD vs the null's median 10.84 USD — cost match 0.86
+                                exposure: signed share of time method -0.309 vs the null's -0.002; time in market method 20115 min vs the null's median 18345 min — ratio 0.91  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.919 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 0.788 ATR = 4.48 points, cost 6.24% of R (realised median, structural)
+                                the method's own realised stop: median 0.788 ATR = 4.48 points over 200 trades
+                                exits: STOP 115, TARGET 77, TIMEOUT 8; mean hold 100.6 min
+tp-btc/us    trend-pullback         57   1.010   0.018    0.907    1.438        0   62%  fail: profit factor 1.010 < 1.2; expectancy 0.018R < 0.05R
+                                MoTuWeThFr + NY 09:30-16:00  — US equity hours, where BTC has its volume
+                                matched null 50 trades median vs the method's 57 — count match 0.88
+                                long share: method 0.456 vs the null's median 0.500
+                                spread paid: method 3.19 USD vs the null's median 2.64 USD — cost match 0.83
+                                exposure: signed share of time method -0.708 vs the null's +0.010; time in market method 12645 min vs the null's median 8715 min — ratio 0.69  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.907 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 0.778 ATR = 5.36 points, cost 5.22% of R (realised median, structural)
+                                the method's own realised stop: median 0.778 ATR = 5.36 points over 57 trades
+                                exits: STOP 30, TARGET 19, TIMEOUT 8; mean hold 221.8 min
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+
