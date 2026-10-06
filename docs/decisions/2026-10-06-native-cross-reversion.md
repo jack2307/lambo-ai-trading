@@ -118,3 +118,38 @@ Nên: **thêm indicator mới `lnz`** (z-score của `ln(close)` trên một c�
 trượt, không cần companion) và một strategy đọc nó. `ratz` và
 `ratio_reversion` **không bị chạm**, nên 36 receipt của n2 vẫn tái lập được
 từng số.
+
+---
+
+## Ghi chú 2026-10-06, sau khi đọc config nhưng TRƯỚC khi chạy ô nào
+
+Ba thứ không lường trước trong đăng ký gốc. Dòng cũ để nguyên.
+
+**(a) Không có log spread AUDNZD.** `data/spreads/` chỉ có `BTCUSD_sc.csv`,
+`XAGUSD_sc.csv`, `XAUUSD_sc.csv`. Nên `spread` trong config là **báo giá, không
+phải phép đo** — khác hẳn con số FOMC mà `agent/n1` đo được từ 8.967 bản ghi
+bid/ask thật. Hệ quả: **chạy một quạt `--spread=`** và công bố mức phí mà kết
+luận vỡ, thay vì công bố một con số đơn. Nếu kết luận phụ thuộc vào báo giá
+thì nó không phải kết luận.
+
+**(b) Carry là cả câu chuyện trên một cross, và đăng ký gốc bỏ sót.**
+`agent/n5` đo được hôm nay rằng 4 ô duy nhất qua cổng ở chân trời dài **chỉ
+qua khi swap = 0**, và tính theo rate chung thì PF 1,383 → **0,109**. Một cross
+AUD/NZD mang chênh lệch lãi suất hai nước; một luật hồi quy giữ vài ngày sẽ
+trả hoặc nhận nó. Tài khoản của desk **miễn swap đã đo** — nhưng đo trên
+`XAUUSD.sc` (340 lệnh, 87 lệnh qua đêm), **không phải trên AUDNZD.sc**, và
+chưa biết sàn có áp cùng ưu đãi cho cross hay không.
+
+⇒ **Khai thêm arm swap**, giống n5: chạy cả `swap = 0` và `swap = rate chung`.
+Nếu ô nào chỉ qua ở arm swap = 0 thì nó là **ưu đãi tài khoản, không phải
+chiến lược**, và phải viết đúng câu đó.
+
+**(c) `contract_size` không chạm cổng.** Comment trong khối `eurduka` của
+chính repo đã ghi: lot tính bằng `risk/(stop × contract_size)` và P&L là
+`points × lots × contract_size`, nên **tích số là bất biến** và R, notional,
+margin không đổi. Một giá trị sai chỉ sai ở **số lot** — thứ executor gửi cho
+MT5. Vô hại trên giấy, không vô hại khi chạy thật. Ghi ra để không ai lấy số
+lot từ receipt này.
+
+**Đa phép thử cập nhật:** 216 ô cổng gốc **+ 216 ô arm swap = 432 ô**, cộng
+quạt spread (khai sau khi biết mức nào đáng quét, đếm riêng và công bố).
