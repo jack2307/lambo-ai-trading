@@ -40,4 +40,20 @@ common=(
 "$bin" "${common[@]}" --seeds=20 "--config=$here/config" \
   --direction-samples=1000 --rebate-share=0.5 --exitmix > "$out/C-flag-audit.txt" 2>&1 || true
 
-grep -nE "^qs-h15|expectancy_net|^flags:" "$out"/*.txt
+# D and E: the rescore repair. FORMAT EVIDENCE, NOT READINGS — the sample
+# counts are deliberately too small for a percentile, and the point is that
+# `--mode=rescore` now prints an exit mix and a `cost ... % of R` line at all.
+# D is the self-managed row (no stop, so cost/R is NOT MEASURABLE, not 0%);
+# E is a stop-based base over two years, so the line has a denominator.
+"$bin" --market=xauduka --mode=rescore --exit-mix --seeds=20 --direction-samples=50 \
+  --rebate-share=0.45 --interval=15m --from=2010-06-01 --to=2018-06-01 \
+  --data=/e/rust/flowdesk/data "$row" "--config=$here/config" --null-sides=exposure \
+  > "$out/D-rescore-exitmix.txt" 2>&1
+
+"$bin" --market=xauduka --mode=rescore --exit-mix --seeds=10 --direction-samples=20 \
+  --rebate-share=0.45 --interval=15m --from=2016-06-01 --to=2018-06-01 \
+  --data=/e/rust/flowdesk/data "--config=$here/config" \
+  "--batch-file=$here/docs/research/designs/2026-10-07-instr-repair-cost-probe.toml" \
+  > "$out/E-rescore-costR.txt" 2>&1
+
+grep -nE "^qs-h15|expectancy_net|^flags:|% of R|^exits \(" "$out"/*.txt
