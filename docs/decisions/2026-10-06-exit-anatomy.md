@@ -169,3 +169,34 @@ cut-off is not a measurement of the rule.
 off. One arm, 3 rows, **3 row-readings** added to the book. It can show what
 the rule's own exit does when nothing else is closing the position. It cannot
 produce a survivor either, for the same window reason.
+
+## Note 2026-10-06 (d) — DIAGNOSTIC D2, declared before it is run
+
+The sweep's arm G shows the three highest profit factors in the whole record
+sitting on rows whose positions are closed by the clock: `orb` cells at
+TIMEOUT 71-72% with PF 2.3-2.5. The CRT decision record states the direction
+as settled — *"a truncated hold can destroy a passing row, never manufacture
+one"* (`docs/decisions/2026-10-04-crt.md`). That sentence has never been
+measured. It can be, with a config value and no code change.
+
+**D2.** `config-nocap/` is a copy of `config/` with ONE line added under
+`[markets.xauusd.trading]`: `max_hold_ms = 604_800_000` (seven days), the
+per-market override the config already supports
+(`crates/fd-core/src/config.rs:499`, exercised by
+`crates/fd-backtest/tests/trading_rules.rs:95`). Seven days rather than zero
+so a position still has to end and `END_OF_DATA` does not absorb the answer.
+`config/` itself is untouched, so every receipt already written stays
+readable.
+
+Arm G only, both windows, every batch — paired row by row against the main
+sweep. **326 rows x 2 windows x 1 arm = 652 row-readings** added to the book.
+
+It can answer one question: when the cap is lifted, does a row's profit
+factor go UP or DOWN? If capped rows systematically look better than uncapped
+ones, the cap manufactures passing rows and the quoted sentence is wrong. It
+cannot produce a survivor — a row measured under a hold the record did not use
+is not a cell of the record, and nothing here is selected.
+
+Falsifier for D2: if lifting the cap leaves the profit factor of
+ceiling-dominated rows unchanged or higher, then the cap is not inflating
+those numbers and the CRT record's sentence stands.
