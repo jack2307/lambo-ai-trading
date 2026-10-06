@@ -1,0 +1,36 @@
+# DIAGNOSTIC B for docs/decisions/2026-10-06-hold-ceiling.md, declared in that
+# file BEFORE it was run.
+#
+# ONE ROW THAT CANNOT PRODUCE A SURVIVOR. `tsmom` with lookbackDays = 5, run
+# at the 120 h ceiling (--config=config-h120) on both windows.
+#
+# WHY IT EXISTS. `tsmom::warmup` is `(lookbackDays + 5) * 288` bars: 7,200 at
+# the grid's shortest lookback of 20, against 6,044 and 5,862 bars of 15m
+# xauusd in the two windows. If warmup is what empties the method, this row —
+# warmup 2,880 bars, which fits — takes trades while every declared cell takes
+# none, and the hold ceiling is exonerated as the cause.
+#
+# WHAT IT CANNOT SHOW. A five-day lookback is not time-series momentum as any
+# paper states it (Moskowitz, Ooi & Pedersen measure 1-12 MONTHS), and picking
+# a parameter outside a declared grid after seeing a result is the move this
+# programme forbids. No verdict of "survives" may be read off this row
+# whatever it prints, and it counts as 2 more looks in the ledger.
+
+[run]
+market = "xauusd"
+interval = "15m"
+window_a = { from = "2025-07-01", to = "2025-10-01" }
+window_b = { from = "2025-04-01", to = "2025-07-01" }
+seeds = 200
+null_sides = "exposure"
+fixed = true
+guards = true
+exit_mix = true
+config = "config-h120"
+
+[[hypothesis]]
+label = "tsmom-lb5"
+base = "tsmom"
+filters = []
+overrides = { lookbackDays = 5 }
+why = "DIAGNOSTIC: a lookback whose warmup fits inside the window, to separate warmup from the hold ceiling as the reason tsmom takes no trades; never a survivor"
