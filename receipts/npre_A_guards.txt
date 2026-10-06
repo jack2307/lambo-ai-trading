@@ -1,0 +1,149 @@
+market:   xauduka 15m
+data:     E:/rust/flowdesk/data (bars from E:/rust/flowdesk/data\bars\XAUDUKA-15m.parquet)
+bounds:   --from=2022-01-01 --to=2026-01-01 kept 93733 of 378749 bars
+spread:   0.28 per round trip
+trail:    off
+max hold: 4 h (14400000 ms) from [trading] max_hold_ms, no per-market override
+bars:     93733 from 2022-01-02 23:00 to 2025-12-31 21:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+companion: none loaded — every cmp series is NaN
+guards: on — max_open_loss_r 2.0, notional 300%, weekend flat 16:40 NY, news flat 60/30 (impact≥3, USD), daily cap 20, loss limit $300, cooldown 30 min
+null sides: coin - 50/50, carries no drift; the null every published percentile was read against
+
+== hypotheses `receipts/news-pre.toml`: 12 declared, FIXED parameters over the whole window (no selection), each against 200 matched null runs ==
+null sides: coin (50/50, carries no drift; the null every published percentile was read against)
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+guards: on — max_open_loss_r 2.0, notional 300%, weekend flat 16:40 NY, news flat 60/30 (impact≥3, USD), daily cap 20, loss limit $300, cooldown 30 min
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+npre-brk-p2-m00 news-pre                0     NaN     NaN      NaN      NaN       -0  null  fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+                                entries ONLY -30 to -15 min from a high-impact release (USD)  — positioning before a scheduled release is directional, so the drift of the last 30 min continues for the last 15; no size gate, the maximum-sample form (A' 123 / B' 129). Flat at the release, so the 5.96x bar is not taken.
+                                matched null NaN trades median vs the method's 0 — count match NaN  ** outside the band: this percentile is unmatched **
+                                long share: method NaN vs the null's median NaN
+                                spread paid: method -0.00 USD vs the null's median NaN USD — cost match NaN  (nothing to compare)
+                                exposure: signed share of time method NaN vs the null's NaN; time in market method NaN min vs the null's median NaN min — ratio NaN  ** the control did not collect the drift the method did **
+                                cost-matched null: control stop 1.500 ATR = NaN points, cost NaN% of R (UNMEASURED: no trade to measure and no governing stopAtr)
+                                the method's own realised stop: median NaN ATR = NaN points over 0 trades
+                                guards: refused NEWS_FLAT 123; closed none; sized down 0
+                                exits: no exits recorded; mean hold NaN min
+npre-brk-p2-m05 news-pre                0     NaN     NaN      NaN      NaN       -0  null  fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+                                entries ONLY -30 to -15 min from a high-impact release (USD)  — the same, gated on the drift being worth at least 0.5 of the pre-span ATR(14) (A' 64 / B' 74). The median pre-release drift is only 0.59 ATR, so this gate keeps about half.
+                                matched null NaN trades median vs the method's 0 — count match NaN  ** outside the band: this percentile is unmatched **
+                                long share: method NaN vs the null's median NaN
+                                spread paid: method -0.00 USD vs the null's median NaN USD — cost match NaN  (nothing to compare)
+                                exposure: signed share of time method NaN vs the null's NaN; time in market method NaN min vs the null's median NaN min — ratio NaN  ** the control did not collect the drift the method did **
+                                cost-matched null: control stop 1.500 ATR = NaN points, cost NaN% of R (UNMEASURED: no trade to measure and no governing stopAtr)
+                                the method's own realised stop: median NaN ATR = NaN points over 0 trades
+                                guards: refused NEWS_FLAT 68; closed none; sized down 0
+                                exits: no exits recorded; mean hold NaN min
+npre-brk-p4-m00 news-pre                0     NaN     NaN      NaN      NaN       -0  null  fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+                                entries ONLY -30 to -15 min from a high-impact release (USD)  — the same claim read over the last hour instead of the last half hour; no size gate (A' 123 / B' 129).
+                                matched null NaN trades median vs the method's 0 — count match NaN  ** outside the band: this percentile is unmatched **
+                                long share: method NaN vs the null's median NaN
+                                spread paid: method -0.00 USD vs the null's median NaN USD — cost match NaN  (nothing to compare)
+                                exposure: signed share of time method NaN vs the null's NaN; time in market method NaN min vs the null's median NaN min — ratio NaN  ** the control did not collect the drift the method did **
+                                cost-matched null: control stop 1.500 ATR = NaN points, cost NaN% of R (UNMEASURED: no trade to measure and no governing stopAtr)
+                                the method's own realised stop: median NaN ATR = NaN points over 0 trades
+                                guards: refused NEWS_FLAT 123; closed none; sized down 0
+                                exits: no exits recorded; mean hold NaN min
+npre-brk-p4-m05 news-pre                0     NaN     NaN      NaN      NaN       -0  null  fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+                                entries ONLY -30 to -15 min from a high-impact release (USD)  — the hour-long drift, gated at 0.5 of the pre-span ATR(14) (A' 68 / B' 87). Median drift over four bars is 0.74 ATR.
+                                matched null NaN trades median vs the method's 0 — count match NaN  ** outside the band: this percentile is unmatched **
+                                long share: method NaN vs the null's median NaN
+                                spread paid: method -0.00 USD vs the null's median NaN USD — cost match NaN  (nothing to compare)
+                                exposure: signed share of time method NaN vs the null's NaN; time in market method NaN min vs the null's median NaN min — ratio NaN  ** the control did not collect the drift the method did **
+                                cost-matched null: control stop 1.500 ATR = NaN points, cost NaN% of R (UNMEASURED: no trade to measure and no governing stopAtr)
+                                the method's own realised stop: median NaN ATR = NaN points over 0 trades
+                                guards: refused NEWS_FLAT 72; closed none; sized down 0
+                                exits: no exits recorded; mean hold NaN min
+npre-brk-e45-p4-m00 news-pre                0     NaN     NaN      NaN      NaN       -0  null  fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+                                entries ONLY -45 to -30 min from a high-impact release (USD)  — the same rule entering at -30 rather than -15, so the position has 30 minutes of pre-release runway; no size gate (A' 123 / B' 129).
+                                matched null NaN trades median vs the method's 0 — count match NaN  ** outside the band: this percentile is unmatched **
+                                long share: method NaN vs the null's median NaN
+                                spread paid: method -0.00 USD vs the null's median NaN USD — cost match NaN  (nothing to compare)
+                                exposure: signed share of time method NaN vs the null's NaN; time in market method NaN min vs the null's median NaN min — ratio NaN  ** the control did not collect the drift the method did **
+                                cost-matched null: control stop 1.500 ATR = NaN points, cost NaN% of R (UNMEASURED: no trade to measure and no governing stopAtr)
+                                the method's own realised stop: median NaN ATR = NaN points over 0 trades
+                                guards: refused NEWS_FLAT 123; closed none; sized down 0
+                                exits: no exits recorded; mean hold NaN min
+npre-brk-e45-p4-m05 news-pre                0     NaN     NaN      NaN      NaN       -0  null  fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+                                entries ONLY -45 to -30 min from a high-impact release (USD)  — the 30-minute runway, gated at 0.5 of the pre-span ATR(14) (A' 70 / B' 72).
+                                matched null NaN trades median vs the method's 0 — count match NaN  ** outside the band: this percentile is unmatched **
+                                long share: method NaN vs the null's median NaN
+                                spread paid: method -0.00 USD vs the null's median NaN USD — cost match NaN  (nothing to compare)
+                                exposure: signed share of time method NaN vs the null's NaN; time in market method NaN min vs the null's median NaN min — ratio NaN  ** the control did not collect the drift the method did **
+                                cost-matched null: control stop 1.500 ATR = NaN points, cost NaN% of R (UNMEASURED: no trade to measure and no governing stopAtr)
+                                the method's own realised stop: median NaN ATR = NaN points over 0 trades
+                                guards: refused NEWS_FLAT 75; closed none; sized down 0
+                                exits: no exits recorded; mean hold NaN min
+npre-sqz-q2-s069 news-pre                0     NaN     NaN      NaN      NaN       -0  null  fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+                                entries ONLY -30 to +0 min from a high-impact release (USD)  — price leaving the quieter half of a 2-bar pre-release band carries the direction of the positioning that broke it; both bars of -30..0 get a chance to break (A' 55 / B' 52). Flat at the release.
+                                matched null NaN trades median vs the method's 0 — count match NaN  ** outside the band: this percentile is unmatched **
+                                long share: method NaN vs the null's median NaN
+                                spread paid: method -0.00 USD vs the null's median NaN USD — cost match NaN  (nothing to compare)
+                                exposure: signed share of time method NaN vs the null's NaN; time in market method NaN min vs the null's median NaN min — ratio NaN  ** the control did not collect the drift the method did **
+                                cost-matched null: control stop 1.500 ATR = NaN points, cost NaN% of R (UNMEASURED: no trade to measure and no governing stopAtr)
+                                the method's own realised stop: median NaN ATR = NaN points over 0 trades
+                                guards: refused NEWS_FLAT 54; closed none; sized down 0
+                                exits: no exits recorded; mean hold NaN min
+npre-sqz-q4-s046 news-pre                0     NaN     NaN      NaN      NaN       -0  null  fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+                                entries ONLY -30 to +0 min from a high-impact release (USD)  — the same over a 4-bar band, whose p50 ratio is 0.46 (A' 52 / B' 45). The band's own height is the stop, so this is the tightest stop in the job and will print the largest cost as a fraction of R.
+                                matched null NaN trades median vs the method's 0 — count match NaN  ** outside the band: this percentile is unmatched **
+                                long share: method NaN vs the null's median NaN
+                                spread paid: method -0.00 USD vs the null's median NaN USD — cost match NaN  (nothing to compare)
+                                exposure: signed share of time method NaN vs the null's NaN; time in market method NaN min vs the null's median NaN min — ratio NaN  ** the control did not collect the drift the method did **
+                                cost-matched null: control stop 1.500 ATR = NaN points, cost NaN% of R (UNMEASURED: no trade to measure and no governing stopAtr)
+                                the method's own realised stop: median NaN ATR = NaN points over 0 trades
+                                guards: refused NEWS_FLAT 55; closed none; sized down 0
+                                exits: no exits recorded; mean hold NaN min
+npre-hold-p2-m00 news-pre                0     NaN     NaN      NaN      NaN       -0  null  fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+                                entries ONLY -30 to -15 min from a high-impact release (USD)  — npre-brk-p2-m00 held THROUGH the release on purpose. Pairs with it to separate exposure to the 5.96x bar from the entry rule.
+                                matched null NaN trades median vs the method's 0 — count match NaN  ** outside the band: this percentile is unmatched **
+                                long share: method NaN vs the null's median NaN
+                                spread paid: method -0.00 USD vs the null's median NaN USD — cost match NaN  (nothing to compare)
+                                exposure: signed share of time method NaN vs the null's NaN; time in market method NaN min vs the null's median NaN min — ratio NaN  ** the control did not collect the drift the method did **
+                                cost-matched null: control stop 1.500 ATR = NaN points, cost NaN% of R (UNMEASURED: no trade to measure and no governing stopAtr)
+                                the method's own realised stop: median NaN ATR = NaN points over 0 trades
+                                guards: refused NEWS_FLAT 123; closed none; sized down 0
+                                exits: no exits recorded; mean hold NaN min
+npre-hold-p2-m05 news-pre                0     NaN     NaN      NaN      NaN       -0  null  fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+                                entries ONLY -30 to -15 min from a high-impact release (USD)  — npre-brk-p2-m05 held THROUGH the release on purpose.
+                                matched null NaN trades median vs the method's 0 — count match NaN  ** outside the band: this percentile is unmatched **
+                                long share: method NaN vs the null's median NaN
+                                spread paid: method -0.00 USD vs the null's median NaN USD — cost match NaN  (nothing to compare)
+                                exposure: signed share of time method NaN vs the null's NaN; time in market method NaN min vs the null's median NaN min — ratio NaN  ** the control did not collect the drift the method did **
+                                cost-matched null: control stop 1.500 ATR = NaN points, cost NaN% of R (UNMEASURED: no trade to measure and no governing stopAtr)
+                                the method's own realised stop: median NaN ATR = NaN points over 0 trades
+                                guards: refused NEWS_FLAT 68; closed none; sized down 0
+                                exits: no exits recorded; mean hold NaN min
+npre-hold-p4-m00 news-pre                0     NaN     NaN      NaN      NaN       -0  null  fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+                                entries ONLY -30 to -15 min from a high-impact release (USD)  — npre-brk-p4-m00 held THROUGH the release on purpose.
+                                matched null NaN trades median vs the method's 0 — count match NaN  ** outside the band: this percentile is unmatched **
+                                long share: method NaN vs the null's median NaN
+                                spread paid: method -0.00 USD vs the null's median NaN USD — cost match NaN  (nothing to compare)
+                                exposure: signed share of time method NaN vs the null's NaN; time in market method NaN min vs the null's median NaN min — ratio NaN  ** the control did not collect the drift the method did **
+                                cost-matched null: control stop 1.500 ATR = NaN points, cost NaN% of R (UNMEASURED: no trade to measure and no governing stopAtr)
+                                the method's own realised stop: median NaN ATR = NaN points over 0 trades
+                                guards: refused NEWS_FLAT 123; closed none; sized down 0
+                                exits: no exits recorded; mean hold NaN min
+npre-hold-p4-m05 news-pre                0     NaN     NaN      NaN      NaN       -0  null  fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+                                entries ONLY -30 to -15 min from a high-impact release (USD)  — npre-brk-p4-m05 held THROUGH the release on purpose.
+                                matched null NaN trades median vs the method's 0 — count match NaN  ** outside the band: this percentile is unmatched **
+                                long share: method NaN vs the null's median NaN
+                                spread paid: method -0.00 USD vs the null's median NaN USD — cost match NaN  (nothing to compare)
+                                exposure: signed share of time method NaN vs the null's NaN; time in market method NaN min vs the null's median NaN min — ratio NaN  ** the control did not collect the drift the method did **
+                                cost-matched null: control stop 1.500 ATR = NaN points, cost NaN% of R (UNMEASURED: no trade to measure and no governing stopAtr)
+                                the method's own realised stop: median NaN ATR = NaN points over 0 trades
+                                guards: refused NEWS_FLAT 72; closed none; sized down 0
+                                exits: no exits recorded; mean hold NaN min
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+
