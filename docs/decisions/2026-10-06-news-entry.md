@@ -287,3 +287,45 @@ never by editing a line above.
 A 1m or 5m measurement of the same releases; a limit-entry fill model; a
 per-minute spread series around releases so cost stops being a constant; or
 the pre-release branch of §12.
+
+---
+
+## Note added 2026-10-06, after the four main runs and before the spread fan
+
+Nothing above is rewritten; this is an append, as §6 requires.
+
+**Why the fan has to run on B′ too.** §7 declared the spread fan on window A′
+only, on the expectation (§1) that nothing would survive and a fan would only
+need to show that nothing survives at zero cost either. The four main runs
+produced **one** row through the gate on **both** windows
+(`np-brk-p4-m15`: A′ PF 1.636 / +0.106R / 96 trades, B′ PF 1.734 / +0.114R /
+90 trades, and the same in the guarded arm). Falsifier 2 — "the conclusion
+breaks at a spread below the release-minute spread" — is therefore a live test
+rather than a formality, and it cannot be answered on one window when the
+survival claim rests on two.
+
+Added, and counted in the ledger: the same fan on B′ — 12 rows × 5 further
+spreads = **60 further cells**, bringing the declared total from 120 to 180.
+No row, parameter, window or threshold is changed; only the cost axis is
+extended to the window the survival claim already stands on.
+
+**Second thing this note has to record, because it was not anticipated.** The
+guarded arm takes **0 trades on 8 of the 12 rows**. The guard config prints
+`news flat 60/30 (impact≥3, USD)`: the desk's own live risk guard forbids
+entries from 60 minutes before to 30 minutes after a high-impact USD release.
+Rows at `probeBars` 1 and 2 enter at +0 and +15 minutes, inside that blackout,
+so the guard refuses every one of them. Only `probeBars = 4` (+45 min) clears
+it. This family was not merely unexpressed by the engine; **two thirds of it
+is prohibited by the running configuration**, which is a second and
+independent reason it had never been measured. It is reported as a fact about
+the desk, not corrected: `[trading.guards]` is not touched.
+
+**Third, the exit mix, which qualifies the survivor severely.** On all four
+main runs the `probeBars = 4` rows leave by the engine's 4-hour cap in
+**80–97 of 90–118 trades** (`TIMEOUT`), with the registered one-impulse-range
+stop firing 6–16 times and the 1.8R target 3–5 times. So the thing measured is
+**"enter 45 minutes after a release in the direction of the move so far and
+hold for four hours"**; the stop and target geometry of §4 is very nearly
+decorative. Any reading of the survivor that credits the invalidation rule is
+wrong, and the brief's §8 trap is half-fired here: the rule's own exits fire,
+but in under 10% of its trades.
