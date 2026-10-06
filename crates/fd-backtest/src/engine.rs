@@ -69,7 +69,9 @@ pub struct TradingRules {
     /// Two by default, which is what every run before 2026-09-14 used.
     #[serde(default = "two")]
     pub price_decimals: u32,
-    /// Enter with a RESTING order instead of taking the next bar's open.
+    /// Enter with a RESTING order - a LIMIT on the pullback side or a STOP on
+    /// the breakout side, per [`RestSide`] - instead of taking the next bar's
+    /// open.
     ///
     /// `None` is the fill model every receipt before 2026-10-06 was measured
     /// under and is what `Default` gives, so a config that has never heard of
@@ -90,13 +92,63 @@ const fn two() -> u32 {
     2
 }
 
-/// A resting entry order, in the only two numbers it needs.
+/// Which side of the signal bar's close a resting order waits on.
+///
+/// The two values are the same object with the sign of the offset flipped, and
+/// they select OPPOSITE subsets of the same signals - which is why they are one
+/// enum on one struct and not two features. See
+/// `docs/decisions/2026-10-06-limit-entry.md` and
+/// `docs/decisions/2026-10-07-stop-entry.md`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum RestSide {
+    /// BELOW the close for a long: a LIMIT order. It is PAID half the spread,
+    /// and it fills only on a move back against the trade - so it keeps the
+    /// signals that retraced and drops the ones that ran. The default, because
+    /// it is what every receipt between 2026-10-06 and today was measured
+    /// under.
+    #[default]
+    Pullback,
+    /// ABOVE the close for a long: a STOP order. It PAYS half the spread AND
+    /// the offset distance, and it fills only once price has already gone the
+    /// way the signal said - so it keeps the signals that ran and drops the
+    /// ones that never moved. The opposite selection to `Pullback`, at the
+    /// opposite cost.
+    Breakout,
+}
+
+impl RestSide {
+    /// Words for the receipt. A breakout row and a pullback row are not
+    /// comparable and must not look alike.
+    #[must_use]
+    pub const fn label(self) -> &'static str {
+        match self {
+            Self::Pullback => "pullback",
+            Self::Breakout => "breakout",
+        }
+    }
+
+    /// Does an order on this side PAY the half spread on the way in, like a
+    /// market order, or is it PAID it?
+    #[must_use]
+    pub const fn pays_the_spread(self) -> bool {
+        matches!(self, Self::Breakout)
+    }
+}
+
+/// A resting entry order, in the only numbers it needs.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct LimitEntry {
-    /// How far on the PULLBACK side of the signal bar's close the order rests,
-    /// in units of the run's sizing ATR at that bar. Zero rests at the close
-    /// itself, which still earns half the spread and is the cheapest version
-    /// of the question.
+    /// Which side of the signal bar's close the order rests on, and therefore
+    /// whether it is a limit or a stop. `Pullback` by default, so a config
+    /// written before 2026-10-07 reproduces its own numbers.
+    #[serde(default)]
+    pub side_of_close: RestSide,
+    /// How far from the signal bar's close the order rests, on the side
+    /// `side_of_close` names, in units of the run's sizing ATR at that bar.
+    /// Zero rests at the close itself - which is still not the market arm,
+    /// because the order must still be touched and the spread still has the
+    /// sign its side gives it.
     pub offset_atr: f64,
     /// How many bars after the signal bar the order works for, inclusive.
     /// One is "the next bar only" and is the nearest thing to the market arm.
@@ -159,6 +211,22 @@ pub struct LimitFills {
     /// win.** An order with no room is not an order a desk can place, so it is
     /// refused here and counted.
     pub no_room: usize,
+    /// Fills closed on their OWN fill bar at a price taken from that bar's
+    /// **open** - a price that existed BEFORE the order filled.
+    ///
+    /// Measured 2026-10-07 and **counted, not corrected**, because correcting
+    /// it would restate the 2026-10-06 pullback receipts with it.
+    /// `check_exit` prices a gapped stop at `bar.open`: for a position the
+    /// engine has held since the previous bar that is right, and for one a
+    /// resting order opened INSIDE this bar it is not, because the open came
+    /// first. A breakout long fills at or above its bar's open, so if the bar
+    /// also traded through the stop the exit is booked at that open - several
+    /// risk units below an entry the trade did not have yet.
+    ///
+    /// The same artifact exists in the pullback arm and was not counted there.
+    /// A row carrying many of these is not a row to read; the count is printed
+    /// beside the profit factor so it can be seen rather than guessed at.
+    pub exit_priced_before_the_fill: usize,
 }
 
 impl LimitFills {
@@ -574,6 +642,10 @@ pub fn run_backtest_guarded(
     // a market order in both arms.
     let mut working: Option<Working> = None;
     let mut fills = LimitFills::default();
+    // The bar index a resting order last opened a position on, so an exit on
+    // that same bar can be checked for a price that preceded the entry. See
+    // `LimitFills::exit_priced_before_the_fill`.
+    let mut rested_fill_bar: Option<usize> = None;
     let mut wrong_side_stop = 0usize;
     let mut skipped_no_atr = 0usize;
     let mut skipped_by_guard: BTreeMap<String, usize> = BTreeMap::new();
@@ -697,7 +769,7 @@ pub fn run_backtest_guarded(
                 // in. This is the sign flip the whole family is about, and the
                 // ONE place a limit arm can flatter itself: queue priority is
                 // not modelled, so price touching the level is a fill.
-                let entry = limit_fill_price(raw, order.side, rules);
+                let entry = rest_fill_price(raw, order.side, order.rest, rules);
                 let refused = guards.and_then(|g| {
                     guard_state
                         .refusal(g, bar.time, 0)
@@ -707,10 +779,11 @@ pub fn run_backtest_guarded(
                     *skipped_by_guard.entry(why.label().to_string()).or_default() += 1;
                     fills.expired += 1;
                 } else {
+                    let (stop, target) = order.geometry(raw);
                     match open_position_at(
                         order.side,
-                        order.stop,
-                        order.target,
+                        stop,
+                        target,
                         order.reason.clone(),
                         bar.time,
                         entry,
@@ -722,6 +795,7 @@ pub fn run_backtest_guarded(
                     ) {
                         Ok((opened, sized_down)) => {
                             fills.filled += 1;
+                            rested_fill_bar = Some(i);
                             sized_down_by_guard += usize::from(sized_down);
                             wrong_side_stop += usize::from(stop_is_wrong_side(&opened));
                             guard_state.opened(opened.entry_time);
@@ -752,6 +826,25 @@ pub fn run_backtest_guarded(
                 guards.and_then(|g| guard_exit(&exposure, bar, bar_ms, rules, g))
             });
             if let Some((price, kind)) = exit {
+                // COUNTED, NOT CORRECTED: this exit is on the very bar a
+                // resting order filled on, and `check_exit` priced it at that
+                // bar's OPEN - which came before the fill.
+                if rested_fill_bar == Some(i) {
+                    let long = open.side.is_long();
+                    let from_the_open = match kind {
+                        ExitKind::Stop => {
+                            open.stop.is_some_and(|v| if long { bar.open <= v } else { bar.open >= v })
+                        }
+                        ExitKind::Target => open
+                            .target
+                            .filter(|v| v.is_finite())
+                            .is_some_and(|v| if long { bar.open >= v } else { bar.open <= v }),
+                        _ => false,
+                    };
+                    if from_the_open {
+                        fills.exit_priced_before_the_fill += 1;
+                    }
+                }
                 let open = position.take().expect("checked");
                 let entry_reason = open.reason.clone();
                 let trade = close_position(open, price, bar.time, kind, kind.label(), rules, &entry_reason);
@@ -897,8 +990,17 @@ fn stop_is_wrong_side(position: &Live) -> bool {
 #[derive(Debug, Clone, PartialEq)]
 struct Working {
     side: Side,
+    /// Which side of the signal close this order rests on, carried with the
+    /// order because the fill TEST and the sign of the half spread both depend
+    /// on it.
+    rest: RestSide,
+    /// Whether the stop and target travel with the entry. Kept with the order
+    /// because on the breakout side the distance the entry moved is only known
+    /// at the fill: a gap fills past the level. See [`Working::geometry`].
+    carry: bool,
     /// The level on the tape the order rests at. The order's own price is half
-    /// a spread better than this; see [`limit_fill_price`].
+    /// a spread away from this - better for a limit, worse for a stop; see
+    /// [`rest_fill_price`].
     level: f64,
     stop: Option<f64>,
     target: Option<f64>,
@@ -945,16 +1047,27 @@ impl Working {
             return Err(NoOrder::NoAtr);
         }
         let offset = spec.offset_atr.max(0.0);
-        // On the PULLBACK side of the close, always: that is what makes it a
-        // limit rather than a stop entry, and it is why the order is adversely
-        // selected - it only ever fills on a move back against the trade.
-        let level = if side.is_long() { bar.close - offset * atr } else { bar.close + offset * atr };
+        // The ONE sign that decides whether this is a limit or a stop, and
+        // therefore which subset of the signals the arm keeps. Pullback: below
+        // a long's close, filled only on a move back against the trade.
+        // Breakout: above it, filled only once price went the signal's way.
+        let away = if spec.side_of_close.pays_the_spread() { 1.0 } else { -1.0 };
+        let signed = if side.is_long() { away } else { -away };
+        let level = bar.close + signed * offset * atr;
         if !level.is_finite() {
             return Err(NoOrder::NoAtr);
         }
-        // TRANSLATED: the whole trade moves down (or up) with the entry, so the
-        // risk unit and the reward are the ones the signal designed and the
-        // only thing the order changed is the price and whether it happened.
+        // TRANSLATED: the whole trade moves with the entry, so the risk unit and
+        // the reward are the ones the signal designed and the only thing the
+        // order changed is the price and whether it happened.
+        //
+        // This shift carries them as far as the LEVEL, which is where the room
+        // check below needs to read them. On the breakout side a gap fills PAST
+        // the level, and the rest of the distance is added at the fill - see
+        // `Working::geometry`, and the comment there for why using the level
+        // alone would hand the trade a risk unit nobody designed. On the
+        // pullback side the fill IS the level, so nothing is added and this is
+        // bit-identical to the 2026-10-06 receipts.
         let shift = level - bar.close;
         let (stop, target) = if spec.carry_stop {
             (stop.map(|v| v + shift), target.map(|v| v + shift))
@@ -962,7 +1075,7 @@ impl Working {
             (stop, target)
         };
         // Room, measured against the price the order would actually fill at.
-        let entry = limit_fill_price(level, side, rules);
+        let entry = rest_fill_price(level, side, spec.side_of_close, rules);
         let long = side.is_long();
         let above = |v: f64| v - entry > 0.0;
         let below = |v: f64| entry - v > 0.0;
@@ -978,6 +1091,8 @@ impl Working {
         }
         Ok(Self {
             side,
+            rest: spec.side_of_close,
+            carry: spec.carry_stop,
             level,
             stop,
             target,
@@ -991,12 +1106,49 @@ impl Working {
     /// The tape level the order fills at on this bar, or `None` if price never
     /// came to it.
     ///
-    /// **A gap through the level never improves the fill.** The order gets the
-    /// price it asked for and nothing better, which is the same direction
-    /// `check_exit` takes a gapped stop in: gaps do not pay here.
+    /// **A gap through the level never improves the fill** - in either arm, and
+    /// "improves" points opposite ways in the two:
+    ///
+    /// * A LIMIT on the pullback side gets the price it asked for and nothing
+    ///   better, which is the direction `check_exit` takes a gapped stop in:
+    ///   gaps do not pay here.
+    /// * A STOP on the breakout side is TRIGGERED by the gap and fills at the
+    ///   open, which is WORSE than the level it asked for. A long buying a
+    ///   breakout at 100 on a bar that opened at 103 buys at 103.
+    ///
+    /// Both arms are therefore charged the pessimistic side of the gap, and
+    /// neither is handed a price the tape did not offer.
+    /// The stop and the target this fill actually opens with, given the TAPE
+    /// level it filled at (what [`Working::fill_on`] returned, before the half
+    /// spread).
+    ///
+    /// ANCHORED: the signal bar's own levels, untouched - so a worse entry on
+    /// the breakout side GROWS the risk unit, which is why that arm is reported
+    /// as a different method and not as a confirmed entry.
+    ///
+    /// TRANSLATED: `place` already carried them to the level the order rested
+    /// at; this adds the distance the fill went BEYOND that level, which is
+    /// zero unless a gap triggered a stop order past its own price. Without it
+    /// a gapped fill keeps a stop measured from a price it never got, and the
+    /// risk unit this arm exists to hold constant is not constant.
+    fn geometry(&self, tape_fill: f64) -> (Option<f64>, Option<f64>) {
+        let extra = if self.carry { tape_fill - self.level } else { 0.0 };
+        if extra == 0.0 {
+            return (self.stop, self.target);
+        }
+        (self.stop.map(|v| v + extra), self.target.map(|v| v + extra))
+    }
+
     fn fill_on(&self, bar: &Bar) -> Option<f64> {
-        let touched = if self.side.is_long() { bar.low <= self.level } else { bar.high >= self.level };
-        touched.then_some(self.level)
+        let long = self.side.is_long();
+        if self.rest.pays_the_spread() {
+            let touched = if long { bar.high >= self.level } else { bar.low <= self.level };
+            // Gapped past the level: the stop triggers at the open.
+            touched.then(|| if long { self.level.max(bar.open) } else { self.level.min(bar.open) })
+        } else {
+            let touched = if long { bar.low <= self.level } else { bar.high >= self.level };
+            touched.then_some(self.level)
+        }
     }
 }
 
@@ -1011,8 +1163,27 @@ impl Working {
 /// The exit is untouched and still pays half.
 #[must_use]
 pub fn limit_fill_price(level: f64, side: Side, rules: &TradingRules) -> f64 {
+    rest_fill_price(level, side, RestSide::Pullback, rules)
+}
+
+/// What a resting order pays, by the side of the close it rested on.
+///
+/// This is the whole arithmetic of the two arms, in one expression:
+///
+/// * `Pullback` - the order **is** the offer, so it is **PAID** half the spread
+///   (`level - half` for a long). The sign of the spread term is reversed.
+/// * `Breakout` - the order lifts the offer when it triggers, exactly as a
+///   market entry does, so it **PAYS** half the spread (`level + half` for a
+///   long) on top of having rested `offset x ATR` away in the first place. The
+///   spread term is the market arm's, and the offset distance is an extra cost
+///   the market arm does not pay at all.
+///
+/// The exit is untouched in both arms and still pays half.
+#[must_use]
+pub fn rest_fill_price(level: f64, side: Side, rest: RestSide, rules: &TradingRules) -> f64 {
     let half = rules.spread / 2.0;
-    if side.is_long() { level - half } else { level + half }
+    let sign = if side.is_long() == rest.pays_the_spread() { 1.0 } else { -1.0 };
+    level + sign * half
 }
 
 /// Why `open_position` did not open one.

@@ -218,3 +218,56 @@ it.**
 
 Written by the stop-entry agent (Claude Opus 5, 1M context) on
 `agent/stop-entry`, 2026-10-07, before `RestSide` existed in any file.
+
+## Amendment 2026-10-07 (1) — two implementation facts the registration did not anticipate
+
+Written after the first smoke run (one month, `--seeds=20`, three arms) and
+BEFORE the declared 24 invocations. Nothing in section 5 changes: same arms,
+same windows, same 144 rows.
+
+**(a) TRANSLATED must shift from the FILL, not from the level.** Section 3 says
+the stop and target "shift by the amount the entry moved". On the pullback side
+the fill IS the level, so the two readings are the same number and n3 never had
+to choose. On the breakout side they are not: **a gap through a stop order fills
+at the open, past the level.** Shifting by the level would then leave the trade
+with a risk unit nobody designed — the opposite of what this arm exists to hold
+constant. `Working::geometry` therefore carries the stop and target to the level
+at placement (so the `no_room` check has something to read) and adds the
+remaining distance at the fill. On `Pullback` the remainder is exactly zero, so
+every 2026-10-06 number is unmoved.
+
+**(b) `check_exit` prices a gapped stop at `bar.open`, which on a resting
+order's fill bar is a price that PRECEDED the entry.** Measured, counted, and
+**not corrected**.
+
+The smoke run read `trend-pullback`, breakout 0.50 ATR, TRANSLATED, July 2025:
+**expectancy −1.573R over 44 trades.** An average loss over one and a half risk
+units cannot come from a stop; it comes from exits booked *beyond* the stop. The
+engine's gap branch is `if bar.open <= stop { exit at bar.open }`, which is
+correct for a position it has held since the previous bar and wrong for one a
+resting order opened *inside* this bar: a breakout long fills at or above its
+bar's open, so an adverse bar books its exit at a price from before the fill.
+With `trend-pullback`'s 1.35-point risk unit, a two-point open is −1.5R by
+itself.
+
+The same artifact exists in the **pullback** arm — a limit long filling at its
+level on a bar that opened below its stop — and was not counted there. Fixing it
+would restate every 2026-10-06 receipt, so, exactly as brief section 4.vi
+instructs for `wrong_side_stop`, it is **counted and printed**:
+`LimitFills::exit_priced_before_the_fill`, on every row that carries one, with
+its share of that row's fills. A row where the share is large is not a row to
+read, and the result section says so row by row.
+
+This is the sixth member of the class brief section 4.iv names, with a new
+shape: not a flag a mode ignores, but **an exit price that is right for one
+fill model and wrong for another**, silently shared between the two.
+
+## Amendment 2026-10-07 (2) — a flag the shared binary ignores without error
+
+The premise check of section 5 is worth stating as a defect rather than only as
+a reason: `/e/rust/fd-n1bin/target/release/search.exe --limit=0.25,4,carry`
+**runs, prints no `entry:` line, and exits 0.** That binary predates the flag, so
+the argument is simply never read. Any job that reaches for the shared binary
+with a flag introduced on another branch gets a silently market-entry run with a
+resting-entry filename. Brief section 4.iv's rule — change the value and see
+whether the number changes — caught it; nothing in the output would have.

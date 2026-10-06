@@ -153,10 +153,30 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 "carry" => true,
                 _ => return Err(format!("--limit wants `anchored` or `carry` as its third field, got `{mode}`").into()),
             };
+            // The fourth field decides whether this is a LIMIT or a STOP, and
+            // that is the biggest difference in the flag: `pullback` is paid
+            // the half spread and fills only on a move back, `breakout` pays
+            // the half spread AND the offset distance and fills only once
+            // price went the signal's way. It defaults to `pullback` because
+            // that is what every receipt from 2026-10-06 carries, and the
+            // receipt prints which one ran either way.
+            // docs/decisions/2026-10-07-stop-entry.md
+            let where_ = parts.next().unwrap_or("pullback").trim().to_string();
+            let side_of_close = match where_.as_str() {
+                "pullback" | "limit" => fd_backtest::engine::RestSide::Pullback,
+                "breakout" | "stop" => fd_backtest::engine::RestSide::Breakout,
+                _ => {
+                    return Err(format!(
+                        "--limit wants `pullback` or `breakout` as its fourth field, got `{where_}`"
+                    )
+                    .into())
+                }
+            };
             if !(offset >= 0.0) || !(ttl >= 1.0) {
                 return Err(format!("--limit wants offset >= 0 and ttl >= 1, got `{spec}`").into());
             }
             rules.limit_entry = Some(fd_backtest::engine::LimitEntry {
+                side_of_close,
                 offset_atr: offset,
                 ttl_bars: ttl as usize,
                 carry_stop: carry,
@@ -172,10 +192,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         match rules.limit_entry {
             None => "MARKET at the next bar's open, PAYING half the spread".to_string(),
             Some(l) => format!(
-                "LIMIT resting {} ATR on the pullback side of the signal close, working {} bar(s), stop {}, EARNING half the spread",
+                "{} resting {} ATR on the {} side of the signal close, working {} bar(s), stop {}, {} half the spread",
+                if l.side_of_close.pays_the_spread() { "STOP" } else { "LIMIT" },
                 l.offset_atr,
+                l.side_of_close.label(),
                 l.ttl_bars,
-                if l.carry_stop { "CARRIED with the entry (risk unit preserved)" } else { "ANCHORED at the signal bar (risk unit shrinks)" }
+                if l.carry_stop {
+                    "CARRIED with the entry (risk unit preserved)"
+                } else if l.side_of_close.pays_the_spread() {
+                    "ANCHORED at the signal bar (risk unit GROWS)"
+                } else {
+                    "ANCHORED at the signal bar (risk unit shrinks)"
+                },
+                if l.side_of_close.pays_the_spread() { "PAYING" } else { "EARNING" }
             ),
         }
     );
@@ -1012,30 +1041,61 @@ fn run_hypotheses(
             rules.spread / 2.0, rules.spread / 2.0, rules.spread
         ),
         Some(l) => {
+            let breakout = l.side_of_close.pays_the_spread();
             println!(
-                "entry: LIMIT resting {} ATR on the pullback side of the signal close, working {} bar(s).",
-                l.offset_atr, l.ttl_bars
+                "entry: {} resting {} ATR on the {} side of the signal close, working {} bar(s).",
+                if breakout { "STOP" } else { "LIMIT" },
+                l.offset_atr,
+                l.side_of_close.label(),
+                l.ttl_bars
+            );
+            println!(
+                "       selection: it fills ONLY {}, so its trades are a subset the MARKET chose and its profit factor is a profit factor on that subset.",
+                if breakout {
+                    "once price has already gone the way the signal said - it DEMANDS CONFIRMATION and drops the signals that never moved"
+                } else {
+                    "if price comes BACK against the trade - it drops the signals that ran away"
+                }
             );
             println!(
                 "       stop and target: {}",
                 if l.carry_stop {
-                    "CARRIED - shifted by the same amount the entry moved, so the risk unit and the reward are the ones the signal designed. Only the spread sign and the fill selection differ from the market arm."
+                    "CARRIED - shifted by the same amount the entry moved, so the risk unit and the reward are the ones the signal designed. Only the entry price, the spread sign and the fill selection differ from the market arm."
+                } else if breakout {
+                    "ANCHORED - left where the signal bar put them, so a WORSE entry GROWS the risk unit and brings an absolute target NEARER in R. This arm measures a wider-stopped version of the mechanism, not a confirmed entry."
                 } else {
                     "ANCHORED - left where the signal bar put them, so a better entry SHRINKS the risk unit. This arm measures a tighter-stopped version of the mechanism, not a cheaper entry."
                 }
             );
             println!(
-                "       It is PAID {:.3} in and pays {:.3} out = {:.3} per round trip, so the spread term is REVERSED, not reduced.",
+                "       It {} {:.3} in and pays {:.3} out = {:.3} per round trip, so the spread term is {}.",
+                if breakout { "PAYS" } else { "is PAID" },
                 rules.spread / 2.0,
                 rules.spread / 2.0,
-                0.0
+                if breakout { rules.spread } else { 0.0 },
+                if breakout {
+                    "the MARKET arm's, unreduced - and the offset distance is an EXTRA cost on top of it that the market arm never pays"
+                } else {
+                    "REVERSED, not reduced"
+                }
             );
             println!(
-                "       The `cost ... % of R` line on each row is spread/stop and reads the market round trip: on these rows it is the cost the method did NOT pay."
+                "       The `cost ... % of R` line on each row is spread/stop and reads the market round trip: on these rows it is the cost the method {}.",
+                if breakout { "DID pay, plus the offset" } else { "did NOT pay" }
             );
             println!(
-                "       Queue priority is NOT modelled: price touching the level is a fill. That flatters these rows."
+                "       Queue priority and slippage are NOT modelled: {}. That flatters these rows.",
+                if breakout {
+                    "a stop order is filled AT its level (or at a gapped open), never slipped through it"
+                } else {
+                    "price touching the level is a fill"
+                }
             );
+            if breakout {
+                println!(
+                    "       The fill bar is managed the moment it fills, so a bar that printed its LOW before its HIGH can book a stop the sequence never allowed - a FAKE LOSS, the mirror of the limit arm's fake win. Audited on 1m, see docs/decisions/2026-10-07-stop-entry.md."
+                );
+            }
         }
     }
     println!("{}", news_line());
@@ -1173,6 +1233,23 @@ fn run_hypotheses(
                     format!("{:.1}%", 100.0 * fd_backtest::hypotheses::median_f64(&report.null_fill_rate))
                 },
             );
+            // AN EXIT AT A PRICE THAT PRECEDED THE ENTRY, counted on the row.
+            // `check_exit` prices a gapped stop at the bar's open, which is
+            // right for a position held since the bar before and wrong for one
+            // a resting order opened INSIDE this bar. Counted, not corrected
+            // (it would restate the 2026-10-06 receipts): see
+            // LimitFills::exit_priced_before_the_fill. A row where this is a
+            // large share of its fills is not a row to read.
+            if f.exit_priced_before_the_fill > 0 {
+                println!(
+                    "{:<12} {:<18} ** {} of {} fills ({:.1}%) were closed on their OWN fill bar at a price taken from that bar's OPEN - a price that existed BEFORE the order filled. Counted, not corrected; this row is read with that share in mind. **",
+                    "",
+                    "",
+                    f.exit_priced_before_the_fill,
+                    f.filled,
+                    if f.filled > 0 { 100.0 * f.exit_priced_before_the_fill as f64 / f.filled as f64 } else { 0.0 },
+                );
+            }
         }
         // The SIDE ratio, method against control, on every row and whichever
         // null ran. On a coin-flip run this line is what shows the defect: a
