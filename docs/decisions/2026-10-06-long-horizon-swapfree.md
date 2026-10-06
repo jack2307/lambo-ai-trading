@@ -177,4 +177,24 @@ Grand total declared: **96 gold cells + 1 silver timing cell**.
 
 ## 11. Amendments
 
-(none yet)
+### 2026-10-06, after the twelve runs — an imprecision in section 3, recorded not repaired
+
+Section 3 defined family membership as "mean hold >= 5 sessions (>= 120 h)" and
+treated the two as the same thing. They are not. `quiet-swing` at
+`holdSessions = 5` holds **5, 6 or 7 sessions by its own count** (printed in
+the exit mix: 112 / 99 / 17 on DUKA-IS) but only **103-112 h of wall clock**,
+because a session count skips the weekend and a clock does not. By the session
+clause `qs-h5` is in the family; by the 120-h clause it is out.
+
+**Nothing is rewritten and nothing turns on it:** `qs-h5` fails the gate in
+every one of its four arm-A cells (PF 1.081-1.181), so it carries no result
+under either reading. Every cell that does clear the gate holds 158 h or more
+and is in-family under both clauses. The two clauses are recorded as the
+separate tests they are, for the next registration to state properly.
+
+### 2026-10-06 — section 5's declared prediction, checked
+
+Section 5 declared before running that `tsmom/250d` would return **0 trades on
+both `xauusd` legs** and that `tsmom/120d` would be warmup-starved there. It
+returned exactly 0 trades on both `xauusd` legs, and `tsmom/120d` returned **1
+trade** on VAN-IS and **4** on VAN-OOS. The prediction stands as made.

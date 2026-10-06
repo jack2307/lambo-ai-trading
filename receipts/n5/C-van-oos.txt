@@ -1,0 +1,95 @@
+market:   xauusd 15m
+data:     E:/rust/flowdesk/data (bars from E:/rust/flowdesk/data\bars\XAUUSD-15m.parquet)
+bounds:   --from=2024-09-01 --to=2026-09-18 kept 48311 of 100586 bars
+spread:   0.28 per round trip
+trail:    off
+max hold: 4 h (14400000 ms) from [trading] max_hold_ms, no per-market override
+bars:     48311 from 2024-09-01 22:00 to 2026-09-17 13:00
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+companion: none loaded — every cmp series is NaN
+guards: on — max_open_loss_r 2.0, notional 300%, weekend flat 16:40 NY, news flat 60/30 (impact≥3, USD), daily cap 20, loss limit $300, cooldown 30 min
+null sides: exposure - the method's measured long share AND its trade count on the hold branch
+
+== hypotheses `E:/rust/fd-b5/docs/research/designs/2026-10-06-long-horizon-n5.toml`: 8 declared, FIXED parameters over the whole window (no selection), each against 200 matched null runs ==
+null sides: exposure (the method's measured long share AND its trade count on the hold branch)
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+guards: on — max_open_loss_r 2.0, notional 300%, weekend flat 16:40 NY, news flat 60/30 (impact≥3, USD), daily cap 20, loss limit $300, cooldown 30 min
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+qs-h5        quiet-swing            81   1.517   0.122    1.066    1.870        0   86%  gate pass, inside the noise
+                                  — the registered 5-session horizon, re-read with no guards so the hold is allowed to cross a weekend
+                                matched null 88 trades median vs the method's 81 — count match 1.09
+                                long share: method 0.617 vs the null's median 0.677  ** the control's side ratio is not the method's **
+                                spread paid: method 0.25 USD vs the null's median 0.29 USD — cost match 1.12
+                                exposure: signed share of time method +0.346 vs the null's +0.356; time in market method 292755 min vs the null's median 192322 min — ratio 0.66  ** the control did not collect the drift the method did **
+                                guards: refused none; closed NEWS_FLAT 29, OPEN_LOSS_CAP 1, WEEKEND_FLAT 31; sized down 0
+                                exits: 10-session return flipped to +0.03% 1, 10-session return flipped to +0.37% 1, 10-session return flipped to +0.44% 1, 10-session return flipped to +0.62% 1, 10-session return flipped to +0.68% 2, 10-session return flipped to +0.84% 1, 10-session return flipped to +0.95% 1, 10-session return flipped to +1.29% 1, 10-session return flipped to +1.87% 1, 10-session return flipped to +1.91% 1, 10-session return flipped to -0.00% 1, 10-session return flipped to -0.36% 1, 10-session return flipped to -0.69% 1, 10-session return flipped to -0.70% 1, 10-session return flipped to -1.51% 1, 10-session return flipped to -1.80% 1, 10-session return flipped to -2.42% 1, 10-session return flipped to -3.58% 1, NEWS_FLAT 29, OPEN_LOSS_CAP 1, WEEKEND_FLAT 31, held 5 sessions of 5 1; mean hold 3614.3 min
+qs-h10       quiet-swing            80   1.512   0.122    1.060    1.884        0   85%  gate pass, inside the noise
+                                  — two weeks of exposure to the only horizon band where gold drift is measured positive
+                                matched null 88 trades median vs the method's 80 — count match 1.11
+                                long share: method 0.625 vs the null's median 0.672
+                                spread paid: method 0.25 USD vs the null's median 0.28 USD — cost match 1.12
+                                exposure: signed share of time method +0.340 vs the null's +0.352; time in market method 294195 min vs the null's median 192802 min — ratio 0.66  ** the control did not collect the drift the method did **
+                                guards: refused none; closed NEWS_FLAT 29, OPEN_LOSS_CAP 1, WEEKEND_FLAT 31; sized down 0
+                                exits: 10-session return flipped to +0.03% 1, 10-session return flipped to +0.37% 1, 10-session return flipped to +0.44% 1, 10-session return flipped to +0.62% 1, 10-session return flipped to +0.68% 2, 10-session return flipped to +0.84% 1, 10-session return flipped to +0.95% 1, 10-session return flipped to +1.29% 1, 10-session return flipped to +1.87% 1, 10-session return flipped to +1.91% 1, 10-session return flipped to -0.00% 1, 10-session return flipped to -0.36% 1, 10-session return flipped to -0.69% 1, 10-session return flipped to -0.70% 1, 10-session return flipped to -1.51% 1, 10-session return flipped to -1.80% 1, 10-session return flipped to -2.42% 1, 10-session return flipped to -3.58% 1, NEWS_FLAT 29, OPEN_LOSS_CAP 1, WEEKEND_FLAT 31; mean hold 3677.4 min
+qs-h15       quiet-swing            80   1.512   0.122    1.060    1.884        0   85%  gate pass, inside the noise
+                                  — three weeks: does the drift term keep paying as the horizon lengthens
+                                matched null 88 trades median vs the method's 80 — count match 1.11
+                                long share: method 0.625 vs the null's median 0.672
+                                spread paid: method 0.25 USD vs the null's median 0.28 USD — cost match 1.12
+                                exposure: signed share of time method +0.340 vs the null's +0.352; time in market method 294195 min vs the null's median 192802 min — ratio 0.66  ** the control did not collect the drift the method did **
+                                guards: refused none; closed NEWS_FLAT 29, OPEN_LOSS_CAP 1, WEEKEND_FLAT 31; sized down 0
+                                exits: 10-session return flipped to +0.03% 1, 10-session return flipped to +0.37% 1, 10-session return flipped to +0.44% 1, 10-session return flipped to +0.62% 1, 10-session return flipped to +0.68% 2, 10-session return flipped to +0.84% 1, 10-session return flipped to +0.95% 1, 10-session return flipped to +1.29% 1, 10-session return flipped to +1.87% 1, 10-session return flipped to +1.91% 1, 10-session return flipped to -0.00% 1, 10-session return flipped to -0.36% 1, 10-session return flipped to -0.69% 1, 10-session return flipped to -0.70% 1, 10-session return flipped to -1.51% 1, 10-session return flipped to -1.80% 1, 10-session return flipped to -2.42% 1, 10-session return flipped to -3.58% 1, NEWS_FLAT 29, OPEN_LOSS_CAP 1, WEEKEND_FLAT 31; mean hold 3677.4 min
+qs-h20       quiet-swing            80   1.512   0.122    1.060    1.884        0   85%  gate pass, inside the noise
+                                  — a month, the longest horizon that still keeps 40 trades on an eight-year leg
+                                matched null 88 trades median vs the method's 80 — count match 1.11
+                                long share: method 0.625 vs the null's median 0.672
+                                spread paid: method 0.25 USD vs the null's median 0.28 USD — cost match 1.12
+                                exposure: signed share of time method +0.340 vs the null's +0.352; time in market method 294195 min vs the null's median 192802 min — ratio 0.66  ** the control did not collect the drift the method did **
+                                guards: refused none; closed NEWS_FLAT 29, OPEN_LOSS_CAP 1, WEEKEND_FLAT 31; sized down 0
+                                exits: 10-session return flipped to +0.03% 1, 10-session return flipped to +0.37% 1, 10-session return flipped to +0.44% 1, 10-session return flipped to +0.62% 1, 10-session return flipped to +0.68% 2, 10-session return flipped to +0.84% 1, 10-session return flipped to +0.95% 1, 10-session return flipped to +1.29% 1, 10-session return flipped to +1.87% 1, 10-session return flipped to +1.91% 1, 10-session return flipped to -0.00% 1, 10-session return flipped to -0.36% 1, 10-session return flipped to -0.69% 1, 10-session return flipped to -0.70% 1, 10-session return flipped to -1.51% 1, 10-session return flipped to -1.80% 1, 10-session return flipped to -2.42% 1, 10-session return flipped to -3.58% 1, NEWS_FLAT 29, OPEN_LOSS_CAP 1, WEEKEND_FLAT 31; mean hold 3677.4 min
+ts-l20       tsmom                 139   1.184   0.082    1.046    1.649        0   69%  fail: profit factor 1.184 < 1.2
+                                  — the shortest lookback tsmom ships; pinning it empties the grid so the control becomes the drift null
+                                matched null 149 trades median vs the method's 139 — count match 1.07
+                                long share: method 0.655 vs the null's median 0.655
+                                spread paid: method 0.39 USD vs the null's median 0.42 USD — cost match 1.07
+                                exposure: signed share of time method +0.303 vs the null's +0.313; time in market method 591015 min vs the null's median 354570 min — ratio 0.60  ** the control did not collect the drift the method did **
+                                guards: refused none; closed NEWS_FLAT 46, OPEN_LOSS_CAP 3, WEEKEND_FLAT 57; sized down 0
+                                exits: 20-day return flipped 32, END_OF_DATA 1, NEWS_FLAT 46, OPEN_LOSS_CAP 3, WEEKEND_FLAT 57; mean hold 4251.9 min
+ts-l60       tsmom                  93   0.998   0.056    1.082    1.890        0   36%  fail: profit factor 0.998 < 1.2
+                                  — tsmom at its own default, on a window long enough to carry its warmup
+                                matched null 100 trades median vs the method's 93 — count match 1.08
+                                long share: method 0.688 vs the null's median 0.663
+                                spread paid: method 0.26 USD vs the null's median 0.28 USD — cost match 1.08
+                                exposure: signed share of time method +0.310 vs the null's +0.325; time in market method 442080 min vs the null's median 248880 min — ratio 0.56  ** the control did not collect the drift the method did **
+                                guards: refused none; closed NEWS_FLAT 36, OPEN_LOSS_CAP 3, WEEKEND_FLAT 44; sized down 0
+                                exits: 60-day return flipped 9, END_OF_DATA 1, NEWS_FLAT 36, OPEN_LOSS_CAP 3, WEEKEND_FLAT 44; mean hold 4753.6 min
+ts-l120      tsmom                  36   0.703  -0.109    0.993    2.544        0   30%  fail: profit factor 0.703 < 1.2; expectancy -0.109R < 0.05R
+                                  — the cell that printed PF 2.236 and SURVIVES with guards while its own rule fired zero times; read here with no guards
+                                matched null 36 trades median vs the method's 36 — count match 1.00
+                                long share: method 0.361 vs the null's median 0.352
+                                spread paid: method 0.10 USD vs the null's median 0.10 USD — cost match 1.00
+                                exposure: signed share of time method -0.295 vs the null's -0.312; time in market method 190485 min vs the null's median 90345 min — ratio 0.47  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.993 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                guards: refused none; closed NEWS_FLAT 16, WEEKEND_FLAT 18; sized down 0
+                                exits: 120-day return flipped 1, END_OF_DATA 1, NEWS_FLAT 16, WEEKEND_FLAT 18; mean hold 5291.2 min
+ts-l250      tsmom                   0     NaN     NaN    0.960    1.401       -0  null  fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+                                  — a year of lookback; only the sixteen-year Dukascopy window can carry the 73,440-bar warmup
+                                matched null 166 trades median vs the method's 0 — count match NaN  ** outside the band: this percentile is unmatched **
+                                long share: method NaN vs the null's median 0.503  ** the control's side ratio is not the method's **
+                                spread paid: method -0.00 USD vs the null's median 0.46 USD — cost match NaN  (nothing to compare)
+                                exposure: signed share of time method NaN vs the null's +0.016; time in market method NaN min vs the null's median 764280 min — ratio NaN  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.960 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                guards: nothing acted
+                                exits: no exits recorded; mean hold NaN min
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+

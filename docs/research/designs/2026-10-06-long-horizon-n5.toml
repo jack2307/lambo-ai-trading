@@ -1,0 +1,60 @@
+# Long-horizon gold holds, >= 5 sessions, swap-free account.
+# Registered: docs/decisions/2026-10-06-long-horizon-swapfree.md
+# 8 rows, frozen. No filters: the guards arm carries the weekend/calendar,
+# the no-guards arm carries nothing, and that contrast is the point.
+
+[[hypothesis]]
+label = "qs-h5"
+base = "quiet-swing"
+filters = []
+overrides = { holdSessions = 5 }
+why = "the registered 5-session horizon, re-read with no guards so the hold is allowed to cross a weekend"
+
+[[hypothesis]]
+label = "qs-h10"
+base = "quiet-swing"
+filters = []
+overrides = { holdSessions = 10 }
+why = "two weeks of exposure to the only horizon band where gold drift is measured positive"
+
+[[hypothesis]]
+label = "qs-h15"
+base = "quiet-swing"
+filters = []
+overrides = { holdSessions = 15 }
+why = "three weeks: does the drift term keep paying as the horizon lengthens"
+
+[[hypothesis]]
+label = "qs-h20"
+base = "quiet-swing"
+filters = []
+overrides = { holdSessions = 20 }
+why = "a month, the longest horizon that still keeps 40 trades on an eight-year leg"
+
+[[hypothesis]]
+label = "ts-l20"
+base = "tsmom"
+filters = []
+overrides = { lookbackDays = 20 }
+why = "the shortest lookback tsmom ships; pinning it empties the grid so the control becomes the drift null"
+
+[[hypothesis]]
+label = "ts-l60"
+base = "tsmom"
+filters = []
+overrides = { lookbackDays = 60 }
+why = "tsmom at its own default, on a window long enough to carry its warmup"
+
+[[hypothesis]]
+label = "ts-l120"
+base = "tsmom"
+filters = []
+overrides = { lookbackDays = 120 }
+why = "the cell that printed PF 2.236 and SURVIVES with guards while its own rule fired zero times; read here with no guards"
+
+[[hypothesis]]
+label = "ts-l250"
+base = "tsmom"
+filters = []
+overrides = { lookbackDays = 250 }
+why = "a year of lookback; only the sixteen-year Dukascopy window can carry the 73,440-bar warmup"
