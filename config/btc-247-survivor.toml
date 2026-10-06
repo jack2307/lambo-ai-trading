@@ -1,0 +1,12 @@
+# ONE construct: the only one of the 104 declared cells that cleared both gate
+# legs with >= 40 trades on BOTH windows (expansion247/donchian-breakout on
+# market `btc`). Isolated here for a COST sensitivity only — the spread is
+# repriced with `--spread=` and nothing else changes — so that the question
+# "at what spread does BTC stop having room for a +0.050R edge" is measured
+# rather than extrapolated. Added as a dated addendum to
+# docs/decisions/2026-10-06-btc-247.md; the extra cells are counted.
+[[hypothesis]]
+label = "expansion247"
+base = "donchian-breakout"
+filters = ["vol:14/100:1.2-99"]
+why = "the one both-window survivor, repriced at other spreads to find its break-even cost"

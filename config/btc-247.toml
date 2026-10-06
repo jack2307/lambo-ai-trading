@@ -1,0 +1,94 @@
+# The thirteen `gold-intraday` constructs with the two GOLD-SESSION gates
+# removed: no `weekdays` (Mo-Fr on the New York clock) and no `flat:1630-1815`
+# (the CME metals break). Bases, parameters and session/regime gates are
+# byte-for-byte the ones `gold_intraday_batch()` declares; nothing is tuned and
+# nothing is added.
+#
+# Registered in docs/decisions/2026-10-06-btc-247.md as the SECONDARY arm,
+# 52 cells. BTC never closes, so on this tape those two gates discard calendar
+# time for a reason that belongs to gold's session and not to this instrument.
+#
+# NOTE, stated here because a receipt from this file would otherwise be
+# over-read: `--guards` still carries `flat_before_weekend_hhmm = 1640`, which
+# blocks Friday from 16:40 New York and ALL of Saturday. Removing the
+# `weekdays` filter therefore recovers Sunday, Friday evening and the 1h45
+# flat window every day — not Saturday. A true 24/7 run needs guards off,
+# which is a different variable and is not measured here.
+
+[[hypothesis]]
+label = "intraday247"
+base = "ema-cross"
+filters = []
+why = "the trend baseline with no session gate at all, on a tape with no session"
+
+[[hypothesis]]
+label = "intraday247"
+base = "rsi-reversion"
+filters = []
+why = "the reversion baseline with no session gate at all"
+
+[[hypothesis]]
+label = "intraday247"
+base = "donchian-breakout"
+filters = []
+why = "the breakout baseline with no session gate at all"
+
+[[hypothesis]]
+label = "intraday247"
+base = "bb-fade"
+filters = []
+why = "the fade baseline with no session gate at all"
+
+[[hypothesis]]
+label = "ny-morning247"
+base = "ema-cross"
+filters = ["hours:0800-1200"]
+why = "the same New York hours, but Saturday and Sunday no longer struck out by the weekday gate"
+
+[[hypothesis]]
+label = "ny-morning247"
+base = "donchian-breakout"
+filters = ["hours:0800-1200"]
+why = "same hours gate, breakout base"
+
+[[hypothesis]]
+label = "london-open247"
+base = "donchian-breakout"
+filters = ["hours:0200-0600"]
+why = "London hours on a market where London is not an open"
+
+[[hypothesis]]
+label = "asia247"
+base = "rsi-reversion"
+filters = ["hours:1900-0200"]
+why = "the thin-hours reversion claim, weekend hours included"
+
+[[hypothesis]]
+label = "asia247"
+base = "bb-fade"
+filters = ["hours:1900-0200"]
+why = "same claim, band-based"
+
+[[hypothesis]]
+label = "expansion247"
+base = "donchian-breakout"
+filters = ["vol:14/100:1.2-99"]
+why = "breakouts only while volatility is rising, every day of the week"
+
+[[hypothesis]]
+label = "expansion247"
+base = "ema-cross"
+filters = ["vol:14/100:1.2-99"]
+why = "trend only while there is range to trend in, every day of the week"
+
+[[hypothesis]]
+label = "compression247"
+base = "rsi-reversion"
+filters = ["vol:14/100:0.0-0.8"]
+why = "fade only while the range is tight, every day of the week"
+
+[[hypothesis]]
+label = "compression247"
+base = "bb-fade"
+filters = ["vol:14/100:0.0-0.8"]
+why = "same, band-based"

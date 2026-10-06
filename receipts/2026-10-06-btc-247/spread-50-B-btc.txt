@@ -1,0 +1,40 @@
+market:   btc 15m
+data:     E:/rust/flowdesk/data (bars from E:/rust/flowdesk/data\bars\BTCUSDT-15m.parquet)
+bounds:   --from=2025-04-01 --to=2025-07-01 kept 8736 of 70080 bars
+spread:   50 per round trip
+trail:    off
+max hold: 4 h (14400000 ms) from [trading] max_hold_ms, no per-market override
+bars:     8736 from 2025-04-01 00:00 to 2025-06-30 23:45
+timeline: 1828 frames from 2026-09-11 05:36 to 2026-09-17 13:51
+          the tape covers 0 of 8736 bars (0.0%)
+
+tape:     44843 prints, 1828 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+companion: none loaded — every cmp series is NaN
+guards: on — max_open_loss_r 2.0, notional 300%, weekend flat 16:40 NY, news flat 60/30 (impact≥3, USD), daily cap 20, loss limit $300, cooldown 30 min
+null sides: exposure - the method's measured long share AND its trade count on the hold branch
+
+== hypotheses `E:/rust/fd-a7/config/btc-247-survivor.toml`: 1 declared, FIXED parameters over the whole window (no selection), each against 300 matched null runs ==
+null sides: exposure (the method's measured long share AND its trade count on the hold branch)
+swap: long 0.00 / short 0.00 USD per lot per night; spread 50
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+guards: on — max_open_loss_r 2.0, notional 300%, weekend flat 16:40 NY, news flat 60/30 (impact≥3, USD), daily cap 20, loss limit $300, cooldown 30 min
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+expansion247 donchian-breakout      95   1.090   0.051    1.006    1.584        0   60%  fail: profit factor 1.090 < 1.2
+                                ATR14/ATR100 in [1.2, 99]  — the one both-window survivor, repriced at other spreads to find its break-even cost
+                                matched null 81 trades median vs the method's 95 — count match 0.85
+                                long share: method 0.589 vs the null's median 0.679  ** the control's side ratio is not the method's **
+                                spread paid: method 689.45 USD vs the null's median 550.35 USD — cost match 0.80
+                                exposure: signed share of time method +0.362 vs the null's +0.390; time in market method 13110 min vs the null's median 13612 min — ratio 1.04
+                                cost-matched null: control stop 2.000 ATR = 682.19 points, cost 7.33% of R (named stopAtr, copied)
+                                the method's own realised stop: median 2.073 ATR = 707.22 points over 95 trades
+                                guards: refused COOLDOWN 2, DAILY_LOSS_LIMIT 8, NEWS_FLAT 1, WEEKEND_FLAT 2; closed WEEKEND_FLAT 1; sized down 2
+                                exits: STOP 33, TARGET 22, TIMEOUT 19, WEEKEND_FLAT 1, lost the channel midline 12, reclaimed the channel midline 8; mean hold 138.0 min
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+
