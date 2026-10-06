@@ -1,0 +1,146 @@
+market:   eurusd 15m
+data:     E:/rust/flowdesk/data (bars from E:/rust/flowdesk/data\bars\EURUSD-15m.parquet)
+bounds:   --from=2025-07-01 --to=2025-10-01 kept 6336 of 61247 bars
+spread:   0.00014 per round trip
+trail:    off
+max hold: 4 h (14400000 ms) from [trading] max_hold_ms, no per-market override
+bars:     6336 from 2025-07-01 00:00 to 2025-09-30 23:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD|EUR (news_currencies)
+companion: none loaded — every cmp series is NaN
+guards: off (every number unguarded)
+null sides: coin - 50/50, carries no drift; the null every published percentile was read against
+
+== hypotheses `gold-intraday`: 13 declared, walk-forward (4 folds), each against 200 matched null runs ==
+null sides: coin (50/50, carries no drift; the null every published percentile was read against)
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.00014
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD|EUR (news_currencies)
+guards: off (every number unguarded)
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+intraday     ema-cross              80   1.095   0.055    0.761    1.172        0   92%  fail: profit factor 1.095 < 1.2
+                                MoTuWeThFr + flat 16:30-18:15  — the swap-free version of the trend baseline
+                                matched null 72 trades median vs the method's 80 — count match 0.90
+                                long share: method 0.487 vs the null's median 0.488
+                                spread paid: method 11.14 USD vs the null's median 9.00 USD — cost match 0.81
+                                exposure: signed share of time method -0.046 vs the null's -0.053; time in market method 8115 min vs the null's median 8992 min — ratio 1.11
+                                the null's own median LOSES money (p50 0.761 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 1.500 ATR = 0.00 points, cost 14.65% of R (named stopAtr, copied)
+                                the method's own realised stop: median 1.609 ATR = 0.00 points over 102 trades
+intraday     rsi-reversion         127   0.397  -0.354    0.781    1.067        0    0%  fail: profit factor 0.397 < 1.2; expectancy -0.354R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15  — the swap-free version of the reversion baseline
+                                matched null 100 trades median vs the method's 127 — count match 0.79
+                                long share: method 0.331 vs the null's median 0.489  ** outside 40-60% long against a coin: this percentile carries the instrument's drift **
+                                spread paid: method 15.57 USD vs the null's median 12.02 USD — cost match 0.77
+                                exposure: signed share of time method -0.359 vs the null's -0.041; time in market method 9075 min vs the null's median 12502 min — ratio 1.38  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.781 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 1.500 ATR = 0.00 points, cost 13.33% of R (named stopAtr, copied)
+                                the method's own realised stop: median 1.599 ATR = 0.00 points over 149 trades
+intraday     donchian-breakout     207   0.715  -0.124    0.826    1.117        0   22%  fail: profit factor 0.715 < 1.2; expectancy -0.124R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15  — the swap-free version of the breakout baseline
+                                matched null 156 trades median vs the method's 207 — count match 0.75
+                                long share: method 0.493 vs the null's median 0.503
+                                spread paid: method 18.35 USD vs the null's median 13.80 USD — cost match 0.75
+                                exposure: signed share of time method +0.085 vs the null's -0.016; time in market method 26220 min vs the null's median 24832 min — ratio 0.95  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.826 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 2.000 ATR = 0.00 points, cost 10.83% of R (named stopAtr, copied)
+                                the method's own realised stop: median 2.105 ATR = 0.00 points over 287 trades
+intraday     bb-fade               338   0.674  -0.174    0.784    1.032        0   16%  fail: profit factor 0.674 < 1.2; expectancy -0.174R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15  — the swap-free version of the fade baseline
+                                matched null 200 trades median vs the method's 338 — count match 0.59  ** outside the band: this percentile is unmatched **
+                                long share: method 0.500 vs the null's median 0.495
+                                spread paid: method 42.56 USD vs the null's median 22.16 USD — cost match 0.52  ** outside the band: the control did not pay what the method paid **
+                                exposure: signed share of time method -0.090 vs the null's -0.032; time in market method 26565 min vs the null's median 26685 min — ratio 1.00  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.784 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 1.500 ATR = 0.00 points, cost 14.29% of R (named stopAtr, copied)
+                                the method's own realised stop: median 1.608 ATR = 0.00 points over 401 trades
+ny-morning   ema-cross              17   0.976  -0.006    0.837    1.631        0   66%  fail: only 17 trades (need 30); profit factor 0.976 < 1.2; expectancy -0.006R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 08:00-12:00  — trend into the session with the volume
+                                matched null 21 trades median vs the method's 17 — count match 1.24
+                                long share: method 0.647 vs the null's median 0.500  ** outside 40-60% long against a coin: this percentile carries the instrument's drift **
+                                spread paid: method 1.64 USD vs the null's median 2.14 USD — cost match 1.31  ** outside the band: the control did not pay what the method paid **
+                                exposure: signed share of time method +0.544 vs the null's -0.007; time in market method 2565 min vs the null's median 2610 min — ratio 1.02  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.837 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 1.500 ATR = 0.00 points, cost 10.79% of R (named stopAtr, copied)
+                                the method's own realised stop: median 1.584 ATR = 0.00 points over 22 trades
+ny-morning   donchian-breakout      61   1.075   0.028    0.856    1.334        0   82%  fail: profit factor 1.075 < 1.2; expectancy 0.028R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 08:00-12:00  — breakouts where the liquidity is
+                                matched null 57 trades median vs the method's 61 — count match 0.93
+                                long share: method 0.459 vs the null's median 0.491
+                                spread paid: method 3.37 USD vs the null's median 4.13 USD — cost match 1.23
+                                exposure: signed share of time method +0.079 vs the null's +0.007; time in market method 9285 min vs the null's median 9360 min — ratio 1.01  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.856 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 2.000 ATR = 0.00 points, cost 8.11% of R (named stopAtr, copied)
+                                the method's own realised stop: median 2.086 ATR = 0.00 points over 83 trades
+london-open  donchian-breakout      67   0.868  -0.067    0.811    1.247        0   60%  fail: profit factor 0.868 < 1.2; expectancy -0.067R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 02:00-06:00  — London sets the range; trade the break of the Asian one
+                                matched null 59 trades median vs the method's 67 — count match 0.88
+                                long share: method 0.493 vs the null's median 0.500
+                                spread paid: method 8.35 USD vs the null's median 6.21 USD — cost match 0.74  ** outside the band: the control did not pay what the method paid **
+                                exposure: signed share of time method +0.018 vs the null's -0.009; time in market method 6720 min vs the null's median 7785 min — ratio 1.16
+                                the null's own median LOSES money (p50 0.811 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 2.000 ATR = 0.00 points, cost 11.56% of R (named stopAtr, copied)
+                                the method's own realised stop: median 2.113 ATR = 0.00 points over 85 trades
+asia         rsi-reversion          40   0.776  -0.094    0.710    2.134        0   54%  fail: profit factor 0.776 < 1.2; expectancy -0.094R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + NY 19:00-02:00  — thin hours are said to mean-revert
+                                matched null 11 trades median vs the method's 40 — count match 0.28  ** outside the band: this percentile is unmatched **
+                                long share: method 0.425 vs the null's median 0.500
+                                spread paid: method 6.51 USD vs the null's median 1.92 USD — cost match 0.30  ** outside the band: the control did not pay what the method paid **
+                                exposure: signed share of time method -0.064 vs the null's -0.049; time in market method 2565 min vs the null's median 1215 min — ratio 0.47  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.710 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 1.500 ATR = 0.00 points, cost 18.15% of R (named stopAtr, copied)
+                                the method's own realised stop: median 1.634 ATR = 0.00 points over 26 trades
+asia         bb-fade                36   1.167   0.089    0.785    1.345        0   92%  fail: profit factor 1.167 < 1.2
+                                MoTuWeThFr + flat 16:30-18:15 + NY 19:00-02:00  — same claim, band-based
+                                matched null 46 trades median vs the method's 36 — count match 1.28  ** outside the band: this percentile is unmatched **
+                                long share: method 0.667 vs the null's median 0.510  ** outside 40-60% long against a coin: this percentile carries the instrument's drift **
+                                spread paid: method 6.03 USD vs the null's median 7.73 USD — cost match 1.28  ** outside the band: the control did not pay what the method paid **
+                                exposure: signed share of time method +0.267 vs the null's -0.031; time in market method 4050 min vs the null's median 5370 min — ratio 1.33  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.785 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 1.500 ATR = 0.00 points, cost 19.19% of R (named stopAtr, copied)
+                                the method's own realised stop: median 1.644 ATR = 0.00 points over 104 trades
+expansion    donchian-breakout      78   1.110   0.045    0.823    1.408        0   82%  fail: profit factor 1.110 < 1.2; expectancy 0.045R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + ATR14/ATR100 in [1.2, 99]  — breakouts only when volatility is already rising
+                                matched null 44 trades median vs the method's 78 — count match 0.56  ** outside the band: this percentile is unmatched **
+                                long share: method 0.590 vs the null's median 0.491
+                                spread paid: method 6.17 USD vs the null's median 2.90 USD — cost match 0.47  ** outside the band: the control did not pay what the method paid **
+                                exposure: signed share of time method +0.087 vs the null's -0.027; time in market method 8475 min vs the null's median 7582 min — ratio 0.89  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.823 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 2.000 ATR = 0.00 points, cost 7.17% of R (named stopAtr, copied)
+                                the method's own realised stop: median 2.068 ATR = 0.00 points over 71 trades
+expansion    ema-cross              10   0.586  -0.216    0.709    2.610        0   41%  fail: only 10 trades (need 30); profit factor 0.586 < 1.2; expectancy -0.216R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + ATR14/ATR100 in [1.2, 99]  — trend only when there is range to trend in
+                                matched null 10 trades median vs the method's 10 — count match 1.00
+                                long share: method 0.900 vs the null's median 0.500  ** outside 40-60% long against a coin: this percentile carries the instrument's drift **
+                                spread paid: method 0.82 USD vs the null's median 0.88 USD — cost match 1.08
+                                exposure: signed share of time method +1.000 vs the null's -0.035; time in market method 1695 min vs the null's median 1402 min — ratio 0.83  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.709 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 1.500 ATR = 0.00 points, cost 8.73% of R (named stopAtr, copied)
+                                the method's own realised stop: median 1.567 ATR = 0.00 points over 16 trades
+compression  rsi-reversion          41   0.312  -0.402    0.740    2.341        0   20%  fail: profit factor 0.312 < 1.2; expectancy -0.402R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + ATR14/ATR100 in [0, 0.8]  — fade only when the range is tight
+                                matched null 9 trades median vs the method's 41 — count match 0.22  ** outside the band: this percentile is unmatched **
+                                long share: method 0.244 vs the null's median 0.500  ** outside 40-60% long against a coin: this percentile carries the instrument's drift **
+                                spread paid: method 7.50 USD vs the null's median 1.58 USD — cost match 0.21  ** outside the band: the control did not pay what the method paid **
+                                exposure: signed share of time method -0.423 vs the null's -0.036; time in market method 2445 min vs the null's median 915 min — ratio 0.37  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.740 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 1.500 ATR = 0.00 points, cost 19.12% of R (named stopAtr, copied)
+                                the method's own realised stop: median 1.639 ATR = 0.00 points over 22 trades
+compression  bb-fade                27   1.486   0.220    0.815    1.420        0   96%  fail: only 27 trades (need 30)
+                                MoTuWeThFr + flat 16:30-18:15 + ATR14/ATR100 in [0, 0.8]  — same, band-based
+                                matched null 40 trades median vs the method's 27 — count match 1.48  ** outside the band: this percentile is unmatched **
+                                long share: method 0.556 vs the null's median 0.494
+                                spread paid: method 4.75 USD vs the null's median 6.50 USD — cost match 1.37  ** outside the band: the control did not pay what the method paid **
+                                exposure: signed share of time method +0.193 vs the null's -0.030; time in market method 2565 min vs the null's median 4688 min — ratio 1.83  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.815 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 1.500 ATR = 0.00 points, cost 20.01% of R (named stopAtr, copied)
+                                the method's own realised stop: median 1.651 ATR = 0.00 points over 88 trades
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+
