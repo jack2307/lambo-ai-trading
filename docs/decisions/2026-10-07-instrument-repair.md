@@ -190,3 +190,24 @@ with its numbers so it cannot be lost, and handed on.
 
 **Cells spent on it: 0.** Nothing was run for it on this branch; the 69-vs-70
 measurement is `agent/news-tf`'s, not reproduced here.
+
+---
+
+## Ghi chu 07/10/2026 (coordinator) — da khep cho "chua co compiler xac nhan"
+
+Job nay bao rang `fd-api` **KHONG duoc bien dich**, nen hai truong `None` moi
+them vao struct literal trong `crates/fd-api/src/paper.rs` (`mod carried_basis`)
+chua co compiler xac nhan — va no **noi ra** thay vi khai la da kiem. Dung.
+
+Toi chay `cargo check` thay vi `test`, vi check type-check ma khong codegen nen
+khong roi vao bay §1(b) (11 GB `target/debug`):
+
+    cargo +stable-x86_64-pc-windows-gnu check --release -p fd-api --all-targets
+    Finished `release` profile [optimized] target(s) in 1m 01s
+    -> 0 error ve hai truong do
+
+Dia: 25 GB truoc -> 24 GB sau, mot lan check. **Cho tac nay DONG.**
+
+Luu y cho ai merge: day la `cargo check`, khong phai `cargo test` — no xac nhan
+**KIEU**, khong chay test cua `fd-api`. Chay cay test cua crate do la mot buoc
+rieng va no keo tang axum/reqwest.
