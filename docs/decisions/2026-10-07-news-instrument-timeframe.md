@@ -579,3 +579,20 @@ the last. This job built nothing: its worktree has no `target/`, and everything
 it wrote is about 1 MB of text under `receipts/`. The 14 GB came from elsewhere
 on the machine during the same hour. Reported because brief §1(c) sets the
 floor at 8 GB and the next job to start may find it already crossed.
+
+---
+
+## Note added 2026-10-07, correcting the disk paragraph above
+
+Append-only, as section 6 requires. The paragraph above read 9.5 GB free
+after the last run. Measured again a few minutes later, after the push:
+**21 GB free**. So the dip was transient - another process on the machine
+held about 12 GB during the hour this job ran and released it. The floor was
+never crossed and nothing was deleted. The paragraph above is left standing
+as it was written; this is the later reading.
+
+For the record, the three things brief section 1(a) forbids: no `taskkill` was
+run, `/e/rust/flowdesk/target/release/` was read (the shared `search.exe`) and
+never written or cleaned, and `data/gold/` and `data/btc/` were not touched.
+`--data=/e/rust/flowdesk/data` was read-only; every output of this job is
+under `/e/rust/fd-news-tf/`.
