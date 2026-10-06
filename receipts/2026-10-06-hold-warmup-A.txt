@@ -1,0 +1,37 @@
+market:   xauusd 15m
+data:     E:/rust/flowdesk/data (bars from E:/rust/flowdesk/data\bars\XAUUSD-15m.parquet)
+bounds:   --from=2025-07-01 --to=2025-10-01 kept 6044 of 100586 bars
+spread:   0.28 per round trip
+trail:    off
+max hold: 120 h (432000000 ms) from [markets.<id>.trading] max_hold_ms = 432000000
+bars:     6044 from 2025-07-01 00:00 to 2025-09-30 23:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+companion: none loaded — every cmp series is NaN
+guards: on — max_open_loss_r 2.0, notional 300%, weekend flat 16:40 NY, news flat 60/30 (impact≥3, USD), daily cap 20, loss limit $300, cooldown 30 min
+null sides: exposure - the method's measured long share AND its trade count on the hold branch
+
+== hypotheses `docs/hypotheses/2026-10-06-hold-ceiling-warmup.toml`: 1 declared, FIXED parameters over the whole window (no selection), each against 200 matched null runs ==
+null sides: exposure (the method's measured long share AND its trade count on the hold branch)
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+guards: on — max_open_loss_r 2.0, notional 300%, weekend flat 16:40 NY, news flat 60/30 (impact≥3, USD), daily cap 20, loss limit $300, cooldown 30 min
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+tsmom-lb5    tsmom                  11   8.241   0.443    1.600    8.400        0   94%  fail: only 11 trades (need 30)
+                                  — DIAGNOSTIC: a lookback whose warmup fits inside the window, to separate warmup from the hold ceiling as the reason tsmom takes no trades; never a survivor
+                                matched null 12 trades median vs the method's 11 — count match 1.09
+                                long share: method 0.818 vs the null's median 0.857
+                                spread paid: method 0.03 USD vs the null's median 0.03 USD — cost match 1.09
+                                exposure: signed share of time method +0.674 vs the null's +0.761; time in market method 43590 min vs the null's median 24795 min — ratio 0.57  ** the control did not collect the drift the method did **
+                                guards: refused none; closed NEWS_FLAT 4, WEEKEND_FLAT 4; sized down 0
+                                exits: 5-day return flipped 2, END_OF_DATA 1, NEWS_FLAT 4, WEEKEND_FLAT 4; mean hold 3962.7 min
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+

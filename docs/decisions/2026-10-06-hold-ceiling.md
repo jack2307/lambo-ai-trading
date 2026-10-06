@@ -166,3 +166,30 @@ a live behaviour change. The sibling directories keep that assertion true.
 Nothing from this axis goes on the funded account, whatever it shows. A result
 of "the ceiling was never the constraint" is the finding, and I will report it
 as the finding rather than go looking for a cell to rescue it.
+
+---
+
+## Amendment, 2026-10-06 (after the eight runs above, before two more)
+
+Nothing already written is rewritten. This adds two cells and says why.
+
+The nine declared `tsmom` cells took **0 trades at every ceiling on both
+windows**, so "identical at 4 h, 24 h and 120 h" is confirmed only as
+`0 = 0 = 0`, which is the weakest form of confirmation there is: a row that
+never trades cannot show whether the ceiling would have touched it.
+
+Diagnostic B at 120 h did trade — 11 trades in window A, 12 in window B — and
+its mean hold is **3,962.7 min (66.0 h)** and **3,327.5 min (55.5 h)**, with
+exit reasons `5-day return flipped`, `END_OF_DATA`, `NEWS_FLAT`,
+`WEEKEND_FLAT` and **no TIMEOUT at all**. To turn that into a direct test I
+add the SAME diagnostic row at the **4 h** control ceiling, both windows:
+**2 more cells**, taking the declared total from 74 to **76**.
+
+What it decides: if the 4 h run returns the same trade count, the same mean
+hold of 66 h and 55 h, and still no TIMEOUT, then `max_hold_ms` provably does
+not reach a self-managed position and `tsmom` was never under the ceiling at
+all. If it returns a shorter hold or any TIMEOUT, my prediction 1 is refuted
+and `engine.rs:737` does not do what I read it to do.
+
+No verdict of "survives" may be read off these two cells either: they carry
+`lookbackDays = 5`, which is outside the method's declared grid.

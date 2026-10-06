@@ -1,0 +1,118 @@
+market:   xauusd 15m
+data:     E:/rust/flowdesk/data (bars from E:/rust/flowdesk/data\bars\XAUUSD-15m.parquet)
+bounds:   --from=2025-04-01 --to=2025-07-01 kept 5862 of 100586 bars
+spread:   0.28 per round trip
+trail:    off
+max hold: 24 h (86400000 ms) from [markets.<id>.trading] max_hold_ms = 86400000
+bars:     5862 from 2025-04-01 00:00 to 2025-06-30 23:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+companion: none loaded — every cmp series is NaN
+guards: on — max_open_loss_r 2.0, notional 300%, weekend flat 16:40 NY, news flat 60/30 (impact≥3, USD), daily cap 20, loss limit $300, cooldown 30 min
+null sides: exposure - the method's measured long share AND its trade count on the hold branch
+
+== hypotheses `docs/hypotheses/2026-10-06-hold-ceiling.toml`: 9 declared, FIXED parameters over the whole window (no selection), each against 200 matched null runs ==
+null sides: exposure (the method's measured long share AND its trade count on the hold branch)
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+guards: on — max_open_loss_r 2.0, notional 300%, weekend flat 16:40 NY, news flat 60/30 (impact≥3, USD), daily cap 20, loss limit $300, cooldown 30 min
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+tsmom-lb20   tsmom                   0     NaN     NaN    1.030    2.394       -0  null  fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+                                  — the shortest lookback the method's own grid declares; does a lifted hold ceiling give a multi-day trend method any trades at all?
+                                matched null 20 trades median vs the method's 0 — count match NaN  ** outside the band: this percentile is unmatched **
+                                long share: method NaN vs the null's median 0.500  ** the control's side ratio is not the method's **
+                                spread paid: method -0.00 USD vs the null's median 0.06 USD — cost match NaN  (nothing to compare)
+                                exposure: signed share of time method NaN vs the null's +0.029; time in market method NaN min vs the null's median 87105 min — ratio NaN  ** the control did not collect the drift the method did **
+                                guards: nothing acted
+                                exits: no exits recorded; mean hold NaN min
+tsmom-lb60   tsmom                   0     NaN     NaN    1.009    2.495       -0  null  fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+                                  — the method's default lookback, the three-month search's middle cell
+                                matched null 19 trades median vs the method's 0 — count match NaN  ** outside the band: this percentile is unmatched **
+                                long share: method NaN vs the null's median 0.474  ** the control's side ratio is not the method's **
+                                spread paid: method -0.00 USD vs the null's median 0.05 USD — cost match NaN  (nothing to compare)
+                                exposure: signed share of time method NaN vs the null's +0.042; time in market method NaN min vs the null's median 87120 min — ratio NaN  ** the control did not collect the drift the method did **
+                                guards: nothing acted
+                                exits: no exits recorded; mean hold NaN min
+tsmom-lb120  tsmom                   0     NaN     NaN    1.009    2.495       -0  null  fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+                                  — the longest lookback the grid declares; the cell with the most warmup to pay for
+                                matched null 19 trades median vs the method's 0 — count match NaN  ** outside the band: this percentile is unmatched **
+                                long share: method NaN vs the null's median 0.474  ** the control's side ratio is not the method's **
+                                spread paid: method -0.00 USD vs the null's median 0.05 USD — cost match NaN  (nothing to compare)
+                                exposure: signed share of time method NaN vs the null's +0.042; time in market method NaN min vs the null's median 87120 min — ratio NaN  ** the control did not collect the drift the method did **
+                                guards: nothing acted
+                                exits: no exits recorded; mean hold NaN min
+vbox-bb12    volman-box              1     inf   0.963    0.740    3.394        0  null  fail: only 1 trades (need 30)
+                                  — the shortest box the grid declares, so the most setups per window; the cell with the best chance of reaching a readable count
+                                matched null 3 trades median vs the method's 1 — count match 3.00  ** outside the band: this percentile is unmatched **
+                                long share: method 1.000 vs the null's median 0.500  ** the control's side ratio is not the method's **
+                                spread paid: method 0.03 USD vs the null's median 0.06 USD — cost match 2.44  ** outside the band: the control did not pay what the method paid **
+                                exposure: signed share of time method NaN vs the null's -0.156; time in market method 0 min vs the null's median 660 min — ratio NaN  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.740 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 1.946 ATR = 7.28 points, cost 3.85% of R (realised median, structural)
+                                the method's own realised stop: median 1.946 ATR = 7.28 points over 1 trades
+                                guards: refused WEEKEND_FLAT 1; closed none; sized down 1
+                                exits: TARGET 1; mean hold 0.0 min
+vbox-bb20    volman-box              0     NaN     NaN    0.986    1.407       -0  null  fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+                                  — the method's default box, the three-month search's middle cell
+                                matched null 95 trades median vs the method's 0 — count match NaN  ** outside the band: this percentile is unmatched **
+                                long share: method NaN vs the null's median 0.500  ** the control's side ratio is not the method's **
+                                spread paid: method -0.00 USD vs the null's median 2.13 USD — cost match NaN  (nothing to compare)
+                                exposure: signed share of time method NaN vs the null's +0.060; time in market method NaN min vs the null's median 16612 min — ratio NaN  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.986 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 1.500 ATR = NaN points, cost NaN% of R (UNMEASURED: no trade to measure and no governing stopAtr)
+                                the method's own realised stop: median NaN ATR = NaN points over 0 trades
+                                guards: nothing acted
+                                exits: no exits recorded; mean hold NaN min
+vbox-bb30    volman-box              0     NaN     NaN    0.986    1.407       -0  null  fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+                                  — the longest box the grid declares; a tight 30-bar box is the rarest setup and the one a 4-hour exit would truncate hardest
+                                matched null 95 trades median vs the method's 0 — count match NaN  ** outside the band: this percentile is unmatched **
+                                long share: method NaN vs the null's median 0.500  ** the control's side ratio is not the method's **
+                                spread paid: method -0.00 USD vs the null's median 2.13 USD — cost match NaN  (nothing to compare)
+                                exposure: signed share of time method NaN vs the null's +0.060; time in market method NaN min vs the null's median 16612 min — ratio NaN  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.986 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 1.500 ATR = NaN points, cost NaN% of R (UNMEASURED: no trade to measure and no governing stopAtr)
+                                the method's own realised stop: median NaN ATR = NaN points over 0 trades
+                                guards: nothing acted
+                                exits: no exits recorded; mean hold NaN min
+vthr-vm20    volume-thrust          51   0.925  -0.055    1.046    1.500        0   33%  fail: profit factor 0.925 < 1.2; expectancy -0.055R < 0.05R
+                                  — the loosest volume gate the grid declares, so the most setups; the cell most likely to clear 40 trades
+                                matched null 57 trades median vs the method's 51 — count match 1.12
+                                long share: method 0.510 vs the null's median 0.688  ** the control's side ratio is not the method's **
+                                spread paid: method 0.96 USD vs the null's median 1.04 USD — cost match 1.08
+                                exposure: signed share of time method +0.368 vs the null's +0.428; time in market method 12105 min vs the null's median 19928 min — ratio 1.65  ** the control did not collect the drift the method did **
+                                cost-matched null: control stop 2.316 ATR = 12.78 points, cost 2.19% of R (realised median, structural)
+                                the method's own realised stop: median 2.316 ATR = 12.78 points over 51 trades
+                                guards: refused NEWS_FLAT 1; closed NEWS_FLAT 2; sized down 9
+                                exits: NEWS_FLAT 2, STOP 30, TARGET 19; mean hold 237.3 min
+vthr-vm25    volume-thrust          13   1.468   0.225    0.946    2.036        0   84%  fail: only 13 trades (need 30)
+                                  — the method's default volume multiple, the three-month search's middle cell
+                                matched null 19 trades median vs the method's 13 — count match 1.46  ** outside the band: this percentile is unmatched **
+                                long share: method 0.462 vs the null's median 0.500
+                                spread paid: method 0.23 USD vs the null's median 0.31 USD — cost match 1.36  ** outside the band: the control did not pay what the method paid **
+                                exposure: signed share of time method +0.047 vs the null's +0.037; time in market method 6330 min vs the null's median 6735 min — ratio 1.06
+                                the null's own median LOSES money (p50 0.946 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 2.584 ATR = 14.76 points, cost 1.90% of R (realised median, structural)
+                                the method's own realised stop: median 2.584 ATR = 14.76 points over 13 trades
+                                guards: refused none; closed none; sized down 2
+                                exits: STOP 6, TARGET 6, TIMEOUT 1; mean hold 486.9 min
+vthr-vm35    volume-thrust           2   1.277   0.238    0.667    5.434        0   71%  fail: only 2 trades (need 30)
+                                  — the strictest volume gate the grid declares; if a thrust needs room to run, this is the cell that most needs it
+                                matched null 4 trades median vs the method's 2 — count match 2.00  ** outside the band: this percentile is unmatched **
+                                long share: method 1.000 vs the null's median 1.000
+                                spread paid: method 0.02 USD vs the null's median 0.04 USD — cost match 2.67  ** outside the band: the control did not pay what the method paid **
+                                exposure: signed share of time method +1.000 vs the null's +1.000; time in market method 1080 min vs the null's median 1935 min — ratio 1.79  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.667 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 3.630 ATR = 28.17 points, cost 0.99% of R (realised median, structural)
+                                the method's own realised stop: median 3.630 ATR = 28.17 points over 2 trades
+                                guards: nothing acted
+                                exits: STOP 1, TARGET 1; mean hold 540.0 min
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+
