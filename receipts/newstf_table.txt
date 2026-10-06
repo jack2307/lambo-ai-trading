@@ -1,0 +1,203 @@
+run|row|trades|PF|exp|null_p50|null_p95|pct|count_match|stop_pts|cost%R|long|exits|verdict
+I1_guards|np-brk-p1-m05|0|NaN|NaN|NaN|NaN|null|NaN UNMATCHED|NaN|NaN%|NaN|no exits recorded|fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+I1_guards|np-brk-p1-m15|0|NaN|NaN|NaN|NaN|null|NaN UNMATCHED|NaN|NaN%|NaN|no exits recorded|fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+I1_guards|np-brk-p2-m05|0|NaN|NaN|NaN|NaN|null|NaN UNMATCHED|NaN|NaN%|NaN|no exits recorded|fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+I1_guards|np-brk-p2-m15|0|NaN|NaN|NaN|NaN|null|NaN UNMATCHED|NaN|NaN%|NaN|no exits recorded|fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+I1_guards|np-brk-p4-m05|60|2.014|0.140|0.988|1.575|99%|1.13|22.58|1.24%|0.567|NEWS_FLAT 1, STOP 3, TARGET 1, TIMEOUT 55|SURVIVES
+I1_guards|np-brk-p4-m15|58|2.270|0.161|1.017|1.593|99%|1.17|22.81|1.23%|0.569|NEWS_FLAT 1, STOP 3, TARGET 1, TIMEOUT 53|SURVIVES
+I1_guards|np-rev-p1-m05|0|NaN|NaN|NaN|NaN|null|NaN UNMATCHED|NaN|NaN%|NaN|no exits recorded|fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+I1_guards|np-rev-p1-m15|0|NaN|NaN|NaN|NaN|null|NaN UNMATCHED|NaN|NaN%|NaN|no exits recorded|fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+I1_guards|np-rev-p2-m05|0|NaN|NaN|NaN|NaN|null|NaN UNMATCHED|NaN|NaN%|NaN|no exits recorded|fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+I1_guards|np-rev-p2-m15|0|NaN|NaN|NaN|NaN|null|NaN UNMATCHED|NaN|NaN%|NaN|no exits recorded|fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+I1_guards|np-rev-p4-m05|60|0.582|-0.121|0.968|1.598|6%|1.13|22.48|1.25%|0.433|NEWS_FLAT 1, STOP 9, TARGET 2, TIMEOUT 48|fail: profit factor 0.582 < 1.2; expectancy -0.121R < 0.05R
+I1_guards|np-rev-p4-m15|58|0.532|-0.140|0.976|1.611|4%|1.17|22.70|1.23%|0.431|NEWS_FLAT 1, STOP 9, TARGET 2, TIMEOUT 46|fail: profit factor 0.532 < 1.2; expectancy -0.140R < 0.05R
+I1_noguards|np-brk-p1-m05|59|1.346|0.124|0.000|4.258|83%|0.03 UNMATCHED|16.30|1.72%|0.525|STOP 16, TARGET 8, TIMEOUT 35|gate pass, inside the noise
+I1_noguards|np-brk-p1-m15|50|1.423|0.136|0.000|3.387|86%|0.04 UNMATCHED|17.79|1.57%|0.520|STOP 12, TARGET 5, TIMEOUT 33|gate pass, inside the noise
+I1_noguards|np-brk-p2-m05|65|1.139|0.046|1.011|1.620|68%|1.05|17.52|1.60%|0.523|STOP 17, TARGET 6, TIMEOUT 42|fail: profit factor 1.139 < 1.2; expectancy 0.046R < 0.05R
+I1_noguards|np-brk-p2-m15|53|1.532|0.141|0.981|1.635|94%|1.28 UNMATCHED|18.80|1.49%|0.566|STOP 11, TARGET 5, TIMEOUT 37|gate pass, inside the noise
+I1_noguards|np-brk-p4-m05|60|1.979|0.138|0.988|1.575|99%|1.13|22.58|1.24%|0.567|STOP 3, TARGET 1, TIMEOUT 56|SURVIVES
+I1_noguards|np-brk-p4-m15|58|2.226|0.158|1.020|1.610|99%|1.17|22.81|1.23%|0.569|STOP 3, TARGET 1, TIMEOUT 54|SURVIVES
+I1_noguards|np-rev-p1-m05|59|0.935|-0.022|0.000|4.258|76%|0.03 UNMATCHED|16.54|1.69%|0.475|STOP 17, TARGET 7, TIMEOUT 35|fail: profit factor 0.935 < 1.2; expectancy -0.022R < 0.05R
+I1_noguards|np-rev-p1-m15|50|0.835|-0.062|0.000|3.387|73%|0.04 UNMATCHED|17.70|1.58%|0.480|STOP 14, TARGET 5, TIMEOUT 31|fail: profit factor 0.835 < 1.2; expectancy -0.062R < 0.05R
+I1_noguards|np-rev-p2-m05|65|0.942|-0.021|1.014|1.637|42%|1.05|17.52|1.60%|0.477|STOP 17, TARGET 6, TIMEOUT 42|fail: profit factor 0.942 < 1.2; expectancy -0.021R < 0.05R
+I1_noguards|np-rev-p2-m15|53|0.748|-0.100|0.982|1.633|17%|1.28 UNMATCHED|18.82|1.49%|0.434|STOP 14, TARGET 4, TIMEOUT 35|fail: profit factor 0.748 < 1.2; expectancy -0.100R < 0.05R
+I1_noguards|np-rev-p4-m05|60|0.589|-0.119|0.978|1.614|6%|1.13|22.48|1.25%|0.433|STOP 9, TARGET 2, TIMEOUT 49|fail: profit factor 0.589 < 1.2; expectancy -0.119R < 0.05R
+I1_noguards|np-rev-p4-m15|58|0.540|-0.137|0.976|1.627|4%|1.17|22.70|1.23%|0.431|STOP 9, TARGET 2, TIMEOUT 47|fail: profit factor 0.540 < 1.2; expectancy -0.137R < 0.05R
+I2_guards|np-brk-p1-m05|0|NaN|NaN|NaN|NaN|null|NaN UNMATCHED|NaN|NaN%|NaN|no exits recorded|fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+I2_guards|np-brk-p1-m15|0|NaN|NaN|NaN|NaN|null|NaN UNMATCHED|NaN|NaN%|NaN|no exits recorded|fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+I2_guards|np-brk-p2-m05|0|NaN|NaN|NaN|NaN|null|NaN UNMATCHED|NaN|NaN%|NaN|no exits recorded|fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+I2_guards|np-brk-p2-m15|0|NaN|NaN|NaN|NaN|null|NaN UNMATCHED|NaN|NaN%|NaN|no exits recorded|fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+I2_guards|np-brk-p4-m05|61|1.080|0.035|0.000|3.769|83%|0.03 UNMATCHED|32.21|0.87%|0.574|STOP 10, TARGET 4, TIMEOUT 47|fail: profit factor 1.080 < 1.2; expectancy 0.035R < 0.05R
+I2_guards|np-brk-p4-m15|45|1.116|0.042|0.000|3.769|85%|0.04 UNMATCHED|32.89|0.85%|0.644|STOP 6, TARGET 3, TIMEOUT 36|fail: profit factor 1.116 < 1.2; expectancy 0.042R < 0.05R
+I2_guards|np-rev-p1-m05|0|NaN|NaN|NaN|NaN|null|NaN UNMATCHED|NaN|NaN%|NaN|no exits recorded|fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+I2_guards|np-rev-p1-m15|0|NaN|NaN|NaN|NaN|null|NaN UNMATCHED|NaN|NaN%|NaN|no exits recorded|fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+I2_guards|np-rev-p2-m05|0|NaN|NaN|NaN|NaN|null|NaN UNMATCHED|NaN|NaN%|NaN|no exits recorded|fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+I2_guards|np-rev-p2-m15|0|NaN|NaN|NaN|NaN|null|NaN UNMATCHED|NaN|NaN%|NaN|no exits recorded|fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+I2_guards|np-rev-p4-m05|61|0.722|-0.099|0.000|3.769|79%|0.03 UNMATCHED|31.88|0.88%|0.426|STOP 13, TARGET 1, TIMEOUT 47|fail: profit factor 0.722 < 1.2; expectancy -0.099R < 0.05R
+I2_guards|np-rev-p4-m15|45|0.669|-0.103|0.000|3.769|77%|0.04 UNMATCHED|33.07|0.85%|0.356|STOP 8, TARGET 1, TIMEOUT 36|fail: profit factor 0.669 < 1.2; expectancy -0.103R < 0.05R
+I2_noguards|np-brk-p1-m05|56|0.953|-0.027|1.007|1.682|42%|0.66 UNMATCHED|23.94|1.17%|0.625|STOP 22, TARGET 9, TIMEOUT 25|fail: profit factor 0.953 < 1.2; expectancy -0.027R < 0.05R
+I2_noguards|np-brk-p1-m15|36|0.421|-0.243|0.986|2.484|4%|0.67 UNMATCHED|27.60|1.01%|0.722|STOP 13, TARGET 1, TIMEOUT 22|fail: profit factor 0.421 < 1.2; expectancy -0.243R < 0.05R
+I2_noguards|np-brk-p2-m05|57|0.973|-0.000|1.033|2.200|46%|0.44 UNMATCHED|27.38|1.02%|0.579|STOP 19, TARGET 4, TIMEOUT 34|fail: profit factor 0.973 < 1.2; expectancy -0.000R < 0.05R
+I2_noguards|np-brk-p2-m15|38|1.455|0.129|1.004|2.693|72%|0.45 UNMATCHED|30.92|0.91%|0.632|STOP 9, TARGET 3, TIMEOUT 26|gate pass, inside the noise
+I2_noguards|np-brk-p4-m05|61|1.085|0.036|0.000|3.769|83%|0.03 UNMATCHED|32.21|0.87%|0.574|STOP 10, TARGET 4, TIMEOUT 47|fail: profit factor 1.085 < 1.2; expectancy 0.036R < 0.05R
+I2_noguards|np-brk-p4-m15|45|1.125|0.045|0.000|3.769|85%|0.04 UNMATCHED|32.89|0.85%|0.644|STOP 6, TARGET 3, TIMEOUT 36|fail: profit factor 1.125 < 1.2; expectancy 0.045R < 0.05R
+I2_noguards|np-rev-p1-m05|56|1.169|0.052|0.993|1.622|70%|0.66 UNMATCHED|24.16|1.16%|0.375|STOP 21, TARGET 8, TIMEOUT 27|fail: profit factor 1.169 < 1.2
+I2_noguards|np-rev-p1-m15|36|1.802|0.191|0.985|2.479|88%|0.67 UNMATCHED|27.58|1.02%|0.278|STOP 7, TARGET 3, TIMEOUT 26|gate pass, inside the noise
+I2_noguards|np-rev-p2-m05|58|0.747|-0.122|1.038|2.163|28%|0.45 UNMATCHED|27.57|1.02%|0.431|STOP 23, TARGET 6, TIMEOUT 29|fail: profit factor 0.747 < 1.2; expectancy -0.122R < 0.05R
+I2_noguards|np-rev-p2-m15|39|0.421|-0.261|1.026|2.657|10%|0.44 UNMATCHED|30.57|0.92%|0.385|STOP 16, TARGET 1, TIMEOUT 22|fail: profit factor 0.421 < 1.2; expectancy -0.261R < 0.05R
+I2_noguards|np-rev-p4-m05|61|0.717|-0.101|0.000|3.769|78%|0.03 UNMATCHED|31.88|0.88%|0.426|STOP 13, TARGET 1, TIMEOUT 47|fail: profit factor 0.717 < 1.2; expectancy -0.101R < 0.05R
+I2_noguards|np-rev-p4-m15|45|0.661|-0.105|0.000|3.769|75%|0.04 UNMATCHED|33.07|0.85%|0.356|STOP 8, TARGET 1, TIMEOUT 36|fail: profit factor 0.661 < 1.2; expectancy -0.105R < 0.05R
+Ifull_noguards|np-brk-p1-m05|115|1.111|0.051|1.049|1.412|64%|1.16|19.56|1.43%|0.574|STOP 38, TARGET 17, TIMEOUT 60|fail: profit factor 1.111 < 1.2
+Ifull_noguards|np-brk-p1-m15|86|0.938|-0.023|1.052|1.442|32%|1.33 UNMATCHED|20.94|1.34%|0.605|STOP 25, TARGET 6, TIMEOUT 55|fail: profit factor 0.938 < 1.2; expectancy -0.023R < 0.05R
+Ifull_noguards|np-brk-p2-m05|122|1.050|0.025|0.979|1.506|57%|0.66 UNMATCHED|20.65|1.36%|0.549|STOP 36, TARGET 10, TIMEOUT 76|fail: profit factor 1.050 < 1.2; expectancy 0.025R < 0.05R
+Ifull_noguards|np-brk-p2-m15|91|1.425|0.136|0.990|1.664|84%|0.67 UNMATCHED|21.50|1.30%|0.593|STOP 20, TARGET 8, TIMEOUT 63|gate pass, inside the noise
+Ifull_noguards|np-brk-p4-m05|121|1.397|0.086|0.922|1.335|96%|1.10|24.76|1.13%|0.570|STOP 13, TARGET 5, TIMEOUT 103|SURVIVES
+Ifull_noguards|np-brk-p4-m15|103|1.563|0.109|0.954|1.358|99%|1.29 UNMATCHED|25.39|1.10%|0.602|STOP 9, TARGET 4, TIMEOUT 90|SURVIVES
+Ifull_noguards|np-rev-p1-m05|115|1.040|0.014|1.049|1.412|48%|1.16|19.47|1.44%|0.426|STOP 38, TARGET 15, TIMEOUT 62|fail: profit factor 1.040 < 1.2; expectancy 0.014R < 0.05R
+Ifull_noguards|np-rev-p1-m15|86|1.109|0.044|1.070|1.456|62%|1.33 UNMATCHED|20.61|1.36%|0.395|STOP 21, TARGET 8, TIMEOUT 57|fail: profit factor 1.109 < 1.2; expectancy 0.044R < 0.05R
+Ifull_noguards|np-rev-p2-m05|123|0.848|-0.069|0.977|1.540|28%|0.67 UNMATCHED|20.73|1.35%|0.455|STOP 40, TARGET 12, TIMEOUT 71|fail: profit factor 0.848 < 1.2; expectancy -0.069R < 0.05R
+Ifull_noguards|np-rev-p2-m15|92|0.622|-0.169|1.009|1.702|6%|0.67 UNMATCHED|21.56|1.30%|0.413|STOP 30, TARGET 5, TIMEOUT 57|fail: profit factor 0.622 < 1.2; expectancy -0.169R < 0.05R
+Ifull_noguards|np-rev-p4-m05|121|0.642|-0.110|0.920|1.336|8%|1.10|24.79|1.13%|0.430|STOP 22, TARGET 3, TIMEOUT 96|fail: profit factor 0.642 < 1.2; expectancy -0.110R < 0.05R
+Ifull_noguards|np-rev-p4-m15|103|0.588|-0.123|0.938|1.360|3%|1.29 UNMATCHED|25.07|1.12%|0.398|STOP 17, TARGET 3, TIMEOUT 83|fail: profit factor 0.588 < 1.2; expectancy -0.123R < 0.05R
+clock1_A_guards|np1m-brk-c45-m05|119|1.331|0.091|0.875|1.266|98%|1.03|20.09|1.39%|0.555|NEWS_FLAT 1, STOP 21, TARGET 7, TIMEOUT 90|SURVIVES
+clock1_A_guards|np1m-brk-c45-m15|110|1.296|0.082|0.875|1.257|96%|1.12|20.02|1.40%|0.555|NEWS_FLAT 1, STOP 19, TARGET 6, TIMEOUT 84|SURVIVES
+clock1_A_guards|np1m-rev-c45-m05|119|0.722|-0.097|0.875|1.266|20%|1.03|20.08|1.39%|0.445|NEWS_FLAT 1, STOP 25, TARGET 6, TIMEOUT 87|fail: profit factor 0.722 < 1.2; expectancy -0.097R < 0.05R
+clock1_A_guards|np1m-rev-c45-m15|110|0.735|-0.089|0.875|1.257|22%|1.12|20.03|1.40%|0.445|NEWS_FLAT 1, STOP 21, TARGET 5, TIMEOUT 83|fail: profit factor 0.735 < 1.2; expectancy -0.089R < 0.05R
+clock1_A_noguards|np1m-brk-c45-m05|119|1.332|0.092|0.873|1.264|98%|1.03|20.09|1.39%|0.555|STOP 21, TARGET 7, TIMEOUT 91|SURVIVES
+clock1_A_noguards|np1m-brk-c45-m15|110|1.298|0.082|0.873|1.255|96%|1.12|20.02|1.40%|0.555|STOP 19, TARGET 6, TIMEOUT 85|SURVIVES
+clock1_A_noguards|np1m-rev-c45-m05|119|0.721|-0.098|0.873|1.264|20%|1.03|20.08|1.39%|0.445|STOP 25, TARGET 6, TIMEOUT 88|fail: profit factor 0.721 < 1.2; expectancy -0.098R < 0.05R
+clock1_A_noguards|np1m-rev-c45-m15|110|0.734|-0.089|0.873|1.255|22%|1.12|20.03|1.40%|0.445|STOP 21, TARGET 5, TIMEOUT 84|fail: profit factor 0.734 < 1.2; expectancy -0.089R < 0.05R
+clock1_B_guards|np1m-brk-c45-m05|126|0.836|-0.035|0.924|1.615|40%|0.37 UNMATCHED|10.59|2.64%|0.603|STOP 27, TARGET 8, TIMEOUT 91|fail: profit factor 0.836 < 1.2; expectancy -0.035R < 0.05R
+clock1_B_guards|np1m-brk-c45-m15|113|0.814|-0.043|0.937|1.601|33%|0.37 UNMATCHED|10.46|2.68%|0.611|STOP 23, TARGET 6, TIMEOUT 84|fail: profit factor 0.814 < 1.2; expectancy -0.043R < 0.05R
+clock1_B_guards|np1m-rev-c45-m05|126|0.956|-0.027|0.923|1.615|52%|0.37 UNMATCHED|10.57|2.65%|0.397|STOP 26, TARGET 5, TIMEOUT 95|fail: profit factor 0.956 < 1.2; expectancy -0.027R < 0.05R
+clock1_B_guards|np1m-rev-c45-m15|113|0.916|-0.036|0.909|1.587|50%|0.37 UNMATCHED|10.46|2.68%|0.389|STOP 23, TARGET 3, TIMEOUT 87|fail: profit factor 0.916 < 1.2; expectancy -0.036R < 0.05R
+clock1_B_noguards|np1m-brk-c45-m05|126|0.878|-0.035|0.917|1.609|44%|0.37 UNMATCHED|10.59|2.64%|0.603|STOP 27, TARGET 8, TIMEOUT 91|fail: profit factor 0.878 < 1.2; expectancy -0.035R < 0.05R
+clock1_B_noguards|np1m-brk-c45-m15|113|0.847|-0.043|0.927|1.590|41%|0.37 UNMATCHED|10.46|2.68%|0.611|STOP 23, TARGET 6, TIMEOUT 84|fail: profit factor 0.847 < 1.2; expectancy -0.043R < 0.05R
+clock1_B_noguards|np1m-rev-c45-m05|126|0.904|-0.027|0.917|1.608|48%|0.37 UNMATCHED|10.57|2.65%|0.397|STOP 26, TARGET 5, TIMEOUT 95|fail: profit factor 0.904 < 1.2; expectancy -0.027R < 0.05R
+clock1_B_noguards|np1m-rev-c45-m15|113|0.872|-0.036|0.894|1.573|46%|0.37 UNMATCHED|10.46|2.68%|0.389|STOP 23, TARGET 3, TIMEOUT 87|fail: profit factor 0.872 < 1.2; expectancy -0.036R < 0.05R
+clock5_A_guards|np5m-brk-c45-m05|118|1.440|0.108|0.914|1.291|97%|1.04|21.05|1.33%|0.559|NEWS_FLAT 1, STOP 16, TARGET 6, TIMEOUT 95|SURVIVES
+clock5_A_guards|np5m-brk-c45-m15|99|1.446|0.095|0.931|1.362|96%|1.24|21.48|1.30%|0.556|NEWS_FLAT 1, STOP 10, TARGET 3, TIMEOUT 85|SURVIVES
+clock5_A_guards|np5m-rev-c45-m05|118|0.658|-0.109|0.915|1.307|6%|1.04|20.93|1.34%|0.441|NEWS_FLAT 1, STOP 23, TARGET 3, TIMEOUT 91|fail: profit factor 0.658 < 1.2; expectancy -0.109R < 0.05R
+clock5_A_guards|np5m-rev-c45-m15|99|0.609|-0.119|0.930|1.362|4%|1.24|21.35|1.31%|0.444|NEWS_FLAT 1, STOP 17, TARGET 2, TIMEOUT 79|fail: profit factor 0.609 < 1.2; expectancy -0.119R < 0.05R
+clock5_A_noguards|np5m-brk-c45-m05|118|1.444|0.108|0.917|1.291|97%|1.04|21.05|1.33%|0.559|STOP 16, TARGET 6, TIMEOUT 96|SURVIVES
+clock5_A_noguards|np5m-brk-c45-m15|99|1.450|0.095|0.931|1.367|96%|1.24|21.48|1.30%|0.556|STOP 10, TARGET 3, TIMEOUT 86|SURVIVES
+clock5_A_noguards|np5m-rev-c45-m05|118|0.656|-0.110|0.916|1.311|6%|1.04|20.93|1.34%|0.441|STOP 23, TARGET 3, TIMEOUT 92|fail: profit factor 0.656 < 1.2; expectancy -0.110R < 0.05R
+clock5_A_noguards|np5m-rev-c45-m15|99|0.607|-0.120|0.932|1.367|4%|1.24|21.35|1.31%|0.444|STOP 17, TARGET 2, TIMEOUT 80|fail: profit factor 0.607 < 1.2; expectancy -0.120R < 0.05R
+clock5_B_guards|np5m-brk-c45-m05|115|0.838|-0.035|0.950|1.644|34%|0.37 UNMATCHED|11.04|2.54%|0.617|STOP 22, TARGET 6, TIMEOUT 87|fail: profit factor 0.838 < 1.2; expectancy -0.035R < 0.05R
+clock5_B_guards|np5m-brk-c45-m15|92|0.756|-0.065|0.937|1.886|32%|0.38 UNMATCHED|11.96|2.34%|0.587|STOP 16, TARGET 3, TIMEOUT 73|fail: profit factor 0.756 < 1.2; expectancy -0.065R < 0.05R
+clock5_B_guards|np5m-rev-c45-m05|115|0.971|-0.017|0.956|1.646|52%|0.37 UNMATCHED|11.06|2.53%|0.383|STOP 17, TARGET 4, TIMEOUT 94|fail: profit factor 0.971 < 1.2; expectancy -0.017R < 0.05R
+clock5_B_guards|np5m-rev-c45-m15|92|1.071|0.014|0.938|1.887|64%|0.38 UNMATCHED|11.88|2.36%|0.413|STOP 10, TARGET 2, TIMEOUT 80|fail: profit factor 1.071 < 1.2; expectancy 0.014R < 0.05R
+clock5_B_noguards|np5m-brk-c45-m05|115|0.869|-0.035|0.939|1.655|40%|0.37 UNMATCHED|11.04|2.54%|0.617|STOP 22, TARGET 6, TIMEOUT 87|fail: profit factor 0.869 < 1.2; expectancy -0.035R < 0.05R
+clock5_B_noguards|np5m-brk-c45-m15|92|0.754|-0.065|0.937|1.892|32%|0.38 UNMATCHED|11.96|2.34%|0.587|STOP 16, TARGET 3, TIMEOUT 73|fail: profit factor 0.754 < 1.2; expectancy -0.065R < 0.05R
+clock5_B_noguards|np5m-rev-c45-m05|115|0.931|-0.017|0.944|1.656|49%|0.37 UNMATCHED|11.06|2.53%|0.383|STOP 17, TARGET 4, TIMEOUT 94|fail: profit factor 0.931 < 1.2; expectancy -0.017R < 0.05R
+clock5_B_noguards|np5m-rev-c45-m15|92|1.051|0.014|0.938|1.892|62%|0.38 UNMATCHED|11.88|2.36%|0.413|STOP 10, TARGET 2, TIMEOUT 80|fail: profit factor 1.051 < 1.2; expectancy 0.014R < 0.05R
+plumb_1m|np1m-brk-p1-m05|120|0.766|-0.132|0.933|1.179|10%|1.02|10.16|2.76%|0.542|STOP 68, TARGET 23, TIMEOUT 29|fail: profit factor 0.766 < 1.2; expectancy -0.132R < 0.05R
+plumb_1m|np1m-brk-p1-m15|111|0.882|-0.060|0.897|1.123|45%|1.11|10.26|2.73%|0.541|STOP 59, TARGET 23, TIMEOUT 29|fail: profit factor 0.882 < 1.2; expectancy -0.060R < 0.05R
+plumb_1m|np1m-rev-p1-m05|120|1.005|0.010|0.934|1.181|65%|1.02|10.19|2.75%|0.458|STOP 58, TARGET 30, TIMEOUT 32|fail: profit factor 1.005 < 1.2; expectancy 0.010R < 0.05R
+plumb_1m|np1m-rev-p1-m15|111|0.932|-0.033|0.899|1.124|60%|1.11|10.35|2.71%|0.459|STOP 54, TARGET 25, TIMEOUT 32|fail: profit factor 0.932 < 1.2; expectancy -0.033R < 0.05R
+plumb_1m|np1m-brk-p2-m05|119|1.025|0.019|0.941|1.114|65%|1.03|11.00|2.55%|0.529|STOP 57, TARGET 25, TIMEOUT 37|fail: profit factor 1.025 < 1.2; expectancy 0.019R < 0.05R
+plumb_1m|np1m-brk-p2-m15|109|1.014|0.013|0.939|1.111|60%|1.13|12.23|2.29%|0.532|STOP 52, TARGET 22, TIMEOUT 35|fail: profit factor 1.014 < 1.2; expectancy 0.013R < 0.05R
+plumb_1m|np1m-rev-p2-m05|119|0.879|-0.060|0.940|1.113|35%|1.03|11.17|2.51%|0.471|STOP 58, TARGET 24, TIMEOUT 37|fail: profit factor 0.879 < 1.2; expectancy -0.060R < 0.05R
+plumb_1m|np1m-rev-p2-m15|109|0.914|-0.039|0.938|1.102|50%|1.13|12.23|2.29%|0.468|STOP 51, TARGET 22, TIMEOUT 36|fail: profit factor 0.914 < 1.2; expectancy -0.039R < 0.05R
+plumb_1m|np1m-brk-p4-m05|117|0.781|-0.109|0.921|1.137|10%|1.05|13.39|2.09%|0.581|STOP 57, TARGET 11, TIMEOUT 49|fail: profit factor 0.781 < 1.2; expectancy -0.109R < 0.05R
+plumb_1m|np1m-brk-p4-m15|115|0.786|-0.106|0.921|1.137|15%|1.07|13.43|2.08%|0.583|STOP 56, TARGET 11, TIMEOUT 48|fail: profit factor 0.786 < 1.2; expectancy -0.106R < 0.05R
+plumb_1m|np1m-rev-p4-m05|117|1.133|0.069|0.922|1.139|90%|1.05|13.29|2.11%|0.419|STOP 45, TARGET 26, TIMEOUT 46|fail: profit factor 1.133 < 1.2
+plumb_1m|np1m-rev-p4-m15|115|1.176|0.088|0.921|1.137|95%|1.07|13.32|2.10%|0.417|STOP 43, TARGET 26, TIMEOUT 46|fail: profit factor 1.176 < 1.2
+probe1_A_guards|np1m-brk-p1-m05|0|NaN|NaN|NaN|NaN|null|NaN UNMATCHED|NaN|NaN%|NaN|no exits recorded|fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+probe1_A_guards|np1m-brk-p1-m15|0|NaN|NaN|NaN|NaN|null|NaN UNMATCHED|NaN|NaN%|NaN|no exits recorded|fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+probe1_A_guards|np1m-rev-p1-m05|0|NaN|NaN|NaN|NaN|null|NaN UNMATCHED|NaN|NaN%|NaN|no exits recorded|fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+probe1_A_guards|np1m-rev-p1-m15|0|NaN|NaN|NaN|NaN|null|NaN UNMATCHED|NaN|NaN%|NaN|no exits recorded|fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+probe1_A_guards|np1m-brk-p2-m05|0|NaN|NaN|NaN|NaN|null|NaN UNMATCHED|NaN|NaN%|NaN|no exits recorded|fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+probe1_A_guards|np1m-brk-p2-m15|0|NaN|NaN|NaN|NaN|null|NaN UNMATCHED|NaN|NaN%|NaN|no exits recorded|fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+probe1_A_guards|np1m-rev-p2-m05|0|NaN|NaN|NaN|NaN|null|NaN UNMATCHED|NaN|NaN%|NaN|no exits recorded|fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+probe1_A_guards|np1m-rev-p2-m15|0|NaN|NaN|NaN|NaN|null|NaN UNMATCHED|NaN|NaN%|NaN|no exits recorded|fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+probe1_A_guards|np1m-brk-p4-m05|0|NaN|NaN|NaN|NaN|null|NaN UNMATCHED|NaN|NaN%|NaN|no exits recorded|fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+probe1_A_guards|np1m-brk-p4-m15|0|NaN|NaN|NaN|NaN|null|NaN UNMATCHED|NaN|NaN%|NaN|no exits recorded|fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+probe1_A_guards|np1m-rev-p4-m05|0|NaN|NaN|NaN|NaN|null|NaN UNMATCHED|NaN|NaN%|NaN|no exits recorded|fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+probe1_A_guards|np1m-rev-p4-m15|0|NaN|NaN|NaN|NaN|null|NaN UNMATCHED|NaN|NaN%|NaN|no exits recorded|fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+probe1_A_noguards|np1m-brk-p1-m05|120|0.766|-0.132|0.934|1.286|12%|1.02|10.16|2.76%|0.542|STOP 68, TARGET 23, TIMEOUT 29|fail: profit factor 0.766 < 1.2; expectancy -0.132R < 0.05R
+probe1_A_noguards|np1m-brk-p1-m15|111|0.882|-0.060|0.912|1.250|44%|1.11|10.26|2.73%|0.541|STOP 59, TARGET 23, TIMEOUT 29|fail: profit factor 0.882 < 1.2; expectancy -0.060R < 0.05R
+probe1_A_noguards|np1m-rev-p1-m05|120|1.005|0.010|0.935|1.287|64%|1.02|10.19|2.75%|0.458|STOP 58, TARGET 30, TIMEOUT 32|fail: profit factor 1.005 < 1.2; expectancy 0.010R < 0.05R
+probe1_A_noguards|np1m-rev-p1-m15|111|0.932|-0.033|0.923|1.264|52%|1.11|10.35|2.71%|0.459|STOP 54, TARGET 25, TIMEOUT 32|fail: profit factor 0.932 < 1.2; expectancy -0.033R < 0.05R
+probe1_A_noguards|np1m-brk-p2-m05|119|1.025|0.019|0.996|1.311|56%|1.03|11.00|2.55%|0.529|STOP 57, TARGET 25, TIMEOUT 37|fail: profit factor 1.025 < 1.2; expectancy 0.019R < 0.05R
+probe1_A_noguards|np1m-brk-p2-m15|109|1.014|0.013|1.009|1.327|51%|1.13|12.23|2.29%|0.532|STOP 52, TARGET 22, TIMEOUT 35|fail: profit factor 1.014 < 1.2; expectancy 0.013R < 0.05R
+probe1_A_noguards|np1m-rev-p2-m05|119|0.879|-0.060|1.011|1.330|28%|1.03|11.17|2.51%|0.471|STOP 58, TARGET 24, TIMEOUT 37|fail: profit factor 0.879 < 1.2; expectancy -0.060R < 0.05R
+probe1_A_noguards|np1m-rev-p2-m15|109|0.914|-0.039|1.008|1.317|32%|1.13|12.23|2.29%|0.468|STOP 51, TARGET 22, TIMEOUT 36|fail: profit factor 0.914 < 1.2; expectancy -0.039R < 0.05R
+probe1_A_noguards|np1m-brk-p4-m05|117|0.781|-0.109|0.971|1.246|12%|1.05|13.39|2.09%|0.581|STOP 57, TARGET 11, TIMEOUT 49|fail: profit factor 0.781 < 1.2; expectancy -0.109R < 0.05R
+probe1_A_noguards|np1m-brk-p4-m15|115|0.786|-0.106|0.971|1.246|13%|1.07|13.43|2.08%|0.583|STOP 56, TARGET 11, TIMEOUT 48|fail: profit factor 0.786 < 1.2; expectancy -0.106R < 0.05R
+probe1_A_noguards|np1m-rev-p4-m05|117|1.133|0.069|0.973|1.249|80%|1.05|13.29|2.11%|0.419|STOP 45, TARGET 26, TIMEOUT 46|fail: profit factor 1.133 < 1.2
+probe1_A_noguards|np1m-rev-p4-m15|115|1.176|0.088|0.971|1.246|88%|1.07|13.32|2.10%|0.417|STOP 43, TARGET 26, TIMEOUT 46|fail: profit factor 1.176 < 1.2
+probe1_B_guards|np1m-brk-p1-m05|0|NaN|NaN|NaN|NaN|null|NaN UNMATCHED|NaN|NaN%|NaN|no exits recorded|fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+probe1_B_guards|np1m-brk-p1-m15|0|NaN|NaN|NaN|NaN|null|NaN UNMATCHED|NaN|NaN%|NaN|no exits recorded|fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+probe1_B_guards|np1m-rev-p1-m05|0|NaN|NaN|NaN|NaN|null|NaN UNMATCHED|NaN|NaN%|NaN|no exits recorded|fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+probe1_B_guards|np1m-rev-p1-m15|0|NaN|NaN|NaN|NaN|null|NaN UNMATCHED|NaN|NaN%|NaN|no exits recorded|fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+probe1_B_guards|np1m-brk-p2-m05|0|NaN|NaN|NaN|NaN|null|NaN UNMATCHED|NaN|NaN%|NaN|no exits recorded|fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+probe1_B_guards|np1m-brk-p2-m15|0|NaN|NaN|NaN|NaN|null|NaN UNMATCHED|NaN|NaN%|NaN|no exits recorded|fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+probe1_B_guards|np1m-rev-p2-m05|0|NaN|NaN|NaN|NaN|null|NaN UNMATCHED|NaN|NaN%|NaN|no exits recorded|fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+probe1_B_guards|np1m-rev-p2-m15|0|NaN|NaN|NaN|NaN|null|NaN UNMATCHED|NaN|NaN%|NaN|no exits recorded|fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+probe1_B_guards|np1m-brk-p4-m05|0|NaN|NaN|NaN|NaN|null|NaN UNMATCHED|NaN|NaN%|NaN|no exits recorded|fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+probe1_B_guards|np1m-brk-p4-m15|0|NaN|NaN|NaN|NaN|null|NaN UNMATCHED|NaN|NaN%|NaN|no exits recorded|fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+probe1_B_guards|np1m-rev-p4-m05|0|NaN|NaN|NaN|NaN|null|NaN UNMATCHED|NaN|NaN%|NaN|no exits recorded|fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+probe1_B_guards|np1m-rev-p4-m15|0|NaN|NaN|NaN|NaN|null|NaN UNMATCHED|NaN|NaN%|NaN|no exits recorded|fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+probe1_B_noguards|np1m-brk-p1-m05|122|0.849|-0.085|0.810|1.065|58%|1.07|4.99|5.62%|0.566|STOP 69, TARGET 28, TIMEOUT 25|fail: profit factor 0.849 < 1.2; expectancy -0.085R < 0.05R
+probe1_B_noguards|np1m-brk-p1-m15|101|0.846|-0.084|0.830|1.130|54%|1.29 UNMATCHED|5.19|5.39%|0.584|STOP 56, TARGET 22, TIMEOUT 23|fail: profit factor 0.846 < 1.2; expectancy -0.084R < 0.05R
+probe1_B_noguards|np1m-rev-p1-m05|122|0.876|-0.064|0.879|1.149|50%|1.07|4.86|5.77%|0.434|STOP 70, TARGET 36, TIMEOUT 16|fail: profit factor 0.876 < 1.2; expectancy -0.064R < 0.05R
+probe1_B_noguards|np1m-rev-p1-m15|101|0.850|-0.081|0.819|1.086|60%|1.29 UNMATCHED|5.03|5.57%|0.416|STOP 57, TARGET 28, TIMEOUT 16|fail: profit factor 0.850 < 1.2; expectancy -0.081R < 0.05R
+probe1_B_noguards|np1m-brk-p2-m05|120|0.786|-0.110|0.728|0.976|69%|1.08|5.61|5.00%|0.575|STOP 63, TARGET 22, TIMEOUT 35|fail: profit factor 0.786 < 1.2; expectancy -0.110R < 0.05R
+probe1_B_noguards|np1m-brk-p2-m15|100|0.856|-0.067|0.792|1.054|72%|1.30 UNMATCHED|6.34|4.42%|0.590|STOP 49, TARGET 17, TIMEOUT 34|fail: profit factor 0.856 < 1.2; expectancy -0.067R < 0.05R
+probe1_B_noguards|np1m-rev-p2-m05|120|0.900|-0.046|0.747|1.006|83%|1.08|5.69|4.92%|0.425|STOP 54, TARGET 28, TIMEOUT 38|fail: profit factor 0.900 < 1.2; expectancy -0.046R < 0.05R
+probe1_B_noguards|np1m-rev-p2-m15|100|0.781|-0.112|0.801|1.077|43%|1.30 UNMATCHED|6.52|4.29%|0.410|STOP 45, TARGET 20, TIMEOUT 35|fail: profit factor 0.781 < 1.2; expectancy -0.112R < 0.05R
+probe1_B_noguards|np1m-brk-p4-m05|123|0.873|-0.057|0.770|1.030|76%|1.06|6.73|4.16%|0.569|STOP 60, TARGET 23, TIMEOUT 40|fail: profit factor 0.873 < 1.2; expectancy -0.057R < 0.05R
+probe1_B_noguards|np1m-brk-p4-m15|106|0.994|0.003|0.780|1.033|90%|1.23|6.83|4.10%|0.575|STOP 47, TARGET 20, TIMEOUT 39|fail: profit factor 0.994 < 1.2; expectancy 0.003R < 0.05R
+probe1_B_noguards|np1m-rev-p4-m05|123|0.724|-0.142|0.771|1.031|37%|1.06|6.71|4.17%|0.431|STOP 54, TARGET 20, TIMEOUT 49|fail: profit factor 0.724 < 1.2; expectancy -0.142R < 0.05R
+probe1_B_noguards|np1m-rev-p4-m15|106|0.622|-0.202|0.775|1.024|14%|1.23|6.83|4.10%|0.425|STOP 47, TARGET 14, TIMEOUT 45|fail: profit factor 0.622 < 1.2; expectancy -0.202R < 0.05R
+probe5_A_guards|np5m-brk-p1-m05|0|NaN|NaN|NaN|NaN|null|NaN UNMATCHED|NaN|NaN%|NaN|no exits recorded|fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+probe5_A_guards|np5m-brk-p1-m15|0|NaN|NaN|NaN|NaN|null|NaN UNMATCHED|NaN|NaN%|NaN|no exits recorded|fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+probe5_A_guards|np5m-rev-p1-m05|0|NaN|NaN|NaN|NaN|null|NaN UNMATCHED|NaN|NaN%|NaN|no exits recorded|fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+probe5_A_guards|np5m-rev-p1-m15|0|NaN|NaN|NaN|NaN|null|NaN UNMATCHED|NaN|NaN%|NaN|no exits recorded|fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+probe5_A_guards|np5m-brk-p2-m05|0|NaN|NaN|NaN|NaN|null|NaN UNMATCHED|NaN|NaN%|NaN|no exits recorded|fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+probe5_A_guards|np5m-brk-p2-m15|0|NaN|NaN|NaN|NaN|null|NaN UNMATCHED|NaN|NaN%|NaN|no exits recorded|fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+probe5_A_guards|np5m-rev-p2-m05|0|NaN|NaN|NaN|NaN|null|NaN UNMATCHED|NaN|NaN%|NaN|no exits recorded|fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+probe5_A_guards|np5m-rev-p2-m15|0|NaN|NaN|NaN|NaN|null|NaN UNMATCHED|NaN|NaN%|NaN|no exits recorded|fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+probe5_A_guards|np5m-brk-p4-m05|0|NaN|NaN|NaN|NaN|null|NaN UNMATCHED|NaN|NaN%|NaN|no exits recorded|fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+probe5_A_guards|np5m-brk-p4-m15|0|NaN|NaN|NaN|NaN|null|NaN UNMATCHED|NaN|NaN%|NaN|no exits recorded|fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+probe5_A_guards|np5m-rev-p4-m05|0|NaN|NaN|NaN|NaN|null|NaN UNMATCHED|NaN|NaN%|NaN|no exits recorded|fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+probe5_A_guards|np5m-rev-p4-m15|0|NaN|NaN|NaN|NaN|null|NaN UNMATCHED|NaN|NaN%|NaN|no exits recorded|fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+probe5_A_noguards|np5m-brk-p1-m05|112|0.923|-0.034|1.053|1.474|22%|1.10|13.03|2.15%|0.571|STOP 51, TARGET 15, TIMEOUT 46|fail: profit factor 0.923 < 1.2; expectancy -0.034R < 0.05R
+probe5_A_noguards|np5m-brk-p1-m15|97|0.899|-0.045|1.070|1.479|18%|1.27 UNMATCHED|14.15|1.98%|0.598|STOP 44, TARGET 12, TIMEOUT 41|fail: profit factor 0.899 < 1.2; expectancy -0.045R < 0.05R
+probe5_A_noguards|np5m-rev-p1-m05|112|1.017|0.014|1.046|1.475|40%|1.10|13.16|2.13%|0.429|STOP 44, TARGET 23, TIMEOUT 45|fail: profit factor 1.017 < 1.2; expectancy 0.014R < 0.05R
+probe5_A_noguards|np5m-rev-p1-m15|97|1.067|0.037|1.070|1.479|49%|1.27 UNMATCHED|14.09|1.99%|0.402|STOP 35, TARGET 19, TIMEOUT 43|fail: profit factor 1.067 < 1.2; expectancy 0.037R < 0.05R
+probe5_A_noguards|np5m-brk-p2-m05|112|0.890|-0.048|1.056|1.553|19%|0.82|15.39|1.82%|0.589|STOP 47, TARGET 12, TIMEOUT 53|fail: profit factor 0.890 < 1.2; expectancy -0.048R < 0.05R
+probe5_A_noguards|np5m-brk-p2-m15|102|0.968|-0.010|1.056|1.588|37%|0.82|15.79|1.77%|0.578|STOP 40, TARGET 11, TIMEOUT 51|fail: profit factor 0.968 < 1.2; expectancy -0.010R < 0.05R
+probe5_A_noguards|np5m-rev-p2-m05|112|1.298|0.124|1.029|1.510|84%|0.82|15.41|1.82%|0.411|STOP 36, TARGET 21, TIMEOUT 55|gate pass, inside the noise
+probe5_A_noguards|np5m-rev-p2-m15|102|1.144|0.065|1.058|1.591|60%|0.82|15.69|1.79%|0.422|STOP 33, TARGET 16, TIMEOUT 53|fail: profit factor 1.144 < 1.2
+probe5_A_noguards|np5m-brk-p4-m05|118|0.888|-0.044|1.064|1.531|24%|0.82|17.84|1.57%|0.593|STOP 46, TARGET 15, TIMEOUT 57|fail: profit factor 0.888 < 1.2; expectancy -0.044R < 0.05R
+probe5_A_noguards|np5m-brk-p4-m15|99|0.957|-0.013|1.019|1.557|42%|0.82|18.60|1.51%|0.576|STOP 36, TARGET 11, TIMEOUT 52|fail: profit factor 0.957 < 1.2; expectancy -0.013R < 0.05R
+probe5_A_noguards|np5m-rev-p4-m05|118|1.249|0.098|1.064|1.531|76%|0.82|17.85|1.57%|0.407|STOP 30, TARGET 16, TIMEOUT 72|gate pass, inside the noise
+probe5_A_noguards|np5m-rev-p4-m15|99|1.071|0.032|1.033|1.553|57%|0.82|18.65|1.50%|0.424|STOP 24, TARGET 10, TIMEOUT 65|fail: profit factor 1.071 < 1.2; expectancy 0.032R < 0.05R
+probe5_B_guards|np5m-brk-p1-m05|0|NaN|NaN|NaN|NaN|null|NaN UNMATCHED|NaN|NaN%|NaN|no exits recorded|fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+probe5_B_guards|np5m-brk-p1-m15|0|NaN|NaN|NaN|NaN|null|NaN UNMATCHED|NaN|NaN%|NaN|no exits recorded|fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+probe5_B_guards|np5m-rev-p1-m05|0|NaN|NaN|NaN|NaN|null|NaN UNMATCHED|NaN|NaN%|NaN|no exits recorded|fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+probe5_B_guards|np5m-rev-p1-m15|0|NaN|NaN|NaN|NaN|null|NaN UNMATCHED|NaN|NaN%|NaN|no exits recorded|fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+probe5_B_guards|np5m-brk-p2-m05|0|NaN|NaN|NaN|NaN|null|NaN UNMATCHED|NaN|NaN%|NaN|no exits recorded|fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+probe5_B_guards|np5m-brk-p2-m15|0|NaN|NaN|NaN|NaN|null|NaN UNMATCHED|NaN|NaN%|NaN|no exits recorded|fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+probe5_B_guards|np5m-rev-p2-m05|0|NaN|NaN|NaN|NaN|null|NaN UNMATCHED|NaN|NaN%|NaN|no exits recorded|fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+probe5_B_guards|np5m-rev-p2-m15|0|NaN|NaN|NaN|NaN|null|NaN UNMATCHED|NaN|NaN%|NaN|no exits recorded|fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+probe5_B_guards|np5m-brk-p4-m05|0|NaN|NaN|NaN|NaN|null|NaN UNMATCHED|NaN|NaN%|NaN|no exits recorded|fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+probe5_B_guards|np5m-brk-p4-m15|0|NaN|NaN|NaN|NaN|null|NaN UNMATCHED|NaN|NaN%|NaN|no exits recorded|fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+probe5_B_guards|np5m-rev-p4-m05|0|NaN|NaN|NaN|NaN|null|NaN UNMATCHED|NaN|NaN%|NaN|no exits recorded|fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+probe5_B_guards|np5m-rev-p4-m15|0|NaN|NaN|NaN|NaN|null|NaN UNMATCHED|NaN|NaN%|NaN|no exits recorded|fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+probe5_B_noguards|np5m-brk-p1-m05|113|0.736|-0.130|0.844|1.203|22%|1.15|7.25|3.86%|0.584|STOP 56, TARGET 18, TIMEOUT 39|fail: profit factor 0.736 < 1.2; expectancy -0.130R < 0.05R
+probe5_B_noguards|np5m-brk-p1-m15|89|0.832|-0.074|0.898|1.259|34%|1.46 UNMATCHED|7.73|3.62%|0.607|STOP 40, TARGET 14, TIMEOUT 35|fail: profit factor 0.832 < 1.2; expectancy -0.074R < 0.05R
+probe5_B_noguards|np5m-rev-p1-m05|113|0.717|-0.146|0.844|1.203|18%|1.15|7.19|3.89%|0.416|STOP 45, TARGET 16, TIMEOUT 52|fail: profit factor 0.717 < 1.2; expectancy -0.146R < 0.05R
+probe5_B_noguards|np5m-rev-p1-m15|89|0.656|-0.171|0.910|1.289|4%|1.46 UNMATCHED|7.75|3.61%|0.393|STOP 33, TARGET 10, TIMEOUT 46|fail: profit factor 0.656 < 1.2; expectancy -0.171R < 0.05R
+probe5_B_noguards|np5m-brk-p2-m05|115|1.015|0.011|0.849|1.133|84%|1.13|8.09|3.46%|0.626|STOP 46, TARGET 13, TIMEOUT 56|fail: profit factor 1.015 < 1.2; expectancy 0.011R < 0.05R
+probe5_B_noguards|np5m-brk-p2-m15|94|1.015|0.011|0.880|1.187|76%|1.38 UNMATCHED|8.17|3.43%|0.670|STOP 36, TARGET 10, TIMEOUT 48|fail: profit factor 1.015 < 1.2; expectancy 0.011R < 0.05R
+probe5_B_noguards|np5m-rev-p2-m05|115|0.601|-0.207|0.859|1.151|2%|1.13|8.09|3.46%|0.374|STOP 50, TARGET 11, TIMEOUT 54|fail: profit factor 0.601 < 1.2; expectancy -0.207R < 0.05R
+probe5_B_noguards|np5m-rev-p2-m15|94|0.624|-0.185|0.879|1.186|4%|1.38 UNMATCHED|8.15|3.44%|0.330|STOP 38, TARGET 10, TIMEOUT 46|fail: profit factor 0.624 < 1.2; expectancy -0.185R < 0.05R
+probe5_B_noguards|np5m-brk-p4-m05|113|0.894|-0.036|0.882|1.235|54%|0.87|8.61|3.25%|0.655|STOP 36, TARGET 8, TIMEOUT 69|fail: profit factor 0.894 < 1.2; expectancy -0.036R < 0.05R
+probe5_B_noguards|np5m-brk-p4-m15|93|0.833|-0.058|0.922|1.392|34%|0.87|9.90|2.83%|0.677|STOP 29, TARGET 5, TIMEOUT 59|fail: profit factor 0.833 < 1.2; expectancy -0.058R < 0.05R
+probe5_B_noguards|np5m-rev-p4-m05|113|0.757|-0.104|0.881|1.234|28%|0.87|8.61|3.25%|0.345|STOP 38, TARGET 10, TIMEOUT 65|fail: profit factor 0.757 < 1.2; expectancy -0.104R < 0.05R
+probe5_B_noguards|np5m-rev-p4-m15|93|0.779|-0.088|0.919|1.389|26%|0.87|9.94|2.82%|0.323|STOP 28, TARGET 7, TIMEOUT 58|fail: profit factor 0.779 < 1.2; expectancy -0.088R < 0.05R
+
+TOTAL (run,row) cells seen: 200

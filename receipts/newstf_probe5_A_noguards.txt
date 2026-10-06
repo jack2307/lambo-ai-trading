@@ -1,0 +1,137 @@
+market:   xauduka 5m
+data:     E:/rust/flowdesk/data (bars from E:/rust/flowdesk/data\bars\XAUDUKA-5m.parquet)
+bounds:   --from=2022-01-01 --to=2026-01-01 kept 281178 of 1135389 bars
+spread:   0.28 per round trip
+trail:    off
+max hold: 4 h (14400000 ms) from [trading] max_hold_ms, no per-market override
+bars:     281178 from 2022-01-02 23:00 to 2025-12-31 21:55
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+companion: none loaded — every cmp series is NaN
+guards: off (every number unguarded)
+null sides: coin - 50/50, carries no drift; the null every published percentile was read against
+
+== hypotheses `receipts/newstf-5m-probe.toml`: 12 declared, FIXED parameters over the whole window (no selection), each against 200 matched null runs ==
+null sides: coin (50/50, carries no drift; the null every published percentile was read against)
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+guards: off (every number unguarded)
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+np5m-brk-p1-m05 news-pulse            112   0.923  -0.034    1.053    1.474        0   22%  fail: profit factor 0.923 < 1.2; expectancy -0.034R < 0.05R
+                                entries ONLY +0 to +5 min from a high-impact release (USD)  — the first move after a scheduled release persists; probe 1 bar(s) of 5m = the signal bar opens +0 min from the release, gate 0.5 pre-release ATR(14) of 5m bars. The filter admits exactly that one bar, so the matched null draws from the same bar after the same release.
+                                matched null 123 trades median vs the method's 112 — count match 1.10
+                                long share: method 0.571 vs the null's median 0.496
+                                spread paid: method 268.01 USD vs the null's median 261.20 USD — cost match 0.97
+                                exposure: signed share of time method +0.098 vs the null's -0.013; time in market method 15470 min vs the null's median 18952 min — ratio 1.23  ** the control did not collect the drift the method did **
+                                cost-matched null: control stop 5.642 ATR = 13.03 points, cost 2.15% of R (realised median, structural)
+                                the method's own realised stop: median 5.642 ATR = 13.03 points over 112 trades
+                                exits: STOP 51, TARGET 15, TIMEOUT 46; mean hold 138.1 min
+np5m-brk-p1-m15 news-pulse             97   0.899  -0.045    1.070    1.479        0   18%  fail: profit factor 0.899 < 1.2; expectancy -0.045R < 0.05R
+                                entries ONLY +0 to +5 min from a high-impact release (USD)  — the first move after a scheduled release persists; probe 1 bar(s) of 5m = the signal bar opens +0 min from the release, gate 1.5 pre-release ATR(14) of 5m bars. The filter admits exactly that one bar, so the matched null draws from the same bar after the same release.
+                                matched null 123 trades median vs the method's 97 — count match 1.27  ** outside the band: this percentile is unmatched **
+                                long share: method 0.598 vs the null's median 0.496
+                                spread paid: method 206.39 USD vs the null's median 241.21 USD — cost match 1.17
+                                exposure: signed share of time method +0.142 vs the null's -0.014; time in market method 13710 min vs the null's median 20598 min — ratio 1.50  ** the control did not collect the drift the method did **
+                                cost-matched null: control stop 6.173 ATR = 14.15 points, cost 1.98% of R (realised median, structural)
+                                the method's own realised stop: median 6.173 ATR = 14.15 points over 97 trades
+                                exits: STOP 44, TARGET 12, TIMEOUT 41; mean hold 141.3 min
+np5m-rev-p1-m05 news-pulse            112   1.017   0.014    1.046    1.475        0   40%  fail: profit factor 1.017 < 1.2; expectancy 0.014R < 0.05R
+                                entries ONLY +0 to +5 min from a high-impact release (USD)  — the first move after a scheduled release overshoots and gives it back; probe 1 bar(s) of 5m = the signal bar opens +0 min from the release, gate 0.5 pre-release ATR(14) of 5m bars. The filter admits exactly that one bar, so the matched null draws from the same bar after the same release.
+                                matched null 123 trades median vs the method's 112 — count match 1.10
+                                long share: method 0.429 vs the null's median 0.496
+                                spread paid: method 264.77 USD vs the null's median 261.37 USD — cost match 0.99
+                                exposure: signed share of time method -0.268 vs the null's -0.005; time in market method 16090 min vs the null's median 18825 min — ratio 1.17  ** the control did not collect the drift the method did **
+                                cost-matched null: control stop 5.628 ATR = 13.16 points, cost 2.13% of R (realised median, structural)
+                                the method's own realised stop: median 5.628 ATR = 13.16 points over 112 trades
+                                exits: STOP 44, TARGET 23, TIMEOUT 45; mean hold 143.7 min
+np5m-rev-p1-m15 news-pulse             97   1.067   0.037    1.070    1.479        0   49%  fail: profit factor 1.067 < 1.2; expectancy 0.037R < 0.05R
+                                entries ONLY +0 to +5 min from a high-impact release (USD)  — the first move after a scheduled release overshoots and gives it back; probe 1 bar(s) of 5m = the signal bar opens +0 min from the release, gate 1.5 pre-release ATR(14) of 5m bars. The filter admits exactly that one bar, so the matched null draws from the same bar after the same release.
+                                matched null 123 trades median vs the method's 97 — count match 1.27  ** outside the band: this percentile is unmatched **
+                                long share: method 0.402 vs the null's median 0.496
+                                spread paid: method 217.26 USD vs the null's median 241.21 USD — cost match 1.11
+                                exposure: signed share of time method -0.300 vs the null's -0.014; time in market method 14825 min vs the null's median 20598 min — ratio 1.39  ** the control did not collect the drift the method did **
+                                cost-matched null: control stop 6.173 ATR = 14.09 points, cost 1.99% of R (realised median, structural)
+                                the method's own realised stop: median 6.173 ATR = 14.09 points over 97 trades
+                                exits: STOP 35, TARGET 19, TIMEOUT 43; mean hold 152.8 min
+np5m-brk-p2-m05 news-pulse            112   0.890  -0.048    1.056    1.553        0   19%  fail: profit factor 0.890 < 1.2; expectancy -0.048R < 0.05R
+                                entries ONLY +5 to +10 min from a high-impact release (USD)  — the first move after a scheduled release persists; probe 2 bar(s) of 5m = the signal bar opens +5 min from the release, gate 0.5 pre-release ATR(14) of 5m bars. The filter admits exactly that one bar, so the matched null draws from the same bar after the same release.
+                                matched null 92 trades median vs the method's 112 — count match 0.82
+                                long share: method 0.589 vs the null's median 0.500
+                                spread paid: method 236.49 USD vs the null's median 176.12 USD — cost match 0.74  ** outside the band: the control did not pay what the method paid **
+                                exposure: signed share of time method +0.081 vs the null's -0.003; time in market method 16690 min vs the null's median 15630 min — ratio 0.94  ** the control did not collect the drift the method did **
+                                cost-matched null: control stop 5.523 ATR = 15.39 points, cost 1.82% of R (realised median, structural)
+                                the method's own realised stop: median 5.523 ATR = 15.39 points over 112 trades
+                                exits: STOP 47, TARGET 12, TIMEOUT 53; mean hold 149.0 min
+np5m-brk-p2-m15 news-pulse            102   0.968  -0.010    1.056    1.588        0   37%  fail: profit factor 0.968 < 1.2; expectancy -0.010R < 0.05R
+                                entries ONLY +5 to +10 min from a high-impact release (USD)  — the first move after a scheduled release persists; probe 2 bar(s) of 5m = the signal bar opens +5 min from the release, gate 1.5 pre-release ATR(14) of 5m bars. The filter admits exactly that one bar, so the matched null draws from the same bar after the same release.
+                                matched null 84 trades median vs the method's 102 — count match 0.82
+                                long share: method 0.578 vs the null's median 0.500
+                                spread paid: method 206.96 USD vs the null's median 152.26 USD — cost match 0.74  ** outside the band: the control did not pay what the method paid **
+                                exposure: signed share of time method +0.078 vs the null's -0.018; time in market method 15775 min vs the null's median 14692 min — ratio 0.93  ** the control did not collect the drift the method did **
+                                cost-matched null: control stop 5.848 ATR = 15.79 points, cost 1.77% of R (realised median, structural)
+                                the method's own realised stop: median 5.848 ATR = 15.79 points over 102 trades
+                                exits: STOP 40, TARGET 11, TIMEOUT 51; mean hold 154.7 min
+np5m-rev-p2-m05 news-pulse            112   1.298   0.124    1.029    1.510        0   84%  gate pass, inside the noise
+                                entries ONLY +5 to +10 min from a high-impact release (USD)  — the first move after a scheduled release overshoots and gives it back; probe 2 bar(s) of 5m = the signal bar opens +5 min from the release, gate 0.5 pre-release ATR(14) of 5m bars. The filter admits exactly that one bar, so the matched null draws from the same bar after the same release.
+                                matched null 92 trades median vs the method's 112 — count match 0.82
+                                long share: method 0.411 vs the null's median 0.500
+                                spread paid: method 244.97 USD vs the null's median 176.22 USD — cost match 0.72  ** outside the band: the control did not pay what the method paid **
+                                exposure: signed share of time method -0.181 vs the null's -0.009; time in market method 18050 min vs the null's median 15408 min — ratio 0.85  ** the control did not collect the drift the method did **
+                                cost-matched null: control stop 5.490 ATR = 15.41 points, cost 1.82% of R (realised median, structural)
+                                the method's own realised stop: median 5.490 ATR = 15.41 points over 112 trades
+                                exits: STOP 36, TARGET 21, TIMEOUT 55; mean hold 161.2 min
+np5m-rev-p2-m15 news-pulse            102   1.144   0.065    1.058    1.591        0   60%  fail: profit factor 1.144 < 1.2
+                                entries ONLY +5 to +10 min from a high-impact release (USD)  — the first move after a scheduled release overshoots and gives it back; probe 2 bar(s) of 5m = the signal bar opens +5 min from the release, gate 1.5 pre-release ATR(14) of 5m bars. The filter admits exactly that one bar, so the matched null draws from the same bar after the same release.
+                                matched null 84 trades median vs the method's 102 — count match 0.82
+                                long share: method 0.422 vs the null's median 0.500
+                                spread paid: method 206.85 USD vs the null's median 153.05 USD — cost match 0.74  ** outside the band: the control did not pay what the method paid **
+                                exposure: signed share of time method -0.173 vs the null's -0.018; time in market method 17075 min vs the null's median 14685 min — ratio 0.86  ** the control did not collect the drift the method did **
+                                cost-matched null: control stop 5.820 ATR = 15.69 points, cost 1.79% of R (realised median, structural)
+                                the method's own realised stop: median 5.820 ATR = 15.69 points over 102 trades
+                                exits: STOP 33, TARGET 16, TIMEOUT 53; mean hold 167.4 min
+np5m-brk-p4-m05 news-pulse            118   0.888  -0.044    1.064    1.531        0   24%  fail: profit factor 0.888 < 1.2; expectancy -0.044R < 0.05R
+                                entries ONLY +15 to +20 min from a high-impact release (USD)  — the first move after a scheduled release persists; probe 4 bar(s) of 5m = the signal bar opens +15 min from the release, gate 0.5 pre-release ATR(14) of 5m bars. The filter admits exactly that one bar, so the matched null draws from the same bar after the same release.
+                                matched null 97 trades median vs the method's 118 — count match 0.82
+                                long share: method 0.593 vs the null's median 0.505
+                                spread paid: method 220.75 USD vs the null's median 180.34 USD — cost match 0.82
+                                exposure: signed share of time method +0.117 vs the null's -0.001; time in market method 18295 min vs the null's median 17160 min — ratio 0.94  ** the control did not collect the drift the method did **
+                                cost-matched null: control stop 5.199 ATR = 17.84 points, cost 1.57% of R (realised median, structural)
+                                the method's own realised stop: median 5.199 ATR = 17.84 points over 118 trades
+                                exits: STOP 46, TARGET 15, TIMEOUT 57; mean hold 155.0 min
+np5m-brk-p4-m15 news-pulse             99   0.957  -0.013    1.019    1.557        0   42%  fail: profit factor 0.957 < 1.2; expectancy -0.013R < 0.05R
+                                entries ONLY +15 to +20 min from a high-impact release (USD)  — the first move after a scheduled release persists; probe 4 bar(s) of 5m = the signal bar opens +15 min from the release, gate 1.5 pre-release ATR(14) of 5m bars. The filter admits exactly that one bar, so the matched null draws from the same bar after the same release.
+                                matched null 81 trades median vs the method's 99 — count match 0.82
+                                long share: method 0.576 vs the null's median 0.512
+                                spread paid: method 174.41 USD vs the null's median 137.23 USD — cost match 0.79
+                                exposure: signed share of time method +0.061 vs the null's +0.035; time in market method 16210 min vs the null's median 15642 min — ratio 0.96
+                                cost-matched null: control stop 5.678 ATR = 18.60 points, cost 1.51% of R (realised median, structural)
+                                the method's own realised stop: median 5.678 ATR = 18.60 points over 99 trades
+                                exits: STOP 36, TARGET 11, TIMEOUT 52; mean hold 163.7 min
+np5m-rev-p4-m05 news-pulse            118   1.249   0.098    1.064    1.531        0   76%  gate pass, inside the noise
+                                entries ONLY +15 to +20 min from a high-impact release (USD)  — the first move after a scheduled release overshoots and gives it back; probe 4 bar(s) of 5m = the signal bar opens +15 min from the release, gate 0.5 pre-release ATR(14) of 5m bars. The filter admits exactly that one bar, so the matched null draws from the same bar after the same release.
+                                matched null 97 trades median vs the method's 118 — count match 0.82
+                                long share: method 0.407 vs the null's median 0.505
+                                spread paid: method 247.13 USD vs the null's median 180.50 USD — cost match 0.73  ** outside the band: the control did not pay what the method paid **
+                                exposure: signed share of time method -0.228 vs the null's -0.001; time in market method 20895 min vs the null's median 17160 min — ratio 0.82  ** the control did not collect the drift the method did **
+                                cost-matched null: control stop 5.195 ATR = 17.85 points, cost 1.57% of R (realised median, structural)
+                                the method's own realised stop: median 5.195 ATR = 17.85 points over 118 trades
+                                exits: STOP 30, TARGET 16, TIMEOUT 72; mean hold 177.1 min
+np5m-rev-p4-m15 news-pulse             99   1.071   0.032    1.033    1.553        0   57%  fail: profit factor 1.071 < 1.2; expectancy 0.032R < 0.05R
+                                entries ONLY +15 to +20 min from a high-impact release (USD)  — the first move after a scheduled release overshoots and gives it back; probe 4 bar(s) of 5m = the signal bar opens +15 min from the release, gate 1.5 pre-release ATR(14) of 5m bars. The filter admits exactly that one bar, so the matched null draws from the same bar after the same release.
+                                matched null 81 trades median vs the method's 99 — count match 0.82
+                                long share: method 0.424 vs the null's median 0.512
+                                spread paid: method 183.66 USD vs the null's median 136.70 USD — cost match 0.74  ** outside the band: the control did not pay what the method paid **
+                                exposure: signed share of time method -0.206 vs the null's +0.032; time in market method 18385 min vs the null's median 15702 min — ratio 0.85  ** the control did not collect the drift the method did **
+                                cost-matched null: control stop 5.701 ATR = 18.65 points, cost 1.50% of R (realised median, structural)
+                                the method's own realised stop: median 5.701 ATR = 18.65 points over 99 trades
+                                exits: STOP 24, TARGET 10, TIMEOUT 65; mean hold 185.7 min
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+
