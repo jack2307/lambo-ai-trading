@@ -552,3 +552,22 @@ rows sit, and every row it touches was already in the record.
    run on gold.
 5. **Whether any of this would survive out of sample.** Nothing here was
    proposed, so nothing needed to.
+
+## Note 2026-10-06 (e) — housekeeping, stated rather than left to be found
+
+- `config-nocap/` is a verbatim copy of `config/` with the single
+  `max_hold_ms = 604_800_000` line added under `[markets.xauusd.trading]`. It
+  is committed so the capless receipts can be reproduced. `accounts.toml`
+  inside it is the same password-free file already tracked at
+  `config/accounts.toml` (that file states in its own comments that no
+  password belongs in it), and `config/` itself was not edited.
+- `/e/rust/flowdesk` was read only. The one file with today's timestamp under
+  it is `.git/config`, which git wrote when `git push -u origin agent/m9` set
+  the branch's upstream — this worktree shares that common git dir. No bar,
+  receipt or config of the shared store was touched, and `data-sealed/` was
+  never opened.
+- Disk on E: was 32 GB free at the start and 26 GB at the end, against the
+  brief's 6 GB stop line. This worktree accounts for 43 MB in total, 4.0 MB of
+  it receipts. Nothing was built: no `cargo build`, `cargo test` or
+  `cargo run` was run, and every measurement came from
+  `/e/rust/fd-wt-crt/target/release/search.exe`.
