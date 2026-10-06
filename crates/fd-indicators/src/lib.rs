@@ -251,6 +251,24 @@ pub static INDICATORS: &[IndicatorDef] = &[
         params: &[("period", 96.0)],
         outputs: &["z", "ratio"],
     },
+    // The same standardised level as `ratz`, read off THIS series' own log
+    // close instead of a ratio against a companion — for an instrument that
+    // already IS a ratio. An FX cross quotes one correlated major against
+    // another, so `ln(close)` on AUDNZD is the quantity `ratz` has to build
+    // from two feeds for XAU/XAG, except the venue sells it as one contract
+    // at one spread.
+    //
+    // Deliberately a SEPARATE definition rather than a fallback inside
+    // `ratz`: that one answers all-NaN without a companion on purpose, and a
+    // method that reads two series must not quietly start reading one. Here
+    // one series is the whole claim, so there is nothing to be missing.
+    IndicatorDef {
+        id: "lnz",
+        name: "Own log-price z-score",
+        pane: Pane::Separate,
+        params: &[("period", 96.0)],
+        outputs: &["z"],
+    },
 ];
 
 /// How a DEFINITION behaved on a measured sample. Not a property of it.
@@ -578,11 +596,58 @@ fn compute_one(def: &IndicatorDef, p: &[f64], source: Source, bars: &[Bar]) -> V
                 vec![("z", z), ("ratio", ratio)]
             }
         },
+        // This series' own standardised log level. No companion to align, so
+        // no missing-bar case and no all-NaN answer to give.
+        "lnz" => vec![("z", ln_zscore(bars, period("period")))],
         other => unreachable!("indicator {other} is registered but not implemented"),
     }
 }
 
 /* ---------------- primitives ---------------- */
+
+/// `ln(close)` standardised against its own trailing `period` window.
+///
+/// The window is in logs for the reason [`companion::ratio_zscore`] gives: a
+/// ratio's moves are multiplicative, so a spread measured in logs means the
+/// same thing at 1.05 as at 1.95, and standardising a raw price would read a
+/// drifting level as a permanent extreme.
+///
+/// Causal: bar `i` uses only `[i + 1 - period, i]`, so truncating the series
+/// leaves every earlier value unchanged. Before the first complete window
+/// there is no sample standard deviation, so the answer is `NAN` — **not a
+/// zero z-score**, which would read as "exactly average" and be traded on. A
+/// flat window (`sd == 0`) answers `NAN` for the same reason, and so does a
+/// non-positive close, which has no logarithm.
+#[must_use]
+pub fn ln_zscore(bars: &[Bar], period: usize) -> Vec<f64> {
+    let n = bars.len();
+    let mut z = vec![f64::NAN; n];
+    // Fewer than two observations has no sample standard deviation.
+    if period < 2 || n == 0 {
+        return z;
+    }
+    let mut lc = vec![f64::NAN; n];
+    for (i, bar) in bars.iter().enumerate() {
+        if bar.close > 0.0 {
+            lc[i] = bar.close.ln();
+        }
+    }
+    for i in (period - 1)..n {
+        let window = &lc[i + 1 - period..=i];
+        if window.iter().any(|v| !v.is_finite()) {
+            continue;
+        }
+        let mean = window.iter().sum::<f64>() / period as f64;
+        let var =
+            window.iter().map(|v| (v - mean) * (v - mean)).sum::<f64>() / (period as f64 - 1.0);
+        let sd = var.sqrt();
+        if !(sd > 0.0) {
+            continue;
+        }
+        z[i] = (lc[i] - mean) / sd;
+    }
+    z
+}
 
 /// Last confirmed swing high and low as of each bar, with the bar each formed on.
 ///

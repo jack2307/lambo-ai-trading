@@ -1,0 +1,20 @@
+Canh bao: spread 0.00030 la BAO GIA, khong phai phep do.
+
+=== A 2022-06..2026-05
+  sd cua 1 nen (log)        = 0.000366   = 0.00040 gia   = 4.0 pip
+  stop 1.5 ATR              = 0.000786 gia = 7.9 pip
+  z=1.5 -> ky vong cu di    = 0.000020 gia = 0.20 pip   |  edge = +0.0260 R   |  phi = 0.3816 R   |  RONG = -0.3556 R
+  z=2.0 -> ky vong cu di    = 0.000027 gia = 0.27 pip   |  edge = +0.0346 R   |  phi = 0.3816 R   |  RONG = -0.3469 R
+  z=2.5 -> ky vong cu di    = 0.000034 gia = 0.34 pip   |  edge = +0.0433 R   |  phi = 0.3816 R   |  RONG = -0.3383 R
+  --> o z=2.0 phi hoa von   = 0.000027 gia = 0.27 pip  (bao gia dang dung: 3.00 pip)
+  --> spread phai duoi 0.000027 (0.27 pip) moi co edge duong. Ty le can: 11.0x hep hon bao gia.
+
+=== B 2018-06..2022-06
+  sd cua 1 nen (log)        = 0.000400   = 0.00043 gia   = 4.3 pip
+  stop 1.5 ATR              = 0.000824 gia = 8.2 pip
+  z=1.5 -> ky vong cu di    = 0.000022 gia = 0.22 pip   |  edge = +0.0264 R   |  phi = 0.3640 R   |  RONG = -0.3376 R
+  z=2.0 -> ky vong cu di    = 0.000029 gia = 0.29 pip   |  edge = +0.0352 R   |  phi = 0.3640 R   |  RONG = -0.3288 R
+  z=2.5 -> ky vong cu di    = 0.000036 gia = 0.36 pip   |  edge = +0.0439 R   |  phi = 0.3640 R   |  RONG = -0.3200 R
+  --> o z=2.0 phi hoa von   = 0.000029 gia = 0.29 pip  (bao gia dang dung: 3.00 pip)
+  --> spread phai duoi 0.000029 (0.29 pip) moi co edge duong. Ty le can: 10.4x hep hon bao gia.
+

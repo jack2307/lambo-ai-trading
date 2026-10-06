@@ -92,6 +92,7 @@ pub fn register_all(registry: &mut Registry) {
     // position is ONE LEG and so is not drift-neutral however the signal is
     // computed. Takes no trades without a companion.
     registry.register(Box::new(crate::ratio_reversion::RatioReversion));
+    registry.register(Box::new(crate::cross_reversion::CrossReversion));
     // Multi-day. Its sizing parameters are named so `control_for` copies them
     // onto the null, which is how a method should close the not-cost-matched
     // hole rather than use it.

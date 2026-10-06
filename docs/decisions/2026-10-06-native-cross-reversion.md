@@ -153,3 +153,105 @@ lot từ receipt này.
 
 **Đa phép thử cập nhật:** 216 ô cổng gốc **+ 216 ô arm swap = 432 ô**, cộng
 quạt spread (khai sau khi biết mức nào đáng quét, đếm riêng và công bố).
+
+---
+
+# KET QUA 2026-10-07: F2 BAN. 432 o cong KHONG duoc tieu.
+
+## F2 ban, o ca hai cua so
+
+    chi phi/R o stop 1,5 ATR    nguong F2    chan bac cua n2
+    A  38,157%                  10,0%        14,69%
+    B  36,395%                  10,0%        14,69%
+
+Va khong co co stop nao trong luoi da khai cuu duoc: 2,0 ATR cho 28,6%/27,3%;
+3,0 ATR cho 19,1%/18,2%.
+
+**Tien de cua phep thu bi bac bo.** AUDNZD **dat gap 2,5 lan** chan bac ma no
+le ra phai re hon. Ly do ro rang khi nhin lai, va dang ghi: mot cross la mot
+instrument **bien dong THAP** voi mot spread **RONG** -- ATR 1,5 chi 7,9 pip
+trong khi spread cross la 3 pip. Ti so `spread/stop` la thu quyet dinh, va day
+la to hop te nhat co the cho ti so do. "Ti so la mot symbol giao dich duoc" co
+that, nhung no khong keo theo "re hon".
+
+## Theo dung cach doc da dang ky, toi KHONG tieu 432 o cong
+
+Dang ky viet: F2 ban ⇒ "ket qua **khong noi gi** ve ho co che -- no chi noi ve
+mot instrument". Tieu 432 o de do mot thu da tu khai la khong doc duoc chinh la
+toi da phep thu ma ho so nay ton tai de chong. So da phep thu: **khai 432, tieu
+0**.
+
+## F3 KHONG ban -- va day moi la phan dang giu
+
+Khac han vang/bac. `agent/n2` do duoc dau **DUONG** (tiep dien) tren ti so
+vang/bac voi t toi +12,88, nen luat hoi quy cua no dang dung truoc doan tau.
+AUDNZD thi nguoc lai:
+
+    VR(32)  0,732 (A) / 0,682 (B)      <- thap hon ca vang/bac (0,798/0,921)
+    corr(z, cu di 1 nen), lookback 96:
+        A  r = -0,034   t = -10,68   n = 98.664
+        B  r = -0,036   t = -10,90   n = 93.521
+    dong dau o moi lookback (96/192/480) va o ca hai cua so
+
+t tinh tren mau **KHONG chong lan** (buoc bang chan troi), vi ho so cua desk
+ghi rang cua so chong lan phong t len ~sqrt(overlap) va con so drift +6,74 bi
+nghi dung loi do.
+
+**Nen: hoi quy tren cross la THAT, dau DUNG, nhat quan hai cua so -- va khong
+voi tới duoc.** Kich thuoc kinh te, o z = 2,0:
+
+    ky vong cu di co loi = 0,27 pip      phi mot luot = 3,00 pip
+    edge = +0,035 R                      phi = 0,382 R        rong = -0,347 R
+    spread hoa von = 0,27 pip  ⇒  can HEP HON BAO GIA 11,0 lan (A) / 10,4 lan (B)
+
+Ke ca khi bao gia 0,00030 sai 3 lan, van con thieu 3,5 lan nua. Day la ly do
+ket luan khong phu thuoc vao con so chua do duoc.
+
+## Chan troi: hai duong cong khong bao gio cat nhau
+
+`chi phi/R = spread/(1,5 x ATR)` giam theo ~1/sqrt(chan troi) khi ATR gian.
+Nhung **tin hieu cung tan theo chan troi, va tan nhanh hon**:
+
+    chan troi      1 nen (15m)        1 ngay (96)         1 tuan (480)
+    A, lookback 96  r=-0,034 t=-10,7   r=+0,034 t=+1,10    r=+0,005 t=+0,07
+    B, lookback 96  r=-0,036 t=-10,9   r=+0,006 t=+0,19    r=-0,094 t=-1,32
+
+Chan troi duy nhat co tin hieu (1 nen) la chan troi phi dat nhat theo R. Chan
+troi ma phi tra noi (>= 1 ngay) la chan troi **tin hieu bang 0**. Nua doi AR(1)
+30-228 ngay khang dinh cung mot dieu: o thang do khai thac duoc, day la buoc
+ngau nhien.
+
+⚠️ **Chan troi TRUNG GIAN (1h, 4h) KHONG DUOC DO.** Hai chan troi tren chi
+*kep* cau hoi; mot phep do o 4h la mot look moi va phai khai lai.
+
+## Va day la loi giai thich day du cho ban ghi 70 thang ma chu may chi sang
+
+Neu co che nen la **-0,347 R moi lenh**, thi mot he thong hoi quy tren AUDNZD
+khong the co 70 thang lai lien tiep tu co che do. Grid recovery **khong phai
+mot cai tien cua co che nay -- no la THU DUY NHAT tao ra duong cong von do**:
+nhoi them khi dang sai bien nhieu cai lo nho thanh "thang" nho, day ti le thang
+len, va don toan bo lo vao mot duoi trai khong duoc do. 70 thang la **thoi gian
+truoc khi no lo**, khong phai bang chung co edge.
+
+Dieu nay khop chinh xac voi so hoc DCA da noi voi chu may: ky vong **cong don
+theo tung lan vao**, nen ba lan nhoi cho ba lan cai am, tren ba lan khoi luong.
+
+## Thu KHONG do duoc
+
+1. **Spread THAT cua AUDNZD.sc.** Khong co log tick nao tren may. Moi con so
+   phi o day xuat phat tu mot bao gia; cach xu ly la cong bo **phi hoa von**
+   (0,27 pip) de ket luan khong phu thuoc vao bao gia -- va no khong phu thuoc.
+2. **AUDCAD va NZDCAD.** Phan con lai cua ho. Chung la hai o nua, khong phai
+   mot huong moi; neu ai muon do thi phai khai lai. Du doan (ghi ra de co the
+   sai): CAD crosses co bien dong cao hon mot chut nhung spread cung rong hon,
+   nen ti so kho tot hon mot bac do lon.
+3. **Chan troi 1h/4h** -- xem tren.
+4. **Grid recovery** -- engine giu mot vi the, da khai tu dang ky goc.
+5. **Arm swap** -- khai o ghi chu (b) nhung khong tieu, vi F2 ban truoc do.
+
+## Code van giu lai, vi no dung va se con dung
+
+`lnz` (z-score cua `ln(close)`, nhan qua, NaN chu khong phai 0 khi chua du cua
+so) va `cross-reversion`, 4 test moi, tong **131 fd-strategy + 30 fd-indicators
++ 38 fd-core, 0 fail**. `ratz` va `ratio_reversion` **khong bi cham**, nen 36
+receipt cua `agent/n2` tai lap duoc tung so.

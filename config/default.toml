@@ -494,6 +494,64 @@ min_premium_usd = 100_000
 floor = 0.0005
 atr_fraction = 0.15
 
+[markets.audnzd]
+# An FX cross is already a ratio: AUDNZD quotes one correlated major against
+# another, so this series' own log level is the quantity `ratz` has to build
+# from two feeds for XAU/XAG. That is the whole reason this market exists --
+# `ratio_reversion` closed because the leg carrying the signal paid 14.69% of
+# R while the cheap leg carried 4-11% of it, and a native cross removes the
+# leg rather than working around it.
+label = "AUDNZD, Dukascopy bid feed (a ratio quoted as one contract; Vantage costs)"
+bar_symbol = "AUDNZD"
+bar_source = "dukascopy"
+options_source = "none"
+premium_in_underlying = false
+multiplier = 100
+underlying = "6A"
+
+[markets.audnzd.trading]
+symbol = "AUDNZD.sc"
+# AUDNZD quotes to five decimals.
+price_decimals = 5
+# NOT MEASURED. `data/spreads/` holds logs for BTCUSD_sc, XAGUSD_sc and
+# XAUUSD_sc only -- there is no AUDNZD tick log on this machine, so this is a
+# QUOTE for a retail cross, not a reading off the account. A cross is wider
+# than EURUSD (0.00014 measured); 0.00030 is the order of magnitude. Every
+# run that reads this number must fan `--spread=` and publish the level where
+# the verdict breaks, because a conclusion that depends on an unmeasured
+# quote is not a conclusion.
+spread = 0.00030
+# NOT MEASURED either, and it does not reach the gate: lots are sized as
+# risk/(stop x contract_size) and P&L is points x lots x contract_size, so the
+# product is invariant and R, notional and margin are unchanged. Only the LOTS
+# figure moves -- which is exactly what an executor sends to MT5. Taken as
+# 1000.0 because that is what `symbol_info("EURUSD.sc").trade_contract_size`
+# measured on this live account 2026-09-16. Do not read a lot size off a
+# receipt from this market.
+contract_size = 1000.0
+lot_step = 0.01
+min_lot = 0.01
+# Both legs of the cross.
+news_currencies = ["AUD", "NZD"]
+# The desk's account is swap-free -- MEASURED on XAUUSD.sc (340 closed trades,
+# 87 held overnight, swap 0.00 over 2026-04-21..09-08). It is NOT measured on
+# AUDNZD.sc, and a cross carries the AU-NZ rate differential, which is the
+# whole return of the classic version of this trade. `agent/n5` measured what
+# this assumption is worth on gold: the only cells that passed at a long
+# horizon passed ONLY at swap 0, and PF 1.383 became 0.109 at the general
+# rate. So any run here that holds overnight must report a second arm with a
+# charged rate, and a cell that passes only at zero is an account perk, not a
+# strategy.
+swap_long_per_lot = 0.0
+swap_short_per_lot = 0.0
+
+[markets.audnzd.big_trades]
+min_premium_usd = 100_000
+
+[markets.audnzd.levels.cluster]
+floor = 0.0020
+atr_fraction = 0.15
+
 [markets.eurusd]
 label = "Vantage EURUSD.sc CFD (MT5 bars, no options)"
 bar_symbol = "EURUSD"

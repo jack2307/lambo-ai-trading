@@ -1,0 +1,36 @@
+bars: 371148  2010-06-02 .. 2026-05-29
+spread used: 0.00030  (QUOTE from config, not a measurement)
+
+=== A 2022-06..2026-05   98760 bars
+  F2  cost/R = spread / (k x ATR14), median:
+        k=1.5  stop 0.000786  ->  38.157% of R
+              F2 FIRES (fires at >= 10.0%)
+        k=2.0  stop 0.001048  ->  28.617% of R
+        k=3.0  stop 0.001572  ->  19.078% of R
+  (2) variance ratio (1 = random walk, < 1 = mean reverting):
+        VR( 32) = 0.732   (n=3086 non-overlapping)
+        VR( 96) = 0.723   (n=1028 non-overlapping)
+        VR(480) = 0.732   (n=205 non-overlapping)
+        AR(1) beta = -0.000032  t = -0.88  n=98759
+        half-life = 21857 bars  = 227.7 days
+  (3) corr(z, future log move) -- NEGATIVE = reversion, POSITIVE = continuation
+        lookback  96:  1 bar r=-0.034 t=-10.68 n=98664   |   1 day r=+0.034 t=+1.10 n=1027   |   1 week r=+0.005 t=+0.07 n=204
+        lookback 192:  1 bar r=-0.024 t=-7.47 n=98568   |   1 day r=+0.005 t=+0.14 n=1026   |   1 week r=+0.020 t=+0.28 n=204
+        lookback 480:  1 bar r=-0.014 t=-4.30 n=98280   |   1 day r=+0.002 t=+0.05 n=1023   |   1 week r=+0.006 t=+0.08 n=204
+
+=== B 2018-06..2022-06   93617 bars
+  F2  cost/R = spread / (k x ATR14), median:
+        k=1.5  stop 0.000824  ->  36.395% of R
+              F2 FIRES (fires at >= 10.0%)
+        k=2.0  stop 0.001099  ->  27.296% of R
+        k=3.0  stop 0.001649  ->  18.198% of R
+  (2) variance ratio (1 = random walk, < 1 = mean reverting):
+        VR( 32) = 0.682   (n=2925 non-overlapping)
+        VR( 96) = 0.621   (n=975 non-overlapping)
+        VR(480) = 0.669   (n=195 non-overlapping)
+        AR(1) beta = -0.000240  t = -3.24  n=93616
+        half-life = 2884 bars  = 30.0 days
+  (3) corr(z, future log move) -- NEGATIVE = reversion, POSITIVE = continuation
+        lookback  96:  1 bar r=-0.036 t=-10.90 n=93521   |   1 day r=+0.006 t=+0.19 n=974   |   1 week r=-0.094 t=-1.32 n=194
+        lookback 192:  1 bar r=-0.027 t=-8.22 n=93425   |   1 day r=-0.004 t=-0.13 n=973   |   1 week r=-0.128 t=-1.79 n=194
+        lookback 480:  1 bar r=-0.021 t=-6.32 n=93137   |   1 day r=-0.005 t=-0.15 n=970   |   1 week r=-0.144 t=-2.02 n=194
