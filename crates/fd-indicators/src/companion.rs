@@ -226,6 +226,89 @@ pub fn aligned_change(
     (change, atr_out, close_out)
 }
 
+/// The primary's close divided by the companion's, and that ratio's
+/// **z-score** against its own trailing `period` bars, as of each primary bar.
+///
+/// Returns `(z, ratio)`, each the length of `primary`. A value is `NaN` when
+///
+/// * the companion carries no bar stamped exactly this primary bar's time, or
+///   either close is not strictly positive (a ratio of a non-price is not a
+///   ratio);
+/// * any of the `period` ratios ending at this bar is itself `NaN` — the
+///   window is required to be COMPLETE rather than computed over whatever
+///   survived, because a mean over a window with holes is not a mean over that
+///   window; or
+/// * the window's standard deviation is zero, so the z-score has no scale.
+///
+/// # Why a LEVEL may span a break when a CHANGE may not
+///
+/// [`aligned_change`] refuses a change measured across a weekend or a daily
+/// break, because a thirty-minute move and a sixty-five-hour move are
+/// different quantities. A z-score is not a change: it is where *this* bar's
+/// level sits in the distribution of the last `period` levels, and that
+/// distribution is no less valid for having a weekend inside it. So the window
+/// here is `period` **consecutive bars of the primary series** and is not
+/// required to be contiguous in wall-clock time. The stricter rule would make
+/// a 480-bar lookback unreachable on any feed with a weekend, which is every
+/// feed in this store.
+///
+/// # Logs, so that the two legs are one rule
+///
+/// The z-score of a ratio and the z-score of its reciprocal must be the same
+/// number with the opposite sign, or reading the mechanism from the gold side
+/// and from the silver side would be two different rules rather than one rule
+/// read from either end. That identity holds in logs and fails in levels, so
+/// the statistic is computed on `ln(primary / companion)`.
+///
+/// # Causality
+///
+/// `z[i]` reads `lr[i + 1 - period ..= i]` and nothing later, so truncating
+/// either series at an instant leaves every value at or before it unchanged.
+/// The tests assert both directions, because a two-series method has two ways
+/// to read the future.
+#[must_use]
+pub fn ratio_zscore(primary: &[Bar], companion: &Companion, period: usize) -> (Vec<f64>, Vec<f64>) {
+    let n = primary.len();
+    let mut z = vec![f64::NAN; n];
+    let mut ratio = vec![f64::NAN; n];
+    // Fewer than two bars has no sample standard deviation, so there is no
+    // z-score to report — not a zero one.
+    if companion.bars.is_empty() || period < 2 || n == 0 {
+        return (z, ratio);
+    }
+    let mut lr = vec![f64::NAN; n];
+    let mut cursor = 0usize;
+    for (i, bar) in primary.iter().enumerate() {
+        while cursor < companion.bars.len() && companion.bars[cursor].time < bar.time {
+            cursor += 1;
+        }
+        if cursor >= companion.bars.len() || companion.bars[cursor].time != bar.time {
+            continue; // missing, not the previous bar and not one
+        }
+        let comp_close = companion.bars[cursor].close;
+        if !(comp_close > 0.0) || !(bar.close > 0.0) {
+            continue;
+        }
+        let r = bar.close / comp_close;
+        ratio[i] = r;
+        lr[i] = r.ln();
+    }
+    for i in (period - 1)..n {
+        let window = &lr[i + 1 - period..=i];
+        if window.iter().any(|v| !v.is_finite()) {
+            continue;
+        }
+        let mean = window.iter().sum::<f64>() / period as f64;
+        let var = window.iter().map(|v| (v - mean) * (v - mean)).sum::<f64>() / (period as f64 - 1.0);
+        let sd = var.sqrt();
+        if !(sd > 0.0) {
+            continue;
+        }
+        z[i] = (lr[i] - mean) / sd;
+    }
+    (z, ratio)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -317,5 +400,110 @@ mod tests {
         times.push(40 * M15 + 3 * M15); // one long gap
         let comp = Companion::new("X", "15m", times.iter().map(|t| bar(*t, 10.0)).collect());
         assert_eq!(comp.interval_ms(), Some(M15));
+    }
+
+    /* ------------------------------------------------- ratio_zscore */
+
+    /// The identity the whole two-leg reading rests on: reading the ratio from
+    /// the other side is the same statistic negated, so gold-leg and
+    /// silver-leg runs measure one rule and not two.
+    #[test]
+    fn the_reciprocal_ratio_has_the_negated_z_score() {
+        let n = 40;
+        let au: Vec<Bar> = (0..n).map(|i| bar(i * M15, 3300.0 + (i as f64 / 3.0).sin() * 40.0)).collect();
+        let ag: Vec<Bar> = (0..n).map(|i| bar(i * M15, 38.0 + (i as f64 / 5.0).cos() * 1.5)).collect();
+        let comp_ag = Companion::new("XAG", "15m", ag.clone());
+        let comp_au = Companion::new("XAU", "15m", au.clone());
+        let (z_gold, r_gold) = ratio_zscore(&au, &comp_ag, 10);
+        let (z_silver, r_silver) = ratio_zscore(&ag, &comp_au, 10);
+        for i in 0..n as usize {
+            if z_gold[i].is_finite() {
+                assert!(
+                    (z_gold[i] + z_silver[i]).abs() < 1e-9,
+                    "z at {i}: gold leg {} vs silver leg {} are not negatives",
+                    z_gold[i],
+                    z_silver[i]
+                );
+                assert!((r_gold[i] * r_silver[i] - 1.0).abs() < 1e-9, "the ratios are not reciprocals at {i}");
+            }
+        }
+        assert!(z_gold.iter().any(|v| v.is_finite()), "the fixture produced no z-score at all");
+    }
+
+    #[test]
+    fn a_window_with_one_missing_companion_bar_is_refused_whole() {
+        // Bar 5 is absent from the companion, so every window containing it —
+        // bars 5 through 5 + period - 1 — has no z-score.
+        let n = 30usize;
+        let mut comp_bars: Vec<Bar> = (0..n as i64).map(|i| bar(i * M15, 38.0 + i as f64 * 0.1)).collect();
+        comp_bars.remove(5);
+        let comp = Companion::new("XAG", "15m", comp_bars);
+        let primary: Vec<Bar> = (0..n as i64).map(|i| bar(i * M15, 3300.0 + (i as f64).sin() * 20.0)).collect();
+        let period = 4usize;
+        let (z, ratio) = ratio_zscore(&primary, &comp, period);
+        assert!(ratio[5].is_nan(), "bar 5 has no companion bar, so it has no ratio");
+        for i in 5..5 + period {
+            assert!(z[i].is_nan(), "the window ending at {i} contains the hole at 5 and must be refused");
+        }
+        assert!(z[5 + period].is_finite(), "the first window clear of the hole is measurable again");
+    }
+
+    #[test]
+    fn a_level_z_score_spans_a_break_that_a_change_would_refuse() {
+        // Same shape as `a_change_across_a_break_is_refused_rather_than_measured`,
+        // but a z-score of a LEVEL is defined over it: see the doc comment.
+        let times: Vec<i64> = (0..12).map(|i| if i < 6 { i * M15 } else { i * M15 + 40 * M15 }).collect();
+        let comp = Companion::new("XAG", "15m", times.iter().enumerate().map(|(i, t)| bar(*t, 38.0 + i as f64 * 0.2)).collect());
+        let primary: Vec<Bar> =
+            times.iter().enumerate().map(|(i, t)| bar(*t, 3300.0 + (i as f64 * 1.7).sin() * 15.0)).collect();
+        let (z, _) = ratio_zscore(&primary, &comp, 5);
+        assert!(z[7].is_finite(), "a window straddling the gap still has a mean and a spread");
+    }
+
+    #[test]
+    fn a_flat_ratio_has_no_z_score_rather_than_a_zero_one() {
+        // Both legs constant: the window's spread is zero, so there is no
+        // scale to divide by and the honest answer is NaN.
+        let primary: Vec<Bar> = (0..20).map(|i| bar(i * M15, 3300.0)).collect();
+        let comp = Companion::new("XAG", "15m", (0..20).map(|i| bar(i * M15, 38.0)).collect());
+        let (z, ratio) = ratio_zscore(&primary, &comp, 5);
+        assert!(ratio.iter().all(|v| (*v - 3300.0 / 38.0).abs() < 1e-9));
+        assert!(z.iter().all(|v| v.is_nan()), "a zero-spread window has no z-score");
+    }
+
+    #[test]
+    fn nothing_installed_or_too_short_a_period_is_nan_throughout() {
+        let primary: Vec<Bar> = (0..10).map(|i| bar(i * M15, 3300.0)).collect();
+        let empty = Companion::new("XAG", "15m", Vec::new());
+        let (z, ratio) = ratio_zscore(&primary, &empty, 5);
+        assert!(z.iter().all(|v| v.is_nan()) && ratio.iter().all(|v| v.is_nan()));
+        let comp = Companion::new("XAG", "15m", (0..10).map(|i| bar(i * M15, 38.0)).collect());
+        let (z1, _) = ratio_zscore(&primary, &comp, 1);
+        assert!(z1.iter().all(|v| v.is_nan()), "a one-bar window has no sample standard deviation");
+    }
+
+    /// The causality property, both ways round, for the z-score as well.
+    #[test]
+    fn truncating_either_series_leaves_every_earlier_z_score_unchanged() {
+        let n = 80usize;
+        let au: Vec<Bar> = (0..n as i64).map(|i| bar(i * M15, 3300.0 + (i as f64 / 7.0).sin() * 50.0)).collect();
+        let ag: Vec<Bar> = (0..n as i64).map(|i| bar(i * M15, 38.0 + (i as f64 / 4.0).cos() * 2.0)).collect();
+        let full = Companion::new("XAG", "15m", ag.clone());
+        let (z, ratio) = ratio_zscore(&au, &full, 12);
+        let cut = 50usize;
+
+        let (z2, r2) = ratio_zscore(&au[..cut], &full, 12);
+        for i in 0..cut {
+            assert!(fd_core::parity_eq(z[i], z2[i]), "z at {i} moved when the primary was truncated");
+            assert!(fd_core::parity_eq(ratio[i], r2[i]), "ratio at {i} moved when the primary was truncated");
+        }
+
+        let short = Companion::new("XAG", "15m", ag[..cut].to_vec());
+        let (z3, r3) = ratio_zscore(&au[..cut], &short, 12);
+        for i in 0..cut {
+            assert!(fd_core::parity_eq(z[i], z3[i]), "z at {i} moved when later companion bars arrived");
+            assert!(fd_core::parity_eq(ratio[i], r3[i]), "ratio at {i} moved when later companion bars arrived");
+        }
+        assert!(z.iter().take(cut).any(|v| v.is_finite()), "the fixture produced no z-score to compare");
     }
 }

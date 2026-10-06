@@ -238,6 +238,19 @@ pub static INDICATORS: &[IndicatorDef] = &[
         params: &[("period", 2.0), ("atrPeriod", 14.0)],
         outputs: &["change", "atr", "close"],
     },
+    // The SECOND definition that is not a function of these bars, and the
+    // first that is a function of a RELATIVE price: `ln(primary / companion)`
+    // standardised against its own trailing window. Same alignment rules and
+    // the same all-NaN answer when no companion is installed; see
+    // [`companion::ratio_zscore`] for why the window is in logs and why a
+    // level, unlike a change, may span a break.
+    IndicatorDef {
+        id: "ratz",
+        name: "Companion ratio z-score",
+        pane: Pane::Separate,
+        params: &[("period", 96.0)],
+        outputs: &["z", "ratio"],
+    },
 ];
 
 /// How a DEFINITION behaved on a measured sample. Not a property of it.
@@ -549,6 +562,20 @@ fn compute_one(def: &IndicatorDef, p: &[f64], source: Source, bars: &[Bar]) -> V
                 let (change, atr, close) =
                     companion::aligned_change(bars, c, period("period"), period("atrPeriod"));
                 vec![("change", change), ("atr", atr), ("close", close)]
+            }
+        },
+        // The RELATIVE price of the two instruments, standardised. All NaN
+        // when nothing is installed, for the same reason: a method that reads
+        // two series and finds one must take no trades rather than trade on
+        // this series' own value.
+        "ratz" => match companion::installed() {
+            None => {
+                let nan = || vec![f64::NAN; bars.len()];
+                vec![("z", nan()), ("ratio", nan())]
+            }
+            Some(c) => {
+                let (z, ratio) = companion::ratio_zscore(bars, c, period("period"));
+                vec![("z", z), ("ratio", ratio)]
             }
         },
         other => unreachable!("indicator {other} is registered but not implemented"),

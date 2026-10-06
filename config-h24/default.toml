@@ -1,0 +1,655 @@
+# flowdesk â€” default configuration
+#
+# Ported from the JavaScript prototype's config/default.json. Two deliberate
+# changes: keys are snake_case (Rust/serde idiom), and the per-market overrides
+# that lived in src/markets.js are data here rather than code.
+#
+# Numbers that were *measured* rather than chosen carry a note saying so. A
+# threshold with no evidence behind it is a placeholder, and the comments say
+# which is which â€” that distinction is the whole discipline of this project.
+
+multiplier = 100            # overridden per market
+underlying = "GC"
+# The desk's default market. It is the Vantage cent pair, not COMEX gold:
+# every number this system is meant to act on has to be quoted at the price
+# and the contract the account actually trades. `gold` (the OTL/COMEX tape,
+# 100 oz a lot) and `btc` (Binance spot, 1 BTC a lot) remain defined and
+# remain useful as reference tapes, but they are no longer what an unqualified
+# run means. Owner's instruction, 2026-09-15: gold and BTC both on Vantage
+# prices, the `.sc` cent pairs first.
+market = "xauusd"           # default market; --market=<id> overrides
+
+[models]
+# Swappable model registries. Only the profile mode and the max-pain proxy have
+# been calibrated against the reference feed; break-even and whale remain
+# unverified candidates (docs/formulas.md in the prototype).
+break_even = "premium-weighted"     # UNVERIFIED â€” 5 candidates, no winner across contracts
+whale = "net-long-whale"            # UNVERIFIED â€” reproduced wSup on OGV6, wRes only on OGX6
+max_pain_absolute = true            # CALIBRATED: volume-weighted proxy beat net-positioning on 3 of 4 contracts
+
+[profile]
+mode = "PREMIUM"                    # CALIBRATED: closest to the reference POC/VAH/VAL on all four contracts
+value_area_pct = 0.7
+
+[big_trades]
+min_premium_usd = 100_000           # per-market; BTC premiums run ~1000x smaller
+# min_contracts = 0                 # unset = no contract floor
+percentile = 0.95
+percentile_window = 2000
+limit = 200
+
+[flow]
+velocity_window_ms = 900_000
+
+[flow.thresholds]                   # PLACEHOLDERS â€” never backtested
+strong_bull = 0.60
+moderate_bull = 0.55
+moderate_bear = 0.45
+strong_bear = 0.40
+
+[flow.windows]
+"5m" = 300_000
+"15m" = 900_000
+"30m" = 1_800_000
+"60m" = 3_600_000
+session = 28_800_000
+
+[levels]
+max_clusters = 12
+
+[levels.cluster]
+floor = 5.0                         # dollars; per-market (BTC moves in hundreds)
+atr_fraction = 0.15
+
+[levels.type_weights]               # PLACEHOLDERS â€” encode hypotheses H1/H2/H5
+MAX_PAIN = 1.0
+POC = 1.0
+ABOVE_POC = 0.6
+UNDER_POC = 0.6
+CALL_BE = 0.7
+PUT_BE = 0.7
+WSUP = 0.9
+WRES = 0.9
+GAMMA_WALL = 0.8
+
+[backtest]
+# Fill model: a signal fills at the NEXT bar's open; when one bar covers both
+# stop and target the stop is taken; a gap through the stop fills at the open.
+timeframe = "15m"
+options_step_ms = 300_000
+fallback_atr_period = 14
+min_trades_per_cell = 5
+walk_forward_folds = 4
+select_by = "expectancy"
+
+[backtest.promising]
+min_trades = 30
+min_profit_factor = 1.2
+min_expectancy_r = 0.05
+
+[trading]
+symbol = "XAUUSD"                   # per-market
+contract_size = 100.0               # per-market
+spread = 0.3                        # per-market
+commission_per_lot = 0.0
+starting_equity_usd = 10_000.0
+risk_per_trade_pct = 0.01
+stop_atr = 1.2
+reward_risk = 1.8
+# ARM PHU of docs/decisions/2026-10-06-ratio-reversion.md S7: 24 h, not 4 h.
+# The ratio reversion this worktree measures has a half-life of 746-837
+# bars of 15m (7.8-8.7 trading days), so the desk standard 4 h cap closes
+# every position long before the mechanism could have worked. 24 h is not
+# the mechanism horizon either: it is the LONGEST horizon that can still
+# reach the 40-trade gate inside a 3-month window with one position at a
+# time (~64 trading days / 1 day = ~64 non-overlapping trades). This dir
+# is read only by --config=config-h24 and changes nothing for any other
+# receipt.
+max_hold_ms = 86_400_000
+lot_step = 0.01
+min_lot = 0.01
+# max_stop_atr, cluster_pad_atr, min_reward_risk and require_basis were removed
+# on 2026-09-13: no code read them, and a limit nobody reads is an intention.
+# They return with the live planner that enforces them.
+
+# A stop that follows the trade, measured in R — the distance from the entry to
+# the original stop, which is the unit every receipt in docs/ is already quoted
+# in. OFF, and it must stay off unless a registration turns it on: every number
+# in docs/decisions/ was measured without one, and switching it on globally
+# would make all of them unreproducible without changing a single receipt.
+#
+# The engine ratchets AFTER a bar's exit check, never before, so the stop a bar
+# is tested against was set from the close of the bar before it. A trail moved
+# from the same bar's high and then tested against that bar's low is look-ahead
+# and is the easiest way in this repository to make a losing rule look good.
+[trading.trail]
+enabled = false
+distance_r = 1.0
+activate_r = 1.0
+
+[trading.guards]
+max_concurrent_positions = 1
+# 4 UNTIL 2026-09-21, NOW 20, ON THE OWNER'S WORD: "mo cho no mo lenh thoai
+# mai di" - let it open positions freely.
+#
+# READ THIS BEFORE TRUSTING THE NUMBER ABOVE IT: THIS FILE WAS NOT THE CAP.
+# `config/guards.toml` carried `max_trades_per_day = 10` from the desk, and
+# `AppState::guards_for` applies that overlay ON TOP of this file, so the cap
+# actually in force was 10 while this line read 4. The first version of this
+# comment, written the same day, said the desk had been refused "against a
+# cap of four" and that was wrong. The overlay was cleared on 2026-09-21 so
+# that this file governs again; `GET /api/paper/guards` shows `configured`,
+# `edited` and `effective` separately, and `effective` is the only one that
+# decides anything.
+#
+# WHAT IT WAS COSTING, at the cap that was really running. Over 233 closed
+# trades on 27 books, DAILY_TRADE_CAP refused 16 entries across six books and
+# COOLDOWN refused one; nothing else refused an entry at all. So this was the
+# only guard stopping the desk from trading. The hungriest book,
+# `ai-xau-ds-ctx`, closed 19 and was refused 9 - it wanted more than TEN in a
+# day, nine times over about five days. So 12 would have been a change of
+# two against a book that had already cleared ten.
+#
+# WHY 20 AND NOT 0. Zero turns it off, and off is not what "freely" has to
+# mean. This cap is also the circuit breaker on a runaway loop: on 2026-09-18
+# an orphaned deploy process drove four books against a stale server. A 15m
+# book sees about 96 bars in a day, so 20 is loose enough that the observed
+# appetite never reaches it and tight enough that a book opening a position
+# on every fifth bar is still stopped and still noticed.
+#
+# THE BACKSTOP BELOW THIS ONE IS INERT, AND RAISING THIS MAKES THAT MATTER.
+# `daily_loss_limit_usd` is 300 and it is evaluated PER BOOK, against books
+# that run on 100 USD. A book cannot lose 300 in a day when it only has 100,
+# so the limit has never fired and cannot - DAILY_LOSS appears nowhere in
+# `skipped_by_guard` across all 233 trades. It was the natural companion to a
+# trade cap and it is not doing that job. Setting it to something a 100-dollar
+# book can actually reach is the owner's call and is not made here.
+#
+# RECEIPTS, AND WHY THEY SAY 4 WHILE THE LIVE DESK RAN AT 10. The overlay is
+# applied by `AppState::guards_for`, which is the API; `search --guards` calls
+# `Guards::for_market` on this file and never sees `guards.toml`. So a
+# backtest receipt really was measured at 4 and a live book really was capped
+# at 10, at the same time, from one repository. That divergence is the reason
+# the overlay was cleared rather than simply raised.
+#
+# This is an explicit, recorded amendment rather than a silent edit, the same
+# way `flat_before_weekend_hhmm` moved on 2026-09-19; a receipt that needs the
+# old behaviour re-runs with `max_trades_per_day = 4` set on the run.
+max_trades_per_day = 20
+daily_loss_limit_usd = 300.0
+cooldown_ms = 1_800_000
+# The four below are the risk role's standing list (2026-09-13/14). Each is
+# enforced in the engine for every position, self-managed ones included, and
+# only when a run asks for guards (`search --guards`, the API's `guards: true`);
+# 0 turns one off. Every receipt before 2026-09-14 was produced without them.
+# Unrealised loss on the open position, in R of its sizing unit, checked every
+# bar including the reopen bar; the fill is the level, or the open when a bar
+# gaps through it. tsmom-silver: "the right guard is an unrealised-loss cap in
+# R on the open position, evaluated every bar including the reopen bar,
+# closing at market."
+max_open_loss_r = 2.0
+# Lots are cut so that lots × contract × price ≤ this share of equity; below
+# min_lot the entry is refused. fx-local-hours: "the '1% risk' row is 1.3×
+# leveraged with no stop."
+max_notional_pct_equity = 300.0
+# Friday New York wall clock (HHMM) from which the book is flat: the position
+# is closed at the close of the last bar ending at or after it and no entry is
+# taken. close-reopen-drift: "a 50-hour weekend hold is not representable
+# under these guards."
+#
+# 1655 UNTIL 2026-09-19, AND IT COULD NEVER FIRE. The rule reads the instant a
+# bar CLOSES, and the last 15m bar this desk receives closes at 16:45 NY -
+# minute 1005 against a cut-off of 1015. MetaTrader closes a bar only on a
+# tick after its boundary and the weekly close sends none, so the 20:45Z bar
+# stays forming until Sunday and the poller never sees it. Measured
+# 2026-09-18: every run stopped at 20:30Z while the terminal's own export had
+# 20:45Z. Fourteen books and two real positions went into the weekend.
+#
+# 1640 fires on the 20:30Z bar, which is the last one that actually arrives,
+# and costs fifteen minutes of the week. Anchored in New York, so the winter
+# shift needs no second value. The owner's rule, 2026-09-19: "nguyen tac la
+# khong bao gio giu qua tuan" - never hold over the weekend.
+# docs/decisions/2026-09-19-weekend-flat-never-fires.md
+flat_before_weekend_hhmm = 1640
+# Flat from `before` minutes ahead of a scheduled event of impact ≥ min to
+# `after` minutes past it, over the calendar `search`/the API install; inert
+# with no calendar. fx-local-hours: "worst hold −3.12R / −$410 (2015-12-03,
+# ECB)."
+news_flat_before_min = 60
+news_flat_after_min = 30
+news_min_impact = 3
+
+[ai]
+# ATR bar width must match the trade horizon. Computing ATR on one-minute closes
+# against a 60-minute horizon produced a ~$0.60 stop and a 5-minute average hold
+# â€” the backtest was measuring noise until this was fixed.
+atr_bar_ms = 900_000
+atr_period = 14
+dataset_step_ms = 300_000
+warmup_ms = 7_200_000
+horizon = "60m"
+label_band_atr = 0.5
+folds = 4
+big_trade_window_ms = 1_800_000
+long_threshold = 0.58
+short_threshold = 0.42
+cycle_ms = 300_000
+live_contracts = 4
+
+[ai.horizons_ms]
+"15m" = 900_000
+"30m" = 1_800_000
+"60m" = 3_600_000
+"240m" = 14_400_000
+
+[ai.train]
+epochs = 800
+lr = 0.1
+l2 = 2.0
+class_weight = true
+
+[ai.gate]
+# A live signal is suppressed unless the walk-forward result clears every number
+# here. As of the last run on five days of gold tape it does NOT: out-of-sample
+# AUC 0.521, profit factor 1.049.
+min_auc = 0.55
+min_trades = 30
+min_profit_factor = 1.2
+min_expectancy_r = 0.05
+
+[ai.analyst]
+# Writes the case for and against a plan it did not create. It may veto or cut
+# size; it can never raise size or move a price.
+enabled = true
+model = "claude-opus-5"
+effort = "high"
+max_tokens = 4000
+can_veto = true
+required_for_signal = false
+min_confidence = 0.4
+scales_size = true
+full_size_confidence = 0.8
+min_size_scale = 0.4
+
+[alerts.telegram]
+bot_token = ""
+chat_id = ""
+
+[server]
+host = "127.0.0.1"
+port = 8137
+
+# ---------------------------------------------------------------------------
+# Markets. Everything above is the baseline; these override it per market.
+# ---------------------------------------------------------------------------
+
+[markets.gold]
+label = "COMEX gold (OTL tape + XAUUSD CFD)"
+bar_symbol = "GC"
+bar_source = "reference"
+options_source = "reference"
+premium_in_underlying = false       # premium = price x size x 100
+multiplier = 100
+underlying = "GC"
+
+[markets.gold.trading]
+symbol = "XAUUSD"
+contract_size = 100.0
+spread = 0.3
+lot_step = 0.01
+min_lot = 0.01
+# Calendar currencies whose scheduled releases flatten this market (the
+# `news:` filters and the news-flat guard). An EMPTY list means EVERY
+# currency — which is how a Canadian rate decision came to flatten the gold
+# bot on 2026-09-14. Events the calendar marks `All` match any list.
+news_currencies = ["USD"]
+
+[markets.gold.big_trades]
+min_premium_usd = 100_000
+
+[markets.gold.levels.cluster]
+floor = 5.0
+atr_fraction = 0.15
+
+# --- Vantage MT5 markets -----------------------------------------------------
+# The instruments the system will eventually trade, on the broker's own bars
+# (py/ingest/mt5_export.py, read-only from the terminal). Contract sizes and
+# spreads below were READ from the terminal on 2026-09-12 (VantageMarkets-Live
+# 21, `.sc` cent symbols), not assumed:
+#   XAUUSD.sc  contract 1 oz     spread 28 pts    = $0.28
+#   BTCUSD.sc  contract 0.01 BTC spread ~1705 pts = $17.05
+# Spreads are per unit of underlying; times contract size for the per-lot cost.
+#
+# 2026-09-15: those two were each a SINGLE read of the spread. The logger
+# (py/live/spread_log.py) has since sampled XAUUSD.sc 2,315 times over 12.8
+# hours and the distribution is much tighter and LOWER than the number charged
+# here: p10 0.210, p50 0.220, p90 0.220, max 0.260 — the configured 0.28 is
+# above every spread ever observed, and charges roughly 27% too much.
+#
+# It is NOT changed here, for the same reason `[trading.trail]` stays off:
+# every receipt in docs/decisions/ was measured at 0.28, and moving the number
+# globally would make all of them unreproducible without editing a single
+# receipt. Repricing is an explicit, recorded amendment — the way the SPREAD
+# repricing was done, docs/decisions/2026-09-16-spread-repricing-scale.txt —
+# not a silent edit. (This read "the rebate repricing" until 2026-09-21. There
+# has never been one. The slip was harmless while no rebate existed and stopped
+# being harmless the day `[rebate]` appeared in config/accounts.toml, because a
+# reader would now go looking for an amendment that was never made: that rebate
+# is a credit line and repriced nothing —
+# docs/decisions/2026-09-21-rebate-credit-line.md.) Two things are still missing before
+# that amendment can be written: the 21:00 UTC rollover hour and a weekend,
+# neither of which the 12.8-hour sample covers. The logger is running 168
+# hours and now samples BTCUSD.sc too, whose 17.05 has never been checked over
+# time at all.
+
+[markets.xauusd]
+label = "Vantage XAUUSD.sc CFD (MT5 bars, no options)"
+bar_symbol = "XAUUSD"
+bar_source = "mt5"
+# The OTL tape is COMEX GC. Spot XAUUSD trades tens of dollars below GC (the
+# basis), wider than the strike spacing the levels come from, so attaching the
+# gold tape here would place every level on the wrong price. Basis-adjusted
+# levels are a research task; until then this market is technical-only.
+options_source = "none"
+premium_in_underlying = false
+multiplier = 100
+underlying = "GC"
+
+[markets.xauusd.trading]
+symbol = "XAUUSD.sc"
+contract_size = 1.0
+# The live Vantage account is a CENT account: 10,000 USC = $100. Every number
+# the engine computes is USD — `lots x contract_size x price` is USD and
+# nothing else — so the account unit is carried for DISPLAY only and the
+# conversion happens where a human reads it. Putting it in the arithmetic would
+# multiply through every cost, every guard and every receipt.
+#
+# Owner's instruction, 2026-09-16: 10,000 cent per strategy, and that is what
+# the live test will use too.
+starting_equity_usd = 100.0        # = 10,000 USC
+account_currency = "USC"
+units_per_usd = 100.0
+leverage = 2000.0                  # MEASURED: account_info().leverage, 2026-09-16
+
+spread = 0.28
+lot_step = 0.01
+min_lot = 0.01
+# Gold is a dollar asset: USD releases only (empty = every currency).
+news_currencies = ["USD"]
+# MEASURED from this account's own history (2026-04-21 -> 2026-09-08: 340
+# closed positions, 87 held overnight, swap 0.00, commission 0.00): the account
+# is swap-free. symbol_info shows the generic rate (-82.76 points = -$0.83 per
+# oz per night, swap_mode=1 means POINTS, not dollars) and this account does not
+# pay it. Set the real rate here for an account that does.
+swap_long_per_lot = 0.0
+swap_short_per_lot = 0.0
+
+[markets.xauusd.big_trades]
+min_premium_usd = 100_000
+
+[markets.xauusd.levels.cluster]
+floor = 5.0
+atr_fraction = 0.15
+
+[markets.xauduka]
+label = "Gold, Dukascopy bid feed (out-of-sample structure; Vantage costs)"
+bar_symbol = "XAUDUKA"
+bar_source = "dukascopy"
+options_source = "none"
+premium_in_underlying = false
+multiplier = 100
+underlying = "GC"
+
+[markets.xauduka.trading]
+# Vantage's costs applied to Dukascopy's bars: the question is whether a
+# structure found on three months of the broker's own minutes holds on four
+# years of someone else's, at the broker's price.
+symbol = "XAUUSD.sc"
+contract_size = 1.0
+spread = 0.28
+lot_step = 0.01
+min_lot = 0.01
+# Same scope as xauusd: USD releases only (empty = every currency).
+news_currencies = ["USD"]
+swap_long_per_lot = 0.0
+swap_short_per_lot = 0.0
+
+[markets.xauduka.big_trades]
+min_premium_usd = 100_000
+
+[markets.xauduka.levels.cluster]
+floor = 5.0
+atr_fraction = 0.15
+
+[markets.xagduka]
+label = "Silver, Dukascopy bid feed (a second seven-year asset; Vantage costs)"
+bar_symbol = "XAGDUKA"
+bar_source = "dukascopy"
+options_source = "none"
+premium_in_underlying = false
+multiplier = 100
+underlying = "SI"
+
+[markets.xagduka.trading]
+# Vantage XAGUSD.sc, measured 2026-09-13 from 205k ticks over three days
+# (read-only): spread p50/p90 $0.021 an ounce. Swap: the swap-free
+# measurement is gold's deal history (340 XAUUSD.sc positions); no silver
+# deal is known to be in it, so zero here is the account's stated terms, not
+# a measurement (adversary, 2026-09-13-tsmom-silver). symbol_info shows the
+# generic rate, -22.7 points long. Contract unit one ounce, the convention
+# every Dukascopy-fed market here uses, so "lots" are ounces.
+symbol = "XAGUSD.sc"
+# silver quotes to three decimals.
+price_decimals = 3
+# MEASURED: symbol_info("XAGUSD.sc").trade_contract_size on the live account,
+# 2026-09-16. It was declared 1.0 before, copied from the gold block where
+# 1.0 is right. The error cancelled out of every result -- lots are sized as
+# risk/(stop x contract_size) and P&L is points x lots x contract_size, so the
+# product is invariant and so are R, notional and margin -- but the LOTS number
+# was wrong by the same factor, and lots is exactly what an executor sends to
+# MT5. Harmless on paper, not harmless live.
+contract_size = 50.0
+spread = 0.021
+lot_step = 0.01
+min_lot = 0.01
+# Silver, priced in dollars: USD releases only (empty = every currency).
+news_currencies = ["USD"]
+swap_long_per_lot = 0.0
+swap_short_per_lot = 0.0
+
+[markets.xagduka.big_trades]
+min_premium_usd = 100_000
+
+[markets.xagduka.levels.cluster]
+floor = 0.05
+atr_fraction = 0.15
+
+[markets.eurduka]
+label = "EURUSD, Dukascopy bid feed (a second seven-year asset; Vantage costs)"
+bar_symbol = "EURDUKA"
+bar_source = "dukascopy"
+options_source = "none"
+premium_in_underlying = false
+multiplier = 100
+underlying = "6E"
+
+[markets.eurduka.trading]
+# Vantage EURUSD.sc, measured 2026-09-13 from 119k ticks over three days
+# (read-only): spread p50/p90 0.00014. Swap-free account. Contract unit one
+# euro, so "lots" are euros and P&L is in dollars.
+symbol = "EURUSD.sc"
+# EURUSD quotes to five decimals; two would report 1.16 for 1.15843.
+price_decimals = 5
+# MEASURED: symbol_info("EURUSD.sc").trade_contract_size on the live account,
+# 2026-09-16. It was declared 1.0 before, copied from the gold block where
+# 1.0 is right. The error cancelled out of every result -- lots are sized as
+# risk/(stop x contract_size) and P&L is points x lots x contract_size, so the
+# product is invariant and so are R, notional and margin -- but the LOTS number
+# was wrong by the same factor, and lots is exactly what an executor sends to
+# MT5. Harmless on paper, not harmless live.
+contract_size = 1000.0
+spread = 0.00014
+lot_step = 0.01
+min_lot = 0.01
+# Both legs of the pair (empty = every currency).
+news_currencies = ["USD", "EUR"]
+swap_long_per_lot = 0.0
+swap_short_per_lot = 0.0
+
+[markets.eurduka.big_trades]
+min_premium_usd = 100_000
+
+[markets.eurduka.levels.cluster]
+floor = 0.0005
+atr_fraction = 0.15
+
+[markets.eurusd]
+label = "Vantage EURUSD.sc CFD (MT5 bars, no options)"
+bar_symbol = "EURUSD"
+bar_source = "mt5"
+# The broker's own bars, for the paper desk: an EURUSD.sc poller
+# (`py/live/mt5_bars.py --symbol=EURUSD.sc --market=eurusd`) feeds the runs
+# started on this market. The store has no EURUSD-*.parquet until an export
+# is run; a paper start on it warms up from zero bars, from the poller.
+# Costs and conventions are `eurduka`'s, measured on the same account.
+options_source = "none"
+premium_in_underlying = false
+multiplier = 100
+underlying = "6E"
+
+[markets.eurusd.trading]
+symbol = "EURUSD.sc"
+# EURUSD quotes to five decimals.
+# The live Vantage account is a CENT account: 10,000 USC = $100. Every number
+# the engine computes is USD — `lots x contract_size x price` is USD and
+# nothing else — so the account unit is carried for DISPLAY only and the
+# conversion happens where a human reads it. Putting it in the arithmetic would
+# multiply through every cost, every guard and every receipt.
+#
+# Owner's instruction, 2026-09-16: 10,000 cent per strategy, and that is what
+# the live test will use too.
+starting_equity_usd = 100.0        # = 10,000 USC
+account_currency = "USC"
+units_per_usd = 100.0
+leverage = 2000.0                  # MEASURED: account_info().leverage, 2026-09-16
+
+price_decimals = 5
+# MEASURED: symbol_info("EURUSD.sc").trade_contract_size on the live account,
+# 2026-09-16. It was declared 1.0 before, copied from the gold block where
+# 1.0 is right. The error cancelled out of every result -- lots are sized as
+# risk/(stop x contract_size) and P&L is points x lots x contract_size, so the
+# product is invariant and so are R, notional and margin -- but the LOTS number
+# was wrong by the same factor, and lots is exactly what an executor sends to
+# MT5. Harmless on paper, not harmless live.
+contract_size = 1000.0
+spread = 0.00014
+lot_step = 0.01
+min_lot = 0.01
+# Both legs of the pair (empty = every currency).
+news_currencies = ["USD", "EUR"]
+swap_long_per_lot = 0.0
+swap_short_per_lot = 0.0
+
+[markets.eurusd.big_trades]
+min_premium_usd = 100_000
+
+[markets.eurusd.levels.cluster]
+floor = 0.0005
+atr_fraction = 0.15
+
+[markets.btcusd]
+label = "Vantage BTCUSD.sc CFD (MT5 bars + Deribit options)"
+bar_symbol = "BTCUSD"
+bar_source = "mt5"
+# Deribit strikes are in USD index terms and 1,000 apart; the CFD tracks the
+# index within a few dollars, so the tape's levels transfer. The tape is the
+# one the `btc` market collects; it is not collected twice.
+options_source = "deribit"
+tape = "btc"
+premium_in_underlying = true
+multiplier = 1
+underlying = "BTC"
+
+[markets.btcusd.trading]
+symbol = "BTCUSD.sc"
+contract_size = 0.01
+# The live Vantage account is a CENT account: 10,000 USC = $100. Every number
+# the engine computes is USD — `lots x contract_size x price` is USD and
+# nothing else — so the account unit is carried for DISPLAY only and the
+# conversion happens where a human reads it. Putting it in the arithmetic would
+# multiply through every cost, every guard and every receipt.
+#
+# Owner's instruction, 2026-09-16: 10,000 cent per strategy, and that is what
+# the live test will use too.
+starting_equity_usd = 100.0        # = 10,000 USC
+account_currency = "USC"
+units_per_usd = 100.0
+leverage = 2000.0                  # MEASURED: account_info().leverage, 2026-09-16
+
+spread = 17.05                      # MEASURED: 3.4x the 5.00 assumed for the Binance market
+lot_step = 0.01
+min_lot = 0.01
+# Dollar-denominated: USD releases only (empty = every currency).
+news_currencies = ["USD"]
+# Swap-free on this account too (measured, same history). The symbol's generic
+# terms are swap_mode=5: -20% a year of position value, ~-$0.64 per 0.01 BTC
+# lot per night at $115k — for an account that pays it.
+swap_long_per_lot = 0.0
+swap_short_per_lot = 0.0
+
+[markets.btcusd.big_trades]
+min_premium_usd = 25_000
+
+[markets.btcusd.levels.cluster]
+floor = 100.0
+atr_fraction = 0.15
+
+[markets.btc]
+label = "BTC (Deribit options + Binance spot)"
+bar_symbol = "BTCUSDT"
+bar_source = "binance"
+options_source = "deribit"
+premium_in_underlying = true        # premium = price(BTC) x index(USD/BTC) x size
+multiplier = 1
+underlying = "BTC"
+
+[markets.btc.trading]
+symbol = "BTCUSD"
+contract_size = 1.0
+spread = 5.0
+lot_step = 0.001
+min_lot = 0.001
+# Dollar-denominated: USD releases only (empty = every currency).
+news_currencies = ["USD"]
+
+[markets.btc.big_trades]
+min_premium_usd = 25_000
+
+[markets.btc.levels.cluster]
+floor = 100.0
+atr_fraction = 0.15
+
+# ---------------------------------------------------------------------------
+# Data sources. All public, unauthenticated, read-only market data.
+# ---------------------------------------------------------------------------
+
+[sources.reference]
+base_url = "https://live.otldata.com"
+min_delay_ms = 1500
+# MEASURED 2026-09-12: the feed renders every time — bare strings and the
+# "+00:00"-suffixed expirations alike — in the account's zone, UTC+7. Fingerprints:
+# GC closes correlate 0.987 with a UTC-verified XAUUSD series only at -7h; the
+# daily gap sits at 04:00 (17:00 ET CME break); expiries stamp 00:30 (13:30 ET).
+# Re-run the shift scan if the feed or the account changes. Pinned by a test in
+# fd-ingest: docs/decisions/2026-09-12-otl-timestamps.md
+utc_offset_hours = 7
+
+[sources.binance]
+base_url = "https://api.binance.com"
+ws_url = "wss://stream.binance.com:9443/ws"
+min_delay_ms = 300
+
+[sources.deribit]
+base_url = "https://www.deribit.com/api/v2"
+ws_url = "wss://www.deribit.com/ws/api/v2"
+min_delay_ms = 400

@@ -85,6 +85,13 @@ pub fn register_all(registry: &mut Registry) {
     // The only method here that reads TWO instruments. It takes no trades
     // unless a companion series is installed; see its module docs.
     registry.register(Box::new(crate::companion_unconfirmed::CompanionUnconfirmed));
+    // The second two-instrument method, and the first whose signal is a
+    // RELATIVE price: the XAU/XAG ratio stretched from its own trailing mean.
+    // Registered in docs/decisions/2026-10-06-ratio-reversion.md before the
+    // file existed; 36 declared rows, and its module docs say plainly that the
+    // position is ONE LEG and so is not drift-neutral however the signal is
+    // computed. Takes no trades without a companion.
+    registry.register(Box::new(crate::ratio_reversion::RatioReversion));
     // Multi-day. Its sizing parameters are named so `control_for` copies them
     // onto the null, which is how a method should close the not-cost-matched
     // hole rather than use it.

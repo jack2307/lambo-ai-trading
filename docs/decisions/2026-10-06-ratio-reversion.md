@@ -171,3 +171,116 @@ giao thức desk. Chi phí của lựa chọn đó được báo ở §6 của b
 
 `--rebate-share=` KHÔNG được truyền (hypotheses bỏ qua nó trong im lặng).
 Số lần rút null là `--seeds=` (mặc định 200), không phải `--samples=`.
+
+---
+
+## Ghi chú thêm — 06/10/2026, SAU KHI CHẠY (không sửa dòng nào ở trên)
+
+36 run đã chạy đúng như §5 khai. Receipt: `receipts/n2_{h4,h24}_{gold,silver}_{A,B}_g{on,off}_{coin,ratio,exposure}.txt`.
+Rows: `receipts/n2-ratio-rows.toml` (sinh bằng script, 36 dòng).
+
+### Sổ đa phép thử — khai so với đã xem
+
+| | đã khai | đã xem |
+|---|---|---|
+| rows | 36 | **36** |
+| ô cổng (arm,chân,cửa sổ,guards,row) | 432 | **432** |
+| run | 36 | **36** |
+| quan sát (run,row) | 1.296 | **1.296** |
+
+Không nới ngưỡng, không hạ cỡ mẫu, không đổi cửa sổ, không thêm row nào sau
+khi thấy kết quả. Cổng đọc ở PF ≥ 1,200 / exp ≥ +0,050R / **≥ 40 lệnh** (40
+của brief, không phải 30 của config).
+
+### Falsifier chính: ĐÃ BẮN cho giả thuyết như đã đăng ký
+
+- **Arm hồi quy (`revert=+1`) — cơ chế đã đăng ký: 0 ô qua cả hai cửa sổ**
+  trên 108 tuple (arm,chân,guards,row). 12 ô qua một cửa sổ trong 216. **Falsifier
+  §4 bắn.**
+- Arm tiếp diễn (`revert=−1`) — biện pháp kiểm soát dấu đã khai: **1** ô qua
+  cả hai cửa sổ trong 108 tuple (38/216 qua một cửa sổ).
+
+Tổng cộng 1 ô qua cả hai cửa sổ trên 216 tuple. Kỳ vọng nếu mỗi cửa sổ là một
+lượt rút độc lập (dùng đúng tỉ lệ qua cổng đo được của từng nhóm):
+**4,11 ô**. Quan sát **1 < 4,11** — **ít hơn tình cờ**. Một ô sống sót dưới
+mức tình cờ không mang bằng chứng nào.
+
+### Ô duy nhất qua cả hai cửa sổ, và nó chết vì falsifier phụ 2
+
+`h24 / chân vàng / guards off / ratz/lb96/z2.0/s3.0/**con**` — tức **arm tiếp
+diễn**, không phải cơ chế đã đăng ký.
+
+| | PF | exp | lệnh | null p50 | null p95 | phân vị |
+|---|---|---|---|---|---|---|
+| A, null=exposure | 1,238 | +0,117 | 74 | 1,008 | **1,483** | 81% |
+| B, null=exposure | 1,417 | +0,225 | 74 | 0,962 | **1,442** | 94% |
+
+**null p95 ≥ PF của chính nó ở CẢ HAI cửa sổ, dưới CẢ BA null.** Đúng bài học
+§9 của brief: phân vị 81%/94% đó vô nghĩa. **Falsifier phụ 2 bắn.** Luật của
+nó có nổ (A: STOP 35 / TARGET 24 / TIMEOUT 13; B: STOP 38 / TARGET 28 /
+TIMEOUT 6), nên đây là phép đo thật, không phải falsifier phụ 1.
+
+Trên toàn bộ 432 ô: **397 (92%) có exposure-null p95 ≥ PF của phương pháp.**
+Phân vị trung vị của phương pháp là **54** dưới cả ba null (coin 54 / ratio 54
+/ exposure 54) — tung xu.
+
+### Con số đáng giữ nhất: dấu đảo giữa hai cửa sổ, đo được
+
+corr(PF ở cửa sổ A, PF ở cửa sổ B) trên cùng 36 row, **ÂM ở cả sáu nhóm**:
+
+| nhóm | corr |
+|---|---|
+| h4 vàng guards on | **−0,672** |
+| h24 vàng guards off | −0,557 |
+| h4 vàng guards off | −0,461 |
+| h24 bạc guards off | −0,431 |
+| h4 bạc guards off | −0,156 |
+| h4 bạc guards on | −0,140 |
+
+Một row chạy được ở A thì **thất bại ở B, có hệ thống**. Trung vị PF theo arm
+nói cùng một điều: chân vàng cửa sổ A — hồi quy 1,054 / tiếp diễn 0,763;
+chân vàng cửa sổ B — hồi quy **0,694** / tiếp diễn **1,356**. Tham số thắng
+là **thuộc tính của cửa sổ, không phải của thị trường.** Đây là phát biểu sạch
+nhất có thể cho "không có cơ chế", và nó khớp đúng tiền kiểm §3 đã dự đoán.
+
+### Chân mang tín hiệu bị chi phí loại ra — kết quả cấu trúc của đợt này
+
+Chi phí đo được từ dòng `cost-matched null` mà output tự in, kèm cỡ stop:
+
+| chân | stop 1,5 ATR | stop 2,0 ATR | stop 3,0 ATR |
+|---|---|---|---|
+| vàng | 2,52–4,47% R (tv **3,45%**) | 1,95–3,46% (tv 2,58%) | 1,30–2,32% (tv 1,75%) |
+| bạc | 12,99–16,37% R (tv **14,69%**) | 9,76–12,35% (tv 11,05%) | 6,23–8,36% (tv 7,47%) |
+
+Bạc đắt **4,26×** vàng ở cùng cỡ stop — xác nhận độc lập con số 4,5× của brief.
+
+Kết quả theo chân:
+
+| chân | % phương sai tỉ số nó mang (§3) | ô qua cổng (trên 144) | PF trung vị |
+|---|---|---|---|
+| vàng | **4–11%** | **49** | 0,879–1,058 |
+| bạc | **89–104%** | **1** | 0,758–0,831 |
+
+**Chân mang 89–104% tín hiệu qua cổng 1 ô trên 144 và 0 ô ở chân trời 4h.**
+Chân mang 4–11% tín hiệu qua 49 ô. Lý do là chi phí: bạc trả 4,26× ở cùng
+stop. Nên biểu đạt một chân của họ cơ chế này bị kẹp hai đầu — chân rẻ gần như
+không có tín hiệu, chân có tín hiệu không trả nổi chi phí. Đây không phải một
+PF; đây là lý do kiến trúc khiến họ này không biểu đạt được trên engine này.
+
+### Guards: cảnh báo §8 KHÔNG áp cho cơ chế này
+
+Guards đổi cỡ mẫu **0,89×–0,95×** (vàng A 115→121, vàng B 91→100, bạc A
+100→113, bạc B 83→87), không phải 3,4×–106× như `tsmom`. Cảnh báo §8 là về cơ
+chế **giữ lâu**; cơ chế này giữ 175–978 phút nên guards gần như không chạm cỡ
+mẫu. Cả hai arm vẫn báo đủ như §8 đòi.
+
+### Falsifier phụ 1 KHÔNG bắn — phép đo là thật
+
+**0 trong 432 ô có stop/target của chính nó nổ 0 lần.** Mọi ô đều có luật thật
+sự nổ, nên không ô nào là bẫy `tsmom/120d` của §8.
+
+### Chân trời 24h không cứu được gì
+
+Arm h24 (144 ô) cho PF trung vị 0,930 (vàng A) / 1,058 (vàng B) / 0,804 (bạc
+A) / 0,808 (bạc B) — cùng dấu đảo, cùng corr âm (−0,557 / −0,431). Nâng trần
+từ 4h lên 24h **không** làm xuất hiện edge; nó chỉ đổi ô nào tình cờ qua.

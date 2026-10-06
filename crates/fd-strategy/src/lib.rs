@@ -20,6 +20,7 @@ pub mod intraday_momentum;
 pub mod news;
 pub mod orb;
 pub mod pdhl;
+pub mod ratio_reversion;
 pub mod rsi_reversal_vol;
 pub mod quiet_swing;
 pub mod registry;

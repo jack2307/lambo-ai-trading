@@ -1,0 +1,220 @@
+# 36 rows declared in docs/decisions/2026-10-06-ratio-reversion.md S5.
+# Generated, not hand-edited: a row list a human retyped per arm is a
+# row list that can differ between arms, and the whole point is that the
+# same 36 rows are read on both legs, both windows and both guard arms.
+
+[[hypothesis]]
+label = "ratz/lb96/z1.5/s1.5/rev"
+base = "ratio-reversion"
+overrides = { lookback = 96, zEnter = 1.5, stopAtr = 1.5, revert = 1.0 }
+why = "metal ratio faded at 1.5 sd of its 96-bar mean, one leg, stop 1.5 ATR"
+
+[[hypothesis]]
+label = "ratz/lb96/z1.5/s1.5/con"
+base = "ratio-reversion"
+overrides = { lookback = 96, zEnter = 1.5, stopAtr = 1.5, revert = -1.0 }
+why = "metal ratio followed at 1.5 sd of its 96-bar mean, one leg, stop 1.5 ATR"
+
+[[hypothesis]]
+label = "ratz/lb96/z1.5/s2.0/rev"
+base = "ratio-reversion"
+overrides = { lookback = 96, zEnter = 1.5, stopAtr = 2.0, revert = 1.0 }
+why = "metal ratio faded at 1.5 sd of its 96-bar mean, one leg, stop 2.0 ATR"
+
+[[hypothesis]]
+label = "ratz/lb96/z1.5/s2.0/con"
+base = "ratio-reversion"
+overrides = { lookback = 96, zEnter = 1.5, stopAtr = 2.0, revert = -1.0 }
+why = "metal ratio followed at 1.5 sd of its 96-bar mean, one leg, stop 2.0 ATR"
+
+[[hypothesis]]
+label = "ratz/lb96/z1.5/s3.0/rev"
+base = "ratio-reversion"
+overrides = { lookback = 96, zEnter = 1.5, stopAtr = 3.0, revert = 1.0 }
+why = "metal ratio faded at 1.5 sd of its 96-bar mean, one leg, stop 3.0 ATR"
+
+[[hypothesis]]
+label = "ratz/lb96/z1.5/s3.0/con"
+base = "ratio-reversion"
+overrides = { lookback = 96, zEnter = 1.5, stopAtr = 3.0, revert = -1.0 }
+why = "metal ratio followed at 1.5 sd of its 96-bar mean, one leg, stop 3.0 ATR"
+
+[[hypothesis]]
+label = "ratz/lb96/z2.0/s1.5/rev"
+base = "ratio-reversion"
+overrides = { lookback = 96, zEnter = 2.0, stopAtr = 1.5, revert = 1.0 }
+why = "metal ratio faded at 2.0 sd of its 96-bar mean, one leg, stop 1.5 ATR"
+
+[[hypothesis]]
+label = "ratz/lb96/z2.0/s1.5/con"
+base = "ratio-reversion"
+overrides = { lookback = 96, zEnter = 2.0, stopAtr = 1.5, revert = -1.0 }
+why = "metal ratio followed at 2.0 sd of its 96-bar mean, one leg, stop 1.5 ATR"
+
+[[hypothesis]]
+label = "ratz/lb96/z2.0/s2.0/rev"
+base = "ratio-reversion"
+overrides = { lookback = 96, zEnter = 2.0, stopAtr = 2.0, revert = 1.0 }
+why = "metal ratio faded at 2.0 sd of its 96-bar mean, one leg, stop 2.0 ATR"
+
+[[hypothesis]]
+label = "ratz/lb96/z2.0/s2.0/con"
+base = "ratio-reversion"
+overrides = { lookback = 96, zEnter = 2.0, stopAtr = 2.0, revert = -1.0 }
+why = "metal ratio followed at 2.0 sd of its 96-bar mean, one leg, stop 2.0 ATR"
+
+[[hypothesis]]
+label = "ratz/lb96/z2.0/s3.0/rev"
+base = "ratio-reversion"
+overrides = { lookback = 96, zEnter = 2.0, stopAtr = 3.0, revert = 1.0 }
+why = "metal ratio faded at 2.0 sd of its 96-bar mean, one leg, stop 3.0 ATR"
+
+[[hypothesis]]
+label = "ratz/lb96/z2.0/s3.0/con"
+base = "ratio-reversion"
+overrides = { lookback = 96, zEnter = 2.0, stopAtr = 3.0, revert = -1.0 }
+why = "metal ratio followed at 2.0 sd of its 96-bar mean, one leg, stop 3.0 ATR"
+
+[[hypothesis]]
+label = "ratz/lb96/z2.5/s1.5/rev"
+base = "ratio-reversion"
+overrides = { lookback = 96, zEnter = 2.5, stopAtr = 1.5, revert = 1.0 }
+why = "metal ratio faded at 2.5 sd of its 96-bar mean, one leg, stop 1.5 ATR"
+
+[[hypothesis]]
+label = "ratz/lb96/z2.5/s1.5/con"
+base = "ratio-reversion"
+overrides = { lookback = 96, zEnter = 2.5, stopAtr = 1.5, revert = -1.0 }
+why = "metal ratio followed at 2.5 sd of its 96-bar mean, one leg, stop 1.5 ATR"
+
+[[hypothesis]]
+label = "ratz/lb96/z2.5/s2.0/rev"
+base = "ratio-reversion"
+overrides = { lookback = 96, zEnter = 2.5, stopAtr = 2.0, revert = 1.0 }
+why = "metal ratio faded at 2.5 sd of its 96-bar mean, one leg, stop 2.0 ATR"
+
+[[hypothesis]]
+label = "ratz/lb96/z2.5/s2.0/con"
+base = "ratio-reversion"
+overrides = { lookback = 96, zEnter = 2.5, stopAtr = 2.0, revert = -1.0 }
+why = "metal ratio followed at 2.5 sd of its 96-bar mean, one leg, stop 2.0 ATR"
+
+[[hypothesis]]
+label = "ratz/lb96/z2.5/s3.0/rev"
+base = "ratio-reversion"
+overrides = { lookback = 96, zEnter = 2.5, stopAtr = 3.0, revert = 1.0 }
+why = "metal ratio faded at 2.5 sd of its 96-bar mean, one leg, stop 3.0 ATR"
+
+[[hypothesis]]
+label = "ratz/lb96/z2.5/s3.0/con"
+base = "ratio-reversion"
+overrides = { lookback = 96, zEnter = 2.5, stopAtr = 3.0, revert = -1.0 }
+why = "metal ratio followed at 2.5 sd of its 96-bar mean, one leg, stop 3.0 ATR"
+
+[[hypothesis]]
+label = "ratz/lb480/z1.5/s1.5/rev"
+base = "ratio-reversion"
+overrides = { lookback = 480, zEnter = 1.5, stopAtr = 1.5, revert = 1.0 }
+why = "metal ratio faded at 1.5 sd of its 480-bar mean, one leg, stop 1.5 ATR"
+
+[[hypothesis]]
+label = "ratz/lb480/z1.5/s1.5/con"
+base = "ratio-reversion"
+overrides = { lookback = 480, zEnter = 1.5, stopAtr = 1.5, revert = -1.0 }
+why = "metal ratio followed at 1.5 sd of its 480-bar mean, one leg, stop 1.5 ATR"
+
+[[hypothesis]]
+label = "ratz/lb480/z1.5/s2.0/rev"
+base = "ratio-reversion"
+overrides = { lookback = 480, zEnter = 1.5, stopAtr = 2.0, revert = 1.0 }
+why = "metal ratio faded at 1.5 sd of its 480-bar mean, one leg, stop 2.0 ATR"
+
+[[hypothesis]]
+label = "ratz/lb480/z1.5/s2.0/con"
+base = "ratio-reversion"
+overrides = { lookback = 480, zEnter = 1.5, stopAtr = 2.0, revert = -1.0 }
+why = "metal ratio followed at 1.5 sd of its 480-bar mean, one leg, stop 2.0 ATR"
+
+[[hypothesis]]
+label = "ratz/lb480/z1.5/s3.0/rev"
+base = "ratio-reversion"
+overrides = { lookback = 480, zEnter = 1.5, stopAtr = 3.0, revert = 1.0 }
+why = "metal ratio faded at 1.5 sd of its 480-bar mean, one leg, stop 3.0 ATR"
+
+[[hypothesis]]
+label = "ratz/lb480/z1.5/s3.0/con"
+base = "ratio-reversion"
+overrides = { lookback = 480, zEnter = 1.5, stopAtr = 3.0, revert = -1.0 }
+why = "metal ratio followed at 1.5 sd of its 480-bar mean, one leg, stop 3.0 ATR"
+
+[[hypothesis]]
+label = "ratz/lb480/z2.0/s1.5/rev"
+base = "ratio-reversion"
+overrides = { lookback = 480, zEnter = 2.0, stopAtr = 1.5, revert = 1.0 }
+why = "metal ratio faded at 2.0 sd of its 480-bar mean, one leg, stop 1.5 ATR"
+
+[[hypothesis]]
+label = "ratz/lb480/z2.0/s1.5/con"
+base = "ratio-reversion"
+overrides = { lookback = 480, zEnter = 2.0, stopAtr = 1.5, revert = -1.0 }
+why = "metal ratio followed at 2.0 sd of its 480-bar mean, one leg, stop 1.5 ATR"
+
+[[hypothesis]]
+label = "ratz/lb480/z2.0/s2.0/rev"
+base = "ratio-reversion"
+overrides = { lookback = 480, zEnter = 2.0, stopAtr = 2.0, revert = 1.0 }
+why = "metal ratio faded at 2.0 sd of its 480-bar mean, one leg, stop 2.0 ATR"
+
+[[hypothesis]]
+label = "ratz/lb480/z2.0/s2.0/con"
+base = "ratio-reversion"
+overrides = { lookback = 480, zEnter = 2.0, stopAtr = 2.0, revert = -1.0 }
+why = "metal ratio followed at 2.0 sd of its 480-bar mean, one leg, stop 2.0 ATR"
+
+[[hypothesis]]
+label = "ratz/lb480/z2.0/s3.0/rev"
+base = "ratio-reversion"
+overrides = { lookback = 480, zEnter = 2.0, stopAtr = 3.0, revert = 1.0 }
+why = "metal ratio faded at 2.0 sd of its 480-bar mean, one leg, stop 3.0 ATR"
+
+[[hypothesis]]
+label = "ratz/lb480/z2.0/s3.0/con"
+base = "ratio-reversion"
+overrides = { lookback = 480, zEnter = 2.0, stopAtr = 3.0, revert = -1.0 }
+why = "metal ratio followed at 2.0 sd of its 480-bar mean, one leg, stop 3.0 ATR"
+
+[[hypothesis]]
+label = "ratz/lb480/z2.5/s1.5/rev"
+base = "ratio-reversion"
+overrides = { lookback = 480, zEnter = 2.5, stopAtr = 1.5, revert = 1.0 }
+why = "metal ratio faded at 2.5 sd of its 480-bar mean, one leg, stop 1.5 ATR"
+
+[[hypothesis]]
+label = "ratz/lb480/z2.5/s1.5/con"
+base = "ratio-reversion"
+overrides = { lookback = 480, zEnter = 2.5, stopAtr = 1.5, revert = -1.0 }
+why = "metal ratio followed at 2.5 sd of its 480-bar mean, one leg, stop 1.5 ATR"
+
+[[hypothesis]]
+label = "ratz/lb480/z2.5/s2.0/rev"
+base = "ratio-reversion"
+overrides = { lookback = 480, zEnter = 2.5, stopAtr = 2.0, revert = 1.0 }
+why = "metal ratio faded at 2.5 sd of its 480-bar mean, one leg, stop 2.0 ATR"
+
+[[hypothesis]]
+label = "ratz/lb480/z2.5/s2.0/con"
+base = "ratio-reversion"
+overrides = { lookback = 480, zEnter = 2.5, stopAtr = 2.0, revert = -1.0 }
+why = "metal ratio followed at 2.5 sd of its 480-bar mean, one leg, stop 2.0 ATR"
+
+[[hypothesis]]
+label = "ratz/lb480/z2.5/s3.0/rev"
+base = "ratio-reversion"
+overrides = { lookback = 480, zEnter = 2.5, stopAtr = 3.0, revert = 1.0 }
+why = "metal ratio faded at 2.5 sd of its 480-bar mean, one leg, stop 3.0 ATR"
+
+[[hypothesis]]
+label = "ratz/lb480/z2.5/s3.0/con"
+base = "ratio-reversion"
+overrides = { lookback = 480, zEnter = 2.5, stopAtr = 3.0, revert = -1.0 }
+why = "metal ratio followed at 2.5 sd of its 480-bar mean, one leg, stop 3.0 ATR"
