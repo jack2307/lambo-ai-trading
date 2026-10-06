@@ -1,0 +1,96 @@
+# XAUDUKA 5m, structure INSIDE the release expansion (T-probe)
+#
+# Registered in docs/decisions/2026-10-07-news-instrument-timeframe.md, written
+# and committed before the first run. The row shape is agent/n1's
+# (receipts/news-entry.toml) and nothing in the rule is changed: only the bar
+# size, and therefore what `impulse`, `range` and ATR(14) are measured over.
+#
+# Each row carries the `newsonly:` gate that admits EXACTLY the one bar its own
+# `probeBars` fires on at THIS interval, so the matched null in hypotheses.rs
+# draws from the same single bar after the same release as the method.
+#
+# `news-pulse` declares no grid. Run with --fixed.
+
+[[hypothesis]]
+label = "np5m-brk-p1-m05"
+base = "news-pulse"
+filters = ["newsonly:0/5:3:USD"]
+overrides = { probeBars = 1, mode = 0, minMoveAtr = 0.5, stopImpulse = 1.0, minImpact = 3, atrPeriod = 14, maxLagMin = 15 }
+why = "the first move after a scheduled release persists; probe 1 bar(s) of 5m = the signal bar opens +0 min from the release, gate 0.5 pre-release ATR(14) of 5m bars. The filter admits exactly that one bar, so the matched null draws from the same bar after the same release."
+
+[[hypothesis]]
+label = "np5m-brk-p1-m15"
+base = "news-pulse"
+filters = ["newsonly:0/5:3:USD"]
+overrides = { probeBars = 1, mode = 0, minMoveAtr = 1.5, stopImpulse = 1.0, minImpact = 3, atrPeriod = 14, maxLagMin = 15 }
+why = "the first move after a scheduled release persists; probe 1 bar(s) of 5m = the signal bar opens +0 min from the release, gate 1.5 pre-release ATR(14) of 5m bars. The filter admits exactly that one bar, so the matched null draws from the same bar after the same release."
+
+[[hypothesis]]
+label = "np5m-rev-p1-m05"
+base = "news-pulse"
+filters = ["newsonly:0/5:3:USD"]
+overrides = { probeBars = 1, mode = 1, minMoveAtr = 0.5, stopImpulse = 1.0, minImpact = 3, atrPeriod = 14, maxLagMin = 15 }
+why = "the first move after a scheduled release overshoots and gives it back; probe 1 bar(s) of 5m = the signal bar opens +0 min from the release, gate 0.5 pre-release ATR(14) of 5m bars. The filter admits exactly that one bar, so the matched null draws from the same bar after the same release."
+
+[[hypothesis]]
+label = "np5m-rev-p1-m15"
+base = "news-pulse"
+filters = ["newsonly:0/5:3:USD"]
+overrides = { probeBars = 1, mode = 1, minMoveAtr = 1.5, stopImpulse = 1.0, minImpact = 3, atrPeriod = 14, maxLagMin = 15 }
+why = "the first move after a scheduled release overshoots and gives it back; probe 1 bar(s) of 5m = the signal bar opens +0 min from the release, gate 1.5 pre-release ATR(14) of 5m bars. The filter admits exactly that one bar, so the matched null draws from the same bar after the same release."
+
+[[hypothesis]]
+label = "np5m-brk-p2-m05"
+base = "news-pulse"
+filters = ["newsonly:5/10:3:USD"]
+overrides = { probeBars = 2, mode = 0, minMoveAtr = 0.5, stopImpulse = 1.0, minImpact = 3, atrPeriod = 14, maxLagMin = 15 }
+why = "the first move after a scheduled release persists; probe 2 bar(s) of 5m = the signal bar opens +5 min from the release, gate 0.5 pre-release ATR(14) of 5m bars. The filter admits exactly that one bar, so the matched null draws from the same bar after the same release."
+
+[[hypothesis]]
+label = "np5m-brk-p2-m15"
+base = "news-pulse"
+filters = ["newsonly:5/10:3:USD"]
+overrides = { probeBars = 2, mode = 0, minMoveAtr = 1.5, stopImpulse = 1.0, minImpact = 3, atrPeriod = 14, maxLagMin = 15 }
+why = "the first move after a scheduled release persists; probe 2 bar(s) of 5m = the signal bar opens +5 min from the release, gate 1.5 pre-release ATR(14) of 5m bars. The filter admits exactly that one bar, so the matched null draws from the same bar after the same release."
+
+[[hypothesis]]
+label = "np5m-rev-p2-m05"
+base = "news-pulse"
+filters = ["newsonly:5/10:3:USD"]
+overrides = { probeBars = 2, mode = 1, minMoveAtr = 0.5, stopImpulse = 1.0, minImpact = 3, atrPeriod = 14, maxLagMin = 15 }
+why = "the first move after a scheduled release overshoots and gives it back; probe 2 bar(s) of 5m = the signal bar opens +5 min from the release, gate 0.5 pre-release ATR(14) of 5m bars. The filter admits exactly that one bar, so the matched null draws from the same bar after the same release."
+
+[[hypothesis]]
+label = "np5m-rev-p2-m15"
+base = "news-pulse"
+filters = ["newsonly:5/10:3:USD"]
+overrides = { probeBars = 2, mode = 1, minMoveAtr = 1.5, stopImpulse = 1.0, minImpact = 3, atrPeriod = 14, maxLagMin = 15 }
+why = "the first move after a scheduled release overshoots and gives it back; probe 2 bar(s) of 5m = the signal bar opens +5 min from the release, gate 1.5 pre-release ATR(14) of 5m bars. The filter admits exactly that one bar, so the matched null draws from the same bar after the same release."
+
+[[hypothesis]]
+label = "np5m-brk-p4-m05"
+base = "news-pulse"
+filters = ["newsonly:15/20:3:USD"]
+overrides = { probeBars = 4, mode = 0, minMoveAtr = 0.5, stopImpulse = 1.0, minImpact = 3, atrPeriod = 14, maxLagMin = 15 }
+why = "the first move after a scheduled release persists; probe 4 bar(s) of 5m = the signal bar opens +15 min from the release, gate 0.5 pre-release ATR(14) of 5m bars. The filter admits exactly that one bar, so the matched null draws from the same bar after the same release."
+
+[[hypothesis]]
+label = "np5m-brk-p4-m15"
+base = "news-pulse"
+filters = ["newsonly:15/20:3:USD"]
+overrides = { probeBars = 4, mode = 0, minMoveAtr = 1.5, stopImpulse = 1.0, minImpact = 3, atrPeriod = 14, maxLagMin = 15 }
+why = "the first move after a scheduled release persists; probe 4 bar(s) of 5m = the signal bar opens +15 min from the release, gate 1.5 pre-release ATR(14) of 5m bars. The filter admits exactly that one bar, so the matched null draws from the same bar after the same release."
+
+[[hypothesis]]
+label = "np5m-rev-p4-m05"
+base = "news-pulse"
+filters = ["newsonly:15/20:3:USD"]
+overrides = { probeBars = 4, mode = 1, minMoveAtr = 0.5, stopImpulse = 1.0, minImpact = 3, atrPeriod = 14, maxLagMin = 15 }
+why = "the first move after a scheduled release overshoots and gives it back; probe 4 bar(s) of 5m = the signal bar opens +15 min from the release, gate 0.5 pre-release ATR(14) of 5m bars. The filter admits exactly that one bar, so the matched null draws from the same bar after the same release."
+
+[[hypothesis]]
+label = "np5m-rev-p4-m15"
+base = "news-pulse"
+filters = ["newsonly:15/20:3:USD"]
+overrides = { probeBars = 4, mode = 1, minMoveAtr = 1.5, stopImpulse = 1.0, minImpact = 3, atrPeriod = 14, maxLagMin = 15 }
+why = "the first move after a scheduled release overshoots and gives it back; probe 4 bar(s) of 5m = the signal bar opens +15 min from the release, gate 1.5 pre-release ATR(14) of 5m bars. The filter admits exactly that one bar, so the matched null draws from the same bar after the same release."

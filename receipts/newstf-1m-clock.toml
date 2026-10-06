@@ -1,0 +1,40 @@
+# XAUDUKA 1m, the 15m survivor's own minute on a finer ruler (T-clock)
+#
+# Registered in docs/decisions/2026-10-07-news-instrument-timeframe.md, written
+# and committed before the first run. The row shape is agent/n1's
+# (receipts/news-entry.toml) and nothing in the rule is changed: only the bar
+# size, and therefore what `impulse`, `range` and ATR(14) are measured over.
+#
+# Each row carries the `newsonly:` gate that admits EXACTLY the one bar its own
+# `probeBars` fires on at THIS interval, so the matched null in hypotheses.rs
+# draws from the same single bar after the same release as the method.
+#
+# `news-pulse` declares no grid. Run with --fixed.
+
+[[hypothesis]]
+label = "np1m-brk-c45-m05"
+base = "news-pulse"
+filters = ["newsonly:45/46:3:USD"]
+overrides = { probeBars = 46, mode = 0, minMoveAtr = 0.5, stopImpulse = 1.0, minImpact = 3, atrPeriod = 14, maxLagMin = 15 }
+why = "the first move after a scheduled release persists; CLOCK-MATCHED to the 15m survivor: probe 46 bar(s) of 1m puts the signal bar at +45 min from the release, the same minute np-brk-p4-m15 enters on 15m bars, with impulse, range and ATR(14) measured on 1m bars instead. Gate 0.5 pre-release ATR."
+
+[[hypothesis]]
+label = "np1m-brk-c45-m15"
+base = "news-pulse"
+filters = ["newsonly:45/46:3:USD"]
+overrides = { probeBars = 46, mode = 0, minMoveAtr = 1.5, stopImpulse = 1.0, minImpact = 3, atrPeriod = 14, maxLagMin = 15 }
+why = "the first move after a scheduled release persists; CLOCK-MATCHED to the 15m survivor: probe 46 bar(s) of 1m puts the signal bar at +45 min from the release, the same minute np-brk-p4-m15 enters on 15m bars, with impulse, range and ATR(14) measured on 1m bars instead. Gate 1.5 pre-release ATR."
+
+[[hypothesis]]
+label = "np1m-rev-c45-m05"
+base = "news-pulse"
+filters = ["newsonly:45/46:3:USD"]
+overrides = { probeBars = 46, mode = 1, minMoveAtr = 0.5, stopImpulse = 1.0, minImpact = 3, atrPeriod = 14, maxLagMin = 15 }
+why = "the first move after a scheduled release overshoots and gives it back; CLOCK-MATCHED to the 15m survivor: probe 46 bar(s) of 1m puts the signal bar at +45 min from the release, the same minute np-brk-p4-m15 enters on 15m bars, with impulse, range and ATR(14) measured on 1m bars instead. Gate 0.5 pre-release ATR."
+
+[[hypothesis]]
+label = "np1m-rev-c45-m15"
+base = "news-pulse"
+filters = ["newsonly:45/46:3:USD"]
+overrides = { probeBars = 46, mode = 1, minMoveAtr = 1.5, stopImpulse = 1.0, minImpact = 3, atrPeriod = 14, maxLagMin = 15 }
+why = "the first move after a scheduled release overshoots and gives it back; CLOCK-MATCHED to the 15m survivor: probe 46 bar(s) of 1m puts the signal bar at +45 min from the release, the same minute np-brk-p4-m15 enters on 15m bars, with impulse, range and ATR(14) measured on 1m bars instead. Gate 1.5 pre-release ATR."
