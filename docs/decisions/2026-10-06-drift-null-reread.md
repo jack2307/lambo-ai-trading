@@ -163,3 +163,35 @@ Falsifier 1 and falsifier 2 can both fire; either one closes the axis.
 ---
 
 *Amendments go below this line as dated notes. No line above is ever rewritten.*
+
+## Amendment, 2026-10-06, after the six core runs and before the published-window runs were read
+
+Three notes. No line above is rewritten.
+
+1. **The seeds ladder was not needed.** The wall-clock probe (one window, one
+   setting, `--seeds=20`, elapsed time only) came back at **0.43 s**. All six
+   core runs went at the declared top rung, `--seeds=2000`, in 20–34 s each.
+   The published-window runs are slower (543 s for `P-coin`, 100,586 bars
+   against 6,044) and also ran at 2000. **No rung was stepped down anywhere.**
+
+2. **My "collapsed" criterion as written reads the wrong column, and I am
+   fixing the reading rather than the threshold.** It says "below the 95th
+   under `exposure`". The receipt's `pct` column is printed `{p:.0}%`, i.e.
+   **rounded**, while the engine's own `survives()` compares the *unrounded*
+   percentile against 95.0. A cell can therefore print `95%` and be below
+   95.0, and one does. From here on the authority for a collapse is **the
+   verdict column** (`SURVIVES` vs `gate pass, inside the noise`), which is the
+   unrounded comparison and is the thing the record publishes, with the printed
+   `null p95` quoted beside it as the independent check. This makes the
+   criterion stricter, not looser, and it is the engine's own arithmetic rather
+   than a number of mine.
+
+3. **Falsifier 3 is read on the signed share of time, not on the long share by
+   trade count.** Under `exposure` the control is *designed* to be drawn at the
+   share that reproduces the method's signed share of **time**
+   (`2026-10-02-drift-null.md`, correction 2), so its long share by count
+   deliberately differs from the method's and the receipt's
+   `** the control's side ratio is not the method's **` flag fires by
+   construction on such a row. The drift match is the signed-share-of-time gap
+   against the 0.05 band, which is the quantity the drift is paid on. I read it
+   that way and report both counts so a reader can check.
