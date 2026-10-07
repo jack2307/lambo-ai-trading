@@ -347,3 +347,54 @@ control's `cost match` is **0.65-0.75** on all four flat rows — outside the
 band — so per brief section 4 **no percentile is published for them**, on silver
 or on gold. This is the same instrument defect `agent/pure-drift` section 7
 counted and did not repair.
+
+### 2026-10-07, after the six gold runs — what the registration got right, what it could not deliver, and the two numbers of section 3 that the measurement overturned
+
+**F1 fired.** 0 of 24 flat-row cells clears the gate on either leg, in any arm.
+Result: `receipts/rollover-flat/RESULT.md`.
+
+**F2 did not fire, and section 4's invariant held.** `swap$/spread$` is
+**0.123x-0.190x** on every flat row against **29.0x-113.2x** on their parents;
+`expectancy_net - expectancy` is **-0.001 to -0.002 R/trade**, which is
+`px-1s`'s own -0.001.
+
+**F4 did not fire.** `WEEKEND_FLAT` is **0-1 in 1,157-1,944 trades** on the
+flat rows in arm C (0.0-0.8 per 1,000) against **395.7-477.7 per 1,000** on the
+parents, and the guards leave trade count unchanged and mean hold 4% shorter.
+The governance claim of section 8 therefore stands, with its limit stated:
+surviving the tradeable arm is not passing the gate.
+
+**Section 3's arithmetic was conservative, and both of its inputs were wrong in
+the same direction** (brief section 8: the measured number wins):
+
+* **"~27 round trips"** -> measured **19.6x (IS) / 19.9x (OOS)**. 651 h is 27.1
+  **calendar** days but only 27.1 x 5/7 = **19.4 trading sessions**, and a flat
+  book trades only sessions the feed opens.
+* **"0.85-1.10% of R per trip, so 23-30% of R"** -> measured **16.3% (IS) /
+  10.9% (OOS)** for `tsf-l60`. The 0.85-1.10% figure is right **on the 1.5
+  daily-range ruler** (my own `px-1s` reads 1.15% IS / 0.83% OOS, confirming
+  addendum F), but `tsmom` sizes on **2.0** ranges, where the same spread is
+  **0.55-0.83% of R**.
+* So the trade is **0.109R spent to avoid 0.641R**, not 0.27R to avoid 0.641R,
+  and the measured net improvement per original horizon is **+0.133R to
+  +0.731R** across all 8 flat-vs-parent comparisons.
+
+**Section 5's reading of addendum A did not hold, and the registration said it
+would be reported from the rows rather than assumed.** On all 24 flat cells
+**expectancy is the far more binding leg**, by 4x to 50x — the opposite of
+addendum A's "expectancy is redundant", which was measured at
+`reward_risk = 1.8` with pure STOP/TARGET exits. These rows never exit on
+STOP/TARGET. A second, related tool-reading defect is counted in RESULT.md
+section 1: in arm B the verdict string on all **six** parent cells names only
+the PF leg, because the verdict tests `expectancy` (which passes) and not
+`expectancy_net` (which fails).
+
+**Section 10.1's refusal to offer a drawdown criterion was the right call and
+is now load-bearing:** the headline of this job is **+0.390R per original
+horizon** on `tsf-l60` OOS, a mechanism that takes **1,790 trades instead of
+90**, and `--mode=hypotheses` prints no drawdown. That return has no risk
+number beside it and RESULT.md says so.
+
+**Probe cells: 16 declared, 8 viewed** (section 11 as amended; the arm-A silver
+probe would have been byte-identical). **Gold cells: 48 declared, 48 viewed.**
+No row added, no threshold moved, no window changed, no sample floor lowered.

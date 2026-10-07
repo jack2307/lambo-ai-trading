@@ -1,0 +1,94 @@
+market:   xauduka 15m
+data:     E:/rust/flowdesk/data (bars from E:/rust/flowdesk/data\bars\XAUDUKA-15m.parquet)
+bounds:   --from=2010-06-01 --to=2018-06-01 kept 190889 of 378749 bars
+spread:   0.28 per round trip
+trail:    off
+max hold: 4 h (14400000 ms) from [trading] max_hold_ms, no per-market override
+bars:     190889 from 2010-06-01 00:00 to 2018-05-31 23:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+companion: none loaded — every cmp series is NaN
+guards: off (every number unguarded)
+null sides: exposure - the method's measured long share AND its trade count on the hold branch
+flags:    12 passed, every one of them read by --mode=hypotheses
+
+== hypotheses `E:/rust/fd-rollover-flat/docs/research/designs/2026-10-07-rollover-flat.toml`: 8 declared, FIXED parameters over the whole window (no selection), each against 200 matched null runs ==
+null sides: exposure (the method's measured long share AND its trade count on the hold branch)
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+guards: off (every number unguarded)
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+px-1s        session-hold         2014   0.912  -0.015    0.934    0.964        0   16%  fail: profit factor 0.912 < 1.2; expectancy -0.015R < 0.05R
+                                  — pure one-session long exposure in the same window the flat variants use: the floor they must beat to have a pattern in them at all. Also the parity anchor for the window - agent/pure-drift measured it at swap$/spread$ 0.116x-0.188x, so this window provably crosses 0 rollovers
+                                matched null 2012 trades median vs the method's 2014 — count match 1.00
+                                long share: method 1.000 vs the null's median 1.000
+                                spread paid: method 1852.49 USD vs the null's median 2012.96 USD — cost match 1.09
+                                exposure: signed share of time method +1.000 vs the null's +1.000; time in market method 2761575 min vs the null's median 3586755 min — ratio 1.30  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.934 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                exits: END_OF_DATA 1, window closed 2013; mean hold 1371.2 min
+qs-h15       quiet-swing           190   1.262   0.130    0.954    1.318        0   91%  gate pass, inside the noise
+                                  — the long-horizon baseline this job is the variant of: expectancy +0.130R -> expectancy_net -0.179R, 0.309R of carry. Parity anchor against agent/n5
+                                matched null 207 trades median vs the method's 190 — count match 1.09
+                                long share: method 0.516 vs the null's median 0.542
+                                spread paid: method 252.78 USD vs the null's median 219.06 USD — cost match 0.87
+                                exposure: signed share of time method +0.080 vs the null's +0.078; time in market method 2456250 min vs the null's median 2960325 min — ratio 1.21
+                                the null's own median LOSES money (p50 0.954 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                exits: 10-session return flipped to +0.05% 2, 10-session return flipped to +0.09% 1, 10-session return flipped to +0.14% 1, 10-session return flipped to +0.15% 1, 10-session return flipped to +0.16% 1, 10-session return flipped to +0.19% 2, 10-session return flipped to +0.20% 2, 10-session return flipped to +0.21% 2, 10-session return flipped to +0.25% 1, 10-session return flipped to +0.26% 2, 10-session return flipped to +0.27% 2, 10-session return flipped to +0.30% 1, 10-session return flipped to +0.32% 1, 10-session return flipped to +0.41% 1, 10-session return flipped to +0.43% 3, 10-session return flipped to +0.44% 2, 10-session return flipped to +0.48% 1, 10-session return flipped to +0.49% 1, 10-session return flipped to +0.50% 1, 10-session return flipped to +0.52% 1, 10-session return flipped to +0.56% 2, 10-session return flipped to +0.64% 1, 10-session return flipped to +0.67% 1, 10-session return flipped to +0.69% 1, 10-session return flipped to +0.71% 1, 10-session return flipped to +0.72% 2, 10-session return flipped to +0.77% 3, 10-session return flipped to +0.78% 1, 10-session return flipped to +0.80% 1, 10-session return flipped to +0.82% 1, 10-session return flipped to +0.85% 1, 10-session return flipped to +0.86% 1, 10-session return flipped to +0.89% 1, 10-session return flipped to +0.90% 1, 10-session return flipped to +0.91% 1, 10-session return flipped to +1.01% 1, 10-session return flipped to +1.11% 1, 10-session return flipped to +1.14% 1, 10-session return flipped to +1.28% 1, 10-session return flipped to +1.30% 1, 10-session return flipped to +1.36% 1, 10-session return flipped to +1.37% 1, 10-session return flipped to +1.42% 1, 10-session return flipped to +1.52% 1, 10-session return flipped to +1.55% 1, 10-session return flipped to +1.59% 1, 10-session return flipped to +1.67% 1, 10-session return flipped to +1.88% 1, 10-session return flipped to +2.14% 1, 10-session return flipped to +2.58% 1, 10-session return flipped to -0.01% 1, 10-session return flipped to -0.02% 1, 10-session return flipped to -0.03% 1, 10-session return flipped to -0.04% 1, 10-session return flipped to -0.05% 1, 10-session return flipped to -0.07% 2, 10-session return flipped to -0.09% 1, 10-session return flipped to -0.10% 1, 10-session return flipped to -0.11% 1, 10-session return flipped to -0.16% 1, 10-session return flipped to -0.21% 1, 10-session return flipped to -0.24% 2, 10-session return flipped to -0.29% 1, 10-session return flipped to -0.30% 1, 10-session return flipped to -0.31% 1, 10-session return flipped to -0.32% 3, 10-session return flipped to -0.33% 2, 10-session return flipped to -0.36% 1, 10-session return flipped to -0.38% 1, 10-session return flipped to -0.40% 1, 10-session return flipped to -0.41% 2, 10-session return flipped to -0.42% 2, 10-session return flipped to -0.43% 2, 10-session return flipped to -0.45% 1, 10-session return flipped to -0.46% 1, 10-session return flipped to -0.53% 1, 10-session return flipped to -0.55% 1, 10-session return flipped to -0.57% 1, 10-session return flipped to -0.58% 1, 10-session return flipped to -0.62% 1, 10-session return flipped to -0.75% 1, 10-session return flipped to -0.82% 1, 10-session return flipped to -0.86% 1, 10-session return flipped to -0.90% 2, 10-session return flipped to -0.97% 1, 10-session return flipped to -0.99% 1, 10-session return flipped to -1.04% 1, 10-session return flipped to -1.07% 1, 10-session return flipped to -1.08% 1, 10-session return flipped to -1.09% 1, 10-session return flipped to -1.11% 1, 10-session return flipped to -1.19% 1, 10-session return flipped to -1.48% 1, 10-session return flipped to -1.50% 1, 10-session return flipped to -1.52% 1, 10-session return flipped to -1.56% 1, 10-session return flipped to -1.82% 1, 10-session return flipped to -2.35% 1, 10-session return flipped to -2.39% 1, 10-session return flipped to -2.46% 1, 10-session return flipped to -2.69% 1, END_OF_DATA 1, held 15 sessions of 15 51, held 17 sessions of 15 15; mean hold 12927.6 min
+ts-l20       tsmom                 183   1.315   0.095    0.982    1.405        0   92%  gate pass, inside the noise
+                                  — the most-sampled long-horizon gate-passer in the record (183/185 trades). Parity anchor
+                                matched null 184 trades median vs the method's 183 — count match 1.01
+                                long share: method 0.514 vs the null's median 0.514
+                                spread paid: method 153.59 USD vs the null's median 147.30 USD — cost match 0.96
+                                exposure: signed share of time method +0.030 vs the null's +0.028; time in market method 3667575 min vs the null's median 4035990 min — ratio 1.10
+                                the null's own median LOSES money (p50 0.982 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                exits: 20-day return flipped 182, END_OF_DATA 1; mean hold 20041.4 min
+ts-l60       tsmom                  93   1.383   0.151    0.966    2.036        0   81%  gate pass, inside the noise
+                                  — the row this job exists for: expectancy +0.370R -> expectancy_net -0.271R, 0.641R of carry, 651 h mean hold. Parity anchor
+                                matched null 89 trades median vs the method's 93 — count match 0.96
+                                long share: method 0.548 vs the null's median 0.459  ** the control's side ratio is not the method's **
+                                spread paid: method 84.69 USD vs the null's median 67.79 USD — cost match 0.80
+                                exposure: signed share of time method -0.063 vs the null's -0.033; time in market method 3634710 min vs the null's median 4147868 min — ratio 1.14
+                                the null's own median LOSES money (p50 0.966 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                exits: 60-day return flipped 92, END_OF_DATA 1; mean hold 39082.9 min
+qsf-h15      quiet-swing-flat     1435   1.057   0.011    0.933    1.034        0   96%  fail: profit factor 1.057 < 1.2; expectancy 0.011R < 0.05R
+                                  — the flat-across-the-rollover variant of qs-h15: same signal, same sizing unit (1.5 daily ranges), expressed only inside 18:00-16:00 New York so it pays a round trip each session instead of financing each night
+                                matched null 1462 trades median vs the method's 1435 — count match 1.02
+                                long share: method 0.516 vs the null's median 0.508
+                                spread paid: method 1807.22 USD vs the null's median 1454.50 USD — cost match 0.80
+                                exposure: signed share of time method +0.020 vs the null's +0.017; time in market method 1969035 min vs the null's median 2553862 min — ratio 1.30  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.933 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                exits: END_OF_DATA 1, window closed 1434; mean hold 1372.2 min
+qsf-h5       quiet-swing-flat     1305   1.046   0.009    0.944    1.062        0   92%  fail: profit factor 1.046 < 1.2; expectancy 0.009R < 0.05R
+                                  — the same variant at the hold quiet-swing actually ships (5 sessions), so the hold clock is not a single point
+                                matched null 1340 trades median vs the method's 1305 — count match 1.03
+                                long share: method 0.534 vs the null's median 0.525
+                                spread paid: method 1597.30 USD vs the null's median 1368.11 USD — cost match 0.86
+                                exposure: signed share of time method +0.054 vs the null's +0.049; time in market method 1790415 min vs the null's median 2345115 min — ratio 1.31  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.944 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                exits: END_OF_DATA 1, window closed 1304; mean hold 1372.0 min
+tsf-l20      tsmom-flat           1944   1.022   0.003    0.930    1.048        0   90%  fail: profit factor 1.022 < 1.2; expectancy 0.003R < 0.05R
+                                  — the flat variant of ts-l20: same signal read at the same New York minute the parent rebalances at (1800), same 2.0-daily-range sizing unit
+                                matched null 1952 trades median vs the method's 1944 — count match 1.00
+                                long share: method 0.515 vs the null's median 0.513
+                                spread paid: method 1622.68 USD vs the null's median 1472.22 USD — cost match 0.91
+                                exposure: signed share of time method +0.029 vs the null's +0.027; time in market method 2669175 min vs the null's median 3441300 min — ratio 1.29  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.930 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                exits: END_OF_DATA 1, window closed 1943; mean hold 1373.0 min
+tsf-l60      tsmom-flat           1823   1.006   0.001    0.934    1.041        0   87%  fail: profit factor 1.006 < 1.2; expectancy 0.001R < 0.05R
+                                  — the flat variant of ts-l60, the row with 0.641R of carry to buy back: the single most informative cell in this plan
+                                matched null 1843 trades median vs the method's 1823 — count match 1.01
+                                long share: method 0.474 vs the null's median 0.466
+                                spread paid: method 1553.52 USD vs the null's median 1380.96 USD — cost match 0.89
+                                exposure: signed share of time method -0.067 vs the null's -0.069; time in market method 2509455 min vs the null's median 3218512 min — ratio 1.28  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.934 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                exits: END_OF_DATA 1, window closed 1822; mean hold 1376.5 min
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+
