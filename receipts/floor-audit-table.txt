@@ -1,7 +1,7 @@
 ================================================================================================================
 THE PUBLISHED RECORD AGAINST TWO PRINTED-RECEIPT DEFECTS - COUNT ONLY, NO GATE
 ================================================================================================================
-refs read                       : 110  (80 local heads + 29 remote-tracking; nothing merged, nothing checked out)
+refs read                       : 110  (81 local heads + 29 remote-tracking; nothing merged, nothing checked out)
 distinct text blobs under docs/research/runs, docs/decisions, */receipts/ : 1476
 table rows parsed               : 14876
 distinct printed rows           : 9858  (de-duplicated on printed text + trade count)

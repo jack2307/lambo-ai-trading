@@ -141,7 +141,7 @@ candidates. Nothing here passes or fails anything.
 
 ### 1. What was read
 
-110 refs (80 local heads, 29 remote-tracking, `main`), 81,182 (ref, blob, path)
+110 refs (81 local heads including `main`, 29 remote-tracking), 81,182 (ref, blob, path)
 tuples under `docs/research/runs/`, `docs/decisions/` and `*/receipts/`,
 de-duplicated to **1,476 distinct text blobs**, of which **1,266 are engine
 receipts** and 210 are agent-written tables or decision records. **14,876 table
@@ -264,7 +264,7 @@ themselves, and the reason not to mix the two stores is unchanged.
 | reported bands | 11 | 11 |
 | gate cells | 0 | 0 |
 | `search.exe` invocations | 0 | 0 |
-| refs scanned | every ref | 110 |
+| refs scanned | every ref | 110 (81 local + 29 remote) |
 
 ### 6. What is still not measured
 

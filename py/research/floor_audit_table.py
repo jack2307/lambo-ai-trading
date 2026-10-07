@@ -34,7 +34,7 @@ print("THE PUBLISHED RECORD AGAINST TWO PRINTED-RECEIPT DEFECTS - COUNT ONLY, NO
 rule()
 print("refs read                       : "
       f"{len({b for f in files for b in f['branches']})}"
-      "  (80 local heads + 29 remote-tracking; nothing merged, nothing checked out)")
+      "  (81 local heads + 29 remote-tracking; nothing merged, nothing checked out)")
 print(f"distinct text blobs under docs/research/runs, docs/decisions, */receipts/ : {len(files)}")
 print(f"table rows parsed               : {sum(f['n_rows'] for f in files)}")
 print(f"distinct printed rows           : {len(rows)}"
