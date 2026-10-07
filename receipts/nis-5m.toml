@@ -1,0 +1,130 @@
+# XAUDUKA 5m: a stop INSIDE the release range
+#
+# Registered in docs/decisions/2026-10-07-news-inner-stop.md, written and
+# committed before this file existed. The row shape is agent/n1's
+# (receipts/news-entry.toml) with ONE thing varied: `stopImpulse`, the fraction
+# of the impulse window's own range the stop sits at. All 12 of n1's rows and
+# all 32 of agent/news-tf's set it to 1.0; nobody moved it.
+#
+# f = 1.00 is the published control, re-run here in THIS binary so the
+# comparison is like-for-like (F3 of the registration).
+#
+# `minMoveAtr` is pinned at 0.5 on every row and is NOT swept: see section 3.
+#
+# Each row carries the `newsonly:` gate that admits EXACTLY the one bar its own
+# `probeBars` fires on at this interval, so the matched null in hypotheses.rs
+# draws from the same single bar after the same release as the method.
+#
+# `news-pulse` declares no grid. Run with --fixed.
+
+[[hypothesis]]
+label = "nis5m-brk-p1-f025"
+base = "news-pulse"
+filters = ["newsonly:0/5:3:USD"]
+overrides = { probeBars = 1, mode = 0, minMoveAtr = 0.5, stopImpulse = 0.25, minImpact = 3, atrPeriod = 14, maxLagMin = 15 }
+why = "the first move after a scheduled release persists; probe 1 bar(s) of 5m = the signal bar opens +0 min from the release, gate 0.5 pre-release ATR(14) of 5m bars. Stop = a fraction f = 0.25 of the release range, so the stop sits INSIDE it and the target is 0.45x the range away instead of 1.80x. The filter admits exactly that one bar, so the matched null draws from the same bar after the same release."
+
+[[hypothesis]]
+label = "nis5m-rev-p1-f025"
+base = "news-pulse"
+filters = ["newsonly:0/5:3:USD"]
+overrides = { probeBars = 1, mode = 1, minMoveAtr = 0.5, stopImpulse = 0.25, minImpact = 3, atrPeriod = 14, maxLagMin = 15 }
+why = "the first move after a scheduled release overshoots and gives it back; probe 1 bar(s) of 5m = the signal bar opens +0 min from the release, gate 0.5 pre-release ATR(14) of 5m bars. Stop = a fraction f = 0.25 of the release range, so the stop sits INSIDE it and the target is 0.45x the range away instead of 1.80x. The filter admits exactly that one bar, so the matched null draws from the same bar after the same release."
+
+[[hypothesis]]
+label = "nis5m-brk-p2-f025"
+base = "news-pulse"
+filters = ["newsonly:5/10:3:USD"]
+overrides = { probeBars = 2, mode = 0, minMoveAtr = 0.5, stopImpulse = 0.25, minImpact = 3, atrPeriod = 14, maxLagMin = 15 }
+why = "the first move after a scheduled release persists; probe 2 bar(s) of 5m = the signal bar opens +5 min from the release, gate 0.5 pre-release ATR(14) of 5m bars. Stop = a fraction f = 0.25 of the release range, so the stop sits INSIDE it and the target is 0.45x the range away instead of 1.80x. The filter admits exactly that one bar, so the matched null draws from the same bar after the same release."
+
+[[hypothesis]]
+label = "nis5m-rev-p2-f025"
+base = "news-pulse"
+filters = ["newsonly:5/10:3:USD"]
+overrides = { probeBars = 2, mode = 1, minMoveAtr = 0.5, stopImpulse = 0.25, minImpact = 3, atrPeriod = 14, maxLagMin = 15 }
+why = "the first move after a scheduled release overshoots and gives it back; probe 2 bar(s) of 5m = the signal bar opens +5 min from the release, gate 0.5 pre-release ATR(14) of 5m bars. Stop = a fraction f = 0.25 of the release range, so the stop sits INSIDE it and the target is 0.45x the range away instead of 1.80x. The filter admits exactly that one bar, so the matched null draws from the same bar after the same release."
+
+[[hypothesis]]
+label = "nis5m-brk-p1-f050"
+base = "news-pulse"
+filters = ["newsonly:0/5:3:USD"]
+overrides = { probeBars = 1, mode = 0, minMoveAtr = 0.5, stopImpulse = 0.50, minImpact = 3, atrPeriod = 14, maxLagMin = 15 }
+why = "the first move after a scheduled release persists; probe 1 bar(s) of 5m = the signal bar opens +0 min from the release, gate 0.5 pre-release ATR(14) of 5m bars. Stop = a fraction f = 0.50 of the release range, so the stop sits INSIDE it and the target is 0.90x the range away instead of 1.80x. The filter admits exactly that one bar, so the matched null draws from the same bar after the same release."
+
+[[hypothesis]]
+label = "nis5m-rev-p1-f050"
+base = "news-pulse"
+filters = ["newsonly:0/5:3:USD"]
+overrides = { probeBars = 1, mode = 1, minMoveAtr = 0.5, stopImpulse = 0.50, minImpact = 3, atrPeriod = 14, maxLagMin = 15 }
+why = "the first move after a scheduled release overshoots and gives it back; probe 1 bar(s) of 5m = the signal bar opens +0 min from the release, gate 0.5 pre-release ATR(14) of 5m bars. Stop = a fraction f = 0.50 of the release range, so the stop sits INSIDE it and the target is 0.90x the range away instead of 1.80x. The filter admits exactly that one bar, so the matched null draws from the same bar after the same release."
+
+[[hypothesis]]
+label = "nis5m-brk-p2-f050"
+base = "news-pulse"
+filters = ["newsonly:5/10:3:USD"]
+overrides = { probeBars = 2, mode = 0, minMoveAtr = 0.5, stopImpulse = 0.50, minImpact = 3, atrPeriod = 14, maxLagMin = 15 }
+why = "the first move after a scheduled release persists; probe 2 bar(s) of 5m = the signal bar opens +5 min from the release, gate 0.5 pre-release ATR(14) of 5m bars. Stop = a fraction f = 0.50 of the release range, so the stop sits INSIDE it and the target is 0.90x the range away instead of 1.80x. The filter admits exactly that one bar, so the matched null draws from the same bar after the same release."
+
+[[hypothesis]]
+label = "nis5m-rev-p2-f050"
+base = "news-pulse"
+filters = ["newsonly:5/10:3:USD"]
+overrides = { probeBars = 2, mode = 1, minMoveAtr = 0.5, stopImpulse = 0.50, minImpact = 3, atrPeriod = 14, maxLagMin = 15 }
+why = "the first move after a scheduled release overshoots and gives it back; probe 2 bar(s) of 5m = the signal bar opens +5 min from the release, gate 0.5 pre-release ATR(14) of 5m bars. Stop = a fraction f = 0.50 of the release range, so the stop sits INSIDE it and the target is 0.90x the range away instead of 1.80x. The filter admits exactly that one bar, so the matched null draws from the same bar after the same release."
+
+[[hypothesis]]
+label = "nis5m-brk-p1-f075"
+base = "news-pulse"
+filters = ["newsonly:0/5:3:USD"]
+overrides = { probeBars = 1, mode = 0, minMoveAtr = 0.5, stopImpulse = 0.75, minImpact = 3, atrPeriod = 14, maxLagMin = 15 }
+why = "the first move after a scheduled release persists; probe 1 bar(s) of 5m = the signal bar opens +0 min from the release, gate 0.5 pre-release ATR(14) of 5m bars. Stop = a fraction f = 0.75 of the release range, so the stop sits INSIDE it and the target is 1.35x the range away instead of 1.80x. The filter admits exactly that one bar, so the matched null draws from the same bar after the same release."
+
+[[hypothesis]]
+label = "nis5m-rev-p1-f075"
+base = "news-pulse"
+filters = ["newsonly:0/5:3:USD"]
+overrides = { probeBars = 1, mode = 1, minMoveAtr = 0.5, stopImpulse = 0.75, minImpact = 3, atrPeriod = 14, maxLagMin = 15 }
+why = "the first move after a scheduled release overshoots and gives it back; probe 1 bar(s) of 5m = the signal bar opens +0 min from the release, gate 0.5 pre-release ATR(14) of 5m bars. Stop = a fraction f = 0.75 of the release range, so the stop sits INSIDE it and the target is 1.35x the range away instead of 1.80x. The filter admits exactly that one bar, so the matched null draws from the same bar after the same release."
+
+[[hypothesis]]
+label = "nis5m-brk-p2-f075"
+base = "news-pulse"
+filters = ["newsonly:5/10:3:USD"]
+overrides = { probeBars = 2, mode = 0, minMoveAtr = 0.5, stopImpulse = 0.75, minImpact = 3, atrPeriod = 14, maxLagMin = 15 }
+why = "the first move after a scheduled release persists; probe 2 bar(s) of 5m = the signal bar opens +5 min from the release, gate 0.5 pre-release ATR(14) of 5m bars. Stop = a fraction f = 0.75 of the release range, so the stop sits INSIDE it and the target is 1.35x the range away instead of 1.80x. The filter admits exactly that one bar, so the matched null draws from the same bar after the same release."
+
+[[hypothesis]]
+label = "nis5m-rev-p2-f075"
+base = "news-pulse"
+filters = ["newsonly:5/10:3:USD"]
+overrides = { probeBars = 2, mode = 1, minMoveAtr = 0.5, stopImpulse = 0.75, minImpact = 3, atrPeriod = 14, maxLagMin = 15 }
+why = "the first move after a scheduled release overshoots and gives it back; probe 2 bar(s) of 5m = the signal bar opens +5 min from the release, gate 0.5 pre-release ATR(14) of 5m bars. Stop = a fraction f = 0.75 of the release range, so the stop sits INSIDE it and the target is 1.35x the range away instead of 1.80x. The filter admits exactly that one bar, so the matched null draws from the same bar after the same release."
+
+[[hypothesis]]
+label = "nis5m-brk-p1-f100"
+base = "news-pulse"
+filters = ["newsonly:0/5:3:USD"]
+overrides = { probeBars = 1, mode = 0, minMoveAtr = 0.5, stopImpulse = 1.00, minImpact = 3, atrPeriod = 14, maxLagMin = 15 }
+why = "the first move after a scheduled release persists; probe 1 bar(s) of 5m = the signal bar opens +0 min from the release, gate 0.5 pre-release ATR(14) of 5m bars. Stop = the WHOLE release range (the published control, f = 1.00). The filter admits exactly that one bar, so the matched null draws from the same bar after the same release."
+
+[[hypothesis]]
+label = "nis5m-rev-p1-f100"
+base = "news-pulse"
+filters = ["newsonly:0/5:3:USD"]
+overrides = { probeBars = 1, mode = 1, minMoveAtr = 0.5, stopImpulse = 1.00, minImpact = 3, atrPeriod = 14, maxLagMin = 15 }
+why = "the first move after a scheduled release overshoots and gives it back; probe 1 bar(s) of 5m = the signal bar opens +0 min from the release, gate 0.5 pre-release ATR(14) of 5m bars. Stop = the WHOLE release range (the published control, f = 1.00). The filter admits exactly that one bar, so the matched null draws from the same bar after the same release."
+
+[[hypothesis]]
+label = "nis5m-brk-p2-f100"
+base = "news-pulse"
+filters = ["newsonly:5/10:3:USD"]
+overrides = { probeBars = 2, mode = 0, minMoveAtr = 0.5, stopImpulse = 1.00, minImpact = 3, atrPeriod = 14, maxLagMin = 15 }
+why = "the first move after a scheduled release persists; probe 2 bar(s) of 5m = the signal bar opens +5 min from the release, gate 0.5 pre-release ATR(14) of 5m bars. Stop = the WHOLE release range (the published control, f = 1.00). The filter admits exactly that one bar, so the matched null draws from the same bar after the same release."
+
+[[hypothesis]]
+label = "nis5m-rev-p2-f100"
+base = "news-pulse"
+filters = ["newsonly:5/10:3:USD"]
+overrides = { probeBars = 2, mode = 1, minMoveAtr = 0.5, stopImpulse = 1.00, minImpact = 3, atrPeriod = 14, maxLagMin = 15 }
+why = "the first move after a scheduled release overshoots and gives it back; probe 2 bar(s) of 5m = the signal bar opens +5 min from the release, gate 0.5 pre-release ATR(14) of 5m bars. Stop = the WHOLE release range (the published control, f = 1.00). The filter admits exactly that one bar, so the matched null draws from the same bar after the same release."
