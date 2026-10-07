@@ -1,0 +1,19 @@
+# The ONE row of docs/hypotheses/2026-09-23-rebate-rescore.toml that carried
+# the highest matched-null percentile in the record (98th gross / 99th net on
+# 197 trades), copied VERBATIM from that file: same base, same two filters,
+# same empty overrides. Nothing is re-chosen here.
+#
+# It is carried alone so the re-read is cheap. `rescore_hypothesis` and
+# `run_hypothesis_sides` are per-hypothesis — the walk-forward, the matched
+# null and the direction null of one row read nothing from the other
+# twenty-one — so a one-row batch reproduces the row's figures exactly. That
+# claim is CHECKED, not assumed: the gross/net profit factor, the trade count
+# and the two null quantiles are compared against
+# docs/research/runs/2026-09-23-rebate-rescore/primary-xauusd-15m.txt.
+
+[[hypothesis]]
+label = "intraday-momentum"
+base = "intraday-momentum"
+filters = ["weekdays", "flat:1630-1815"]
+overrides = {}
+why = "the record's highest matched-null percentile, published with no count-match line beside it"

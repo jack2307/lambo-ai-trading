@@ -102,3 +102,35 @@ No drawdown figure (ADDENDUM-5 G: `max_drawdown_*` is not printed by
 `docs/hypotheses/2026-09-23-matched-null-repair.md`. No change to the hold
 null's arithmetic either; if the mechanism is in the hold branch it is
 **reported, not repaired**, on this branch.
+
+---
+
+## Note added 2026-10-07 (the registration above is not rewritten)
+
+**F3 fired at pre-check, before any gate cell was spent.** `matched_rate` is
+**never called on this row**, so the brief's suspect — "one probe at
+`entryRate = 0.02`, scaled linearly" — is the wrong mechanism and no probe
+needs explaining. `hypotheses.rs` sets
+
+    let drift = base.exits() == Exits::Strategy && preset.grid().is_empty();
+    let rate  = (!drift).then(|| matched_rate(...));
+
+and `IntradayMomentum::exits()` is `Exits::Strategy` with `grid()` empty, so
+`drift = true`, `rate = None`, and the control is the **hold** branch. The
+printed proof is on the row itself: `rescore` prints
+`cost/R: NOT MEASURABLE on this row` exactly when `control_stop` is `None`,
+and `control_stop` is also `(!drift).then(...)`.
+
+**Two diagnostics added, declared here before they were read, neither a gate
+cell:**
+
+- `diag-exitlabel-noflat` — the registered row exits 197/197 under the label
+  `flat window`, which `filter.rs:356` emits and which "overrides the
+  strategy", while `intraday_momentum.rs:75`'s own `window closed` appears
+  **0 times**. The two coincide in time (the hold ends at 16:30 New York, the
+  batch's `flat:1630-1815` starts there), so this cell drops the flat filter
+  to see which it is. Its gate figures are **not** this construct's figures.
+- The exposure cells (6, 7, 8) are reported as a **different measurement**,
+  never as a correction of cells 1-4. `--null-sides=` is inert in `rescore`
+  (ADDENDUM-5 E(2)), so there is no way to run the published mode against the
+  calibrated control, and the two live side by side.

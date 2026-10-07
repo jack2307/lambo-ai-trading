@@ -1,0 +1,39 @@
+# command: search --market=xauusd --interval=15m --data=/e/rust/flowdesk/data --mode=hypotheses --batch-file=docs/research/designs/2026-10-07-top-percentile.toml --from=2025-09-13 --to=2026-09-12 --seeds=200 --exit-mix --null-sides=exposure
+market:   xauusd 15m
+data:     E:/rust/flowdesk/data (bars from E:/rust/flowdesk/data\bars\XAUUSD-15m.parquet)
+bounds:   --from=2025-09-13 --to=2026-09-12 kept 23531 of 100586 bars
+spread:   0.28 per round trip
+trail:    off
+max hold: 4 h (14400000 ms) from [trading] max_hold_ms, no per-market override
+bars:     23531 from 2025-09-14 22:00 to 2026-09-11 20:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+companion: none loaded — every cmp series is NaN
+guards: off (every number unguarded)
+null sides: exposure - the method's measured long share AND its trade count on the hold branch
+flags:    10 passed, every one of them read by --mode=hypotheses
+
+== hypotheses `docs/research/designs/2026-10-07-top-percentile.toml`: 1 declared, walk-forward (4 folds), each against 200 matched null runs ==
+null sides: exposure (the method's measured long share AND its trade count on the hold branch)
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+guards: off (every number unguarded)
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+intraday-momentum intraday-momentum     197   1.088   0.004    0.993    1.343        0   62%  fail: profit factor 1.088 < 1.2; expectancy 0.004R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15  — the record's highest matched-null percentile, published with no count-match line beside it
+                                matched null 190 trades median vs the method's 197 — count match 0.96
+                                long share: method 0.487 vs the null's median 0.491
+                                spread paid: method 0.55 USD vs the null's median 0.53 USD — cost match 0.96
+                                exposure: signed share of time method -0.025 vs the null's -0.014; time in market method 14775 min vs the null's median 14175 min — ratio 0.96
+                                the null's own median LOSES money (p50 0.993 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                exits: flat window 197; mean hold 75.0 min
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+

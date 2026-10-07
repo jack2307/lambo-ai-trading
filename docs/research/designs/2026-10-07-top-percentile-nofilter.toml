@@ -1,0 +1,16 @@
+# A LABELLING DIAGNOSTIC, not a gate cell. The row above exits 197 of 197
+# positions under the label `flat window`, which filter.rs:356 emits — the
+# FILTER's close, which "overrides the strategy" — and never under
+# `window closed`, which intraday_momentum.rs:75 emits. The two coincide in
+# time: the method's hold ends at 16:30 New York and the batch's
+# `flat:1630-1815` filter starts flattening at the same minute. This row drops
+# the flat filter and keeps `weekdays`, so the method's own label is the only
+# one that can appear. It answers ONE question — does the method's own rule
+# fire, or is the clock exit the filter's? — and its gate figures are NOT this
+# construct's figures, because its filters are not the registered ones.
+[[hypothesis]]
+label = "intraday-momentum/noflat"
+base = "intraday-momentum"
+filters = ["weekdays"]
+overrides = {}
+why = "labelling diagnostic for brief 6(a): does `window closed` fire when the flat filter is not in front of it"

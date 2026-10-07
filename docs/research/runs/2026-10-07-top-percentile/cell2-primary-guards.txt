@@ -1,0 +1,42 @@
+# command: search --market=xauusd --interval=15m --data=/e/rust/flowdesk/data --mode=rescore --batch-file=docs/research/designs/2026-10-07-top-percentile.toml --from=2025-09-13 --to=2026-09-12 --seeds=200 --direction-samples=1000 --rebate-share=0.45 --exit-mix --guards
+market:   xauusd 15m
+data:     E:/rust/flowdesk/data (bars from E:/rust/flowdesk/data\bars\XAUUSD-15m.parquet)
+bounds:   --from=2025-09-13 --to=2026-09-12 kept 23531 of 100586 bars
+spread:   0.28 per round trip
+trail:    off
+max hold: 4 h (14400000 ms) from [trading] max_hold_ms, no per-market override
+bars:     23531 from 2025-09-14 22:00 to 2026-09-11 20:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+companion: none loaded — every cmp series is NaN
+guards: on — max_open_loss_r 2.0, notional 300%, weekend flat 16:40 NY, news flat 60/30 (impact≥3, USD), daily cap 20, loss limit $300, cooldown 30 min
+null sides: coin - 50/50, carries no drift; the null every published percentile was read against
+flags:    12 passed, every one of them read by --mode=rescore
+
+== rebate rescore `docs/research/designs/2026-10-07-top-percentile.toml`: 1 constructs, walk-forward (4 folds) ==
+rebate:   0.45 of the round-turn spread, credited BESIDE the book
+          gross columns are unchanged; the cost model is untouched
+nulls:    matched null 200 runs and direction null 1000 draws, BOTH carrying the same credit
+swap:     long 0.00 / short 0.00 USD per lot per night; spread 0.28
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+guards: on — max_open_loss_r 2.0, notional 300%, weekend flat 16:40 NY, news flat 60/30 (impact≥3, USD), daily cap 20, loss limit $300, cooldown 30 min
+
+construct              trades PF gross   PF net  rebate$   reb/R  mnullG  mnullN    dirN  verdict
+intraday-momentum         197    1.089    1.122     0.26   0.13%     98%     99%     66%  fail: profit factor 1.122 < 1.2; expectancy 0.005R < 0.05R
+                       whole window 243 trades, PF 0.997 gross / 1.029 net; direction null p95 1.261 gross / 1.302 net (own sides permuted)
+                       matched null p50 0.955 / p95 1.062 gross, p50 0.976 / p95 1.085 net over 200 runs
+                       matched null 2810 trades median vs the method's 197 — count match 14.26  ** outside the band: this percentile is unmatched **
+                       cost/R: NOT MEASURABLE on this row — it manages its own exits, so it has no stop to divide the spread by; its cost is the spread column above
+                       exits (walk-forward, out of sample): WEEKEND_FLAT 38, flat window 159; mean hold 72.1 min
+                       exits (whole window, what the direction null is a percentile OF): WEEKEND_FLAT 47, flat window 196; mean hold 72.1 min
+
+ran 1 of 1 constructs in the batch; 0 not run
+
+0 of 1 passed all three legs; noise at the 95th percentile yields about 0.1 of 1 by luck.
+Nothing crossed. The rebate lowers the bar and the bar was not the binding constraint.
+
