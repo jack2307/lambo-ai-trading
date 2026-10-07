@@ -1,0 +1,60 @@
+# Pure exposure vs the gate, vs the drift null, vs the best pattern in the record.
+# Registered: docs/decisions/2026-10-07-pure-exposure.md (committed alone, c8800e8).
+# 8 rows, frozen. No filters: arm C's guards carry the weekend and the calendar,
+# arm A carries nothing, and that contrast is the point.
+
+[[hypothesis]]
+label = "bh"
+base = "buy-and-hold"
+filters = []
+overrides = {}
+why = "pure exposure, undivided: the control the code itself calls the one every result must beat, and which this record has never run. 1 trade a leg, exempt from the gate by construction"
+
+[[hypothesis]]
+label = "px-1s"
+base = "session-hold"
+filters = []
+overrides = { from = 1800, to = 1600, side = 1, riskDailyRanges = 1.5, rangeDays = 20 }
+why = "the row: pure long exposure chopped into one-session trades so the 40-trade gate can express it at all, sized exactly as quiet-swing sizes"
+
+[[hypothesis]]
+label = "px-ny"
+base = "session-hold"
+filters = []
+overrides = { from = 930, to = 1600, side = 1, riskDailyRanges = 1.5, rangeDays = 20 }
+why = "the same rule at a smaller exposure dose, ~390 min a day: does R per unit of exposure hold as the dose falls"
+
+[[hypothesis]]
+label = "px-on"
+base = "session-hold"
+filters = []
+overrides = { from = 1800, to = 930, side = 1, riskDailyRanges = 1.5, rangeDays = 20 }
+why = "the complement dose, ~930 min a day, so the two doses together cover the session"
+
+[[hypothesis]]
+label = "px-short"
+base = "session-hold"
+filters = []
+overrides = { from = 1800, to = 1600, side = -1, riskDailyRanges = 1.5, rangeDays = 20 }
+why = "the sign test (falsifier F3): identical exposure, identical spread, opposite side, so half the difference in expectancy IS the drift per session in R"
+
+[[hypothesis]]
+label = "qs-h15"
+base = "quiet-swing"
+filters = []
+overrides = { holdSessions = 15 }
+why = "best pattern in the record at this horizon: gate pass on both xauduka legs in agent/n5 arm A, re-read here with the binary that can see financing"
+
+[[hypothesis]]
+label = "ts-l20"
+base = "tsmom"
+filters = []
+overrides = { lookbackDays = 20 }
+why = "the most sampled gate-passer at this horizon (183 / 185 trades), re-read with expectancy_net"
+
+[[hypothesis]]
+label = "ts-l60"
+base = "tsmom"
+filters = []
+overrides = { lookbackDays = 60 }
+why = "the highest profit factor in the record at this horizon (2.183 OOS), re-read with expectancy_net"

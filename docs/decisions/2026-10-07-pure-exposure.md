@@ -249,3 +249,37 @@ receipt is reproduced in the report, because the engine reads
 `data/news/events.parquet` from the default `data/` whatever `--data=` says.
 
 ## 11. Amendments
+
+### 2026-10-07, after the six runs — what the registration got right and what it could not deliver
+
+**Section 4's declared prediction stands as made.** It said pure long exposure
+would be "much weaker on IS than on OOS even at swap = 0". Measured: the
+one-session drift is **-0.0040 R on DUKA-IS and +0.0205 R on DUKA-OOS**, so it
+is not merely weaker on IS — it is **negative**, and the sign flips between the
+two halves of the same feed.
+
+**Section 7's offer of "drawdown over total R" as an alternative measure could
+NOT be honoured.** `max_drawdown_usd` / `max_drawdown_pct` exist in
+`engine.rs::Metrics` but `--mode=hypotheses` does not print them, so M1 carried
+the whole load and every figure in this family is a return with no risk figure
+beside it. Recorded, not repaired, and not worked around by substituting a
+different measure after the fact.
+
+**Section 7's chop-invariance claim was checked and holds to 0.0005 R**:
+`px-ny + px-on + one saved spread` reproduces `px-1s` on both legs.
+
+**Section 3.5's declared read limit turned into the result's eighth finding.**
+The `RandomHold` control is over-allocated time in the market on **14 of 15**
+measurable arm-A rows (0.97 - 1.39), and on `px-1s` DUKA-OOS — exact side match,
+ratio 1.28 — the method's percentile is **0%** against a null median of 1.153.
+`agent/n5`'s "the drift null stops losing money" is therefore partly the
+control's construction. No percentile in this family is read as a result.
+
+**One thing the registration did not anticipate and should have.** Section 6
+called arm A "the real arm". It is the real arm *for the mechanism*, but the
+owner's standing rule of 2026-09-19 is that the account never holds over a
+weekend, so **arm A is not a tradeable arm for this desk at all** — and
+`WEEKEND_FLAT` fires 148-385 times on every long-hold row in arm C. The one row
+that is indifferent to this is `px-1s`, which is flat before 16:40 New York by
+construction. Nothing above is rewritten; this is the fact for the next
+registration to carry.

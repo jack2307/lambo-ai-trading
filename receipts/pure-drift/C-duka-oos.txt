@@ -1,0 +1,99 @@
+market:   xauduka 15m
+data:     E:/rust/flowdesk/data (bars from E:/rust/flowdesk/data\bars\XAUDUKA-15m.parquet)
+bounds:   --from=2018-06-01 --to=2026-06-01 kept 187860 of 378749 bars
+spread:   0.28 per round trip
+trail:    off
+max hold: 4 h (14400000 ms) from [trading] max_hold_ms, no per-market override
+bars:     187860 from 2018-06-01 00:00 to 2026-05-31 23:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+companion: none loaded — every cmp series is NaN
+guards: on — max_open_loss_r 2.0, notional 300%, weekend flat 16:40 NY, news flat 60/30 (impact≥3, USD), daily cap 20, loss limit $300, cooldown 30 min
+null sides: exposure - the method's measured long share AND its trade count on the hold branch
+flags:    13 passed, every one of them read by --mode=hypotheses
+
+== hypotheses `E:/rust/fd-pure-drift/docs/research/designs/2026-10-07-pure-exposure.toml`: 8 declared, FIXED parameters over the whole window (no selection), each against 200 matched null runs ==
+null sides: exposure (the method's measured long share AND its trade count on the hold branch)
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+guards: on — max_open_loss_r 2.0, notional 300%, weekend flat 16:40 NY, news flat 60/30 (impact≥3, USD), daily cap 20, loss limit $300, cooldown 30 min
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+bh           buy-and-hold         2091   1.195   0.258    0.974    1.100        0  100%  fail: profit factor 1.195 < 1.2
+                                  — pure exposure, undivided: the control the code itself calls the one every result must beat, and which this record has never run. 1 trade a leg, exempt from the gate by construction
+                                matched null 2123 trades median vs the method's 2091 — count match 1.02
+                                long share: method 1.000 vs the null's median 1.000
+                                spread paid: method 11924.56 USD vs the null's median 6618.22 USD — cost match 0.56  ** outside the band: the control did not pay what the method paid **
+                                exposure: signed share of time method +1.000 vs the null's +1.000; time in market method 2645850 min vs the null's median 851348 min — ratio 0.32  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.974 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                guards: refused COOLDOWN 59, DAILY_LOSS_LIMIT 20443, NEWS_FLAT 1401, WEEKEND_FLAT 755; closed NEWS_FLAT 228, OPEN_LOSS_CAP 1497, WEEKEND_FLAT 365; sized down 1971
+                                exits: END_OF_DATA 1, NEWS_FLAT 228, OPEN_LOSS_CAP 1497, WEEKEND_FLAT 365; mean hold 1265.3 min
+px-1s        session-hold         1982   1.046   0.008    1.060    1.108        0   26%  fail: profit factor 1.046 < 1.2; expectancy 0.008R < 0.05R
+                                  — the row: pure long exposure chopped into one-session trades so the 40-trade gate can express it at all, sized exactly as quiet-swing sizes
+                                matched null 1985 trades median vs the method's 1982 — count match 1.00
+                                long share: method 1.000 vs the null's median 1.000
+                                spread paid: method 1511.85 USD vs the null's median 1569.13 USD — cost match 1.04
+                                exposure: signed share of time method +1.000 vs the null's +1.000; time in market method 2656665 min vs the null's median 2316472 min — ratio 0.87
+                                guards: refused none; closed NEWS_FLAT 248, OPEN_LOSS_CAP 10; sized down 0
+                                exits: END_OF_DATA 1, NEWS_FLAT 248, OPEN_LOSS_CAP 10, window closed 1723; mean hold 1340.4 min
+px-ny        session-hold         2043   0.906  -0.009    0.964    1.058        0   12%  fail: profit factor 0.906 < 1.2; expectancy -0.009R < 0.05R
+                                  — the same rule at a smaller exposure dose, ~390 min a day: does R per unit of exposure hold as the dose falls
+                                matched null 2004 trades median vs the method's 2043 — count match 0.98
+                                long share: method 1.000 vs the null's median 1.000
+                                spread paid: method 1468.42 USD vs the null's median 1538.81 USD — cost match 1.05
+                                exposure: signed share of time method +1.000 vs the null's +1.000; time in market method 830445 min vs the null's median 780000 min — ratio 0.94
+                                the null's own median LOSES money (p50 0.964 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                guards: refused NEWS_FLAT 3; closed NEWS_FLAT 63, OPEN_LOSS_CAP 2; sized down 0
+                                exits: NEWS_FLAT 63, OPEN_LOSS_CAP 2, window closed 1978; mean hold 406.5 min
+px-on        session-hold         2046   1.060   0.007    1.030    1.093        0   78%  fail: profit factor 1.060 < 1.2; expectancy 0.007R < 0.05R
+                                  — the complement dose, ~930 min a day, so the two doses together cover the session
+                                matched null 2026 trades median vs the method's 2046 — count match 0.99
+                                long share: method 1.000 vs the null's median 1.000
+                                spread paid: method 1637.42 USD vs the null's median 1580.94 USD — cost match 0.97
+                                exposure: signed share of time method +1.000 vs the null's +1.000; time in market method 1901055 min vs the null's median 1753118 min — ratio 0.92
+                                guards: refused none; closed NEWS_FLAT 188, OPEN_LOSS_CAP 4; sized down 0
+                                exits: END_OF_DATA 1, NEWS_FLAT 188, OPEN_LOSS_CAP 4, window closed 1853; mean hold 929.2 min
+px-short     session-hold         1982   0.858  -0.026    0.839    0.875        0   80%  fail: profit factor 0.858 < 1.2; expectancy -0.026R < 0.05R
+                                  — the sign test (falsifier F3): identical exposure, identical spread, opposite side, so half the difference in expectancy IS the drift per session in R
+                                matched null 1987 trades median vs the method's 1982 — count match 1.00
+                                long share: method 0.000 vs the null's median 0.000
+                                spread paid: method 1457.87 USD vs the null's median 1426.69 USD — cost match 0.98
+                                exposure: signed share of time method -1.000 vs the null's -1.000; time in market method 2659920 min vs the null's median 2323162 min — ratio 0.87
+                                the null's own median LOSES money (p50 0.839 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                guards: refused none; closed NEWS_FLAT 248, OPEN_LOSS_CAP 2; sized down 0
+                                exits: END_OF_DATA 1, NEWS_FLAT 248, OPEN_LOSS_CAP 2, window closed 1731; mean hold 1342.0 min
+qs-h15       quiet-swing           374   1.067   0.020    1.007    1.296        0   66%  fail: profit factor 1.067 < 1.2; expectancy 0.020R < 0.05R
+                                  — best pattern in the record at this horizon: gate pass on both xauduka legs in agent/n5 arm A, re-read here with the binary that can see financing
+                                matched null 357 trades median vs the method's 374 — count match 0.95
+                                long share: method 0.604 vs the null's median 0.625
+                                spread paid: method 309.09 USD vs the null's median 290.61 USD — cost match 0.94
+                                exposure: signed share of time method +0.252 vs the null's +0.247; time in market method 1411635 min vs the null's median 785768 min — ratio 0.56  ** the control did not collect the drift the method did **
+                                guards: refused none; closed NEWS_FLAT 114, OPEN_LOSS_CAP 3, WEEKEND_FLAT 148; sized down 0
+                                exits: 10-session return flipped to +0.01% 1, 10-session return flipped to +0.03% 1, 10-session return flipped to +0.05% 2, 10-session return flipped to +0.07% 2, 10-session return flipped to +0.10% 1, 10-session return flipped to +0.11% 1, 10-session return flipped to +0.12% 1, 10-session return flipped to +0.13% 1, 10-session return flipped to +0.17% 2, 10-session return flipped to +0.19% 1, 10-session return flipped to +0.20% 1, 10-session return flipped to +0.23% 1, 10-session return flipped to +0.27% 1, 10-session return flipped to +0.32% 1, 10-session return flipped to +0.37% 2, 10-session return flipped to +0.39% 1, 10-session return flipped to +0.40% 1, 10-session return flipped to +0.41% 1, 10-session return flipped to +0.44% 1, 10-session return flipped to +0.51% 1, 10-session return flipped to +0.52% 1, 10-session return flipped to +0.53% 2, 10-session return flipped to +0.54% 2, 10-session return flipped to +0.56% 1, 10-session return flipped to +0.57% 1, 10-session return flipped to +0.58% 1, 10-session return flipped to +0.61% 1, 10-session return flipped to +0.66% 1, 10-session return flipped to +0.69% 1, 10-session return flipped to +0.73% 1, 10-session return flipped to +0.84% 1, 10-session return flipped to +0.85% 1, 10-session return flipped to +0.86% 1, 10-session return flipped to +0.88% 1, 10-session return flipped to +0.97% 1, 10-session return flipped to +1.00% 1, 10-session return flipped to +1.01% 1, 10-session return flipped to +1.10% 1, 10-session return flipped to +1.21% 1, 10-session return flipped to +1.24% 1, 10-session return flipped to +1.29% 1, 10-session return flipped to +1.54% 1, 10-session return flipped to +1.56% 1, 10-session return flipped to +1.61% 1, 10-session return flipped to +1.65% 1, 10-session return flipped to +1.73% 1, 10-session return flipped to +2.02% 1, 10-session return flipped to +2.43% 1, 10-session return flipped to +2.69% 1, 10-session return flipped to -0.01% 1, 10-session return flipped to -0.02% 1, 10-session return flipped to -0.03% 2, 10-session return flipped to -0.05% 1, 10-session return flipped to -0.07% 1, 10-session return flipped to -0.09% 1, 10-session return flipped to -0.13% 4, 10-session return flipped to -0.17% 1, 10-session return flipped to -0.21% 1, 10-session return flipped to -0.26% 1, 10-session return flipped to -0.29% 1, 10-session return flipped to -0.32% 1, 10-session return flipped to -0.34% 1, 10-session return flipped to -0.36% 1, 10-session return flipped to -0.38% 1, 10-session return flipped to -0.40% 1, 10-session return flipped to -0.47% 1, 10-session return flipped to -0.49% 1, 10-session return flipped to -0.56% 1, 10-session return flipped to -0.58% 1, 10-session return flipped to -0.59% 1, 10-session return flipped to -0.62% 1, 10-session return flipped to -0.64% 1, 10-session return flipped to -0.65% 1, 10-session return flipped to -0.66% 1, 10-session return flipped to -0.70% 2, 10-session return flipped to -0.75% 1, 10-session return flipped to -0.81% 1, 10-session return flipped to -0.83% 1, 10-session return flipped to -0.85% 1, 10-session return flipped to -0.88% 1, 10-session return flipped to -0.91% 1, 10-session return flipped to -1.07% 1, 10-session return flipped to -1.12% 1, 10-session return flipped to -1.15% 1, 10-session return flipped to -1.16% 1, 10-session return flipped to -1.19% 1, 10-session return flipped to -1.24% 1, 10-session return flipped to -1.33% 1, 10-session return flipped to -1.47% 1, 10-session return flipped to -1.49% 1, 10-session return flipped to -1.63% 1, 10-session return flipped to -1.73% 1, 10-session return flipped to -1.74% 2, 10-session return flipped to -1.99% 1, 10-session return flipped to -2.70% 1, END_OF_DATA 1, NEWS_FLAT 114, OPEN_LOSS_CAP 3, WEEKEND_FLAT 148, held 15 sessions of 15 1; mean hold 3774.4 min
+ts-l20       tsmom                 618   1.094   0.021    0.982    1.169        0   86%  fail: profit factor 1.094 < 1.2; expectancy 0.021R < 0.05R
+                                  — the most sampled gate-passer at this horizon (183 / 185 trades), re-read with expectancy_net
+                                matched null 650 trades median vs the method's 618 — count match 1.05
+                                long share: method 0.591 vs the null's median 0.607
+                                spread paid: method 373.70 USD vs the null's median 389.10 USD — cost match 1.04
+                                exposure: signed share of time method +0.219 vs the null's +0.219; time in market method 2594895 min vs the null's median 1550595 min — ratio 0.60  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.982 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                guards: refused none; closed NEWS_FLAT 215, OPEN_LOSS_CAP 6, WEEKEND_FLAT 257; sized down 0
+                                exits: 20-day return flipped 139, END_OF_DATA 1, NEWS_FLAT 215, OPEN_LOSS_CAP 6, WEEKEND_FLAT 257; mean hold 4198.9 min
+ts-l60       tsmom                 538   1.183   0.041    0.995    1.208        0   92%  fail: profit factor 1.183 < 1.2; expectancy 0.041R < 0.05R
+                                  — the highest profit factor in the record at this horizon (2.183 OOS), re-read with expectancy_net
+                                matched null 560 trades median vs the method's 538 — count match 1.04
+                                long share: method 0.623 vs the null's median 0.633
+                                spread paid: method 310.52 USD vs the null's median 340.46 USD — cost match 1.10
+                                exposure: signed share of time method +0.271 vs the null's +0.267; time in market method 2521845 min vs the null's median 1417470 min — ratio 0.56  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.995 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                guards: refused none; closed NEWS_FLAT 218, OPEN_LOSS_CAP 7, WEEKEND_FLAT 257; sized down 0
+                                exits: 60-day return flipped 55, END_OF_DATA 1, NEWS_FLAT 218, OPEN_LOSS_CAP 7, WEEKEND_FLAT 257; mean hold 4687.4 min
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+
