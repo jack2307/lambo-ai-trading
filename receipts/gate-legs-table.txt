@@ -1,0 +1,516 @@
+============================================================================================================
+Q1 - THE TWO LEGS AS FUNCTIONS OF reward_risk (rr).  NO GATE ON THIS AXIS.
+============================================================================================================
+A1..A4 of the registration: every trade closes at exactly -1R or +rr*R, one R per
+trade, costs already inside the payoffs, PF = sum(+R)/|sum(-R)|.  Let w = win rate.
+
+  expectancy  E  = w*rr - (1-w)*1 = w(1+rr) - 1
+    E >= +0.050R   <=>   w >= (1 + 0.050) / (1 + rr)        = w_E(rr)
+
+  profit factor  PF = w*rr / ((1-w)*1)
+    PF >= 1.200     <=>   w >= 1.200 / (rr + 1.200)         = w_PF(rr)
+
+  the leg that BINDS is the one with the HIGHER threshold win rate:
+    D(rr) = w_PF - w_E = [1.20(1+rr) - 1.05(rr+1.20)] / ((rr+1.20)(1+rr))
+                       = 0.15 * (rr - 0.400) / ((rr + 1.200)(rr + 1))
+
+  ONE root, at rr = 0.400, and the denominator is positive for every rr > 0, so the
+  sign of D changes exactly once:
+    rr <  0.400  ->  D < 0  ->  the EXPECTANCY leg binds, PF is redundant
+    rr =  0.400  ->  D = 0  ->  both legs demand w = 75.0%
+    rr >  0.400  ->  D > 0  ->  the PF leg binds, EXPECTANCY is redundant
+
+  derivatives (so a later reader can re-derive the root without this script):
+    dw_PF/drr = -1.20 / (rr + 1.20)^2        dw_E/drr = -1.05 / (1 + rr)^2
+    dD/drr  = 1.05/(1+rr)^2 - 1.20/(rr+1.2)^2 ;  at rr = 0.400 it is +0.0670 of win
+    rate per unit rr, so +0.1 of rr above the root widens the gap by ~0.67 pp.
+
+  the identity the two legs imply between PF and E (eliminate w) - this is what Q3
+  tests on the record:        PF = rr (1 + E) / (rr - E)
+
+    rr   w_PF needs   w_E needs    D (pp)     binding leg   PF at E=+0.050R   E at PF=1.200
+  0.20        85.7%       87.5%     -1.79      expectancy             1.400        +0.0286R
+  0.30        80.0%       80.8%     -0.77      expectancy             1.260        +0.0400R
+  0.40        75.0%       75.0%     -0.00            BOTH             1.200        +0.0500R
+  0.50        70.6%       70.0%     +0.59              PF             1.167        +0.0588R
+  0.75        61.5%       60.0%     +1.54              PF             1.125        +0.0769R
+  1.00        54.5%       52.5%     +2.05              PF             1.105        +0.0909R
+  1.50        44.4%       42.0%     +2.44              PF             1.086        +0.1111R
+  1.80        40.0%       37.5%     +2.50              PF             1.080        +0.1200R
+  2.00        37.5%       35.0%     +2.50              PF             1.077        +0.1250R
+  3.00        28.6%       26.2%     +2.32              PF             1.068        +0.1429R
+
+  CHECK against AGENT-BRIEF-ADDENDUM-5 sec.A (rr = 1.800): it states PF >= 1.200 needs
+  >= 40.0% and expectancy >= +0.050R needs >= 37.5%.  Derived here: 40.0% and 37.5%.  MATCHES.
+
+  the root is barely moved by cost (brief sec.8 / addendum sec.E measure 0.85-38.16% of R):
+    cost  0.00% of R  (no cost             ) -> root at rr = 0.400
+    cost  4.04% of R  (gold, 1.5 ATR(15m)  ) -> root at rr = 0.435
+    cost 14.81% of R  (EUR                 ) -> root at rr = 0.532
+    cost 17.32% of R  (silver              ) -> root at rr = 0.554
+    cost 38.16% of R  (AUDNZD              ) -> root at rr = 0.748
+============================================================================================================
+Q2 - THE rr EVERY MECHANISM ACTUALLY RUNS AT, AND EVERY OVERRIDE PATH
+============================================================================================================
+`[trading] reward_risk = 1.8` (config/default.toml:98) is the ONLY place in the tree
+that states one.  The override paths, each checked in the source:
+
+  per market  [markets.<id>.trading]  : NO SUCH KEY EXISTS.  MarketTradingOverride
+      (fd-core/src/config.rs:338-385) declares symbol, contract_size, spread,
+      lot_step, min_lot, swap_*, news_currencies, account_currency, units_per_usd,
+      leverage, price_decimals, starting_equity_usd, max_hold_ms - and no
+      reward_risk.  This is `not possible`, which is not the same finding as
+      `not stated`; fd-backtest/tests/trading_rules.rs:48 asserts btc == gold.
+  per batch   overrides = { .. }       : REJECTED AS AN ERROR.  hypotheses.rs:1454
+      `preset_params` returns Err("<id> has no parameter `reward_risk`") for any
+      key the STRATEGY does not declare, and reward_risk is not a strategy param.
+  --params=key=value                   : REJECTED.  search.rs:698-704 takes the same
+      `params.contains(key)` route and prints `bad or unknown --params entry`.
+      It is also in BY_MODE for `null-dir` ALONE (search.rs:78), so even a legal
+      entry changes nothing under --mode=hypotheses / rescore / null.
+  a CLI flag                           : none.  The flag list of brief sec.1 has no
+      --reward-risk, and a flag this binary does not know is reported, not applied
+      (search.rs::flag_audit).
+
+So rr is NOT configurable at all.  It varies between mechanisms by exactly one
+route: a strategy that builds its own target bypasses `reward_risk` entirely
+(engine.rs:737 `Some(explicit) => Some(explicit)`).
+
+mechanism                rr default      rr values declaredwhere rr comes from
+------------------------------------------------------------------------------------------------------------
+buy-and-hold                   null        null (no target)   Exits::Strategy
+intraday-momentum              null        null (no target)   Exits::Strategy
+quiet-swing                    null        null (no target)   Exits::Strategy
+session-hold                   null        null (no target)   Exits::Strategy
+tsmom                          null        null (no target)   Exits::Strategy
+bb-fade                        1.80                     1.8     [trading] 1.8
+companion-unconfirmed          1.80                     1.8     [trading] 1.8
+donchian-breakout              1.80                     1.8     [trading] 1.8
+ema-cross                      1.80                     1.8     [trading] 1.8
+external                       1.80                     1.8     [trading] 1.8
+flow-at-level                  1.80                     1.8     [trading] 1.8
+flow-momentum                  1.80                     1.8     [trading] 1.8
+gap-fade                       1.80                     1.8     [trading] 1.8
+level-reversion                1.80                     1.8     [trading] 1.8
+maxpain-magnet                 1.80                     1.8     [trading] 1.8
+rsi-reversal-vol               1.80                     1.8     [trading] 1.8
+rsi-reversion                  1.80                     1.8     [trading] 1.8
+volman-box                     1.80                     1.8     [trading] 1.8
+vwap-fade                      1.80                     1.8     [trading] 1.8
+crt                            1.50                     1.5        own target
+doji-reversal                  1.50                 1/1.5/2        own target
+far-stop-break                 1.00                   1/1.8        own target
+ict-sweep-mss-fvg              2.00                 1.5/2/3        own target
+keltner-break                  1.50                 1/1.5/2        own target
+macd-cross                     1.50                 1/1.5/2        own target
+orb                            1.50                 1/1.5/2        own target
+pdhl                           1.50                 1/1.5/2        own target
+rsi2-pullback                  1.00              0.75/1/1.5        own target
+squeeze-break                  1.50                 1/1.5/2        own target
+stoch-reversal                 1.50                 1/1.5/2        own target
+trend-pullback                 1.50                 1/1.5/2        own target
+volume-thrust                  1.50                 1/1.5/2        own target
+------------------------------------------------------------------------------------------------------------
+registered mechanisms                                  : 32
+  with a defined rr (the engine places a target)        : 27
+  with NO rr at all (Exits::Strategy; rr is null)       : 5  <- the algebra of Q1 does not apply to these
+
+every rr value that appears anywhere in the tree        : 0.75, 1, 1.5, 1.8, 2, 3
+  lowest                                               : 0.75
+  the Q1 root                                          : 0.400
+  mechanisms at rr BELOW the root (expectancy binds)    : 0
+  mechanisms at rr ABOVE the root (PF binds)            : 27
+  mechanisms with any declared rr value within +-0.10   : 0
+  closest approach to the root                          : +0.350 of rr (rsi2-pullback at 0.75), i.e. 1.88x the root
+
+  ONE CAVEAT WITH A NUMBER: the root moves with cost, and at AUDNZD's measured
+  38.16% of R the root is rr = 0.748 - which is rsi2-pullback's own grid
+  low of 0.75.  On that instrument that one cell sits ON the root, not above it.
+============================================================================================================
+Q3 - THE RECORD AGAINST THE Q1 IDENTITY   PF = rr(1+E)/(rr-E)  at rr = 1.800
+============================================================================================================
+Harvest REUSED UNCHANGED from agent/floor-audit (floor_audit_harvest.py +
+floor_audit_census.py); only the reading of the PF and expectancy columns is new.
+refs scanned                                        : 118 local+remote heads
+distinct printed rows                               : 10076   (floor-audit read 9,858 on 110 refs; 8 further
+                                                    refs have been pushed since, +218 rows)
+rows carrying BOTH a PF and an expectancy           : 6113
+  rows read per printed column pair: OOS_PF+expect 5661, PF+expect 339, PF+expR 55, wfPF+wfExpect 38, PF+expectancy 18, PF+exp 2
+
+FIRST, A1 CHECKED ON THE RECORD ITSELF (the registration said this assumption would
+be the one to fail).  Every distinct printed `exits: ...; mean hold` line:
+  distinct exit-mix lines                           : 2253
+  share of exits that are STOP or TARGET, overall   : 66.1% of 429471 booked exits
+  per line: min 0.0%  p25 37.7%  median 65.9%  p75 88.9%  max 100.0%
+  lines where A1 HOLDS (100% STOP/TARGET)           : 110  (4.9%)
+  lines with ZERO STOP and ZERO TARGET              : 185  (8.2%)
+  => A1 is false on 95.1% of the record.  The Q1 identity is therefore expected to
+     miss, and HOW it misses is the finding.
+
+  the exits that break A1, by booked trade count:
+     166784  STOP  <- A1 holds
+     116884  TARGET  <- A1 holds
+      65836  TIMEOUT
+      31130  window closed
+      11292  WEEKEND_FLAT
+       8533  NEWS_FLAT
+       5288  flat window
+       4480  middle band reached
+       3952  OPEN_LOSS_CAP
+       3189  lost the channel midline
+       3121  reclaimed the channel midline
+       2128  RSI back to midline
+
+RESIDUAL OF THE IDENTITY (printed PF vs the PF the identity predicts from printed E):
+    351    5.7%   |residual| <= 0.5% of predicted PF
+    394    6.4%   |residual| <= 1%
+   2034   33.3%   |residual| <= 5%
+   2297   37.6%   |residual| <= 20%
+   1022   16.7%   |residual| > 20%
+     15    0.2%   E >= rr: no losing side, PF undefined
+
+  rows matching the identity to print width          : 351 of 6113 (5.7%)
+  rows that do NOT match it                         : 5762 (94.3%)
+  The 5.7% that match and the 4.9% of exit-mix lines that are pure STOP/TARGET are
+  the same fact read from two different printed fields, and they agree.
+============================================================================================================
+Q4 - IS ANY ROW REJECTED BY ONE LEG ALONE?  (the mirror of agent/floor-audit)
+============================================================================================================
+                                     expectancy >= +0.050R    expectancy < +0.050R
+PF >= 1.200                                            877                      87   <- THE CELL THAT SHOULD BE EMPTY
+PF <  1.200                                            324                    4825
+------------------------------------------------------------------------------------------------------------
+rows rejected by the EXPECTANCY leg ALONE :    87   of which >= 40 trades too: 62
+rows rejected by the PF leg ALONE         :   324   of which >= 40 trades too: 263
+
+Q1 PREDICTED THE FIRST NUMBER WOULD BE 0 AT EVERY rr THE RECORD USES.  IT IS NOT 0.
+The derivation is missing a term, and here it is:
+
+  drop A1 entirely and keep only A2 (one R per trade) and A4.  Write
+  Lbar = |sum(-R)| / n, the GROSS LOSS PER TRADE in R, averaged over ALL n trades.
+  Then, with no assumption whatever about how a trade exits:
+
+        E  =  Lbar * (PF - 1)                 <- exact, always
+
+  so    E >= +0.050R   <=>   PF - 1 >= 0.050 / Lbar
+        PF >= 1.200    <=>   PF - 1 >= 0.200
+
+  THE EXPECTANCY LEG IS REDUNDANT IF AND ONLY IF   Lbar >= 0.250 R.
+  rr never appears.  It entered Q1 only through A1, which pins Lbar = (1-w); at the
+  PF threshold that is Lbar = rr/(rr+1.2), and Lbar >= 0.250 <=> rr >= 0.400 - the
+  SAME root.  So Q1 was a special case: correct, but blind to the only term that
+  matters here, which is HOW BIG THE LOSSES ARE, not how far away the targets are.
+
+  the switch tested on all 6,112 readable rows:
+        Lbar >= 0.250R    rejected by expectancy alone    rows
+                  True                           False    5261
+                  True                            True       0
+                 False                           False     764
+                 False                            True      87
+  PERFECT SEPARATION: 87 of 87 single-leg rejections have Lbar < 0.250R, and
+  0 of the 5261 rows with Lbar >= 0.250R are rejected by expectancy alone.
+  Lbar over the record (positive values): p25 0.3654R  median 0.4964R  p75 0.6311R
+
+A SECOND MISSING TERM, AND THIS ONE IS A UNIT MISMATCH IN THE ENGINE (count, do not
+fix - brief sec.7):
+  engine.rs:1071-1114 computes gross_win / gross_loss from `t.pnl_usd` and prints
+  that as `profit_factor`, while `expectancy` is the mean of `t.r`.  PF IS IN USD
+  AND EXPECTANCY IS IN R.  Sizing is `risk_usd = equity * risk_per_trade_pct`
+  (engine.rs:728) on a COMPOUNDING equity (`equity += trade.pnl_usd`, engine.rs:521,
+  576, 600, 648), and `lots` is floored to lot_step then raised to min_lot, so one R
+  is a different number of dollars early and late in a run: A2 is false by design.
+  Consequence, counted: 166 rows (2.7% of 6112) print a
+  PF and an expectancy whose SIGNS CANNOT BOTH BE RIGHT for one book -
+    PF > 1 with E < 0 : 68 rows
+    PF < 1 with E > 0 : 98 rows
+  No identity in R can reconcile these; they are brief sec.6(b) counted over the
+  whole record.  THE SIX WORST BY NAME:
+    PF=  1.004  E=    -0.223R  n=32    doji-reversal
+      docs/research/runs/2026-09-23-three-month-search/slice-3-in-sample-restated.txt
+    PF=  0.999  E=    +0.046R  n=89    rsi2-pullback/london
+      receipts/nocap/G-A-file-2026-09-13-recent-year-sessions-5m.txt
+    PF=  0.000  E=   +42.431R  n=1     bh
+      receipts/pure-drift/B-duka-is.txt
+    PF=  1.006  E=    -0.204R  n=178   pullback
+      receipts/invalid-first-run/n3-limit-A-l025-guards.txt
+    PF=  0.947  E=    +1.617R  n=28    ts-l250
+      receipts/n5/B-duka-oos.txt
+    PF=  0.998  E=    +0.056R  n=93    ts-l60
+      receipts/n5/C-van-oos.txt
+============================================================================================================
+EVERY ROW REJECTED BY THE EXPECTANCY LEG ALONE, BY NAME (87 rows; 62 also clear the 40-trade leg)
+  Lbar = the gross loss per trade in R that the row's own PF and expectancy imply.
+  n>=40 marks the rows where expectancy is the SOLE reason the desk gate says no.
+============================================================================================================
+n>=40  PF= 2.153  E=-24.2860R  Lbar= -21.0633R  n=50    tsmom/20d
+        docs/decisions/2026-09-13-tsmom.md   [118 refs]
+n>=40  PF= 2.153  E=-24.2860R  Lbar= -21.0633R  n=50    tsmom/20d
+        docs/research/runs/2026-09-13-tsmom/in-sample.txt   [118 refs]
+n>=40  PF= 2.065  E= +0.0290R  Lbar=   0.0272R  n=45    close/1400-1630
+        receipts/exitmix/G-B-file-2026-09-13-close-reopen-drift.txt   [2 refs]
+n>=40  PF= 1.800  E= +0.0470R  Lbar=   0.0587R  n=228   close/1630-2000
+        docs/research/runs/2026-09-13-close-reopen-drift/out-of-sample.txt   [118 refs]
+n>=40  PF= 1.685  E= +0.0460R  Lbar=   0.0672R  n=59    fx/us-long
+        receipts/exitmix/G-B-file-2026-09-14-fx-local-hours.txt   [2 refs]
+n<40   PF= 1.648  E= +0.0080R  Lbar=   0.0123R  n=7     m15/pdhl-break
+        receipts/nocap/G-B-file-2026-09-13-gold-m15-check.txt   [2 refs]
+n<40   PF= 1.648  E= +0.0080R  Lbar=   0.0123R  n=7     m15/pdhl-break
+        receipts/exitmix/G-B-file-2026-09-13-gold-m15-check.txt   [2 refs]
+n<40   PF= 1.648  E= +0.0080R  Lbar=   0.0123R  n=7     pdhl/break-nyam
+        receipts/exitmix/G-B-file-2026-09-13-pdhl.txt   [2 refs]
+n<40   PF= 1.648  E= +0.0080R  Lbar=   0.0123R  n=7     pdhl/break-nyam
+        receipts/nocap/G-B-file-2026-09-13-pdhl.txt   [2 refs]
+n>=40  PF= 1.637  E= +0.0390R  Lbar=   0.0612R  n=282   close/1630-2000
+        docs/research/runs/2026-09-13-close-reopen-drift/out-of-sample-fixed.txt   [118 refs]
+n>=40  PF= 1.637  E= +0.0390R  Lbar=   0.0612R  n=282   close/1630-2000
+        docs/decisions/2026-09-13-close-reopen-drift.md   [118 refs]
+n<40   PF= 1.585  E= +0.0350R  Lbar=   0.0598R  n=12    ict-C-loose
+        receipts/exitmix/G-A-builtin-ict-m1.txt   [2 refs]
+n<40   PF= 1.540  E= +0.0170R  Lbar=   0.0315R  n=12    close/fri-1630-1815
+        receipts/exitmix/U-A-file-2026-09-13-close-reopen-drift.txt   [2 refs]
+n<40   PF= 1.540  E= +0.0170R  Lbar=   0.0315R  n=12    fri/1630-1815
+        receipts/exitmix/U-A-file-2026-09-13-friday-weekend-hold.txt   [2 refs]
+n<40   PF= 1.537  E= -0.0400R  Lbar=  -0.0745R  n=17    pdhl/asia
+        receipts/exitmix/G-B-file-2026-09-13-recent-year-sessions-5m.txt   [2 refs]
+n<40   PF= 1.520  E= +0.0310R  Lbar=   0.0596R  n=9     np-brk-p4-m05
+        receipts/n1_briefwindowA_xauusd.txt   [10 refs]
+n>=40  PF= 1.506  E= +0.0450R  Lbar=   0.0889R  n=59    fx/us-long
+        receipts/exitmix/U-B-file-2026-09-14-fx-local-hours.txt   [2 refs]
+n>=40  PF= 1.500  E= +0.0420R  Lbar=   0.0840R  n=47    close/1815-2200
+        receipts/exitmix/G-B-file-2026-09-13-close-reopen-drift.txt   [2 refs]
+n>=40  PF= 1.429  E= +0.0150R  Lbar=   0.0350R  n=48    close/1630-2000
+        receipts/exitmix/G-A-file-2026-09-13-close-reopen-drift.txt   [2 refs]
+n>=40  PF= 1.420  E= +0.0430R  Lbar=   0.1024R  n=228   close/1630-2200
+        docs/research/runs/2026-09-13-close-reopen-drift/out-of-sample.txt   [118 refs]
+n>=40  PF= 1.400  E= +0.0140R  Lbar=   0.0350R  n=228   close/1630-1815
+        docs/research/runs/2026-09-13-close-reopen-drift/out-of-sample.txt   [118 refs]
+n>=40  PF= 1.381  E= +0.0110R  Lbar=   0.0289R  n=47    close/1400-1630
+        receipts/exitmix/U-B-file-2026-09-13-close-reopen-drift.txt   [2 refs]
+n>=40  PF= 1.355  E= +0.0380R  Lbar=   0.1070R  n=282   close/1630-2200
+        docs/research/runs/2026-09-13-close-reopen-drift/out-of-sample-fixed.txt   [118 refs]
+n>=40  PF= 1.355  E= +0.0380R  Lbar=   0.1070R  n=282   close/1630-2200
+        docs/decisions/2026-09-13-close-reopen-drift.md   [118 refs]
+n<40   PF= 1.354  E= +0.0480R  Lbar=   0.1356R  n=15    pdhl/asia
+        receipts/nocap/G-A-file-2026-09-13-recent-year-sessions-5m.txt   [2 refs]
+n<40   PF= 1.342  E= -0.1300R  Lbar=  -0.3801R  n=16    pdhl/fade-asia
+        receipts/exitmix/G-B-file-2026-09-13-pdhl.txt   [2 refs]
+n<40   PF= 1.342  E= -0.1300R  Lbar=  -0.3801R  n=16    pdhl/fade-asia
+        receipts/nocap/G-B-file-2026-09-13-pdhl.txt   [2 refs]
+n<40   PF= 1.341  E= +0.0340R  Lbar=   0.0997R  n=8     ict-B-allday
+        receipts/exitmix/G-A-builtin-ict-m1.txt   [2 refs]
+n>=40  PF= 1.309  E= +0.0070R  Lbar=   0.0227R  n=1086  close/1630-1815
+        docs/research/runs/2026-09-14-close-reopen-guarded/in-sample.txt   [118 refs]
+n>=40  PF= 1.309  E= +0.0470R  Lbar=   0.1521R  n=78    crt-nocap/4h-mid
+        receipts/nocap/G-A-file-2026-10-04-crt-ceiling-lifted.txt   [2 refs]
+n>=40  PF= 1.299  E= +0.0120R  Lbar=   0.0401R  n=282   close/1630-1815
+        docs/research/runs/2026-09-13-close-reopen-drift/out-of-sample-fixed.txt   [118 refs]
+n>=40  PF= 1.299  E= +0.0120R  Lbar=   0.0401R  n=282   close/1630-1815
+        docs/decisions/2026-09-13-close-reopen-drift.md   [118 refs]
+n<40   PF= 1.294  E= +0.0390R  Lbar=   0.1327R  n=30    orb
+        receipts/invalid-first-run/n3-limit-A-l050-guards.txt   [4 refs]
+n<40   PF= 1.294  E= +0.0390R  Lbar=   0.1327R  n=30    orb
+        receipts/n3-limit-SUMMARY.txt   [4 refs]
+n>=40  PF= 1.292  E= +0.0210R  Lbar=   0.0719R  n=1086  close/1630-2200
+        docs/research/runs/2026-09-13-close-reopen-drift/in-sample.txt   [118 refs]
+n>=40  PF= 1.288  E= +0.0070R  Lbar=   0.0243R  n=1086  close/1630-1815
+        docs/research/runs/2026-09-13-close-reopen-drift/in-sample.txt   [118 refs]
+n>=40  PF= 1.279  E= +0.0350R  Lbar=   0.1254R  n=54    box/b2
+        receipts/nocap/G-A-file-2026-09-14-volman-box-vantage.txt   [2 refs]
+n>=40  PF= 1.274  E= +0.0060R  Lbar=   0.0219R  n=1355  close/1630-1815
+        docs/decisions/2026-09-13-close-reopen-drift.md   [118 refs]
+n>=40  PF= 1.274  E= +0.0060R  Lbar=   0.0219R  n=1355  close/1630-1815
+        docs/research/runs/2026-09-14-close-reopen-guarded/in-sample-fixed.txt   [118 refs]
+n>=40  PF= 1.274  E= +0.0060R  Lbar=   0.0219R  n=1355  close/1630-1815
+        docs/research/runs/2026-09-24-drift-repair-a/2026-09-13-close-reopen-drift-in-coin-scope.txt   [2 refs]
+n>=40  PF= 1.274  E= +0.0060R  Lbar=   0.0219R  n=1355  close/1630-1815
+        docs/research/runs/2026-09-24-drift-repair-a/2026-09-13-close-reopen-drift-in-ratio.txt   [2 refs]
+n>=40  PF= 1.268  E= +0.0150R  Lbar=   0.0560R  n=46    close/1630-2000
+        receipts/exitmix/G-B-file-2026-09-13-close-reopen-drift.txt   [2 refs]
+n>=40  PF= 1.263  E= +0.0170R  Lbar=   0.0646R  n=1355  close/1630-2200
+        docs/research/runs/2026-09-24-drift-repair-a/2026-09-13-close-reopen-drift-in-coin-scope.txt   [2 refs]
+n>=40  PF= 1.263  E= +0.0170R  Lbar=   0.0646R  n=1355  close/1630-2200
+        docs/research/runs/2026-09-24-drift-repair-a/2026-09-13-close-reopen-drift-in-coin.txt   [2 refs]
+n>=40  PF= 1.263  E= +0.0170R  Lbar=   0.0646R  n=1355  close/1630-2200
+        docs/research/runs/2026-09-24-drift-repair-a/2026-09-13-close-reopen-drift-in-ratio.txt   [2 refs]
+n>=40  PF= 1.258  E= +0.0190R  Lbar=   0.0736R  n=1355  close/1630-2200
+        docs/decisions/2026-09-13-close-reopen-drift.md   [118 refs]
+n>=40  PF= 1.258  E= +0.0190R  Lbar=   0.0736R  n=1355  close/1630-2200
+        docs/research/runs/2026-09-13-close-reopen-drift/in-sample-fixed.txt   [118 refs]
+n<40   PF= 1.256  E= +0.0320R  Lbar=   0.1250R  n=30    pdhl
+        receipts/n3-limit-SUMMARY.txt   [4 refs]
+n<40   PF= 1.256  E= +0.0320R  Lbar=   0.1250R  n=30    pdhl
+        receipts/n3-limit-B-a050-guards.txt   [4 refs]
+n>=40  PF= 1.254  E= +0.0060R  Lbar=   0.0236R  n=1355  close/1630-1815
+        docs/decisions/2026-09-13-close-reopen-drift.md   [118 refs]
+n>=40  PF= 1.254  E= +0.0060R  Lbar=   0.0236R  n=1355  close/1630-1815
+        docs/research/runs/2026-09-13-close-reopen-drift/in-sample-fixed.txt   [118 refs]
+n>=40  PF= 1.254  E= +0.0280R  Lbar=   0.1102R  n=234   close/1815-2200
+        docs/research/runs/2026-09-13-close-reopen-drift/out-of-sample.txt   [118 refs]
+n>=40  PF= 1.253  E= +0.0080R  Lbar=   0.0316R  n=50    m15/pdhl-fade
+        receipts/exitmix/G-B-file-2026-09-13-gold-m15-check.txt   [2 refs]
+n>=40  PF= 1.253  E= +0.0080R  Lbar=   0.0316R  n=50    pdhl
+        receipts/exitmix/G-B-file-2026-09-23-rebate-rescore.txt   [2 refs]
+n>=40  PF= 1.253  E= +0.0080R  Lbar=   0.0316R  n=50    pdhl/all
+        receipts/exitmix/G-B-file-2026-09-13-recent-year-screen-5m.txt   [2 refs]
+n>=40  PF= 1.253  E= +0.0080R  Lbar=   0.0316R  n=50    pdhl/fade-allday
+        receipts/exitmix/G-B-file-2026-09-13-pdhl.txt   [2 refs]
+n>=40  PF= 1.250  E= +0.0100R  Lbar=   0.0400R  n=1355  close/1630-2000
+        docs/research/runs/2026-09-24-drift-repair-a/2026-09-13-close-reopen-drift-in-coin-scope.txt   [2 refs]
+n>=40  PF= 1.250  E= +0.0100R  Lbar=   0.0400R  n=1355  close/1630-2000
+        docs/research/runs/2026-09-24-drift-repair-a/2026-09-13-close-reopen-drift-in-coin.txt   [2 refs]
+n>=40  PF= 1.250  E= +0.0100R  Lbar=   0.0400R  n=1355  close/1630-2000
+        docs/research/runs/2026-09-24-drift-repair-a/2026-09-13-close-reopen-drift-in-ratio.txt   [2 refs]
+n<40   PF= 1.247  E= +0.0410R  Lbar=   0.1660R  n=5     ict-B-balanced
+        receipts/exitmix/G-B-builtin-ict-m1.txt   [2 refs]
+n>=40  PF= 1.245  E= +0.0360R  Lbar=   0.1469R  n=53    hold/18-20-long
+        receipts/exitmix/G-A-file-2026-09-13-recent-year-hours.txt   [2 refs]
+n>=40  PF= 1.240  E= +0.0030R  Lbar=   0.0125R  n=50    m15/pdhl-fade
+        receipts/nocap/G-B-file-2026-09-13-gold-m15-check.txt   [2 refs]
+n>=40  PF= 1.240  E= +0.0030R  Lbar=   0.0125R  n=50    pdhl
+        receipts/nocap/G-B-file-2026-09-23-rebate-rescore.txt   [2 refs]
+n>=40  PF= 1.240  E= +0.0030R  Lbar=   0.0125R  n=50    pdhl/all
+        receipts/nocap/G-B-file-2026-09-13-recent-year-screen-5m.txt   [2 refs]
+n>=40  PF= 1.240  E= +0.0030R  Lbar=   0.0125R  n=50    pdhl/fade-allday
+        receipts/nocap/G-B-file-2026-09-13-pdhl.txt   [2 refs]
+n>=40  PF= 1.237  E= +0.0110R  Lbar=   0.0464R  n=1355  close/1630-2000
+        docs/decisions/2026-09-13-close-reopen-drift.md   [118 refs]
+n>=40  PF= 1.237  E= +0.0110R  Lbar=   0.0464R  n=1355  close/1630-2000
+        docs/research/runs/2026-09-13-close-reopen-drift/in-sample-fixed.txt   [118 refs]
+n>=40  PF= 1.234  E= +0.0110R  Lbar=   0.0470R  n=1086  close/1630-2000
+        docs/research/runs/2026-09-13-close-reopen-drift/in-sample.txt   [118 refs]
+n<40   PF= 1.234  E= +0.0050R  Lbar=   0.0214R  n=14    crt/1d-rr15
+        docs/research/runs/2026-10-04-crt/B-out-of-sample-cells.txt   [60 refs]
+n<40   PF= 1.234  E= +0.0050R  Lbar=   0.0214R  n=14    |
+        docs/decisions/2026-10-04-crt.md   [60 refs]
+n>=40  PF= 1.230  E= +0.0010R  Lbar=   0.0043R  n=59    vwap/us-hours
+        receipts/nocap/G-A-file-2026-09-13-vwap-fade.txt   [2 refs]
+n>=40  PF= 1.229  E= +0.0310R  Lbar=   0.1354R  n=578   struct-80-f14
+        docs/research/runs/2026-09-24-repair-c/era-era3-h4.txt   [70 refs]
+n>=40  PF= 1.223  E= +0.0190R  Lbar=   0.0852R  n=49    close/1815-2200
+        receipts/exitmix/G-A-file-2026-09-13-close-reopen-drift.txt   [2 refs]
+n>=40  PF= 1.221  E= +0.0100R  Lbar=   0.0452R  n=78    pullback
+        receipts/n3-limit-SUMMARY.txt   [4 refs]
+n>=40  PF= 1.221  E= +0.0100R  Lbar=   0.0452R  n=78    pullback
+        receipts/n3-limit-B-a025-guards.txt   [4 refs]
+n<40   PF= 1.220  E= +0.0220R  Lbar=   0.1000R  n=4     btc/data-0830-60m
+        receipts/exitmix/G-A-file-2026-09-13-btc-us-open.txt   [2 refs]
+n>=40  PF= 1.220  E= +0.0420R  Lbar=   0.1909R  n=90    np-brk-p4-m15
+        receipts/n1_fan_B_s1.12.txt   [10 refs]
+n<40   PF= 1.218  E= +0.0170R  Lbar=   0.0780R  n=15    crt/1d-mid
+        docs/research/runs/2026-10-04-crt/A-in-sample-cells.txt   [60 refs]
+n<40   PF= 1.218  E= +0.0170R  Lbar=   0.0780R  n=15    |
+        docs/research/runs/2026-10-04-crt/A-window-a-written-down.md   [60 refs]
+n<40   PF= 1.218  E= +0.0170R  Lbar=   0.0780R  n=15    |
+        docs/decisions/2026-10-04-crt.md   [60 refs]
+n>=40  PF= 1.212  E= +0.0300R  Lbar=   0.1415R  n=580   struct-80
+        docs/research/runs/2026-09-24-repair-c/era-era3-h4.txt   [70 refs]
+n<40   PF= 1.209  E= -0.1310R  Lbar=  -0.6268R  n=32    doji-reversal
+        docs/research/runs/2026-09-23-three-month-search/slice-3-in-sample-restated.txt   [79 refs]
+n>=40  PF= 1.209  E= +0.0470R  Lbar=   0.2249R  n=206   tsmom/20d
+        receipts/D1-tsmom-long-window.txt   [2 refs]
+n>=40  PF= 1.206  E= +0.0440R  Lbar=   0.2136R  n=472   ts-l120
+        receipts/n5/C-duka-oos.txt   [16 refs]
+n>=40  PF= 1.201  E= +0.0000R  Lbar=   0.0000R  n=46    pdhl
+        receipts/invalid-first-run/n3-limit-B-l025-guards.txt   [4 refs]
+n>=40  PF= 1.200  E= -0.0110R  Lbar=  -0.0550R  n=44    pdhl
+        receipts/n3-limit-SUMMARY.txt   [4 refs]
+n>=40  PF= 1.200  E= -0.0110R  Lbar=  -0.0550R  n=44    pdhl
+        receipts/n3-limit-B-a025-guards.txt   [4 refs]
+============================================================================================================
+THE PF-ONLY CELL (324 rows) - the mirror, by family with its extremes named
+============================================================================================================
+  by the first component of the printed label, top 12:
+      57  ratz
+      29  hold
+      24  intraday
+      14  compression
+      10  orb
+      10  expansion247
+       8  ict-sweep-mss-fvg
+       8  pullback
+       7  vwap-fade
+       5  crt
+       5  donchian-breakout
+       5  macd-cross
+  distinct labels: 77
+  the 6 with the LOWEST PF (expectancy clears, PF is furthest from 1.200):
+    PF= 0.000  E=+42.4310R  Lbar= -42.4310R  n=1     bh
+      receipts/pure-drift/B-duka-is.txt
+    PF= 0.109  E= +0.1510R  Lbar=  -0.1695R  n=93    ts-l60
+      receipts/n5/B-duka-is.txt
+    PF= 0.309  E= +0.0950R  Lbar=  -0.1375R  n=183   ts-l20
+      receipts/n5/B-duka-is.txt
+    PF= 0.474  E= +0.3630R  Lbar=  -0.6901R  n=20    ts-l60
+      receipts/n5/B-van-is.txt
+    PF= 0.486  E= +0.1000R  Lbar=  -0.1946R  n=174   qs-h20
+      receipts/n5/B-duka-is.txt
+    PF= 0.489  E= +0.3700R  Lbar=  -0.7241R  n=90    ts-l60
+      receipts/n5/B-duka-oos.txt
+============================================================================================================
+THE 87 SPLIT BY CAUSE - two different things, not one (brief sec.8: null != 0)
+============================================================================================================
+  0 < Lbar < 0.250R   the trades are genuinely too small in R, and the
+                      expectancy leg is the only leg that can see it
+                        78 rows, 57 of them with >= 40 trades
+  Lbar <= 0           PF and expectancy disagree in SIGN, so no Lbar exists:
+                      these are the USD-vs-R unit defect, not a small book
+                         9 rows, 5 of them with >= 40 trades
+
+  the second group is reported as its own population and is NOT counted as evidence
+  that the expectancy leg is doing useful work; it is evidence that the two columns
+  are not in the same unit.  ALL NINE BY NAME:
+    PF= 2.153  E=  -24.2860R  n=50    tsmom/20d
+      docs/decisions/2026-09-13-tsmom.md
+    PF= 2.153  E=  -24.2860R  n=50    tsmom/20d
+      docs/research/runs/2026-09-13-tsmom/in-sample.txt
+    PF= 1.209  E=   -0.1310R  n=32    doji-reversal
+      docs/research/runs/2026-09-23-three-month-search/slice-3-in-sample-restated.txt
+    PF= 1.342  E=   -0.1300R  n=16    pdhl/fade-asia
+      receipts/exitmix/G-B-file-2026-09-13-pdhl.txt
+    PF= 1.342  E=   -0.1300R  n=16    pdhl/fade-asia
+      receipts/nocap/G-B-file-2026-09-13-pdhl.txt
+    PF= 1.537  E=   -0.0400R  n=17    pdhl/asia
+      receipts/exitmix/G-B-file-2026-09-13-recent-year-sessions-5m.txt
+    PF= 1.200  E=   -0.0110R  n=44    pdhl
+      receipts/n3-limit-SUMMARY.txt
+    PF= 1.200  E=   -0.0110R  n=44    pdhl
+      receipts/n3-limit-B-a025-guards.txt
+    PF= 1.201  E=   +0.0000R  n=46    pdhl
+      receipts/invalid-first-run/n3-limit-B-l025-guards.txt
+
+  So the defensible headline is the FIRST group: 78 rows, 57 past the 40-trade leg,
+  where the expectancy leg rejects a row that PF and the trade count both admit,
+  for the one reason PF cannot express - the trades are too small.
+============================================================================================================
+FALSIFIER F1 - DOES IT FIRE?
+============================================================================================================
+F1 fires (the three-leg gate has been a one-leg gate all along) only if at every rr
+the record uses the PF threshold is the higher one AND the count of rows rejected by
+the expectancy leg alone is 0.
+
+  first condition  : HOLDS.  All 27 mechanisms with a defined rr run at rr in
+                     [0.75, 3.00], every value above the root 0.400, so w_PF > w_E
+                     everywhere in the tree.  Q2 names all 27.
+  second condition : FAILS.  87 rows are rejected by the expectancy leg alone,
+                     62 of them with >= 40 trades.
+
+  => F1 DOES NOT FIRE.  The gate is a genuine TWO-leg gate in the record, and the
+     reason is not rr: it is that 94.3% of the record does not exit purely at stop
+     or target, so Lbar falls below 0.250R and the expectancy leg starts doing work
+     that PF cannot do.  PF is scale-free; expectancy in R is not.
+============================================================================================================
+RECOMMENDATION FOR THE OWNER - stated with numbers and LEFT THERE (no threshold is
+changed or proposed on this axis; brief sec.7)
+============================================================================================================
+  1. Addendum sec.A, `the expectancy leg is redundant`, is true on a PURE STOP/TARGET
+     book and false on this record: 87 rows, 62 of them past the 40-trade leg,
+     are rejected by expectancy and by nothing else.  It is not a restatement of PF.
+  2. What the expectancy leg actually enforces is a MINIMUM TRADE SIZE: PF >= 1.200
+     and E >= +0.050R together are PF - 1 >= max(0.200, 0.050/Lbar).  The whole
+     session-close family (`close/<window>`, 36 of the 87) prints PF up to 2.065 on
+     an Lbar of 0.027R - a 2x profit factor on trades 2.7% of a risk unit in size.
+     That is addendum sec.C's px-1s seen from the gate's side.
+  3. `profit_factor` in USD printed beside `expectancy` in R is the defect worth a
+     decision: 166 rows print a sign-contradictory pair.  A `profit_factor_r` over
+     `t.r` would make the two legs commensurable; it would also restate the PF
+     column of the whole record, which is why it is not done here.
