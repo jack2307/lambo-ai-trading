@@ -1,0 +1,97 @@
+# Entering ON the economic calendar — the 12 rows registered in
+# docs/decisions/2026-10-06-news-entry.md, written before the first run.
+#
+# Each row carries the `newsonly:` gate that admits EXACTLY the bar its own
+# `probeBars` fires on (probe 1 -> +0 min, probe 2 -> +15 min, probe 4 ->
+# +45 min). That is not decoration: the matched null in hypotheses.rs is the
+# random-entry control wrapped in THIS filter list, so the control draws its
+# entries from the same single bar after the same release as the method. A
+# percentile read against a null free to enter any bar would measure "higher
+# volatility", not "mechanism".
+#
+# `news-pulse` declares no grid: nothing is chosen from the data and every row
+# is a separately declared rule. Run with --fixed.
+
+[[hypothesis]]
+label = "np-brk-p1-m05"
+base = "news-pulse"
+filters = ["newsonly:0/15:3:USD"]
+overrides = { probeBars = 1, mode = 0, minMoveAtr = 0.5, stopImpulse = 1.0, minImpact = 3, atrPeriod = 14, maxLagMin = 15 }
+why = "the first move after a scheduled release persists; probe 1 bar(s), gate 0.5 pre-release ATR. The filter admits exactly the bar this probe fires on, so the matched null draws from the same bar after the same release."
+
+[[hypothesis]]
+label = "np-brk-p1-m15"
+base = "news-pulse"
+filters = ["newsonly:0/15:3:USD"]
+overrides = { probeBars = 1, mode = 0, minMoveAtr = 1.5, stopImpulse = 1.0, minImpact = 3, atrPeriod = 14, maxLagMin = 15 }
+why = "the first move after a scheduled release persists; probe 1 bar(s), gate 1.5 pre-release ATR. The filter admits exactly the bar this probe fires on, so the matched null draws from the same bar after the same release."
+
+[[hypothesis]]
+label = "np-brk-p2-m05"
+base = "news-pulse"
+filters = ["newsonly:15/30:3:USD"]
+overrides = { probeBars = 2, mode = 0, minMoveAtr = 0.5, stopImpulse = 1.0, minImpact = 3, atrPeriod = 14, maxLagMin = 15 }
+why = "the first move after a scheduled release persists; probe 2 bar(s), gate 0.5 pre-release ATR. The filter admits exactly the bar this probe fires on, so the matched null draws from the same bar after the same release."
+
+[[hypothesis]]
+label = "np-brk-p2-m15"
+base = "news-pulse"
+filters = ["newsonly:15/30:3:USD"]
+overrides = { probeBars = 2, mode = 0, minMoveAtr = 1.5, stopImpulse = 1.0, minImpact = 3, atrPeriod = 14, maxLagMin = 15 }
+why = "the first move after a scheduled release persists; probe 2 bar(s), gate 1.5 pre-release ATR. The filter admits exactly the bar this probe fires on, so the matched null draws from the same bar after the same release."
+
+[[hypothesis]]
+label = "np-brk-p4-m05"
+base = "news-pulse"
+filters = ["newsonly:45/60:3:USD"]
+overrides = { probeBars = 4, mode = 0, minMoveAtr = 0.5, stopImpulse = 1.0, minImpact = 3, atrPeriod = 14, maxLagMin = 15 }
+why = "the first move after a scheduled release persists; probe 4 bar(s), gate 0.5 pre-release ATR. The filter admits exactly the bar this probe fires on, so the matched null draws from the same bar after the same release."
+
+[[hypothesis]]
+label = "np-brk-p4-m15"
+base = "news-pulse"
+filters = ["newsonly:45/60:3:USD"]
+overrides = { probeBars = 4, mode = 0, minMoveAtr = 1.5, stopImpulse = 1.0, minImpact = 3, atrPeriod = 14, maxLagMin = 15 }
+why = "the first move after a scheduled release persists; probe 4 bar(s), gate 1.5 pre-release ATR. The filter admits exactly the bar this probe fires on, so the matched null draws from the same bar after the same release."
+
+[[hypothesis]]
+label = "np-rev-p1-m05"
+base = "news-pulse"
+filters = ["newsonly:0/15:3:USD"]
+overrides = { probeBars = 1, mode = 1, minMoveAtr = 0.5, stopImpulse = 1.0, minImpact = 3, atrPeriod = 14, maxLagMin = 15 }
+why = "the first move after a scheduled release overshoots and gives it back; probe 1 bar(s), gate 0.5 pre-release ATR. The filter admits exactly the bar this probe fires on, so the matched null draws from the same bar after the same release."
+
+[[hypothesis]]
+label = "np-rev-p1-m15"
+base = "news-pulse"
+filters = ["newsonly:0/15:3:USD"]
+overrides = { probeBars = 1, mode = 1, minMoveAtr = 1.5, stopImpulse = 1.0, minImpact = 3, atrPeriod = 14, maxLagMin = 15 }
+why = "the first move after a scheduled release overshoots and gives it back; probe 1 bar(s), gate 1.5 pre-release ATR. The filter admits exactly the bar this probe fires on, so the matched null draws from the same bar after the same release."
+
+[[hypothesis]]
+label = "np-rev-p2-m05"
+base = "news-pulse"
+filters = ["newsonly:15/30:3:USD"]
+overrides = { probeBars = 2, mode = 1, minMoveAtr = 0.5, stopImpulse = 1.0, minImpact = 3, atrPeriod = 14, maxLagMin = 15 }
+why = "the first move after a scheduled release overshoots and gives it back; probe 2 bar(s), gate 0.5 pre-release ATR. The filter admits exactly the bar this probe fires on, so the matched null draws from the same bar after the same release."
+
+[[hypothesis]]
+label = "np-rev-p2-m15"
+base = "news-pulse"
+filters = ["newsonly:15/30:3:USD"]
+overrides = { probeBars = 2, mode = 1, minMoveAtr = 1.5, stopImpulse = 1.0, minImpact = 3, atrPeriod = 14, maxLagMin = 15 }
+why = "the first move after a scheduled release overshoots and gives it back; probe 2 bar(s), gate 1.5 pre-release ATR. The filter admits exactly the bar this probe fires on, so the matched null draws from the same bar after the same release."
+
+[[hypothesis]]
+label = "np-rev-p4-m05"
+base = "news-pulse"
+filters = ["newsonly:45/60:3:USD"]
+overrides = { probeBars = 4, mode = 1, minMoveAtr = 0.5, stopImpulse = 1.0, minImpact = 3, atrPeriod = 14, maxLagMin = 15 }
+why = "the first move after a scheduled release overshoots and gives it back; probe 4 bar(s), gate 0.5 pre-release ATR. The filter admits exactly the bar this probe fires on, so the matched null draws from the same bar after the same release."
+
+[[hypothesis]]
+label = "np-rev-p4-m15"
+base = "news-pulse"
+filters = ["newsonly:45/60:3:USD"]
+overrides = { probeBars = 4, mode = 1, minMoveAtr = 1.5, stopImpulse = 1.0, minImpact = 3, atrPeriod = 14, maxLagMin = 15 }
+why = "the first move after a scheduled release overshoots and gives it back; probe 4 bar(s), gate 1.5 pre-release ATR. The filter admits exactly the bar this probe fires on, so the matched null draws from the same bar after the same release."
