@@ -1,0 +1,61 @@
+market:   xauusd 5m
+data:     E:/rust/flowdesk/data (bars from E:/rust/flowdesk/data\bars\XAUUSD-5m.parquet)
+spread:   0.28 per round trip
+trail:    off
+max hold: 4 h (14400000 ms) from [trading] max_hold_ms, no per-market override
+bars:     101242 from 2025-04-11 01:05 to 2026-09-15 16:00
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+companion: none loaded — every cmp series is NaN
+guards: off (every number unguarded)
+null sides: coin - 50/50, carries no drift; the null every published percentile was read against
+flags:    7 passed, every one of them read by --mode=hypotheses
+
+== hypotheses `E:/rust/fd-drawdown/docs/hypotheses/2026-09-13-london-range.toml`: 3 declared, walk-forward (4 folds), each against 200 matched null runs ==
+null sides: coin (50/50, carries no drift; the null every published percentile was read against)
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+guards: off (every number unguarded)
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+london/nyam  orb                   258   1.319   0.084    0.971    1.235        0   98%  SURVIVES
+                                MoTuWeThFr + flat 16:30-18:15 + NY 08:00-12:00  — the London range broken in the New York morning; the null trades the same window
+                                max drawdown 8.23 USD = 6.48% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.493 R is); net +19.89 USD over 258 trades
+                                matched null 242 trades median vs the method's 258 — count match 0.94
+                                long share: method 0.558 vs the null's median 0.499
+                                spread paid: method 1.96 USD vs the null's median 1.90 USD — cost match 0.97
+                                exposure: signed share of time method +0.066 vs the null's +0.006; time in market method 62315 min vs the null's median 54745 min — ratio 0.88  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.971 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 6.836 ATR = 33.51 points, cost 0.84% of R (realised median, structural)
+                                the method's own realised stop: median 6.836 ATR = 33.51 points over 322 trades
+                                exits: END_OF_DATA 1, STOP 43, TARGET 20, TIMEOUT 194; mean hold 241.5 min
+london/early orb                   204   1.274   0.082    0.982    1.305        0   92%  gate pass, inside the noise
+                                MoTuWeThFr + flat 16:30-18:15 + NY 08:00-10:00  — only the first two hours: a late break is a different day
+                                max drawdown 7.72 USD = 6.43% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.515 R is); net +14.08 USD over 204 trades
+                                matched null 173 trades median vs the method's 204 — count match 0.85
+                                long share: method 0.549 vs the null's median 0.501
+                                spread paid: method 1.53 USD vs the null's median 1.50 USD — cost match 0.98
+                                exposure: signed share of time method +0.111 vs the null's +0.009; time in market method 47265 min vs the null's median 34792 min — ratio 0.74  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.982 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 6.957 ATR = 33.10 points, cost 0.85% of R (realised median, structural)
+                                the method's own realised stop: median 6.957 ATR = 33.10 points over 260 trades
+                                exits: END_OF_DATA 1, STOP 39, TARGET 17, TIMEOUT 147; mean hold 231.7 min
+london/expansion orb                   132   1.201   0.052    0.957    1.342        0   83%  gate pass, inside the noise
+                                MoTuWeThFr + flat 16:30-18:15 + NY 08:00-12:00 + ATR14/ATR100 in [1.2, 99]  — only when volatility is already expanding into the New York open
+                                max drawdown 6.71 USD = 6.01% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.478 R is); net +5.93 USD over 132 trades
+                                matched null 138 trades median vs the method's 132 — count match 1.05
+                                long share: method 0.500 vs the null's median 0.504
+                                spread paid: method 0.90 USD vs the null's median 0.93 USD — cost match 1.03
+                                exposure: signed share of time method +0.027 vs the null's +0.009; time in market method 33360 min vs the null's median 32472 min — ratio 0.97
+                                the null's own median LOSES money (p50 0.957 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 6.416 ATR = 36.08 points, cost 0.78% of R (realised median, structural)
+                                the method's own realised stop: median 6.416 ATR = 36.08 points over 162 trades
+                                exits: END_OF_DATA 1, STOP 17, TARGET 9, TIMEOUT 105; mean hold 252.7 min
+
+Survivors: london/nyam/orb — worth a decision record and a direction null before anything else.
+

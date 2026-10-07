@@ -1,0 +1,63 @@
+market:   xauusd 5m
+data:     E:/rust/flowdesk/data (bars from E:/rust/flowdesk/data\bars\XAUUSD-5m.parquet)
+spread:   0.28 per round trip
+trail:    off
+max hold: 4 h (14400000 ms) from [trading] max_hold_ms, no per-market override
+bars:     101242 from 2025-04-11 01:05 to 2026-09-15 16:00
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+companion: none loaded — every cmp series is NaN
+guards: off (every number unguarded)
+null sides: coin - 50/50, carries no drift; the null every published percentile was read against
+flags:    9 passed, every one of them read by --mode=rescore
+
+== rebate rescore `E:/rust/fd-drawdown/docs/hypotheses/2026-09-13-orb-ny.toml`: 3 constructs, walk-forward (4 folds) ==
+rebate:   0.50 of the round-turn spread, credited BESIDE the book
+          gross columns are unchanged; the cost model is untouched
+nulls:    matched null 20 runs and direction null 50 draws, BOTH carrying the same credit
+swap:     long 0.00 / short 0.00 USD per lot per night; spread 0.28
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+guards: off (every number unguarded)
+
+construct              trades PF gross   PF net  rebate$   reb/R  mnullG  mnullN    dirN  verdict
+orb/60m                    84    1.206    1.227     0.59   0.77%     85%     85%     28%  gate pass, inside a null (matched 85, dir 28)
+                       whole window 102 trades, PF 0.855 gross / 0.869 net; direction null p95 1.359 gross / 1.382 net
+                       walk-forward max drawdown 6.23 USD = 5.67% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.595 R is); net +6.55 USD over 84 trades
+                       whole window max drawdown 15.92 USD = 15.87% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.692 R is); net -6.66 USD over 102 trades
+                       matched null p50 0.989 / p95 1.382 gross, p50 1.010 / p95 1.415 net over 20 runs
+                       matched null 117 trades median vs the method's 84 — count match 1.39  ** outside the band: this percentile is unmatched **
+                       cost-matched null: control stop 3.133 ATR = 18.92 points, cost 1.48% of R (realised median, structural)
+                       the method's own realised stop: median 3.133 ATR = 18.92 points over 102 trades
+                       exits (walk-forward, out of sample): STOP 32, TARGET 43, TIMEOUT 9; mean hold 73.0 min
+                       exits (whole window, what the direction null is a percentile OF): STOP 50, TARGET 30, TIMEOUT 22; mean hold 118.4 min
+orb/30m                   165    0.856    0.872     1.50   0.98%     15%     15%     22%  fail: profit factor 0.872 < 1.2; expectancy -0.069R < 0.05R
+                       whole window 204 trades, PF 0.882 gross / 0.899 net; direction null p95 1.202 gross / 1.226 net
+                       walk-forward max drawdown 25.52 USD = 22.73% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.751 R is); net -12.75 USD over 165 trades
+                       whole window max drawdown 17.18 USD = 16.84% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.747 R is); net -12.40 USD over 204 trades
+                       matched null p50 0.986 / p95 1.244 gross, p50 1.009 / p95 1.276 net over 20 runs
+                       matched null 218 trades median vs the method's 165 — count match 1.32  ** outside the band: this percentile is unmatched **
+                       cost-matched null: control stop 2.852 ATR = 14.12 points, cost 1.98% of R (realised median, structural)
+                       the method's own realised stop: median 2.852 ATR = 14.12 points over 204 trades
+                       exits (walk-forward, out of sample): STOP 92, TARGET 44, TIMEOUT 29; mean hold 114.1 min
+                       exits (whole window, what the direction null is a percentile OF): STOP 113, TARGET 68, TIMEOUT 23; mean hold 99.9 min
+orb/60m-expansion          48    1.269    1.290     0.31   0.71%     85%     85%     46%  gate pass, inside a null (matched 85, dir 46)
+                       whole window 57 trades, PF 0.930 gross / 0.947 net; direction null p95 1.530 gross / 1.557 net
+                       walk-forward max drawdown 3.08 USD = 2.89% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.605 R is); net +4.43 USD over 48 trades
+                       whole window max drawdown 6.75 USD = 6.67% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.672 R is); net -1.59 USD over 57 trades
+                       matched null p50 0.980 / p95 1.353 gross, p50 0.995 / p95 1.383 net over 20 runs
+                       matched null 54 trades median vs the method's 48 — count match 1.12
+                       cost-matched null: control stop 3.245 ATR = 20.15 points, cost 1.39% of R (realised median, structural)
+                       the method's own realised stop: median 3.245 ATR = 20.15 points over 57 trades
+                       exits (walk-forward, out of sample): STOP 16, TARGET 23, TIMEOUT 9; mean hold 93.7 min
+                       exits (whole window, what the direction null is a percentile OF): STOP 22, TARGET 14, TIMEOUT 21; mean hold 168.0 min
+
+ran 3 of 3 constructs in the batch; 0 not run
+
+0 of 3 passed all three legs; noise at the 95th percentile yields about 0.1 of 3 by luck.
+Nothing crossed. The rebate lowers the bar and the bar was not the binding constraint.
+

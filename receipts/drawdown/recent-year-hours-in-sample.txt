@@ -1,0 +1,245 @@
+market:   xauusd 15m
+data:     E:/rust/flowdesk/data (bars from E:/rust/flowdesk/data\bars\XAUUSD-15m.parquet)
+bounds:   --from=2025-09-13 --to=2026-09-12 kept 23531 of 100586 bars
+spread:   0.28 per round trip
+trail:    off
+max hold: 4 h (14400000 ms) from [trading] max_hold_ms, no per-market override
+bars:     23531 from 2025-09-14 22:00 to 2026-09-11 20:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+companion: none loaded — every cmp series is NaN
+guards: off (every number unguarded)
+null sides: coin - 50/50, carries no drift; the null every published percentile was read against
+flags:    9 passed, every one of them read by --mode=hypotheses
+
+== hypotheses `E:/rust/fd-drawdown/docs/hypotheses/2026-09-13-recent-year-hours.toml`: 24 declared, walk-forward (4 folds), each against 200 matched null runs ==
+null sides: coin (50/50, carries no drift; the null every published percentile was read against)
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+guards: off (every number unguarded)
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+hold/00-02-long session-hold          206   0.985  -0.018    0.961    1.270        0   60%  fail: profit factor 0.985 < 1.2; expectancy -0.018R < 0.05R
+                                MoTuWeThFr + NY 00:00-00:05  — long from 00:00 to 02:00 New York; the null holds random sides from the same bar
+                                max drawdown 30.08 USD = 25.29% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -1.363 R is); net -1.65 USD over 206 trades
+                                matched null 206 trades median vs the method's 206 — count match 1.00
+                                long share: method 1.000 vs the null's median 0.502  ** outside 40-60% long against a coin: this percentile carries the instrument's drift **
+                                spread paid: method 5.29 USD vs the null's median 5.34 USD — cost match 1.01
+                                exposure: signed share of time method +1.000 vs the null's +0.005; time in market method 24720 min vs the null's median 24720 min — ratio 1.00  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.961 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                exits: window closed 206; mean hold 120.0 min
+hold/00-02-short session-hold          206   0.943  -0.037    0.961    1.270        0   48%  fail: profit factor 0.943 < 1.2; expectancy -0.037R < 0.05R
+                                MoTuWeThFr + NY 00:00-00:05  — short from 00:00 to 02:00 New York; the null holds random sides from the same bar
+                                max drawdown 24.14 USD = 22.73% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -1.161 R is); net -6.65 USD over 206 trades
+                                matched null 206 trades median vs the method's 206 — count match 1.00
+                                long share: method 0.000 vs the null's median 0.502  ** outside 40-60% long against a coin: this percentile carries the instrument's drift **
+                                spread paid: method 5.36 USD vs the null's median 5.34 USD — cost match 1.00
+                                exposure: signed share of time method -1.000 vs the null's +0.005; time in market method 24720 min vs the null's median 24720 min — ratio 1.00  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.961 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                exits: window closed 206; mean hold 120.0 min
+hold/02-04-long session-hold          206   0.969  -0.015    0.942    1.318        0   58%  fail: profit factor 0.969 < 1.2; expectancy -0.015R < 0.05R
+                                MoTuWeThFr + NY 02:00-02:05  — long from 02:00 to 04:00 New York; the null holds random sides from the same bar
+                                max drawdown 20.52 USD = 19.80% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -1.231 R is); net -3.75 USD over 206 trades
+                                matched null 206 trades median vs the method's 206 — count match 1.00
+                                long share: method 1.000 vs the null's median 0.500  ** outside 40-60% long against a coin: this percentile carries the instrument's drift **
+                                spread paid: method 5.34 USD vs the null's median 5.31 USD — cost match 0.99
+                                exposure: signed share of time method +1.000 vs the null's +0.005; time in market method 24840 min vs the null's median 24840 min — ratio 1.00  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.942 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                exits: window closed 206; mean hold 120.6 min
+hold/02-04-short session-hold          206   0.921  -0.040    0.942    1.318        0   46%  fail: profit factor 0.921 < 1.2; expectancy -0.040R < 0.05R
+                                MoTuWeThFr + NY 02:00-02:05  — short from 02:00 to 04:00 New York; the null holds random sides from the same bar
+                                max drawdown 25.70 USD = 22.82% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -1.202 R is); net -9.73 USD over 206 trades
+                                matched null 206 trades median vs the method's 206 — count match 1.00
+                                long share: method 0.000 vs the null's median 0.500  ** outside 40-60% long against a coin: this percentile carries the instrument's drift **
+                                spread paid: method 5.31 USD vs the null's median 5.31 USD — cost match 1.00
+                                exposure: signed share of time method -1.000 vs the null's +0.005; time in market method 24840 min vs the null's median 24840 min — ratio 1.00  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.942 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                exits: window closed 206; mean hold 120.6 min
+hold/04-06-long session-hold          205   0.599  -0.227    0.956    1.288        0    1%  fail: profit factor 0.599 < 1.2; expectancy -0.227R < 0.05R
+                                MoTuWeThFr + NY 04:00-04:05  — long from 04:00 to 06:00 New York; the null holds random sides from the same bar
+                                max drawdown 43.93 USD = 42.81% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -1.192 R is); net -41.32 USD over 205 trades
+                                matched null 205 trades median vs the method's 205 — count match 1.00
+                                long share: method 1.000 vs the null's median 0.498  ** outside 40-60% long against a coin: this percentile carries the instrument's drift **
+                                spread paid: method 4.94 USD vs the null's median 5.29 USD — cost match 1.07
+                                exposure: signed share of time method +1.000 vs the null's -0.005; time in market method 24600 min vs the null's median 24600 min — ratio 1.00  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.956 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                exits: window closed 205; mean hold 120.0 min
+hold/04-06-short session-hold          205   1.507   0.173    0.956    1.288        0   99%  SURVIVES
+                                MoTuWeThFr + NY 04:00-04:05  — short from 04:00 to 06:00 New York; the null holds random sides from the same bar
+                                max drawdown 14.70 USD = 10.70% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.914 R is); net +37.36 USD over 205 trades
+                                matched null 205 trades median vs the method's 205 — count match 1.00
+                                long share: method 0.000 vs the null's median 0.498  ** outside 40-60% long against a coin: this percentile carries the instrument's drift **
+                                spread paid: method 5.62 USD vs the null's median 5.29 USD — cost match 0.94
+                                exposure: signed share of time method -1.000 vs the null's -0.005; time in market method 24600 min vs the null's median 24600 min — ratio 1.00  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.956 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                exits: window closed 205; mean hold 120.0 min
+hold/06-08-long session-hold          206   1.192   0.118    0.956    1.329        0   86%  fail: profit factor 1.192 < 1.2
+                                MoTuWeThFr + NY 06:00-06:05  — long from 06:00 to 08:00 New York; the null holds random sides from the same bar
+                                max drawdown 19.99 USD = 15.59% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -1.234 R is); net +21.23 USD over 206 trades
+                                matched null 206 trades median vs the method's 206 — count match 1.00
+                                long share: method 1.000 vs the null's median 0.500  ** outside 40-60% long against a coin: this percentile carries the instrument's drift **
+                                spread paid: method 5.95 USD vs the null's median 5.61 USD — cost match 0.94
+                                exposure: signed share of time method +1.000 vs the null's +0.003; time in market method 24645 min vs the null's median 24645 min — ratio 1.00  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.956 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                exits: END_OF_DATA 1, window closed 205; mean hold 119.6 min
+hold/06-08-short session-hold          206   0.726  -0.176    0.956    1.329        0   12%  fail: profit factor 0.726 < 1.2; expectancy -0.176R < 0.05R
+                                MoTuWeThFr + NY 06:00-06:05  — short from 06:00 to 08:00 New York; the null holds random sides from the same bar
+                                max drawdown 39.37 USD = 39.11% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -1.355 R is); net -34.22 USD over 206 trades
+                                matched null 206 trades median vs the method's 206 — count match 1.00
+                                long share: method 0.000 vs the null's median 0.500  ** outside 40-60% long against a coin: this percentile carries the instrument's drift **
+                                spread paid: method 5.29 USD vs the null's median 5.61 USD — cost match 1.06
+                                exposure: signed share of time method -1.000 vs the null's +0.003; time in market method 24645 min vs the null's median 24645 min — ratio 1.00  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.956 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                exits: END_OF_DATA 1, window closed 205; mean hold 119.6 min
+hold/08-10-long session-hold          206   1.038   0.071    0.999    1.306        0   61%  fail: profit factor 1.038 < 1.2
+                                MoTuWeThFr + NY 08:00-08:05  — long from 08:00 to 10:00 New York; the null holds random sides from the same bar
+                                max drawdown 30.64 USD = 27.82% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -2.330 R is); net +8.29 USD over 206 trades
+                                matched null 206 trades median vs the method's 206 — count match 1.00
+                                long share: method 1.000 vs the null's median 0.495  ** outside 40-60% long against a coin: this percentile carries the instrument's drift **
+                                spread paid: method 5.52 USD vs the null's median 5.53 USD — cost match 1.00
+                                exposure: signed share of time method +1.000 vs the null's -0.010; time in market method 24720 min vs the null's median 24720 min — ratio 1.00  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.999 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                exits: window closed 206; mean hold 120.0 min
+hold/08-10-short session-hold          206   0.860  -0.128    0.999    1.306        0   24%  fail: profit factor 0.860 < 1.2; expectancy -0.128R < 0.05R
+                                MoTuWeThFr + NY 08:00-08:05  — short from 08:00 to 10:00 New York; the null holds random sides from the same bar
+                                max drawdown 45.53 USD = 40.35% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -2.160 R is); net -32.69 USD over 206 trades
+                                matched null 206 trades median vs the method's 206 — count match 1.00
+                                long share: method 0.000 vs the null's median 0.495  ** outside 40-60% long against a coin: this percentile carries the instrument's drift **
+                                spread paid: method 5.46 USD vs the null's median 5.53 USD — cost match 1.01
+                                exposure: signed share of time method -1.000 vs the null's -0.010; time in market method 24720 min vs the null's median 24720 min — ratio 1.00  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.999 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                exits: window closed 206; mean hold 120.0 min
+hold/10-12-long session-hold          206   0.926  -0.057    0.949    1.358        0   46%  fail: profit factor 0.926 < 1.2; expectancy -0.057R < 0.05R
+                                MoTuWeThFr + NY 10:00-10:05  — long from 10:00 to 12:00 New York; the null holds random sides from the same bar
+                                max drawdown 29.69 USD = 27.29% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -1.503 R is); net -9.47 USD over 206 trades
+                                matched null 206 trades median vs the method's 206 — count match 1.00
+                                long share: method 1.000 vs the null's median 0.495  ** outside 40-60% long against a coin: this percentile carries the instrument's drift **
+                                spread paid: method 4.01 USD vs the null's median 4.00 USD — cost match 1.00
+                                exposure: signed share of time method +1.000 vs the null's -0.010; time in market method 24720 min vs the null's median 24720 min — ratio 1.00  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.949 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                exits: window closed 206; mean hold 120.0 min
+hold/10-12-short session-hold          206   1.015   0.014    0.949    1.358        0   70%  fail: profit factor 1.015 < 1.2; expectancy 0.014R < 0.05R
+                                MoTuWeThFr + NY 10:00-10:05  — short from 10:00 to 12:00 New York; the null holds random sides from the same bar
+                                max drawdown 17.37 USD = 15.04% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -1.312 R is); net +1.84 USD over 206 trades
+                                matched null 206 trades median vs the method's 206 — count match 1.00
+                                long share: method 0.000 vs the null's median 0.495  ** outside 40-60% long against a coin: this percentile carries the instrument's drift **
+                                spread paid: method 4.06 USD vs the null's median 4.00 USD — cost match 0.99
+                                exposure: signed share of time method -1.000 vs the null's -0.010; time in market method 24720 min vs the null's median 24720 min — ratio 1.00  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.949 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                exits: window closed 206; mean hold 120.0 min
+hold/12-14-long session-hold          206   0.816  -0.084    0.924    1.336        0   30%  fail: profit factor 0.816 < 1.2; expectancy -0.084R < 0.05R
+                                MoTuWeThFr + NY 12:00-12:05  — long from 12:00 to 14:00 New York; the null holds random sides from the same bar
+                                max drawdown 21.86 USD = 20.69% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.996 R is); net -16.18 USD over 206 trades
+                                matched null 206 trades median vs the method's 206 — count match 1.00
+                                long share: method 1.000 vs the null's median 0.505  ** outside 40-60% long against a coin: this percentile carries the instrument's drift **
+                                spread paid: method 3.95 USD vs the null's median 3.92 USD — cost match 0.99
+                                exposure: signed share of time method +1.000 vs the null's +0.004; time in market method 32640 min vs the null's median 32640 min — ratio 1.00  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.924 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                exits: END_OF_DATA 1, window closed 205; mean hold 158.4 min
+hold/12-14-short session-hold          206   1.074   0.043    0.924    1.336        0   72%  fail: profit factor 1.074 < 1.2; expectancy 0.043R < 0.05R
+                                MoTuWeThFr + NY 12:00-12:05  — short from 12:00 to 14:00 New York; the null holds random sides from the same bar
+                                max drawdown 9.77 USD = 9.25% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.853 R is); net +5.59 USD over 206 trades
+                                matched null 206 trades median vs the method's 206 — count match 1.00
+                                long share: method 0.000 vs the null's median 0.505  ** outside 40-60% long against a coin: this percentile carries the instrument's drift **
+                                spread paid: method 3.87 USD vs the null's median 3.92 USD — cost match 1.01
+                                exposure: signed share of time method -1.000 vs the null's +0.004; time in market method 32640 min vs the null's median 32640 min — ratio 1.00  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.924 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                exits: END_OF_DATA 1, window closed 205; mean hold 158.4 min
+hold/14-16-long session-hold          203   0.877  -0.067    0.954    1.319        0   33%  fail: profit factor 0.877 < 1.2; expectancy -0.067R < 0.05R
+                                MoTuWeThFr + NY 14:00-14:05  — long from 14:00 to 16:00 New York; the null holds random sides from the same bar
+                                max drawdown 28.31 USD = 24.87% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -1.038 R is); net -11.38 USD over 203 trades
+                                matched null 203 trades median vs the method's 203 — count match 1.00
+                                long share: method 1.000 vs the null's median 0.502  ** outside 40-60% long against a coin: this percentile carries the instrument's drift **
+                                spread paid: method 4.40 USD vs the null's median 4.44 USD — cost match 1.01
+                                exposure: signed share of time method +1.000 vs the null's +0.043; time in market method 27960 min vs the null's median 27960 min — ratio 1.00  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.954 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                exits: window closed 203; mean hold 137.7 min
+hold/14-16-short session-hold          203   1.054   0.021    0.954    1.319        0   69%  fail: profit factor 1.054 < 1.2; expectancy 0.021R < 0.05R
+                                MoTuWeThFr + NY 14:00-14:05  — short from 14:00 to 16:00 New York; the null holds random sides from the same bar
+                                max drawdown 15.55 USD = 14.09% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.894 R is); net +4.55 USD over 203 trades
+                                matched null 203 trades median vs the method's 203 — count match 1.00
+                                long share: method 0.000 vs the null's median 0.502  ** outside 40-60% long against a coin: this percentile carries the instrument's drift **
+                                spread paid: method 4.44 USD vs the null's median 4.44 USD — cost match 1.00
+                                exposure: signed share of time method -1.000 vs the null's +0.043; time in market method 27960 min vs the null's median 27960 min — ratio 1.00  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.954 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                exits: window closed 203; mean hold 137.7 min
+hold/16-18-long session-hold          197   1.374   0.150    0.951    1.428        0   92%  gate pass, inside the noise
+                                MoTuWeThFr + NY 16:00-16:05  — long from 16:00 to 18:00 New York; the null holds random sides from the same bar
+                                max drawdown 15.96 USD = 12.10% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.886 R is); net +27.24 USD over 197 trades
+                                matched null 197 trades median vs the method's 197 — count match 1.00
+                                long share: method 1.000 vs the null's median 0.497  ** outside 40-60% long against a coin: this percentile carries the instrument's drift **
+                                spread paid: method 4.87 USD vs the null's median 4.78 USD — cost match 0.98
+                                exposure: signed share of time method +1.000 vs the null's +0.003; time in market method 135810 min vs the null's median 135810 min — ratio 1.00  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.951 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                exits: END_OF_DATA 1, window closed 196; mean hold 689.4 min
+hold/16-18-short session-hold          197   0.643  -0.201    0.951    1.428        0    8%  fail: profit factor 0.643 < 1.2; expectancy -0.201R < 0.05R
+                                MoTuWeThFr + NY 16:00-16:05  — short from 16:00 to 18:00 New York; the null holds random sides from the same bar
+                                max drawdown 36.46 USD = 35.98% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.995 R is); net -35.05 USD over 197 trades
+                                matched null 197 trades median vs the method's 197 — count match 1.00
+                                long share: method 0.000 vs the null's median 0.497  ** outside 40-60% long against a coin: this percentile carries the instrument's drift **
+                                spread paid: method 4.62 USD vs the null's median 4.78 USD — cost match 1.03
+                                exposure: signed share of time method -1.000 vs the null's +0.003; time in market method 135810 min vs the null's median 135810 min — ratio 1.00  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.951 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                exits: END_OF_DATA 1, window closed 196; mean hold 689.4 min
+hold/18-20-long session-hold          164   1.362   0.221    0.953    1.305        0   96%  SURVIVES
+                                MoTuWeThFr + NY 18:00-18:05  — long from 18:00 to 20:00 New York; the null holds random sides from the same bar
+                                max drawdown 16.79 USD = 12.04% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -1.178 R is); net +32.45 USD over 164 trades
+                                matched null 164 trades median vs the method's 164 — count match 1.00
+                                long share: method 1.000 vs the null's median 0.500  ** outside 40-60% long against a coin: this percentile carries the instrument's drift **
+                                spread paid: method 4.61 USD vs the null's median 4.41 USD — cost match 0.96
+                                exposure: signed share of time method +1.000 vs the null's +0.000; time in market method 19680 min vs the null's median 19680 min — ratio 1.00  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.953 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                exits: window closed 164; mean hold 120.0 min
+hold/18-20-short session-hold          164   0.651  -0.278    0.953    1.305        0    3%  fail: profit factor 0.651 < 1.2; expectancy -0.278R < 0.05R
+                                MoTuWeThFr + NY 18:00-18:05  — short from 18:00 to 20:00 New York; the null holds random sides from the same bar
+                                max drawdown 42.87 USD = 42.63% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -1.333 R is); net -40.75 USD over 164 trades
+                                matched null 164 trades median vs the method's 164 — count match 1.00
+                                long share: method 0.000 vs the null's median 0.500  ** outside 40-60% long against a coin: this percentile carries the instrument's drift **
+                                spread paid: method 4.23 USD vs the null's median 4.41 USD — cost match 1.04
+                                exposure: signed share of time method -1.000 vs the null's +0.000; time in market method 19680 min vs the null's median 19680 min — ratio 1.00  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.953 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                exits: window closed 164; mean hold 120.0 min
+hold/20-22-long session-hold          164   0.862  -0.147    0.951    1.348        0   33%  fail: profit factor 0.862 < 1.2; expectancy -0.147R < 0.05R
+                                MoTuWeThFr + NY 20:00-20:05  — long from 20:00 to 22:00 New York; the null holds random sides from the same bar
+                                max drawdown 47.39 USD = 40.16% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -1.760 R is); net -19.09 USD over 164 trades
+                                matched null 164 trades median vs the method's 164 — count match 1.00
+                                long share: method 1.000 vs the null's median 0.500  ** outside 40-60% long against a coin: this percentile carries the instrument's drift **
+                                spread paid: method 4.55 USD vs the null's median 4.52 USD — cost match 0.99
+                                exposure: signed share of time method +1.000 vs the null's -0.004; time in market method 19605 min vs the null's median 19605 min — ratio 1.00  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.951 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                exits: END_OF_DATA 1, window closed 163; mean hold 119.5 min
+hold/20-22-short session-hold          164   1.135   0.089    0.951    1.348        0   78%  fail: profit factor 1.135 < 1.2
+                                MoTuWeThFr + NY 20:00-20:05  — short from 20:00 to 22:00 New York; the null holds random sides from the same bar
+                                max drawdown 25.96 USD = 20.39% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -1.632 R is); net +16.03 USD over 164 trades
+                                matched null 164 trades median vs the method's 164 — count match 1.00
+                                long share: method 0.000 vs the null's median 0.500  ** outside 40-60% long against a coin: this percentile carries the instrument's drift **
+                                spread paid: method 4.53 USD vs the null's median 4.52 USD — cost match 1.00
+                                exposure: signed share of time method -1.000 vs the null's -0.004; time in market method 19605 min vs the null's median 19605 min — ratio 1.00  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.951 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                exits: END_OF_DATA 1, window closed 163; mean hold 119.5 min
+hold/22-00-long session-hold          165   0.746  -0.120    0.972    1.311        0   14%  fail: profit factor 0.746 < 1.2; expectancy -0.120R < 0.05R
+                                MoTuWeThFr + NY 22:00-22:05  — long from 22:00 to 00:00 New York; the null holds random sides from the same bar
+                                max drawdown 29.79 USD = 27.31% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -1.016 R is); net -19.36 USD over 165 trades
+                                matched null 165 trades median vs the method's 165 — count match 1.00
+                                long share: method 1.000 vs the null's median 0.497  ** outside 40-60% long against a coin: this percentile carries the instrument's drift **
+                                spread paid: method 3.82 USD vs the null's median 3.96 USD — cost match 1.04
+                                exposure: signed share of time method +1.000 vs the null's -0.006; time in market method 19800 min vs the null's median 19800 min — ratio 1.00  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.972 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                exits: window closed 165; mean hold 120.0 min
+hold/22-00-short session-hold          165   1.174   0.069    0.972    1.311        0   90%  fail: profit factor 1.174 < 1.2
+                                MoTuWeThFr + NY 22:00-22:05  — short from 22:00 to 00:00 New York; the null holds random sides from the same bar
+                                max drawdown 13.51 USD = 11.89% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.866 R is); net +11.38 USD over 165 trades
+                                matched null 165 trades median vs the method's 165 — count match 1.00
+                                long share: method 0.000 vs the null's median 0.497  ** outside 40-60% long against a coin: this percentile carries the instrument's drift **
+                                spread paid: method 4.08 USD vs the null's median 3.96 USD — cost match 0.97
+                                exposure: signed share of time method -1.000 vs the null's -0.006; time in market method 19800 min vs the null's median 19800 min — ratio 1.00  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.972 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                exits: window closed 165; mean hold 120.0 min
+
+Survivors: hold/04-06-short/session-hold, hold/18-20-long/session-hold — worth a decision record and a direction null before anything else.
+
