@@ -1,0 +1,270 @@
+================================================================================================================
+THE PUBLISHED RECORD AGAINST TWO PRINTED-RECEIPT DEFECTS - COUNT ONLY, NO GATE
+================================================================================================================
+refs read                       : 110  (80 local heads + 29 remote-tracking; nothing merged, nothing checked out)
+distinct text blobs under docs/research/runs, docs/decisions, */receipts/ : 1476
+table rows parsed               : 14876
+distinct printed rows           : 9858  (de-duplicated on printed text + trade count)
+================================================================================================================
+DEFECT A - THE TRADE-COUNT FLOOR.  The tool's verdict needs 30 trades
+(config/default.toml [backtest.promising] min_trades = 30, printed as
+'only <n> trades (need 30)'); the desk gate needs 40.  A row in the 30-39 slot is
+NOT automatically wrong: it is a row where the engine's printed verdict and the
+desk's gate SAY DIFFERENT THINGS on the trade-count leg.
+================================================================================================================
+trades          rows  positive  SURVIVES  gate pass  other pos   note
+0-4              588         0         0          0          0      engine prints 'only <n> trades (need 30)'
+5-9              381         0         0          0          0      engine prints 'only <n> trades (need 30)'
+10-19            558         4         0          0          4      engine prints 'only <n> trades (need 30)'
+20-29            376         1         0          0          1      engine prints 'only <n> trades (need 30)'
+30-39            447        69        26         41          2   <- engine PASSES this leg, desk FAILS it
+40-99           2909       382       109        265          8      both floors agree
+>=100           4587       219       106        107          6   
+----------------------------------------------------------------------------------------------------------------
+TOTAL           9858       675
+
+rows in the 30-39 slot                      : 447
+of those, printed with a POSITIVE verdict    : 69
+that is 10.2% of every positive verdict in the record (69 of 675)
+distinct mechanisms behind the 69 rows        : 28
+================================================================================================================
+EVERY POSITIVE ROW IN THE 30-39 SLOT, BY NAME  (69 rows, sorted by trade count)
+  guards = what the receipt's own header said about the arm; '-' = the header said nothing
+================================================================================================================
+n= 39  guards=on    n6/volume-thrust 39 1.376 1.418 0.32 1.12% 69% 69% 22% gate pass, inside a null (matched
+              receipts/n6_R4.txt   [2 refs]
+n= 39  guards=on    n6/volume-thrust 39 1.376 1.425 0.37 1.28% 69% 69% 22% gate pass, inside a null (matched
+              receipts/n6_R3.txt   [2 refs]
+n= 39  guards=off   ny-morning donchian-breakout 39 1.255 0.094 0.808 1.362 0 92% gate pass, inside the nois
+              receipts/silver-gold-intraday-winA.txt   [2 refs]
+n= 39  guards=on    orb orb 39 1.324 0.087 0.959 2.074 0 76% gate pass, inside the noise
+              receipts/stopentry-A-b025-guards.txt   [2 refs]
+n= 39  guards=on    orb orb 39 1.465 0.138 0.921 1.973 0 84% gate pass, inside the noise
+              receipts/stopentry-A-t025-guards.txt   [2 refs]
+n= 39  guards=off   pdhl pdhl 39 1.247 0.200 5.920 103.314 0 11% gate pass, inside the noise
+              receipts/invalid-first-run/n3-limit-B-l050-noguards.txt   [4 refs]
+n= 38  guards=-     I2_noguards|np-brk-p2-m15|38|1.455|0.129|1.004|2.693|72%|0.45 UNMATCHED|30.92|0.91%|0.63
+              receipts/newstf_table.txt   [2 refs]
+n= 38  guards=off   asia bb-fade 38 1.393 0.195 0.765 1.126 0 100% SURVIVES
+              receipts/eurduka-gold-intraday-winB.txt   [2 refs]
+n= 38  guards=off   gian/m2 rsi-reversion 38 1.412 0.168 0.850 1.530 0 91% gate pass, inside the noise
+              receipts/2026-10-06-vol-regime-B.txt   [2 refs]
+n= 38  guards=off   np-brk-p2-m15 news-pulse 38 1.455 0.129 1.004 2.693 0 72% gate pass, inside the noise
+              receipts/newstf_I2_noguards.txt   [2 refs]
+n= 38  guards=on    pdhl pdhl 38 1.301 0.059 0.987 1.673 0 82% gate pass, inside the noise
+              receipts/n3-limit-B-c050-guards.txt   [4 refs]
+n= 38  guards=on    pdhl pdhl 38 1.354 0.177 13.848 158.500 0 0% gate pass, inside the noise
+              receipts/invalid-first-run/n3-limit-B-l050-guards.txt   [4 refs]
+n= 38  guards=off   ts-l20 tsmom 38 1.619 0.160 1.137 2.794 0 73% gate pass, inside the noise
+              receipts/n5/A-van-is.txt   [8 refs]
+n= 37  guards=-     ema-cross/asia 37 1.632 0.294 1.004 1.441 99% SURVIVES
+              docs/decisions/2026-09-13-recent-year-screen.md   [110 refs]
+n= 37  guards=off   ema-cross/asia ema-cross 37 1.622 0.294 1.003 1.404 0 99% SURVIVES
+              docs/research/runs/2026-09-23-matched-null-repair/recent-year-sessions-in-sample-before-instrumented.txt   [76 refs]
+n= 37  guards=off   ema-cross/asia ema-cross 37 1.622 0.294 1.015 1.358 0 99% SURVIVES
+              docs/research/runs/2026-09-23-matched-null-repair/recent-year-sessions-in-sample-repaired.txt   [76 refs]
+n= 37  guards=off   ema-cross/asia ema-cross 37 1.622 0.294 1.016 1.365 0 100% SURVIVES
+              docs/research/runs/2026-10-02-drift-null/sessions-in-sample-exposure.txt   [54 refs]
+n= 37  guards=-     ema-cross/asia ema-cross 37 1.632 0.294 1.004 1.441 0 99% SURVIVES
+              docs/research/runs/2026-09-13-recent-year-sessions/in-sample.txt   [110 refs]
+n= 37  guards=off   ny-morning donchian-breakout 37 2.464 0.274 1.036 1.317 0 100% SURVIVES
+              receipts/A1-1h-windowA.txt   [2 refs]
+n= 37  guards=off   ny-morning donchian-breakout 37 2.499 0.304 0.998 1.492 0 100% SURVIVES
+              receipts/A2-1h-windowA.txt   [2 refs]
+n= 37  guards=-     ny-morning/donchian-breakout A 1h 37 17.79 1.57 2.464 +0.274 1.036 PASS
+              receipts/Z-summary.txt   [2 refs]
+n= 37  guards=off   orb orb 37 1.313 0.122 0.982 1.882 0 76% gate pass, inside the noise
+              receipts/stopentry-A-t050-noguards.txt   [2 refs]
+n= 37  guards=off   smoke ema-cross 37 1.387 0.201 0.954 1.592 0 88% gate pass, inside the noise
+              receipts/exitmix/U-A-file-smoke-test.txt   [2 refs]
+n= 36  guards=-     I2_noguards|np-rev-p1-m15|36|1.802|0.191|0.985|2.479|88%|0.67 UNMATCHED|27.58|1.02%|0.27
+              receipts/newstf_table.txt   [2 refs]
+n= 36  guards=off   box/b2 volman-box 36 1.267 0.089 0.996 1.862 0 78% gate pass, inside the noise
+              receipts/exitmix/U-B-file-2026-09-14-volman-box-vantage.txt   [2 refs]
+n= 36  guards=on    box/b2 volman-box 36 1.318 0.089 0.960 1.752 0 80% gate pass, inside the noise
+              receipts/exitmix/G-B-file-2026-09-14-volman-box-vantage.txt   [2 refs]
+n= 36  guards=on    ema-cross/asia ema-cross 36 1.567 0.147 0.918 1.646 0 94% gate pass, inside the noise
+              receipts/exitmix/G-B-file-2026-09-13-recent-year-sessions-5m.txt   [2 refs]
+n= 36  guards=on    ema-cross/asia ema-cross 36 1.672 0.232 0.922 1.601 0 95% SURVIVES
+              receipts/nocap/G-B-file-2026-09-13-recent-year-sessions-5m.txt   [2 refs]
+n= 36  guards=on    london/early orb 36 2.789 0.307 1.022 2.105 0 98% SURVIVES
+              receipts/nocap/G-A-file-2026-09-13-london-range.txt   [2 refs]
+n= 36  guards=on    london/early orb 36 3.127 0.313 1.049 2.137 0 98% SURVIVES
+              receipts/exitmix/G-A-file-2026-09-13-london-range.txt   [2 refs]
+n= 36  guards=off   np-rev-p1-m15 news-pulse 36 1.802 0.191 0.985 2.479 0 88% gate pass, inside the noise
+              receipts/newstf_I2_noguards.txt   [2 refs]
+n= 36  guards=on    orb orb 36 1.314 0.106 0.924 1.846 0 80% gate pass, inside the noise
+              receipts/stopentry-A-t050-guards.txt   [2 refs]
+n= 36  guards=off   th/m9 bb-fade 36 1.354 0.156 0.921 2.193 0 75% gate pass, inside the noise
+              receipts/2026-10-06-vol-regime-A.txt   [2 refs]
+n= 35  guards=off   asia bb-fade 35 1.653 0.293 0.752 1.182 0 100% SURVIVES
+              receipts/eurusd-gold-intraday-winB.txt   [2 refs]
+n= 35  guards=off   n6/orb 35 1.229 1.263 0.32 0.97% 78% 78% 88% gate pass, inside a null (matched 78, dir 8
+              receipts/n6_R2.txt   [2 refs]
+n= 35  guards=off   n6/orb 35 1.229 1.268 0.37 1.11% 78% 78% 88% gate pass, inside a null (matched 78, dir 8
+              receipts/n6_R1.txt   [2 refs]
+n= 35  guards=off   n6/orb 35 1.241 1.270 0.28 0.84% 78% 78% 87% gate pass, inside a null (matched 78, dir 8
+              receipts/n6_R9.txt   [2 refs]
+n= 35  guards=off   n6/orb 35 1.241 1.275 0.32 0.97% 78% 78% 87% gate pass, inside a null (matched 78, dir 8
+              receipts/n6_R10.txt   [2 refs]
+n= 35  guards=on    orb orb 35 1.242 0.055 1.060 1.786 0 72% gate pass, inside the noise
+              receipts/n3-limit-A-c025-guards.txt   [4 refs]
+n= 35  guards=on    orb orb 35 1.330 0.063 1.017 1.867 0 76% gate pass, inside the noise
+              receipts/invalid-first-run/n3-limit-A-l025-guards.txt   [4 refs]
+n= 34  guards=off   ema-cross/london ema-cross 34 1.370 0.185 0.912 1.683 0 86% gate pass, inside the noise
+              receipts/exitmix/U-B-file-2026-09-13-recent-year-sessions-5m.txt   [2 refs]
+n= 34  guards=off   gop/m5 ema-cross 34 1.261 0.140 0.960 1.645 0 78% gate pass, inside the noise
+              receipts/2026-10-06-vol-regime-A.txt   [2 refs]
+n= 34  guards=off   ny-morning ema-cross 34 1.261 0.140 0.960 1.379 0 85% gate pass, inside the noise
+              receipts/A1-15m-windowA.txt   [2 refs]
+n= 34  guards=off   ny-morning ema-cross 34 1.261 0.140 0.960 1.645 0 78% gate pass, inside the noise
+              receipts/exitmix/U-A-builtin-gold-intraday.txt   [2 refs]
+n= 34  guards=on    ratz/lb480/z2.5/s1.5/rev ratio-reversion 34 1.377 0.179 0.703 1.322 0 96% SURVIVES
+              receipts/n2_h4_silver_B_gon_coin.txt   [4 refs]
+n= 34  guards=on    ratz/lb480/z2.5/s1.5/rev ratio-reversion 34 1.377 0.179 0.712 1.190 0 98% SURVIVES
+              receipts/n2_h4_silver_B_gon_exposure.txt   [4 refs]
+n= 34  guards=on    ratz/lb480/z2.5/s1.5/rev ratio-reversion 34 1.377 0.179 0.719 1.199 0 98% SURVIVES
+              receipts/n2_h4_silver_B_gon_ratio.txt   [4 refs]
+n= 32  guards=on    asia247 rsi-reversion 32 1.543 0.209 0.956 1.746 0 88% gate pass, inside the noise
+              receipts/2026-10-06-btc-247/B-btcusd-247.txt   [2 refs]
+n= 32  guards=on    ema-cross/london ema-cross 32 1.378 0.169 0.918 1.703 0 86% gate pass, inside the noise
+              receipts/nocap/G-B-file-2026-09-13-recent-year-sessions-5m.txt   [2 refs]
+n= 32  guards=on    ema-cross/london ema-cross 32 1.466 0.201 0.896 1.664 0 89% gate pass, inside the noise
+              receipts/exitmix/G-B-file-2026-09-13-recent-year-sessions-5m.txt   [2 refs]
+n= 32  guards=on    ratz/lb480/z2.5/s2.0/con ratio-reversion 32 1.908 0.424 0.953 1.760 0 98% SURVIVES
+              receipts/n2_h4_gold_B_gon_coin.txt   [4 refs]
+n= 32  guards=on    ratz/lb480/z2.5/s2.0/con ratio-reversion 32 1.908 0.424 1.000 1.794 0 96% SURVIVES
+              receipts/n2_h4_gold_B_gon_ratio.txt   [4 refs]
+n= 32  guards=on    ratz/lb480/z2.5/s2.0/con ratio-reversion 32 1.908 0.424 1.031 1.801 0 96% SURVIVES
+              receipts/n2_h4_gold_B_gon_exposure.txt   [4 refs]
+n= 32  guards=off   ratz/lb480/z2.5/s2.0/con ratio-reversion 32 2.058 0.424 0.971 1.754 0 98% SURVIVES
+              receipts/n2_h4_gold_B_goff_coin.txt   [4 refs]
+n= 32  guards=off   ratz/lb480/z2.5/s2.0/con ratio-reversion 32 2.058 0.424 0.973 1.833 0 98% SURVIVES
+              receipts/n2_h4_gold_B_goff_ratio.txt   [4 refs]
+n= 32  guards=off   ratz/lb480/z2.5/s2.0/con ratio-reversion 32 2.058 0.424 0.974 1.816 0 98% SURVIVES
+              receipts/n2_h4_gold_B_goff_exposure.txt   [4 refs]
+n= 31  guards=on    asia247 rsi-reversion 31 1.620 0.233 1.000 1.916 0 88% gate pass, inside the noise
+              receipts/2026-10-06-btc-247/B-btc-247.txt   [2 refs]
+n= 31  guards=off   intraday donchian-breakout 31 1.296 0.080 0.966 1.728 0 75% gate pass, inside the noise
+              receipts/A1-4h-windowB.txt   [2 refs]
+n= 31  guards=-     intraday/donchian-breakout B 4h 31 50.20 0.56 1.296 +0.080 0.966 PASS
+              receipts/Z-summary.txt   [2 refs]
+n= 31  guards=off   orb orb 31 1.224 0.100 1.024 1.792 0 68% gate pass, inside the noise
+              receipts/invalid-first-run/n3-limit-A-l050-noguards.txt   [4 refs]
+n= 31  guards=off   ratz/lb480/z2.5/s2.0/rev ratio-reversion 31 1.456 0.193 0.727 1.460 0 94% gate pass, ins
+              receipts/n2_h4_silver_B_goff_coin.txt   [4 refs]
+n= 31  guards=off   ratz/lb480/z2.5/s2.0/rev ratio-reversion 31 1.456 0.193 0.770 1.362 0 96% SURVIVES
+              receipts/n2_h4_silver_B_goff_exposure.txt   [4 refs]
+n= 31  guards=off   ratz/lb480/z2.5/s2.0/rev ratio-reversion 31 1.456 0.193 0.775 1.383 0 96% SURVIVES
+              receipts/n2_h4_silver_B_goff_ratio.txt   [4 refs]
+n= 30  guards=off   co/m1 ema-cross 30 1.278 0.150 0.860 1.737 0 82% gate pass, inside the noise
+              receipts/2026-10-06-vol-regime-B.txt   [2 refs]
+n= 30  guards=off   co/m2 rsi-reversion 30 1.593 0.227 0.860 1.737 0 92% gate pass, inside the noise
+              receipts/2026-10-06-vol-regime-B.txt   [2 refs]
+n= 30  guards=off   compression bb-fade 30 1.281 0.141 0.789 1.236 0 96% SURVIVES
+              receipts/eurduka-gold-intraday-winA-exitmix.txt   [2 refs]
+n= 30  guards=on    ratz/lb480/z2.5/s2.0/rev ratio-reversion 30 1.364 0.160 0.724 1.457 0 94% gate pass, ins
+              receipts/n2_h4_silver_B_gon_coin.txt   [4 refs]
+n= 30  guards=on    ratz/lb480/z2.5/s2.0/rev ratio-reversion 30 1.364 0.160 0.758 1.340 0 95% SURVIVES
+              receipts/n2_h4_silver_B_gon_ratio.txt   [4 refs]
+n= 30  guards=on    ratz/lb480/z2.5/s2.0/rev ratio-reversion 30 1.364 0.160 0.765 1.283 0 97% SURVIVES
+              receipts/n2_h4_silver_B_gon_exposure.txt   [4 refs]
+================================================================================================================
+DEFECT B - THE ARM THE GUARDS RAN ON.  search.rs::guards_line prints the arm in the
+header of every run, but only since that line existed.  Measured elsewhere: guards
+move the hold-mechanism sample size 3.4x-106x, and 23 of 398 paired rows (5.8%) cross
+PF 1.200 on the flag alone - worst PF 2.328 unguarded vs 0.894 guarded on exactly 64
+trades.  A receipt that does not say which arm it ran cannot be read at the gate.
+================================================================================================================
+class                                                       blobs % of eng    rows
+records the arm in its header (guards: on / guards: off)      722    57.0%   12965
+no guards: line, but echoes its own full argv                 514    40.6%     670
+engine receipt, no guards: line AND no argv echo               30     2.4%      16
+not an engine receipt (agent table / decision doc)            210        -    1225
+----------------------------------------------------------------------------------------------------------------
+engine receipts                                              1266   100.0%   13651
+
+engine receipts that do NOT record arm guards in the header : 544  (43.0% of 1266)
+  of those, the arm is still recoverable from the echoed argv : 514
+    --guards appears in an echoed command line in            : 0 of them
+    guards are enabled by nothing but --guards (search.rs:244), so all 514
+    of these are the UNGUARDED arm, stated by the argv and not by the header
+  of those, the arm is NOT READABLE AT ALL                    : 30   <- this is null, not off
+
+receipts that record the arm, by which arm they record:
+    367  guards: off
+    355  guards: on
+      0  both arms printed side by side in one receipt   <- every recording receipt pins exactly ONE arm
+================================================================================================================
+THE 30 ENGINE RECEIPTS WHOSE ARM CANNOT BE READ AT ALL, BY NAME
+  'trades' = the receipt books trades, so the arm changes its numbers.
+  A receipt that books no trade at all is descriptive and the arm cannot reach it.
+================================================================================================================
+  trades=YES  rows=  0  [110 refs]  docs/research/runs/2026-09-13-close-reopen-drift/direction-close-1630-1815-pre-2023.txt
+  trades=YES  rows=  0  [110 refs]  docs/research/runs/2026-09-13-close-reopen-drift/direction-close-fri-1630-1815-pre-screen.txt
+  trades=YES  rows=  1  [110 refs]  docs/research/runs/2026-09-13-doji-2018/pooled-2018-2025-fixed.txt
+  trades=YES  rows=  3  [110 refs]  docs/research/runs/2026-09-13-doji/in-sample-2022-2025-matched-null.txt
+  trades=YES  rows=  0  [110 refs]  docs/research/runs/2026-09-13-ict-sweep-mss-fvg/direction-ict-sweep-mss-fvg.txt
+  trades=YES  rows=  4  [110 refs]  docs/research/runs/2026-09-13-ict-sweep-mss-fvg/in-sample.txt
+  trades=YES  rows=  2  [110 refs]  docs/research/runs/2026-09-13-ict-sweep-mss-fvg/out-of-sample.txt
+  trades=YES  rows=  3  [110 refs]  docs/research/runs/2026-09-13-london-range/out-of-sample-fixed.txt
+  trades=YES  rows=  0  [110 refs]  docs/research/runs/2026-09-13-orb-ny/direction-orb-oos.txt
+  trades=YES  rows=  3  [110 refs]  docs/research/runs/2026-09-13-orb-ny/out-of-sample-disjoint.txt
+  trades=no   rows=  0  [ 67 refs]  docs/research/runs/2026-09-23-designed-2/01-hours-xauduka.txt
+  trades=no   rows=  0  [ 67 refs]  docs/research/runs/2026-09-23-designed-2/02-zsize-xauduka.txt
+  trades=no   rows=  0  [ 67 refs]  docs/research/runs/2026-09-23-designed-2/03-effratio-xauduka.txt
+  trades=no   rows=  0  [ 67 refs]  docs/research/runs/2026-09-23-designed-2/04-eras-xauduka.txt
+  trades=no   rows=  0  [ 67 refs]  docs/research/runs/2026-09-23-designed-2/05-flipnull-h16-xauduka.txt
+  trades=no   rows=  0  [ 67 refs]  docs/research/runs/2026-09-23-designed-2/06-flipnull-h4-xauduka.txt
+  trades=no   rows=  0  [ 67 refs]  docs/research/runs/2026-09-23-designed-2/07-giveback-k1-m4-xauduka.txt
+  trades=no   rows=  0  [ 67 refs]  docs/research/runs/2026-09-23-designed-2/08-giveback-k8-m8-xauduka.txt
+  trades=no   rows=  0  [ 67 refs]  docs/research/runs/2026-09-23-designed-2/09-thinness-vs-clock-xauduka.txt
+  trades=no   rows=  0  [ 67 refs]  docs/research/runs/2026-09-23-designed-2/10-halt-artifact-xauduka.txt
+  trades=no   rows=  0  [ 67 refs]  docs/research/runs/2026-09-23-designed-2/11-cell-m4-xauduka.txt
+  trades=no   rows=  0  [ 67 refs]  docs/research/runs/2026-09-23-designed-2/12-cell-m8-xauusd.txt
+  trades=no   rows=  0  [ 67 refs]  docs/research/runs/2026-09-23-designed-2/13-fill-m8-xauusd.txt
+  trades=no   rows=  0  [ 67 refs]  docs/research/runs/2026-09-23-designed-2/14-fill-m8-xauduka.txt
+  trades=no   rows=  0  [ 67 refs]  docs/research/runs/2026-09-23-designed-2/15-shape-by-regime-xauduka.txt
+  trades=no   rows=  0  [ 67 refs]  docs/research/runs/2026-09-23-designed-2/16-flipnull-h16-EURDUKA-15m.txt
+  trades=no   rows=  0  [ 67 refs]  docs/research/runs/2026-09-23-designed-2/16-flipnull-h16-XAGDUKA-15m.txt
+  trades=no   rows=  0  [ 67 refs]  docs/research/runs/2026-09-23-designed-2/16-flipnull-h16-XAUUSD-15m.txt
+  trades=no   rows=  0  [ 67 refs]  docs/research/runs/2026-09-23-designed-2/17-reversion-by-vol-band.txt
+  trades=no   rows=  0  [  2 refs]  receipts/precheck.txt
+
+  of the 30: 10 book trades <- these are the receipts the desk cannot place on an arm
+               20 book no trade at all (descriptive), so no arm applies
+================================================================================================================
+THE TWO DEFECTS CROSSED - the 30-39 positive rows by the guards readability of
+their receipt
+================================================================================================================
+    63  records the arm in its header (guards: on / guards: off)
+     1  no guards: line, but echoes its own full argv
+     5  not an engine receipt (agent table / decision doc)
+================================================================================================================
+NOT MEASURED, and why
+================================================================================================================
+  * Rows whose table prints no trade count: 8 lines carry a positive verdict word
+    with no trades column on the row (two copies of a four-row hold/<window> table).
+    They cannot be binned and are null for defect A, not folded into any band.
+  * Whether any 30-39 row would survive at 40 trades: needs a re-run; this axis runs
+    nothing.  The slot is a disagreement between two floors, not a verdict.
+  * Whether a receipt recording guards: off ran the right arm: it records ONE arm.
+    It is readable FOR THAT ARM and silent about the other.
+  * 5 further positive rows sit BELOW 30 trades, all five in one agent-written table
+    (receipts/Z-summary.txt) whose own header declares 'gate PASS counts rows with
+    PF >= 1.200 AND expectancy >= +0.050R, trade count ignored'.  Declared by its
+    author, not an engine defect; 2 of the 69 slot rows come from that same table
+    and carry PASS above.
+================================================================================================================
+ONE BRIEF FIGURE THAT DOES NOT MATCH WHAT IS PRINTED (brief sec.8: my number wins)
+================================================================================================================
+Brief sec.9 says 6 receipts in the repo print that they ran on data-sealed/.
+Counted from the printed `data:` / `data root:` header: 48 blobs.
+    27  records the arm in its header (guards: on / guards: off)
+    19  engine receipt, no guards: line AND no argv echo
+     2  not an engine receipt (agent table / decision doc)
+  directories: 2026-09-23-designed-2 (19), 2026-09-24-repair-c (16),
+               2026-09-24-cost-matched-null (5), 2026-09-23-designed-4 (6),
+               2026-09-24-repair-d (2)
+The sealed store is NOT opened by this axis; this is a count of what the receipts
+already say about themselves.
