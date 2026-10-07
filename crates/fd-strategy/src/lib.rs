@@ -23,6 +23,7 @@ pub mod pdhl;
 pub mod rsi_reversal_vol;
 pub mod quiet_swing;
 pub mod registry;
+pub mod rollover_flat;
 pub mod screen;
 pub mod external;
 pub mod far_stop_break;

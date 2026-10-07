@@ -296,3 +296,54 @@ the VPS 103.19.29.194, `main`, `data/gold/`, `data/btc/`,
 38720), which are not signalled.
 
 ## 13. Amendments
+
+### 2026-10-07, after the `xagduka` pre-check and before the first gold cell
+
+**The probe ran, and half of F2 could not be fired on it.** `config-swap/`
+sets a non-zero rate on **`xauduka` and `xauusd` only**; `[markets.xagduka]`
+carries `swap_long_per_lot = 0.0` in **both** config trees (lines 465-466), and
+the probe receipt confirms it in its own header: *"swap: long 0.00 / short 0.00
+USD per lot per night"* with `--config=config-swap`. So a silver probe cannot
+distinguish a flat variant from its parent on financing, and the **second
+declared probe run (arm A) was not made at all**, because for `xagduka` the two
+config trees are identical and the receipt would have been byte-identical.
+
+**Probe cells: 16 declared, 8 viewed, in 1 run.** `receipts/rollover-flat/PROBE-xag-swapB.txt`.
+
+**What the probe DID fire — the "does the rule fire at all" half, which it
+answers yes to.** Both new ids are known to the new binary;
+`quiet-swing-flat` books **2,423 trades** (`holdSessions` 5) and **2,763**
+(15), `tsmom-flat` **3,883** (`lookbackDays` 20) and **3,764** (60) over
+374,188 silver bars; the mechanism's **own rule** (`window closed`) is the exit
+on every trade but one `END_OF_DATA` in all four rows, so brief section 6a's
+trap is not sprung; mean hold is **1,408-1,417 min**, which is `px-1s`'s own
+**1,406.5 min** on the same feed and the same window to within 0.8%.
+
+**Where F2's financing half is checked instead, declared before the gold runs:**
+
+1. **Against the charging function itself, not a restatement of it.**
+   `crates/fd-strategy/tests/causality_rollover_flat.rs::no_position_either_strategy_opens_is_ever_charged_a_rollover`
+   walks both strategies over an 80-session 15-minute fixture, tracks positions
+   the way the engine tracks them, and asserts
+   `fd_core::clock::swap_nights(entry, exit) == 0` on **every** closed
+   position — the same function `engine.rs` multiplies by the rate. It also
+   asserts the longest hold is ~22 h, so the zero is not the zero of a
+   position that never opened.
+2. **On the gold arm-B run**, which is inside the declared 48 cells and
+   therefore costs nothing extra. The threshold stands as registered:
+   `swap$/spread$ > 1.0x` or `|expectancy_net - expectancy| > 0.010 R/trade` on
+   a flat row means the implementation is wrong and the result is void.
+
+**Also measured on the probe and worth recording before the gold run, because
+it bears on the trade-off arithmetic of section 3:** `tsf-l20` takes
+**10.6x** the trades of `ts-l20` (3,883 vs 368) but pays only **7.1x** the
+spread in dollars (7,202.28 vs 1,012.98 USD), because lots are re-sized every
+session rather than once per multi-week hold. So "27 round trips instead of 1"
+is an **upper bound on the dollar cost**, not the cost. The gold receipts carry
+the same two printed figures and the report will use them.
+
+**One reading limit found on the probe and carried forward:** the `RandomHold`
+control's `cost match` is **0.65-0.75** on all four flat rows — outside the
+band — so per brief section 4 **no percentile is published for them**, on silver
+or on gold. This is the same instrument defect `agent/pure-drift` section 7
+counted and did not repair.

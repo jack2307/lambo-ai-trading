@@ -1,0 +1,62 @@
+# Long-horizon signals, flat across every 17:00 New York rollover.
+# Registered: docs/decisions/2026-10-07-rollover-flat.md (committed alone, 4bf8457).
+# 8 rows, frozen. Four parity anchors (px-1s, qs-h15, ts-l20, ts-l60) which must
+# reproduce agent/n5 and agent/pure-drift from a DIFFERENT binary, and four flat
+# variants. No filters: arm C's guards carry the weekend and the calendar, arm A
+# carries nothing, and the contrast is the point.
+
+[[hypothesis]]
+label = "px-1s"
+base = "session-hold"
+filters = []
+overrides = { from = 1800, to = 1600, side = 1, riskDailyRanges = 1.5, rangeDays = 20 }
+why = "pure one-session long exposure in the same window the flat variants use: the floor they must beat to have a pattern in them at all. Also the parity anchor for the window - agent/pure-drift measured it at swap$/spread$ 0.116x-0.188x, so this window provably crosses 0 rollovers"
+
+[[hypothesis]]
+label = "qs-h15"
+base = "quiet-swing"
+filters = []
+overrides = { holdSessions = 15 }
+why = "the long-horizon baseline this job is the variant of: expectancy +0.130R -> expectancy_net -0.179R, 0.309R of carry. Parity anchor against agent/n5"
+
+[[hypothesis]]
+label = "ts-l20"
+base = "tsmom"
+filters = []
+overrides = { lookbackDays = 20 }
+why = "the most-sampled long-horizon gate-passer in the record (183/185 trades). Parity anchor"
+
+[[hypothesis]]
+label = "ts-l60"
+base = "tsmom"
+filters = []
+overrides = { lookbackDays = 60 }
+why = "the row this job exists for: expectancy +0.370R -> expectancy_net -0.271R, 0.641R of carry, 651 h mean hold. Parity anchor"
+
+[[hypothesis]]
+label = "qsf-h15"
+base = "quiet-swing-flat"
+filters = []
+overrides = { holdSessions = 15, from = 1800, to = 1600 }
+why = "the flat-across-the-rollover variant of qs-h15: same signal, same sizing unit (1.5 daily ranges), expressed only inside 18:00-16:00 New York so it pays a round trip each session instead of financing each night"
+
+[[hypothesis]]
+label = "qsf-h5"
+base = "quiet-swing-flat"
+filters = []
+overrides = { holdSessions = 5, from = 1800, to = 1600 }
+why = "the same variant at the hold quiet-swing actually ships (5 sessions), so the hold clock is not a single point"
+
+[[hypothesis]]
+label = "tsf-l20"
+base = "tsmom-flat"
+filters = []
+overrides = { lookbackDays = 20, from = 1800, to = 1600 }
+why = "the flat variant of ts-l20: same signal read at the same New York minute the parent rebalances at (1800), same 2.0-daily-range sizing unit"
+
+[[hypothesis]]
+label = "tsf-l60"
+base = "tsmom-flat"
+filters = []
+overrides = { lookbackDays = 60, from = 1800, to = 1600 }
+why = "the flat variant of ts-l60, the row with 0.641R of carry to buy back: the single most informative cell in this plan"

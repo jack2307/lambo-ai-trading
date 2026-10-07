@@ -94,6 +94,15 @@ pub fn register_all(registry: &mut Registry) {
     // volume over its 30-bar mean, all on one bar. Reward-to-risk 0.375, so it
     // needs a 72.7% win rate to break even before costs - read its drawdown.
     registry.register(Box::new(crate::rsi_reversal_vol::RsiReversalVol));
+    // The two flat-across-the-rollover variants of the long-horizon methods
+    // above. Registered in docs/decisions/2026-10-07-rollover-flat.md before
+    // this line existed; empty grids, strategy-owned exits, eight declared
+    // cells, no sweep. They exist because `agent/pure-drift` measured that
+    // financing is charged per 17:00 New York crossing and not per hour held,
+    // so `ts-l60`'s +0.370R gross became -0.271R net while a one-session book
+    // kept +0.011R of +0.012R.
+    registry.register(Box::new(crate::rollover_flat::TsmomFlat));
+    registry.register(Box::new(crate::rollover_flat::QuietSwingFlat));
 }
 
 /* ---------------- classic technical baselines ---------------- */
