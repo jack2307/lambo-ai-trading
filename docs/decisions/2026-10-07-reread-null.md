@@ -49,3 +49,18 @@ Tiền kiểm F1: 3 cặp A/B = 6 lượt chạy, trên cửa sổ R1, R5 và pr
   đổi thế nào. Trục này không lật nó.
 
 **Trục này không có cổng** — nó không đề cử cơ chế nào.
+
+---
+
+## Ghi chú 2026-10-07 (thêm vào cuối, không sửa dòng trên)
+
+**Tiền đề của brief sai, và F1 bắn ở tiền kiểm.** Bản vá (7) trên
+`agent/instr-repair` **không** làm `--null-sides=` có tác dụng trong `rescore`;
+nó là bản vá **KHAI BÁO**. `BY_MODE` ghi `("null-sides", &["hypotheses"])`
+(`search.rs:73`) và test `search.rs:1810` khẳng định nguyên văn
+*"rescore keeps the coin-flip null it published"*. `null_sides` chỉ được tiêu
+thụ trong `hypotheses.rs`; không một dòng nào trong đường `rescore` đọc nó.
+Nên **không tồn tại phép đo lại nào** — cờ đó không thể đổi một con số
+`rescore` nào. Giả thuyết bị bác, tiêu **0 ô cổng**.
+
+Kết quả đầy đủ: `receipts/reread-null/RESULT.md`.

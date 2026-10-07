@@ -1,0 +1,165 @@
+market:   xauusd 15m
+data:     E:/rust/flowdesk/data (bars from E:/rust/flowdesk/data\bars\XAUUSD-15m.parquet)
+bounds:   --from=2025-04-01 --to=2025-07-01 kept 5862 of 100586 bars
+spread:   0.28 per round trip
+trail:    off
+max hold: 4 h (14400000 ms) from [trading] max_hold_ms, no per-market override
+bars:     5862 from 2025-04-01 00:00 to 2025-06-30 23:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+companion: none loaded — every cmp series is NaN
+guards: off (every number unguarded)
+null sides: coin - 50/50, carries no drift; the null every published percentile was read against
+flags:    ** --null-sides IS NOT READ BY --mode=rescore — only by --mode=hypotheses — so nothing below was changed by it **
+
+== rebate rescore `docs/hypotheses/2026-10-06-rebate-optimal-family.toml`: 22 constructs, walk-forward (4 folds) ==
+rebate:   0.45 of the round-turn spread, credited BESIDE the book
+          gross columns are unchanged; the cost model is untouched
+nulls:    matched null 200 runs and direction null 1000 draws, BOTH carrying the same credit
+swap:     long 0.00 / short 0.00 USD per lot per night; spread 0.28
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+guards: off (every number unguarded)
+
+construct              trades PF gross   PF net  rebate$   reb/R  mnullG  mnullN    dirN  verdict
+n6/ema-cross               46    0.895    0.922     0.68   1.54%     38%     37%     78%  fail: profit factor 0.922 < 1.2; expectancy -0.038R < 0.05R
+                       whole window 92 trades, PF 1.101 gross / 1.134 net; direction null p95 1.339 gross / 1.379 net
+                       matched null p50 0.958 / p95 1.406 gross, p50 0.986 / p95 1.452 net over 200 runs
+                       matched null 74 trades median vs the method's 46 — count match 1.61  ** outside the band: this percentile is unmatched **
+                       cost-matched null: control stop 1.500 ATR = 8.23 points, cost 3.40% of R (named stopAtr, copied)
+                       the method's own realised stop: median 1.526 ATR = 8.37 points over 92 trades
+n6/rsi-reversion          216    0.959    1.000     3.29   1.56%     54%     56%     64%  fail: profit factor 1.000 < 1.2; expectancy -0.000R < 0.05R
+                       whole window 144 trades, PF 0.870 gross / 0.894 net; direction null p95 1.036 gross / 1.077 net
+                       matched null p50 0.945 / p95 1.290 gross, p50 0.972 / p95 1.325 net over 200 runs
+                       matched null 108 trades median vs the method's 216 — count match 0.50  ** outside the band: this percentile is unmatched **
+                       cost-matched null: control stop 1.500 ATR = 9.84 points, cost 2.85% of R (named stopAtr, copied)
+                       the method's own realised stop: median 1.521 ATR = 9.98 points over 144 trades
+n6/donchian-breakout      155    1.023    1.048     1.56   1.07%     61%     61%     70%  fail: profit factor 1.048 < 1.2; expectancy 0.027R < 0.05R
+                       whole window 280 trades, PF 1.034 gross / 1.059 net; direction null p95 1.166 gross / 1.208 net
+                       matched null p50 0.978 / p95 1.303 gross, p50 1.002 / p95 1.330 net over 200 runs
+                       matched null 170 trades median vs the method's 155 — count match 1.10
+                       cost-matched null: control stop 2.000 ATR = 12.18 points, cost 2.30% of R (named stopAtr, copied)
+                       the method's own realised stop: median 2.024 ATR = 12.33 points over 280 trades
+n6/bb-fade                439    0.778    0.804     5.63   1.45%     10%     10%     19%  fail: profit factor 0.804 < 1.2; expectancy -0.089R < 0.05R
+                       whole window 385 trades, PF 0.876 gross / 0.901 net; direction null p95 1.115 gross / 1.160 net
+                       matched null p50 0.955 / p95 1.211 gross, p50 0.982 / p95 1.241 net over 200 runs
+                       matched null 212 trades median vs the method's 439 — count match 0.48  ** outside the band: this percentile is unmatched **
+                       cost-matched null: control stop 1.500 ATR = 8.99 points, cost 3.11% of R (named stopAtr, copied)
+                       the method's own realised stop: median 1.524 ATR = 9.13 points over 385 trades
+n6/keltner-break           79    1.028    1.051     0.53   0.74%     62%     61%     93%  fail: profit factor 1.051 < 1.2; expectancy 0.020R < 0.05R
+                       whole window 249 trades, PF 1.082 gross / 1.110 net; direction null p95 1.105 gross / 1.134 net
+                       matched null p50 0.966 / p95 1.273 gross, p50 0.990 / p95 1.311 net over 200 runs
+                       matched null 160 trades median vs the method's 79 — count match 2.03  ** outside the band: this percentile is unmatched **
+                       cost-matched null: control stop 1.779 ATR = 10.78 points, cost 2.60% of R (realised median, structural)
+                       the method's own realised stop: median 1.779 ATR = 10.78 points over 249 trades
+n6/macd-cross             240    1.124    1.155     3.48   1.46%     82%     82%    100%  fail: profit factor 1.155 < 1.2
+                       whole window 303 trades, PF 1.185 gross / 1.218 net; direction null p95 1.058 gross / 1.088 net
+                       matched null p50 0.945 / p95 1.257 gross, p50 0.973 / p95 1.292 net over 200 runs
+                       matched null 186 trades median vs the method's 240 — count match 0.78
+                       cost-matched null: control stop 1.500 ATR = 9.08 points, cost 3.08% of R (named stopAtr, copied)
+                       the method's own realised stop: median 1.523 ATR = 9.22 points over 303 trades
+n6/rsi2-pullback          199    1.061    1.092     2.01   1.08%     68%     70%     68%  fail: profit factor 1.092 < 1.2; expectancy 0.035R < 0.05R
+                       whole window 223 trades, PF 1.024 gross / 1.050 net; direction null p95 1.211 gross / 1.243 net
+                       matched null p50 0.969 / p95 1.321 gross, p50 0.994 / p95 1.350 net over 200 runs
+                       matched null 148 trades median vs the method's 199 — count match 0.74  ** outside the band: this percentile is unmatched **
+                       cost-matched null: control stop 2.000 ATR = 12.06 points, cost 2.32% of R (named stopAtr, copied)
+                       the method's own realised stop: median 2.023 ATR = 12.20 points over 223 trades
+n6/squeeze-break           56    1.257    1.295     0.90   1.65%     83%     83%     80%  gate pass, inside a null (matched 83, dir 80)
+                       whole window 57 trades, PF 1.043 gross / 1.077 net; direction null p95 1.263 gross / 1.304 net
+                       matched null p50 0.947 / p95 1.576 gross, p50 0.972 / p95 1.619 net over 200 runs
+                       matched null 50 trades median vs the method's 56 — count match 0.89
+                       cost-matched null: control stop 1.580 ATR = 8.61 points, cost 3.25% of R (realised median, structural)
+                       the method's own realised stop: median 1.580 ATR = 8.61 points over 57 trades
+n6/stoch-reversal         335    0.832    0.858     4.66   1.47%     16%     16%      4%  fail: profit factor 0.858 < 1.2; expectancy -0.079R < 0.05R
+                       whole window 393 trades, PF 0.772 gross / 0.794 net; direction null p95 1.047 gross / 1.077 net
+                       matched null p50 0.955 / p95 1.232 gross, p50 0.983 / p95 1.262 net over 200 runs
+                       matched null 215 trades median vs the method's 335 — count match 0.64  ** outside the band: this percentile is unmatched **
+                       cost-matched null: control stop 1.500 ATR = 9.01 points, cost 3.11% of R (named stopAtr, copied)
+                       the method's own realised stop: median 1.524 ATR = 9.15 points over 393 trades
+n6/orb                     36    0.579    0.590     0.22   0.70%      8%      8%     16%  fail: profit factor 0.590 < 1.2; expectancy -0.176R < 0.05R
+                       whole window 50 trades, PF 0.760 gross / 0.773 net; direction null p95 1.463 gross / 1.492 net
+                       matched null p50 1.023 / p95 1.822 gross, p50 1.043 / p95 1.867 net over 200 runs
+                       matched null 45 trades median vs the method's 36 — count match 1.25
+                       cost-matched null: control stop 2.718 ATR = 19.17 points, cost 1.46% of R (realised median, structural)
+                       the method's own realised stop: median 2.718 ATR = 19.17 points over 50 trades
+n6/pdhl                    42    0.953    0.999     1.05   2.61%     61%     61%     78%  fail: profit factor 0.999 < 1.2; expectancy 0.006R < 0.05R
+                       whole window 51 trades, PF 1.022 gross / 1.074 net; direction null p95 1.246 gross / 1.308 net
+                       matched null p50 0.872 / p95 1.502 gross, p50 0.915 / p95 1.575 net over 200 runs
+                       matched null 43 trades median vs the method's 42 — count match 1.02
+                       cost-matched null: control stop 0.838 ATR = 5.29 points, cost 5.29% of R (realised median, structural)
+                       the method's own realised stop: median 0.838 ATR = 5.29 points over 51 trades
+n6/ict-sweep-mss-fvg        9    0.660    0.682     0.07   0.88%     31%     32%     38%  fail: only 9 trades (need 30); profit factor 0.682 < 1.2; expectancy -0.115R < 0.05R
+                       whole window 17 trades, PF 0.987 gross / 1.018 net; direction null p95 3.606 gross / 3.737 net
+                       matched null p50 0.964 / p95 4.100 gross, p50 0.989 / p95 4.226 net over 199 runs
+                       matched null 14 trades median vs the method's 9 — count match 1.56  ** outside the band: this percentile is unmatched **
+                       cost-matched null: control stop 2.943 ATR = 15.68 points, cost 1.79% of R (realised median, structural)
+                       the method's own realised stop: median 2.943 ATR = 15.68 points over 17 trades
+n6/vwap-fade              161    0.904    0.932     2.77   1.78%     49%     47%     35%  fail: profit factor 0.932 < 1.2; expectancy -0.032R < 0.05R
+                       whole window 263 trades, PF 0.928 gross / 0.960 net; direction null p95 1.196 gross / 1.239 net
+                       matched null p50 0.907 / p95 1.202 gross, p50 0.939 / p95 1.244 net over 200 runs
+                       matched null 185 trades median vs the method's 161 — count match 1.15
+                       cost-matched null: control stop 1.000 ATR = 5.94 points, cost 4.72% of R (named stopAtr, copied)
+                       the method's own realised stop: median 1.024 ATR = 6.08 points over 263 trades
+n6/doji-reversal           60    0.425    0.450     2.09   3.78%      3%      3%     12%  fail: profit factor 0.450 < 1.2; expectancy -0.416R < 0.05R
+                       whole window 62 trades, PF 0.612 gross / 0.649 net; direction null p95 1.280 gross / 1.364 net
+                       matched null p50 0.878 / p95 1.381 gross, p50 0.920 / p95 1.435 net over 200 runs
+                       matched null 51 trades median vs the method's 60 — count match 0.85
+                       cost-matched null: control stop 0.751 ATR = 4.84 points, cost 5.79% of R (realised median, structural)
+                       the method's own realised stop: median 0.751 ATR = 4.84 points over 62 trades
+n6/gap-fade                 0      NaN      NaN     0.00    NaN%    NaN%    NaN%    NaN%  fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+                       whole window 0 trades, PF NaN gross / NaN net; direction null p95 NaN gross / NaN net
+                       matched null p50 0.963 / p95 1.404 gross, p50 0.990 / p95 1.442 net over 200 runs
+                       matched null 74 trades median vs the method's 0 — count match NaN  ** outside the band: this percentile is unmatched **
+                       cost-matched null: control stop 1.500 ATR = NaN points, cost NaN% of R (UNMEASURED: no trade to measure and no governing stopAtr)
+                       the method's own realised stop: median NaN ATR = NaN points over 0 trades
+n6/trend-pullback         135    0.506    0.578    11.31   8.94%      0%      2%     80%  fail: profit factor 0.578 < 1.2; expectancy -0.326R < 0.05R
+                       whole window 185 trades, PF 0.506 gross / 0.586 net; direction null p95 0.566 gross / 0.660 net
+                       matched null p50 0.776 / p95 0.989 gross, p50 0.844 / p95 1.081 net over 200 runs
+                       matched null 146 trades median vs the method's 135 — count match 1.09
+                       cost-matched null: control stop 0.300 ATR = 1.85 points, cost 15.14% of R (realised median, structural)
+                       the method's own realised stop: median 0.300 ATR = 1.85 points over 185 trades
+n6/volume-thrust           18    1.442    1.471     0.15   0.87%     73%     73%     41%  fail: only 18 trades (need 30)
+                       whole window 13 trades, PF 0.577 gross / 0.592 net; direction null p95 1.821 gross / 1.872 net
+                       matched null p50 0.903 / p95 5.309 gross, p50 0.929 / p95 5.416 net over 195 runs
+                       matched null 9 trades median vs the method's 18 — count match 0.50  ** outside the band: this percentile is unmatched **
+                       cost-matched null: control stop 2.855 ATR = 14.76 points, cost 1.90% of R (realised median, structural)
+                       the method's own realised stop: median 2.855 ATR = 14.76 points over 13 trades
+n6/volman-box               0      NaN      NaN     0.00    NaN%    NaN%    NaN%    NaN%  fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+                       whole window 0 trades, PF NaN gross / NaN net; direction null p95 NaN gross / NaN net
+                       matched null p50 0.963 / p95 1.404 gross, p50 0.990 / p95 1.442 net over 200 runs
+                       matched null 74 trades median vs the method's 0 — count match NaN  ** outside the band: this percentile is unmatched **
+                       cost-matched null: control stop 1.500 ATR = NaN points, cost NaN% of R (UNMEASURED: no trade to measure and no governing stopAtr)
+                       the method's own realised stop: median NaN ATR = NaN points over 0 trades
+n6/tsmom                    0      NaN      NaN     0.00    NaN%    NaN%    NaN%    NaN%  fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+                       whole window 0 trades, PF NaN gross / NaN net; direction null p95 NaN gross / NaN net (own sides permuted)
+                       matched null p50 0.963 / p95 1.404 gross, p50 0.990 / p95 1.442 net over 200 runs
+                       matched null 74 trades median vs the method's 0 — count match NaN  ** outside the band: this percentile is unmatched **
+                       cost-matched null: control stop 1.500 ATR = NaN points, cost NaN% of R (UNMEASURED: no trade to measure and no governing stopAtr)
+                       the method's own realised stop: median NaN ATR = NaN points over 0 trades
+n6/intraday-momentum       50    0.921    0.972     0.07   0.18%     55%     60%     64%  fail: profit factor 0.972 < 1.2; expectancy 0.001R < 0.05R
+                       whole window 57 trades, PF 1.008 gross / 1.067 net; direction null p95 1.669 gross / 1.768 net (own sides permuted)
+                       matched null p50 0.910 / p95 1.110 gross, p50 0.946 / p95 1.153 net over 200 runs
+                       matched null 724 trades median vs the method's 50 — count match 14.48  ** outside the band: this percentile is unmatched **
+                       cost/R: NOT MEASURABLE on this row — it manages its own exits, so it has no stop to divide the spread by; its cost is the spread column above
+n6/atr/hivol-london        39    1.042    1.062     0.16   0.46%     56%     56%     57%  fail: profit factor 1.062 < 1.2; expectancy 0.022R < 0.05R
+                       whole window 50 trades, PF 1.057 gross / 1.075 net; direction null p95 1.669 gross / 1.698 net
+                       matched null p50 0.983 / p95 2.238 gross, p50 1.002 / p95 2.290 net over 200 runs
+                       matched null 28 trades median vs the method's 39 — count match 0.72  ** outside the band: this percentile is unmatched **
+                       cost-matched null: control stop 4.589 ATR = 30.32 points, cost 0.92% of R (realised median, structural)
+                       the method's own realised stop: median 4.589 ATR = 30.32 points over 50 trades
+n6/atr/hivol-orb60         41    0.561    0.572     0.24   0.67%     18%     18%     12%  fail: profit factor 0.572 < 1.2; expectancy -0.175R < 0.05R
+                       whole window 55 trades, PF 0.729 gross / 0.742 net; direction null p95 1.425 gross / 1.452 net
+                       matched null p50 0.860 / p95 2.105 gross, p50 0.882 / p95 2.154 net over 200 runs
+                       matched null 31 trades median vs the method's 41 — count match 0.76
+                       cost-matched null: control stop 2.761 ATR = 20.10 points, cost 1.39% of R (realised median, structural)
+                       the method's own realised stop: median 2.761 ATR = 20.10 points over 55 trades
+
+ran 22 of 22 constructs in the batch; 0 not run
+
+0 of 22 passed all three legs; noise at the 95th percentile yields about 1.1 of 22 by luck.
+Nothing crossed. The rebate lowers the bar and the bar was not the binding constraint.
+
