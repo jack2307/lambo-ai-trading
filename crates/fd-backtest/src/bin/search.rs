@@ -993,6 +993,78 @@ fn run_volume(registry: &Registry, bars: &[Bar], rules: &TradingRules, timeline:
     println!();
 }
 
+/// The column header of the `--mode=hypotheses` table, as every published
+/// receipt carries it.
+///
+/// Lifted out of `run_hypotheses` for one reason: so a test can assert it is
+/// **byte-identical** to the header line in a receipt already in the record.
+/// A new column added by widening this table would shift every figure on every
+/// row, and the proof that the 2026-10-07 drawdown line did not do that is
+/// that this string still matches the record character for character. The
+/// drawdown is printed on its OWN line below the row, exactly as
+/// `expectancy_net` was added on 2026-10-07, for the same reason.
+fn gate_header() -> String {
+    format!(
+        "{:<12} {:<18} {:>6} {:>7} {:>7} {:>8} {:>8} {:>8} {:>5}  verdict",
+        "hypothesis", "base", "trades", "OOS PF", "expect", "null p50", "null p95", "swap$", "pct"
+    )
+}
+
+/// One row of that table, same reason: a test re-formats a row that is already
+/// in the record from the row's own figures and asserts byte equality, which
+/// is what "added beside, nothing moved" means when it is checked rather than
+/// asserted.
+#[allow(clippy::too_many_arguments)]
+fn gate_row(
+    label: &str,
+    base: &str,
+    trades: usize,
+    profit_factor: f64,
+    expectancy: f64,
+    null_p50: f64,
+    null_p95: f64,
+    swap_usd: f64,
+    pct: &str,
+    verdict: &str,
+) -> String {
+    format!(
+        "{label:<12} {base:<18} {trades:>6} {profit_factor:>7.3} {expectancy:>7.3} {null_p50:>8.3} {null_p95:>8.3} {swap_usd:>8.0} {pct:>5}  {verdict}"
+    )
+}
+
+/// THE RISK FIGURE, in the words it has to be read in.
+///
+/// `max_drawdown_usd` is the worst peak-to-trough fall of the **closed-trade**
+/// equity curve: `metrics_of` walks the trades in order, adds `pnl_usd`, and
+/// tracks `peak - equity`. It therefore sees nothing that happened while a
+/// position was open — a trade that went 3 R against the book and closed green
+/// contributes **zero** to it, and `avg_mae` is the only field that sees that.
+/// The line says so, every time, because a reader who assumes the other
+/// definition assumes the worse number.
+///
+/// `max_drawdown_pct` divides that fall by the curve's **highest** equity, not
+/// by the peak the fall started from, so it is a FLOOR on the conventional
+/// max-drawdown-percent and never an overstatement. Both facts are pinned in
+/// `crates/fd-backtest/tests/drawdown.rs`.
+///
+/// A cell with no trades gets no drawdown: `Metrics::empty` carries
+/// `max_drawdown_usd = 0.0`, which is not a measurement of anything, so the
+/// line refuses rather than printing a 0 that reads as "never fell".
+fn drawdown_line(m: &fd_backtest::engine::Metrics) -> String {
+    if m.trades == 0 {
+        return "max drawdown: NOT MEASURED — this cell took no position, so there is no equity curve to fall (this is not 0.00 USD)".to_string();
+    }
+    let pct = if m.max_drawdown_pct.is_finite() {
+        format!("{:.2}% of the book's peak equity", m.max_drawdown_pct)
+    } else {
+        "percent NOT MEASURED (no peak to divide by)".to_string()
+    };
+    format!(
+        "max drawdown {:.2} USD = {pct}, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae {:+.3} R is); net {:+.2} USD over {} trades",
+        m.max_drawdown_usd, m.avg_mae, m.net_pnl_usd, m.trades,
+    )
+}
+
 /// A declared batch of hypotheses, each read against its matched null.
 #[allow(clippy::too_many_arguments)]
 fn run_hypotheses(
@@ -1043,10 +1115,7 @@ fn run_hypotheses(
     println!("{}", news_scope_line(rules));
     println!("{}", guards_line(guards));
     println!();
-    println!(
-        "{:<12} {:<18} {:>6} {:>7} {:>7} {:>8} {:>8} {:>8} {:>5}  verdict",
-        "hypothesis", "base", "trades", "OOS PF", "expect", "null p50", "null p95", "swap$", "pct"
-    );
+    println!("{}", gate_header());
     let mut survivors = Vec::new();
     for hypothesis in &batch {
         let outcome = if fixed {
@@ -1076,25 +1145,36 @@ fn run_hypotheses(
             format!("fail: {}", report.verdict.reasons.join("; "))
         };
         println!(
-            "{:<12} {:<18} {:>6} {:>7.3} {:>7.3} {:>8.3} {:>8.3} {:>8.0} {:>5}  {verdict}",
-            report.label,
-            report.base,
-            m.trades,
-            m.profit_factor,
-            m.expectancy,
-            report.null_quantile(0.5),
-            report.null_quantile(0.95),
-            report.swap_usd,
-            // A percentile read against a null whose seeds all agree is one
-            // comparison dressed as a quantile, so the column says `null`
-            // rather than a number it cannot support. It is not 0 and it is
-            // not 100; the line below says why.
-            match report.percentile_or_null() {
-                Some(p) => format!("{p:.0}%"),
-                None => "null".to_string(),
-            }
+            "{}",
+            gate_row(
+                &report.label,
+                &report.base,
+                m.trades,
+                m.profit_factor,
+                m.expectancy,
+                report.null_quantile(0.5),
+                report.null_quantile(0.95),
+                report.swap_usd,
+                // A percentile read against a null whose seeds all agree is one
+                // comparison dressed as a quantile, so the column says `null`
+                // rather than a number it cannot support. It is not 0 and it is
+                // not 100; the line below says why.
+                &match report.percentile_or_null() {
+                    Some(p) => format!("{p:.0}%"),
+                    None => "null".to_string(),
+                },
+                &verdict,
+            )
         );
         println!("{:<12} {:<18} {}  — {}", "", "", report.filters, report.why);
+        // THE RISK FIGURE BESIDE THE PROFIT FIGURE. Until 2026-10-07 this mode
+        // printed neither: `max_drawdown_usd` and `max_drawdown_pct` have been
+        // in `Metrics` the whole time and no printer ever read them, so every
+        // profit factor this record holds was published with no risk number
+        // next to it. PF 1.200 at an 8% drawdown and PF 1.200 at a 60% one are
+        // not the same row for a real account, and the desk could not tell
+        // them apart. `docs/decisions/2026-10-07-drawdown-printed.md`.
+        println!("{:<12} {:<18} {}", "", "", drawdown_line(m));
         // EXPECTANCY WITH THE FINANCING IN IT, on every row that paid any.
         //
         // `expectancy` above is the mean of `r = points / risk`, which is
@@ -1470,6 +1550,16 @@ fn run_rescore(
             fd_backtest::hypotheses::RescoreRow::null_quantile(&row.dir_null_net, 0.95),
             if row.dir_self_managed { " (own sides permuted)" } else { "" },
         );
+        // The same risk figure this mode also never printed, on both of the
+        // two curves it scores: the walk-forward out-of-sample book and the
+        // whole window the direction null is a percentile of. The rebate
+        // credit does not change the drawdown of the GROSS book, which is what
+        // these two are — `oos_net` is a credited copy and its own drawdown is
+        // the gross one minus a credit that is never negative, so the gross
+        // figure is the conservative one and the one printed.
+        // `docs/decisions/2026-10-07-drawdown-printed.md`.
+        println!("{:<22} walk-forward {}", "", drawdown_line(&row.oos));
+        println!("{:<22} whole window {}", "", drawdown_line(&row.whole));
         println!(
             "{:<22} matched null p50 {:.3} / p95 {:.3} gross, p50 {:.3} / p95 {:.3} net over {} runs",
             "",
@@ -1831,5 +1921,89 @@ mod flag_tests {
         let lines = flag_audit("all", &["--seeds=500".to_string(), "--exit-mix".to_string(), "--market=xauduka".to_string()]);
         assert_eq!(lines.len(), 2, "--seeds= and --exit-mix are both ignored by --mode=all: {lines:?}");
         assert!(lines.iter().all(|l| l.contains("IS NOT READ BY --mode=all")), "{lines:?}");
+    }
+}
+
+/// THE PROOF THAT THE NEW COLUMN MOVED NOTHING.
+///
+/// `instr-repair` proved its additive patch with `to_bits()`: `r_net == r` on
+/// a costless row, so every published receipt still reads as it did. The
+/// equivalent proof for a PRINTED column is byte equality against the printed
+/// record itself — a table that gained a column, or lost a space, would fail
+/// here even though every `f64` in the engine was untouched.
+///
+/// Both strings are compared against a receipt that is in the repository and
+/// was produced before this branch existed.
+#[cfg(test)]
+mod drawdown_printer_tests {
+    use super::{drawdown_line, gate_header, gate_row};
+    use fd_backtest::engine::Metrics;
+
+    /// A receipt from the record: `--mode=hypotheses` over `xauusd` 15m,
+    /// 2025-09-13 to 2026-09-12, 200 seeds, committed 2026-09-13.
+    fn published_receipt() -> String {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../docs/research/runs/2026-09-13-recent-year-hours/in-sample.txt");
+        std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("the receipt this test reads is part of the record: {}: {e}", path.display()))
+    }
+
+    /// THE HEADER, byte for byte against the record. A drawdown column widened
+    /// into this table would shift every figure on every row of every receipt;
+    /// this is the assertion that it did not happen.
+    #[test]
+    fn the_table_header_is_byte_identical_to_the_published_record() {
+        let receipt = published_receipt();
+        let published = receipt
+            .lines()
+            .find(|l| l.starts_with("hypothesis "))
+            .expect("the receipt has a table header");
+        assert_eq!(gate_header(), published, "the header this build prints is not the header the record holds");
+    }
+
+    /// AND ONE ROW, re-formatted from its own published figures. `SURVIVES` at
+    /// PF 1.481 on 205 trades: the row is quoted in three decision records, so
+    /// its layout is load-bearing.
+    #[test]
+    fn a_published_row_reformats_byte_identically() {
+        let receipt = published_receipt();
+        let published = receipt
+            .lines()
+            .find(|l| l.starts_with("hold/04-06-short session-hold"))
+            .expect("the receipt has this row");
+        let rebuilt = gate_row("hold/04-06-short", "session-hold", 205, 1.481, 0.173, 0.963, 1.284, 0.0, "100%", "SURVIVES");
+        assert_eq!(rebuilt, published, "the row this build prints is not the row the record holds");
+    }
+
+    /// The new line itself: it names the quantity, carries a unit, and says
+    /// which of the two drawdowns it is.
+    #[test]
+    fn the_drawdown_line_states_its_unit_and_which_drawdown_it_is() {
+        let m = Metrics { trades: 40, max_drawdown_usd: 812.5, max_drawdown_pct: 7.4318, avg_mae: -0.61, net_pnl_usd: 1234.5, ..Metrics::empty() };
+        let line = drawdown_line(&m);
+        assert!(line.contains("max drawdown 812.50 USD"), "{line}");
+        assert!(line.contains("7.43% of the book's peak equity"), "{line}");
+        assert!(line.contains("CLOSED-TRADE curve only"), "{line}");
+        assert!(line.contains("avg_mae -0.610 R"), "the intrabar figure is named beside it: {line}");
+    }
+
+    /// AND IT REFUSES ON AN EMPTY CELL rather than printing the 0.0 that
+    /// `Metrics::empty` carries, which is not a measurement of anything.
+    #[test]
+    fn an_empty_cell_gets_no_drawdown_number() {
+        let line = drawdown_line(&Metrics::empty());
+        assert!(line.contains("NOT MEASURED"), "{line}");
+        assert!(line.contains("this is not 0.00 USD"), "{line}");
+        assert!(!line.contains("max drawdown 0.00"), "an empty cell must not read as a book that never fell: {line}");
+    }
+
+    /// A zero drawdown on a real curve, however, IS printed as 0.00 USD: the
+    /// fall was measured and it was zero. The two cases above and here are the
+    /// difference between `null` and `0`.
+    #[test]
+    fn a_measured_zero_is_printed_as_zero() {
+        let m = Metrics { trades: 7, max_drawdown_usd: 0.0, max_drawdown_pct: 0.0, avg_mae: -0.2, net_pnl_usd: 700.0, ..Metrics::empty() };
+        let line = drawdown_line(&m);
+        assert!(line.contains("max drawdown 0.00 USD = 0.00% of the book's peak equity"), "{line}");
+        assert!(!line.contains("NOT MEASURED"), "{line}");
     }
 }

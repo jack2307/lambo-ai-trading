@@ -140,6 +140,14 @@ fn check_market(market: &str) {
             diffs.check(&at("totalR"), result.metrics.total_r, &metrics["totalR"]);
             diffs.check(&at("netPnlUsd"), result.metrics.net_pnl_usd, &metrics["netPnlUsd"]);
             diffs.check(&at("maxDrawdownUsd"), result.metrics.max_drawdown_usd, &metrics["maxDrawdownUsd"]);
+            // AND THE PERCENT, which this gate never compared although the
+            // golden files have carried `maxDrawdownPct` all along. It is
+            // compared as of 2026-10-07 because the figure is now PRINTED
+            // beside every profit factor, and a printed number whose
+            // denominator was never checked against the oracle is a number
+            // with an unverified definition.
+            // `docs/decisions/2026-10-07-drawdown-printed.md`.
+            diffs.check(&at("maxDrawdownPct"), result.metrics.max_drawdown_pct, &metrics["maxDrawdownPct"]);
             if metrics["profitFactor"].as_f64().is_some_and(f64::is_finite) {
                 diffs.check(&at("profitFactor"), result.metrics.profit_factor, &metrics["profitFactor"]);
             }
