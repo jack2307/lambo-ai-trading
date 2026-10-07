@@ -1,0 +1,21 @@
+[10:50:25] 1m_A_noguards
+    exit=0 rows=16
+[10:55:11] 1m_A_guards
+    exit=0 rows=16
+[10:56:35] 1m_B_noguards
+    exit=0 rows=16
+[11:01:22] 1m_B_guards
+    exit=0 rows=16
+[11:02:45] 5m_A_noguards
+    exit=0 rows=16
+[11:03:36] 5m_A_guards
+    exit=0 rows=16
+[11:03:50] 5m_B_noguards
+    exit=0 rows=16
+[11:04:48] 5m_B_guards
+    exit=0 rows=16
+[11:05:03] 1m_A_spread0
+    exit=0 rows=16
+[11:09:50] 1m_B_spread0
+    exit=0 rows=16
+[11:15:17] ALL DONE

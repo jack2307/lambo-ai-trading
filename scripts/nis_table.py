@@ -15,9 +15,13 @@ REC = ROOT / 'receipts'
 
 GATE_PF, GATE_EXP, GATE_N = 1.200, 0.050, 40
 
+# A guarded row takes 0 trades and prints NaN for every statistic, so NaN is
+# part of the grammar: a cell that printed nothing would otherwise vanish from
+# the ledger, which is exactly brief section 8's `null != 0 != []`.
+NUM = r'(-?(?:[\d.]+|NaN))'
 ROW = re.compile(
     r'^(nis\d+m-\w+-p\d-f\d+)\s+news-pulse\s+(\d+)\s+'
-    r'(-?[\d.]+)\s+(-?[\d.]+)\s+(-?[\d.]+)\s+(-?[\d.]+)\s+(-?[\d.]+)\s+(\d+)%'
+    + r'\s+'.join([NUM] * 5) + r'\s+(\d+%|null)'
 )
 STOP = re.compile(r"the method's own realised stop: median ([\d.]+) ATR = ([\d.]+) points")
 COST = re.compile(r'cost-matched null: control stop ([\d.]+) ATR = ([\d.]+) points, cost ([\d.]+)% of R')
@@ -55,7 +59,7 @@ def parse(path):
         out.append(dict(
             label=m.group(1), trades=int(m.group(2)), pf=float(m.group(3)),
             exp=float(m.group(4)), null_p50=float(m.group(5)), null_p95=float(m.group(6)),
-            pct=int(m.group(8)),
+            pct=m.group(8),
             stop_atr=float(s.group(1)) if s else None, stop_pts=float(s.group(2)) if s else None,
             cost=float(c.group(3)) if c else None,
             match=float(mt.group(1)) if mt else None,
@@ -67,6 +71,8 @@ def parse(path):
 
 
 def verdict(r):
+    if r['trades'] == 0:
+        return 'ZERO TRADES (guard refused every entry) - not an absence of signal'
     if r['trades'] < GATE_N:
         return 'VOID <40'
     legs = []
@@ -96,7 +102,7 @@ def main():
             own = sum(v for k, v in r['exits'].items() if k in ('STOP', 'TARGET'))
             share = f'{100*own/r["trades"]:.0f}%' if r['trades'] else 'null'
             print(f'  {r["label"]:<22} n={r["trades"]:>4} PF={r["pf"]:>6.3f} exp={r["exp"]:>+7.3f}R '
-                  f'p50={r["null_p50"]:>5.3f} pct={r["pct"]:>3}% match={r["match"] if r["match"] is not None else "null"} '
+                  f'p50={r["null_p50"]:>5.3f} pct={r["pct"]:>4} match={r["match"] if r["match"] is not None else "null"} '
                   f'stop={r["stop_atr"] if r["stop_atr"] is not None else "null"}ATR'
                   f'/{r["stop_pts"] if r["stop_pts"] is not None else "null"}pts '
                   f'cost={r["cost"] if r["cost"] is not None else "null"}% own={share} [{mix}] '

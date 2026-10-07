@@ -351,3 +351,282 @@ Written by the `news-inner-stop` agent (Claude Opus 5, 1M context) on
 `agent/news-inner-stop`, 2026-10-07, **before** `agent/n1`'s filter and strategy
 were brought into this worktree and before any binary was built here.
 `df -h /e` at the start of the job: **23 GB free** of 301 G.
+
+---
+
+## Note added 2026-10-07, results. Append-only; no line above is altered.
+
+Receipts: `receipts/nis_{1m,5m}_{A,B}_{noguards,guards}.txt` (the gate),
+`receipts/nis_1m_{A,B}_spread0.txt` (the diagnostic),
+`receipts/nis_plumb_1m.txt` (the declared plumbing cell),
+`receipts/nis_table.txt` (all 176 cells, one line each),
+`receipts/nis_runlog.txt`, `receipts/nis-{1m,5m}.toml` (the 32 declared rows).
+Code: `scripts/nis_runs.sh`, `scripts/nis_table.py`, and the four pre-check
+scripts. No engine file was touched: the only Rust in this branch is
+`agent/n1`'s commit `ca9125c`, cherry-picked byte for byte.
+
+### 0. The gate: 0 of 128 cells pass. F1 FIRED.
+
+**No row of the inner-stop family — and no row of the f = 1.00 control — reaches
+`PF >= 1.200` on both A' and B' in the same guard arm, at either interval.**
+32 rows, 0 survivors. Of the 64 unguarded gate cells, 3 pass both legs on one
+window and every one of the 3 inverts on the other:
+
+| row | A' | B' |
+|---|---|---|
+| `nis5m-rev-p2-f075` | PF **1.467** / **+0.216R** / 112 | PF **0.652** / **-0.204R** / 115 |
+| `nis5m-rev-p2-f050` | PF 1.291 / +0.167R / 112 | PF 0.900 / -0.056R / 115 |
+| `nis5m-rev-p2-f100` | PF 1.298 / +0.124R / 112 | PF 0.601 / -0.207R / 115 |
+| `nis1m-brk-p2-f025` (best 1m on A') | PF 1.170 / +0.117R / 119 | PF **0.610** / **-0.297R** / 120 |
+| `nis1m-brk-p1-f075` (best 1m on B') | PF 0.786 / -0.128R / 120 | PF 1.106 / +0.073R / 122 |
+
+Every window carries 112-122 trades, so none of this is a small-sample void:
+the minimum trade count in the whole unguarded set is **112**, nearly three
+times the 40-trade floor. Counted by hand against 40, not the tool's 30.
+
+### 1. The number worth keeping: the stop fraction is a property of the MEASUREMENT
+
+This is the finding, and it is an eighth entry for the brief's own section 0
+list. **`corr(PF_A', PF_B')` is negative at both intervals** — `-0.228` over the
+16 rows at 1m and `-0.438` over the 16 at 5m — which falls inside the
+`-0.672 ... -0.140` range the brief reports for its six existing groups. And the
+**sign of expectancy flips between the two windows on 16 of 32 rows: exactly
+half.**
+
+The profile of profit factor against f has a *different shape* on each window,
+and the best f is not the same one:
+
+| branch | A' (f = 0.25 / 0.50 / 0.75 / 1.00) | B' (same) |
+|---|---|---|
+| 1m breakout, probe 2 | **1.170** / 0.876 / 0.923 / 1.025 | 0.610 / 0.790 / **0.818** / 0.786 |
+| 1m breakout, probe 1 | 1.045 / **1.075** / 0.786 / 0.766 | 0.788 / 0.948 / **1.106** / 0.849 |
+| 5m reversion, probe 2 | 0.788 / 1.291 / **1.467** / 1.298 | 0.749 / **0.900** / 0.652 / 0.601 |
+| 1m reversion, probe 1 | 0.715 / 0.895 / 0.963 / **1.005** | 0.680 / **1.034** / 0.884 / 0.876 |
+
+So `stopImpulse` joins window, clock, ruler, guard arm, bar resolution,
+swap-blindness and the null declaration: **a parameter whose optimum, and whose
+sign, is a property of which four years were measured.** Picking f on A' and
+reading it on B' loses money on three of these four branches.
+
+### 2. F2 did NOT fire, and the reason is the sharper half of the answer
+
+The zero-spread arm was declared precisely so that "no direction" could not be
+confused with "direction paid to the spread". **At zero spread, still 0 of 16
+rows pass the gate on both windows.** Five rows pass on one window and none on
+two; the closest is `nis1m-brk-p1-f025` at PF 1.228 / +0.143R on A' and PF
+**1.150** / +0.102R on B' — positive on both windows, and short of the profit
+factor leg on B' by 0.050. **So the inner-stop geometry is not refuted on cost.
+It is refuted on direction, with cost making it worse.**
+
+But cost decides the *sign*, and that is measured rather than argued. The same
+row, the same 120 and 122 entries, only the spread changing:
+
+| `nis1m-brk-p1-f025` | printed cost/R | spread 0.28 | spread 0.00 | difference |
+|---|---|---|---|---|
+| A' | 10.49% of R | **+0.038R** | +0.143R | 0.105R |
+| B' | **20.74% of R** | **-0.145R** | **+0.102R** | 0.247R |
+
+The one row that is positive on **both** windows at zero cost is **negative on
+B' at the desk's own 0.28 spread**, and the amount it loses is about its own
+printed cost. The difference between the arms (0.105R and 0.247R) is a little
+larger than the printed `spread / stop` (10.49% and 20.74%) because removing the
+spread also moves the stop/target mix, so the two are not purely additive; both
+are quoted rather than reconciled.
+
+**Brief section 3 item 3 is therefore half right for this family, and the
+correction is mine to report (brief section 8).** "Cost is not what blocks"
+holds at f = 1.00, where the printed figures are 1.82% to 3.46% of R. It does
+**not** hold at f = 0.25, where the printed figures are **9.46% to 21.71% of R**
+— because cutting the stop to a quarter of the release range multiplies
+`spread / stop` by four, and because B'-era gold at a 1,200 to 1,800 dollar
+price level has a release range less than half of A'-era gold's (4.50 points
+against 10.21 at 1m, section 4(d)). The brief's quoted band of 0.85% to 5.62% is
+`agent/news-tf`'s band at f = 1.00 and does not survive the move inside the
+range.
+
+### 3. What the inner stop DID deliver: the four-hour ceiling is gone, and the rule still fails
+
+This is the part that closes the family rather than merely adding to it.
+`agent/news-geom` fired F2 on the published survivor because 77% to 93% of its
+trades were closed by `max_hold_ms = 4 h`, so what was measured was "hold four
+hours in a direction" and not the registered stop geometry. **The inner stop
+removes that confound by construction**, and the receipts show it:
+
+| f | own-rule share (STOP+TARGET) | mean hold |
+|---|---|---|
+| 1.00 (the published geometry) | 51% to 76% | hours |
+| 0.75 | 70% to 93% | — |
+| 0.50 | 91% to 99% | — |
+| 0.25 | **99% to 100%** | **8.2 min** (1m A' probe 2) |
+
+At f = 0.25 the registered rule decides **every trade in every cell**: 0 to 1
+TIMEOUT out of 112 to 122. **F6 could not fire anywhere** — the minimum own-rule
+share across all 176 cells is 51%, against the 20% line. So the calendar family
+has now been read in the one configuration where neither the hold ceiling nor the
+bar ruler can be blamed, and it fails there too: at f = 0.25, where the geometry
+is 100% of the result, the 1m breakout branch reads PF 1.045 and 1.170 on A' and
+PF **0.610 and 0.788** on B'.
+
+### 4. The measuring instrument worked, on every count it was asked about
+
+- **F5, resolution, did NOT fire.** The smallest printed realised stop across all
+  176 cells is **1.261 ATR**; the largest is 6.907 ATR. The threshold for a
+  mechanism entering on expansion bars is 0.714 ATR, and the "not evidence" line
+  is 0.300 ATR. **Every cell of this job sits in the readable band**, and section
+  4(d) said so before the first run. Independently measured on the tape:
+  both-touched on the backtest's own bars 0.0% to 2.7%, and the 5m verdict
+  against the 1m verdict **0.0% to 0.9%**, inside the record's 1.0% readable
+  line. **So these results are evidence, not an indicator** — which is the one
+  thing brief section 2 warned this job would most likely have to concede.
+- **The null calibrates everywhere.** Count match across all 112 non-guarded
+  cells runs **0.82 to 1.15**, every one inside `COUNT_MATCH_BAND = 0.25`. So
+  unlike `agent/news-tf`'s `xauusd` arm (0.03 to 0.04) and the parent's B'
+  (0.38), **every percentile in this job is publishable** — and they are reported
+  beside `null p50`, which is below 1.000 on 104 of 112 cells, meaning a high
+  percentile here says "loses less than random entry at the same minute, count,
+  cost and side ratio", not "makes money".
+- **`null p50` printed `0.000` on 0 of 176 cells.** Brief section 4's defect did
+  not occur here; the guarded cells print `nan`, not `0`, which is the correct
+  behaviour.
+- **`wrong_side_stop`: 0.** No such counter exists in this branch's engine, so it
+  was measured directly instead: 0 occurrences in 192 pre-check cells, including
+  every f = 0.25 cell. On this feed the 1m-to-1m open gap after a release never
+  reaches a quarter of the release range. F4 did not fire on that ground.
+- **F3, the control, reproduced exactly.** The f = 1.00 rows in this binary read
+  120 / PF 0.766 / -0.132R, 120 / 1.005 / +0.010R and 119 / 1.025 / +0.019R —
+  identical to three decimals to `agent/news-tf`'s `np1m-brk-p1-m05`,
+  `np1m-rev-p1-m05` and `np1m-brk-p2-m05` on the same window. So the only thing
+  that differs between this job and the published record is `stopImpulse`.
+- **The flag audit answered the brief's binary warning.** Every receipt prints
+  `flags: 9 passed` (or 10 with `--guards`), `every one of them read by
+  --mode=hypotheses`. Nothing was swallowed silently, including `--spread=0.0`,
+  whose arm prints `spread: 0 per round trip`.
+- **An independent reimplementation agrees with the engine.** The Python walk in
+  `scripts/nis_resolution.py` applies the engine's documented fill and exit rules
+  and reproduces the printed exit mix **exactly** on 7 of 8 cross-checked cells
+  (`73/47/0`, `71/43/6`, `68/23/29`, `69/49/1`, `79/43/0`, `72/39/1`, `51/15/46`)
+  and is off by **one trade** on the eighth (predicted `73/28/11`, printed
+  `74/28/10`). The engine's exit accounting is therefore reproducible from its
+  own description.
+- **One pre-check number of mine was wrong and the printed one wins.** Section
+  4(d) predicted the f = 0.25 stop at 1m A' probe 1 as 2.78 ATR; the receipt
+  prints **1.823 ATR**. The stop in *points* agrees (2.55 predicted, 2.67
+  printed), so the whole gap is the ATR denominator: my pre-check normalised by
+  the **pre-release** ATR(14) and the engine normalises by an ATR that already
+  contains the release bar, which is roughly twice as large. The printed figure
+  is the conservative one and both clear 0.714 ATR, so the verdict of section
+  4(d) stands — but the arithmetic behind it was mine and it was off by a factor
+  of about two.
+
+### 5. The guard arm: 0 trades on all 64 cells, as declared
+
+`--guards` prints `news flat 60/30 (impact>=3, USD)` and refused every entry:
+`refused NEWS_FLAT 112` to `122` per row, `closed none`, `sized down 0`, on all
+16 rows of all 4 guarded runs. **This is a fact about the desk's own
+configuration, not an absence of signal**: the desk is configured so that it
+cannot take any entry this family describes, at any stop geometry, at either
+interval. Declared in section 7 before it ran, run anyway, and
+`[trading.guards]` was not touched.
+
+### 6. One tool observation, free and exact
+
+At `reward_risk = 1.8` with exits that are purely STOP or TARGET — which is what
+f of 0.50 or less produces here — the desk's two gate legs are not independent,
+and the profit factor leg is strictly the harder one. With win rate `w`,
+`PF = 1.8w / (1 - w)` and `expectancy = 2.8w - 1`, so
+
+    PF >= 1.200            requires  w >= 40.0%
+    expectancy >= +0.050R  requires  w >= 37.5%
+
+The expectancy leg is therefore **redundant** for any such mechanism, and the
+gate reduces to "win rate at or above 40%". That is visible on the rows: four
+cells in this job clear expectancy and fail profit factor, and none does the
+reverse. Reported as an observation about the gate's arithmetic; the gate is not
+adjusted.
+
+### 7. Falsifiers
+
+| # | what it tested | fired? | where |
+|---|---|---|---|
+| F1 | no tradable structure at any stop geometry | **FIRED** | 0 of 128 gate cells pass; 32 rows, 0 survivors on two windows |
+| F2 | refuted on cost rather than direction | did **not** fire | 0 of 16 rows pass at zero spread either; best is 1.228 then **1.150** |
+| F3 | the control does not reproduce | did not fire | f = 1.00 matches `agent/news-tf` to 3 decimals |
+| F4 | void rather than fail | did not fire | min 112 trades, count match 0.82 to 1.15, `wrong_side_stop` 0 |
+| F5 | the stop is below the resolution threshold | did not fire | min printed stop **1.261 ATR** against the 0.714 line |
+| F6 | the row measures the four-hour ceiling | did not fire | min own-rule share 51%; **99% to 100% at f = 0.25** |
+
+### 8. Multiple-testing ledger
+
+| block | declared | looked at |
+|---|---|---|
+| plumbing: 1m, A', 16 rows, `--seeds=20`, no guards | 16 | 16 |
+| 1m: 16 rows x {A', B'} x {no guards, guards} | 64 | 64 |
+| 5m: 16 rows x {A', B'} x {no guards, guards} | 64 | 64 |
+| zero-spread diagnostic, no gate | 32 | 32 |
+| **total** | **176** | **176** |
+
+Declared and looked at agree exactly; the count is taken off the receipts by
+`scripts/nis_table.py`, which prints one line per (run, row) and totals 176. No
+`--mode=rescore`, no `--null-sides=exposure`, no `--trail`, no third window, no
+spread value other than the configured 0.28 and the declared 0.0, and no
+parameter outside the 32 declared rows. The plumbing cell was declared in
+section 8 before it ran and no gate figure is taken from it; the only thing read
+off it is F3's control reproduction, which is what it was declared to check.
+
+### 9. Outcome — the calendar mechanism family is closed
+
+Four independent branches, four negatives, and this one removes the last defence
+the record had:
+
+| branch | verdict | by |
+|---|---|---|
+| enter BEFORE the release | 0 cells, both windows | `agent/news-pre` |
+| enter AFTER it, stop = the whole release range, 15m | passed, then refuted on a second feed and a second ruler | `agent/n1`, `agent/news-tf` |
+| the same, read as geometry rather than as a 4-hour hold | direction inseparable from a coin flip | `agent/news-geom` |
+| enter AFTER it, **stop INSIDE the release range**, 1m and 5m | **0 of 128 cells, both windows, both intervals, both guard arms** | this file |
+
+**The scheduled expansion is real and it has no direction a stop geometry can
+take.** The expansion itself was never in doubt — 5.96x the day's median range,
+44% of the first hour's range inside the first minute — and this job settles the
+one thing that was still arguable: at the resolution where the registered rule
+decides 100% of its own trades, where the matched null calibrates on every cell,
+where the stop is 1.3 to 6.9 ATR and therefore readable, and where the four-hour
+ceiling cannot contribute, the rule's profit factor on the second window is
+**0.610 to 1.106** and its correlation with the first window is **negative**.
+There is no stop fraction that survives two windows, and the fraction that looks
+best is a property of which four years were used.
+
+The desk's own guards already forbid the whole family. Nothing here asks for that
+to change.
+
+### 10. What would reopen this, and what this still does not measure
+
+- **A limit or stop fill model.** The engine fills at the next bar's open at one
+  constant spread. A market order into the first minute after a release is the
+  one thing this family most needs and cannot have here.
+- **A per-second spread series at a release.** Section 10 above said the 0.28
+  charged is a floor, and section 2 of this note now shows why that matters: at
+  f = 0.25 the result moves 0.105R to 0.247R per trade on the spread term alone,
+  so a realistic release-minute spread would move it further in the losing
+  direction, never the other way.
+- **A second instrument below 15m.** Section 4(a): no broker-feed store exists at
+  a readable length. Both arms here are one venue's bid feed.
+- **A stop anchored to the range's own levels** (a retracement level, the release
+  bar's midpoint) rather than to the signal close. That is a third geometry and
+  is not measured here; this file measures a *fraction of the range from the
+  signal close*, which is what the brief asked for. It is named so that nobody
+  reads this file as having closed geometries it did not run.
+- `data-sealed/` was not opened, read or counted. `config/accounts.toml`,
+  `config/local.toml`, the VPS and `main` were not touched. No `taskkill` was
+  run, `/e/rust/flowdesk/target/release/` was never written or cleaned, and
+  `data/gold/` and `data/btc/` were not touched.
+  `--data=/e/rust/flowdesk/data` was read-only.
+
+### 11. Disk
+
+`df -h /e`: **23 GB free** before the first run and **23 GB free** after the
+last, unchanged. This job built its own binary into its own worktree `target/`
+(about 1.5 GB) and wrote about 0.5 MB of text under `receipts/`. The shared
+`/e/rust/fd-instr-repair/target/release/search.exe` was not used, because it does
+not know `newsonly:` or `news-pulse`, and brief section 1 records that an older
+binary swallows an unknown flag in silence. Nothing was deleted.

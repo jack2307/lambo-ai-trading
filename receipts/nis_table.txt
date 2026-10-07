@@ -1,0 +1,305 @@
+
+===== nis_1m_A_guards.txt  (16 rows) =====
+  news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+  news scope: USD (news_currencies) | guards: on — max_open_loss_r 2.0, notional 300%, weekend flat 16:40 NY, news flat 60/30 (impact≥3, USD), daily cap 20, loss limit $300, cooldown 30 min | spread:   0.28 per round trip
+  flags:    10 passed, every one of them read by --mode=hypotheses
+  nis1m-brk-p1-f025      n=   0 PF=   nan exp=   +nanR p50=  nan pct=null match=null stop=nullATR/nullpts cost=null% own=null [null] -> ZERO TRADES (guard refused every entry) - not an absence of signal
+       refused: {'NEWS_FLAT': 120}
+  nis1m-rev-p1-f025      n=   0 PF=   nan exp=   +nanR p50=  nan pct=null match=null stop=nullATR/nullpts cost=null% own=null [null] -> ZERO TRADES (guard refused every entry) - not an absence of signal
+       refused: {'NEWS_FLAT': 120}
+  nis1m-brk-p2-f025      n=   0 PF=   nan exp=   +nanR p50=  nan pct=null match=null stop=nullATR/nullpts cost=null% own=null [null] -> ZERO TRADES (guard refused every entry) - not an absence of signal
+       refused: {'NEWS_FLAT': 119}
+  nis1m-rev-p2-f025      n=   0 PF=   nan exp=   +nanR p50=  nan pct=null match=null stop=nullATR/nullpts cost=null% own=null [null] -> ZERO TRADES (guard refused every entry) - not an absence of signal
+       refused: {'NEWS_FLAT': 119}
+  nis1m-brk-p1-f050      n=   0 PF=   nan exp=   +nanR p50=  nan pct=null match=null stop=nullATR/nullpts cost=null% own=null [null] -> ZERO TRADES (guard refused every entry) - not an absence of signal
+       refused: {'NEWS_FLAT': 120}
+  nis1m-rev-p1-f050      n=   0 PF=   nan exp=   +nanR p50=  nan pct=null match=null stop=nullATR/nullpts cost=null% own=null [null] -> ZERO TRADES (guard refused every entry) - not an absence of signal
+       refused: {'NEWS_FLAT': 120}
+  nis1m-brk-p2-f050      n=   0 PF=   nan exp=   +nanR p50=  nan pct=null match=null stop=nullATR/nullpts cost=null% own=null [null] -> ZERO TRADES (guard refused every entry) - not an absence of signal
+       refused: {'NEWS_FLAT': 119}
+  nis1m-rev-p2-f050      n=   0 PF=   nan exp=   +nanR p50=  nan pct=null match=null stop=nullATR/nullpts cost=null% own=null [null] -> ZERO TRADES (guard refused every entry) - not an absence of signal
+       refused: {'NEWS_FLAT': 119}
+  nis1m-brk-p1-f075      n=   0 PF=   nan exp=   +nanR p50=  nan pct=null match=null stop=nullATR/nullpts cost=null% own=null [null] -> ZERO TRADES (guard refused every entry) - not an absence of signal
+       refused: {'NEWS_FLAT': 120}
+  nis1m-rev-p1-f075      n=   0 PF=   nan exp=   +nanR p50=  nan pct=null match=null stop=nullATR/nullpts cost=null% own=null [null] -> ZERO TRADES (guard refused every entry) - not an absence of signal
+       refused: {'NEWS_FLAT': 120}
+  nis1m-brk-p2-f075      n=   0 PF=   nan exp=   +nanR p50=  nan pct=null match=null stop=nullATR/nullpts cost=null% own=null [null] -> ZERO TRADES (guard refused every entry) - not an absence of signal
+       refused: {'NEWS_FLAT': 119}
+  nis1m-rev-p2-f075      n=   0 PF=   nan exp=   +nanR p50=  nan pct=null match=null stop=nullATR/nullpts cost=null% own=null [null] -> ZERO TRADES (guard refused every entry) - not an absence of signal
+       refused: {'NEWS_FLAT': 119}
+  nis1m-brk-p1-f100      n=   0 PF=   nan exp=   +nanR p50=  nan pct=null match=null stop=nullATR/nullpts cost=null% own=null [null] -> ZERO TRADES (guard refused every entry) - not an absence of signal
+       refused: {'NEWS_FLAT': 120}
+  nis1m-rev-p1-f100      n=   0 PF=   nan exp=   +nanR p50=  nan pct=null match=null stop=nullATR/nullpts cost=null% own=null [null] -> ZERO TRADES (guard refused every entry) - not an absence of signal
+       refused: {'NEWS_FLAT': 120}
+  nis1m-brk-p2-f100      n=   0 PF=   nan exp=   +nanR p50=  nan pct=null match=null stop=nullATR/nullpts cost=null% own=null [null] -> ZERO TRADES (guard refused every entry) - not an absence of signal
+       refused: {'NEWS_FLAT': 119}
+  nis1m-rev-p2-f100      n=   0 PF=   nan exp=   +nanR p50=  nan pct=null match=null stop=nullATR/nullpts cost=null% own=null [null] -> ZERO TRADES (guard refused every entry) - not an absence of signal
+       refused: {'NEWS_FLAT': 119}
+
+===== nis_1m_A_noguards.txt  (16 rows) =====
+  news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+  news scope: USD (news_currencies) | guards: off (every number unguarded) | spread:   0.28 per round trip
+  flags:    9 passed, every one of them read by --mode=hypotheses
+  nis1m-brk-p1-f025      n= 120 PF= 1.045 exp= +0.038R p50=0.858 pct= 86% match=1.02 stop=1.823ATR/2.67pts cost=10.49% own=100% [STOP 73/TARGET 47] -> fail:PF+exp
+  nis1m-rev-p1-f025      n= 120 PF= 0.715 exp= -0.196R p50=0.852 pct= 14% match=1.02 stop=1.773ATR/2.71pts cost=10.35% own=100% [STOP 83/TARGET 37] -> fail:PF+exp
+  nis1m-brk-p2-f025      n= 119 PF= 1.170 exp= +0.117R p50=0.889 pct= 95% match=1.03 stop=1.727ATR/2.87pts cost=9.76% own=99% [STOP 69/TARGET 49/TIMEOUT 1] -> fail:PF
+  nis1m-rev-p2-f025      n= 119 PF= 0.737 exp= -0.183R p50=0.896 pct= 11% match=1.03 stop=1.751ATR/2.96pts cost=9.46% own=100% [STOP 82/TARGET 37] -> fail:PF+exp
+  nis1m-brk-p1-f050      n= 120 PF= 1.075 exp= +0.055R p50=0.942 pct= 78% match=1.02 stop=3.526ATR/5.17pts cost=5.42% own=95% [STOP 71/TARGET 43/TIMEOUT 6] -> fail:PF
+  nis1m-rev-p1-f050      n= 120 PF= 0.895 exp= -0.060R p50=0.942 pct= 39% match=1.02 stop=3.439ATR/5.23pts cost=5.35% own=99% [STOP 78/TARGET 41/TIMEOUT 1] -> fail:PF+exp
+  nis1m-brk-p2-f050      n= 119 PF= 0.876 exp= -0.079R p50=0.894 pct= 46% match=1.03 stop=3.387ATR/5.58pts cost=5.02% own=94% [STOP 75/TARGET 37/TIMEOUT 7] -> fail:PF+exp
+  nis1m-rev-p2-f050      n= 119 PF= 0.844 exp= -0.100R p50=0.900 pct= 33% match=1.03 stop=3.439ATR/5.7pts cost=4.91% own=98% [STOP 78/TARGET 39/TIMEOUT 2] -> fail:PF+exp
+  nis1m-brk-p1-f075      n= 120 PF= 0.786 exp= -0.128R p50=0.903 pct= 20% match=1.02 stop=5.207ATR/7.67pts cost=3.65% own=83% [STOP 73/TARGET 27/TIMEOUT 20] -> fail:PF+exp
+  nis1m-rev-p1-f075      n= 120 PF= 0.963 exp= -0.015R p50=0.883 pct= 72% match=1.02 stop=5.115ATR/7.72pts cost=3.62% own=88% [STOP 69/TARGET 37/TIMEOUT 14] -> fail:PF+exp
+  nis1m-brk-p2-f075      n= 119 PF= 0.923 exp= -0.038R p50=0.897 pct= 60% match=1.03 stop=5.044ATR/8.28pts cost=3.38% own=79% [STOP 66/TARGET 28/TIMEOUT 25] -> fail:PF+exp
+  nis1m-rev-p2-f075      n= 119 PF= 0.951 exp= -0.022R p50=0.896 pct= 67% match=1.03 stop=5.1ATR/8.44pts cost=3.32% own=84% [STOP 66/TARGET 34/TIMEOUT 19] -> fail:PF+exp
+  nis1m-brk-p1-f100      n= 120 PF= 0.766 exp= -0.132R p50=0.934 pct= 12% match=1.02 stop=6.907ATR/10.16pts cost=2.76% own=76% [STOP 68/TARGET 23/TIMEOUT 29] -> fail:PF+exp
+  nis1m-rev-p1-f100      n= 120 PF= 1.005 exp= +0.010R p50=0.935 pct= 64% match=1.02 stop=6.86ATR/10.19pts cost=2.75% own=73% [STOP 58/TARGET 30/TIMEOUT 32] -> fail:PF+exp
+  nis1m-brk-p2-f100      n= 119 PF= 1.025 exp= +0.019R p50=0.996 pct= 56% match=1.03 stop=6.701ATR/11.0pts cost=2.55% own=69% [STOP 57/TARGET 25/TIMEOUT 37] -> fail:PF+exp
+  nis1m-rev-p2-f100      n= 119 PF= 0.879 exp= -0.060R p50=1.011 pct= 28% match=1.03 stop=6.76ATR/11.17pts cost=2.51% own=69% [STOP 58/TARGET 24/TIMEOUT 37] -> fail:PF+exp
+
+===== nis_1m_A_spread0.txt  (16 rows) =====
+  news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+  news scope: USD (news_currencies) | guards: off (every number unguarded) | spread:   0 per round trip
+  flags:    10 passed, every one of them read by --mode=hypotheses
+  nis1m-brk-p1-f025      n= 120 PF= 1.228 exp= +0.143R p50=1.059 pct= 84% match=1.02 stop=1.712ATR/2.53pts cost=0.0% own=100% [STOP 71/TARGET 49] -> PASS
+  nis1m-rev-p1-f025      n= 120 PF= 0.820 exp= -0.113R p50=1.059 pct= 10% match=1.02 stop=1.683ATR/2.57pts cost=0.0% own=100% [STOP 82/TARGET 38] -> fail:PF+exp
+  nis1m-brk-p2-f025      n= 119 PF= 1.495 exp= +0.289R p50=1.021 pct=100% match=1.03 stop=1.647ATR/2.73pts cost=0.0% own=99% [STOP 64/TARGET 54/TIMEOUT 1] -> PASS
+  nis1m-rev-p2-f025      n= 119 PF= 0.831 exp= -0.106R p50=1.022 pct=  9% match=1.03 stop=1.662ATR/2.82pts cost=0.0% own=100% [STOP 81/TARGET 38] -> fail:PF+exp
+  nis1m-brk-p1-f050      n= 120 PF= 1.261 exp= +0.158R p50=1.087 pct= 82% match=1.02 stop=3.412ATR/5.03pts cost=0.0% own=96% [STOP 68/TARGET 47/TIMEOUT 5] -> PASS
+  nis1m-rev-p1-f050      n= 120 PF= 0.940 exp= -0.029R p50=1.155 pct= 12% match=1.02 stop=3.313ATR/5.09pts cost=0.0% own=99% [STOP 78/TARGET 41/TIMEOUT 1] -> fail:PF+exp
+  nis1m-brk-p2-f050      n= 119 PF= 0.983 exp= -0.003R p50=0.932 pct= 64% match=1.03 stop=3.302ATR/5.44pts cost=0.0% own=94% [STOP 73/TARGET 39/TIMEOUT 7] -> fail:PF+exp
+  nis1m-rev-p2-f050      n= 119 PF= 0.914 exp= -0.048R p50=0.939 pct= 42% match=1.03 stop=3.364ATR/5.56pts cost=0.0% own=98% [STOP 77/TARGET 40/TIMEOUT 2] -> fail:PF+exp
+  nis1m-brk-p1-f075      n= 120 PF= 0.820 exp= -0.104R p50=0.923 pct= 25% match=1.02 stop=5.099ATR/7.53pts cost=0.0% own=84% [STOP 73/TARGET 28/TIMEOUT 19] -> fail:PF+exp
+  nis1m-rev-p1-f075      n= 120 PF= 1.103 exp= +0.068R p50=0.924 pct= 84% match=1.02 stop=5.019ATR/7.59pts cost=0.0% own=89% [STOP 67/TARGET 40/TIMEOUT 13] -> fail:PF
+  nis1m-brk-p2-f075      n= 119 PF= 1.002 exp= +0.009R p50=0.957 pct= 64% match=1.03 stop=4.964ATR/8.14pts cost=0.0% own=79% [STOP 65/TARGET 29/TIMEOUT 25] -> fail:PF+exp
+  nis1m-rev-p2-f075      n= 119 PF= 0.985 exp= -0.002R p50=0.933 pct= 67% match=1.03 stop=5.018ATR/8.3pts cost=0.0% own=84% [STOP 66/TARGET 34/TIMEOUT 19] -> fail:PF+exp
+  nis1m-brk-p1-f100      n= 120 PF= 0.794 exp= -0.113R p50=0.971 pct= 12% match=1.02 stop=6.787ATR/10.02pts cost=0.0% own=76% [STOP 68/TARGET 23/TIMEOUT 29] -> fail:PF+exp
+  nis1m-rev-p1-f100      n= 120 PF= 1.072 exp= +0.048R p50=0.965 pct= 70% match=1.02 stop=6.74ATR/10.05pts cost=0.0% own=74% [STOP 58/TARGET 31/TIMEOUT 31] -> fail:PF+exp
+  nis1m-brk-p2-f100      n= 119 PF= 1.064 exp= +0.038R p50=0.991 pct= 68% match=1.03 stop=6.613ATR/10.86pts cost=0.0% own=69% [STOP 57/TARGET 25/TIMEOUT 37] -> fail:PF+exp
+  nis1m-rev-p2-f100      n= 119 PF= 0.952 exp= -0.019R p50=1.010 pct= 38% match=1.03 stop=6.665ATR/11.03pts cost=0.0% own=70% [STOP 57/TARGET 26/TIMEOUT 36] -> fail:PF+exp
+
+===== nis_1m_B_guards.txt  (16 rows) =====
+  news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+  news scope: USD (news_currencies) | guards: on — max_open_loss_r 2.0, notional 300%, weekend flat 16:40 NY, news flat 60/30 (impact≥3, USD), daily cap 20, loss limit $300, cooldown 30 min | spread:   0.28 per round trip
+  flags:    10 passed, every one of them read by --mode=hypotheses
+  nis1m-brk-p1-f025      n=   0 PF=   nan exp=   +nanR p50=  nan pct=null match=null stop=nullATR/nullpts cost=null% own=null [null] -> ZERO TRADES (guard refused every entry) - not an absence of signal
+       refused: {'NEWS_FLAT': 122}
+  nis1m-rev-p1-f025      n=   0 PF=   nan exp=   +nanR p50=  nan pct=null match=null stop=nullATR/nullpts cost=null% own=null [null] -> ZERO TRADES (guard refused every entry) - not an absence of signal
+       refused: {'NEWS_FLAT': 122}
+  nis1m-brk-p2-f025      n=   0 PF=   nan exp=   +nanR p50=  nan pct=null match=null stop=nullATR/nullpts cost=null% own=null [null] -> ZERO TRADES (guard refused every entry) - not an absence of signal
+       refused: {'NEWS_FLAT': 120}
+  nis1m-rev-p2-f025      n=   0 PF=   nan exp=   +nanR p50=  nan pct=null match=null stop=nullATR/nullpts cost=null% own=null [null] -> ZERO TRADES (guard refused every entry) - not an absence of signal
+       refused: {'NEWS_FLAT': 120}
+  nis1m-brk-p1-f050      n=   0 PF=   nan exp=   +nanR p50=  nan pct=null match=null stop=nullATR/nullpts cost=null% own=null [null] -> ZERO TRADES (guard refused every entry) - not an absence of signal
+       refused: {'NEWS_FLAT': 122}
+  nis1m-rev-p1-f050      n=   0 PF=   nan exp=   +nanR p50=  nan pct=null match=null stop=nullATR/nullpts cost=null% own=null [null] -> ZERO TRADES (guard refused every entry) - not an absence of signal
+       refused: {'NEWS_FLAT': 122}
+  nis1m-brk-p2-f050      n=   0 PF=   nan exp=   +nanR p50=  nan pct=null match=null stop=nullATR/nullpts cost=null% own=null [null] -> ZERO TRADES (guard refused every entry) - not an absence of signal
+       refused: {'NEWS_FLAT': 120}
+  nis1m-rev-p2-f050      n=   0 PF=   nan exp=   +nanR p50=  nan pct=null match=null stop=nullATR/nullpts cost=null% own=null [null] -> ZERO TRADES (guard refused every entry) - not an absence of signal
+       refused: {'NEWS_FLAT': 120}
+  nis1m-brk-p1-f075      n=   0 PF=   nan exp=   +nanR p50=  nan pct=null match=null stop=nullATR/nullpts cost=null% own=null [null] -> ZERO TRADES (guard refused every entry) - not an absence of signal
+       refused: {'NEWS_FLAT': 122}
+  nis1m-rev-p1-f075      n=   0 PF=   nan exp=   +nanR p50=  nan pct=null match=null stop=nullATR/nullpts cost=null% own=null [null] -> ZERO TRADES (guard refused every entry) - not an absence of signal
+       refused: {'NEWS_FLAT': 122}
+  nis1m-brk-p2-f075      n=   0 PF=   nan exp=   +nanR p50=  nan pct=null match=null stop=nullATR/nullpts cost=null% own=null [null] -> ZERO TRADES (guard refused every entry) - not an absence of signal
+       refused: {'NEWS_FLAT': 120}
+  nis1m-rev-p2-f075      n=   0 PF=   nan exp=   +nanR p50=  nan pct=null match=null stop=nullATR/nullpts cost=null% own=null [null] -> ZERO TRADES (guard refused every entry) - not an absence of signal
+       refused: {'NEWS_FLAT': 120}
+  nis1m-brk-p1-f100      n=   0 PF=   nan exp=   +nanR p50=  nan pct=null match=null stop=nullATR/nullpts cost=null% own=null [null] -> ZERO TRADES (guard refused every entry) - not an absence of signal
+       refused: {'NEWS_FLAT': 122}
+  nis1m-rev-p1-f100      n=   0 PF=   nan exp=   +nanR p50=  nan pct=null match=null stop=nullATR/nullpts cost=null% own=null [null] -> ZERO TRADES (guard refused every entry) - not an absence of signal
+       refused: {'NEWS_FLAT': 122}
+  nis1m-brk-p2-f100      n=   0 PF=   nan exp=   +nanR p50=  nan pct=null match=null stop=nullATR/nullpts cost=null% own=null [null] -> ZERO TRADES (guard refused every entry) - not an absence of signal
+       refused: {'NEWS_FLAT': 120}
+  nis1m-rev-p2-f100      n=   0 PF=   nan exp=   +nanR p50=  nan pct=null match=null stop=nullATR/nullpts cost=null% own=null [null] -> ZERO TRADES (guard refused every entry) - not an absence of signal
+       refused: {'NEWS_FLAT': 120}
+
+===== nis_1m_B_noguards.txt  (16 rows) =====
+  news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+  news scope: USD (news_currencies) | guards: off (every number unguarded) | spread:   0.28 per round trip
+  flags:    9 passed, every one of them read by --mode=hypotheses
+  nis1m-brk-p1-f025      n= 122 PF= 0.788 exp= -0.145R p50=0.798 pct= 48% match=1.07 stop=1.553ATR/1.35pts cost=20.74% own=100% [STOP 79/TARGET 43] -> fail:PF+exp
+  nis1m-rev-p1-f025      n= 122 PF= 0.680 exp= -0.239R p50=0.786 pct= 18% match=1.07 stop=1.481ATR/1.29pts cost=21.71% own=100% [STOP 83/TARGET 39] -> fail:PF+exp
+  nis1m-brk-p2-f025      n= 120 PF= 0.610 exp= -0.297R p50=0.806 pct=  6% match=1.08 stop=1.548ATR/1.46pts cost=19.18% own=100% [STOP 85/TARGET 35] -> fail:PF+exp
+  nis1m-rev-p2-f025      n= 120 PF= 0.801 exp= -0.133R p50=0.813 pct= 46% match=1.08 stop=1.597ATR/1.57pts cost=17.83% own=100% [STOP 78/TARGET 42] -> fail:PF+exp
+  nis1m-brk-p1-f050      n= 122 PF= 0.948 exp= -0.026R p50=0.849 pct= 76% match=1.07 stop=2.863ATR/2.59pts cost=10.81% own=99% [STOP 76/TARGET 45/TIMEOUT 1] -> fail:PF+exp
+  nis1m-rev-p1-f050      n= 122 PF= 1.034 exp= +0.030R p50=0.827 pct= 91% match=1.07 stop=2.744ATR/2.45pts cost=11.43% own=98% [STOP 73/TARGET 47/TIMEOUT 2] -> fail:PF+exp
+  nis1m-brk-p2-f050      n= 120 PF= 0.790 exp= -0.134R p50=0.965 pct= 15% match=1.08 stop=2.973ATR/2.86pts cost=9.81% own=96% [STOP 78/TARGET 37/TIMEOUT 5] -> fail:PF+exp
+  nis1m-rev-p2-f050      n= 120 PF= 1.010 exp= +0.015R p50=0.958 pct= 61% match=1.08 stop=3.017ATR/2.93pts cost=9.57% own=98% [STOP 73/TARGET 45/TIMEOUT 2] -> fail:PF+exp
+  nis1m-brk-p1-f075      n= 122 PF= 1.106 exp= +0.073R p50=0.845 pct= 96% match=1.07 stop=4.209ATR/3.8pts cost=7.37% own=93% [STOP 69/TARGET 44/TIMEOUT 9] -> fail:PF
+  nis1m-rev-p1-f075      n= 122 PF= 0.884 exp= -0.064R p50=0.835 pct= 62% match=1.07 stop=4.099ATR/3.66pts cost=7.66% own=93% [STOP 74/TARGET 39/TIMEOUT 9] -> fail:PF+exp
+  nis1m-brk-p2-f075      n= 120 PF= 0.818 exp= -0.107R p50=0.809 pct= 52% match=1.08 stop=4.347ATR/4.23pts cost=6.62% own=86% [STOP 72/TARGET 31/TIMEOUT 17] -> fail:PF+exp
+  nis1m-rev-p2-f075      n= 120 PF= 0.974 exp= -0.008R p50=0.787 pct= 88% match=1.08 stop=4.408ATR/4.31pts cost=6.5% own=89% [STOP 67/TARGET 40/TIMEOUT 13] -> fail:PF+exp
+  nis1m-brk-p1-f100      n= 122 PF= 0.849 exp= -0.085R p50=0.810 pct= 58% match=1.07 stop=5.546ATR/4.99pts cost=5.62% own=80% [STOP 69/TARGET 28/TIMEOUT 25] -> fail:PF+exp
+  nis1m-rev-p1-f100      n= 122 PF= 0.876 exp= -0.064R p50=0.879 pct= 50% match=1.07 stop=5.424ATR/4.86pts cost=5.77% own=87% [STOP 70/TARGET 36/TIMEOUT 16] -> fail:PF+exp
+  nis1m-brk-p2-f100      n= 120 PF= 0.786 exp= -0.110R p50=0.728 pct= 69% match=1.08 stop=5.761ATR/5.61pts cost=5.0% own=71% [STOP 63/TARGET 22/TIMEOUT 35] -> fail:PF+exp
+  nis1m-rev-p2-f100      n= 120 PF= 0.900 exp= -0.046R p50=0.747 pct= 83% match=1.08 stop=5.814ATR/5.69pts cost=4.92% own=68% [STOP 54/TARGET 28/TIMEOUT 38] -> fail:PF+exp
+
+===== nis_1m_B_spread0.txt  (16 rows) =====
+  news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+  news scope: USD (news_currencies) | guards: off (every number unguarded) | spread:   0 per round trip
+  flags:    10 passed, every one of them read by --mode=hypotheses
+  nis1m-brk-p1-f025      n= 122 PF= 1.150 exp= +0.102R p50=1.176 pct= 43% match=1.07 stop=1.341ATR/1.21pts cost=0.0% own=100% [STOP 74/TARGET 48] -> fail:PF
+  nis1m-rev-p1-f025      n= 122 PF= 0.837 exp= -0.105R p50=1.247 pct=  1% match=1.07 stop=1.261ATR/1.15pts cost=0.0% own=100% [STOP 83/TARGET 39] -> fail:PF+exp
+  nis1m-brk-p2-f025      n= 120 PF= 0.991 exp= +0.003R p50=1.077 pct= 30% match=1.08 stop=1.393ATR/1.31pts cost=0.0% own=100% [STOP 77/TARGET 43] -> fail:PF+exp
+  nis1m-rev-p2-f025      n= 120 PF= 1.182 exp= +0.120R p50=1.110 pct= 68% match=1.08 stop=1.401ATR/1.43pts cost=0.0% own=100% [STOP 72/TARGET 48] -> fail:PF
+  nis1m-brk-p1-f050      n= 122 PF= 1.062 exp= +0.048R p50=1.005 pct= 56% match=1.07 stop=2.69ATR/2.45pts cost=0.0% own=99% [STOP 76/TARGET 45/TIMEOUT 1] -> fail:PF+exp
+  nis1m-rev-p1-f050      n= 122 PF= 1.162 exp= +0.105R p50=1.005 pct= 80% match=1.07 stop=2.617ATR/2.31pts cost=0.0% own=98% [STOP 73/TARGET 47/TIMEOUT 2] -> fail:PF
+  nis1m-brk-p2-f050      n= 120 PF= 0.936 exp= -0.032R p50=1.131 pct= 14% match=1.08 stop=2.784ATR/2.71pts cost=0.0% own=97% [STOP 77/TARGET 39/TIMEOUT 4] -> fail:PF+exp
+  nis1m-rev-p2-f050      n= 120 PF= 1.221 exp= +0.138R p50=1.127 pct= 68% match=1.08 stop=2.839ATR/2.79pts cost=0.0% own=99% [STOP 71/TARGET 48/TIMEOUT 1] -> PASS
+  nis1m-brk-p1-f075      n= 122 PF= 1.296 exp= +0.172R p50=0.962 pct= 98% match=1.07 stop=4.048ATR/3.66pts cost=0.0% own=93% [STOP 67/TARGET 46/TIMEOUT 9] -> PASS
+  nis1m-rev-p1-f075      n= 122 PF= 1.081 exp= +0.055R p50=0.950 pct= 76% match=1.07 stop=3.946ATR/3.51pts cost=0.0% own=93% [STOP 72/TARGET 42/TIMEOUT 8] -> fail:PF
+  nis1m-brk-p2-f075      n= 120 PF= 1.086 exp= +0.057R p50=0.930 pct= 82% match=1.08 stop=4.206ATR/4.09pts cost=0.0% own=88% [STOP 68/TARGET 37/TIMEOUT 15] -> fail:PF
+  nis1m-rev-p2-f075      n= 120 PF= 1.088 exp= +0.061R p50=0.921 pct= 82% match=1.08 stop=4.253ATR/4.17pts cost=0.0% own=89% [STOP 66/TARGET 41/TIMEOUT 13] -> fail:PF
+  nis1m-brk-p1-f100      n= 122 PF= 1.097 exp= +0.062R p50=1.007 pct= 66% match=1.07 stop=5.391ATR/4.84pts cost=0.0% own=80% [STOP 65/TARGET 33/TIMEOUT 24] -> fail:PF
+  nis1m-rev-p1-f100      n= 122 PF= 0.947 exp= -0.022R p50=0.988 pct= 44% match=1.07 stop=5.301ATR/4.72pts cost=0.0% own=87% [STOP 70/TARGET 36/TIMEOUT 16] -> fail:PF+exp
+  nis1m-brk-p2-f100      n= 120 PF= 0.910 exp= -0.040R p50=0.828 pct= 70% match=1.08 stop=5.629ATR/5.46pts cost=0.0% own=72% [STOP 62/TARGET 24/TIMEOUT 34] -> fail:PF+exp
+  nis1m-rev-p2-f100      n= 120 PF= 0.989 exp= +0.001R p50=0.830 pct= 83% match=1.08 stop=5.675ATR/5.55pts cost=0.0% own=69% [STOP 54/TARGET 29/TIMEOUT 37] -> fail:PF+exp
+
+===== nis_5m_A_guards.txt  (16 rows) =====
+  news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+  news scope: USD (news_currencies) | guards: on — max_open_loss_r 2.0, notional 300%, weekend flat 16:40 NY, news flat 60/30 (impact≥3, USD), daily cap 20, loss limit $300, cooldown 30 min | spread:   0.28 per round trip
+  flags:    10 passed, every one of them read by --mode=hypotheses
+  nis5m-brk-p1-f025      n=   0 PF=   nan exp=   +nanR p50=  nan pct=null match=null stop=nullATR/nullpts cost=null% own=null [null] -> ZERO TRADES (guard refused every entry) - not an absence of signal
+       refused: {'NEWS_FLAT': 112}
+  nis5m-rev-p1-f025      n=   0 PF=   nan exp=   +nanR p50=  nan pct=null match=null stop=nullATR/nullpts cost=null% own=null [null] -> ZERO TRADES (guard refused every entry) - not an absence of signal
+       refused: {'NEWS_FLAT': 112}
+  nis5m-brk-p2-f025      n=   0 PF=   nan exp=   +nanR p50=  nan pct=null match=null stop=nullATR/nullpts cost=null% own=null [null] -> ZERO TRADES (guard refused every entry) - not an absence of signal
+       refused: {'NEWS_FLAT': 112}
+  nis5m-rev-p2-f025      n=   0 PF=   nan exp=   +nanR p50=  nan pct=null match=null stop=nullATR/nullpts cost=null% own=null [null] -> ZERO TRADES (guard refused every entry) - not an absence of signal
+       refused: {'NEWS_FLAT': 112}
+  nis5m-brk-p1-f050      n=   0 PF=   nan exp=   +nanR p50=  nan pct=null match=null stop=nullATR/nullpts cost=null% own=null [null] -> ZERO TRADES (guard refused every entry) - not an absence of signal
+       refused: {'NEWS_FLAT': 112}
+  nis5m-rev-p1-f050      n=   0 PF=   nan exp=   +nanR p50=  nan pct=null match=null stop=nullATR/nullpts cost=null% own=null [null] -> ZERO TRADES (guard refused every entry) - not an absence of signal
+       refused: {'NEWS_FLAT': 112}
+  nis5m-brk-p2-f050      n=   0 PF=   nan exp=   +nanR p50=  nan pct=null match=null stop=nullATR/nullpts cost=null% own=null [null] -> ZERO TRADES (guard refused every entry) - not an absence of signal
+       refused: {'NEWS_FLAT': 112}
+  nis5m-rev-p2-f050      n=   0 PF=   nan exp=   +nanR p50=  nan pct=null match=null stop=nullATR/nullpts cost=null% own=null [null] -> ZERO TRADES (guard refused every entry) - not an absence of signal
+       refused: {'NEWS_FLAT': 112}
+  nis5m-brk-p1-f075      n=   0 PF=   nan exp=   +nanR p50=  nan pct=null match=null stop=nullATR/nullpts cost=null% own=null [null] -> ZERO TRADES (guard refused every entry) - not an absence of signal
+       refused: {'NEWS_FLAT': 112}
+  nis5m-rev-p1-f075      n=   0 PF=   nan exp=   +nanR p50=  nan pct=null match=null stop=nullATR/nullpts cost=null% own=null [null] -> ZERO TRADES (guard refused every entry) - not an absence of signal
+       refused: {'NEWS_FLAT': 112}
+  nis5m-brk-p2-f075      n=   0 PF=   nan exp=   +nanR p50=  nan pct=null match=null stop=nullATR/nullpts cost=null% own=null [null] -> ZERO TRADES (guard refused every entry) - not an absence of signal
+       refused: {'NEWS_FLAT': 112}
+  nis5m-rev-p2-f075      n=   0 PF=   nan exp=   +nanR p50=  nan pct=null match=null stop=nullATR/nullpts cost=null% own=null [null] -> ZERO TRADES (guard refused every entry) - not an absence of signal
+       refused: {'NEWS_FLAT': 112}
+  nis5m-brk-p1-f100      n=   0 PF=   nan exp=   +nanR p50=  nan pct=null match=null stop=nullATR/nullpts cost=null% own=null [null] -> ZERO TRADES (guard refused every entry) - not an absence of signal
+       refused: {'NEWS_FLAT': 112}
+  nis5m-rev-p1-f100      n=   0 PF=   nan exp=   +nanR p50=  nan pct=null match=null stop=nullATR/nullpts cost=null% own=null [null] -> ZERO TRADES (guard refused every entry) - not an absence of signal
+       refused: {'NEWS_FLAT': 112}
+  nis5m-brk-p2-f100      n=   0 PF=   nan exp=   +nanR p50=  nan pct=null match=null stop=nullATR/nullpts cost=null% own=null [null] -> ZERO TRADES (guard refused every entry) - not an absence of signal
+       refused: {'NEWS_FLAT': 112}
+  nis5m-rev-p2-f100      n=   0 PF=   nan exp=   +nanR p50=  nan pct=null match=null stop=nullATR/nullpts cost=null% own=null [null] -> ZERO TRADES (guard refused every entry) - not an absence of signal
+       refused: {'NEWS_FLAT': 112}
+
+===== nis_5m_A_noguards.txt  (16 rows) =====
+  news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+  news scope: USD (news_currencies) | guards: off (every number unguarded) | spread:   0.28 per round trip
+  flags:    9 passed, every one of them read by --mode=hypotheses
+  nis5m-brk-p1-f025      n= 112 PF= 0.901 exp= -0.057R p50=0.829 pct= 74% match=1.1 stop=1.464ATR/3.32pts cost=8.43% own=99% [STOP 72/TARGET 39/TIMEOUT 1] -> fail:PF+exp
+  nis5m-rev-p1-f025      n= 112 PF= 0.770 exp= -0.171R p50=0.818 pct= 36% match=1.1 stop=1.452ATR/3.39pts cost=8.25% own=100% [STOP 77/TARGET 35] -> fail:PF+exp
+  nis5m-brk-p2-f025      n= 112 PF= 0.828 exp= -0.116R p50=0.883 pct= 36% match=0.82 stop=1.442ATR/3.95pts cost=7.09% own=100% [STOP 75/TARGET 37] -> fail:PF+exp
+  nis5m-rev-p2-f025      n= 112 PF= 0.788 exp= -0.141R p50=0.867 pct= 30% match=0.82 stop=1.432ATR/3.93pts cost=7.12% own=100% [STOP 76/TARGET 36] -> fail:PF+exp
+  nis5m-brk-p1-f050      n= 112 PF= 0.709 exp= -0.190R p50=0.884 pct=  9% match=1.1 stop=2.849ATR/6.53pts cost=4.29% own=91% [STOP 74/TARGET 28/TIMEOUT 10] -> fail:PF+exp
+  nis5m-rev-p1-f050      n= 112 PF= 0.917 exp= -0.045R p50=0.897 pct= 56% match=1.1 stop=2.83ATR/6.64pts cost=4.21% own=96% [STOP 70/TARGET 37/TIMEOUT 5] -> fail:PF+exp
+  nis5m-brk-p2-f050      n= 112 PF= 0.678 exp= -0.219R p50=0.994 pct=  2% match=0.82 stop=2.812ATR/7.76pts cost=3.61% own=89% [STOP 75/TARGET 25/TIMEOUT 12] -> fail:PF+exp
+  nis5m-rev-p2-f050      n= 112 PF= 1.291 exp= +0.167R p50=0.995 pct= 89% match=0.82 stop=2.786ATR/7.78pts cost=3.6% own=92% [STOP 60/TARGET 43/TIMEOUT 9] -> PASS
+  nis5m-brk-p1-f075      n= 112 PF= 0.764 exp= -0.129R p50=0.822 pct= 34% match=1.1 stop=4.242ATR/9.78pts cost=2.86% own=72% [STOP 62/TARGET 19/TIMEOUT 31] -> fail:PF+exp
+  nis5m-rev-p1-f075      n= 112 PF= 1.023 exp= +0.020R p50=0.823 pct= 89% match=1.1 stop=4.228ATR/9.9pts cost=2.83% own=79% [STOP 58/TARGET 30/TIMEOUT 24] -> fail:PF+exp
+  nis5m-brk-p2-f075      n= 112 PF= 0.862 exp= -0.069R p50=0.975 pct= 28% match=0.82 stop=4.171ATR/11.58pts cost=2.42% own=67% [STOP 56/TARGET 19/TIMEOUT 37] -> fail:PF+exp
+  nis5m-rev-p2-f075      n= 112 PF= 1.467 exp= +0.216R p50=0.976 pct= 96% match=0.82 stop=4.139ATR/11.6pts cost=2.41% own=75% [STOP 48/TARGET 36/TIMEOUT 28] -> PASS
+  nis5m-brk-p1-f100      n= 112 PF= 0.923 exp= -0.034R p50=1.053 pct= 22% match=1.1 stop=5.642ATR/13.03pts cost=2.15% own=59% [STOP 51/TARGET 15/TIMEOUT 46] -> fail:PF+exp
+  nis5m-rev-p1-f100      n= 112 PF= 1.017 exp= +0.014R p50=1.046 pct= 40% match=1.1 stop=5.628ATR/13.16pts cost=2.13% own=60% [STOP 44/TARGET 23/TIMEOUT 45] -> fail:PF+exp
+  nis5m-brk-p2-f100      n= 112 PF= 0.890 exp= -0.048R p50=1.056 pct= 19% match=0.82 stop=5.523ATR/15.39pts cost=1.82% own=53% [STOP 47/TARGET 12/TIMEOUT 53] -> fail:PF+exp
+  nis5m-rev-p2-f100      n= 112 PF= 1.298 exp= +0.124R p50=1.029 pct= 84% match=0.82 stop=5.49ATR/15.41pts cost=1.82% own=51% [STOP 36/TARGET 21/TIMEOUT 55] -> PASS
+
+===== nis_5m_B_guards.txt  (16 rows) =====
+  news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+  news scope: USD (news_currencies) | guards: on — max_open_loss_r 2.0, notional 300%, weekend flat 16:40 NY, news flat 60/30 (impact≥3, USD), daily cap 20, loss limit $300, cooldown 30 min | spread:   0.28 per round trip
+  flags:    10 passed, every one of them read by --mode=hypotheses
+  nis5m-brk-p1-f025      n=   0 PF=   nan exp=   +nanR p50=  nan pct=null match=null stop=nullATR/nullpts cost=null% own=null [null] -> ZERO TRADES (guard refused every entry) - not an absence of signal
+       refused: {'NEWS_FLAT': 113}
+  nis5m-rev-p1-f025      n=   0 PF=   nan exp=   +nanR p50=  nan pct=null match=null stop=nullATR/nullpts cost=null% own=null [null] -> ZERO TRADES (guard refused every entry) - not an absence of signal
+       refused: {'NEWS_FLAT': 113}
+  nis5m-brk-p2-f025      n=   0 PF=   nan exp=   +nanR p50=  nan pct=null match=null stop=nullATR/nullpts cost=null% own=null [null] -> ZERO TRADES (guard refused every entry) - not an absence of signal
+       refused: {'NEWS_FLAT': 115}
+  nis5m-rev-p2-f025      n=   0 PF=   nan exp=   +nanR p50=  nan pct=null match=null stop=nullATR/nullpts cost=null% own=null [null] -> ZERO TRADES (guard refused every entry) - not an absence of signal
+       refused: {'NEWS_FLAT': 115}
+  nis5m-brk-p1-f050      n=   0 PF=   nan exp=   +nanR p50=  nan pct=null match=null stop=nullATR/nullpts cost=null% own=null [null] -> ZERO TRADES (guard refused every entry) - not an absence of signal
+       refused: {'NEWS_FLAT': 113}
+  nis5m-rev-p1-f050      n=   0 PF=   nan exp=   +nanR p50=  nan pct=null match=null stop=nullATR/nullpts cost=null% own=null [null] -> ZERO TRADES (guard refused every entry) - not an absence of signal
+       refused: {'NEWS_FLAT': 113}
+  nis5m-brk-p2-f050      n=   0 PF=   nan exp=   +nanR p50=  nan pct=null match=null stop=nullATR/nullpts cost=null% own=null [null] -> ZERO TRADES (guard refused every entry) - not an absence of signal
+       refused: {'NEWS_FLAT': 115}
+  nis5m-rev-p2-f050      n=   0 PF=   nan exp=   +nanR p50=  nan pct=null match=null stop=nullATR/nullpts cost=null% own=null [null] -> ZERO TRADES (guard refused every entry) - not an absence of signal
+       refused: {'NEWS_FLAT': 115}
+  nis5m-brk-p1-f075      n=   0 PF=   nan exp=   +nanR p50=  nan pct=null match=null stop=nullATR/nullpts cost=null% own=null [null] -> ZERO TRADES (guard refused every entry) - not an absence of signal
+       refused: {'NEWS_FLAT': 113}
+  nis5m-rev-p1-f075      n=   0 PF=   nan exp=   +nanR p50=  nan pct=null match=null stop=nullATR/nullpts cost=null% own=null [null] -> ZERO TRADES (guard refused every entry) - not an absence of signal
+       refused: {'NEWS_FLAT': 113}
+  nis5m-brk-p2-f075      n=   0 PF=   nan exp=   +nanR p50=  nan pct=null match=null stop=nullATR/nullpts cost=null% own=null [null] -> ZERO TRADES (guard refused every entry) - not an absence of signal
+       refused: {'NEWS_FLAT': 115}
+  nis5m-rev-p2-f075      n=   0 PF=   nan exp=   +nanR p50=  nan pct=null match=null stop=nullATR/nullpts cost=null% own=null [null] -> ZERO TRADES (guard refused every entry) - not an absence of signal
+       refused: {'NEWS_FLAT': 115}
+  nis5m-brk-p1-f100      n=   0 PF=   nan exp=   +nanR p50=  nan pct=null match=null stop=nullATR/nullpts cost=null% own=null [null] -> ZERO TRADES (guard refused every entry) - not an absence of signal
+       refused: {'NEWS_FLAT': 113}
+  nis5m-rev-p1-f100      n=   0 PF=   nan exp=   +nanR p50=  nan pct=null match=null stop=nullATR/nullpts cost=null% own=null [null] -> ZERO TRADES (guard refused every entry) - not an absence of signal
+       refused: {'NEWS_FLAT': 113}
+  nis5m-brk-p2-f100      n=   0 PF=   nan exp=   +nanR p50=  nan pct=null match=null stop=nullATR/nullpts cost=null% own=null [null] -> ZERO TRADES (guard refused every entry) - not an absence of signal
+       refused: {'NEWS_FLAT': 115}
+  nis5m-rev-p2-f100      n=   0 PF=   nan exp=   +nanR p50=  nan pct=null match=null stop=nullATR/nullpts cost=null% own=null [null] -> ZERO TRADES (guard refused every entry) - not an absence of signal
+       refused: {'NEWS_FLAT': 115}
+
+===== nis_5m_B_noguards.txt  (16 rows) =====
+  news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+  news scope: USD (news_currencies) | guards: off (every number unguarded) | spread:   0.28 per round trip
+  flags:    9 passed, every one of them read by --mode=hypotheses
+  nis5m-brk-p1-f025      n= 113 PF= 0.784 exp= -0.140R p50=0.823 pct= 36% match=1.15 stop=1.319ATR/1.89pts cost=14.81% own=99% [STOP 74/TARGET 38/TIMEOUT 1] -> fail:PF+exp
+  nis5m-rev-p1-f025      n= 113 PF= 0.786 exp= -0.151R p50=0.804 pct= 44% match=1.15 stop=1.307ATR/1.91pts cost=14.66% own=100% [STOP 75/TARGET 38] -> fail:PF+exp
+  nis5m-brk-p2-f025      n= 115 PF= 0.830 exp= -0.106R p50=0.849 pct= 42% match=1.13 stop=1.28ATR/2.11pts cost=13.27% own=97% [STOP 74/TARGET 38/TIMEOUT 3] -> fail:PF+exp
+  nis5m-rev-p2-f025      n= 115 PF= 0.749 exp= -0.182R p50=0.895 pct= 16% match=1.13 stop=1.307ATR/2.12pts cost=13.21% own=100% [STOP 78/TARGET 37] -> fail:PF+exp
+  nis5m-brk-p1-f050      n= 113 PF= 0.757 exp= -0.148R p50=0.860 pct= 21% match=1.15 stop=2.482ATR/3.67pts cost=7.63% own=91% [STOP 72/TARGET 31/TIMEOUT 10] -> fail:PF+exp
+  nis5m-rev-p1-f050      n= 113 PF= 0.962 exp= -0.017R p50=0.860 pct= 73% match=1.15 stop=2.481ATR/3.67pts cost=7.63% own=95% [STOP 68/TARGET 39/TIMEOUT 6] -> fail:PF+exp
+  nis5m-brk-p2-f050      n= 115 PF= 1.005 exp= +0.011R p50=0.882 pct= 75% match=1.13 stop=2.41ATR/4.1pts cost=6.83% own=86% [STOP 63/TARGET 36/TIMEOUT 16] -> fail:PF+exp
+  nis5m-rev-p2-f050      n= 115 PF= 0.900 exp= -0.056R p50=0.868 pct= 59% match=1.13 stop=2.475ATR/4.11pts cost=6.81% own=91% [STOP 68/TARGET 37/TIMEOUT 10] -> fail:PF+exp
+  nis5m-brk-p1-f075      n= 113 PF= 0.873 exp= -0.062R p50=0.817 pct= 70% match=1.15 stop=3.649ATR/5.46pts cost=5.13% own=76% [STOP 60/TARGET 26/TIMEOUT 27] -> fail:PF+exp
+  nis5m-rev-p1-f075      n= 113 PF= 0.809 exp= -0.115R p50=0.817 pct= 50% match=1.15 stop=3.649ATR/5.43pts cost=5.16% own=75% [STOP 58/TARGET 27/TIMEOUT 28] -> fail:PF+exp
+  nis5m-brk-p2-f075      n= 115 PF= 1.128 exp= +0.069R p50=0.853 pct= 96% match=1.13 stop=3.589ATR/6.1pts cost=4.59% own=71% [STOP 54/TARGET 28/TIMEOUT 33] -> fail:PF
+  nis5m-rev-p2-f075      n= 115 PF= 0.652 exp= -0.204R p50=0.853 pct=  9% match=1.13 stop=3.67ATR/6.1pts cost=4.59% own=70% [STOP 60/TARGET 20/TIMEOUT 35] -> fail:PF+exp
+  nis5m-brk-p1-f100      n= 113 PF= 0.736 exp= -0.130R p50=0.844 pct= 22% match=1.15 stop=4.817ATR/7.25pts cost=3.86% own=65% [STOP 56/TARGET 18/TIMEOUT 39] -> fail:PF+exp
+  nis5m-rev-p1-f100      n= 113 PF= 0.717 exp= -0.146R p50=0.844 pct= 18% match=1.15 stop=4.817ATR/7.19pts cost=3.89% own=54% [STOP 45/TARGET 16/TIMEOUT 52] -> fail:PF+exp
+  nis5m-brk-p2-f100      n= 115 PF= 1.015 exp= +0.011R p50=0.849 pct= 84% match=1.13 stop=4.773ATR/8.09pts cost=3.46% own=51% [STOP 46/TARGET 13/TIMEOUT 56] -> fail:PF+exp
+  nis5m-rev-p2-f100      n= 115 PF= 0.601 exp= -0.207R p50=0.859 pct=  2% match=1.13 stop=4.837ATR/8.09pts cost=3.46% own=53% [STOP 50/TARGET 11/TIMEOUT 54] -> fail:PF+exp
+
+===== nis_plumb_1m.txt  (16 rows) =====
+  news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+  news scope: USD (news_currencies) | guards: off (every number unguarded) | spread:   0.28 per round trip
+  flags:    10 passed, every one of them read by --mode=hypotheses
+  nis1m-brk-p1-f025      n= 120 PF= 1.045 exp= +0.038R p50=0.884 pct= 90% match=1.02 stop=1.823ATR/2.67pts cost=10.49% own=100% [STOP 73/TARGET 47] -> fail:PF+exp
+  nis1m-rev-p1-f025      n= 120 PF= 0.715 exp= -0.196R p50=0.913 pct= 10% match=1.02 stop=1.773ATR/2.71pts cost=10.35% own=100% [STOP 83/TARGET 37] -> fail:PF+exp
+  nis1m-brk-p2-f025      n= 119 PF= 1.170 exp= +0.117R p50=0.893 pct= 90% match=1.03 stop=1.727ATR/2.87pts cost=9.76% own=99% [STOP 69/TARGET 49/TIMEOUT 1] -> fail:PF
+  nis1m-rev-p2-f025      n= 119 PF= 0.737 exp= -0.183R p50=0.894 pct=  5% match=1.03 stop=1.751ATR/2.96pts cost=9.46% own=100% [STOP 82/TARGET 37] -> fail:PF+exp
+  nis1m-brk-p1-f050      n= 120 PF= 1.075 exp= +0.055R p50=0.943 pct= 90% match=1.02 stop=3.526ATR/5.17pts cost=5.42% own=95% [STOP 71/TARGET 43/TIMEOUT 6] -> fail:PF
+  nis1m-rev-p1-f050      n= 120 PF= 0.895 exp= -0.060R p50=0.950 pct= 35% match=1.02 stop=3.439ATR/5.23pts cost=5.35% own=99% [STOP 78/TARGET 41/TIMEOUT 1] -> fail:PF+exp
+  nis1m-brk-p2-f050      n= 119 PF= 0.876 exp= -0.079R p50=0.831 pct= 65% match=1.03 stop=3.387ATR/5.58pts cost=5.02% own=94% [STOP 75/TARGET 37/TIMEOUT 7] -> fail:PF+exp
+  nis1m-rev-p2-f050      n= 119 PF= 0.844 exp= -0.100R p50=0.860 pct= 45% match=1.03 stop=3.439ATR/5.7pts cost=4.91% own=98% [STOP 78/TARGET 39/TIMEOUT 2] -> fail:PF+exp
+  nis1m-brk-p1-f075      n= 120 PF= 0.786 exp= -0.128R p50=0.917 pct= 15% match=1.02 stop=5.207ATR/7.67pts cost=3.65% own=83% [STOP 73/TARGET 27/TIMEOUT 20] -> fail:PF+exp
+  nis1m-rev-p1-f075      n= 120 PF= 0.963 exp= -0.015R p50=0.882 pct= 80% match=1.02 stop=5.115ATR/7.72pts cost=3.62% own=88% [STOP 69/TARGET 37/TIMEOUT 14] -> fail:PF+exp
+  nis1m-brk-p2-f075      n= 119 PF= 0.923 exp= -0.038R p50=0.871 pct= 80% match=1.03 stop=5.044ATR/8.28pts cost=3.38% own=79% [STOP 66/TARGET 28/TIMEOUT 25] -> fail:PF+exp
+  nis1m-rev-p2-f075      n= 119 PF= 0.951 exp= -0.022R p50=0.868 pct= 85% match=1.03 stop=5.1ATR/8.44pts cost=3.32% own=84% [STOP 66/TARGET 34/TIMEOUT 19] -> fail:PF+exp
+  nis1m-brk-p1-f100      n= 120 PF= 0.766 exp= -0.132R p50=0.933 pct= 10% match=1.02 stop=6.907ATR/10.16pts cost=2.76% own=76% [STOP 68/TARGET 23/TIMEOUT 29] -> fail:PF+exp
+  nis1m-rev-p1-f100      n= 120 PF= 1.005 exp= +0.010R p50=0.934 pct= 65% match=1.02 stop=6.86ATR/10.19pts cost=2.75% own=73% [STOP 58/TARGET 30/TIMEOUT 32] -> fail:PF+exp
+  nis1m-brk-p2-f100      n= 119 PF= 1.025 exp= +0.019R p50=0.941 pct= 65% match=1.03 stop=6.701ATR/11.0pts cost=2.55% own=69% [STOP 57/TARGET 25/TIMEOUT 37] -> fail:PF+exp
+  nis1m-rev-p2-f100      n= 119 PF= 0.879 exp= -0.060R p50=0.940 pct= 35% match=1.03 stop=6.76ATR/11.17pts cost=2.51% own=69% [STOP 58/TARGET 24/TIMEOUT 37] -> fail:PF+exp
+
+===== nis_table.txt  (0 rows) =====
+  news: MISSING
+  news scope: MISSING | guards: MISSING | spread: MISSING
+  flags: MISSING
+  NO ROW LINE PRINTED — see the receipt (a guarded arm takes 0 trades)
+
+(run, row) lines printed: 176
+declared in docs/decisions/2026-10-07-news-inner-stop.md section 8: 176
+  plumbing 16 + 1m gate 64 + 5m gate 64 + zero-spread diagnostic 32
