@@ -321,3 +321,31 @@ series.** Registered here so it cannot be written after seeing a number.
 * **Still closed, do not re-ask:** gamma wall (IV and bid and ask 100% null on
   all 46,897 prints), sweep and block by venue flag (0 true on all 46,897),
   and `--market=xauusd` reaching the tape (config, not data).
+
+---
+
+## Note added 2026-10-08, same evening — the GC-1m arm was read twice and the two reads differ
+
+The table above was read at **46,897 prints / 16,903 bars**. The committed
+receipt `docs/research/runs/2026-10-08-options-ceiling/ceiling.txt` re-ran the
+`GC-1m` arm minutes later, at **46,986 prints / 16,923 bars**, and prints
+
+    minScore 3.0  entryAtr 0.35   framed 16,881   CEILING 3,778   4h-SPACED 59
+
+against the table's `framed 16,861 / CEILING 3,764 / 4h-SPACED 58`. Both are
+kept: nothing is wrong with either, and overwriting one would hide the reason.
+
+**The reason is that the store is being written while it is read.** The
+collector (pid 5044) is appending tape and `GC-1m` bars continuously, so the
+tape count moved 46,846 -> 46,897 -> 46,936 -> 46,986 across the ten runs that
+produced the table, and `GC-1m` grew by 20 bars between the table and the
+receipt. This is `search.rs`'s own warning — *"a result is only comparable to
+another run over the same tape"* — arriving on a run that was never meant to be
+compared with anything. **A live store cannot produce two identical reads, so
+any future receipt on this axis has to print its own print count and bar count
+and be compared only against a run that printed the same ones.** The ten
+`XAUUSD` arms are unaffected in `framed` (786 / 1,841 / 6,731 are fixed by the
+frozen bar series, not by the tape), which is a second way of saying what the
+blocker above says.
+
+No verdict moves: 3,764 and 3,778 are both 94x the 40-trade floor.
