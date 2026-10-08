@@ -1,0 +1,337 @@
+market:   xauduka 15m
+data:     E:/rust/flowdesk/data (bars from E:/rust/flowdesk/data\bars\XAUDUKA-15m.parquet)
+bounds:   --from=2018-06-01 --to=2026-06-01 kept 187860 of 378749 bars
+spread:   0.28 per round trip
+trail:    off
+max hold: 4 h (14400000 ms) from [trading] max_hold_ms, no per-market override
+bars:     187860 from 2018-06-01 00:00 to 2026-05-31 23:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+companion: none loaded — every cmp series is NaN
+guards: off (every number unguarded)
+null sides: exposure - the method's measured long share AND its trade count on the hold branch
+flags:    12 passed, every one of them read by --mode=hypotheses
+
+== hypotheses `E:/rust/fd-gross-ceiling/docs/research/designs/2026-10-08-gross-ceiling.toml`: 30 declared, FIXED parameters over the whole window (no selection), each against 200 matched null runs ==
+null sides: exposure (the method's measured long share AND its trade count on the hold branch)
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+guards: off (every number unguarded)
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+ema-cross    ema-cross            3208   0.773  -0.117    0.786    0.842        0   39%  fail: profit factor 0.773 < 1.2; expectancy -0.117R < 0.05R
+                                  — classic trend baseline, engine exits
+                                max drawdown 10057.14 USD = 98.21% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.776 R is); net -9807.29 USD over 3208 trades
+                                matched null 3155 trades median vs the method's 3208 — count match 0.98
+                                long share: method 0.496 vs the null's median 0.445  ** the control's side ratio is not the method's **
+                                spread paid: method 9540.18 USD vs the null's median 9512.99 USD — cost match 1.00
+                                exposure: signed share of time method -0.108 vs the null's -0.110; time in market method 550710 min vs the null's median 691478 min — ratio 1.26  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.786 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 1.500 ATR = 3.41 points, cost 8.20% of R (named stopAtr, copied)
+                                the method's own realised stop: median 1.562 ATR = 3.55 points over 3208 trades
+                                exits: STOP 1638, TARGET 719, TIMEOUT 712, opposite cross 139; mean hold 171.7 min
+rsi-rev      rsi-reversion        4593   0.780  -0.086    0.770    0.838        0   58%  fail: profit factor 0.780 < 1.2; expectancy -0.086R < 0.05R
+                                  — classic mean-reversion baseline
+                                max drawdown 10507.90 USD = 98.67% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.746 R is); net -9851.46 USD over 4593 trades
+                                matched null 4250 trades median vs the method's 4593 — count match 0.93
+                                long share: method 0.450 vs the null's median 0.480
+                                spread paid: method 10133.92 USD vs the null's median 9755.10 USD — cost match 0.96
+                                exposure: signed share of time method -0.038 vs the null's -0.036; time in market method 722340 min vs the null's median 922935 min — ratio 1.28  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.770 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 1.500 ATR = 3.83 points, cost 7.31% of R (named stopAtr, copied)
+                                the method's own realised stop: median 1.554 ATR = 3.97 points over 4593 trades
+                                exits: RSI back to midline 1450, STOP 2246, TARGET 315, TIMEOUT 582; mean hold 157.3 min
+donchian     donchian-breakout    9322   0.747  -0.084    0.791    0.865        0   14%  fail: profit factor 0.747 < 1.2; expectancy -0.084R < 0.05R
+                                  — classic breakout baseline
+                                max drawdown 10354.56 USD = 100.04% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.684 R is); net -10003.86 USD over 9322 trades
+                                matched null 6802 trades median vs the method's 9322 — count match 0.73  ** outside the band: this percentile is unmatched **
+                                long share: method 0.530 vs the null's median 0.533
+                                spread paid: method 9185.14 USD vs the null's median 9874.12 USD — cost match 1.08
+                                exposure: signed share of time method +0.066 vs the null's +0.066; time in market method 1699170 min vs the null's median 1749420 min — ratio 1.03
+                                the null's own median LOSES money (p50 0.791 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 2.000 ATR = 4.46 points, cost 6.28% of R (named stopAtr, copied)
+                                the method's own realised stop: median 2.063 ATR = 4.60 points over 9322 trades
+                                exits: STOP 2691, TARGET 1669, TIMEOUT 2097, lost the channel midline 1440, reclaimed the channel midline 1425; mean hold 182.3 min
+bb-fade      bb-fade             13336   0.644  -0.099    0.742    0.809        0    2%  fail: profit factor 0.644 < 1.2; expectancy -0.099R < 0.05R
+                                  — classic band-fade baseline
+                                max drawdown 10383.06 USD = 100.28% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.749 R is); net -10025.62 USD over 13336 trades
+                                matched null 9106 trades median vs the method's 13336 — count match 0.68  ** outside the band: this percentile is unmatched **
+                                long share: method 0.489 vs the null's median 0.492
+                                spread paid: method 8138.05 USD vs the null's median 10324.60 USD — cost match 1.27  ** outside the band: the control did not pay what the method paid **
+                                exposure: signed share of time method -0.015 vs the null's -0.012; time in market method 1373085 min vs the null's median 1857870 min — ratio 1.35  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.742 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 1.500 ATR = 3.36 points, cost 8.33% of R (named stopAtr, copied)
+                                the method's own realised stop: median 1.562 ATR = 3.50 points over 13336 trades
+                                exits: END_OF_DATA 1, STOP 6828, TARGET 3351, TIMEOUT 662, middle band reached 2494; mean hold 103.0 min
+buy-hold     buy-and-hold            1     inf 2875.198  296.039  377.936        0  null  fail: only 1 trades (need 30)
+                                  — the control everything else has to beat; in the guards arm it is void by construction
+                                max drawdown 0.00 USD = 0.00% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -122.899 R is); net +287498.31 USD over 1 trades
+                                matched null 2 trades median vs the method's 1 — count match 2.00  ** outside the band: this percentile is unmatched **
+                                long share: method 1.000 vs the null's median 1.000
+                                spread paid: method 24.84 USD vs the null's median 120.39 USD — cost match 4.85  ** outside the band: the control did not pay what the method paid **
+                                exposure: signed share of time method +1.000 vs the null's +1.000; time in market method 4207455 min vs the null's median 4207095 min — ratio 1.00
+                                exits: END_OF_DATA 1; mean hold 4207455.0 min
+ict-smf      ict-sweep-mss-fvg     477   0.663  -0.140    0.862    0.998        0    0%  fail: profit factor 0.663 < 1.2; expectancy -0.140R < 0.05R
+                                  — structure-based, not indicator-based
+                                max drawdown 4998.56 USD = 49.99% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.656 R is); net -4965.88 USD over 477 trades
+                                matched null 568 trades median vs the method's 477 — count match 1.19
+                                long share: method 0.499 vs the null's median 0.462
+                                spread paid: method 1927.09 USD vs the null's median 2436.01 USD — cost match 1.26  ** outside the band: the control did not pay what the method paid **
+                                exposure: signed share of time method -0.071 vs the null's -0.078; time in market method 104775 min vs the null's median 178740 min — ratio 1.71  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.862 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 2.805 ATR = 5.88 points, cost 4.76% of R (realised median, structural)
+                                the method's own realised stop: median 2.805 ATR = 5.88 points over 477 trades
+                                exits: STOP 169, TARGET 60, TIMEOUT 248; mean hold 219.7 min
+orb          orb                  1340   0.983  -0.002    0.866    0.959        0   98%  fail: profit factor 0.983 < 1.2; expectancy -0.002R < 0.05R
+                                  — opening-range breakout
+                                max drawdown 2292.17 USD = 21.37% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.596 R is); net -766.24 USD over 1340 trades
+                                matched null 1493 trades median vs the method's 1340 — count match 1.11
+                                long share: method 0.506 vs the null's median 0.525
+                                spread paid: method 4767.17 USD vs the null's median 5293.77 USD — cost match 1.11
+                                exposure: signed share of time method +0.054 vs the null's +0.054; time in market method 266520 min vs the null's median 464228 min — ratio 1.74  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.866 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 2.730 ATR = 8.51 points, cost 3.29% of R (realised median, structural)
+                                the method's own realised stop: median 2.730 ATR = 8.51 points over 1340 trades
+                                exits: STOP 350, TARGET 208, TIMEOUT 782; mean hold 198.9 min
+pdhl         pdhl                 2001   0.678  -0.151    0.758    0.835        0    8%  fail: profit factor 0.678 < 1.2; expectancy -0.151R < 0.05R
+                                  — previous-day levels; its mode-0 core is the CRT core already rejected
+                                max drawdown 10184.31 USD = 96.38% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.777 R is); net -9570.71 USD over 2001 trades
+                                matched null 2053 trades median vs the method's 2001 — count match 1.03
+                                long share: method 0.464 vs the null's median 0.441
+                                spread paid: method 8070.13 USD vs the null's median 8886.25 USD — cost match 1.10
+                                exposure: signed share of time method -0.121 vs the null's -0.121; time in market method 127200 min vs the null's median 356220 min — ratio 2.80  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.758 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 1.140 ATR = 2.42 points, cost 11.57% of R (realised median, structural)
+                                the method's own realised stop: median 1.140 ATR = 2.42 points over 2001 trades
+                                exits: STOP 1138, TARGET 698, TIMEOUT 165; mean hold 63.6 min
+crt          crt                  2327   0.699  -0.100    0.831    0.915        0    2%  fail: profit factor 0.699 < 1.2; expectancy -0.100R < 0.05R
+                                  — Candle Range Theory, registered 2026-10-04 and rejected at 1H/4H
+                                max drawdown 9238.74 USD = 92.39% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.703 R is); net -9159.37 USD over 2327 trades
+                                matched null 2396 trades median vs the method's 2327 — count match 1.03
+                                long share: method 0.481 vs the null's median 0.518
+                                spread paid: method 6415.37 USD vs the null's median 7965.92 USD — cost match 1.24
+                                exposure: signed share of time method +0.037 vs the null's +0.036; time in market method 593355 min vs the null's median 641655 min — ratio 1.08
+                                the null's own median LOSES money (p50 0.831 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 1.974 ATR = 4.02 points, cost 6.97% of R (realised median, structural)
+                                the method's own realised stop: median 1.974 ATR = 4.02 points over 2327 trades
+                                exits: STOP 1032, TARGET 535, TIMEOUT 760; mean hold 255.0 min
+sess-hold    session-hold         2051   0.883  -0.030    0.970    1.131        0   17%  fail: profit factor 0.883 < 1.2; expectancy -0.030R < 0.05R
+                                  — the registry default window, not the 1800-1600 one
+                                max drawdown 8874.98 USD = 88.75% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -2.241 R is); net -7742.12 USD over 2051 trades
+                                matched null 1999 trades median vs the method's 2051 — count match 0.97
+                                long share: method 1.000 vs the null's median 1.000
+                                spread paid: method 5964.97 USD vs the null's median 12699.34 USD — cost match 2.13  ** outside the band: the control did not pay what the method paid **
+                                exposure: signed share of time method +1.000 vs the null's +1.000; time in market method 846570 min vs the null's median 1169948 min — ratio 1.38  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.970 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                exits: window closed 2051; mean hold 412.8 min
+intraday-mom intraday-momentum    1979   0.783  -0.008    0.791    0.887        0   47%  fail: profit factor 0.783 < 1.2; expectancy -0.008R < 0.05R
+                                  — intraday momentum
+                                max drawdown 1481.03 USD = 14.81% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.074 R is); net -1418.99 USD over 1979 trades
+                                matched null 1898 trades median vs the method's 1979 — count match 0.96
+                                long share: method 0.509 vs the null's median 0.509
+                                spread paid: method 2237.41 USD vs the null's median 2080.80 USD — cost match 0.93
+                                exposure: signed share of time method +0.018 vs the null's +0.010; time in market method 148425 min vs the null's median 208635 min — ratio 1.41  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.791 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                exits: window closed 1979; mean hold 75.0 min
+vwap-fade    vwap-fade            9087   0.562  -0.142    0.672    0.741        0    2%  fail: profit factor 0.562 < 1.2; expectancy -0.142R < 0.05R
+                                  — VWAP fade
+                                max drawdown 10018.41 USD = 100.18% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.837 R is); net -10016.92 USD over 9087 trades
+                                matched null 7761 trades median vs the method's 9087 — count match 0.85
+                                long share: method 0.485 vs the null's median 0.488
+                                spread paid: method 7713.13 USD vs the null's median 10384.05 USD — cost match 1.35  ** outside the band: the control did not pay what the method paid **
+                                exposure: signed share of time method -0.022 vs the null's -0.014; time in market method 831840 min vs the null's median 1082738 min — ratio 1.30  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.672 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 1.000 ATR = 2.16 points, cost 12.96% of R (named stopAtr, copied)
+                                the method's own realised stop: median 1.065 ATR = 2.30 points over 9087 trades
+                                exits: STOP 5691, TARGET 2793, TIMEOUT 603; mean hold 91.5 min
+tsmom        tsmom                  90   2.183   0.370    0.927    1.422        0  100%  SURVIVES
+                                  — defaults are lookbackDays 60, so this must print identically to ts-l60
+                                max drawdown 673.49 USD = 4.88% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.583 R is); net +3643.31 USD over 90 trades
+                                matched null 116 trades median vs the method's 90 — count match 1.29  ** outside the band: this percentile is unmatched **
+                                long share: method 0.467 vs the null's median 0.627  ** the control's side ratio is not the method's **
+                                spread paid: method 54.45 USD vs the null's median 63.87 USD — cost match 1.17
+                                exposure: signed share of time method +0.264 vs the null's +0.244; time in market method 3620250 min vs the null's median 41692 min — ratio 0.01  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.927 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 25.889 ATR = 49.93 points, cost 0.56% of R (realised median, structural)
+                                the method's own realised stop: median 25.889 ATR = 49.93 points over 90 trades
+                                exits: 60-day return flipped 89, END_OF_DATA 1; mean hold 40225.0 min
+doji-rev     doji-reversal        2116   0.553  -0.234    0.705    0.806        0    0%  fail: profit factor 0.553 < 1.2; expectancy -0.234R < 0.05R
+                                  — single-candle reversal
+                                max drawdown 9957.79 USD = 99.38% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.797 R is); net -9936.77 USD over 2116 trades
+                                matched null 2142 trades median vs the method's 2116 — count match 1.01
+                                long share: method 0.500 vs the null's median 0.503
+                                spread paid: method 7113.12 USD vs the null's median 9193.56 USD — cost match 1.29  ** outside the band: the control did not pay what the method paid **
+                                exposure: signed share of time method +0.009 vs the null's +0.020; time in market method 80730 min vs the null's median 285202 min — ratio 3.53  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.705 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 0.910 ATR = 1.98 points, cost 14.18% of R (realised median, structural)
+                                the method's own realised stop: median 0.910 ATR = 1.98 points over 2116 trades
+                                exits: STOP 1298, TARGET 750, TIMEOUT 68; mean hold 38.1 min
+gap-fade     gap-fade              130   0.051  -2.345    0.854    1.185        0    0%  fail: profit factor 0.051 < 1.2; expectancy -2.345R < 0.05R
+                                  — the only row that reads the 1600-1800 gap the flat frame forgoes
+                                max drawdown 28014.34 USD = 272.41% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -2.699 R is); net -27729.87 USD over 130 trades
+                                matched null 153 trades median vs the method's 130 — count match 1.18
+                                long share: method 0.369 vs the null's median 0.471  ** the control's side ratio is not the method's **
+                                spread paid: method 28346.05 USD vs the null's median 1036.67 USD — cost match 0.04  ** outside the band: the control did not pay what the method paid **
+                                exposure: signed share of time method -0.053 vs the null's -0.071; time in market method 12285 min vs the null's median 41498 min — ratio 3.38  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.854 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 1.937 ATR = 5.33 points, cost 5.25% of R (realised median, structural)
+                                the method's own realised stop: median 1.937 ATR = 5.33 points over 129 trades
+                                exits: STOP 56, TARGET 46, TIMEOUT 28; mean hold 94.5 min
+trend-pull   trend-pullback       7414   0.434  -0.387    0.451    0.549        0   40%  fail: profit factor 0.434 < 1.2; expectancy -0.387R < 0.05R
+                                  — trend pullback
+                                max drawdown 10023.65 USD = 100.24% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.823 R is); net -10023.22 USD over 7414 trades
+                                matched null 7040 trades median vs the method's 7414 — count match 0.95
+                                long share: method 0.547 vs the null's median 0.593
+                                spread paid: method 10365.40 USD vs the null's median 9059.53 USD — cost match 0.87
+                                exposure: signed share of time method +0.185 vs the null's +0.187; time in market method 227670 min vs the null's median 333892 min — ratio 1.47  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.451 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 0.497 ATR = 1.00 points, cost 28.00% of R (realised median, structural)
+                                the method's own realised stop: median 0.497 ATR = 1.00 points over 7414 trades
+                                exits: STOP 4695, TARGET 2606, TIMEOUT 113; mean hold 30.7 min
+vol-thrust   volume-thrust           0     NaN     NaN    0.786    0.858       -0  null  fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+                                  — volume thrust
+                                max drawdown: NOT MEASURED — this cell took no position, so there is no equity curve to fall (this is not 0.00 USD)
+                                matched null 3216 trades median vs the method's 0 — count match NaN  ** outside the band: this percentile is unmatched **
+                                long share: method NaN vs the null's median 0.499  ** the control's side ratio is not the method's **
+                                spread paid: method -0.00 USD vs the null's median 9436.12 USD — cost match NaN  (nothing to compare)
+                                exposure: signed share of time method NaN vs the null's -0.002; time in market method NaN min vs the null's median 704940 min — ratio NaN  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.786 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 1.500 ATR = NaN points, cost NaN% of R (UNMEASURED: no trade to measure and no governing stopAtr)
+                                the method's own realised stop: median NaN ATR = NaN points over 0 trades
+                                exits: no exits recorded; mean hold NaN min
+keltner      keltner-break        8151   0.721  -0.083    0.783    0.845        0   14%  fail: profit factor 0.721 < 1.2; expectancy -0.083R < 0.05R
+                                  — screen family
+                                max drawdown 10127.77 USD = 99.94% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.736 R is); net -9979.29 USD over 8151 trades
+                                matched null 6340 trades median vs the method's 8151 — count match 0.78
+                                long share: method 0.522 vs the null's median 0.519
+                                spread paid: method 8678.50 USD vs the null's median 9999.20 USD — cost match 1.15
+                                exposure: signed share of time method +0.041 vs the null's +0.039; time in market method 1439655 min vs the null's median 1579208 min — ratio 1.10
+                                the null's own median LOSES money (p50 0.783 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 1.876 ATR = 4.28 points, cost 6.54% of R (realised median, structural)
+                                the method's own realised stop: median 1.876 ATR = 4.28 points over 8151 trades
+                                exits: STOP 3753, TARGET 2273, TIMEOUT 2125; mean hold 176.6 min
+macd-cross   macd-cross          10776   0.720  -0.093    0.739    0.817        0   38%  fail: profit factor 0.720 < 1.2; expectancy -0.093R < 0.05R
+                                  — screen family
+                                max drawdown 10407.53 USD = 100.11% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.756 R is); net -10005.07 USD over 10776 trades
+                                matched null 7965 trades median vs the method's 10776 — count match 0.74  ** outside the band: this percentile is unmatched **
+                                long share: method 0.509 vs the null's median 0.525
+                                spread paid: method 10404.15 USD vs the null's median 9815.86 USD — cost match 0.94
+                                exposure: signed share of time method +0.051 vs the null's +0.053; time in market method 1914645 min vs the null's median 1651912 min — ratio 0.86
+                                the null's own median LOSES money (p50 0.739 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 1.500 ATR = 3.40 points, cost 8.23% of R (named stopAtr, copied)
+                                the method's own realised stop: median 1.561 ATR = 3.54 points over 10776 trades
+                                exits: STOP 5439, TARGET 3378, TIMEOUT 1959; mean hold 177.7 min
+rsi2-pull    rsi2-pullback        7477   0.782  -0.052    0.801    0.870        0   36%  fail: profit factor 0.782 < 1.2; expectancy -0.052R < 0.05R
+                                  — screen family
+                                max drawdown 10116.55 USD = 98.58% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.649 R is); net -9844.94 USD over 7477 trades
+                                matched null 5908 trades median vs the method's 7477 — count match 0.79
+                                long share: method 0.554 vs the null's median 0.553
+                                spread paid: method 10079.26 USD vs the null's median 9946.73 USD — cost match 0.99
+                                exposure: signed share of time method +0.108 vs the null's +0.109; time in market method 1510950 min vs the null's median 1534335 min — ratio 1.02
+                                the null's own median LOSES money (p50 0.801 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 2.000 ATR = 4.39 points, cost 6.38% of R (named stopAtr, copied)
+                                the method's own realised stop: median 2.064 ATR = 4.53 points over 7477 trades
+                                exits: END_OF_DATA 1, STOP 2802, TARGET 2907, TIMEOUT 1767; mean hold 202.1 min
+squeeze      squeeze-break        1903   0.711  -0.132    0.803    0.889        0    6%  fail: profit factor 0.711 < 1.2; expectancy -0.132R < 0.05R
+                                  — screen family
+                                max drawdown 9273.63 USD = 92.74% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.781 R is); net -9268.90 USD over 1903 trades
+                                matched null 1987 trades median vs the method's 1903 — count match 1.04
+                                long share: method 0.514 vs the null's median 0.540
+                                spread paid: method 8242.96 USD vs the null's median 8055.60 USD — cost match 0.98
+                                exposure: signed share of time method +0.081 vs the null's +0.084; time in market method 219540 min vs the null's median 445028 min — ratio 2.03  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.803 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 1.508 ATR = 2.58 points, cost 10.85% of R (realised median, structural)
+                                the method's own realised stop: median 1.508 ATR = 2.58 points over 1903 trades
+                                exits: STOP 1010, TARGET 634, TIMEOUT 259; mean hold 115.4 min
+stoch-rev    stoch-reversal      12706   0.735  -0.096    0.746    0.814        0   43%  fail: profit factor 0.735 < 1.2; expectancy -0.096R < 0.05R
+                                  — screen family
+                                max drawdown 10817.71 USD = 100.22% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.754 R is); net -10017.34 USD over 12706 trades
+                                matched null 8843 trades median vs the method's 12706 — count match 0.70  ** outside the band: this percentile is unmatched **
+                                long share: method 0.454 vs the null's median 0.482
+                                spread paid: method 11021.68 USD vs the null's median 10356.50 USD — cost match 0.94
+                                exposure: signed share of time method -0.034 vs the null's -0.033; time in market method 2268720 min vs the null's median 1808032 min — ratio 0.80
+                                the null's own median LOSES money (p50 0.746 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 1.500 ATR = 3.39 points, cost 8.26% of R (named stopAtr, copied)
+                                the method's own realised stop: median 1.561 ATR = 3.53 points over 12706 trades
+                                exits: END_OF_DATA 1, STOP 6403, TARGET 3834, TIMEOUT 2468; mean hold 178.6 min
+volman       volman-box              0     NaN     NaN    0.786    0.858       -0  null  fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+                                  — Volman box
+                                max drawdown: NOT MEASURED — this cell took no position, so there is no equity curve to fall (this is not 0.00 USD)
+                                matched null 3216 trades median vs the method's 0 — count match NaN  ** outside the band: this percentile is unmatched **
+                                long share: method NaN vs the null's median 0.499  ** the control's side ratio is not the method's **
+                                spread paid: method -0.00 USD vs the null's median 9436.12 USD — cost match NaN  (nothing to compare)
+                                exposure: signed share of time method NaN vs the null's -0.002; time in market method NaN min vs the null's median 704940 min — ratio NaN  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.786 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 1.500 ATR = NaN points, cost NaN% of R (UNMEASURED: no trade to measure and no governing stopAtr)
+                                the method's own realised stop: median NaN ATR = NaN points over 0 trades
+                                exits: no exits recorded; mean hold NaN min
+far-stop     far-stop-break       8372   0.780  -0.043    0.855    0.917        0    4%  fail: profit factor 0.780 < 1.2; expectancy -0.043R < 0.05R
+                                  — the cost-term instrument of the 2026-09-23 designed-methods programme; registered at parameters its own design window refuses
+                                max drawdown 10010.38 USD = 98.40% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.508 R is); net -9783.70 USD over 8372 trades
+                                matched null 5804 trades median vs the method's 8372 — count match 0.69  ** outside the band: this percentile is unmatched **
+                                long share: method 0.534 vs the null's median 0.530
+                                spread paid: method 7626.21 USD vs the null's median 8765.29 USD — cost match 1.15
+                                exposure: signed share of time method +0.061 vs the null's +0.058; time in market method 2220720 min vs the null's median 1963005 min — ratio 0.88
+                                the null's own median LOSES money (p50 0.855 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 4.182 ATR = 9.31 points, cost 3.01% of R (realised median, structural); the method DECLARES stopAtr 1.20 and does not use it
+                                the method's own realised stop: median 4.182 ATR = 9.31 points over 8372 trades
+                                exits: END_OF_DATA 1, STOP 1576, TARGET 1595, TIMEOUT 5200; mean hold 265.3 min
+quiet-swing  quiet-swing           296   1.143   0.046    1.097    1.424        0   61%  fail: profit factor 1.143 < 1.2; expectancy 0.046R < 0.05R
+                                  — defaults are holdSessions 5; the first-half signal family of artefact #10
+                                max drawdown 1168.64 USD = 9.95% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.534 R is); net +1305.70 USD over 296 trades
+                                matched null 296 trades median vs the method's 296 — count match 1.00
+                                long share: method 0.605 vs the null's median 0.630
+                                spread paid: method 253.54 USD vs the null's median 247.08 USD — cost match 0.97
+                                exposure: signed share of time method +0.268 vs the null's +0.262; time in market method 1861920 min vs the null's median 2026395 min — ratio 1.09
+                                exits: 10-session return flipped to +0.00% 1, 10-session return flipped to +0.01% 1, 10-session return flipped to +0.03% 1, 10-session return flipped to +0.05% 2, 10-session return flipped to +0.07% 2, 10-session return flipped to +0.10% 2, 10-session return flipped to +0.11% 1, 10-session return flipped to +0.17% 2, 10-session return flipped to +0.20% 1, 10-session return flipped to +0.23% 1, 10-session return flipped to +0.27% 1, 10-session return flipped to +0.29% 2, 10-session return flipped to +0.32% 1, 10-session return flipped to +0.34% 1, 10-session return flipped to +0.37% 1, 10-session return flipped to +0.38% 1, 10-session return flipped to +0.39% 3, 10-session return flipped to +0.41% 1, 10-session return flipped to +0.46% 1, 10-session return flipped to +0.49% 1, 10-session return flipped to +0.51% 1, 10-session return flipped to +0.56% 1, 10-session return flipped to +0.58% 1, 10-session return flipped to +0.61% 1, 10-session return flipped to +0.66% 1, 10-session return flipped to +0.68% 1, 10-session return flipped to +0.69% 1, 10-session return flipped to +0.84% 2, 10-session return flipped to +0.85% 1, 10-session return flipped to +0.86% 1, 10-session return flipped to +0.88% 1, 10-session return flipped to +1.01% 1, 10-session return flipped to +1.07% 1, 10-session return flipped to +1.10% 1, 10-session return flipped to +1.24% 2, 10-session return flipped to +1.29% 1, 10-session return flipped to +1.54% 1, 10-session return flipped to +1.61% 1, 10-session return flipped to +1.73% 1, 10-session return flipped to +1.98% 1, 10-session return flipped to +2.02% 1, 10-session return flipped to +2.43% 1, 10-session return flipped to +2.69% 1, 10-session return flipped to -0.01% 1, 10-session return flipped to -0.02% 1, 10-session return flipped to -0.05% 2, 10-session return flipped to -0.07% 1, 10-session return flipped to -0.09% 1, 10-session return flipped to -0.11% 1, 10-session return flipped to -0.13% 3, 10-session return flipped to -0.17% 1, 10-session return flipped to -0.20% 1, 10-session return flipped to -0.21% 1, 10-session return flipped to -0.25% 1, 10-session return flipped to -0.26% 2, 10-session return flipped to -0.32% 1, 10-session return flipped to -0.36% 1, 10-session return flipped to -0.38% 1, 10-session return flipped to -0.40% 1, 10-session return flipped to -0.43% 1, 10-session return flipped to -0.47% 1, 10-session return flipped to -0.49% 1, 10-session return flipped to -0.56% 1, 10-session return flipped to -0.59% 1, 10-session return flipped to -0.62% 1, 10-session return flipped to -0.64% 1, 10-session return flipped to -0.65% 1, 10-session return flipped to -0.69% 1, 10-session return flipped to -0.70% 1, 10-session return flipped to -0.75% 1, 10-session return flipped to -0.80% 1, 10-session return flipped to -0.83% 1, 10-session return flipped to -0.85% 1, 10-session return flipped to -0.91% 1, 10-session return flipped to -0.99% 1, 10-session return flipped to -1.01% 1, 10-session return flipped to -1.07% 1, 10-session return flipped to -1.14% 1, 10-session return flipped to -1.15% 1, 10-session return flipped to -1.16% 1, 10-session return flipped to -1.24% 1, 10-session return flipped to -1.30% 1, 10-session return flipped to -1.47% 1, 10-session return flipped to -1.49% 1, 10-session return flipped to -1.60% 1, 10-session return flipped to -1.63% 1, 10-session return flipped to -1.74% 2, 10-session return flipped to -2.09% 1, 10-session return flipped to -2.70% 1, held 5 sessions of 5 96, held 6 sessions of 5 75, held 7 sessions of 5 22; mean hold 6290.3 min
+rsi-rev-vol  rsi-reversal-vol        0     NaN     NaN    0.786    0.858       -0  null  fail: only 0 trades (need 30); profit factor NaN < 1.2; expectancy NaNR < 0.05R
+                                  — the owner's MT5 expert advisor shape; reward-to-risk 0.375 needs a 72.7% win rate before costs
+                                max drawdown: NOT MEASURED — this cell took no position, so there is no equity curve to fall (this is not 0.00 USD)
+                                matched null 3216 trades median vs the method's 0 — count match NaN  ** outside the band: this percentile is unmatched **
+                                long share: method NaN vs the null's median 0.499  ** the control's side ratio is not the method's **
+                                spread paid: method -0.00 USD vs the null's median 9436.12 USD — cost match NaN  (nothing to compare)
+                                exposure: signed share of time method NaN vs the null's -0.002; time in market method NaN min vs the null's median 704940 min — ratio NaN  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.786 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 1.500 ATR = NaN points, cost NaN% of R (UNMEASURED: no trade to measure and no governing stopAtr)
+                                the method's own realised stop: median NaN ATR = NaN points over 0 trades
+                                exits: no exits recorded; mean hold NaN min
+px-1s        session-hold         1982   1.072   0.012    1.153    1.194        0    0%  fail: profit factor 1.072 < 1.2; expectancy 0.012R < 0.05R
+                                  — ANCHOR: the session-length constant S and the drift anchor; agent/pure-drift proved this window crosses 0 rollovers
+                                max drawdown 2062.94 USD = 15.42% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.355 R is); net +2433.33 USD over 1982 trades
+                                matched null 1982 trades median vs the method's 1982 — count match 1.00
+                                long share: method 1.000 vs the null's median 1.000
+                                spread paid: method 1571.72 USD vs the null's median 1741.97 USD — cost match 1.11
+                                exposure: signed share of time method +1.000 vs the null's +1.000; time in market method 2771835 min vs the null's median 3549465 min — ratio 1.28  ** the control did not collect the drift the method did **
+                                exits: END_OF_DATA 1, window closed 1981; mean hold 1398.5 min
+qs-h15       quiet-swing           199   1.201   0.080    1.110    1.600        0   62%  gate pass, inside the noise
+                                  — ANCHOR: must reproduce rollover-flat B-duka-is.txt
+                                max drawdown 1001.45 USD = 8.51% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.639 R is); net +1524.75 USD over 199 trades
+                                matched null 191 trades median vs the method's 199 — count match 0.96
+                                long share: method 0.563 vs the null's median 0.633  ** the control's side ratio is not the method's **
+                                spread paid: method 169.98 USD vs the null's median 160.27 USD — cost match 0.94
+                                exposure: signed share of time method +0.272 vs the null's +0.284; time in market method 2262510 min vs the null's median 2411385 min — ratio 1.07
+                                exits: 10-session return flipped to +0.00% 1, 10-session return flipped to +0.01% 1, 10-session return flipped to +0.03% 1, 10-session return flipped to +0.05% 3, 10-session return flipped to +0.07% 2, 10-session return flipped to +0.10% 4, 10-session return flipped to +0.11% 1, 10-session return flipped to +0.12% 1, 10-session return flipped to +0.13% 1, 10-session return flipped to +0.17% 2, 10-session return flipped to +0.18% 1, 10-session return flipped to +0.19% 1, 10-session return flipped to +0.20% 1, 10-session return flipped to +0.23% 1, 10-session return flipped to +0.27% 2, 10-session return flipped to +0.29% 2, 10-session return flipped to +0.37% 2, 10-session return flipped to +0.38% 1, 10-session return flipped to +0.39% 2, 10-session return flipped to +0.40% 1, 10-session return flipped to +0.41% 1, 10-session return flipped to +0.49% 1, 10-session return flipped to +0.51% 1, 10-session return flipped to +0.54% 1, 10-session return flipped to +0.55% 1, 10-session return flipped to +0.56% 1, 10-session return flipped to +0.57% 1, 10-session return flipped to +0.58% 1, 10-session return flipped to +0.61% 1, 10-session return flipped to +0.66% 1, 10-session return flipped to +0.68% 1, 10-session return flipped to +0.69% 1, 10-session return flipped to +0.73% 1, 10-session return flipped to +0.75% 1, 10-session return flipped to +0.84% 1, 10-session return flipped to +0.85% 1, 10-session return flipped to +0.86% 1, 10-session return flipped to +0.88% 1, 10-session return flipped to +0.98% 1, 10-session return flipped to +1.00% 1, 10-session return flipped to +1.01% 2, 10-session return flipped to +1.07% 1, 10-session return flipped to +1.10% 1, 10-session return flipped to +1.22% 1, 10-session return flipped to +1.24% 2, 10-session return flipped to +1.28% 1, 10-session return flipped to +1.29% 1, 10-session return flipped to +1.36% 1, 10-session return flipped to +1.54% 1, 10-session return flipped to +1.61% 1, 10-session return flipped to +1.73% 1, 10-session return flipped to +1.98% 1, 10-session return flipped to +2.02% 1, 10-session return flipped to +2.39% 1, 10-session return flipped to +2.43% 1, 10-session return flipped to +2.69% 1, 10-session return flipped to -0.01% 1, 10-session return flipped to -0.02% 2, 10-session return flipped to -0.03% 2, 10-session return flipped to -0.04% 1, 10-session return flipped to -0.05% 2, 10-session return flipped to -0.09% 1, 10-session return flipped to -0.10% 1, 10-session return flipped to -0.11% 2, 10-session return flipped to -0.13% 4, 10-session return flipped to -0.14% 1, 10-session return flipped to -0.16% 1, 10-session return flipped to -0.17% 1, 10-session return flipped to -0.21% 1, 10-session return flipped to -0.25% 1, 10-session return flipped to -0.26% 2, 10-session return flipped to -0.32% 1, 10-session return flipped to -0.34% 3, 10-session return flipped to -0.35% 1, 10-session return flipped to -0.36% 2, 10-session return flipped to -0.38% 1, 10-session return flipped to -0.40% 2, 10-session return flipped to -0.41% 1, 10-session return flipped to -0.43% 1, 10-session return flipped to -0.49% 1, 10-session return flipped to -0.56% 1, 10-session return flipped to -0.57% 1, 10-session return flipped to -0.59% 1, 10-session return flipped to -0.62% 2, 10-session return flipped to -0.64% 2, 10-session return flipped to -0.65% 1, 10-session return flipped to -0.66% 1, 10-session return flipped to -0.70% 1, 10-session return flipped to -0.75% 1, 10-session return flipped to -0.80% 1, 10-session return flipped to -0.81% 1, 10-session return flipped to -0.83% 2, 10-session return flipped to -0.85% 1, 10-session return flipped to -0.88% 1, 10-session return flipped to -0.91% 1, 10-session return flipped to -0.99% 1, 10-session return flipped to -1.07% 1, 10-session return flipped to -1.12% 1, 10-session return flipped to -1.15% 1, 10-session return flipped to -1.19% 1, 10-session return flipped to -1.24% 1, 10-session return flipped to -1.30% 1, 10-session return flipped to -1.32% 1, 10-session return flipped to -1.33% 1, 10-session return flipped to -1.40% 1, 10-session return flipped to -1.47% 2, 10-session return flipped to -1.49% 1, 10-session return flipped to -1.60% 1, 10-session return flipped to -1.62% 1, 10-session return flipped to -1.63% 1, 10-session return flipped to -1.73% 1, 10-session return flipped to -1.74% 2, 10-session return flipped to -2.09% 1, 10-session return flipped to -2.12% 1, 10-session return flipped to -2.70% 1, END_OF_DATA 1, held 15 sessions of 15 42, held 16 sessions of 15 1, held 17 sessions of 15 10; mean hold 11369.4 min
+ts-l20       tsmom                 185   1.427   0.122    1.188    1.800        0   76%  gate pass, inside the noise
+                                  — ANCHOR: must reproduce rollover-flat B-duka-is.txt
+                                max drawdown 701.73 USD = 5.65% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.468 R is); net +2343.91 USD over 185 trades
+                                matched null 187 trades median vs the method's 185 — count match 1.01
+                                long share: method 0.508 vs the null's median 0.613  ** the control's side ratio is not the method's **
+                                spread paid: method 112.03 USD vs the null's median 119.94 USD — cost match 1.07
+                                exposure: signed share of time method +0.225 vs the null's +0.243; time in market method 3658755 min vs the null's median 4194390 min — ratio 1.15
+                                exits: 20-day return flipped 184, END_OF_DATA 1; mean hold 19777.0 min
+ts-l60       tsmom                  90   2.183   0.370    1.211    3.190        0   82%  gate pass, inside the noise
+                                  — ANCHOR: the 0.641R-of-carry row; must reproduce rollover-flat B-duka-is.txt
+                                max drawdown 673.49 USD = 4.88% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.583 R is); net +3643.31 USD over 90 trades
+                                matched null 80 trades median vs the method's 90 — count match 0.89
+                                long share: method 0.467 vs the null's median 0.627  ** the control's side ratio is not the method's **
+                                spread paid: method 54.45 USD vs the null's median 54.09 USD — cost match 0.99
+                                exposure: signed share of time method +0.264 vs the null's +0.268; time in market method 3620250 min vs the null's median 3523065 min — ratio 0.97
+                                exits: 60-day return flipped 89, END_OF_DATA 1; mean hold 40225.0 min
+
+Survivors: tsmom/tsmom — worth a decision record and a direction null before anything else.
+

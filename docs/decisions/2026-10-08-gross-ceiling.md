@@ -394,3 +394,83 @@ its post-drift residual beside it.
   **handed to the owner**, not proposed.
 
 ## 12. Amendments
+
+### 2026-10-08, after the eight runs
+
+**Cells: 120 declared, 120 viewed, in 8 runs.** Pre-check cells: 2 declared,
+2 viewed. No row added, no window changed, no arm added, no parameter tuned,
+no threshold moved, no sample floor lowered.
+Result: `receipts/gross-ceiling/RESULT.md`.
+
+**F2 and F3 did not fire** (sections 3 and 7 of this registration; 6 of 6
+reproductions and 4 of 4 parity anchors).
+
+**F1 fires on the frame-compatible reading and NOT unrestricted**, and both
+numbers are published. Unrestricted ceiling `+0.4745 R` per exposed session
+(`rsi2-pullback`, defaults, guards off); frame-compatible ceiling (the declared
+`trips_per_exposed_session <= 1.5` subset, after the void of F6/section 8)
+`+0.0126 R` (`quiet-swing`, defaults, guards off). The second is the one the
+frame consumes and it is **4x under the +0.050 R line**.
+
+**F4 fires.** The highest single-window cell is `trend-pull` guards off IS at
+`+3.0535 R` with `-7.9415 R` on the other half, and **17 of 49 readable
+row-arms (34.7%) flip the sign of gross per exposed session between the two
+halves** — `px-1s` among them, which is addendum 5 section B's drift sign flip
+measured independently.
+
+**F5 does not fire on the maximum** (`rsi2-pull` residual +0.7639 / +0.4426 of a
++0.7642 / +0.4745 gross, so 93-100% is not drift) **but fires on the two rows
+that look frame-shaped**: `sess-hold` defaults guards-off OOS is **101.4%
+drift** (gross +0.2539 R, drift +0.2575 R, residual **-0.0035 R**) and
+`buy-hold` guards-on OOS under-collects its drift (residual **-0.1635 R**).
+
+**F6 fires on 15 of 120 cells / 9 row-arms**, all guards-off, all excluded;
+none held the maximum. Worst: `gap-fade` OOS at **272.41% of peak, -27,729.87
+USD**, whose implied sizing stop is **0.117 price points**.
+
+**Two declared things the plan could not deliver, and one it did not foresee:**
+
+1. **`gap-fade` (both windows) and `intraday-momentum` (OOS) cannot be put
+   through the registered ruler at all**: their `swap$` prints **0** even in the
+   swap arm, because they cross **zero** rollovers by construction, so step 1
+   has nothing to divide. Reported as **NOT MEASURED, not 0**. An uncalibrated
+   `net USD / (expectancy x trades)` side-estimate is given in RESULT.md
+   section 8, **labelled as not the registered ruler**, and it does not change
+   the ceiling.
+2. **Three of the 26 registry mechanisms take essentially no trade at defaults**
+   (`rsi-reversal-vol` 0/0, `volume-thrust` 0/0, `volman-box` 1/0), so the
+   effective row count for ranking is **23 + 4 anchors**, not 30. Declared as
+   measured rather than as a plan change: no row was substituted.
+3. **One derived ratio is introduced AFTER the numbers were seen** and is
+   labelled as such in RESULT.md section 5: `trips_per_session / (spread/gross)`
+   = how many round-trip spreads of gross one exposed session produces. It is a
+   ratio of two columns section 8 of this registration already declared, it is
+   **leverage-invariant** where the headline R metric is not, and the declared
+   ranking is unchanged by it. Measured ceiling on it: **3.94x** against a frame
+   requirement of **~8.7x**.
+
+**Section 2's warning about the denominator was the live issue, exactly as
+written.** Every row above +0.050 R is above it because it takes 3.4-45.5 round
+trips per exposed session, and its `spread/gross` column — declared for this
+purpose — reads 140% to 6,557%. Nothing was re-ranked to hide that; the
+frame-compatible subtable declared in section 2 is published beside the
+unrestricted one.
+
+**An eleventh artefact, not foreseen and worth more than the ranking**
+(RESULT.md section 7): `tsmom` and `ts-l60` are the **same method** and print
+identical `trades`/`PF`/`expectancy`/`total_r`/`swap$`, yet their 200-run nulls
+print `p95` **1.297 vs 2.036** (IS) and **1.422 vs 3.190** (OOS), `pct`
+**96% vs 81%** and **100% vs 82%**, and the **verdict string differs**
+(`SURVIVES` vs `gate pass, inside the noise`). The only difference between the
+rows is **their position in the batch file**. Section 9.1's refusal to publish
+any percentile was therefore load-bearing, not cautious.
+
+**Addendum 5 section A is confirmed here and `agent/rollover-flat`'s opposite
+reading is also confirmed**: 10 cells clear PF and all 10 also clear
+expectancy; 2 clear expectancy and miss PF; 0 the reverse. Addendum 6
+section I's `Lbar = E / (PF - 1)` reconciles the two readings at 0.302-0.496 R
+here against 0.045 R on `rollover-flat`'s flat row. The discriminator is stop
+width, not the gate.
+
+`df -h /e`: **27 GB before, 24 GB after.** Nothing was built on this branch and
+no `target/` was deleted.

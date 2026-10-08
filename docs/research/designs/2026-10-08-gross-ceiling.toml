@@ -1,0 +1,218 @@
+# The gross-per-exposed-session ceiling of this registry on xauduka 15m.
+# Registered: docs/decisions/2026-10-08-gross-ceiling.md (committed alone, bf9bbee).
+# 30 rows, frozen: 26 registry mechanisms at their DEFAULT parameters (no grid,
+# --fixed, no selection) plus 4 labelled anchors that must reproduce the record.
+# Excluded and why: level-reversion / maxpain-magnet / flow-momentum / flow-at-level
+# (needs_options, and this run has no timeline), external (no signal file),
+# companion-unconfirmed (takes no trade without --companion=).
+# No filters on any row: the guards arm carries the weekend and the calendar.
+
+[[hypothesis]]
+label = "ema-cross"
+base = "ema-cross"
+filters = []
+overrides = { }
+why = "classic trend baseline, engine exits"
+
+[[hypothesis]]
+label = "rsi-rev"
+base = "rsi-reversion"
+filters = []
+overrides = { }
+why = "classic mean-reversion baseline"
+
+[[hypothesis]]
+label = "donchian"
+base = "donchian-breakout"
+filters = []
+overrides = { }
+why = "classic breakout baseline"
+
+[[hypothesis]]
+label = "bb-fade"
+base = "bb-fade"
+filters = []
+overrides = { }
+why = "classic band-fade baseline"
+
+[[hypothesis]]
+label = "buy-hold"
+base = "buy-and-hold"
+filters = []
+overrides = { }
+why = "the control everything else has to beat; in the guards arm it is void by construction"
+
+[[hypothesis]]
+label = "ict-smf"
+base = "ict-sweep-mss-fvg"
+filters = []
+overrides = { }
+why = "structure-based, not indicator-based"
+
+[[hypothesis]]
+label = "orb"
+base = "orb"
+filters = []
+overrides = { }
+why = "opening-range breakout"
+
+[[hypothesis]]
+label = "pdhl"
+base = "pdhl"
+filters = []
+overrides = { }
+why = "previous-day levels; its mode-0 core is the CRT core already rejected"
+
+[[hypothesis]]
+label = "crt"
+base = "crt"
+filters = []
+overrides = { }
+why = "Candle Range Theory, registered 2026-10-04 and rejected at 1H/4H"
+
+[[hypothesis]]
+label = "sess-hold"
+base = "session-hold"
+filters = []
+overrides = { }
+why = "the registry default window, not the 1800-1600 one"
+
+[[hypothesis]]
+label = "intraday-mom"
+base = "intraday-momentum"
+filters = []
+overrides = { }
+why = "intraday momentum"
+
+[[hypothesis]]
+label = "vwap-fade"
+base = "vwap-fade"
+filters = []
+overrides = { }
+why = "VWAP fade"
+
+[[hypothesis]]
+label = "tsmom"
+base = "tsmom"
+filters = []
+overrides = { }
+why = "defaults are lookbackDays 60, so this must print identically to ts-l60"
+
+[[hypothesis]]
+label = "doji-rev"
+base = "doji-reversal"
+filters = []
+overrides = { }
+why = "single-candle reversal"
+
+[[hypothesis]]
+label = "gap-fade"
+base = "gap-fade"
+filters = []
+overrides = { }
+why = "the only row that reads the 1600-1800 gap the flat frame forgoes"
+
+[[hypothesis]]
+label = "trend-pull"
+base = "trend-pullback"
+filters = []
+overrides = { }
+why = "trend pullback"
+
+[[hypothesis]]
+label = "vol-thrust"
+base = "volume-thrust"
+filters = []
+overrides = { }
+why = "volume thrust"
+
+[[hypothesis]]
+label = "keltner"
+base = "keltner-break"
+filters = []
+overrides = { }
+why = "screen family"
+
+[[hypothesis]]
+label = "macd-cross"
+base = "macd-cross"
+filters = []
+overrides = { }
+why = "screen family"
+
+[[hypothesis]]
+label = "rsi2-pull"
+base = "rsi2-pullback"
+filters = []
+overrides = { }
+why = "screen family"
+
+[[hypothesis]]
+label = "squeeze"
+base = "squeeze-break"
+filters = []
+overrides = { }
+why = "screen family"
+
+[[hypothesis]]
+label = "stoch-rev"
+base = "stoch-reversal"
+filters = []
+overrides = { }
+why = "screen family"
+
+[[hypothesis]]
+label = "volman"
+base = "volman-box"
+filters = []
+overrides = { }
+why = "Volman box"
+
+[[hypothesis]]
+label = "far-stop"
+base = "far-stop-break"
+filters = []
+overrides = { }
+why = "the cost-term instrument of the 2026-09-23 designed-methods programme; registered at parameters its own design window refuses"
+
+[[hypothesis]]
+label = "quiet-swing"
+base = "quiet-swing"
+filters = []
+overrides = { }
+why = "defaults are holdSessions 5; the first-half signal family of artefact #10"
+
+[[hypothesis]]
+label = "rsi-rev-vol"
+base = "rsi-reversal-vol"
+filters = []
+overrides = { }
+why = "the owner's MT5 expert advisor shape; reward-to-risk 0.375 needs a 72.7% win rate before costs"
+
+[[hypothesis]]
+label = "px-1s"
+base = "session-hold"
+filters = []
+overrides = { from = 1800, to = 1600, side = 1, riskDailyRanges = 1.5, rangeDays = 20 }
+why = "ANCHOR: the session-length constant S and the drift anchor; agent/pure-drift proved this window crosses 0 rollovers"
+
+[[hypothesis]]
+label = "qs-h15"
+base = "quiet-swing"
+filters = []
+overrides = { holdSessions = 15 }
+why = "ANCHOR: must reproduce rollover-flat B-duka-is.txt"
+
+[[hypothesis]]
+label = "ts-l20"
+base = "tsmom"
+filters = []
+overrides = { lookbackDays = 20 }
+why = "ANCHOR: must reproduce rollover-flat B-duka-is.txt"
+
+[[hypothesis]]
+label = "ts-l60"
+base = "tsmom"
+filters = []
+overrides = { lookbackDays = 60 }
+why = "ANCHOR: the 0.641R-of-carry row; must reproduce rollover-flat B-duka-is.txt"
