@@ -165,3 +165,15 @@ cổng** (brief §4) nên nếu `count match` ra ngoài băng thì không công 
    `PF · E · Lbar · drawdown · exit-mix`, không cần null. ⇒ **Phân vị của bốn
    lần đó KHÔNG được công bố**; chỉ phân vị của lần `--seeds=100` được in ra,
    và chỉ khi `count match` trong băng.
+
+## Kết quả — 2026-10-08
+
+Đọc ở `docs/decisions/2026-10-08-stop-width-result.md`. Tóm một dòng: **F2 bắn**
+(ở họ `close/*` cỡ stop là đơn vị đo, không phải tham số cơ chế — tập lệnh y hệt
+ở cả 10 cỡ, `E` và `Lbar` tỉ lệ `1/f`), **F1 không bắn** (có ô qua cả hai chân
+với `Lbar ≥ 0,250R` trong arm giao dịch được), **F4 bắn** ở `f ≤ 0,120`
+(`OPEN_LOSS_CAP` thành exit chính ⇒ cơ chế khác), **F3 và F5 không bắn**
+(0/200 ô cháy). Cổng: 13/40 ô qua hai cửa sổ ở arm không-guards, **1/40** ở arm
+có guards. Hai điều khoản số của F2 trượt, và cả hai cái trượt đáng hơn kết quả:
+nửa spread (0,138 USD) rò vào đơn vị rủi ro (R² = 0,99685), và `PF_usd` dịch
+tới **0,3640** trên cùng một tập lệnh khi `PF_r` dịch **0,0040**.

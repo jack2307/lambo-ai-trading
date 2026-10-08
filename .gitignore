@@ -1,6 +1,9 @@
 /target
 # A second build directory, used when the binaries in /target are running.
 /target-b
+# agent/stop-width built here so it never touched the shared /target while the
+# two collect.exe processes were running.
+/target-sw
 **/*.rs.bk
 
 # Data is fetched, not committed — except the golden files, which are the

@@ -1065,6 +1065,60 @@ fn drawdown_line(m: &fd_backtest::engine::Metrics) -> String {
     )
 }
 
+/// THE SIZE OF A TRADE, printed so the gate's own identity can be checked on
+/// the row rather than assumed.
+///
+/// `agent/gate-legs` derived `E = Lbar x (PF - 1)` with
+/// `Lbar = |sum(-R)| / n` — the gross loss per trade in R, averaged over ALL
+/// trades — and found a perfect separation: 87 of 87 rows rejected by one leg
+/// alone have `Lbar < 0.250R`. The record could only ever reach `Lbar` by
+/// INVERTING the printed PF and expectancy, which makes any test of the
+/// identity circular. Both parts are already in `Metrics` and were never
+/// printed, so this line measures them directly:
+///
+/// * `metrics_of` splits wins from losses by `pnl_usd` sign and takes
+///   `avg_loss_r` as the mean `t.r` over that loss set, so
+///   `Lbar = |avg_loss_r| x (1 - win_rate)` and
+///   `PF_r = avg_win_r x win_rate / (|avg_loss_r| x (1 - win_rate))`.
+/// * `profit_factor` on the same struct is a ratio of **`pnl_usd`**, so it is
+///   a different number in a different unit. Both are printed, because the
+///   distance between them IS the unit mismatch that `AGENT-BRIEF-ADDENDUM-6`
+///   section I counts at 166 rows of the record printing PF and expectancy
+///   with opposite signs.
+///
+/// The identity is restated against `PF_r` and the residual is printed, so a
+/// row where it does not hold says so on its own line instead of being
+/// discovered later. A row whose loss set is empty has no `Lbar` — that is
+/// NOT 0, and the line says which.
+fn lbar_line(m: &fd_backtest::engine::Metrics) -> String {
+    if m.trades == 0 {
+        return "Lbar: NOT MEASURED — this cell took no position (this is not 0.000 R)".to_string();
+    }
+    if !m.avg_loss_r.is_finite() {
+        return format!(
+            "Lbar: NOT MEASURED — no losing trade in {} (win rate {:.1}%), so the gross loss per trade has no value; this is not 0.000 R and PF_usd {:.3} has no finite denominator in R either",
+            m.trades,
+            m.win_rate * 100.0,
+            m.profit_factor
+        );
+    }
+    let loss_share = 1.0 - m.win_rate;
+    let lbar = m.avg_loss_r.abs() * loss_share;
+    let gross_win_r = if m.avg_win_r.is_finite() { m.avg_win_r * m.win_rate } else { 0.0 };
+    let pf_r = if lbar > 0.0 { gross_win_r / lbar } else { f64::INFINITY };
+    let implied = lbar * (pf_r - 1.0);
+    let residual = m.expectancy - implied;
+    let redundant = if lbar >= 0.250 { "expectancy leg REDUNDANT (Lbar >= 0.250R)" } else { "expectancy leg BINDS (Lbar < 0.250R)" };
+    format!(
+        "Lbar {lbar:.4} R = |avg_loss_r| {:.4} x loss share {loss_share:.4} over {} trades; PF_r {pf_r:.4} (R) vs PF_usd {:.4} (USD, gap {:+.4}); identity E = Lbar(PF_r-1) = {implied:+.4} R vs expectancy {:+.4} R, residual {residual:+.5} R; {redundant}",
+        m.avg_loss_r.abs(),
+        m.trades,
+        m.profit_factor,
+        pf_r - m.profit_factor,
+        m.expectancy,
+    )
+}
+
 /// A declared batch of hypotheses, each read against its matched null.
 #[allow(clippy::too_many_arguments)]
 fn run_hypotheses(
@@ -1175,6 +1229,7 @@ fn run_hypotheses(
         // not the same row for a real account, and the desk could not tell
         // them apart. `docs/decisions/2026-10-07-drawdown-printed.md`.
         println!("{:<12} {:<18} {}", "", "", drawdown_line(m));
+        println!("{:<12} {:<18} {}", "", "", lbar_line(m));
         // EXPECTANCY WITH THE FINANCING IN IT, on every row that paid any.
         //
         // `expectancy` above is the mean of `r = points / risk`, which is
@@ -1560,6 +1615,8 @@ fn run_rescore(
         // `docs/decisions/2026-10-07-drawdown-printed.md`.
         println!("{:<22} walk-forward {}", "", drawdown_line(&row.oos));
         println!("{:<22} whole window {}", "", drawdown_line(&row.whole));
+        println!("{:<22} walk-forward {}", "", lbar_line(&row.oos));
+        println!("{:<22} whole window {}", "", lbar_line(&row.whole));
         println!(
             "{:<22} matched null p50 {:.3} / p95 {:.3} gross, p50 {:.3} / p95 {:.3} net over {} runs",
             "",
@@ -1936,7 +1993,7 @@ mod flag_tests {
 /// was produced before this branch existed.
 #[cfg(test)]
 mod drawdown_printer_tests {
-    use super::{drawdown_line, gate_header, gate_row};
+    use super::{drawdown_line, gate_header, gate_row, lbar_line};
     use fd_backtest::engine::Metrics;
 
     /// A receipt from the record: `--mode=hypotheses` over `xauusd` 15m,
@@ -2005,5 +2062,61 @@ mod drawdown_printer_tests {
         let line = drawdown_line(&m);
         assert!(line.contains("max drawdown 0.00 USD = 0.00% of the book's peak equity"), "{line}");
         assert!(!line.contains("NOT MEASURED"), "{line}");
+    }
+
+    /// The Lbar line reproduces the gate identity from the two fields it is
+    /// built out of, and it does so on numbers chosen so every part is
+    /// checkable by hand: 40 trades, 50% wins, every win +0.60 R, every loss
+    /// -0.40 R.  Lbar = 0.40 x 0.50 = 0.200 R, gross win per trade
+    /// = 0.60 x 0.50 = 0.300 R, PF_r = 1.500, and the identity gives
+    /// 0.200 x 0.500 = +0.100 R, which is the mean of +0.60 and -0.40.
+    #[test]
+    fn the_lbar_line_reproduces_the_gate_identity_from_measured_parts() {
+        let m = Metrics {
+            trades: 40,
+            win_rate: 0.5,
+            avg_win_r: 0.6,
+            avg_loss_r: -0.4,
+            expectancy: 0.1,
+            profit_factor: 1.5,
+            ..Metrics::empty()
+        };
+        let line = lbar_line(&m);
+        assert!(line.contains("Lbar 0.2000 R"), "{line}");
+        assert!(line.contains("PF_r 1.5000"), "{line}");
+        assert!(line.contains("residual +0.00000 R"), "the identity must close on exact inputs: {line}");
+        assert!(line.contains("expectancy leg BINDS (Lbar < 0.250R)"), "{line}");
+    }
+
+    /// The same row with the PF the engine actually prints — a ratio of
+    /// `pnl_usd` — different from the R ratio: the line prints the gap rather
+    /// than hiding it, because that gap is the unit mismatch itself.
+    #[test]
+    fn the_lbar_line_prints_the_usd_versus_r_gap_instead_of_hiding_it() {
+        let m = Metrics { trades: 40, win_rate: 0.5, avg_win_r: 0.6, avg_loss_r: -0.4, expectancy: 0.1, profit_factor: 2.0, ..Metrics::empty() };
+        let line = lbar_line(&m);
+        assert!(line.contains("PF_r 1.5000 (R) vs PF_usd 2.0000 (USD, gap -0.5000)"), "{line}");
+    }
+
+    /// `Lbar` over an empty cell, and over a cell with no losing trade, is
+    /// absent — not 0.000 R.  `null != 0` (brief section 8).
+    #[test]
+    fn an_lbar_with_no_losing_trade_is_absent_not_zero() {
+        assert!(lbar_line(&Metrics::empty()).contains("NOT MEASURED"), "empty cell");
+        let m = Metrics { trades: 12, win_rate: 1.0, avg_win_r: 0.3, avg_loss_r: f64::NAN, expectancy: 0.3, profit_factor: f64::INFINITY, ..Metrics::empty() };
+        let line = lbar_line(&m);
+        assert!(line.contains("NOT MEASURED"), "{line}");
+        assert!(line.contains("this is not 0.000 R"), "{line}");
+        assert!(!line.contains("Lbar 0.0000"), "{line}");
+    }
+
+    /// A row the gate's expectancy leg cannot bind on: `Lbar >= 0.250 R` is
+    /// exactly the condition `agent/gate-legs` derived, and the line names it
+    /// so a reader does not have to re-derive the threshold.
+    #[test]
+    fn an_lbar_at_or_above_the_threshold_says_the_expectancy_leg_is_redundant() {
+        let m = Metrics { trades: 60, win_rate: 0.4, avg_win_r: 1.8, avg_loss_r: -0.8333, expectancy: 0.22, profit_factor: 1.44, ..Metrics::empty() };
+        let line = lbar_line(&m);
+        assert!(line.contains("expectancy leg REDUNDANT (Lbar >= 0.250R)"), "{line}");
     }
 }
