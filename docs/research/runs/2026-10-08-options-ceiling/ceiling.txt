@@ -1,0 +1,178 @@
+== options_ceiling, agent/options-precheck, 2026-10-08 ==
+== registered in docs/decisions/2026-10-08-options-ceiling-precheck.md ==
+== arithmetic only: no strategy ran, no position opened, no PF/expectancy/percentile/null ==
+
+########## gold / GC-1m offset +0.00
+market:   gold (engine settings, cluster floor / atr_fraction)
+bars:     16923 GC from E:/rust/flowdesk/data\bars\GC-1m.parquet
+offset:   +0.00 USD added to every bar price (0 = none)
+tape:     46986 prints, 9121 frames, step 300000 ms
+shape:    16923/16923 bars open==high==low==close (100.00%)   volume: 0 zero, 16923 null
+          ** EVERY BAR HAS ZERO RANGE: this series cannot cover a stop, the counts below are NOT TRADABLE **
+warmup:   42 bars skipped (atrPeriod x 3)   max_hold 14400000 ms
+
+minScore  entryAtr  framed  CEILING  4h-SPACED  medDist  medAtr
+     2.0      0.20   16881     3596         61    3.900   0.944
+     2.0      0.35   16881     3799         61    3.900   0.944
+     2.0      0.60   16881     4154         62    3.900   0.944
+     3.0      0.20   16881     3579         58    4.100   0.944
+     3.0      0.35   16881     3778         59    4.100   0.944
+     3.0      0.60   16881     4118         61    4.100   0.944
+     5.0      0.20   16881     3549         56    4.500   0.944
+     5.0      0.35   16881     3737         57    4.500   0.944
+     5.0      0.60   16881     4047         57    4.500   0.944
+
+########## XAUUSD-1m offset +41.26
+bars:     100000 XAUUSD from E:/rust/flowdesk/data\bars\XAUUSD-1m.parquet
+offset:   +41.26 USD added to every bar price (0 = none)
+tape:     46897 prints, 9117 frames, step 300000 ms
+shape:    0/100000 bars open==high==low==close (0.00%)   volume: 0 zero, 0 null
+warmup:   42 bars skipped (atrPeriod x 3)   max_hold 14400000 ms
+
+minScore  entryAtr  framed  CEILING  4h-SPACED  medDist  medAtr
+     2.0      0.20    6731      634         22    6.100   1.849
+     2.0      0.35    6731      773         23    6.100   1.849
+     2.0      0.60    6731     1030         24    6.100   1.849
+     3.0      0.20    6731      604         22    6.850   1.849
+     3.0      0.35    6731      725         22    6.850   1.849
+     3.0      0.60    6731      953         22    6.850   1.849
+     5.0      0.20    6731      586         19    7.820   1.849
+     5.0      0.35    6731      690         19    7.820   1.849
+     5.0      0.60    6731      885         19    7.820   1.849
+########## XAUUSD-1m offset +43.70
+bars:     100000 XAUUSD from E:/rust/flowdesk/data\bars\XAUUSD-1m.parquet
+offset:   +43.70 USD added to every bar price (0 = none)
+tape:     46897 prints, 9117 frames, step 300000 ms
+shape:    0/100000 bars open==high==low==close (0.00%)   volume: 0 zero, 0 null
+warmup:   42 bars skipped (atrPeriod x 3)   max_hold 14400000 ms
+
+minScore  entryAtr  framed  CEILING  4h-SPACED  medDist  medAtr
+     2.0      0.20    6731      577         24    6.060   1.849
+     2.0      0.35    6731      724         24    6.060   1.849
+     2.0      0.60    6731      963         24    6.060   1.849
+     3.0      0.20    6731      560         22    6.710   1.849
+     3.0      0.35    6731      691         23    6.710   1.849
+     3.0      0.60    6731      913         23    6.710   1.849
+     5.0      0.20    6731      531         19    7.611   1.849
+     5.0      0.35    6731      637         20    7.611   1.849
+     5.0      0.60    6731      818         20    7.611   1.849
+########## XAUUSD-1m offset +45.78
+bars:     100000 XAUUSD from E:/rust/flowdesk/data\bars\XAUUSD-1m.parquet
+offset:   +45.78 USD added to every bar price (0 = none)
+tape:     46897 prints, 9117 frames, step 300000 ms
+shape:    0/100000 bars open==high==low==close (0.00%)   volume: 0 zero, 0 null
+warmup:   42 bars skipped (atrPeriod x 3)   max_hold 14400000 ms
+
+minScore  entryAtr  framed  CEILING  4h-SPACED  medDist  medAtr
+     2.0      0.20    6731      581         24    5.820   1.849
+     2.0      0.35    6731      708         25    5.820   1.849
+     2.0      0.60    6731      970         25    5.820   1.849
+     3.0      0.20    6731      568         22    6.750   1.849
+     3.0      0.35    6731      687         23    6.750   1.849
+     3.0      0.60    6731      931         23    6.750   1.849
+     5.0      0.20    6731      531         18    8.040   1.849
+     5.0      0.35    6731      628         18    8.040   1.849
+     5.0      0.60    6731      827         18    8.040   1.849
+########## XAUUSD-5m offset +41.26
+bars:     101242 XAUUSD from E:/rust/flowdesk/data\bars\XAUUSD-5m.parquet
+offset:   +41.26 USD added to every bar price (0 = none)
+tape:     46897 prints, 9117 frames, step 300000 ms
+shape:    1/101242 bars open==high==low==close (0.00%)   volume: 0 zero, 0 null
+warmup:   42 bars skipped (atrPeriod x 3)   max_hold 14400000 ms
+
+minScore  entryAtr  framed  CEILING  4h-SPACED  medDist  medAtr
+     2.0      0.20    1841      291         28    5.780   4.517
+     2.0      0.35    1841      384         32    5.780   4.517
+     2.0      0.60    1841      534         32    5.780   4.517
+     3.0      0.20    1841      276         26    6.240   4.517
+     3.0      0.35    1841      362         29    6.240   4.517
+     3.0      0.60    1841      501         29    6.240   4.517
+     5.0      0.20    1841      259         23    7.300   4.517
+     5.0      0.35    1841      326         27    7.300   4.517
+     5.0      0.60    1841      443         27    7.300   4.517
+########## XAUUSD-5m offset +43.70
+bars:     101242 XAUUSD from E:/rust/flowdesk/data\bars\XAUUSD-5m.parquet
+offset:   +43.70 USD added to every bar price (0 = none)
+tape:     46897 prints, 9117 frames, step 300000 ms
+shape:    1/101242 bars open==high==low==close (0.00%)   volume: 0 zero, 0 null
+warmup:   42 bars skipped (atrPeriod x 3)   max_hold 14400000 ms
+
+minScore  entryAtr  framed  CEILING  4h-SPACED  medDist  medAtr
+     2.0      0.20    1841      263         32    5.990   4.517
+     2.0      0.35    1841      342         32    5.990   4.517
+     2.0      0.60    1841      511         33    5.990   4.517
+     3.0      0.20    1841      255         29    6.410   4.517
+     3.0      0.35    1841      327         31    6.410   4.517
+     3.0      0.60    1841      482         32    6.410   4.517
+     5.0      0.20    1841      233         27    7.270   4.517
+     5.0      0.35    1841      289         27    7.270   4.517
+     5.0      0.60    1841      420         27    7.270   4.517
+########## XAUUSD-5m offset +45.78
+bars:     101242 XAUUSD from E:/rust/flowdesk/data\bars\XAUUSD-5m.parquet
+offset:   +45.78 USD added to every bar price (0 = none)
+tape:     46936 prints, 9119 frames, step 300000 ms
+shape:    1/101242 bars open==high==low==close (0.00%)   volume: 0 zero, 0 null
+warmup:   42 bars skipped (atrPeriod x 3)   max_hold 14400000 ms
+
+minScore  entryAtr  framed  CEILING  4h-SPACED  medDist  medAtr
+     2.0      0.20    1841      251         28    5.660   4.517
+     2.0      0.35    1841      351         31    5.660   4.517
+     2.0      0.60    1841      513         33    5.660   4.517
+     3.0      0.20    1841      241         27    6.300   4.517
+     3.0      0.35    1841      335         29    6.300   4.517
+     3.0      0.60    1841      491         31    6.300   4.517
+     5.0      0.20    1841      217         22    7.520   4.517
+     5.0      0.35    1841      293         24    7.520   4.517
+     5.0      0.60    1841      427         25    7.520   4.517
+########## XAUUSD-15m offset +41.26
+bars:     100586 XAUUSD from E:/rust/flowdesk/data\bars\XAUUSD-15m.parquet
+offset:   +41.26 USD added to every bar price (0 = none)
+tape:     46936 prints, 9119 frames, step 300000 ms
+shape:    1/100586 bars open==high==low==close (0.00%)   volume: 0 zero, 0 null
+warmup:   42 bars skipped (atrPeriod x 3)   max_hold 14400000 ms
+
+minScore  entryAtr  framed  CEILING  4h-SPACED  medDist  medAtr
+     2.0      0.20     786      182         36    5.310   8.232
+     2.0      0.35     786      261         39    5.310   8.232
+     2.0      0.60     786      389         42    5.310   8.232
+     3.0      0.20     786      173         34    5.650   8.232
+     3.0      0.35     786      248         38    5.650   8.232
+     3.0      0.60     786      373         41    5.650   8.232
+     5.0      0.20     786      161         32    6.330   8.232
+     5.0      0.35     786      230         36    6.330   8.232
+     5.0      0.60     786      337         36    6.330   8.232
+########## XAUUSD-15m offset +43.70
+bars:     100586 XAUUSD from E:/rust/flowdesk/data\bars\XAUUSD-15m.parquet
+offset:   +43.70 USD added to every bar price (0 = none)
+tape:     46936 prints, 9119 frames, step 300000 ms
+shape:    1/100586 bars open==high==low==close (0.00%)   volume: 0 zero, 0 null
+warmup:   42 bars skipped (atrPeriod x 3)   max_hold 14400000 ms
+
+minScore  entryAtr  framed  CEILING  4h-SPACED  medDist  medAtr
+     2.0      0.20     786      152         38    5.510   8.232
+     2.0      0.35     786      245         40    5.510   8.232
+     2.0      0.60     786      388         44    5.510   8.232
+     3.0      0.20     786      147         35    5.930   8.232
+     3.0      0.35     786      235         39    5.930   8.232
+     3.0      0.60     786      370         42    5.930   8.232
+     5.0      0.20     786      137         30    6.500   8.232
+     5.0      0.35     786      213         35    6.500   8.232
+     5.0      0.60     786      333         37    6.500   8.232
+########## XAUUSD-15m offset +45.78
+bars:     100586 XAUUSD from E:/rust/flowdesk/data\bars\XAUUSD-15m.parquet
+offset:   +45.78 USD added to every bar price (0 = none)
+tape:     46936 prints, 9119 frames, step 300000 ms
+shape:    1/100586 bars open==high==low==close (0.00%)   volume: 0 zero, 0 null
+warmup:   42 bars skipped (atrPeriod x 3)   max_hold 14400000 ms
+
+minScore  entryAtr  framed  CEILING  4h-SPACED  medDist  medAtr
+     2.0      0.20     786      163         37    5.430   8.232
+     2.0      0.35     786      236         41    5.430   8.232
+     2.0      0.60     786      373         44    5.430   8.232
+     3.0      0.20     786      158         36    5.730   8.232
+     3.0      0.35     786      229         40    5.730   8.232
+     3.0      0.60     786      357         43    5.730   8.232
+     5.0      0.20     786      144         32    6.830   8.232
+     5.0      0.35     786      206         35    6.830   8.232
+     5.0      0.60     786      314         38    6.830   8.232
+
