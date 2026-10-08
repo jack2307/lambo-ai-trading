@@ -146,3 +146,22 @@ cổng** (brief §4) nên nếu `count match` ra ngoài băng thì không công 
   "biên độ ngày NY 20 ngày" chứ không viết "ATR" trần (phụ lục 5 mục F).
 - Nếu f tối ưu khác nhau giữa hai cửa sổ ⇒ **cỡ stop là hiện vật cửa sổ thứ
   mười một**, và viết đúng thế (phụ lục 6 mục V).
+
+---
+
+## Ghi chú thêm — 2026-10-08, sau lần chạy đầu, trước khi đọc kết quả
+
+1. **`fixed = true` trong file batch KHÔNG được `--mode=hypotheses` đọc.**
+   `search.rs:307` lấy nó từ `std::env::args().any(|a| a == "--fixed")`; trường
+   trong `[run]` của file toml trơ. Lần chạy đầu (OOS, guards off) vì thế ra
+   **walk-forward (4 folds)**, không phải fixed-replay — đúng như hồ sơ cũ
+   cũng có cả hai bản (`out-of-sample.txt` walk-forward vs
+   `out-of-sample-fixed.txt`). Bảng f mục tiêu ở mục 3 tính từ bản **fixed**,
+   nên bốn lần chạy chính của job này đi kèm `--fixed`.
+   **Lần chạy walk-forward đó được GIỮ và báo, không bỏ** — nó là ô thứ 161–200
+   và sổ đa phép thử sửa thành **200 ô, 5 lần gọi binary**.
+2. **`seeds`**: lần chạy đầu dùng `--seeds=100`. Bốn lần `--fixed` còn lại dùng
+   `--seeds=20` vì **phân vị không phải cổng** (brief §4) và cái job này đo là
+   `PF · E · Lbar · drawdown · exit-mix`, không cần null. ⇒ **Phân vị của bốn
+   lần đó KHÔNG được công bố**; chỉ phân vị của lần `--seeds=100` được in ra,
+   và chỉ khi `count match` trong băng.
