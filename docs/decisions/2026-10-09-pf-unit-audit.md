@@ -139,3 +139,39 @@ If any row flips, it is named and its direction is stated.
 - `data-sealed/` is NOT opened.
 - Rows outside the band, rows with no echoed command, and rows that do not
   reproduce are counted and named as unmeasured, never as 0.
+
+---
+
+## Note added 2026-10-09, after the first trial run (appended, nothing above rewritten)
+
+Three things the registration above did not anticipate, each settled by
+measurement before the run set was launched:
+
+1. **`--seeds=1` is used instead of each command's published seed count.**
+   MEASURED on `2026-09-13-recent-year-sessions.toml` (xauusd 15m,
+   2025-09-13 -> 2026-09-12): `--seeds=1` and `--seeds=200` print the method
+   rows AND every `Lbar ... PF_r ... PF_usd ... residual` line
+   **byte-identical**. Only `null p50`/`p95`, the percentile and the verdict
+   WORD move, and this axis reads none of those — the verdict side is read off
+   the PUBLISHED row. This buys the whole 88-command set at a cost the machine
+   can pay while three other agents hold the same binary.
+
+2. **The record does not re-run to its own `PF_usd`.** First trial:
+   `ema-cross/asia` reproduced its trade count (37) and its expectancy
+   (+0.294 R) exactly, but `PF_usd` printed 1.622 against a published 1.632 —
+   the binary has moved since publication. The registration's reproduction
+   check ("trades, PF_usd and expectancy match to printed width") is therefore
+   **split into two readings that are reported separately and never mixed**:
+
+       (A) PUBLISHED PF_usd vs re-run PF_r  — the published verdict's own side
+       (B) re-run  PF_usd   vs re-run PF_r  — the pure unit effect in one run
+
+   Pairing requires the **same label and the same trade count** (the same trade
+   set); the `PF_usd` drift is reported as its own table and is never folded
+   into a flip count. A published row with no cell at its trade count is
+   counted and named as NOT REPRODUCED.
+
+3. **`--config=` is normalised to this worktree's `config/`.** Any published
+   run that used a copied config dir would not be reproduced faithfully; all 88
+   band commands echoed the default `config`, so none is affected. Flagged
+   because it is a fidelity limit, not because it bit.

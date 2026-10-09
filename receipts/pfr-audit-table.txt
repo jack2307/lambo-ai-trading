@@ -1,0 +1,242 @@
+================================================================================================================
+THE UNIT OF THE PF LEG, READ ACROSS THE PUBLISHED RECORD - NO GATE
+Registration: docs/decisions/2026-10-09-pf-unit-audit.md (band declared before any run)
+================================================================================================================
+refs scanned                                             131
+distinct printed rows harvested                        10802
+rows carrying BOTH a PF and an expectancy               6589
+IN THE DECLARED BAND PF_usd in [0.700, 1.700]           4845  rows
+  distinct (label, trades, PF, E) keys                  3381
+  keys reproducible from an echoed command               503   <- declared re-run set
+  commands declared                                       88
+  commands that completed (exit 0)                        88
+  commands that did not                                    0
+PAIRED CELLS (same label AND same trade count)           452
+  of those printing a finite Lbar                        452
+  Lbar NOT MEASURED (no losing trade / no position)        0   <- null, not 0.000 R
+not paired: command not run                                0
+not paired: ran, no cell with that label+trades           51
+not paired: Lbar trade count disagreed with row            0
+================================================================================================================
+REQUIRED CHECK - THE IDENTITY  E = Lbar x (PF_r - 1)  ON MY OWN RE-RUNS
+The first place the identity is known to break is engine.rs:1070-1076 (USD mixed
+with R). A cell of mine outside ~1e-4 R would be a SECOND place, and that is worth
+more than the result.
+================================================================================================================
+cells checked                                   : 452
+within 1e-4 R                                   : 452  (100.0%)
+largest |residual| of E = Lbar(PF_r - 1)         : 0.00009 R
+the ten largest residuals:
+   +0.00009 R  fx/us-long                   n=1669  Lbar 0.1151 R  PF_r 0.9758  PF_usd 0.9746
+   -0.00009 R  orb/30m                      n=47    Lbar 0.5065 R  PF_r 0.9095  PF_usd 0.8546
+   -0.00008 R  macd-cross/london            n=1660  Lbar 0.6095 R  PF_r 0.8221  PF_usd 0.8260
+   -0.00008 R  rsi2-pullback/asia           n=922   Lbar 0.4673 R  PF_r 0.8425  PF_usd 0.8188
+   -0.00008 R  ict-sweep-mss-fvg/ny         n=62    Lbar 0.3232 R  PF_r 0.8332  PF_usd 0.8259
+   -0.00008 R  hold/08-10-long              n=723   Lbar 1.4535 R  PF_r 0.9418  PF_usd 0.9030
+   +0.00008 R  close/1630-1815              n=1620  Lbar 0.0327 R  PF_r 0.7435  PF_usd 0.7439
+   +0.00007 R  ema-cross/london             n=345   Lbar 0.6503 R  PF_r 0.7935  PF_usd 0.7874
+   +0.00007 R  vwap-fade/london             n=1566  Lbar 0.6805 R  PF_r 0.8719  PF_usd 0.8639
+   -0.00007 R  keltner-break/all            n=2213  Lbar 0.5420 R  PF_r 0.8344  PF_usd 0.8364
+
+No cell is outside 1e-4 R: the identity holds in R on every cell I ran.
+================================================================================================================
+THE GAP  PF_usd - PF_r  ON THE SAME TRADE SET (same run, same cell, same trades)
+================================================================================================================
+cells                : 452
+|gap| median         : 0.0093
+|gap| p90            : 0.0341
+|gap| MAX            : 0.1343   (agent/stop-width measured 0.3640 on 200 cells)
+|gap| > 0.3640       : 0 cells  <- wider than anything stop-width measured
+|gap| > 0.5000       : 0 cells  <- outside the half-width of my declared band
+
+sign of the gap against the sign of the book (PF_usd >= 1 = a winning book):
+   book down  PF_usd flattered      249
+   book down  PF_usd penalised       98
+   book down  equal                   1
+   book up    PF_usd flattered       71
+   book up    PF_usd penalised       33
+
+the twelve widest gaps:
+   gap -0.1343  PF_usd 1.7013 -> PF_r 1.5670  volume-thrust/london       n=5     xauusd 5m
+   gap +0.1222  PF_usd 1.6041 -> PF_r 1.7263  tsmom/60d                  n=95    xagduka 15m
+   gap +0.1058  PF_usd 1.3744 -> PF_r 1.4802  tsmom/60d                  n=76    xagduka 15m
+   gap +0.0802  PF_usd 0.7644 -> PF_r 0.8446  donchian-breakout/london   n=3734  xauduka 5m
+   gap +0.0782  PF_usd 0.9811 -> PF_r 1.0593  orb/london                 n=64    xauusd 5m
+   gap +0.0739  PF_usd 1.5903 -> PF_r 1.6642  tsmom2/120d                n=48    xauduka 15m
+   gap +0.0739  PF_usd 1.5903 -> PF_r 1.6642  tsmom2/120d                n=48    xauduka 15m
+   gap +0.0713  PF_usd 0.8387 -> PF_r 0.9100  hold/08-10-short           n=723   xauduka 15m
+   gap +0.0681  PF_usd 0.9575 -> PF_r 1.0256  orb/all                    n=65    xauusd 5m
+   gap +0.0681  PF_usd 0.9575 -> PF_r 1.0256  orb/ny                     n=65    xauusd 5m
+   gap +0.0624  PF_usd 0.7094 -> PF_r 0.7718  keltner-break/ny           n=2690  xauduka 5m
+   gap +0.0619  PF_usd 1.0022 -> PF_r 1.0641  tsmom/120d                 n=104   xagduka 15m
+================================================================================================================
+REQUIRED COUNT 1 - VERDICTS THAT CROSS PF 1.200 WHEN THE LEG IS READ IN R
+Two readings, reported separately and never mixed:
+  (A) PUBLISHED PF_usd  vs  re-run PF_r  - the published verdict's own side
+  (B) re-run  PF_usd    vs  re-run PF_r  - the pure unit effect inside one run
+================================================================================================================
+
+(A) published PF_usd vs re-run PF_r   cells 452
+   FLIP, the record reads TOO HIGH (PF_usd >= 1.200, PF_r <  1.200) :    1
+   FLIP, the record reads TOO LOW  (PF_usd <  1.200, PF_r >= 1.200) :    2
+   TOTAL FLIPS                                                      :    3   (0.7% of cells read)
+
+(B) re-run PF_usd vs re-run PF_r   cells 452
+   FLIP, the record reads TOO HIGH (PF_usd >= 1.200, PF_r <  1.200) :    1
+   FLIP, the record reads TOO LOW  (PF_usd <  1.200, PF_r >= 1.200) :    2
+   TOTAL FLIPS                                                      :    3   (0.7% of cells read)
+================================================================================================================
+REQUIRED COUNT 1 (cont.) - EVERY FLIPPING ROW BY NAME, reading A (the published verdict)
+  DECISION = the row sits in docs/decisions/; RECEIPT = it only ever sat in a receipt.
+================================================================================================================
+
+THE RECORD READS TOO HIGH (published PF_usd >= 1.200, PF_r < 1.200)   -   1 rows
+   RECEIPT  hold/20-22-long            n=463   published PF_usd 1.238 | re-run PF_usd 1.2376 -> PF_r 1.1818
+             Lbar 0.6660 R, E +0.121 R, xauduka 15m, 10,000 USD book  [POSITIVE verdict printed]
+
+THE RECORD READS TOO LOW  (published PF_usd <  1.200, PF_r >= 1.200)   -   2 rows
+   RECEIPT  hold/06-08-long            n=206   published PF_usd 1.196 | re-run PF_usd 1.1925 -> PF_r 1.2208
+             Lbar 0.5343 R, E +0.118 R, xauusd 15m, CENT 100 USD book, min-lot clamped (defect 17)
+   DECISION m15/eq-open-60m            n=316   published PF_usd 1.192 | re-run PF_usd 1.1919 -> PF_r 1.2034
+             Lbar 0.2630 R, E +0.053 R, btc 15m, 10,000 USD book
+             docs/decisions/2026-09-13-m15-check.md
+================================================================================================================
+REQUIRED COUNT 2 - DECISION RECORD vs RECEIPT ONLY
+A flip inside docs/decisions/ weighs more than a flip that only ever sat in a receipt.
+================================================================================================================
+population                                    cells  flips A  flips B  too high  too low
+paired cells, ALL                               452        3        3         1        2
+  in docs/decisions/ (DECISION RECORD)           63        1        1         0        1
+  receipt only                                  389        2        2         1        1
+  printed a POSITIVE verdict                     28        1        1         1        0
+  >= 40 trades (the desk floor)                 438        3        3         1        2
+================================================================================================================
+REQUIRED COUNT 3 - SPLIT BY INSTRUMENT AND BOOK (defect 17)
+config/default.toml: starting_equity_usd = 100.0 for xauusd/eurusd/btcusd (a CENT
+book), so raw_lots < min_lot 0.01 is clamped and PF_usd there is the PF of a
+0.01-lot book, not of a 1%-risk book. The other markets take the 10,000 USD
+default. PF_usd on the two is NOT the same quantity.
+================================================================================================================
+market        book USD  cells  |gap| med  |gap| max  flips A  flips B
+btc             10,000     18     0.0115     0.0575        1        1
+eurduka         10,000     12     0.0027     0.0058        0        0
+xagduka         10,000     12     0.0534     0.1222        0        0
+xauduka         10,000    258     0.0081     0.0802        1        1
+xauusd             100    152     0.0121     0.1343        1        1
+================================================================================================================
+WHAT I COULD NOT HOLD FIXED - THE RECORD DOES NOT RE-RUN TO ITS OWN PF_usd
+Same command, same batch file, same window, same trade count - but the binary has
+moved since publication. Reported SEPARATELY, never folded into a flip count.
+================================================================================================================
+paired cells (trade count identical, so the TRADE SET is the same) : 452
+  re-run PF_usd equal to published to print width (<= 0.0005)      : 295  (65.3%)
+  |published PF_usd - re-run PF_usd| median                        : 0.0004
+  |published PF_usd - re-run PF_usd| max                           : 0.1620
+  the eight widest drifts:
+    +0.1620  tsmom/120d                 n=70    published 1.248 -> re-run 1.4100  xagduka
+    +0.1393  volume-thrust/london       n=5     published 1.562 -> re-run 1.7013  xauusd
+    +0.1005  hold/us-hours              n=435   published 0.781 -> re-run 0.8815  btc
+    -0.0759  orb/london                 n=64    published 1.057 -> re-run 0.9811  xauusd
+    +0.0721  tsmom/60d                  n=95    published 1.532 -> re-run 1.6041  xagduka
+    +0.0703  tsmom2/120d                n=48    published 1.520 -> re-run 1.5903  xauduka
+    +0.0692  tsmom/120d                 n=104   published 0.933 -> re-run 1.0022  xagduka
+    -0.0685  orb/all                    n=65    published 1.026 -> re-run 0.9575  xauusd
+================================================================================================================
+IS THE DECLARED BAND WIDE ENOUGH?  measured over EVERY cell of EVERY completed run,
+not only the paired ones - the widest |PF_usd - PF_r| anywhere bounds how far from
+1.200 a row can sit and still cross it.
+================================================================================================================
+cells with a finite Lbar in the re-runs          : 653
+|PF_usd - PF_r| median                          : 0.0090
+|PF_usd - PF_r| p99                             : 0.0802
+|PF_usd - PF_r| MAX                             : 0.3423
+declared band half-width                        : 0.5000
+cells whose gap exceeds the band half-width     : 0
+the widest gap anywhere: close/fri-1630-1815 n=56 xauusd 15m  PF_usd 1.4635 -> PF_r 1.8058
+
+=> No cell anywhere in the re-runs has a gap as wide as the band's half-width,
+   so on this evidence a published row OUTSIDE [0.700, 1.700] could not have
+   crossed 1.200 either. The band was declared wide enough and measured so.
+================================================================================================================
+PUBLISHED ROWS WHOSE COMMAND RAN BUT WHOSE CELL NO LONGER EXISTS, BY NAME
+The label is still printed by the same batch file, but the TRADE COUNT has moved,
+so there is no cell with the published trade count to read a PF_r off. This is a
+reproducibility defect of the record, not a flip; it is counted, never folded in.
+================================================================================================================
+  rows whose nearest surviving cell is within 2% or 5 trades : 17 of 51
+    of those, within 5 trades                               : 17
+    of those NEAREST cells that would sit on the other side  : 3
+      DECISION close/1815-2200          published n=289 PF_usd 1.195  vs nearest cell n=292 PF_r 1.2061 (PF_usd 1.2185)
+      DECISION close/fri-1630-1815      published n=336 PF_usd 0.827  vs nearest cell n=336 PF_r 2.1059 (PF_usd 2.0917)
+      RECEIPT  close/fri-1630-1815      published n=270 PF_usd 1.155  vs nearest cell n=270 PF_r 2.3376 (PF_usd 2.3299)
+    (a different trade set, so NOT a flip - a bound on what the 51 could hide)
+
+  DECISION close/1400-1630              published n=289    PF_usd 0.955   now prints n=[236, 291, 1106, 1375]
+  RECEIPT  close/1400-1630              published n=234    PF_usd 0.962   now prints n=[236, 291, 1106, 1375]
+  DECISION close/1630-1815              published n=282    PF_usd 1.299   now prints n=[230, 284, 1086, 1301, 1355, 1620]
+  DECISION close/1630-1815              published n=1621   PF_usd 0.733   now prints n=[230, 284, 1086, 1301, 1355, 1620]
+  RECEIPT  close/1630-1815              published n=228    PF_usd 1.400   now prints n=[230, 284, 1086, 1301, 1355, 1620]
+  DECISION close/1630-2000              published n=282    PF_usd 1.637   now prints n=[230, 284, 1086, 1355]
+  DECISION close/1630-2200              published n=282    PF_usd 1.355   now prints n=[230, 284, 1086, 1355]
+  RECEIPT  close/1630-2200              published n=228    PF_usd 1.420   now prints n=[230, 284, 1086, 1355]
+  DECISION close/1815-2200              published n=289    PF_usd 1.195   now prints n=[236, 292, 1120, 1397]
+  RECEIPT  close/1815-2200              published n=234    PF_usd 1.254   now prints n=[236, 292, 1120, 1397]
+  DECISION close/fri-1630-1815          published n=336    PF_usd 0.827   now prints n=[0, 56, 68, 270, 336]
+  RECEIPT  close/fri-1630-1815          published n=270    PF_usd 1.155   now prints n=[0, 56, 68, 270, 336]
+  RECEIPT  doji/ny                      published n=64     PF_usd 0.916   now prints n=[65, 149, 1133]
+  RECEIPT  doji/ny                      published n=935    PF_usd 0.777   now prints n=[65, 149, 1133]
+  RECEIPT  doji/strict                  published n=146    PF_usd 0.822   now prints n=[18, 25, 301]
+  DECISION fix/am-after                 published n=578    PF_usd 0.811   now prints n=[3078]
+  RECEIPT  fix/pm-after                 published n=1401   PF_usd 0.932   now prints n=[3078]
+  DECISION fix/pm-after                 published n=578    PF_usd 0.904   now prints n=[3078]
+  RECEIPT  fix/pm-into                  published n=1401   PF_usd 0.935   now prints n=[3076]
+  DECISION fix/pm-into                  published n=578    PF_usd 0.961   now prints n=[3076]
+  DECISION hivol/london                 published n=341    PF_usd 0.950   now prints n=[1712]
+  DECISION hivol/orb60                  published n=457    PF_usd 1.004   now prints n=[2115]
+  DECISION london/early                 published n=203    PF_usd 1.309   now prints n=[204, 2177]
+  DECISION london/early                 published n=458    PF_usd 0.947   now prints n=[204, 2177]
+  DECISION london/expansion             published n=131    PF_usd 1.209   now prints n=[132, 2046]
+  DECISION london/expansion             published n=338    PF_usd 0.945   now prints n=[132, 2046]
+  DECISION london/nyam                  published n=257    PF_usd 1.317   now prints n=[258, 2607]
+  DECISION london/nyam                  published n=525    PF_usd 0.953   now prints n=[258, 2607]
+  DECISION lowvol/london                published n=212    PF_usd 0.962   now prints n=[894]
+  DECISION lowvol/orb60                 published n=73     PF_usd 1.074   now prints n=[478]
+  DECISION m15/london                   published n=501    PF_usd 0.886   now prints n=[2477]
+  DECISION m15/orb-60m                  published n=505    PF_usd 0.996   now prints n=[2483]
+  DECISION m15/pdhl-break               published n=163    PF_usd 0.770   now prints n=[792]
+  DECISION m15/pdhl-fade                published n=531    PF_usd 0.726   now prints n=[2655]
+  DECISION m15/vwap-allday              published n=3392   PF_usd 0.917   now prints n=[2557]
+  DECISION orb/30m                      published n=164    PF_usd 0.897   now prints n=[47, 165, 678, 1612]
+  DECISION orb/30m                      published n=394    PF_usd 1.088   now prints n=[47, 165, 678, 1612]
+  RECEIPT  orb/30m                      published n=138    PF_usd 0.828   now prints n=[47, 165, 678, 1612]
+  DECISION orb/60m                      published n=189    PF_usd 0.945   now prints n=[84, 737]
+  DECISION orb/60m-expansion            published n=153    PF_usd 1.115   now prints n=[48, 598]
+  DECISION pdhl/break-nyam              published n=172    PF_usd 0.758   now prints n=[815]
+  DECISION pdhl/fade-allday             published n=555    PF_usd 0.739   now prints n=[2672]
+  RECEIPT  tsmom2/120d                  published n=1086   PF_usd 0.949   now prints n=[44, 48]
+  RECEIPT  tsmom2/120d                  published n=842    PF_usd 1.008   now prints n=[44, 48]
+  RECEIPT  tsmom2/20d                   published n=1337   PF_usd 0.929   now prints n=[124, 149]
+  RECEIPT  tsmom2/20d                   published n=1120   PF_usd 0.916   now prints n=[124, 149]
+  RECEIPT  tsmom2/60d                   published n=1237   PF_usd 0.947   now prints n=[74, 75]
+  RECEIPT  tsmom2/60d                   published n=1120   PF_usd 0.916   now prints n=[74, 75]
+  DECISION vwap/allday                  published n=5828   PF_usd 0.951   now prints n=[5700]
+  DECISION vwap/us-hours                published n=1392   PF_usd 0.917   now prints n=[1435]
+  DECISION vwap/wide                    published n=5828   PF_usd 0.951   now prints n=[4966]
+================================================================================================================
+NOT MEASURED, and why (null, not 0)
+================================================================================================================
+  * 4342 band rows of 4845 have NO echoed command in any blob they were
+    found on - most are agent-written summary tables, which print a row but not the
+    argv that made it. UNMEASURED on this axis, NOT shown to be unflippable.
+  * 1744 rows carrying a PF sit OUTSIDE the declared band. Declared
+    unmeasured in advance, on the stated ground that reaching 1.200 from there needs
+    a USD-vs-R gap wider than 1.37x the largest ever measured.
+  * 0 reproducible keys whose command has not completed; 51 whose
+    command ran but printed no cell with that label and trade count (the batch file
+    or the engine has moved since publication).
+  * No percentile and no verdict WORD is read from a re-run: --seeds=1 was used after
+    MEASURING that it leaves the method row and the whole Lbar line byte-identical.
+    The verdict side is read from the PUBLISHED row.
+  * Drawdown is printed by this binary but is not a criterion of this axis
+    (addendum 5 G: do not promise a drawdown figure on a non-drawdown job).
+================================================================================================================
