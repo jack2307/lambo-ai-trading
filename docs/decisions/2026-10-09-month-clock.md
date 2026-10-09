@@ -292,7 +292,8 @@ sống (ngày giao dịch thứ 4 từ cuối tháng, −8,9% / −6,6%, bền �
 cửa sổ) nhưng nó **làm chi phí/R xấu đi 6,8–12,6%** (4/4 cùng dấu, đo độc lập
 trong engine) và **0/24 ô qua cổng**; chênh lệch `PF_r` giữa ngày-mốc và phần bù
 **lật dấu ở 2/3 cơ chế** ⇒ **F2 bắn ở bước đo**. F3/F4/F5/F6 không bắn
-(n nhỏ nhất 81 lệnh, filter nổ đúng 1/21, hai arm thua như nhau, 0 ô cháy).
+(n nhỏ nhất 81 lệnh, filter nổ và cắt 1/19,1–1/20,5, hai arm thua như nhau,
+0 ô cháy).
 
 Ba cơ chế thực chạy, chọn ở §2.6.1 sau khi đếm lệnh bản không-filter: `c2200`
 (session-hold, họ `close/*`, dòng gần cổng nhất), `rsi2-pullback` (phục hồi

@@ -97,12 +97,18 @@ Không có chiều để bù lại, vì §2 đã đóng chiều.
 
 Luật của filter nổ, kiểm bằng số lệnh (`--exit-mix` bật ở cả 24 ô):
 
-    c2200   1612 khong-filter  ->   81 (TD4) + 1531 (phan bu) = 1612   dung bang
-    rsi2    7392 khong-filter  ->  363       + 7046           = 7409   (+17)
-    donch   8768 khong-filter  ->  428       + 8359           = 8787   (+19)
+    cua so  co che  khong-filter  ->  TD4  + phan bu  =  tong   (lech)   ti le cat
+    W1      c2200          1612        81     1531      1612    (+0)     1/19,9
+    W2      c2200          1588        83     1505      1588    (+0)     1/19,1
+    W1      rsi2           7392       363     7046      7409   (+17)     1/20,4
+    W2      rsi2           7134       372     6781      7153   (+19)     1/19,2
+    W1      donch          8768       428     8359      8787   (+19)     1/20,5
+    W2      donch          8850       434     8438      8872   (+22)     1/20,4
 
-Tỉ lệ cắt **1/20,9 · 1/21,4 · 1/21,5** — khớp `1/21` đã khai trước. Và chỗ
-**tổng hai phần bù LỚN HƠN bản không-filter** (+17, +19) là bằng chứng gate
+Tỉ lệ cắt **1/19,1 … 1/20,5** — khai trước là `1/21`, và **số đo thắng**: nó
+nhỏ hơn 1/21 vì mốc TD-4 rơi vào Thứ Bảy/Chủ Nhật **ít hơn** một ngày trung
+bình, nên nó giữ nhiều phiên hơn tỉ lệ lịch. Và chỗ
+**tổng hai phần bù LỚN HƠN bản không-filter** (+17 … +22) là bằng chứng gate
 **đổi tập lệnh** chứ không chia nó: chặn một lệnh làm sổ rảnh ra và một lệnh
 muộn hơn vào được. `c2200` khớp đúng bằng vì `session-hold` vào ở **một phút cố
 định**, không có chuyện chen chỗ.
@@ -130,7 +136,7 @@ chuẩn của brief §4 (`PF 1,753 / 14 lệnh` cạnh `PF 0,682 / 178 lệnh`).
 **Dự đoán đã khai trước ("ngày-mốc sẽ XẤU hơn") cũng chỉ đúng 1/3** ⇒ nó không
 chỉ "không có edge", mà **chênh lệch ấy thậm chí không nhất quán theo chiều xấu**.
 Phần bù thì **không phân biệt được với bản không-filter**: `c2200` W1
-`PF_usd 1,151 → 1,1539`, W2 `1,312 → 1,3061`. Bỏ 1/21 số lệnh đổi **không gì** —
+`PF_usd 1,151 → 1,1539`, W2 `1,312 → 1,3061`. Bỏ 1/20 số lệnh đổi **không gì** —
 đúng như số học đã nói trước khi chạy.
 
 ## 7. Thứ KHÔNG đo được, và vì sao

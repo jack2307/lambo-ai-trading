@@ -73,7 +73,10 @@ pub enum Filter {
     /// 31st". Holidays are not known to it, by construction — see the clock
     /// function for why that is the honest choice for a gate.
     ///
-    /// A single-day band cuts the trade count to about `1/21`, so a row needs
+    /// A single-day band cuts the trade count to about `1/20` — measured
+    /// `1/19.1` to `1/20.5` over six mechanism-windows of gold, a little less
+    /// than the `1/21` the calendar suggests because a business-day marker
+    /// lands on a weekend less often than an average day does. So a row needs
     /// roughly 840 trades unfiltered to keep the 40 the gate asks for. The
     /// precheck that motivated this filter says so in writing, and says what
     /// the month clock does and does not contain:
