@@ -1,0 +1,222 @@
+agent/month-clock - PRECHECK, 216 declared comparisons, all 216 run.
+Registered in docs/decisions/2026-10-09-month-clock.md. Produced by
+month-clock-precheck.py + month-clock-stress.py + month-clock-implementable.py
+(scratchpad, job prefix month-clock-), reading
+  data/bars/XAUDUKA-15m.parquet  378749 bars  2010-06-01 00:00 -> 2026-05-31 23:45 UTC
+No volume column is read: this feed's volume is 0 on 0/50000 samples.
+
+=========================== RUN 1: the 216 comparisons ===========================
+ngay NY co nen: 4978  tu 2010-05-31 den 2026-05-31
+span dai nhat = 1425 phut; ngay DAT luat full: 4113 / 4978  (loai 865)
+  phan bo ngay bi loai theo weekday (0=Mon): {0: 13, 1: 8, 2: 11, 3: 7, 6: 826}
+
+quan sat dung duoc: 4108  (W1 2057, W2 2051)
+  W1: 96 thang, Amp mean 0.0929 sd 0.0258; Disp mean -0.0012 sd 0.6875
+  W2: 96 thang, Amp mean 0.0973 sd 0.0301; Disp mean +0.0419 sd 0.6967
+
+=== PHEP SO THUC TE CHAY: 216 (khai 216; 108 to hop x 2 cua so) ===
+
+moc p<0,05 o W1 chi: 6 | o W2 chi: 9 | ky vong may rui moi cua so: 5.4
+moc CUNG DAU (mot minh, vo dung): 64 / 108  (ky vong may rui 54)
+moc QUA SANG (cung dau VA p<0,05 ca hai cua so): 1  (ky vong duong-gia 0.135)
+BH q=0,05 tren 216 p-value: 1 phep so song (p nho nhat 5.225e-05, nguong BH dau tien 0.000231)
+
+--- MOC CO p<0,05 O IT NHAT MOT CUA SO ---
+measure  ruler  mark  n_W1    d_W1   p_W1  n_W2    d_W2   p_W2  same_sign  both_p05  pass
+    Amp  A-dom    18    67 -0.0003 0.8964    67 -0.0059 0.0317       True     False False
+    Amp  A-dom    22    68 -0.0079 0.0015    68 -0.0034 0.2676       True     False False
+    Amp  A-dom    27    68 -0.0060 0.0103    70 -0.0028 0.4183       True     False False
+    Amp B-tdfe     2    96 -0.0041 0.0326    96 -0.0027 0.5088       True     False False
+    Amp B-tdfe     3    96 -0.0041 0.0452    96  0.0007 0.8487      False     False False
+    Amp B-tdfe     4    96 -0.0083 0.0001    96 -0.0065 0.0324       True      True  True
+    Amp B-tdfe    10    96 -0.0022 0.3922    96 -0.0065 0.0087       True     False False
+   Disp  A-dom    10    68  0.1170 0.1250    67  0.1685 0.0314       True     False False
+   Disp  A-dom    20    69 -0.0948 0.3163    70  0.2451 0.0046      False     False False
+   Disp  A-dom    25    62  0.1783 0.0246    63 -0.1077 0.1489      False     False False
+   Disp  A-dom    26    65 -0.0681 0.3392    68 -0.1540 0.0179       True     False False
+   Disp  A-dom    27    68 -0.0380 0.6316    70 -0.1589 0.0468       True     False False
+   Disp B-tdfe     4    96  0.0508 0.4322    96 -0.1453 0.0192      False     False False
+   Disp B-tdfe    20    94  0.0211 0.7721    94  0.1809 0.0129       True     False False
+
+--- TOP 12 theo |d| trung binh hai cua so, trong so moc CUNG DAU ---
+measure  ruler  mark  n_W1    d_W1   p_W1  n_W2    d_W2   p_W2  same_sign  both_p05  pass
+   Disp  A-dom    10    68  0.1170 0.1250    67  0.1685 0.0314       True     False False
+   Disp  A-dom    26    65 -0.0681 0.3392    68 -0.1540 0.0179       True     False False
+   Disp  A-dom    14    67 -0.1154 0.1916    67 -0.0941 0.2016       True     False False
+   Disp  A-dom     1    63  0.0838 0.3587    62  0.1195 0.1755       True     False False
+   Disp B-tdfe    20    94  0.0211 0.7721    94  0.1809 0.0129       True     False False
+   Disp  A-dom    15    69 -0.1509 0.1633    65 -0.0497 0.5486       True     False False
+   Disp  A-dom    27    68 -0.0380 0.6316    70 -0.1589 0.0468       True     False False
+   Disp  A-dom    13    69  0.0999 0.1935    69  0.0875 0.3979       True     False False
+   Disp B-tdfe    22    47  0.0168 0.8696    43  0.1340 0.2276       True     False False
+   Disp  A-dom    31    38  0.0644 0.5861    40  0.0780 0.4287       True     False False
+   Disp B-tdfe    16    96  0.0963 0.2452    96  0.0374 0.5863       True     False False
+   Disp  A-dom    29    64 -0.0313 0.7177    63 -0.1015 0.2596       True     False False
+
+--- RIENG CAC MOC CUOI/DAU THANG (prior tai can bang) ---
+measure  ruler  mark  n_W1    d_W1   p_W1  n_W2    d_W2   p_W2  same_sign  both_p05  pass
+    Amp  A-dom     1    63  0.0029 0.2971    62  0.0031 0.2309       True     False False
+    Amp  A-dom     2    67  0.0011 0.6822    65  0.0053 0.2475       True     False False
+    Amp  A-dom     3    66  0.0031 0.2547    67  0.0064 0.0906       True     False False
+    Amp  A-dom    28    69 -0.0027 0.2667    68  0.0037 0.5028      False     False False
+    Amp  A-dom    29    64 -0.0017 0.5614    63 -0.0005 0.9354       True     False False
+    Amp  A-dom    30    63 -0.0036 0.1026    62 -0.0011 0.8555       True     False False
+    Amp  A-dom    31    38  0.0018 0.6676    40 -0.0017 0.6155      False     False False
+    Amp B-tdfe     1    96  0.0045 0.0676    96  0.0072 0.1431       True     False False
+    Amp B-tdfe     2    96 -0.0041 0.0326    96 -0.0027 0.5088       True     False False
+    Amp B-tdfe     3    96 -0.0041 0.0452    96  0.0007 0.8487      False     False False
+    Amp B-tdfe    20    94 -0.0007 0.7882    94  0.0039 0.2621      False     False False
+    Amp B-tdfe    21    79  0.0040 0.1270    76  0.0048 0.1248       True     False False
+    Amp B-tdfe    22    47 -0.0009 0.7772    43  0.0007 0.8319      False     False False
+    Amp B-tdfe    23    15 -0.0040 0.2613    14 -0.0012 0.7756       True     False False
+   Disp  A-dom     1    63  0.0838 0.3587    62  0.1195 0.1755       True     False False
+   Disp  A-dom     2    67 -0.0044 0.9642    65  0.0492 0.5857      False     False False
+   Disp  A-dom     3    66 -0.0470 0.6267    67  0.1230 0.2192      False     False False
+   Disp  A-dom    28    69  0.0082 0.9159    68  0.0533 0.6021       True     False False
+   Disp  A-dom    29    64 -0.0313 0.7177    63 -0.1015 0.2596       True     False False
+   Disp  A-dom    30    63 -0.0887 0.2663    62 -0.0399 0.6567       True     False False
+   Disp  A-dom    31    38  0.0644 0.5861    40  0.0780 0.4287       True     False False
+   Disp B-tdfe     1    96  0.0083 0.9158    96 -0.0463 0.5375      False     False False
+   Disp B-tdfe     2    96 -0.0097 0.8721    96 -0.0760 0.3053       True     False False
+   Disp B-tdfe     3    96 -0.0999 0.0916    96 -0.0221 0.7706       True     False False
+   Disp B-tdfe    20    94  0.0211 0.7721    94  0.1809 0.0129       True     False False
+   Disp B-tdfe    21    79 -0.0261 0.7919    76  0.0570 0.4867      False     False False
+   Disp B-tdfe    22    47  0.0168 0.8696    43  0.1340 0.2276       True     False False
+   Disp B-tdfe    23    15  0.0332 0.8488    14 -0.0980 0.5503      False     False False
+
+luu: month-clock-precheck.csv / month-clock-T.pkl / month-clock-obs.pkl
+
+=========================== RUN 2: stress on the one survivor ===========================
+=== MOC: Amp, thuoc B-tdfe, N = 4 (ngay giao dich thu 4 tu CUOI thang) ===
+W1: n=96  Amp(moc)=0.0850  Amp(con lai)=0.0933  hieu=-0.0083 bien do ngay  = -8.9% tuong doi  Welch p=0.00005
+W2: n=96  Amp(moc)=0.0911  Amp(con lai)=0.0976  hieu=-0.0065 bien do ngay  = -6.6% tuong doi  Welch p=0.03238
+
+--- 1. HOAN VI TRONG THANG, 20.000 lan (khoi = mot thang) ---
+W1: Amp thuc o moc = 0.0850; hoan vi trung vi = 0.0928; phan vi cua moc = 0.01;  p mot phia = 0.0002
+W2: Amp thuc o moc = 0.0911; hoan vi trung vi = 0.0971; phan vi cua moc = 0.59;  p mot phia = 0.0059
+
+--- 2. HIEN VAT THU TRONG TUAN? ---
+phan bo weekday (0=Mon) cua tdfe=4: {0: 32, 1: 79, 2: 27, 3: 28, 4: 26}
+phan bo weekday cua moi ngay       : {0: 821, 1: 826, 2: 823, 3: 827, 4: 811}
+
+Amp trung binh theo weekday (ca hai cua so):
+          mean  count
+weekday              
+0       0.0870    821
+1       0.0922    826
+2       0.0954    823
+3       0.0959    827
+4       0.1050    811
+
+hieu Amp(moc) - Amp(cung weekday, khong moc), tung cua so x weekday:
+  W1 wd0: n= 17 hieu=-0.0010 p=0.810
+  W1 wd1: n= 37 hieu=-0.0101 p=0.000
+  W1 wd2: n= 15 hieu=-0.0077 p=0.093
+  W1 wd3: n= 13 hieu=-0.0103 p=0.178
+  W1 wd4: n= 14 hieu=-0.0040 p=0.496
+  W2 wd0: n= 15 hieu=-0.0092 p=0.016
+  W2 wd1: n= 42 hieu=+0.0004 p=0.947
+  W2 wd2: n= 12 hieu=-0.0042 p=0.502
+  W2 wd3: n= 15 hieu=-0.0098 p=0.055
+  W2 wd4: n= 12 hieu=-0.0164 p=0.028
+
+--- 3. HIEN VAT THANG TRONG NAM? (hieu theo tung thang, ca 16 nam) ---
+  thang  1: n= 16 hieu=-0.0083
+  thang  2: n= 16 hieu=-0.0006
+  thang  3: n= 16 hieu=-0.0183
+  thang  4: n= 16 hieu=-0.0100
+  thang  5: n= 16 hieu=-0.0053
+  thang  6: n= 16 hieu=-0.0059
+  thang  7: n= 16 hieu=+0.0019
+  thang  8: n= 16 hieu=-0.0001
+  thang  9: n= 16 hieu=-0.0032
+  thang 10: n= 16 hieu=-0.0080
+  thang 11: n= 16 hieu=-0.0167
+  thang 12: n= 16 hieu=-0.0144
+  => 11/12 thang trong nam co hieu AM (cung dau voi ket qua tong)
+
+--- 4. DOI CHUAN HOA ---
+  amp15m / base20d  (dang ky)     |  W1: hieu=-0.00829 (-8.9%) p=0.0001  |  W2: hieu=-0.00648 (-6.6%) p=0.0324
+  amp15m / bien do ngay do        |  W1: hieu=-0.00332 (-3.2%) p=0.2796  |  W2: hieu=+0.00352 (+3.4%) p=0.1963
+  amp15m tho [USD]                |  W1: hieu=-0.12939 (-7.4%) p=0.1378  |  W2: hieu=-0.21802 (-6.8%) p=0.4612
+  bien do NGAY / base20d          |  W1: hieu=-0.07316 (-7.2%) p=0.0919  |  W2: hieu=-0.13208 (-12.7%) p=0.0039
+
+--- 5. DICH CHUYEN CO DAU o cung moc (edge HUONG) ---
+W1: n=96 Disp(moc)=+0.0472 +-0.0625(se)  Disp(con lai)=-0.0036  hieu=+0.0508  p=0.4322
+     => bang khong trong +-0.123 bien do ngay (95%); dau: 52/96 ngay duong
+W2: n=96 Disp(moc)=-0.0966 +-0.0590(se)  Disp(con lai)=+0.0487  hieu=-0.1453  p=0.0192
+     => bang khong trong +-0.116 bien do ngay (95%); dau: 46/96 ngay duong
+
+--- 6. MOC NAY SO VOI MOT GATE BIEN DONG DA CO (VolAbs) ---
+W1: phan vi Amp cua moi ngay: p10=0.0675 p25=0.0768 p50=0.0890 p75=0.1033 p90=0.1219
+     Amp trung binh cua moc = 0.0850 => nam o phan vi 42 cua phan phoi ngay
+     be rong mot bang VolAbs p25-p75 = +0.0265; hieu cua moc = -0.0083 = 31% be rong do
+W2: phan vi Amp cua moi ngay: p10=0.0702 p25=0.0801 p50=0.0918 p75=0.1072 p90=0.1261
+     Amp trung binh cua moc = 0.0911 => nam o phan vi 49 cua phan phoi ngay
+     be rong mot bang VolAbs p25-p75 = +0.0271; hieu cua moc = -0.0065 = 24% be rong do
+
+=========================== RUN 3: is it implementable? ===========================
+thuoc B (ngay CO NEN) vs B' (chi lich): khop 86.8% cua 4108 ngay
+  lech o cac ngay le: phan bo lech = {0: 3566, 1: 511, 2: 31}
+
+=== MOC Amp @ N=4, do bang CA HAI thuoc, hai cua so ===
+  B  ngay CO NEN (tien kiem)      |  W1: n=96 hieu=-0.00829 (-8.9%) p=0.0001  |  W2: n=96 hieu=-0.00648 (-6.6%) p=0.0324
+  B' CHI LICH (thi hanh duoc)     |  W1: n=96 hieu=-0.00843 (-9.0%) p=0.0000  |  W2: n=96 hieu=-0.00626 (-6.4%) p=0.0383
+
+=== QUET LAI thuoc B' CHI LICH: 23 moc x 2 dai luong x 2 cua so ===
+measure  mark  n_W1    d_W1   p_W1  n_W2    d_W2   p_W2  same_sign  both_p05  pass
+    Amp     1    93  0.0050 0.0469    95  0.0069 0.1596       True     False False
+    Amp     2    96 -0.0047 0.0147    96 -0.0022 0.5778       True     False False
+    Amp     3    96 -0.0037 0.0778    96  0.0006 0.8683      False     False False
+    Amp     4    96 -0.0084 0.0000    96 -0.0063 0.0383       True      True  True
+    Amp     5    87 -0.0018 0.5853    89 -0.0051 0.1322       True     False False
+    Amp     6    96 -0.0021 0.4943    95  0.0005 0.8301      False     False False
+    Amp     7    96 -0.0039 0.1367    96 -0.0012 0.6968       True     False False
+    Amp     8    95 -0.0013 0.5974    95 -0.0026 0.3675       True     False False
+    Amp     9    95 -0.0047 0.0320    94 -0.0029 0.3279       True     False False
+    Amp    10    96 -0.0024 0.3502    96 -0.0074 0.0029       True     False False
+    Amp    11    94  0.0028 0.2708    93  0.0009 0.7529       True     False False
+    Amp    12    95  0.0050 0.2323    95 -0.0025 0.3596      False     False False
+    Amp    13    96  0.0045 0.1093    94  0.0011 0.7107       True     False False
+    Amp    14    96  0.0004 0.8503    95 -0.0014 0.6357      False     False False
+    Amp    15    96 -0.0010 0.6929    95 -0.0019 0.4945       True     False False
+    Amp    16    96  0.0078 0.0156    94  0.0042 0.1819       True     False False
+    Amp    17    96  0.0053 0.1553    95  0.0020 0.4934       True     False False
+    Amp    18    94  0.0017 0.5183    95  0.0065 0.0906       True     False False
+    Amp    19    95  0.0012 0.6378    96  0.0025 0.4380       True     False False
+    Amp    20    94 -0.0021 0.4409    94  0.0027 0.4573      False     False False
+    Amp    21    84  0.0045 0.0905    81  0.0065 0.0471       True     False False
+    Amp    22    55 -0.0022 0.4048    56  0.0003 0.9273      False     False False
+    Amp    23    20 -0.0016 0.7249    20 -0.0012 0.7371       True     False False
+   Disp     1    93  0.0174 0.8301    95 -0.0608 0.4152      False     False False
+   Disp     2    96 -0.0115 0.8444    96 -0.0681 0.3641       True     False False
+   Disp     3    96 -0.1045 0.0853    96 -0.0185 0.8078       True     False False
+   Disp     4    96  0.0407 0.5262    96 -0.1422 0.0221      False     False False
+   Disp     5    87  0.0714 0.2654    89  0.0013 0.9827       True     False False
+   Disp     6    96  0.0397 0.6101    95 -0.0080 0.9011      False     False False
+   Disp     7    96 -0.1251 0.0710    96 -0.0078 0.9169       True     False False
+   Disp     8    95 -0.0038 0.9585    95  0.1342 0.0802      False     False False
+   Disp     9    95  0.0739 0.2695    94 -0.0102 0.8949      False     False False
+   Disp    10    96 -0.0238 0.7157    96 -0.0673 0.2289       True     False False
+   Disp    11    94  0.0465 0.4947    93 -0.0717 0.3859      False     False False
+   Disp    12    95  0.0506 0.5179    95  0.0112 0.8627       True     False False
+   Disp    13    96 -0.0543 0.5366    94  0.1243 0.1082      False     False False
+   Disp    14    96 -0.1200 0.0823    95 -0.0678 0.2994       True     False False
+   Disp    15    96 -0.0628 0.2792    95  0.0914 0.2873      False     False False
+   Disp    16    96  0.1006 0.2163    94  0.0110 0.8911       True     False False
+   Disp    17    96  0.0364 0.6459    95  0.0301 0.6456       True     False False
+   Disp    18    94  0.0794 0.3061    95 -0.1069 0.2166      False     False False
+   Disp    19    95 -0.0694 0.3544    96 -0.0201 0.8035       True     False False
+   Disp    20    94  0.0148 0.8428    94  0.0238 0.7505       True     False False
+   Disp    21    84  0.0306 0.7398    81  0.1837 0.0328       True     False False
+   Disp    22    55 -0.0446 0.5992    56  0.1078 0.2462      False     False False
+   Disp    23    20  0.0612 0.7471    20  0.0137 0.9203       True     False False
+
+thuoc B' : moc qua sang = 1 ; p<0,05 o W1 chi = 5 ; o W2 chi = 5 ; ky vong may rui moi cua so = 2.3
+
+=== MOC Amp@4 (thuoc B goc) duoi BON cho cat cua so khac ===
+  cat 2014-06: nua1: n= 48 hieu=-0.00884 p=0.0030 | nua2: n=144 hieu=-0.00689 p=0.0020
+  cat 2016-06: nua1: n= 72 hieu=-0.00958 p=0.0001 | nua2: n=120 hieu=-0.00606 p=0.0172
+  cat 2018-06: nua1: n= 96 hieu=-0.00829 p=0.0001 | nua2: n= 96 hieu=-0.00648 p=0.0324
+  cat 2020-06: nua1: n=120 hieu=-0.00648 p=0.0047 | nua2: n= 72 hieu=-0.00889 p=0.0041
+  cat 2022-06: nua1: n=144 hieu=-0.00621 p=0.0054 | nua2: n= 48 hieu=-0.01091 p=0.0003

@@ -1,0 +1,66 @@
+# agent/month-clock - the month clock as a gate.  Registered in
+# docs/decisions/2026-10-09-month-clock.md; 24 declared cells here (3 mechanisms
+# x 2 filter variants x 2 windows x 2 guard arms), run as 4 binary calls.
+#
+# The precheck (receipts/monthclock/) found exactly ONE marker out of 108 that
+# holds its sign at p < 0.05 on both windows: the amplitude of the fourth
+# business day from the month end, 6-9% NARROWER than its trailing 20-day norm.
+# It found NOTHING directional - 0 of 54 signed-displacement markers survived.
+# So these cells do not ask "does this gate pay"; they ask whether a 7% narrower
+# day moves a gate leg at all, and the registered prediction is that it moves it
+# the WRONG way: the sizing stop is f x the trailing 20-day mean range, not the
+# day's own range, so a narrower day is smaller gross at the same cost per R.
+# `monthend:!4-4` is the complement, the side where the prediction says better.
+#
+# The three mechanisms are one per family, all of them over the 840 unfiltered
+# trades a 1/21 filter needs (counted first: receipts/monthclock/COUNTS-W*.txt):
+#   c2200   session-hold, the close/* family, the row nearest the gate
+#   rsi2    mean reversion, 7134-7392 trades
+#   donch   breakout, 8768-8850 trades - where a narrow day should bite hardest
+# The window is set on the CLI, not here: `[run]` cannot set it under --fixed.
+[run]
+in_sample = "xauduka:15m"
+in_sample_from = "2010-06-01"
+in_sample_to = "2018-06-01"
+out_of_sample = "xauduka:15m"
+out_of_sample_from = "2018-06-01"
+seeds = 20
+direction_samples = 1
+
+[[hypothesis]]
+label = "c2200/TD4"
+base = "session-hold"
+filters = ["weekdays:MoTuWeTh", "hours:1615-1620", "monthend:4-4"]
+overrides = { from = 1615, to = 2200, side = 1, riskDailyRanges = 1.000, rangeDays = 20 }
+why = "close/1615-2200 entered ONLY on the 4th business day from month end"
+
+[[hypothesis]]
+label = "c2200/notTD4"
+base = "session-hold"
+filters = ["weekdays:MoTuWeTh", "hours:1615-1620", "monthend:!4-4"]
+overrides = { from = 1615, to = 2200, side = 1, riskDailyRanges = 1.000, rangeDays = 20 }
+why = "the complement: every day EXCEPT the 4th from month end"
+
+[[hypothesis]]
+label = "rsi2/TD4"
+base = "rsi2-pullback"
+filters = ["weekdays", "monthend:4-4"]
+why = "RSI(2) pullback entered only on the 4th business day from month end"
+
+[[hypothesis]]
+label = "rsi2/notTD4"
+base = "rsi2-pullback"
+filters = ["weekdays", "monthend:!4-4"]
+why = "the complement"
+
+[[hypothesis]]
+label = "donch/TD4"
+base = "donchian-breakout"
+filters = ["weekdays", "monthend:4-4"]
+why = "Donchian break entered only on the 4th business day from month end - a breakout is where a 7% narrower day should bite hardest"
+
+[[hypothesis]]
+label = "donch/notTD4"
+base = "donchian-breakout"
+filters = ["weekdays", "monthend:!4-4"]
+why = "the complement"

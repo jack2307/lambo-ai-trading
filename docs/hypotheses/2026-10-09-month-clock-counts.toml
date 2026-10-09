@@ -1,0 +1,77 @@
+# agent/month-clock - STEP 2.6.1 of docs/decisions/2026-10-09-month-clock.md:
+# count the UNFILTERED trades of every candidate mechanism on both registered
+# windows, BEFORE spending a gate cell.  A one-day month filter keeps about
+# 1/21 of the trades, so a mechanism under ~840 trades a window cannot be
+# measured under one -- and that reads "not measurable", never 0.
+# These are COUNTING cells, not gate cells.
+[run]
+in_sample = "xauduka:15m"
+in_sample_from = "2010-06-01"
+in_sample_to = "2018-06-01"
+out_of_sample = "xauduka:15m"
+out_of_sample_from = "2018-06-01"
+seeds = 20
+direction_samples = 1
+
+[[hypothesis]]
+label = "n/c1815"
+base = "session-hold"
+filters = ["weekdays:MoTuWeTh", "hours:1615-1620"]
+overrides = { from = 1615, to = 1815, side = 1, riskDailyRanges = 1.000, rangeDays = 20 }
+why = "trade count, close/1615-1815, the record's parameters"
+
+[[hypothesis]]
+label = "n/c2000"
+base = "session-hold"
+filters = ["weekdays:MoTuWeTh", "hours:1615-1620"]
+overrides = { from = 1615, to = 2000, side = 1, riskDailyRanges = 1.000, rangeDays = 20 }
+why = "trade count, close/1615-2000"
+
+[[hypothesis]]
+label = "n/c2200"
+base = "session-hold"
+filters = ["weekdays:MoTuWeTh", "hours:1615-1620"]
+overrides = { from = 1615, to = 2200, side = 1, riskDailyRanges = 1.000, rangeDays = 20 }
+why = "trade count, close/1615-2200"
+
+[[hypothesis]]
+label = "n/orb"
+base = "orb"
+filters = ["weekdays"]
+why = "trade count, opening-range break at its defaults"
+
+[[hypothesis]]
+label = "n/pdhl"
+base = "pdhl"
+filters = ["weekdays"]
+why = "trade count, previous-day high/low at its defaults"
+
+[[hypothesis]]
+label = "n/doji"
+base = "doji-reversal"
+filters = ["weekdays"]
+why = "trade count, doji reversal at its defaults"
+
+[[hypothesis]]
+label = "n/vwap"
+base = "vwap-fade"
+filters = ["weekdays"]
+why = "trade count, VWAP fade at its defaults"
+
+[[hypothesis]]
+label = "n/ema"
+base = "ema-cross"
+filters = ["weekdays"]
+why = "trade count, EMA cross at its defaults"
+
+[[hypothesis]]
+label = "n/rsi2"
+base = "rsi2-pullback"
+filters = ["weekdays"]
+why = "trade count, RSI(2) pullback at its defaults"
+
+[[hypothesis]]
+label = "n/donch"
+base = "donchian-breakout"
+filters = ["weekdays"]
+why = "trade count, Donchian break at its defaults"

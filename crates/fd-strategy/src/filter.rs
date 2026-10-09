@@ -14,7 +14,7 @@
 
 use std::collections::BTreeMap;
 
-use fd_core::clock::new_york_local;
+use fd_core::clock::{new_york_local, new_york_month_position};
 use fd_indicators::IndicatorSpec;
 
 use crate::news;
@@ -63,6 +63,27 @@ pub enum Filter {
     /// does not, [`Filter::parse_for_market`] fills in the market's
     /// configured list, so a `news:60-30` on gold reads USD releases only.
     News { before_min: u32, after_min: u32, min_impact: u8, currencies: Vec<String> },
+    /// Entries only while the New York **business day counted back from the end
+    /// of the month** is inside `[from, to]` — `1` is the month's last business
+    /// day ([`fd_core::clock::new_york_month_position`]). With `negate` the gate
+    /// admits everything **outside** the band instead.
+    ///
+    /// This is the month clock, and it is the ruler a rebalancing prior is
+    /// actually about: funds close a month on its last *session*, not on "the
+    /// 31st". Holidays are not known to it, by construction — see the clock
+    /// function for why that is the honest choice for a gate.
+    ///
+    /// A single-day band cuts the trade count to about `1/21`, so a row needs
+    /// roughly 840 trades unfiltered to keep the 40 the gate asks for. The
+    /// precheck that motivated this filter says so in writing, and says what
+    /// the month clock does and does not contain:
+    /// `docs/decisions/2026-10-09-month-clock.md`.
+    MonthEnd { from: u32, to: u32, negate: bool },
+    /// Entries only while the New York **day of the month** is inside
+    /// `[from, to]`, `negate` inverting the band. The calendar ruler, which is
+    /// *not* the same as [`Filter::MonthEnd`]: the 30th is the last session of
+    /// some months and the third from last of others.
+    MonthDays { from: u32, to: u32, negate: bool },
 }
 
 impl Filter {
@@ -93,8 +114,12 @@ impl Filter {
     /// `flat:1630-1815`, `vol:14/100:1.2-99`, `volabs:14:0.075-9`,
     /// `news:60-30` (60 min before to 30 min after high-impact news),
     /// `news:60-30:2` (impact ≥ 2) or `news:60-30:3:USD|EUR` (those
-    /// currencies only; the impact is required when currencies are given).
-    /// Times are New York `hhmm`; news widths are minutes.
+    /// currencies only; the impact is required when currencies are given),
+    /// `monthend:1-4` (the month's last four business days), `monthend:4-4`
+    /// (that one day) or `monthend:!4-4` (every day **except** it), and
+    /// `monthdays:25-31` / `monthdays:!25-31` on the calendar ruler.
+    /// Times are New York `hhmm`; news widths are minutes; month bands are
+    /// whole days, inclusive at both ends.
     ///
     /// A `news:` filter parsed here with no currency list reads **every**
     /// currency. Callers that know the market use [`Filter::parse_for_market`].
@@ -128,6 +153,25 @@ impl Filter {
                     mask |= 1 << day;
                 }
                 Ok(Self::Weekdays { mask })
+            }
+            // `monthend:1-4`, `monthend:4-4`, `monthend:!4-4` — the month
+            // clock. `monthdays:25-31` is the same band on the calendar ruler.
+            Some((kind @ ("monthend" | "monthdays"), band)) => {
+                let band = band.trim();
+                let (negate, band) = match band.strip_prefix('!') {
+                    Some(rest) => (true, rest.trim()),
+                    None => (false, band),
+                };
+                let (a, b) = band.split_once('-').ok_or_else(|| format!("filter `{spec}`: expected from-to in whole days"))?;
+                let num = |t: &str| t.trim().parse::<u32>().map_err(|_| format!("filter `{spec}`: `{t}` is not a day number"));
+                let (from, to) = (num(a)?, num(b)?);
+                // A band that cannot admit a day is a silent no-trade row, so
+                // it is a parse error instead.
+                let ceiling = if kind == "monthend" { 23 } else { 31 };
+                if from < 1 || to < from || to > ceiling {
+                    return Err(format!("filter `{spec}`: need 1 <= from <= to <= {ceiling}"));
+                }
+                Ok(if kind == "monthend" { Self::MonthEnd { from, to, negate } } else { Self::MonthDays { from, to, negate } })
             }
             Some(("hours", w)) => window(w).map(|(a, b)| Self::hours(a, b)),
             Some(("flat", w)) => window(w).map(|(a, b)| Self::flat(a, b)),
@@ -246,6 +290,18 @@ impl Filter {
                 };
                 let scope = if currencies.is_empty() { String::new() } else { format!(" ({})", currencies.join("|")) };
                 format!("no entries {before_min} min before to {after_min} min after {which} news{scope}")
+            }
+            Self::MonthEnd { from, to, negate } => {
+                let not = if *negate { "not " } else { "" };
+                if from == to {
+                    format!("{not}business day {from} from month end (NY)")
+                } else {
+                    format!("{not}business days {from}-{to} from month end (NY)")
+                }
+            }
+            Self::MonthDays { from, to, negate } => {
+                let not = if *negate { "not " } else { "" };
+                format!("{not}day of month {from}-{to} (NY)")
             }
         }
     }
@@ -370,6 +426,20 @@ impl Strategy for Filtered<'_> {
                 Filter::Sessions(windows) => windows.iter().any(|(a, b)| in_window(minute, *a, *b)),
                 Filter::Weekdays { mask } => mask & (1 << weekday) != 0,
                 Filter::Flat { .. } => true,
+                // The month clock reads the signal bar's New York date. A
+                // weekend day has no business days left in its month and so
+                // reads 0, which is outside every band — the gold feed's
+                // Sunday evening session is therefore gated out of a
+                // `monthend` band and gated *in* by a negated one, which is
+                // what "not these days" should mean.
+                Filter::MonthEnd { from, to, negate } => {
+                    let (_, from_end) = new_york_month_position(ctx.bar.time);
+                    (from_end >= *from && from_end <= *to) != *negate
+                }
+                Filter::MonthDays { from, to, negate } => {
+                    let (dom, _) = new_york_month_position(ctx.bar.time);
+                    (dom >= *from && dom <= *to) != *negate
+                }
                 Filter::VolRegime { min_ratio, max_ratio, .. } => {
                     let (fast, slow) = (ctx.s(regime_slot), ctx.s(regime_slot + 1));
                     regime_slot += 2;
@@ -449,6 +519,68 @@ mod tests {
         let params = Params::default();
         let ctx = BarContext { bar: &bars[0], i: 0, bars: &bars, ind: &ind, series: &[], options: None, position, params: &params };
         filtered.on_bar(&ctx)
+    }
+
+    /// A UTC instant on a given 2026-05 day. May 2026 ends on a Sunday the
+    /// 31st, so its last business day is Friday the 29th and the fourth from
+    /// the end is Tuesday the 26th.
+    fn may_utc(day: u32, hour: i64) -> i64 {
+        days_from_civil(2026, 5, i64::from(day) as u32) * 86_400_000 + hour * 3_600_000
+    }
+
+    #[test]
+    fn month_end_band_gates_on_business_days_from_the_month_end() {
+        let one_day = Filtered { inner: &Always, filters: vec![Filter::parse("monthend:4-4").unwrap()] };
+        // Tuesday the 26th is the fourth business day from the end: in.
+        assert!(matches!(intent_at(&one_day, may_utc(26, 18), None), Intent::Enter { .. }));
+        // Its neighbours are not.
+        assert!(matches!(intent_at(&one_day, may_utc(27, 18), None), Intent::None));
+        assert!(matches!(intent_at(&one_day, may_utc(25, 18), None), Intent::None));
+        // Friday the 29th is the last business day, so it is 1, not 4.
+        assert!(matches!(intent_at(&one_day, may_utc(29, 18), None), Intent::None));
+
+        let last_four = Filtered { inner: &Always, filters: vec![Filter::parse("monthend:1-4").unwrap()] };
+        for day in [26, 27, 28, 29] {
+            assert!(matches!(intent_at(&last_four, may_utc(day, 18), None), Intent::Enter { .. }), "May {day} is in the last four");
+        }
+        assert!(matches!(intent_at(&last_four, may_utc(25, 18), None), Intent::None));
+        // The weekend has no business days left in the month, so it reads 0 and
+        // is outside the band — and inside the negated one.
+        assert!(matches!(intent_at(&last_four, may_utc(30, 18), None), Intent::None));
+
+        let not_one_day = Filtered { inner: &Always, filters: vec![Filter::parse("monthend:!4-4").unwrap()] };
+        assert!(matches!(intent_at(&not_one_day, may_utc(26, 18), None), Intent::None));
+        assert!(matches!(intent_at(&not_one_day, may_utc(27, 18), None), Intent::Enter { .. }));
+        assert!(matches!(intent_at(&not_one_day, may_utc(30, 18), None), Intent::Enter { .. }));
+
+        // The New York date is the one that counts: 2026-06-01 02:00 UTC is
+        // still 2026-05-31 in New York, a Sunday, so it reads 0.
+        let june_first_utc = days_from_civil(2026, 6, 1) * 86_400_000 + 2 * 3_600_000;
+        assert!(matches!(intent_at(&last_four, june_first_utc, None), Intent::None));
+    }
+
+    #[test]
+    fn month_days_band_is_the_calendar_ruler_not_the_session_one() {
+        let late = Filtered { inner: &Always, filters: vec![Filter::parse("monthdays:29-31").unwrap()] };
+        // Sunday the 31st is in the calendar band although it is no session.
+        assert!(matches!(intent_at(&late, may_utc(31, 22), None), Intent::Enter { .. }));
+        // And Tuesday the 26th, the fourth from the end, is not.
+        assert!(matches!(intent_at(&late, may_utc(26, 18), None), Intent::None));
+    }
+
+    #[test]
+    fn month_bands_reject_a_spelling_that_could_never_admit_a_day() {
+        assert_eq!(Filter::parse("monthend:4-4").unwrap(), Filter::MonthEnd { from: 4, to: 4, negate: false });
+        assert_eq!(Filter::parse("monthend:!1-4").unwrap(), Filter::MonthEnd { from: 1, to: 4, negate: true });
+        assert_eq!(Filter::parse("monthdays:25-31").unwrap(), Filter::MonthDays { from: 25, to: 31, negate: false });
+        // Backwards, zero, and past the ceiling of each ruler.
+        assert!(Filter::parse("monthend:4-1").is_err());
+        assert!(Filter::parse("monthend:0-4").is_err());
+        assert!(Filter::parse("monthend:1-24").is_err(), "a month has at most 23 business days");
+        assert!(Filter::parse("monthdays:1-32").is_err());
+        assert!(Filter::parse("monthend:4").is_err());
+        assert_eq!(Filter::parse("monthend:4-4").unwrap().describe(), "business day 4 from month end (NY)");
+        assert_eq!(Filter::parse("monthend:!4-4").unwrap().describe(), "not business day 4 from month end (NY)");
     }
 
     #[test]

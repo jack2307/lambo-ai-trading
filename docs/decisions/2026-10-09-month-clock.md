@@ -279,3 +279,23 @@ lại của job, nên ghi vào đây trước khi viết filter.
      bề rộng một băng `VolAbs` p25–p75**, và `Amp` trung bình của mốc nằm ở
      **phân vị 42 (W1) / 49 (W2)** của phân phối ngày — **giữa phân phối**. ⇒
      đồng hồ tháng **không chỉ ra một chế độ biến động mà `VolAbs` chưa chỉ được**.
+
+---
+
+## Ghi chú thêm — 2026-10-09, kết quả
+
+Đọc ở `docs/decisions/2026-10-09-month-clock-result.md`. Tóm một dòng:
+**F1 bắn cho đại lượng có dấu** (0/54 mốc `Disp` đồng dấu + p<0,05 hai cửa sổ;
+6/9 mốc một-cửa-sổ so với kỳ vọng may rủi 5,4 ⇒ đúng mức tung xu) ⇒ **chu kỳ
+tháng không chứa hiệu ứng CHIỀU nào đo được trên vàng 15m**. Một mốc **biên độ**
+sống (ngày giao dịch thứ 4 từ cuối tháng, −8,9% / −6,6%, bền ở cả năm chỗ cắt
+cửa sổ) nhưng nó **làm chi phí/R xấu đi 6,8–12,6%** (4/4 cùng dấu, đo độc lập
+trong engine) và **0/24 ô qua cổng**; chênh lệch `PF_r` giữa ngày-mốc và phần bù
+**lật dấu ở 2/3 cơ chế** ⇒ **F2 bắn ở bước đo**. F3/F4/F5/F6 không bắn
+(n nhỏ nhất 81 lệnh, filter nổ đúng 1/21, hai arm thua như nhau, 0 ô cháy).
+
+Ba cơ chế thực chạy, chọn ở §2.6.1 sau khi đếm lệnh bản không-filter: `c2200`
+(session-hold, họ `close/*`, dòng gần cổng nhất), `rsi2-pullback` (phục hồi
+trung bình, 7.134–7.392 lệnh), `donchian-breakout` (phá vỡ, 8.768–8.850 lệnh).
+10/10 ứng viên đạt sàn ~840 lệnh/cửa sổ nên **F3 không bắn** và sàn không loại ô
+nào.
