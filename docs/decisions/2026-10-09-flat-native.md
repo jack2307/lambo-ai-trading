@@ -269,3 +269,51 @@ engine in (phụ lục 7 mục A).
 `df -h /e` trước run đầu: **26 GB khả dụng**.
 
 ## 8. Ghi chú thêm (sửa đăng ký = thêm vào CUỐI, không viết lại dòng trên)
+
+### 2026-10-09, sau 8 run — F3 trượt điều khoản chữ của chính nó, và cái trượt là một phát hiện
+
+Điều khoản F3 bắt tuyến hoa hồng tái tạo `px-1s` của `gross-ceiling` trong 2%.
+Nó **trượt ở 2 trong 4 số**: `spreadR` IS **1,09%** so với 1,150% (5,3%), và
+`gross/lượt` IS **−0,0041** so với −0,0035 (17%). OOS khớp (0,82% vs 0,826%;
++0,0204 vs +0,0203).
+
+**Nguyên nhân: điều khoản so hai ESTIMATOR khác nhau, không so một thước với
+sự thật.** `gross-ceiling` bước 2 là **tỉ số của trung bình**
+(`spread_usd/n/risk_usd`); tuyến của tôi là **trung bình của tỉ số**
+(`0,28 × mean(1/risk)`). Thứ nằm trong `expectancy` — vốn là trung bình của
+`r_i = points_i/risk_i` — là **trung bình của tỉ số**. Trên một phân phối risk
+rộng (họ `gap/*`: 0,0010 → 152,66 điểm) hai estimator **phải** lệch nhau.
+
+**Thay bằng hai phép kiểm nội bộ mạnh hơn, và cả hai PASS:**
+
+1. **Đại lượng mà cái neo tồn tại để tái tạo** là drift của phụ lục 5 mục B
+   (**−0,0040 / +0,0205 R mỗi phiên**). Thước của tôi đọc **−0,0041 / +0,0204**
+   — lệch **2,5% / 0,5%**, tức **sát hơn** `gross-ceiling` (−0,0035, lệch 12%).
+2. **Tái dựng độc lập ngoài engine** (đọc parquet, 0 ô cổng): số lệnh khớp
+   **chính xác** và risk điều hoà khớp **3–4 chữ số có nghĩa** trên **8 cặp
+   dòng-cửa sổ**; và phép thử tỉ lệ `riskDailyRanges` 0,5 : 1 : 2 cho
+   **1 : 1,982 : 3,947** so với ground truth **1 : 2 : 4**.
+
+⇒ Số dẫn xuất **ĐƯỢC** công bố, kèm **cả hai** cách đọc cạnh nhau (RESULT §3).
+
+### 2026-10-09, cùng lúc — một khoảng chính xác kế hoạch không thấy trước
+
+`expectancy` in **3 chữ số thập phân**, còn `gross = expectancy + spreadR` là
+**hiệu của hai số gần bằng nhau**: với `intraday-momentum` (gross ≈ 0,0005 R
+mỗi lượt) làm tròn ở 3 chữ số **lớn hơn cả đại lượng**. Nên mọi `gross` trong
+RESULT lấy `E = total_r / n` (`total_r` in 2 chữ số trên n ≈ 2.000 lệnh), và
+hai cách phải khớp tới chữ số in ra của `expectancy` — **48/48 ô khớp**.
+Đọc bằng `expectancy` 3-chữ-số sẽ **lật dấu** `xSPR` của `im/f2` (+0,36 thay
+vì −0,42). Khai ở đây vì nó là một thay đổi cách đọc, không phải một dòng mới.
+
+### 2026-10-09, cùng lúc — hai thứ được đo mà kế hoạch không hứa
+
+1. **Gián đoạn nến của feed** (đọc parquet, 0 ô cổng): **2.634 gián đoạn đúng
+   75 phút** mở lại ở **18:00 New York**, cộng 862 gián đoạn ≥ 24h. Nên
+   `minGapHours = 0,9` bắt **đủ** cú gap ngày, và họ `gap/daily` **thật sự đọc
+   cửa sổ 16:00–18:00 NY**. Dòng này được dựng từ một tiền đề chưa kiểm; phép
+   đo xác nhận nó.
+2. **`wrong_side_stop` không có bộ đếm nào trong mã** (`grep -rn
+   wrong_side_stop crates/` → 0), nên "0 trên ~580 dòng" trong hồ sơ là một
+   số 0 đọc từ một bộ đếm không tồn tại. Ở đây nó là **KHÔNG ĐO ĐƯỢC, không
+   phải 0** (brief §8). Đếm, không sửa.

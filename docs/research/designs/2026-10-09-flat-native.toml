@@ -1,0 +1,90 @@
+# Hai co che DA PHANG SAN qua moc rollover 17:00 NY, do trong khuon rollover-flat.
+# Dang ky: docs/decisions/2026-10-09-flat-native.md (commit rieng, fec22e6).
+# 12 dong, DONG BANG. Khong dong nao duoc them sau khi thay so.
+# gap-fade  = Exits::Engine  -> stop THI HANH -> co stop la mot BIEN (stopGapMult)
+# intraday-momentum = Exits::Strategy -> stop MAU SO -> quet riskDailyRanges CHI de
+#                                        khang dinh phan loai (F7), khong de tim o qua cong.
+
+[[hypothesis]]
+label = "px-1s"
+base = "session-hold"
+filters = []
+overrides = { from = 1800.0, to = 1600.0, side = 1.0, riskDailyRanges = 1.5, rangeDays = 20.0 }
+why = "neo thuoc va neo drift: mot cuon so mot phien vuot 0 moc rollover; phai tai tao spreadR 1,150%/0,826% va gross/luot -0,0035/+0,0203"
+
+[[hypothesis]]
+label = "gap-fade"
+base = "gap-fade"
+filters = []
+overrides = { }
+why = "dong gross-ceiling da do (PF_usd 0,373/0,051; chay 272,4% o OOS/guards-off); phai tai tao truoc khi doc gi"
+
+[[hypothesis]]
+label = "gap/s05"
+base = "gap-fade"
+filters = []
+overrides = { stopGapMult = 0.5 }
+why = "co stop HEP hon mac dinh: stop thi hanh nen day la mot cau hoi chien luoc, khong phai doi don vi"
+
+[[hypothesis]]
+label = "gap/s4"
+base = "gap-fade"
+filters = []
+overrides = { stopGapMult = 4.0 }
+why = "co stop RONG hon ca luoi cong bo (0,5/1,0/2,0): neu 0,117 diem la hinh hoc entry-vs-stop thi day la cach duy nhat chua no bang tham so"
+
+[[hypothesis]]
+label = "gap/2atr"
+base = "gap-fade"
+filters = []
+overrides = { minGapAtr = 2.0 }
+why = "nguong tin hieu chat hon, co stop khong doi: tach loc tin hieu khoi co stop"
+
+[[hypothesis]]
+label = "gap/daily"
+base = "gap-fade"
+filters = []
+overrides = { minGapHours = 0.9 }
+why = "DONG TRA LOI CAU HOI: ha nguong gian doan duoi 1h de doc cu gap NGAY o nghi 17:00->18:00 NY, dung cua so 16:00-18:00 ma rollover-flat khai la chua do, moi ngay thay vi moi tuan"
+
+[[hypothesis]]
+label = "gap/daily-a05"
+base = "gap-fade"
+filters = []
+overrides = { minGapHours = 0.9, minGapAtr = 0.5 }
+why = "cung cua so, nguong gap long hon: nhieu lenh hon, gap nho hon"
+
+[[hypothesis]]
+label = "gap/daily-a2"
+base = "gap-fade"
+filters = []
+overrides = { minGapHours = 0.9, minGapAtr = 2.0 }
+why = "cung cua so, nguong gap chat hon: it lenh hon, gap lon hon"
+
+[[hypothesis]]
+label = "gap/daily-s4"
+base = "gap-fade"
+filters = []
+overrides = { minGapHours = 0.9, stopGapMult = 4.0 }
+why = "co stop rong tren dong gap ngay"
+
+[[hypothesis]]
+label = "intraday-mom"
+base = "intraday-momentum"
+filters = []
+overrides = { }
+why = "dong gross-ceiling da do (PF_usd 0,609/0,783); Gao-Han-Li-Zhou 2018; giu 1515-1630 NY nen vuot 0 moc rollover"
+
+[[hypothesis]]
+label = "im/f05"
+base = "intraday-momentum"
+filters = []
+overrides = { riskDailyRanges = 0.5 }
+why = "CHI cho F7: neu stop la mau so thi tap lenh bat bien va E, Lbar ti le 1/f"
+
+[[hypothesis]]
+label = "im/f2"
+base = "intraday-momentum"
+filters = []
+overrides = { riskDailyRanges = 2.0 }
+why = "CHI cho F7: dau kia cua cung phep thu don vi"
