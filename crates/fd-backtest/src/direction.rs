@@ -179,6 +179,7 @@ mod tests {
             spread: Some(0.28),
             risk_usd: Some(1.0),
             r_net: Some(pnl / 10.0),
+            banked_r: None,
         }
     }
 

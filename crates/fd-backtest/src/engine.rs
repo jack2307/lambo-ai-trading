@@ -44,6 +44,10 @@ pub struct TradingRules {
     pub max_hold_ms: i64,
     /// A stop that follows the trade. Off unless a registration turns it on.
     pub trail: fd_core::config::TrailConfig,
+    /// Bank part of the position at a level in R and carry the rest. Off
+    /// unless a registration turns it on, like the trail above.
+    #[serde(default)]
+    pub partial: fd_core::config::PartialExitConfig,
     pub lot_step: f64,
     pub min_lot: f64,
     /// ATR period used when the strategy declares none.
@@ -92,6 +96,7 @@ impl Default for TradingRules {
             // Off, like the config's own default: a rule that changes every
             // number in docs/decisions/ does not arrive switched on.
             trail: fd_core::config::TrailConfig::default(),
+            partial: fd_core::config::PartialExitConfig::default(),
             lot_step: 0.01,
             min_lot: 0.01,
             fallback_atr_period: 14,
@@ -194,6 +199,22 @@ pub struct Trade {
     /// 0, and not `r` standing in for it.
     #[serde(default)]
     pub r_net: Option<f64>,
+    /// The R this position banked **before** its final exit, by the partial
+    /// exit rule, already weighted by the share of the position that left
+    /// there: `(points_at_the_level / risk) x (lots_banked / lots_opened)`.
+    ///
+    /// It is already inside `r`, `r_net` and `pnl_usd`; it is carried
+    /// separately so a receipt can say how much of a result came from the
+    /// part that was taken off early, and so a reader can tell a position
+    /// that banked from one that never reached the level.
+    ///
+    /// **`None` when the partial rule was off**, which is not the same fact as
+    /// `Some(0.0)` — that would be a position the rule managed and never
+    /// banked on. One trade, not two: a partial does not make a second
+    /// position, so `n` keeps meaning positions and the gate's trade-count leg
+    /// keeps meaning what it meant.
+    #[serde(default)]
+    pub banked_r: Option<f64>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -284,6 +305,27 @@ pub struct Live {
     pub mae: f64,
     pub mfe: f64,
     pub self_managed: bool,
+    /// The lots this position was OPENED with, before any partial exit took
+    /// part of it off. `lots` above is what is still open.
+    ///
+    /// It is the denominator of every weighted figure the partial rule
+    /// produces: a leg that takes half of a position contributes half an R,
+    /// and "half" is measured against this and never against whatever is left
+    /// at the time. `None` on a position written before the field existed, and
+    /// then it is `lots` — a position that never partialled, which is what
+    /// every state file older than this patch holds.
+    #[serde(default)]
+    pub opened_lots: Option<f64>,
+    /// R already banked by the partial rule on this position, weighted by the
+    /// share of it that left. `None` means the rule is off on this run;
+    /// `Some(0.0)` means it is on and has not fired yet.
+    #[serde(default)]
+    pub banked_r: Option<f64>,
+    /// USD already banked by the partial rule on this position — the realised
+    /// P&L of the legs taken off, their own commission and financing inside
+    /// it. Added to the final leg's P&L by [`close_position`], never twice.
+    #[serde(default)]
+    pub banked_pnl_usd: f64,
     /// The contract size `lots` above was SIZED under, carried with the
     /// position so that a later config correction cannot restate it.
     ///
@@ -322,6 +364,15 @@ pub struct Live {
 }
 
 impl Live {
+    /// The lots this position opened with — the denominator the partial rule
+    /// weights against. `opened_lots` when it is recorded, and the lots still
+    /// open when it is not, which is every position written before the field
+    /// existed and therefore every position that never partialled.
+    #[must_use]
+    pub fn opened_lots(&self) -> f64 {
+        self.opened_lots.unwrap_or(self.lots)
+    }
+
     /// The position as a strategy sees it.
     #[must_use]
     pub fn view(&self) -> OpenPosition {
@@ -367,6 +418,7 @@ pub fn trading_rules_for(config: &Config, market: &str) -> Result<TradingRules, 
         stop_atr: config.trading.stop_atr,
         reward_risk: config.trading.reward_risk,
         trail: config.trading.trail.clone(),
+        partial: config.trading.partial.clone(),
         fallback_atr_period: config.backtest.fallback_atr_period,
     })
 }
@@ -590,6 +642,17 @@ pub fn run_backtest_guarded(
                 let exposure = Exposure { side: open.side, entry_price: open.entry_price, risk: open.risk };
                 guards.and_then(|g| guard_exit(&exposure, bar, bar_ms, rules, g))
             });
+            // The partial exit rule, in the only order a pessimistic reading of
+            // OHLC permits: AFTER the stop has been tested, so a bar that
+            // reached both the stop and the level closes whole at the stop, and
+            // BEFORE the target, the hold cap and the guards book what is left,
+            // so a bar that reached both gives up the tail it would have been
+            // paid for the lots that left early. Rules-level and not strategy
+            // level, which is why `control::RandomEntry` takes the same partial
+            // without a line of code written for the control.
+            if !matches!(exit, Some((_, ExitKind::Stop))) {
+                take_partial(open, bar, rules);
+            }
             if let Some((price, kind)) = exit {
                 let open = position.take().expect("checked");
                 let entry_reason = open.reason.clone();
@@ -757,6 +820,14 @@ pub fn open_position(
             mae: 0.0,
             mfe: 0.0,
             self_managed,
+            // The sizing the partial rule weights against, recorded at the
+            // fill for the same reason `contract_size` is: the only moment it
+            // is known to be the one that produced `lots`.
+            opened_lots: Some(lots),
+            // `None` when the rule is off, so a trade can say "not managed"
+            // rather than "managed and banked nothing".
+            banked_r: rules.partial.enabled.then_some(0.0),
+            banked_pnl_usd: 0.0,
             // The sizing basis, recorded at the only moment it is known to
             // be the one that produced `lots` and `entry`.
             contract_size: Some(rules.contract_size),
@@ -801,6 +872,118 @@ pub fn check_exit(position: &Live, bar: &Bar, rules: &TradingRules) -> Option<(f
         return Some((apply_costs(bar.close, position.side, false, rules), ExitKind::Timeout));
     }
     None
+}
+
+/// The price the partial exit rule would bank part of this position at.
+///
+/// `None` — never a price the rule would not act on — when the rule is off,
+/// when it has already fired on this position, when the position is
+/// self-managed, or when the configuration does not describe a partial.
+///
+/// Measured in **R**, the position's own `risk`, so the level reads the same on
+/// every instrument and in the unit every receipt is quoted in. Three things it
+/// deliberately will not do, the same three the trail will not:
+///
+/// * **It never touches a self-managed position.** The strategy owns every
+///   exit there and the stop is a sizing unit rather than an order, so there is
+///   no engine-managed position to take a part of.
+/// * **It never fires twice.** One bank per position, not a ladder: this rule
+///   is the only thing in the engine that reduces `lots`, so a position holding
+///   less than it opened with has already banked.
+/// * **It never moves the stop.** Banking part of a position and pulling the
+///   stop to breakeven are two interventions, and the second one is the trail
+///   that `agent/m4` already measured. Mixing them would make the result
+///   unattributable.
+#[must_use]
+pub fn partial_level(position: &Live, rules: &TradingRules) -> Option<f64> {
+    let cfg = &rules.partial;
+    if !cfg.enabled || position.self_managed {
+        return None;
+    }
+    if position.lots < position.opened_lots() {
+        return None;
+    }
+    if !(position.risk > 0.0) || !cfg.at_r.is_finite() || cfg.at_r <= 0.0 {
+        return None;
+    }
+    // A fraction of one is a target with another name and a fraction of zero
+    // is nothing; both are configuration errors and neither is quietly turned
+    // into a full exit.
+    if !cfg.fraction.is_finite() || cfg.fraction <= 0.0 || cfg.fraction >= 1.0 {
+        return None;
+    }
+    let distance = cfg.at_r * position.risk;
+    Some(if position.side.is_long() { position.entry_price + distance } else { position.entry_price - distance })
+}
+
+/// Bank part of the position at `exit_price`, booking its P&L and its share of
+/// one R onto the position itself. `true` when it banked.
+///
+/// The share is weighted against the lots the position OPENED with, never
+/// against what is left, so the parts of one position sum to exactly one risk
+/// unit. That is what keeps `r` meaning "this position's result in its own
+/// risk" and `n` meaning positions — two legs booked as two trades would each
+/// claim a whole R (`r` is `points / risk` and does not read `lots`) and would
+/// double the trade count the gate's third leg reads.
+fn bank_partial(position: &mut Live, exit_price: f64, exit_time: i64, rules: &TradingRules) -> bool {
+    let opened = position.opened_lots();
+    if !(opened > 0.0) {
+        return false;
+    }
+    // Lots leave in whole lot steps, like every other order this engine
+    // places, and BOTH parts have to be tradable. A bank that would take less
+    // than one minimum lot, or leave less than one behind, is not a partial
+    // exit — it is a full exit wearing the name, or a no-op — so it does not
+    // happen and the position carries on whole.
+    let step = if rules.lot_step > 0.0 { rules.lot_step } else { return false };
+    let taken = ((opened * rules.partial.fraction) / step).floor() * step;
+    let remaining = position.lots - taken;
+    if taken < rules.min_lot || remaining < rules.min_lot {
+        return false;
+    }
+    let long = position.side.is_long();
+    let points = if long { exit_price - position.entry_price } else { position.entry_price - exit_price };
+    // The same three costs `close_position` charges, on the lots that left:
+    // commission on this leg, financing for the rollovers this leg crossed,
+    // and the exit half of the spread already inside `exit_price`. They sum
+    // across the legs to exactly what one undivided exit would have paid, so
+    // a partial exit costs nothing extra to trade.
+    let commission = rules.commission_per_lot * taken * 2.0;
+    let nights = fd_core::clock::swap_nights(position.entry_time, exit_time);
+    let per_night = if long { rules.swap_long_per_lot } else { rules.swap_short_per_lot };
+    let swap = per_night * taken * f64::from(nights);
+    let contract_size = position.contract_size.unwrap_or(rules.contract_size);
+    position.banked_pnl_usd += points * taken * contract_size - commission + swap;
+    position.banked_r = Some(position.banked_r.unwrap_or(0.0) + points / position.risk * (taken / opened));
+    position.lots = remaining;
+    // The level was reached and part of the position left there: that is an
+    // excursion the position was in for, and the same function the exit uses
+    // records it, to the price the lots actually left at and no further.
+    track_exit_excursion(position, exit_price);
+    true
+}
+
+/// Take the partial exit if this bar reached its level.
+///
+/// **Call this after the bar's stop has been tested and not before.** A bar
+/// whose range covers both the stop and the level closes at the stop with the
+/// whole position: crediting the bank first would hand the trade the good half
+/// of a bar whose intrabar order OHLC does not record. A bar that reached the
+/// target, the hold cap or a guard closes what is LEFT after the bank, because
+/// `f x at_r + (1 - f) x rr` is less than `rr` and the smaller reading is the
+/// one this engine takes.
+pub fn take_partial(position: &mut Live, bar: &Bar, rules: &TradingRules) -> bool {
+    let Some(level) = partial_level(position, rules) else { return false };
+    let long = position.side.is_long();
+    let reached = if long { bar.high >= level } else { bar.low <= level };
+    if !reached {
+        return false;
+    }
+    // A bar that opened already past the level fills there and not at the
+    // level, the same pessimistic reading `check_exit` gives a gapped target.
+    let gapped = if long { bar.open >= level } else { bar.open <= level };
+    let raw = if gapped { bar.open } else { level };
+    bank_partial(position, apply_costs(raw, position.side, false, rules), bar.time, rules)
 }
 
 /// Move a trailing stop up behind a winning trade, from the bar that just closed.
@@ -938,6 +1121,13 @@ pub fn close_position(
 
     let points =
         if position.side.is_long() { exit_price - position.entry_price } else { position.entry_price - exit_price };
+    // What is still open, as a share of what was opened. One on every position
+    // that never banked a partial leg — which is every position on every
+    // receipt written before the partial rule existed — so each figure below
+    // is bit-identical there.
+    let opened_lots = position.opened_lots();
+    let open_share = if opened_lots > 0.0 { position.lots / opened_lots } else { 1.0 };
+    let banked_r = position.banked_r.unwrap_or(0.0);
     let commission = rules.commission_per_lot * position.lots * 2.0;
     let nights = fd_core::clock::swap_nights(position.entry_time, exit_time);
     let per_night = if position.side.is_long() { rules.swap_long_per_lot } else { rules.swap_short_per_lot };
@@ -949,18 +1139,34 @@ pub fn close_position(
     // from a state file older than the field has none to carry, and only then
     // does the current rule stand in — see `Live::contract_size`.
     let contract_size = position.contract_size.unwrap_or(rules.contract_size);
-    let pnl = points * position.lots * contract_size - commission + swap;
+    // The final leg, plus whatever the partial legs already realised — their
+    // own commission and financing inside it. Added once, here, because this
+    // is the only function that books a trade.
+    let pnl = points * position.lots * contract_size - commission + swap + position.banked_pnl_usd;
     // One R in USD, from the same two numbers the P&L above is built from and
     // the sizing unit the position was born with. Recorded rather than
     // re-derived later: `rebate::usd_per_r` recovers it from `entry - stop`,
     // which a TRAILED stop has already moved, and from an inversion of the
     // P&L identity for a self-managed position. This is the figure itself.
-    let risk_usd = position.risk * position.lots * contract_size;
+    // One R in USD of the position AS OPENED, not of the part still open: it
+    // is the unit the whole position's result is measured in, and the legs'
+    // weighted shares sum to one of it. Identical to the old figure on a
+    // position that never banked, where the two lot counts are the same.
+    let risk_usd = position.risk * opened_lots * contract_size;
     let risk_usd = (risk_usd.is_finite() && risk_usd > 0.0).then_some(risk_usd);
     // `r` WITH the two costs it cannot see. The addend is exactly zero on a
     // trade that paid neither, so this is `r` itself on every receipt the
     // record already holds.
-    let r_net = risk_usd.map(|unit| round4(points / position.risk + (swap - commission) / unit));
+    // `r` WITH the two costs it cannot see, for the whole position: the final
+    // leg's price result at its weight, plus every cost and every banked leg
+    // expressed in the same unit. `position.banked_pnl_usd` already contains
+    // the banked legs' own price result, so adding it here adds their R and
+    // their costs in one term, which is why `banked_r` does not appear — it
+    // would be counted twice. On a position that never banked the term is
+    // zero and `open_share` is one, so this is the old expression exactly and
+    // a costless trade still has `r_net` bit-identical to `r`.
+    let r_net = risk_usd
+        .map(|unit| round4(points / position.risk * open_share + (swap - commission + position.banked_pnl_usd) / unit));
 
     Trade {
         direction: position.side,
@@ -972,10 +1178,18 @@ pub fn close_position(
         exit_kind: kind,
         stop: round_price(position.stop.unwrap_or(f64::NAN), rules),
         target: position.target.map(|t| round_price(t, rules)),
-        lots: position.lots,
+        // The lots the position was OPENED with. A partial exit does not make
+        // the position smaller after the fact: the entry half of the spread
+        // and the commission were charged on this size, and every reader that
+        // prices a trade from `lots x spread` has to see the size traded.
+        lots: opened_lots,
         pnl_usd: round2(pnl),
         swap_usd: round2(swap),
-        r: round4(points / position.risk),
+        // The whole position's result in its own risk: the final leg at its
+        // share of the position, plus the shares already banked. The parts sum
+        // to one risk unit, so this is one trade and not two, and `n` keeps
+        // meaning positions.
+        r: round4(points / position.risk * open_share + banked_r),
         mae: round4(position.mae / position.risk),
         mfe: round4(position.mfe / position.risk),
         hold_ms: exit_time - position.entry_time,
@@ -991,6 +1205,9 @@ pub fn close_position(
         // measured in, and a 0 here would read as "it cost nothing".
         risk_usd: risk_usd.map(round2),
         r_net,
+        // `None` when the rule was off: that is "not managed", which is a
+        // different fact from "managed and banked nothing".
+        banked_r: position.banked_r.map(round4),
     }
 }
 
@@ -1026,6 +1243,20 @@ pub struct Metrics {
     pub avg_mfe: f64,
     pub avg_hold_min: f64,
     pub exits: BTreeMap<String, usize>,
+    /// How many of these positions banked a partial exit leg.
+    ///
+    /// **`None` when the partial rule was off on this run**, and `Some(0)` when
+    /// it was on and never fired — which is the distinction a receipt needs:
+    /// `tsmom/120d` printed `SURVIVES` on a run where its own rule fired zero
+    /// times, and a zero that cannot be told from "absent" is how that reads as
+    /// a result (brief 2026-10-07, §6a).
+    #[serde(default)]
+    pub partials: Option<usize>,
+    /// The R those legs banked between them, already weighted by the share of
+    /// each position that left early, so it is directly comparable with
+    /// `total_r` and is a part of it. `None` on the same terms as `partials`.
+    #[serde(default)]
+    pub banked_r: Option<f64>,
 }
 
 /// The serde default for a figure that was never written: "not measured",
@@ -1057,6 +1288,8 @@ impl Metrics {
             avg_mfe: f64::NAN,
             avg_hold_min: f64::NAN,
             exits: BTreeMap::new(),
+            partials: None,
+            banked_r: None,
         }
     }
 }
@@ -1101,6 +1334,15 @@ pub fn metrics_of(trades: &[Trade], starting_equity: f64) -> Metrics {
         *exits.entry(trade.exit_reason.clone()).or_insert(0) += 1;
     }
 
+    // Absent unless at least one of these positions was MANAGED by the partial
+    // rule. A set measured with the rule off reports nothing here rather than
+    // reporting zero, because "the rule was not asked" and "the rule was asked
+    // and never fired" are different facts and only the second one is evidence
+    // about the rule.
+    let managed = trades.iter().any(|t| t.banked_r.is_some());
+    let partials = managed.then(|| trades.iter().filter(|t| t.banked_r.is_some_and(|r| r != 0.0)).count());
+    let banked_r = managed.then(|| round4(trades.iter().filter_map(|t| t.banked_r).sum::<f64>()));
+
     Metrics {
         trades: trades.len(),
         win_rate: wins.len() as f64 / trades.len() as f64,
@@ -1125,6 +1367,8 @@ pub fn metrics_of(trades: &[Trade], starting_equity: f64) -> Metrics {
         avg_mfe: round4(trades.iter().map(|t| t.mfe).sum::<f64>() / trades.len() as f64),
         avg_hold_min: round2(trades.iter().map(|t| t.hold_ms as f64).sum::<f64>() / trades.len() as f64 / 60_000.0),
         exits,
+        partials,
+        banked_r,
     }
 }
 
@@ -1171,6 +1415,12 @@ mod trail_tests {
             mae: 0.0,
             mfe: 0.0,
             self_managed: false,
+            // `None` on purpose: a position written before the field existed,
+            // which is every position in the record, and the fallback has to
+            // read it as "it still holds what it opened with".
+            opened_lots: None,
+            banked_r: None,
+            banked_pnl_usd: 0.0,
             contract_size: Some(1.0),
             spread: Some(0.0),
         }
@@ -1299,6 +1549,12 @@ mod net_r_tests {
             mae: 0.0,
             mfe: 0.0,
             self_managed: false,
+            // `None` on purpose: a position written before the field existed,
+            // which is every position in the record, and the fallback has to
+            // read it as "it still holds what it opened with".
+            opened_lots: None,
+            banked_r: None,
+            banked_pnl_usd: 0.0,
             contract_size: Some(1.0),
             spread: Some(0.0),
         }

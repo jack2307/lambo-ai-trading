@@ -48,8 +48,10 @@ fn arg(name: &str, fallback: &str) -> String {
 
 /// The flags every mode reads: the market, the window, the cost model and the
 /// run header. Passing one of these changes the numbers whatever `--mode=` is.
-const ALWAYS: &[&str] =
-    &["market", "mode", "data", "config", "interval", "from", "to", "spread", "trail", "companion", "guards"];
+const ALWAYS: &[&str] = &[
+    "market", "mode", "data", "config", "interval", "from", "to", "spread", "trail", "partial", "companion",
+    "guards",
+];
 
 /// Every other flag, with the `--mode=` values that actually read it.
 ///
@@ -184,6 +186,33 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             rules.trail.activate_r = a;
         }
     }
+    // `--partial=<at_r>,<fraction>` overrides `[trading.partial]` for this run
+    // only, the same way `--trail=` does, so a grid over partial exits needs no
+    // config edit per cell and cannot leave one behind. `--partial=off` forces
+    // it off whatever the config says, which is what the control arm needs.
+    if let Some(spec) = std::env::args().find_map(|a| a.strip_prefix("--partial=").map(str::to_string)) {
+        if spec == "off" {
+            rules.partial.enabled = false;
+        } else {
+            let mut parts = spec.split(',');
+            let at: f64 = parts.next().unwrap_or("").trim().parse()
+                .map_err(|_| format!("--partial wants <at_r>,<fraction> or `off`, got `{spec}`"))?;
+            let f: f64 = parts.next().unwrap_or("").trim().parse()
+                .map_err(|_| format!("--partial wants <at_r>,<fraction> or `off`, got `{spec}`"))?;
+            // Refused rather than clamped: a fraction outside (0, 1) is not a
+            // partial exit, and a run that silently turned one into a full exit
+            // would publish a receipt for a rule nobody asked for.
+            if !(f > 0.0 && f < 1.0) {
+                return Err(format!("--partial fraction must be inside (0, 1), got `{f}` — 1 is an ordinary target").into());
+            }
+            if !(at > 0.0) {
+                return Err(format!("--partial at_r must be above 0, got `{at}`").into());
+            }
+            rules.partial.enabled = true;
+            rules.partial.at_r = at;
+            rules.partial.fraction = f;
+        }
+    }
     // `--spread=<price units>` reprices the round trip for this run only. The
     // configured 0.28 for gold was a SINGLE read of the terminal; the logger
     // has since sampled thousands and the p50 is 0.220 with a maximum of 0.260,
@@ -200,6 +229,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "trail:    {}",
         if rules.trail.enabled {
             format!("ON distance {}R activate {}R", rules.trail.distance_r, rules.trail.activate_r)
+        } else {
+            "off".to_string()
+        }
+    );
+    println!(
+        "partial:  {}",
+        if rules.partial.enabled {
+            format!(
+                "ON bank {} of the position at +{}R, the rest runs to its own exit",
+                rules.partial.fraction, rules.partial.at_r
+            )
         } else {
             "off".to_string()
         }
@@ -1471,7 +1511,18 @@ fn run_hypotheses(
             } else {
                 m.exits.iter().map(|(k, n)| format!("{k} {n}")).collect::<Vec<_>>().join(", ")
             };
-            println!("{:<12} {:<18} exits: {mix}; mean hold {:.1} min", "", "", m.avg_hold_min);
+            // Whether the PARTIAL rule fired, beside the exit mix, because a
+            // rule that fired zero times is a row that says nothing about the
+            // rule — and a row whose numbers moved while it fired zero times is
+            // a row measuring something else.
+            let banked = match (m.partials, m.banked_r) {
+                (Some(count), Some(r)) => format!(
+                    "; partial legs: {count} of {} positions banked, {r:+.4} R of total_r {:+.4} R",
+                    m.trades, m.total_r
+                ),
+                _ => "; partial rule: off (not asked)".to_string(),
+            };
+            println!("{:<12} {:<18} exits: {mix}; mean hold {:.1} min{banked}", "", "", m.avg_hold_min);
         }
         if report.survives() {
             survivors.push(format!("{}/{}", report.label, report.base));

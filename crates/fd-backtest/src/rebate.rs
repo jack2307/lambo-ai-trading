@@ -259,6 +259,7 @@ mod tests {
             // rules charge no commission and no swap, so the two agree.
             risk_usd: Some((entry - stop).abs() * lots),
             r_net: Some(r),
+            banked_r: None,
         }
     }
 

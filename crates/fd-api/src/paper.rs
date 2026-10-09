@@ -5495,6 +5495,7 @@ mod carried_basis {
             // KNOWN, which is what this fixture is about.
             risk_usd: None,
             r_net: None,
+            banked_r: None,
         }
     }
 

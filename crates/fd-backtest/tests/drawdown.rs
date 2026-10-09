@@ -41,6 +41,7 @@ fn result_of(pnl_usd: f64) -> Trade {
         spread: Some(0.0),
         risk_usd: Some(100.0),
         r_net: Some(pnl_usd / 100.0),
+        banked_r: None,
     }
 }
 

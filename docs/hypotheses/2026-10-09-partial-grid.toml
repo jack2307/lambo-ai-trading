@@ -1,0 +1,32 @@
+# Ba cơ chế được chọn bằng luật đã khai trong
+# docs/decisions/2026-10-06-trailing-exit.md: >= 40 lệnh out-of-sample ở CẢ
+# HAI cửa sổ, rồi min(PF cửa sổ A, PF cửa sổ B) lớn nhất.
+#
+# Đo trên baseline --trail=off (receipts/m4-baseline-notrail-A.txt và -B.txt):
+#   compression/bb-fade        A 1.153 (54 lệnh) / B 1.320 (75)  -> min 1.153
+#   intraday/donchian-breakout A 1.119 (199)     / B 1.023 (155) -> min 1.023
+#   intraday/bb-fade           A 0.828 (396)     / B 0.778 (439) -> min 0.778
+# Ô bị loại dù min-PF cao hơn vì cỡ mẫu: expansion/donchian (B 39 lệnh),
+# asia/rsi-reversion (B 28), compression/rsi-reversion (26/29),
+# ny-morning/donchian (min 0.752, dưới intraday/bb-fade).
+#
+# Bản sao nguyên văn của ba hypothesis trong gold_intraday_batch(), không sửa
+# tham số nào — lưới chỉ đổi --trail=.
+
+[[hypothesis]]
+label = "compression"
+base = "bb-fade"
+filters = ["weekdays", "flat:1630-1815", "vol:14/100:0-0.8"]
+why = "ô gần cổng nhất trên cả hai cửa sổ khi không trail; fade khi range hẹp"
+
+[[hypothesis]]
+label = "intraday"
+base = "donchian-breakout"
+filters = ["weekdays", "flat:1630-1815"]
+why = "ô gần cổng thứ hai; breakout không giữ qua đêm, cỡ mẫu lớn nhất trong ba"
+
+[[hypothesis]]
+label = "intraday"
+base = "bb-fade"
+filters = ["weekdays", "flat:1630-1815"]
+why = "ô gần cổng thứ ba; 396/439 lệnh — cỡ mẫu đủ để một hiệu ứng trail nhỏ nhìn thấy được"

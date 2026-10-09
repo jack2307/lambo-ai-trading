@@ -170,6 +170,8 @@ pub struct TradingConfig {
     pub guards: GuardsConfig,
     #[serde(default)]
     pub trail: TrailConfig,
+    #[serde(default)]
+    pub partial: PartialExitConfig,
 }
 
 fn default_currency() -> String {
@@ -210,6 +212,47 @@ impl Default for TrailConfig {
         // the best price once the trade is a full R ahead, so a winner that
         // gives back everything it made closes at about breakeven.
         Self { enabled: false, distance_r: 1.0, activate_r: 1.0 }
+    }
+}
+
+/// Bank part of a position at a level and carry the rest to its original exit.
+///
+/// The level is in **R** — the position's own risk — for the same reason the
+/// trail's distances are: the engine already stores that number on every
+/// position, so the rule reads the same on gold at $4,000 as on the euro at
+/// 1.16 and is quoted in the unit every receipt uses.
+///
+/// This is a **rules-level** exit rule and not a strategy's: it is consulted
+/// for every position the engine manages, which is what makes the matched
+/// control (`control::RandomEntry`, whose `Intent::Enter` the engine sizes and
+/// targets exactly like a method's) take the same partial without one line of
+/// code written for the control. A rule that lived in a strategy would leave
+/// the null managing its positions a different way, and the comparison would
+/// not be a comparison.
+///
+/// Off by default, and deliberately so: every result in `docs/decisions/` was
+/// measured without one, and a partial switched on globally would make those
+/// numbers unreproducible without saying so.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct PartialExitConfig {
+    /// Nothing happens at all unless this is true.
+    pub enabled: bool,
+    /// How far in the position's favour the first part is banked, in R.
+    /// At or below zero there is nothing to bank, and the rule stays asleep.
+    pub at_r: f64,
+    /// What share of the position is banked there, in (0, 1). One would be an
+    /// ordinary target and is refused as a configuration rather than silently
+    /// closing the whole position under a different name.
+    pub fraction: f64,
+}
+
+impl Default for PartialExitConfig {
+    fn default() -> Self {
+        // The defaults are a shape, not a recommendation: half the position at
+        // a third of an R, which is where the only measured MFE distribution
+        // this desk owns (`xau-stoch`, 73 closed trades of real money) says
+        // 81% of positions reach while 11% reach +2.00R.
+        Self { enabled: false, at_r: 0.33, fraction: 0.5 }
     }
 }
 
