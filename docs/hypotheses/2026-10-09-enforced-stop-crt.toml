@@ -1,0 +1,70 @@
+# Quet co stop o loai stop THI HANH, ho L3 (target = MUC GIA, doc lap voi stop).
+# Dang ky: docs/decisions/2026-10-09-enforced-stop.md muc 4.
+# Nhan goc: crt-nocap/4h-mid cua docs/hypotheses/2026-10-04-crt-ceiling-lifted.toml
+# (dong n=78 trong receipts/gate-legs-table.txt).  CHI bufferPips doi.
+#
+# RANG BUOC KE THUA, khai lai o day: header cua file ceiling-lifted tu tuyen
+# khong verdict "survives" nao duoc doc tu bat ky dong crt-nocap, vi tran
+# maxRiskAtr duoc noi sau khi thay ket qua.  Giu nguyen tuyen do.
+[run]
+in_sample = { market = "xauduka", interval = "15m", from = "2018-06-16", to = "2022-06-16" }
+out_of_sample = { market = "xauusd", interval = "15m", from = "2022-06-16", to = "2026-09-18" }
+seeds = 300
+null_sides = "exposure"
+fixed = true
+
+[[hypothesis]]
+label = "crtbuf/b0001"
+base = "crt"
+filters = []
+overrides = { rangeTf = 16, target = 1, maxRiskAtr = 1000, bufferPips = 1.0 }
+why = "co stop 1 pip = 0.1 USD dem ngoai dinh sweep 4H; L3: target la trung diem nen 1, mot muc gia khong phu thuoc stop"
+
+[[hypothesis]]
+label = "crtbuf/b0003"
+base = "crt"
+filters = []
+overrides = { rangeTf = 16, target = 1, maxRiskAtr = 1000, bufferPips = 3.0 }
+why = "co stop 3 pip = 0.3 USD dem ngoai dinh sweep 4H; L3: target la trung diem nen 1, mot muc gia khong phu thuoc stop"
+
+[[hypothesis]]
+label = "crtbuf/b0010"
+base = "crt"
+filters = []
+overrides = { rangeTf = 16, target = 1, maxRiskAtr = 1000, bufferPips = 10.0 }
+why = "co stop 10 pip = 1.0 USD dem ngoai dinh sweep 4H; L3: target la trung diem nen 1, mot muc gia khong phu thuoc stop"
+
+[[hypothesis]]
+label = "crtbuf/b0030"
+base = "crt"
+filters = []
+overrides = { rangeTf = 16, target = 1, maxRiskAtr = 1000, bufferPips = 30.0 }
+why = "co stop 30 pip = 3.0 USD dem ngoai dinh sweep 4H; L3: target la trung diem nen 1, mot muc gia khong phu thuoc stop"
+
+[[hypothesis]]
+label = "crtbuf/b0060"
+base = "crt"
+filters = []
+overrides = { rangeTf = 16, target = 1, maxRiskAtr = 1000, bufferPips = 60.0 }
+why = "co stop 60 pip = 6.0 USD dem ngoai dinh sweep 4H; L3: target la trung diem nen 1, mot muc gia khong phu thuoc stop"
+
+[[hypothesis]]
+label = "crtbuf/b0100"
+base = "crt"
+filters = []
+overrides = { rangeTf = 16, target = 1, maxRiskAtr = 1000, bufferPips = 100.0 }
+why = "co stop 100 pip = 10.0 USD dem ngoai dinh sweep 4H; L3: target la trung diem nen 1, mot muc gia khong phu thuoc stop"
+
+[[hypothesis]]
+label = "crtbuf/b0200"
+base = "crt"
+filters = []
+overrides = { rangeTf = 16, target = 1, maxRiskAtr = 1000, bufferPips = 200.0 }
+why = "co stop 200 pip = 20.0 USD dem ngoai dinh sweep 4H; L3: target la trung diem nen 1, mot muc gia khong phu thuoc stop"
+
+[[hypothesis]]
+label = "crtbuf/b0400"
+base = "crt"
+filters = []
+overrides = { rangeTf = 16, target = 1, maxRiskAtr = 1000, bufferPips = 400.0 }
+why = "co stop 400 pip = 40.0 USD dem ngoai dinh sweep 4H; L3: target la trung diem nen 1, mot muc gia khong phu thuoc stop"

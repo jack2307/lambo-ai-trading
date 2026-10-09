@@ -1,0 +1,67 @@
+# Quet co stop o loai stop THI HANH, ho L2 (target = rr x risk).
+# Dang ky: docs/decisions/2026-10-09-enforced-stop.md muc 4.
+# Nhan goc: pdhl/fade-allday cua docs/hypotheses/2026-09-13-pdhl.toml
+# (dong n=50 trong receipts/gate-legs-table.txt).  CHI bufferPips doi.
+[run]
+in_sample = "xauduka:5m"
+in_sample_to = "2025-04-10"
+out_of_sample = "xauusd:5m"
+seeds = 200
+direction_samples = 1000
+fixed = true
+
+[[hypothesis]]
+label = "pdhlbuf/b0001"
+base = "pdhl"
+filters = ["weekdays", "flat:1630-1815"]
+overrides = { mode = 0, bufferPips = 1.0 }
+why = "co stop 1 pip = 0.1 USD dem tren dinh nen cham; L2: target = risk x riskReward nen hinh hoc ti le"
+
+[[hypothesis]]
+label = "pdhlbuf/b0003"
+base = "pdhl"
+filters = ["weekdays", "flat:1630-1815"]
+overrides = { mode = 0, bufferPips = 3.0 }
+why = "co stop 3 pip = 0.3 USD dem tren dinh nen cham; L2: target = risk x riskReward nen hinh hoc ti le"
+
+[[hypothesis]]
+label = "pdhlbuf/b0010"
+base = "pdhl"
+filters = ["weekdays", "flat:1630-1815"]
+overrides = { mode = 0, bufferPips = 10.0 }
+why = "co stop 10 pip = 1.0 USD dem tren dinh nen cham; L2: target = risk x riskReward nen hinh hoc ti le"
+
+[[hypothesis]]
+label = "pdhlbuf/b0030"
+base = "pdhl"
+filters = ["weekdays", "flat:1630-1815"]
+overrides = { mode = 0, bufferPips = 30.0 }
+why = "co stop 30 pip = 3.0 USD dem tren dinh nen cham; L2: target = risk x riskReward nen hinh hoc ti le"
+
+[[hypothesis]]
+label = "pdhlbuf/b0060"
+base = "pdhl"
+filters = ["weekdays", "flat:1630-1815"]
+overrides = { mode = 0, bufferPips = 60.0 }
+why = "co stop 60 pip = 6.0 USD dem tren dinh nen cham; L2: target = risk x riskReward nen hinh hoc ti le"
+
+[[hypothesis]]
+label = "pdhlbuf/b0100"
+base = "pdhl"
+filters = ["weekdays", "flat:1630-1815"]
+overrides = { mode = 0, bufferPips = 100.0 }
+why = "co stop 100 pip = 10.0 USD dem tren dinh nen cham; L2: target = risk x riskReward nen hinh hoc ti le"
+
+[[hypothesis]]
+label = "pdhlbuf/b0200"
+base = "pdhl"
+filters = ["weekdays", "flat:1630-1815"]
+overrides = { mode = 0, bufferPips = 200.0 }
+why = "co stop 200 pip = 20.0 USD dem tren dinh nen cham; L2: target = risk x riskReward nen hinh hoc ti le"
+
+[[hypothesis]]
+label = "pdhlbuf/b0400"
+base = "pdhl"
+filters = ["weekdays", "flat:1630-1815"]
+overrides = { mode = 0, bufferPips = 400.0 }
+why = "co stop 400 pip = 40.0 USD dem tren dinh nen cham; L2: target = risk x riskReward nen hinh hoc ti le"

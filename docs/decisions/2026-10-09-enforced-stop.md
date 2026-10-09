@@ -163,3 +163,19 @@ Thêm, và **không** dùng làm verdict: `null p50` cạnh mọi phân vị
 
 `df -h /e` trước: **26 GB** còn trống (301G, 92%). Không build ⇒ không phình
 `target/`. Chỉ dừng nếu dưới **3 GB**; đọc `df` là thông tin, không phải lệnh.
+
+---
+
+## Ghi chú thêm — 09/10/2026 (thêm vào cuối, không viết lại dòng nào ở trên)
+
+1. **Biên cửa sổ OOS của `pdhl`.** `[run] out_of_sample = "xauusd:5m"` của
+   `docs/hypotheses/2026-09-13-pdhl.toml` không ghi biên. Chạy với
+   `--from=2025-04-11`, mốc liền sau `in_sample_to = 2025-04-10`, để hai cửa sổ
+   không chồng — cùng quy ước `agent/stop-width` dùng. Khai trước khi đọc số.
+2. **`[run]` của batch file KHÔNG đặt được cửa sổ dưới `--fixed`.** Lần chạy
+   plumbing (`receipts/enfstop/00-plumbing-crt-5seeds.txt`) in
+   `bars: 378749 from 2010-06-01 ... to 2026-05-31` dù `[run]` khai
+   2018-06-16→2022-06-16. ⇒ cửa sổ phải truyền bằng
+   `--market= --interval= --from= --to=`. Bốn lần chạy thật dùng cách đó; lần
+   plumbing **không đọc verdict**, đúng như khai ở mục 4.
+3. **Số ô không đổi**: 64 khai, 64 xem. Không thêm trục/nhãn/cỡ stop.

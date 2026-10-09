@@ -1,0 +1,132 @@
+run                 label              n  PF_usd    PF_r     E(R)  Lbar(R)    resid     netUSD     ddUSD    dd% cost/R%  stopPts  sized  szd%    cm   p50  pct
+--------------------------------------------------------------------------------------------------------------------------------------------------------------
+crt-is-guards-on    crtbuf/b0001    1320   0.722  0.6729   -0.124   0.3780 -0.00005   -4888.49   5062.82  50.11    8.92     3.14   1034  78.3  1.03 0.833    1
+crt-is-guards-on    crtbuf/b0003    1312   0.708  0.6627   -0.122   0.3605 -0.00003   -5138.25   5344.02  52.71    8.35     3.35   1008  76.8  1.04 0.836    0
+crt-is-guards-on    crtbuf/b0010    1294   0.695  0.6851   -0.096   0.3043 +0.00002   -5424.90   5643.48  55.57    6.85     4.09    890  68.8  1.04 0.840    1
+crt-is-guards-on    crtbuf/b0030    1261   0.713  0.7256   -0.056   0.2024 -0.00006   -4730.30   4946.15  48.72    4.61     6.08    395  31.3  1.04 0.844    1
+crt-is-guards-on    crtbuf/b0060    1251   0.742  0.7520   -0.034   0.1358 -0.00003   -3486.66   3648.59  36.14    3.09     9.05      0   0.0  1.04 0.846    5
+crt-is-guards-on    crtbuf/b0100    1248   0.737  0.7448   -0.025   0.0972 -0.00000   -2689.90   2827.84  28.10    2.15    13.04      0   0.0  1.04 0.841    5
+crt-is-guards-on    crtbuf/b0200    1243   0.782  0.7869   -0.011   0.0535 -0.00001   -1328.60   1414.10  14.09    1.22    23.03      0   0.0  1.04 0.844   17
+crt-is-guards-on    crtbuf/b0400    1243   0.800  0.8030   -0.006   0.0287 -0.00005    -682.72    730.48   7.29    0.65    43.03      0   0.0  1.04 0.844   23
+crt-is-guards-off   crtbuf/b0001    1338   0.631  0.6657   -0.131   0.3907 +0.00000   -8333.95   8536.95  83.94    8.92     3.14   null  null  1.04 0.805    0
+crt-is-guards-off   crtbuf/b0003    1330   0.632  0.6600   -0.127   0.3725 +0.00008   -8217.97   8519.30  82.97    8.35     3.35   null  null  1.04 0.812    0
+crt-is-guards-off   crtbuf/b0010    1312   0.661  0.6782   -0.102   0.3162 +0.00003   -7444.98   7685.39  75.36    6.85     4.09   null  null  1.04 0.825    1
+crt-is-guards-off   crtbuf/b0030    1279   0.704  0.7268   -0.057   0.2094 +0.00003   -5266.63   5476.99  53.95    4.61     6.08   null  null  1.04 0.838    2
+crt-is-guards-off   crtbuf/b0060    1269   0.747  0.7572   -0.034   0.1404 -0.00000   -3563.67   3764.46  37.29    3.09     9.05   null  null  1.04 0.854    4
+crt-is-guards-off   crtbuf/b0100    1266   0.753  0.7625   -0.024   0.0999 +0.00003   -2625.62   2795.78  27.78    2.15    13.04   null  null  1.04 0.849    6
+crt-is-guards-off   crtbuf/b0200    1261   0.792  0.7982   -0.011   0.0557 +0.00005   -1335.13   1442.87  14.38    1.22    23.03   null  null  1.04 0.846   19
+crt-is-guards-off   crtbuf/b0400    1261   0.810  0.8146   -0.006   0.0300 -0.00003    -683.85    745.60   7.44    0.65    43.03   null  null  1.04 0.850   25
+crt-oos-guards-on   crtbuf/b0001    1358   0.901  0.8927   -0.038   0.3512 +0.00007     -21.57     30.10  29.10    4.56     6.13    890  65.5  0.99 0.908   45
+crt-oos-guards-on   crtbuf/b0003    1353   0.886  0.8758   -0.043   0.3425 +0.00004     -24.53     31.64  30.66    4.40     6.36    863  63.8  0.99 0.913   38
+crt-oos-guards-on   crtbuf/b0010    1344   0.872  0.8709   -0.040   0.3129 -0.00002     -27.72     35.07  33.70    3.95     7.10    779  58.0  0.99 0.912   27
+crt-oos-guards-on   crtbuf/b0030    1325   0.892  0.9078   -0.023   0.2457 -0.00003     -23.83     30.59  29.61    3.05     9.17    512  38.6  0.99 0.908   41
+crt-oos-guards-on   crtbuf/b0060    1311   0.933  0.9505   -0.009   0.1864 +0.00003     -13.26     26.64  25.35    2.30    12.15    109   8.3  1.00 0.895   73
+crt-oos-guards-on   crtbuf/b0100    1299   0.931  0.9539   -0.007   0.1441 -0.00005     -10.64     23.06  22.28    1.74    16.06      8   0.6  1.00 0.902   68
+crt-oos-guards-on   crtbuf/b0200    1291   0.900  0.9361   -0.006   0.0966 -0.00002      -9.84     17.20  16.89    1.08    26.02      0   0.0  1.00 0.910   45
+crt-oos-guards-on   crtbuf/b0400    1291   0.887  0.9496   -0.003   0.0578 +0.00001      -6.37     10.89  10.82    0.61    46.02      0   0.0  1.00 0.920   32
+crt-oos-guards-off  crtbuf/b0001    1379   0.897  0.9164   -0.030   0.3574 -0.00001     -37.31     55.23  50.92    4.58     6.11   null  null  0.99 0.894   52
+crt-oos-guards-off  crtbuf/b0003    1374   0.870  0.8966   -0.036   0.3487 -0.00005     -43.06     56.72  53.81    4.43     6.32   null  null  0.99 0.893   35
+crt-oos-guards-off  crtbuf/b0010    1365   0.866  0.8850   -0.037   0.3190 +0.00008     -41.38     50.38  48.32    3.97     7.06   null  null  0.99 0.904   30
+crt-oos-guards-off  crtbuf/b0030    1344   0.902  0.9156   -0.021   0.2515 +0.00002     -26.42     33.33  32.53    3.06     9.16   null  null  1.00 0.907   47
+crt-oos-guards-off  crtbuf/b0060    1330   0.924  0.9438   -0.011   0.1929 -0.00006     -16.10     28.11  26.83    2.32    12.10   null  null  1.00 0.898   64
+crt-oos-guards-off  crtbuf/b0100    1318   0.907  0.9271   -0.011   0.1527 -0.00006     -15.28     23.91  23.17    1.75    16.02   null  null  1.00 0.906   51
+crt-oos-guards-off  crtbuf/b0200    1310   0.855  0.8919   -0.011   0.1041 +0.00006     -15.19     18.59  18.33    1.08    25.99   null  null  1.00 0.914   18
+crt-oos-guards-off  crtbuf/b0400    1310   0.862  0.9174   -0.005   0.0614 -0.00003      -8.26     11.64  11.59    0.61    45.99   null  null  1.00 0.926   21
+pdhl-is-guards-on   pdhlbuf/b0001   3395   0.715  0.5988   -0.272   0.6781 +0.00003   -8515.16   8717.24  85.58   22.40     1.25   3332  98.1  1.46 0.738   26
+pdhl-is-guards-on   pdhlbuf/b0003   3371   0.735  0.6558   -0.227   0.6604 +0.00002   -8659.88   8880.49  86.93   19.44     1.44   3302  98.0  1.31 0.759   26
+pdhl-is-guards-on   pdhlbuf/b0010   2897   0.858  0.8142   -0.112   0.6011 +0.00002   -7109.74   7253.87  71.91   12.79     2.19   2809  97.0  1.25 0.797   96
+pdhl-is-guards-on   pdhlbuf/b0030    905   0.935  0.9327   -0.036   0.5298 -0.00004   -2287.34   4140.37  36.29    6.02     4.65    676  74.7  1.39 0.813  100
+pdhl-is-guards-on   pdhlbuf/b0060    159   1.039  1.0310    0.014   0.4411 +0.00002    +278.54   1262.70  10.95    3.41     8.21     22  13.8  2.96 0.809   98
+pdhl-is-guards-on   pdhlbuf/b0100     24   0.851  0.8591   -0.065   0.4601 +0.00003    -165.06    497.53   4.85    2.07    13.52      0   0.0 19.58 0.817   66
+pdhl-is-guards-on   pdhlbuf/b0200      2   0.803  0.8080   -0.097   0.5030 -0.00005     -19.99    101.27   1.00    1.16    24.22   null  null235.00 0.819   44
+pdhl-is-guards-on   pdhlbuf/b0400      0     NaN    null      NaN     null     null       null      null   null    null     null   null  null  null 0.774 null
+pdhl-is-guards-off  pdhlbuf/b0001   3506   0.629  0.6068   -0.265   0.6750 -0.00002   -9999.06  10366.97  99.99   21.88     1.28   null  null  1.12 0.714    7
+pdhl-is-guards-off  pdhlbuf/b0003   3478   0.705  0.6643   -0.221   0.6586 -0.00003   -9995.48  10453.01  99.96   19.05     1.47   null  null  1.15 0.736   28
+pdhl-is-guards-off  pdhlbuf/b0010   2995   0.821  0.8202   -0.108   0.6020 -0.00002   -9675.56   9851.81  96.91   12.67     2.21   null  null  1.25 0.773   86
+pdhl-is-guards-off  pdhlbuf/b0030    939   0.926  0.9357   -0.034   0.5344 -0.00004   -3152.39   5130.91  45.73    6.00     4.67   null  null  1.39 0.783  100
+pdhl-is-guards-off  pdhlbuf/b0060    162   1.014  1.0251    0.011   0.4455 -0.00000    +103.52   1222.57  10.81    3.42     8.20   null  null  2.93 0.778  100
+pdhl-is-guards-off  pdhlbuf/b0100     25   0.981  0.9915   -0.004   0.4417 -0.00006     -21.37    355.07   3.46    2.07    13.50   null  null 19.00 0.786   98
+pdhl-is-guards-off  pdhlbuf/b0200      2   0.803  0.8080   -0.097   0.5030 -0.00005     -19.99    101.27   1.00    1.16    24.22   null  null237.00 0.795   56
+pdhl-is-guards-off  pdhlbuf/b0400      0     NaN    null      NaN     null     null       null      null   null    null     null   null  null  null 0.716 null
+pdhl-oos-guards-on  pdhlbuf/b0001    308   0.686  0.7277   -0.178   0.6549 +0.00001     -21.25     24.12  23.77    6.36     4.40    283  91.9  1.09 0.930    2
+pdhl-oos-guards-on  pdhlbuf/b0003    307   0.686  0.7379   -0.170   0.6498 +0.00003     -21.74     24.76  24.38    6.09     4.60    283  92.2  1.10 0.931    2
+pdhl-oos-guards-on  pdhlbuf/b0010    305   0.704  0.7244   -0.181   0.6564 -0.00000     -22.48     25.98  25.53    5.31     5.27    274  89.8  1.12 0.939    2
+pdhl-oos-guards-on  pdhlbuf/b0030    294   0.787  0.8239   -0.107   0.6103 -0.00002     -18.67     21.00  20.90    3.88     7.21    254  86.4  1.19 0.948    5
+pdhl-oos-guards-on  pdhlbuf/b0060    226   0.918  0.9647   -0.019   0.5480 +0.00002      -7.01     11.62  11.46    2.66    10.53    160  70.8  1.24 0.950   40
+pdhl-oos-guards-on  pdhlbuf/b0100    123   0.993  1.0008    0.000   0.5308 -0.00002      -0.39     10.17   9.44    1.84    15.19     37  30.1  1.36 0.951   59
+pdhl-oos-guards-on  pdhlbuf/b0200     24   0.999  1.1071    0.046   0.4344 +0.00000      -0.01      3.99   3.84    0.89    31.29   null  null  1.92 0.968   56
+pdhl-oos-guards-on  pdhlbuf/b0400      5   4.467  5.2177    0.845   0.2004 -0.00004      +2.60      0.75   0.73    0.44    63.24   null  null  9.20 0.968  100
+pdhl-oos-guards-off pdhlbuf/b0001    315   0.714  0.7182   -0.186   0.6605 +0.00001     -43.94     52.70  50.09    6.35     4.41   null  null  1.06 0.902    4
+pdhl-oos-guards-off pdhlbuf/b0003    314   0.728  0.7278   -0.178   0.6556 -0.00004     -42.22     49.13  47.62    6.08     4.61   null  null  1.07 0.904    5
+pdhl-oos-guards-off pdhlbuf/b0010    312   0.710  0.7141   -0.189   0.6624 +0.00006     -43.86     50.59  49.10    5.28     5.30   null  null  1.10 0.918    2
+pdhl-oos-guards-off pdhlbuf/b0030    300   0.790  0.8037   -0.121   0.6168 -0.00003     -29.94     33.94  33.70    3.86     7.26   null  null  1.17 0.928    8
+pdhl-oos-guards-off pdhlbuf/b0060    229   0.941  0.9556   -0.025   0.5527 +0.00007      -6.66     13.83  13.64    2.65    10.57   null  null  1.23 0.929   52
+pdhl-oos-guards-off pdhlbuf/b0100    126   0.985  0.9928   -0.004   0.5341 +0.00002      -0.92     11.31  10.48    1.84    15.22   null  null  1.35 0.938   62
+pdhl-oos-guards-off pdhlbuf/b0200     24   0.999  1.1071    0.046   0.4344 +0.00000      -0.01      3.99   3.84    0.89    31.29   null  null  1.92 0.914   60
+pdhl-oos-guards-off pdhlbuf/b0400      5   4.467  5.2177    0.845   0.2004 -0.00004      +2.60      0.75   0.73    0.44    63.24   null  null  9.20 0.915  100
+
+EXIT MIX (F1: if this were a denominator stop it would be IDENTICAL across stop sizes)
+crt-is-guards-on    crtbuf/b0001   NEWS_FLAT 10, STOP 421, TARGET 665, TIMEOUT 176, WEEKEND_FLAT 48   | mean hold 85.5 min
+crt-is-guards-on    crtbuf/b0003   NEWS_FLAT 10, STOP 397, TARGET 667, TIMEOUT 189, WEEKEND_FLAT 49   | mean hold 88.5 min
+crt-is-guards-on    crtbuf/b0010   NEWS_FLAT 11, STOP 321, TARGET 690, TIMEOUT 223, WEEKEND_FLAT 49   | mean hold 97.6 min
+crt-is-guards-on    crtbuf/b0030   NEWS_FLAT 12, STOP 166, TARGET 716, TIMEOUT 314, WEEKEND_FLAT 53   | mean hold 115.9 min
+crt-is-guards-on    crtbuf/b0060   NEWS_FLAT 12, STOP 79, TARGET 723, TIMEOUT 383, WEEKEND_FLAT 54   | mean hold 126.2 min
+crt-is-guards-on    crtbuf/b0100   NEWS_FLAT 13, STOP 38, TARGET 724, TIMEOUT 419, WEEKEND_FLAT 54   | mean hold 130.6 min
+crt-is-guards-on    crtbuf/b0200   NEWS_FLAT 13, STOP 5, TARGET 722, TIMEOUT 449, WEEKEND_FLAT 54   | mean hold 133.7 min
+crt-is-guards-on    crtbuf/b0400   NEWS_FLAT 13, TARGET 722, TIMEOUT 454, WEEKEND_FLAT 54   | mean hold 134.1 min
+crt-is-guards-off   crtbuf/b0001   STOP 441, TARGET 686, TIMEOUT 211   | mean hold 187.3 min
+crt-is-guards-off   crtbuf/b0003   STOP 417, TARGET 689, TIMEOUT 224   | mean hold 190.9 min
+crt-is-guards-off   crtbuf/b0010   STOP 340, TARGET 712, TIMEOUT 260   | mean hold 203.6 min
+crt-is-guards-off   crtbuf/b0030   STOP 178, TARGET 740, TIMEOUT 361   | mean hold 236.2 min
+crt-is-guards-off   crtbuf/b0060   STOP 86, TARGET 750, TIMEOUT 433   | mean hold 249.9 min
+crt-is-guards-off   crtbuf/b0100   STOP 41, TARGET 753, TIMEOUT 472   | mean hold 254.9 min
+crt-is-guards-off   crtbuf/b0200   STOP 6, TARGET 751, TIMEOUT 504   | mean hold 258.5 min
+crt-is-guards-off   crtbuf/b0400   TARGET 751, TIMEOUT 510   | mean hold 258.8 min
+crt-oos-guards-on   crtbuf/b0001   NEWS_FLAT 9, STOP 413, TARGET 681, TIMEOUT 208, WEEKEND_FLAT 47   | mean hold 89.9 min
+crt-oos-guards-on   crtbuf/b0003   NEWS_FLAT 10, STOP 402, TARGET 681, TIMEOUT 213, WEEKEND_FLAT 47   | mean hold 92.1 min
+crt-oos-guards-on   crtbuf/b0010   NEWS_FLAT 10, STOP 360, TARGET 698, TIMEOUT 228, WEEKEND_FLAT 48   | mean hold 97.5 min
+crt-oos-guards-on   crtbuf/b0030   NEWS_FLAT 13, STOP 263, TARGET 728, TIMEOUT 273, WEEKEND_FLAT 48   | mean hold 109.4 min
+crt-oos-guards-on   crtbuf/b0060   NEWS_FLAT 17, STOP 170, TARGET 740, TIMEOUT 336, WEEKEND_FLAT 48   | mean hold 118.6 min
+crt-oos-guards-on   crtbuf/b0100   NEWS_FLAT 18, STOP 108, TARGET 738, TIMEOUT 386, WEEKEND_FLAT 49   | mean hold 126.8 min
+crt-oos-guards-on   crtbuf/b0200   NEWS_FLAT 19, STOP 48, TARGET 739, TIMEOUT 436, WEEKEND_FLAT 49   | mean hold 133.2 min
+crt-oos-guards-on   crtbuf/b0400   NEWS_FLAT 19, STOP 12, TARGET 744, TIMEOUT 467, WEEKEND_FLAT 49   | mean hold 136.2 min
+crt-oos-guards-off  crtbuf/b0001   STOP 434, TARGET 710, TIMEOUT 235   | mean hold 185.9 min
+crt-oos-guards-off  crtbuf/b0003   STOP 423, TARGET 710, TIMEOUT 241   | mean hold 188.5 min
+crt-oos-guards-off  crtbuf/b0010   STOP 380, TARGET 728, TIMEOUT 257   | mean hold 196.6 min
+crt-oos-guards-off  crtbuf/b0030   STOP 278, TARGET 758, TIMEOUT 308   | mean hold 212.3 min
+crt-oos-guards-off  crtbuf/b0060   STOP 184, TARGET 771, TIMEOUT 375   | mean hold 222.7 min
+crt-oos-guards-off  crtbuf/b0100   STOP 119, TARGET 771, TIMEOUT 428   | mean hold 234.0 min
+crt-oos-guards-off  crtbuf/b0200   STOP 58, TARGET 772, TIMEOUT 480   | mean hold 241.2 min
+crt-oos-guards-off  crtbuf/b0400   STOP 15, TARGET 779, TIMEOUT 516   | mean hold 244.5 min
+pdhl-is-guards-on   pdhlbuf/b0001  NEWS_FLAT 8, STOP 2011, TARGET 1302, TIMEOUT 57, flat window 17   | mean hold 26.3 min
+pdhl-is-guards-on   pdhlbuf/b0003  NEWS_FLAT 10, STOP 1992, TARGET 1273, TIMEOUT 73, flat window 23   | mean hold 33.9 min
+pdhl-is-guards-on   pdhlbuf/b0010  NEWS_FLAT 19, STOP 1601, TARGET 1066, TIMEOUT 164, flat window 47   | mean hold 61.0 min
+pdhl-is-guards-on   pdhlbuf/b0030  NEWS_FLAT 10, STOP 441, TARGET 279, TIMEOUT 140, flat window 35   | mean hold 95.5 min
+pdhl-is-guards-on   pdhlbuf/b0060  NEWS_FLAT 1, STOP 61, TARGET 30, TIMEOUT 52, flat window 15   | mean hold 154.4 min
+pdhl-is-guards-on   pdhlbuf/b0100  STOP 10, TARGET 4, TIMEOUT 7, flat window 3   | mean hold 133.3 min
+pdhl-is-guards-on   pdhlbuf/b0200  STOP 1, TIMEOUT 1   | mean hold 142.5 min
+pdhl-is-guards-on   pdhlbuf/b0400  no exits recorded   | mean hold None min
+pdhl-is-guards-off  pdhlbuf/b0001  STOP 2074, TARGET 1351, TIMEOUT 64, flat window 17   | mean hold 26.5 min
+pdhl-is-guards-off  pdhlbuf/b0003  STOP 2054, TARGET 1321, TIMEOUT 79, flat window 24   | mean hold 33.9 min
+pdhl-is-guards-off  pdhlbuf/b0010  STOP 1663, TARGET 1114, TIMEOUT 171, flat window 47   | mean hold 60.6 min
+pdhl-is-guards-off  pdhlbuf/b0030  STOP 463, TARGET 296, TIMEOUT 145, flat window 35   | mean hold 94.8 min
+pdhl-is-guards-off  pdhlbuf/b0060  STOP 63, TARGET 31, TIMEOUT 53, flat window 15   | mean hold 154.2 min
+pdhl-is-guards-off  pdhlbuf/b0100  STOP 10, TARGET 5, TIMEOUT 7, flat window 3   | mean hold 129.2 min
+pdhl-is-guards-off  pdhlbuf/b0200  STOP 1, TIMEOUT 1   | mean hold 142.5 min
+pdhl-is-guards-off  pdhlbuf/b0400  no exits recorded   | mean hold None min
+pdhl-oos-guards-on  pdhlbuf/b0001  NEWS_FLAT 2, STOP 189, TARGET 106, TIMEOUT 6, flat window 5   | mean hold 22.9 min
+pdhl-oos-guards-on  pdhlbuf/b0003  NEWS_FLAT 2, STOP 188, TARGET 106, TIMEOUT 6, flat window 5   | mean hold 24.5 min
+pdhl-oos-guards-on  pdhlbuf/b0010  NEWS_FLAT 2, STOP 190, TARGET 102, TIMEOUT 5, flat window 6   | mean hold 28.6 min
+pdhl-oos-guards-on  pdhlbuf/b0030  NEWS_FLAT 1, STOP 172, TARGET 99, TIMEOUT 13, flat window 9   | mean hold 54.6 min
+pdhl-oos-guards-on  pdhlbuf/b0060  NEWS_FLAT 1, STOP 119, TARGET 75, TIMEOUT 25, flat window 6   | mean hold 79.8 min
+pdhl-oos-guards-on  pdhlbuf/b0100  STOP 63, TARGET 39, TIMEOUT 17, flat window 4   | mean hold 95.0 min
+pdhl-oos-guards-on  pdhlbuf/b0200  STOP 10, TARGET 4, TIMEOUT 8, flat window 2   | mean hold 145.0 min
+pdhl-oos-guards-on  pdhlbuf/b0400  STOP 1, TARGET 3, TIMEOUT 1   | mean hold 136.0 min
+pdhl-oos-guards-off pdhlbuf/b0001  STOP 196, TARGET 107, TIMEOUT 7, flat window 5   | mean hold 23.6 min
+pdhl-oos-guards-off pdhlbuf/b0003  STOP 195, TARGET 107, TIMEOUT 7, flat window 5   | mean hold 25.2 min
+pdhl-oos-guards-off pdhlbuf/b0010  STOP 197, TARGET 103, TIMEOUT 6, flat window 6   | mean hold 29.2 min
+pdhl-oos-guards-off pdhlbuf/b0030  STOP 178, TARGET 99, TIMEOUT 14, flat window 9   | mean hold 54.6 min
+pdhl-oos-guards-off pdhlbuf/b0060  STOP 122, TARGET 76, TIMEOUT 25, flat window 6   | mean hold 79.8 min
+pdhl-oos-guards-off pdhlbuf/b0100  STOP 65, TARGET 40, TIMEOUT 17, flat window 4   | mean hold 94.6 min
+pdhl-oos-guards-off pdhlbuf/b0200  STOP 10, TARGET 4, TIMEOUT 8, flat window 2   | mean hold 145.0 min
+pdhl-oos-guards-off pdhlbuf/b0400  STOP 1, TARGET 3, TIMEOUT 1   | mean hold 136.0 min
