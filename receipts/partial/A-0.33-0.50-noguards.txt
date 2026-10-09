@@ -1,0 +1,67 @@
+market:   xauusd 15m
+data:     E:/rust/flowdesk/data (bars from E:/rust/flowdesk/data\bars\XAUUSD-15m.parquet)
+bounds:   --from=2025-07-01 --to=2025-10-01 kept 6044 of 100586 bars
+spread:   0.28 per round trip
+trail:    off
+partial:  ON bank 0.5 of the position at +0.33R, the rest runs to its own exit
+max hold: 4 h (14400000 ms) from [trading] max_hold_ms, no per-market override
+bars:     6044 from 2025-07-01 00:00 to 2025-09-30 23:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+companion: none loaded — every cmp series is NaN
+guards: off (every number unguarded)
+null sides: coin - 50/50, carries no drift; the null every published percentile was read against
+flags:    9 passed, every one of them read by --mode=hypotheses
+
+== hypotheses `docs/hypotheses/2026-10-09-partial-grid.toml`: 3 declared, FIXED parameters over the whole window (no selection), each against 200 matched null runs ==
+null sides: coin (50/50, carries no drift; the null every published percentile was read against)
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0.28
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+guards: off (every number unguarded)
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+compression  bb-fade                39   0.689  -0.111    0.785    1.689        0   38%  fail: profit factor 0.689 < 1.2; expectancy -0.111R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15 + ATR14/ATR100 in [0, 0.8]  — ô gần cổng nhất trên cả hai cửa sổ khi không trail; fade khi range hẹp
+                                max drawdown 5.68 USD = 5.65% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.700 R is); net -4.17 USD over 39 trades
+                                Lbar 0.3582 R = |avg_loss_r| 0.6074 x loss share 0.5897 over 39 trades; PF_r 0.6906 (R) vs PF_usd 0.6888 (USD, gap +0.0018); identity E = Lbar(PF_r-1) = -0.1108 R vs expectancy -0.1108 R, residual +0.00003 R; expectancy leg REDUNDANT (Lbar >= 0.250R)
+                                matched null 24 trades median vs the method's 39 — count match 0.62  ** outside the band: this percentile is unmatched **
+                                long share: method 0.462 vs the null's median 0.500
+                                spread paid: method 2.51 USD vs the null's median 1.48 USD — cost match 0.59  ** outside the band: the control did not pay what the method paid **
+                                exposure: signed share of time method -0.346 vs the null's -0.007; time in market method 2295 min vs the null's median 2228 min — ratio 0.97  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.785 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 1.500 ATR = 3.97 points, cost 7.06% of R (named stopAtr, copied)
+                                the method's own realised stop: median 1.554 ATR = 4.11 points over 39 trades
+                                exits: STOP 21, TARGET 13, flat window 3, middle band reached 2; mean hold 58.9 min; partial legs: 28 of 39 positions banked, +4.1269 R of total_r -4.3215 R
+intraday     donchian-breakout     271   0.977  -0.004    0.884    1.171        0   77%  fail: profit factor 0.977 < 1.2; expectancy -0.004R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15  — ô gần cổng thứ hai; breakout không giữ qua đêm, cỡ mẫu lớn nhất trong ba
+                                max drawdown 13.07 USD = 12.90% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.628 R is); net -1.79 USD over 271 trades
+                                Lbar 0.3194 R = |avg_loss_r| 0.5969 x loss share 0.5351 over 271 trades; PF_r 0.9867 (R) vs PF_usd 0.9774 (USD, gap +0.0093); identity E = Lbar(PF_r-1) = -0.0042 R vs expectancy -0.0042 R, residual +0.00004 R; expectancy leg REDUNDANT (Lbar >= 0.250R)
+                                matched null 198 trades median vs the method's 271 — count match 0.73  ** outside the band: this percentile is unmatched **
+                                long share: method 0.557 vs the null's median 0.499
+                                spread paid: method 9.14 USD vs the null's median 6.69 USD — cost match 0.73  ** outside the band: the control did not pay what the method paid **
+                                exposure: signed share of time method +0.183 vs the null's -0.008; time in market method 34785 min vs the null's median 31478 min — ratio 0.90  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.884 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 2.000 ATR = 7.64 points, cost 3.66% of R (named stopAtr, copied)
+                                the method's own realised stop: median 2.036 ATR = 7.78 points over 271 trades
+                                exits: END_OF_DATA 1, STOP 65, TARGET 49, TIMEOUT 65, flat window 23, lost the channel midline 30, reclaimed the channel midline 38; mean hold 128.4 min; partial legs: 178 of 271 positions banked, +26.3432 R of total_r -1.1427 R
+intraday     bb-fade               369   0.766  -0.093    0.863    1.087        0   22%  fail: profit factor 0.766 < 1.2; expectancy -0.093R < 0.05R
+                                MoTuWeThFr + flat 16:30-18:15  — ô gần cổng thứ ba; 396/439 lệnh — cỡ mẫu đủ để một hiệu ứng trail nhỏ nhìn thấy được
+                                max drawdown 37.71 USD = 34.69% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.719 R is); net -28.78 USD over 369 trades
+                                Lbar 0.3808 R = |avg_loss_r| 0.7026 x loss share 0.5420 over 369 trades; PF_r 0.7564 (R) vs PF_usd 0.7657 (USD, gap -0.0093); identity E = Lbar(PF_r-1) = -0.0928 R vs expectancy -0.0928 R, residual -0.00002 R; expectancy leg REDUNDANT (Lbar >= 0.250R)
+                                matched null 254 trades median vs the method's 369 — count match 0.69  ** outside the band: this percentile is unmatched **
+                                long share: method 0.488 vs the null's median 0.498
+                                spread paid: method 15.54 USD vs the null's median 11.24 USD — cost match 0.72  ** outside the band: the control did not pay what the method paid **
+                                exposure: signed share of time method -0.063 vs the null's +0.003; time in market method 29070 min vs the null's median 31380 min — ratio 1.08  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.863 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 1.500 ATR = 5.95 points, cost 4.70% of R (named stopAtr, copied)
+                                the method's own realised stop: median 1.535 ATR = 6.09 points over 369 trades
+                                exits: STOP 186, TARGET 83, TIMEOUT 16, flat window 22, middle band reached 62; mean hold 78.8 min; partial legs: 256 of 369 positions banked, +37.5949 R of total_r -34.2294 R
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+

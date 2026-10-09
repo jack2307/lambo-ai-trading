@@ -195,3 +195,28 @@ hai tham số thì kết quả là **hiện vật cửa sổ thứ 12**, không 
   duy nhất thấy excursion, và nó đo tới giá THOÁT, nên trên một vị thế đã chốt
   một phần nó vẫn là excursion của **cả** đường đi, không của từng chân.
 - Không đo họ tự quản (`Exits::Strategy`) — luật không chạm chúng, cố ý.
+
+---
+
+## Ghi chú thêm 2026-10-09 (sau khi chạy lưới, KHÔNG viết lại dòng nào ở trên)
+
+Lưới đã chạy xong. Kết quả ở `docs/decisions/2026-10-09-partial-exit-result.md`,
+receipt ở `receipts/partial/`. Bốn chỗ đăng ký này cần đọc kèm số đo:
+
+1. **F0 bắn một nửa và điều kiện thứ hai của nó giữ được:** engine phải vá
+   (~366 dòng code, trong khoảng khai ~330–380), và `--partial=off` tái hiện
+   `agent/m4` đúng từng chữ số (271 lệnh / PF_usd 1,1175 / +0,0536R / TARGET 49
+   / hold 128,4 min) với 27 test binary của `fd-backtest` qua hết. Nên tôi
+   KHÔNG dừng.
+2. **Phần test VƯỢT khai:** khai ~120 dòng, viết 350 dòng (11 test). Tổng
+   insertions của commit `c3d746e` là 748 dòng. Khai 330–380 là khai phần CODE
+   và nó đúng; phần test vượt 230 dòng.
+3. **Dự đoán âm ở mục 3 SAI VỀ CƠ CHẾ.** `Lbar` tụt **−24,9%**, không phải về
+   một phần ba, và **0/84 dòng có `Lbar < 0,250R`** nên chân expectancy **vẫn
+   dư ở mọi dòng**. Trục chết vì `PF_r` cũng tụt (1,1259 → 0,9867), không vì
+   hằng đẳng thức. Số đo thắng.
+4. **Liều THẬT khác liều KHAI** vì `lot_step`/`min_lot` trên sổ 100 USD: khai
+   0,25 → thật 0,170–0,237; khai 0,50 → thật 0,433–0,480. Mọi số đáp ứng đọc
+   theo liều thật. Đăng ký này không lường trước điều đó.
+
+Sổ đa phép thử: **khai 28 run / 84 row, xem 28 run / 84 row.**
