@@ -1,0 +1,27 @@
+$ python volreal_scan.py   # every parquet in data/bars, the WHOLE volume column, no sampling
+
+file                           rows     NULL     zero      pos   neg     minpos     median          max  range
+AUDNZD-15m.parquet           371148        0   371148        0     0       null       null         null  2010-06-02..2026-05-29
+AUDNZD-1m.parquet           5507472  5507472        0        0     0       null       null         null  2010-06-02..2026-05-29
+AUDNZD-5m.parquet           1111927        0  1111927        0     0       null       null         null  2010-06-02..2026-05-29
+BTCUSD-15m.parquet           100798        0    56300    44498     0         65       1420    1.368e+04  2023-10-05..2026-09-15
+BTCUSD-1m.parquet             99823        0        0    99823     0          2      64.98          692  2026-07-05..2026-09-12
+BTCUSD-5m.parquet            100860        0        0   100860     0         17      466.2         4663  2025-09-26..2026-09-15
+BTCUSDT-15m.parquet           70080        0        0    70080     0      3.985      141.3    1.007e+04  2024-09-12..2026-09-12
+BTCUSDT-1m.parquet            10683        0        0    10683     0    0.09031      4.863        929.5  2026-09-05..2026-09-12
+BTCUSDT-5m.parquet           218880        0        0   218880     0     0.8031      44.04         5471  2024-08-13..2026-09-12
+EURDUKA-15m.parquet          398220        0   398220        0     0       null       null         null  2010-06-01..2026-05-31
+EURDUKA-1m.parquet          5881397  5881397        0        0     0       null       null         null  2010-06-01..2026-05-31
+EURDUKA-5m.parquet          1193417        0  1193417        0     0       null       null         null  2010-06-01..2026-05-31
+EURUSD-15m.parquet            61247        0        0    61247     0          5      486.5         4490  2024-03-29..2026-09-15
+EURUSD-5m.parquet             61054        0        0    61054     0          1      206.1         1492  2025-11-19..2026-09-15
+GC-1m.parquet                 18403    18403        0        0     0       null       null         null  2026-09-06..2026-10-09
+XAGDUKA-15m.parquet          374188        0   374188        0     0       null       null         null  2010-06-01..2026-05-31
+XAGDUKA-1m.parquet          5285287  5285287        0        0     0       null       null         null  2010-06-01..2026-05-31
+XAGDUKA-5m.parquet          1117119        0  1117119        0     0       null       null         null  2010-06-01..2026-05-31
+XAUDUKA-15m.parquet          378749        0   378749        0     0       null       null         null  2010-06-01..2026-05-31
+XAUDUKA-1m.parquet          5635777  5635777        0        0     0       null       null         null  2010-06-01..2026-05-31
+XAUDUKA-5m.parquet          1135389        0  1135389        0     0       null       null         null  2010-06-01..2026-05-31
+XAUUSD-15m.parquet           100586        0        0   100586     0          1       1251    1.016e+04  2022-06-16..2026-09-17
+XAUUSD-1m.parquet            100000        0        0   100000     0         29      337.1          635  2026-06-02..2026-09-11
+XAUUSD-5m.parquet            101242        0        0   101242     0          1       1395         3389  2025-04-11..2026-09-15

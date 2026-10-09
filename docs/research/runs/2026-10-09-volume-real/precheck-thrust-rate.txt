@@ -1,0 +1,47 @@
+$ python volreal_thrust.py # the volume-thrust entry condition, counted directly on the column
+
+
+=== XAUUSD-15m (MT5 tick volume)  n=100586  vol: null=0 zero=0 pos=100586
+year      bars  vol>=2.5xmean   rate%   +range  +extreme  FULL ENTRY  per 1k bars
+  2022   12865            149    1.16      146        75          53         4.12
+  2023   23560            802    3.40      768       360         234         9.93
+  2024   23716             79    0.33       76        35          29         1.22
+  2025   23619             99    0.42       96        46          39         1.65
+  2026   16826              6    0.04        6         2           2         0.12
+ALL     100586           1135    1.13     1092       518         357         3.55
+
+=== BTCUSDT-15m (Binance traded volume)  n=70080  vol: null=0 zero=0 pos=70080
+year      bars  vol>=2.5xmean   rate%   +range  +extreme  FULL ENTRY  per 1k bars
+  2024   10615            589    5.55      564       301         202        19.03
+  2025   35040           2111    6.02     1987      1016         676        19.29
+  2026   24425           1579    6.46     1356       609         403        16.50
+ALL      70080           4279    6.11     3907      1926        1281        18.28
+
+=== BTCUSD-15m (MT5 tick volume, 56% zeros)  n=100798  vol: null=0 zero=56300 pos=44498
+year      bars  vol>=2.5xmean   rate%   +range  +extreme  FULL ENTRY  per 1k bars
+  2023    7848              0    0.00        0         0           0         0.00
+  2024   33984              0    0.00        0         0           0         0.00
+  2025   34335            377    1.10      368       188         120         3.49
+  2026   24631            557    2.26      555       273         165         6.70
+ALL     100798            934    0.93      923       461         285         2.83
+
+=== XAUDUKA-15m (Dukascopy, all zeros)  n=378749  vol: null=0 zero=378749 pos=0
+year      bars  vol>=2.5xmean   rate%   +range  +extreme  FULL ENTRY  per 1k bars
+  2010   14652              0    0.00        0         0           0         0.00
+  2011   24456              0    0.00        0         0           0         0.00
+  2012   24200              0    0.00        0         0           0         0.00
+  2013   23568              0    0.00        0         0           0         0.00
+  2014   23459              0    0.00        0         0           0         0.00
+  2015   23593              0    0.00        0         0           0         0.00
+  2016   23629              0    0.00        0         0           0         0.00
+  2017   23526              0    0.00        0         0           0         0.00
+  2018   23532              0    0.00        0         0           0         0.00
+  2019   23615              0    0.00        0         0           0         0.00
+  2020   23614              0    0.00        0         0           0         0.00
+  2021   23626              0    0.00        0         0           0         0.00
+  2022   23267              0    0.00        0         0           0         0.00
+  2023   23455              0    0.00        0         0           0         0.00
+  2024   23641              0    0.00        0         0           0         0.00
+  2025   23370              0    0.00        0         0           0         0.00
+  2026    9546              0    0.00        0         0           0         0.00
+ALL     378749              0    0.00        0         0           0         0.00

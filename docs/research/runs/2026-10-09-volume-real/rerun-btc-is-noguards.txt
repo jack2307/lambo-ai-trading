@@ -1,0 +1,69 @@
+$ /e/rust/fd-stop-width/target-sw/release/search.exe --market=btc --interval=15m --mode=hypotheses --data=/e/rust/flowdesk/data --batch-file=/e/rust/fd-volume-real/docs/hypotheses/2026-09-13-volume-thrust.toml --seeds=200 --to=2025-12-31 --exit-mix
+
+market:   btc 15m
+data:     E:/rust/flowdesk/data (bars from E:/rust/flowdesk/data\bars\BTCUSDT-15m.parquet)
+bounds:   --from=… --to=2025-12-31 kept 45559 of 70080 bars
+spread:   5 per round trip
+trail:    off
+max hold: 4 h (14400000 ms) from [trading] max_hold_ms, no per-market override
+bars:     45559 from 2024-09-12 10:15 to 2025-12-30 23:45
+timeline: 8189 frames from 2026-09-11 05:36 to 2026-10-09 15:56
+          the tape covers 0 of 45559 bars (0.0%)
+
+tape:     67367 prints, 8189 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+companion: none loaded — every cmp series is NaN
+guards: off (every number unguarded)
+null sides: coin - 50/50, carries no drift; the null every published percentile was read against
+flags:    8 passed, every one of them read by --mode=hypotheses
+
+== hypotheses `E:/rust/fd-volume-real/docs/hypotheses/2026-09-13-volume-thrust.toml`: 3 declared, walk-forward (4 folds), each against 200 matched null runs ==
+null sides: coin (50/50, carries no drift; the null every published percentile was read against)
+swap: long 0.00 / short 0.00 USD per lot per night; spread 5
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+guards: off (every number unguarded)
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+vt-btc/fixed volume-thrust         677   0.992   0.002    0.978    1.159        0   54%  fail: profit factor 0.992 < 1.2; expectancy 0.002R < 0.05R
+                                  — the defaults pinned, 24/7
+                                max drawdown 3542.62 USD = 29.78% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.712 R is); net -262.77 USD over 677 trades
+                                Lbar 0.5037 R = |avg_loss_r| 0.8973 x loss share 0.5613 over 677 trades; PF_r 1.0040 (R) vs PF_usd 0.9924 (USD, gap +0.0116); identity E = Lbar(PF_r-1) = +0.0020 R vs expectancy +0.0020 R, residual -0.00004 R; expectancy leg REDUNDANT (Lbar >= 0.250R)
+                                matched null 628 trades median vs the method's 677 — count match 0.93
+                                long share: method 0.482 vs the null's median 0.502
+                                spread paid: method 785.65 USD vs the null's median 664.79 USD — cost match 0.85
+                                exposure: signed share of time method +0.034 vs the null's +0.004; time in market method 78105 min vs the null's median 101445 min — ratio 1.30  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.978 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 1.951 ATR = 500.60 points, cost 1.00% of R (realised median, structural)
+                                the method's own realised stop: median 1.951 ATR = 500.60 points over 840 trades
+                                exits: STOP 319, TARGET 198, TIMEOUT 160; mean hold 115.4 min
+vt-btc/all   volume-thrust         362   1.119   0.064    0.978    1.159        0   90%  fail: profit factor 1.119 < 1.2
+                                  — the grid (volume multiple x reward) walked forward, 24/7
+                                max drawdown 1373.72 USD = 10.43% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.698 R is); net +2214.49 USD over 362 trades
+                                Lbar 0.4921 R = |avg_loss_r| 0.8690 x loss share 0.5663 over 362 trades; PF_r 1.1302 (R) vs PF_usd 1.1193 (USD, gap +0.0109); identity E = Lbar(PF_r-1) = +0.0641 R vs expectancy +0.0641 R, residual +0.00003 R; expectancy leg REDUNDANT (Lbar >= 0.250R)
+                                matched null 628 trades median vs the method's 362 — count match 1.73  ** outside the band: this percentile is unmatched **
+                                long share: method 0.483 vs the null's median 0.502
+                                spread paid: method 373.36 USD vs the null's median 664.79 USD — cost match 1.78  ** outside the band: the control did not pay what the method paid **
+                                exposure: signed share of time method +0.007 vs the null's +0.004; time in market method 51255 min vs the null's median 101445 min — ratio 1.98  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.978 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 1.951 ATR = 500.60 points, cost 1.00% of R (realised median, structural)
+                                the method's own realised stop: median 1.951 ATR = 500.60 points over 840 trades
+                                exits: STOP 164, TARGET 75, TIMEOUT 123; mean hold 141.6 min
+vt-btc/us    volume-thrust         179   1.036   0.019    0.979    1.277        0   62%  fail: profit factor 1.036 < 1.2; expectancy 0.019R < 0.05R
+                                MoTuWeThFr + NY 09:30-16:00  — US equity hours: a thrust with the most participants behind it
+                                max drawdown 1592.15 USD = 14.14% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.683 R is); net +308.06 USD over 179 trades
+                                Lbar 0.4789 R = |avg_loss_r| 0.8930 x loss share 0.5363 over 179 trades; PF_r 1.0407 (R) vs PF_usd 1.0359 (USD, gap +0.0048); identity E = Lbar(PF_r-1) = +0.0195 R vs expectancy +0.0195 R, residual +0.00001 R; expectancy leg REDUNDANT (Lbar >= 0.250R)
+                                matched null 191 trades median vs the method's 179 — count match 1.07
+                                long share: method 0.391 vs the null's median 0.499  ** outside 40-60% long against a coin: this percentile carries the instrument's drift **
+                                spread paid: method 120.76 USD vs the null's median 132.20 USD — cost match 1.09
+                                exposure: signed share of time method -0.014 vs the null's -0.013; time in market method 18750 min vs the null's median 31380 min — ratio 1.67  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.979 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 2.172 ATR = 718.94 points, cost 0.70% of R (realised median, structural)
+                                the method's own realised stop: median 2.172 ATR = 718.94 points over 261 trades
+                                exits: STOP 81, TARGET 60, TIMEOUT 38; mean hold 104.8 min
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+

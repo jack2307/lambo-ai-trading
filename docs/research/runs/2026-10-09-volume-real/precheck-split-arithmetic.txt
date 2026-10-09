@@ -1,0 +1,17 @@
+$ python volreal_split.py  # can any time split of XAUUSD-15m give both halves >= 40 signals
+
+total full entries over all 100586 bars (2022-06-16..2026-09-17): 357
+
+split candidate -> entries before / after  (gate floor 40 each)
+  2023-01-01: before   53 ( 12865 bars) / after  304 ( 87721 bars)   BOTH >=40
+  2023-06-16: before  151 ( 23607 bars) / after  206 ( 76979 bars)   BOTH >=40
+  2023-12-01: before  286 ( 34589 bars) / after   71 ( 65997 bars)   BOTH >=40
+  2024-01-01: before  287 ( 36425 bars) / after   70 ( 64161 bars)   BOTH >=40
+  2024-07-01: before  302 ( 48158 bars) / after   55 ( 52428 bars)   BOTH >=40
+  2024-12-31: before  316 ( 60053 bars) / after   41 ( 40533 bars)   BOTH >=40
+  2025-01-01: before  316 ( 60141 bars) / after   41 ( 40445 bars)   BOTH >=40
+  2025-04-11: before  321 ( 66660 bars) / after   36 ( 33926 bars)   after<40
+  2025-06-01: before  331 ( 69861 bars) / after   26 ( 30725 bars)   after<40
+
+regime A (2022-06-16..2023-11-30):  34589 bars,  286 entries, 8.27 per 1k bars
+regime B (2023-12-01..2026-09-17):  65997 bars,   71 entries, 1.08 per 1k bars

@@ -1,0 +1,70 @@
+$ /e/rust/fd-stop-width/target-sw/release/search.exe --market=btc --interval=15m --mode=hypotheses --data=/e/rust/flowdesk/data --batch-file=/e/rust/fd-volume-real/docs/hypotheses/2026-09-13-volume-thrust.toml --seeds=200 --to=2025-12-31 --exit-mix --guards
+
+market:   btc 15m
+data:     E:/rust/flowdesk/data (bars from E:/rust/flowdesk/data\bars\BTCUSDT-15m.parquet)
+bounds:   --from=… --to=2025-12-31 kept 45559 of 70080 bars
+spread:   5 per round trip
+trail:    off
+max hold: 4 h (14400000 ms) from [trading] max_hold_ms, no per-market override
+bars:     45559 from 2024-09-12 10:15 to 2025-12-30 23:45
+timeline: 8190 frames from 2026-09-11 05:36 to 2026-10-09 16:01
+          the tape covers 0 of 45559 bars (0.0%)
+
+tape:     67367 prints, 8190 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+companion: none loaded — every cmp series is NaN
+guards: on — max_open_loss_r 2.0, notional 300%, weekend flat 16:40 NY, news flat 60/30 (impact≥3, USD), daily cap 20, loss limit $300, cooldown 30 min
+null sides: coin - 50/50, carries no drift; the null every published percentile was read against
+flags:    9 passed, every one of them read by --mode=hypotheses
+
+== hypotheses `E:/rust/fd-volume-real/docs/hypotheses/2026-09-13-volume-thrust.toml`: 3 declared, walk-forward (4 folds), each against 200 matched null runs ==
+null sides: coin (50/50, carries no drift; the null every published percentile was read against)
+swap: long 0.00 / short 0.00 USD per lot per night; spread 5
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+guards: on — max_open_loss_r 2.0, notional 300%, weekend flat 16:40 NY, news flat 60/30 (impact≥3, USD), daily cap 20, loss limit $300, cooldown 30 min
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+vt-btc/fixed volume-thrust         557   1.016   0.004    1.003    1.188        0   56%  fail: profit factor 1.016 < 1.2; expectancy 0.004R < 0.05R
+                                  — the defaults pinned, 24/7
+                                max drawdown 2898.53 USD = 23.50% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.707 R is); net +441.51 USD over 557 trades
+                                Lbar 0.4996 R = |avg_loss_r| 0.8920 x loss share 0.5601 over 557 trades; PF_r 1.0074 (R) vs PF_usd 1.0165 (USD, gap -0.0091); identity E = Lbar(PF_r-1) = +0.0037 R vs expectancy +0.0037 R, residual +0.00002 R; expectancy leg REDUNDANT (Lbar >= 0.250R)
+                                matched null 524 trades median vs the method's 557 — count match 0.94
+                                long share: method 0.474 vs the null's median 0.502
+                                spread paid: method 526.23 USD vs the null's median 455.66 USD — cost match 0.87
+                                exposure: signed share of time method +0.006 vs the null's +0.002; time in market method 63060 min vs the null's median 83228 min — ratio 1.32  ** the control did not collect the drift the method did **
+                                cost-matched null: control stop 1.982 ATR = 533.95 points, cost 0.94% of R (realised median, structural)
+                                the method's own realised stop: median 1.982 ATR = 533.95 points over 703 trades
+                                guards: refused COOLDOWN 3, DAILY_LOSS_LIMIT 10, NEWS_FLAT 17, WEEKEND_FLAT 105; closed NEWS_FLAT 6, WEEKEND_FLAT 1; sized down 110
+                                exits: NEWS_FLAT 6, STOP 263, TARGET 161, TIMEOUT 126, WEEKEND_FLAT 1; mean hold 113.2 min
+vt-btc/all   volume-thrust         403   1.031   0.026    1.003    1.188        0   62%  fail: profit factor 1.031 < 1.2; expectancy 0.026R < 0.05R
+                                  — the grid (volume multiple x reward) walked forward, 24/7
+                                max drawdown 1854.79 USD = 15.75% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.720 R is); net +635.56 USD over 403 trades
+                                Lbar 0.5190 R = |avg_loss_r| 0.8939 x loss share 0.5806 over 403 trades; PF_r 1.0510 (R) vs PF_usd 1.0307 (USD, gap +0.0203); identity E = Lbar(PF_r-1) = +0.0265 R vs expectancy +0.0265 R, residual +0.00004 R; expectancy leg REDUNDANT (Lbar >= 0.250R)
+                                matched null 524 trades median vs the method's 403 — count match 1.30  ** outside the band: this percentile is unmatched **
+                                long share: method 0.469 vs the null's median 0.502
+                                spread paid: method 360.03 USD vs the null's median 455.66 USD — cost match 1.27  ** outside the band: the control did not pay what the method paid **
+                                exposure: signed share of time method +0.012 vs the null's +0.002; time in market method 52455 min vs the null's median 83228 min — ratio 1.59  ** the control did not collect the drift the method did **
+                                cost-matched null: control stop 1.982 ATR = 533.95 points, cost 0.94% of R (realised median, structural)
+                                the method's own realised stop: median 1.982 ATR = 533.95 points over 703 trades
+                                guards: refused COOLDOWN 3, DAILY_LOSS_LIMIT 5, NEWS_FLAT 15, WEEKEND_FLAT 71; closed NEWS_FLAT 5, WEEKEND_FLAT 1; sized down 66
+                                exits: NEWS_FLAT 5, STOP 197, TARGET 83, TIMEOUT 117, WEEKEND_FLAT 1; mean hold 130.2 min
+vt-btc/us    volume-thrust         205   1.143   0.076    0.992    1.322        0   78%  fail: profit factor 1.143 < 1.2
+                                MoTuWeThFr + NY 09:30-16:00  — US equity hours: a thrust with the most participants behind it
+                                max drawdown 841.31 USD = 7.23% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.689 R is); net +1370.39 USD over 205 trades
+                                Lbar 0.4743 R = |avg_loss_r| 0.9173 x loss share 0.5171 over 205 trades; PF_r 1.1597 (R) vs PF_usd 1.1430 (USD, gap +0.0167); identity E = Lbar(PF_r-1) = +0.0757 R vs expectancy +0.0757 R, residual -0.00004 R; expectancy leg REDUNDANT (Lbar >= 0.250R)
+                                matched null 189 trades median vs the method's 205 — count match 0.92
+                                long share: method 0.420 vs the null's median 0.498
+                                spread paid: method 150.02 USD vs the null's median 128.60 USD — cost match 0.86
+                                exposure: signed share of time method -0.007 vs the null's -0.006; time in market method 21240 min vs the null's median 29588 min — ratio 1.39  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.992 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 2.170 ATR = 712.29 points, cost 0.70% of R (realised median, structural)
+                                the method's own realised stop: median 2.170 ATR = 712.29 points over 256 trades
+                                guards: refused COOLDOWN 3, NEWS_FLAT 5; closed NEWS_FLAT 1; sized down 14
+                                exits: NEWS_FLAT 1, STOP 94, TARGET 66, TIMEOUT 44; mean hold 103.6 min
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+
