@@ -4,6 +4,8 @@
 # agent/stop-width built here so it never touched the shared /target while the
 # two collect.exe processes were running.
 /target-sw
+# agent/month-clock, same reason.
+/target-mc
 **/*.rs.bk
 
 # Data is fetched, not committed — except the golden files, which are the
@@ -56,4 +58,3 @@ config/local.toml
 # The sealed research store: a truncated copy of data/ built by seal-store for
 # design agents that must not see the withheld year. Derived, large, rebuildable.
 /data-sealed
-target-mc/
