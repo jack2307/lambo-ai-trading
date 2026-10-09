@@ -223,3 +223,59 @@ _pct · exit-mix · cost/R kèm cỡ stop`.
   — làm tròn lớn hơn cả `gross` và đủ để lật dấu).
 - **Phân vị KHÔNG công bố** trừ khi `count match` trong băng; `null p50 = 0,000`
   nghĩa là **không calibrate được** (brief §4).
+
+---
+
+## Ghi chú thêm — 2026-10-09, SAU tiền kiểm, TRƯỚC dòng code đầu tiên
+
+Tiền kiểm đã chạy đúng 216 phép so như khai (receipt
+`receipts/monthclock/PRECHECK-216-tests.txt`). Kết quả quyết định phạm vi còn
+lại của job, nên ghi vào đây trước khi viết filter.
+
+1. **F1 KHÔNG bắn, nhưng chỉ ở một nửa của nó.** Đúng **1/108** tổ hợp qua sàng
+   (cùng dấu VÀ p < 0,05 ở cả hai cửa sổ): **`Amp` ở thước B, mốc N = 4** (ngày
+   giao dịch thứ 4 từ cuối tháng). Kỳ vọng dương-giả 0,135 ⇒ 1 mốc là ~7 lần
+   kỳ vọng. BH q=0,05 trên 216 p-value giữ **đúng 1** phép so.
+2. **Chiều thì CHẾT SẠCH.** **0/54 mốc `Disp`** qua sàng, ở cả hai thước. Số mốc
+   p<0,05 một cửa sổ: **6 ở W1, 9 ở W2**, kỳ vọng may rủi **5,4** ⇒ **đúng mức
+   tung xu**. ⇒ F1 bắn **cho đại lượng có dấu**: chu kỳ tháng **không chứa một
+   hiệu ứng CHIỀU nào đo được** trên vàng 15m.
+3. **Sàng "cùng dấu" một mình đúng là vô dụng như khai:** 64/108 qua, kỳ vọng
+   may rủi 54.
+4. Vì mốc duy nhất sống là **biên độ, không phải chiều**, phần đo cơ chế đổi
+   mục tiêu: nó không còn hỏi "gate này có cho edge không" (không có chiều để
+   lấy) mà hỏi **"biên độ hẹp 6–9% ở mốc đó có đổi được chân cổng nào không"**,
+   và **dấu dự đoán là XẤU ĐI**: stop của họ `close/*` là `f × biên độ ngày
+   TRUNG BÌNH 20 ngày` (không phải biên độ của ngày đó) nên ngày hẹp 7% cho
+   **gross/lệnh nhỏ hơn ~7% ở cùng cost/R** ⇒ `E` giảm. Khai dự đoán đó trước.
+5. **Thêm vào sổ ô, có lý do:** vì dấu dự đoán là xấu đi, phải đo **cả phần bù**
+   (loại đúng mốc đó) — đó là phía mà dự đoán nói sẽ tốt lên. ⇒ sổ ô sửa từ
+   **12 lên 24** (3 cơ chế × **2** biến thể filter × 2 cửa sổ × 2 arm). Spelling
+   nhận thêm dạng phủ định `!` (`monthend:!4-4`), cùng khuôn, không thêm trục.
+6. **Thước B được THAY bằng thước B′ chỉ-dùng-lịch cho phần thi hành.** Thước B
+   của tiền kiểm đếm "ngày CÓ NẾN" từ cuối tháng, tức đã loại ngày lễ **sau khi
+   biết ngày nào có nến** — một `Filter` trong engine **không biết ngày lễ**.
+   B′ đếm ngược chỉ qua Thứ Bảy/Chủ Nhật từ lịch, **khớp 86,8%** với B. Mốc sống
+   **nguyên** dưới B′: `W1 −0,00843 (−9,0%) p = 0,0000`, `W2 −0,00626 (−6,4%)
+   p = 0,0383`, và **0/23 mốc `Disp` qua sàng** dưới B′ nữa. ⇒ filter cài theo
+   **B′**, và con số công bố là con số của B′.
+7. **Mốc đó KHÔNG phải hiện vật cửa sổ thứ 12** — đo ở **năm chỗ cắt** cửa sổ
+   (2014-06 / 2016-06 / 2018-06 / 2020-06 / 2022-06), **cùng dấu và p < 0,05 ở
+   cả hai nửa tại CẢ NĂM chỗ cắt** (p xấu nhất 0,0324). Đó là độ bền hiếm trên
+   hồ sơ này và phải nói ra.
+8. **Nhưng ba phép kiểm khác làm nhỏ nó lại, và phải nói ra cùng lúc:**
+   - **Đổi chuẩn hoá thì LẬT DẤU.** `amp15m / biên độ của CHÍNH ngày đó`:
+     W1 −3,2% (p 0,28), W2 **+3,4%** (p 0,20). Biên độ thô [USD]: p 0,14 / 0,46.
+     ⇒ hiệu ứng **không phải** cấu trúc nến 15m; nó là **cả NGÀY hẹp hơn** so với
+     chuẩn 20 ngày (`biên độ NGÀY / base20d`: −7,2% p 0,092 / −12,7% p 0,0039).
+   - **Mốc kế thừa một pha THỨ TRONG TUẦN lệch.** `tdfe = 4` rơi vào Thứ Ba
+     **79/192 lần (41%)** thay vì ~20%, vì ngày cuối tháng rơi Thứ Bảy/Chủ Nhật
+     thì phiên cuối là Thứ Sáu (3/7 số tháng) ⇒ mốc 4 thành Thứ Ba. Và `Amp`
+     theo weekday: Mo 0,0870 · Tu 0,0922 · We 0,0954 · Th 0,0959 · **Fr 0,1050**.
+     Pha đó giải thích **−0,0010** trong −0,0083 (≈12%), nên **không** phải toàn
+     bộ — nhưng **trong từng weekday, hai cửa sổ KHÔNG đồng ý chỗ hiệu ứng nằm**:
+     W1 nằm ở Thứ Ba (p 0,000, n 37) còn W2 ở Thứ Ba là **+0,0004 (p 0,947)**.
+   - **Độ lớn nhỏ so với một gate biến động đã có.** Hiệu của mốc là **24–31%
+     bề rộng một băng `VolAbs` p25–p75**, và `Amp` trung bình của mốc nằm ở
+     **phân vị 42 (W1) / 49 (W2)** của phân phối ngày — **giữa phân phối**. ⇒
+     đồng hồ tháng **không chỉ ra một chế độ biến động mà `VolAbs` chưa chỉ được**.
