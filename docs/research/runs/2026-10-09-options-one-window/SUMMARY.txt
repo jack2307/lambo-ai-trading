@@ -1,0 +1,39 @@
+# 2026-10-09 options-first: 24 declared cells, one table.
+# Receipts: offset-<basis>-<arm>.txt in this directory. Desk floor is 40 TRADES, not the tool's 'need 30'.
+# E is the identity value Lbar x (PF_r - 1), which equals total_r/n; the 3-decimal expectancy column is not used.
+
+## basis +41.26  arm=guards   tape: 53436 prints, 9429 frames 
+  opt-lvl  level-reversion  n= 100  PF_usd   1.047  PF_r  1.0057  E    +0.0036 R  Lbar   0.6378 R  DD    7.22 USD (   7.07% peak)  net    +1.08 USD
+  opt-mpn  maxpain-magnet   n=  28 FLOOR-MISS (n<40)  PF_usd   1.724  PF_r  1.8023  E    +0.2419 R  Lbar   0.3015 R  DD    2.44 USD (   2.25% peak)  net    +5.89 USD
+  opt-flw  flow-momentum    n=   4 FLOOR-MISS (n<40)  PF_usd   0.540  PF_r  0.5897  E    -0.3111 R  Lbar   0.7581 R  DD    2.35 USD (   2.32% peak)  net    -1.08 USD
+  opt-fal  flow-at-level    n=  20 FLOOR-MISS (n<40)  PF_usd   0.757  PF_r  0.7369  E    -0.1897 R  Lbar   0.7209 R  DD    3.02 USD (   2.97% peak)  net    -1.22 USD
+
+## basis +41.26  arm=noguards   tape: 53436 prints, 9431 frames 
+  opt-lvl  level-reversion  n= 115  PF_usd   1.021  PF_r  1.0361  E    +0.0231 R  Lbar   0.6406 R  DD   20.30 USD (  18.89% peak)  net    +1.43 USD
+  opt-mpn  maxpain-magnet   n=  29 FLOOR-MISS (n<40)  PF_usd   2.095  PF_r  2.0747  E    +0.3410 R  Lbar   0.3173 R  DD    2.43 USD (   2.18% peak)  net    +9.93 USD
+  opt-flw  flow-momentum    n=   4 FLOOR-MISS (n<40)  PF_usd   0.587  PF_r  0.5897  E    -0.3111 R  Lbar   0.7581 R  DD    2.88 USD (   2.83% peak)  net    -1.19 USD
+  opt-fal  flow-at-level    n=  22 FLOOR-MISS (n<40)  PF_usd   0.845  PF_r  0.8558  E    -0.1011 R  Lbar   0.7016 R  DD    7.15 USD (   6.82% peak)  net    -2.37 USD
+
+## basis +43.70  arm=guards   tape: 53436 prints, 9431 frames 
+  opt-lvl  level-reversion  n= 108  PF_usd   1.179  PF_r  0.1735  E    -2.8924 R  Lbar   3.4998 R  DD    2.84 USD (   2.70% peak)  net    +4.35 USD
+  opt-mpn  maxpain-magnet   n=  24 FLOOR-MISS (n<40)  PF_usd   1.817  PF_r  1.8156  E    +0.2399 R  Lbar   0.2941 R  DD    3.31 USD (   3.06% peak)  net    +5.57 USD
+  opt-flw  flow-momentum    n=   4 FLOOR-MISS (n<40)  PF_usd   0.540  PF_r  0.5897  E    -0.3111 R  Lbar   0.7581 R  DD    2.35 USD (   2.32% peak)  net    -1.08 USD
+  opt-fal  flow-at-level    n=  30 FLOOR-MISS (n<40)  PF_usd   0.624  PF_r  0.0400  E   -10.5788 R  Lbar  11.0194 R  DD    4.17 USD (   4.11% peak)  net    -2.37 USD
+
+## basis +43.70  arm=noguards   tape: 53436 prints, 9431 frames 
+  opt-lvl  level-reversion  n= 120  PF_usd   0.044  PF_r  0.1675  E    -2.7172 R  Lbar   3.2640 R  DD  306.86 USD ( 303.85% peak)  net  -305.61 USD ** BLOWN: _pct > 100%, PF NOT TO BE READ **
+  opt-mpn  maxpain-magnet   n=  26 FLOOR-MISS (n<40)  PF_usd   2.080  PF_r  2.0203  E    +0.3169 R  Lbar   0.3106 R  DD    2.94 USD (   2.65% peak)  net    +8.41 USD
+  opt-flw  flow-momentum    n=   4 FLOOR-MISS (n<40)  PF_usd   0.587  PF_r  0.5897  E    -0.3111 R  Lbar   0.7581 R  DD    2.88 USD (   2.83% peak)  net    -1.19 USD
+  opt-fal  flow-at-level    n=  30 FLOOR-MISS (n<40)  PF_usd   0.007  PF_r  0.0400  E   -10.5788 R  Lbar  11.0194 R  DD  311.55 USD ( 309.48% peak)  net  -310.81 USD ** BLOWN: _pct > 100%, PF NOT TO BE READ **
+
+## basis +45.78  arm=guards   tape: 53436 prints, 9431 frames 
+  opt-lvl  level-reversion  n=  94  PF_usd   1.401  PF_r  1.3883  E    +0.2170 R  Lbar   0.5589 R  DD    3.77 USD (   3.48% peak)  net    +8.29 USD
+  opt-mpn  maxpain-magnet   n=  24 FLOOR-MISS (n<40)  PF_usd   1.556  PF_r  1.5580  E    +0.1875 R  Lbar   0.3361 R  DD    3.37 USD (   3.15% peak)  net    +4.24 USD
+  opt-flw  flow-momentum    n=   4 FLOOR-MISS (n<40)  PF_usd   0.540  PF_r  0.5897  E    -0.3111 R  Lbar   0.7581 R  DD    2.35 USD (   2.32% peak)  net    -1.08 USD
+  opt-fal  flow-at-level    n=  28 FLOOR-MISS (n<40)  PF_usd   2.182  PF_r  1.9849  E    +0.4711 R  Lbar   0.4784 R  DD    3.65 USD (   3.45% peak)  net    +5.71 USD
+
+## basis +45.78  arm=noguards   tape: 53479 prints, 9431 frames 
+  opt-lvl  level-reversion  n= 109  PF_usd   1.216  PF_r  1.2314  E    +0.1380 R  Lbar   0.5965 R  DD   10.97 USD (   9.57% peak)  net   +14.22 USD
+  opt-mpn  maxpain-magnet   n=  26 FLOOR-MISS (n<40)  PF_usd   1.964  PF_r  1.8908  E    +0.3108 R  Lbar   0.3490 R  DD    2.94 USD (   2.66% peak)  net    +8.27 USD
+  opt-flw  flow-momentum    n=   4 FLOOR-MISS (n<40)  PF_usd   0.587  PF_r  0.5897  E    -0.3111 R  Lbar   0.7581 R  DD    2.88 USD (   2.83% peak)  net    -1.19 USD
+  opt-fal  flow-at-level    n=  29 FLOOR-MISS (n<40)  PF_usd   1.782  PF_r  1.8440  E    +0.4196 R  Lbar   0.4971 R  DD    9.40 USD (   8.30% peak)  net   +12.02 USD

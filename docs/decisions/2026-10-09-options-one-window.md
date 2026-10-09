@@ -184,3 +184,285 @@ every print), and per-level-type attribution (the cluster pools 9 level types,
 
 If this runs past ~4 hours of wall clock, stop and report what is measured
 rather than overrun.
+
+---
+
+## Note added 2026-10-09, after the run — RESULT: F0 did not fire, F3 DID. The thesis has its first measurement and the measurement is NOT DECIDED.
+
+Tool: `search.exe` built from this branch
+(`cargo +stable-x86_64-pc-windows-gnu build --release -p fd-backtest --bin
+search`, target dir `target-of/` inside this worktree).
+Receipts: `docs/research/runs/2026-10-09-options-one-window/` — six files,
+`offset-<basis>-<arm>.txt`, plus `SUMMARY.txt` with all 24 cells in one table.
+Command, identical in all six but for `--basis-offset=` and `--guards`:
+
+    search --market=xauusd --interval=15m --mode=hypotheses --fixed --exit-mix
+           --config=config-ofirst --data=/e/rust/flowdesk/data --seeds=200
+           --batch-file=docs/hypotheses/2026-10-09-options-one-window.toml
+           --basis-offset={41.26|43.70|45.78} [--guards]
+
+**No percentile is published** and none of the numbers below is one.
+
+### What this run's own header says, because the store is being written while it is read
+
+    prints   53,357 -> 53,396 -> 53,436 -> 53,479   across the runs below
+    frames    9,429 / 9,431                          (step 300,000 ms)
+    bars     100,586  XAUUSD-15m  2022-06-16 -> 2026-09-17  (frozen)
+    overlap     786 of 100,586 bars = 0.8%  <- the whole measurement
+    GC-1m    18,393 bars 2026-09-06 -> 2026-10-09 (grew 16,903 -> 18,393 since 10-08)
+
+Two reads of this axis give two print counts and both are right. Any future
+receipt here is comparable only to a run that printed the same ones.
+
+### F0 did not fire — but the reason the thesis was never measured is now a counted fact, and it is TWO blind spots, neither of them data
+
+1. `options_source = "none"` on `[markets.xauusd]` — config. Changing it in
+   `config-ofirst/` alone made `timeline: none` become `timeline: 9429 frames`
+   over the same store.
+2. **`--mode=hypotheses` was structurally blind to options.** Every
+   `run_backtest_guarded` call in `crates/fd-backtest/src/hypotheses.rs` passed
+   `None` for the timeline, and — unlike `sweep.rs:122`, which refuses such a
+   row — nothing checked. So the four mechanisms could sit in a pre-registered
+   batch and take **0 trades in silence**, which prints as a gate miss and
+   reads like a measurement. Fixed additively here
+   (`run_hypothesis_fixed_options`, every existing signature untouched, the
+   `None` path argument-for-argument identical). **The walk-forward hypotheses
+   path and `rescore` are still blind; this binary now refuses an
+   options-reading row on them instead of scoring it.**
+
+So the record's "not rejected — unasked" was not an oversight anyone could see
+from a receipt. It was enforced by the tool.
+
+### Only ONE of the four mechanisms reaches the desk's 40-trade floor at all
+
+Counted by hand against **40**, not the tool's `need 30`:
+
+    level-reversion   94 - 120 trades   <- the only row above 40, in all six cells
+    maxpain-magnet    24 -  29 trades   FLOOR MISS in all six
+    flow-at-level     20 -  30 trades   FLOOR MISS in all six
+    flow-momentum      4 trades         FLOOR MISS in all six
+
+**18 of the 24 cells have no verdict**, on the trade-count leg alone. The
+pre-check's ceiling of 235 entries and its "one window is at the floor today"
+are true for `level-reversion` and for nothing else: occupancy (one position,
+4 h cap) plus each rule's own extra conditions cut the realised count to a
+fifth or less of the ceiling. `maxpain-magnet` at 24-29 and `flow-at-level` at
+20-30 would also be printed by the tool as clearing `need 30` at 30 while
+missing the desk's 40 by ten — the brief's §4 trap, live.
+
+### F3 FIRES. A 4.52 USD change in a CONSTANT basis moves level-reversion from PF_r 0.17 to a gate pass
+
+`level-reversion`, the registered first mechanism, guards arm (the only arm the
+owner permits):
+
+    basis +41.26 (p10)   100 trades   PF_r 1.0057   E +0.0036 R   Lbar 0.6378 R   DD  7.22 USD   -> MISS (PF leg)
+    basis +43.70 (mean)  108 trades   PF_r 0.1735   E -2.8924 R   Lbar 3.4998 R   DD  2.84 USD   -> MISS (PF leg)
+    basis +45.78 (p90)    94 trades   PF_r 1.3883   E +0.2170 R   Lbar 0.5589 R   DD  3.77 USD   -> clears all three legs
+
+and in the no-guards arm the p90 cell clears too (109 trades, PF_r 1.2314,
+E +0.1380 R, DD 10.97 USD = 9.57% of peak).
+
+**One offset of three passes, so per this registration's own F3 the answer is
+NOT DECIDED** — and the three offsets are p10, p50 and p90 of the basis as
+measured, not a widened search. The verdict is a property of a constant nobody
+has a rolling correction for. That is a **twelfth window artefact: the basis
+constant**, and it is the one this axis cannot be read without fixing.
+
+### The mean-offset rows are degenerate, and the degeneracy is the finding
+
+At +43.70 only, both structural-stop mechanisms blow up in R:
+
+    level-reversion  Lbar  3.4998 R  |avg_loss_r|  5.4779  avg_mae  -3.642 R
+    flow-at-level    Lbar 11.0194 R  |avg_loss_r| 15.0264  avg_mae -11.107 R
+
+against Lbar 0.47-0.72 R at both neighbouring offsets. A handful of entries
+land where `risk = entry - (cluster.low - 0.3 x ATR)` is near zero, and
+`r = points / risk` explodes. **On those two rows the gate is reading a unit,
+not a method** — the same class as addendum 7's L1 finding, arriving on an
+L2 row through a STRUCTURAL stop instead of a self-managed one.
+
+### Defect 14 fired, twice, and the owner's guards are what stand between these mechanisms and a blown book
+
+No-guards arm, basis +43.70:
+
+    level-reversion  max drawdown 306.86 USD = 303.85% of peak, equity to -305.61 USD on a 100 USD book
+    flow-at-level    max drawdown 311.55 USD = 309.48% of peak, equity to -310.81 USD
+
+Both rows **blew the account and the engine kept trading at `min_lot`**, so
+their printed `PF_usd` (0.044 and 0.007) is not to be read. The same two cells
+with `--guards` printed **2.84 USD** and **4.17 USD** of drawdown. The guard
+doing it is `max_open_loss_r = 2.0`. This is the first measured instance in the
+record of addendum IV's blow-up defect actually firing, and it is a second
+reason the no-guards arm is not a trading arm.
+
+### The notional cap rides EVERY trade of both cluster mechanisms, and both gate legs are blind to it
+
+Guards arm, `sized down` out of trades taken:
+
+    level-reversion   97/100,  107/108,  94/94
+    flow-at-level      20/20,    30/30,  28/28
+    maxpain-magnet      2/28,     1/24,   1/24
+    flow-momentum       4/4
+
+`max_notional_pct_equity = 300%` on a 100 USD book caps lots on essentially
+every entry of the two cluster rules. `r = points / risk` never sees it and
+`PF_usd` is the PF of a capped 0.01-lot book (defect 17). Said out loud per
+addendum 7C.
+
+### The real stop, measured — and the arm was chosen on a cost/R the mechanism does not run at
+
+From each receipt's own `the method's own realised stop` line:
+
+    level-reversion  0.542 - 0.609 ATR14(15m) =  5.28 -  5.63 points   cost/R 4.97 - 5.30%
+    flow-at-level    0.468 - 0.594 ATR14(15m) =  4.68 -  5.53 points   cost/R 5.06 - 5.98%
+    maxpain-magnet   2.014 ATR14(15m)         = 17.24 - 18.34 points   cost/R 1.54 - 1.64%
+    flow-momentum    1.516 ATR14(15m)         = 12.82 points           cost/R 2.21%
+
+The pre-check selected this arm on **cost/R 2.43% at 1.5 x ATR14(15m) = 8.227
+USD**. Neither cluster mechanism runs at 1.5 ATR: the receipts say in their own
+words *"the method DECLARES stopAtr 1.50 and does not use it"*, because the
+stop is the cluster edge. **The real cost/R on the two mechanisms the arm was
+chosen for is roughly twice the figure it was chosen on.** The horizon
+argument survives (5% still beats `GC-1m`'s 21.19% by far); the number does
+not. Brief §8: the measured number wins.
+
+### L1 / L2 / L3, read off `Exits::` and not off a parameter name
+
+`registry.rs:256` makes `Exits::Engine` the default and `builtin.rs:737` is the
+only override in that file — it belongs to `buy-and-hold`. **None of the four
+overrides it, so all four are ENFORCED-stop rows and none is L1.** This is the
+first time a real stop has been measured on any of them.
+
+    level-reversion  L2  enforced stop = cluster.low - 0.3 x ATR (STRUCTURAL); target None -> risk x reward_risk 1.8
+    flow-at-level    L2  same shape
+    flow-momentum    L2  enforced stop = close -/+ 1.5 x ATR;  target None -> risk x 1.8
+    maxpain-magnet   L3  enforced stop = close -/+ 2.0 x ATR;  target = max_pain, an ABSOLUTE PRICE
+
+`maxpain-magnet` is the only L3 row here and the only one whose declared stop
+is the stop it runs. The two L2 cluster rows are the pair whose R unit blew up
+above — an L2 row with a structural stop can degenerate the same way an L1 row
+does, which addendum 7's two-class reading did not cover and addendum 8's
+three-layer reading only half does.
+
+### Which gate leg bound, on all 24 cells
+
+**`Lbar >= 0.250R` on every one of the 24**, so per §I the expectancy leg is
+**REDUNDANT in all 24** — it never bound once on this axis. What bound:
+
+    40-trade leg   18 of 24 cells  (maxpain-magnet, flow-at-level, flow-momentum, every offset, both arms)
+    PF leg          6 of 24 cells  (level-reversion), of which 2 passed (both at p90)
+
+The identity `E = Lbar x (PF_r - 1)` held on **24/24** cells, largest residual
+**0.00005 R**.
+
+### PF_r against PF_usd, units named
+
+`PF_usd` is not the same reading. The widest gaps:
+
+    level-reversion +43.70 guards    PF_usd 1.1790 (USD)  vs  PF_r 0.1735 (R)   gap -1.0055  <- OPPOSITE SIDES of the gate
+    flow-at-level   +43.70 guards    PF_usd 0.6238 (USD)  vs  PF_r 0.0400 (R)   gap -0.5838
+    flow-at-level   +45.78 guards    PF_usd 2.1822 (USD)  vs  PF_r 1.9849 (R)   gap -0.1973
+    level-reversion +45.78 guards    PF_usd 1.4015 (USD)  vs  PF_r 1.3883 (R)   gap -0.0132
+
+One cell — `level-reversion` at the mean offset in the guards arm — straddles
+the gate's own 1.200 line between the two units: **1.179 in USD and 0.174 in R,
+and only the USD reading is anywhere near a pass.** It is reported as a MISS on
+both, because `PF_r` is the one that is a property of the method.
+
+And the same 30-trade set of `flow-at-level` at +43.70 prints `PF_usd` **0.624**
+with guards and **0.007** without, on **identical** `E = -10.5788 R` and
+identical `Lbar 11.0194 R` — the guards changed only the lots. A reader of the
+USD column would call those two different methods.
+
+### The mechanism's own rule fired on every row — F4 does not fire
+
+`--exit-mix`, guards arm:
+
+    level-reversion  STOP 51-68, TARGET 35-40, TIMEOUT 1-2, WEEKEND_FLAT 1, END_OF_DATA 1   mean hold 33-38 min
+    maxpain-magnet   STOP 7-8, TARGET 10-13, TIMEOUT 3-5, NEWS_FLAT 1, END_OF_DATA 1        mean hold 117-142 min
+    flow-at-level    STOP 13-22, TARGET 6-15, TIMEOUT 0-1                                   mean hold 17-31 min
+    flow-momentum    STOP 3, TARGET 1                                                       mean hold 68 min
+
+No row is a `tsmom/120d` artefact: the guard exits are 0-2 per row and the
+method's own stop or target closed the large majority everywhere. For
+`level-reversion` and `flow-at-level` the `STOP` exits ARE the mechanism's own
+claim, because their stop is the cluster edge.
+
+### The basis-shift control held
+
+`flow-momentum` reads no price level, and its six cells are identical at all
+three offsets within each arm — 4 trades, `Lbar 0.7581 R`, `PF_r 0.5897`,
+realised stop 1.516 ATR = 12.82 points, exits STOP 3 / TARGET 1. The shift
+moved prices and only prices.
+
+### Percentiles not published, and here is why in this axis's own numbers
+
+`count match`, method against its matched null:
+
+    level-reversion  0.99 - 1.00   in band
+    flow-at-level    1.63 - 2.45   OUT
+    maxpain-magnet   1.75 - 2.04   OUT
+    flow-momentum    12.25         OUT
+
+Three of the four mechanisms are read against a control that is not their size.
+On top of that every row printed `spread paid ... cost match 1.77 - 22.90 **
+outside the band **` and `exposure ... ratio 1.09 - 24.61 ** the control did
+not collect the drift the method did **`, and every row's null p50 is **below
+1.000** (0.700 - 0.907), so a high percentile here would mean "loses less than
+random entry", not "makes money". The gate is reported alone.
+
+### Multiple-testing ledger: declared 24 gate cells, examined exactly 24
+
+Declared: 24 = 3 basis offsets x 4 strategies x 2 guard arms, `--fixed` at each
+strategy's own `default_params()`, no grid, no fold, no selection.
+Examined: **24.** Nothing was loosened after a number was seen; the 40-trade
+floor is the brief's own and was written down before the build. Of the parent
+registrations, `agent/n4` §6's 9 cells and the pre-check's carried-forward 8
+are hereby **spent**, inside these 24.
+
+### The verdict, in the words this registration fixed in advance
+
+* **F0** did not fire: the mechanisms run.
+* **F1** did not fire: `level-reversion` clears all three gate legs on this
+  window at the p90 basis, in both arms.
+* **F2** applies to that pass: it is **one window and one of three offsets**,
+  not a candidate.
+* **F3 FIRED.** The verdict moves across p10 / mean / p90, so the reading is
+  **NOT DECIDED** and the basis needs a rolling correction before this axis is
+  read again.
+* **F4** did not fire.
+
+**The honest one-line answer: the founding thesis has been measured for the
+first time, one mechanism of four can even be measured against the desk's
+floor, and its sign is set by a basis constant rather than by the market.**
+
+### What would settle it, in order, and the first item is not the tape
+
+1. **A rolling GC-XAUUSD basis**, not a constant. The whole verdict lives
+   inside the p10-p90 width of the basis that is already measured, so this is
+   not a refinement — it is the measurement. (`agent/n4` §7 item 3 estimated
+   1-2 days.)
+2. **`py/ingest/mt5_export.py` for XAUUSD, running.** The bars are frozen at
+   2026-09-17 while the tape runs to 2026-10-09, so the overlap is stuck at
+   196.5 h and the second window cannot arrive, however long the collector
+   runs. 28% of the tape has no tradable bar at all.
+3. Only then a second disjoint window of >= ~205 market-hours, which is what
+   the desk gate actually asks for.
+4. Not worth doing before (1): per-level-type attribution, any parameter
+   sweep, and the three mechanisms that cannot reach 40 trades.
+
+### Defects counted, not fixed
+
+* **Defect 14 observed firing** (two rows above 100% drawdown, still trading).
+* **Defect 17 observed** on every row: a 100 USD book at `min_lot`, with the
+  notional cap additionally binding on essentially every cluster-rule entry.
+* **New, and the reason this job exists:** the hypotheses and rescore paths
+  carried no timeline and no guard to say so. Repaired for `--fixed` only; the
+  walk-forward hypotheses path and `rescore` now **refuse** an options-reading
+  row rather than scoring it at zero trades.
+* **One defect of my own, found and fixed before any cell was spent:** the
+  first `shift_basis` was written `let (timeline, offset) = (timeline?,
+  offset?)`, which silently returned `None` whenever `--basis-offset` was
+  absent and turned every un-offset run into `timeline: none` over 53,396
+  prints — the exact failure this job exists to undo. Caught because the header
+  printed the frame count.

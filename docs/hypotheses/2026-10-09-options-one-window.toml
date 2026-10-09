@@ -1,0 +1,28 @@
+# The four option-reading mechanisms, each at its OWN default_params(), no
+# filters, no preset, no grid. Pre-registered by
+# docs/decisions/2026-10-09-options-one-window.md and written before the first
+# run. These four are the complete set: `builtin.rs`'s own test at :805
+# asserts that exactly these return `needs_options() == true`.
+#
+# Run with --fixed, so each row is one cell at the registered parameters over
+# the whole window. 4 rows x 2 guard arms x 3 basis offsets = 24 declared cells.
+
+[[hypothesis]]
+label = "opt-lvl"
+base = "level-reversion"
+why = "the registered first mechanism: the only one whose entry ceiling was counted (235 on XAUUSD-15m at the mean basis, 5.9x the 40-trade floor), and the cheapest horizon measured on this axis at cost/R 2.43% of 1.5 x ATR14(15m)"
+
+[[hypothesis]]
+label = "opt-mpn"
+base = "maxpain-magnet"
+why = "the magnet claim stated directly, and the only one of the four whose target is a PRICE rather than a multiple of risk, so it is the only L3 row here"
+
+[[hypothesis]]
+label = "opt-flw"
+base = "flow-momentum"
+why = "the one mechanism that reads no price level at all, only bull_ratio_15m and net_flow_velocity_norm — which also makes it the control on the basis shift: its numbers must not move across the three offsets"
+
+[[hypothesis]]
+label = "opt-fal"
+base = "flow-at-level"
+why = "the framework the reference methodology implies: structure says where, flow says which way, a close through the level says when"

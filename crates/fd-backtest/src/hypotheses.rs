@@ -1534,11 +1534,50 @@ pub fn run_hypothesis_fixed_as(
     cost_match: CostMatch,
     null_sides: NullSides,
 ) -> Result<HypothesisReport, String> {
+    run_hypothesis_fixed_options(registry, hypothesis, bars, rules, gate, seeds, guards, cost_match, null_sides, None)
+}
+
+/// [`run_hypothesis_fixed_as`] with an options timeline the METHOD can read.
+///
+/// **This exists because the hypotheses path was blind to options and said
+/// nothing about it.** Every `run_backtest_guarded` call in this module passed
+/// `None` for the timeline, and — unlike `sweep.rs`, which refuses a row whose
+/// strategy `needs_options()` when there is no tape — nothing here checked. So
+/// the four option-reading mechanisms (`level-reversion`, `maxpain-magnet`,
+/// `flow-momentum`, `flow-at-level`), the mechanisms this repository was
+/// written around, could be put in a pre-registered batch and would take
+/// **zero trades in silence**, on any market, with a perfect tape on disk.
+/// That is one half of why the founding thesis had never been measured; the
+/// other half is `options_source = "none"` in the config.
+///
+/// The repair is additive on purpose. `options = None` is the path every
+/// earlier receipt took and is unchanged down to the call arguments, so no
+/// published number moves; the existing signatures are left exactly as they
+/// were and this is a new entry point beside them. Only the METHOD's own run
+/// is given the timeline — `RandomEntry` and the `matched_rate` probes do not
+/// read options, and handing them a timeline would change a control that is
+/// already calibrated.
+///
+/// `docs/decisions/2026-10-09-options-one-window.md`.
+#[allow(clippy::too_many_arguments)]
+pub fn run_hypothesis_fixed_options(
+    registry: &Registry,
+    hypothesis: &Hypothesis,
+    bars: &[Bar],
+    rules: &TradingRules,
+    gate: &PromisingGate,
+    seeds: usize,
+    guards: Option<&Guards>,
+    cost_match: CostMatch,
+    null_sides: NullSides,
+    options: Option<&crate::context::OptionsTimeline>,
+) -> Result<HypothesisReport, String> {
     use crate::engine::{Range, run_backtest_guarded};
     let base = registry.get(&hypothesis.base).map_err(|e| e.to_string())?;
     let preset = Preset::new(base, &hypothesis.overrides)?;
     let filtered = Filtered { inner: &preset, filters: scoped(&hypothesis.filters, rules) };
-    let result = run_backtest_guarded(bars, &filtered, &preset.defaults, rules, guards, None, Range::default(), None);
+    let result =
+        run_backtest_guarded(bars, &filtered, &preset.defaults, rules, guards, options, Range::default(), None);
     let drift = base.exits() == fd_strategy::registry::Exits::Strategy && preset.grid().is_empty();
     // The stop first, then the rate: the control's stop changes how long its
     // trades last and therefore how many it takes, so a rate calibrated

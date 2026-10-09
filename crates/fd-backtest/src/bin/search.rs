@@ -31,7 +31,7 @@ use fd_backtest::engine::{Range, TradingRules, run_backtest_guarded};
 use fd_strategy::registry::Strategy as _;
 use fd_backtest::sweep::{SelectBy, compare_strategies_guarded, sweep_strategy_guarded, verdict, walk_forward_guarded};
 use fd_backtest::hypotheses::{
-    NullSides, batch as hypothesis_batch, batch_from_file, run_hypothesis_fixed_sides, run_hypothesis_sides,
+    NullSides, batch as hypothesis_batch, batch_from_file, run_hypothesis_sides,
 };
 use fd_backtest::timeline::{TimelineOptions, build_timeline};
 use fd_backtest::{Guards, OptionsTimeline, PromisingGate};
@@ -83,6 +83,12 @@ const BY_MODE: &[(&str, &[&str])] = &[
     ("fixed", &["hypotheses"]),
     ("exit-mix", &["hypotheses", "rescore"]),
     ("null-registered-stop", &["hypotheses"]),
+    // The GC->spot basis correction. It shifts the OPTIONS TIMELINE, so it is
+    // read by exactly the modes that load one. `rescore` is NOT one of them:
+    // every `run_backtest_guarded` in `rescore_hypothesis` still passes `None`
+    // for the timeline, so a basis offset there would be a setting applied to
+    // nothing — which is the class of defect this table exists to denounce.
+    ("basis-offset", &["all", "compare", "sweep", "wf", "hypotheses", "null", "null-dir", "volume", "costs"]),
 ];
 
 /// What this mode will IGNORE out of what was passed, as lines for the receipt
@@ -222,6 +228,25 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         if config.backtest.select_by == "profitFactor" { SelectBy::ProfitFactor } else { SelectBy::Expectancy };
 
     let timeline = load_timeline(&data, &market, &config, &bars);
+    // `--basis-offset=<usd>`: the GC->spot correction, applied to the LEVELS
+    // and never to a bar.
+    //
+    // The gold option tape is COMEX GC; the only tradable gold bars here are
+    // Vantage spot, which trades tens of dollars below it. Measured twice on
+    // 6,718 overlapping minutes: mean +43.70, sd 1.91, p10 41.26, p90 45.78,
+    // quartile means drifting monotonically 45.66 -> 41.35. A CONSTANT offset
+    // is good enough to COUNT entries and is NOT good enough to read a gate —
+    // at `entryAtr = 0.35` the entry tolerance is smaller than that residual
+    // sd — so the honest use of this flag is three runs at p10 / mean / p90
+    // with all three reported, and "not decided" if they disagree.
+    //
+    // Levels are shifted DOWN rather than bars UP because the bars are the
+    // account: shifting them would move every notional, every margin check
+    // and every price a receipt quotes, while the distances the rules trigger
+    // on are identical either way.
+    let basis = basis_offset()?;
+    let timeline = shift_basis(timeline, basis);
+    println!("{}", basis_line(basis, timeline.is_some()));
     describe(&bars, timeline.as_ref());
     let prints = spec
         .tape_id()
@@ -297,6 +322,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             &registry,
             &bars,
             &rules,
+            // THE TIMELINE, which this mode never had. See
+            // `hypotheses::run_hypothesis_fixed_options`: every backtest call
+            // in that module passed `None`, with no `needs_options()` check to
+            // say so, so an options-reading method in a pre-registered batch
+            // took zero trades in silence.
+            timeline.as_ref(),
             config.backtest.walk_forward_folds,
             select_by,
             config.backtest.min_trades_per_cell,
@@ -468,6 +499,83 @@ fn load_timeline(
     );
     let _ = bars;
     (!timeline.is_empty()).then_some(timeline)
+}
+
+/// `--basis-offset=<usd>`, parsed. `None` means the flag was not passed, which
+/// is NOT the same as `0.0`: zero is a declared decision to run the levels on
+/// the tape's own price axis, and the header says which of the two happened.
+fn basis_offset() -> Result<Option<f64>, String> {
+    match std::env::args().find_map(|a| a.strip_prefix("--basis-offset=").map(str::to_string)) {
+        None => Ok(None),
+        Some(v) => {
+            let n: f64 =
+                v.trim().parse().map_err(|_| format!("--basis-offset wants a number in price units, got `{v}`"))?;
+            if !n.is_finite() {
+                return Err(format!("--basis-offset wants a finite number, got `{v}`"));
+            }
+            Ok(Some(n))
+        }
+    }
+}
+
+/// Move every price in the timeline DOWN by `offset`, onto the bars' axis.
+///
+/// Everything price-valued in a frame comes off the option tape's strike grid
+/// and is therefore on the tape's axis: the cluster bounds and centre, and
+/// `max_pain` / `poc` / `w_sup` / `w_res` / `call_be` / `put_be` / `spot` in
+/// every expiration context. `score`, `dte`, the flow ratios and the velocity
+/// are not prices and are left alone — which is also the check on this
+/// function: `flow-momentum` reads only those, so its trade set and its
+/// metrics must be identical at every offset.
+fn shift_basis(timeline: Option<OptionsTimeline>, offset: Option<f64>) -> Option<OptionsTimeline> {
+    // No flag, or an offset of zero, is the identity — and must return the
+    // timeline it was handed, not drop it. Written as two `?`s first, which
+    // silently turned every un-offset run into `timeline: none` over 53,396
+    // prints: exactly the failure this whole job exists to undo.
+    let timeline = timeline?;
+    let Some(offset) = offset else { return Some(timeline) };
+    if offset == 0.0 {
+        return Some(timeline);
+    }
+    let down = |v: f64| v - offset;
+    let frames = timeline
+        .frames()
+        .iter()
+        .map(|f| {
+            let mut f = f.clone();
+            f.spot = down(f.spot);
+            for c in &mut f.clusters {
+                c.low = down(c.low);
+                c.high = down(c.high);
+                c.center = down(c.center);
+            }
+            for c in &mut f.contexts {
+                for slot in [&mut c.max_pain, &mut c.poc, &mut c.w_sup, &mut c.w_res, &mut c.call_be, &mut c.put_be] {
+                    *slot = slot.map(down);
+                }
+            }
+            f
+        })
+        .collect();
+    Some(OptionsTimeline::new(frames))
+}
+
+/// The receipt line for the basis correction.
+///
+/// It says the offset, that it was applied to the levels and not to the bars,
+/// and — when there is no timeline — that the flag changed nothing, because a
+/// header that prints a correction over `timeline: none` is exactly the kind
+/// of claim this binary's flag audit exists to stop.
+fn basis_line(offset: Option<f64>, has_timeline: bool) -> String {
+    match (offset, has_timeline) {
+        (None, _) => "basis:    none — option levels are read on the tape's own price axis (not 0.00: the flag was not passed)".to_string(),
+        (Some(v), true) => format!(
+            "basis:    option levels shifted {v:+.2} price units onto the bars' axis (levels moved, bars untouched); GC-XAUUSD measured mean +43.70 sd 1.91 p10 41.26 p90 45.78, drifting 45.66 -> 41.35, so ONE offset is not a measurement — read p10/mean/p90 together"
+        ),
+        (Some(v), false) => format!(
+            "basis:    ** --basis-offset={v:+.2} CHANGED NOTHING: there is no options timeline on this run **"
+        ),
+    }
 }
 
 /// The calendar path `load_news` actually read, for the receipt lines printed
@@ -1125,6 +1233,7 @@ fn run_hypotheses(
     registry: &Registry,
     bars: &[Bar],
     rules: &TradingRules,
+    timeline: Option<&OptionsTimeline>,
     folds: usize,
     select_by: SelectBy,
     min_trades_per_cell: usize,
@@ -1172,8 +1281,51 @@ fn run_hypotheses(
     println!("{}", gate_header());
     let mut survivors = Vec::new();
     for hypothesis in &batch {
+        // WHETHER THIS ROW CAN SEE THE TAPE, said out loud before its numbers.
+        // A method that `needs_options()` and is handed no timeline does not
+        // fail — it takes no position at all, which prints as a gate miss and
+        // reads like a measurement. Until 2026-10-09 the hypotheses path
+        // passed `None` unconditionally, so every such row in this mode was
+        // that, and the walk-forward path still is.
+        let wants_options = registry.get(&hypothesis.base).map(|s| s.needs_options()).unwrap_or(false);
+        if wants_options {
+            match (timeline, fixed) {
+                (Some(t), true) => println!(
+                    "{:<12} {:<18} reads the tape: {} frames reach this row",
+                    hypothesis.label,
+                    hypothesis.base,
+                    t.len()
+                ),
+                (_, false) => {
+                    println!(
+                        "{:<12} {:<18} refused: an options-reading method cannot be measured on the walk-forward hypotheses path — it still passes no timeline. Re-run with --fixed.",
+                        hypothesis.label, hypothesis.base
+                    );
+                    continue;
+                }
+                (None, true) => {
+                    println!(
+                        "{:<12} {:<18} refused: this method reads options and this run has no timeline — that is `options_source` in the config or no tape in the store, NOT a result",
+                        hypothesis.label, hypothesis.base
+                    );
+                    continue;
+                }
+            }
+        }
         let outcome = if fixed {
-            run_hypothesis_fixed_sides(registry, hypothesis, bars, rules, gate, seeds, guards, null_sides).map(Some)
+            fd_backtest::hypotheses::run_hypothesis_fixed_options(
+                registry,
+                hypothesis,
+                bars,
+                rules,
+                gate,
+                seeds,
+                guards,
+                fd_backtest::hypotheses::CostMatch::Method,
+                null_sides,
+                timeline,
+            )
+            .map(Some)
         } else {
             run_hypothesis_sides(
                 registry, hypothesis, bars, rules, folds, select_by, min_trades_per_cell, gate, seeds, guards, null_sides,
