@@ -1,0 +1,49 @@
+hour-screen | the two cross-checks that decide how to read the signed survivors
+
+=== 1. HALT-BOUNDARY MARK: provider property or market? ===
+"re-open bar" = the first 15m bar after a 60-200 min gap in the tape (the daily halt,
+not the weekend). Compared against every ordinary 15m bar (dt == 15 min) of the same feed.
+
+XAUDUKA-15m  378749 bars  2010-06-01 .. 2026-05-31   re-opens 2671  modal NY hour 18
+   re-open bar  mean(close-open) +0.5784 price units   (ordinary bar +0.00220)
+   re-open bar  open==low 19.02%  open==high  2.66%   | ordinary  open==low  3.20%  open==high  3.57%
+   pre-halt bar mean(close-open) -0.2574   close==low 13.25%  close==high  0.94%   | ordinary  close==low  1.88%  close==high  1.65%
+
+XAGDUKA-15m  374188 bars  2010-06-01 .. 2026-05-31   re-opens 2632  modal NY hour 18
+   re-open bar  mean(close-open) +0.0157 price units   (ordinary bar -0.00002)
+   re-open bar  open==low 24.16%  open==high  2.58%   | ordinary  open==low  4.86%  open==high  5.27%
+   pre-halt bar mean(close-open) -0.0152   close==low 26.44%  close==high  2.24%   | ordinary  close==low  3.29%  close==high  3.64%
+
+XAUUSD-15m  100586 bars  2022-06-16 .. 2026-09-17   re-opens 845  modal NY hour 18
+   re-open bar  mean(close-open) +0.4061 price units   (ordinary bar +0.01698)
+   re-open bar  open==low  6.75%  open==high  4.02%   | ordinary  open==low  2.77%  open==high  2.77%
+   pre-halt bar mean(close-open) +0.0284   close==low  1.42%  close==high  2.60%   | ordinary  close==low  1.18%  close==high  1.24%
+
+=== 2. OVERNIGHT 19:00 -> 02:00 NY, three feeds ===
+
+XAUDUKA-15m
+   W1 2010-06..2018-06        n= 1617  mean +0.02902 DR20  t +4.28  p 0.0000   DR20 mean 18.913  => +0.5489 price units  = +1.96 x one round trip (0,28 USD, gold only)
+   W2 2018-06..2026-05        n= 1615  mean +0.01771 DR20  t +2.57  p 0.0104   DR20 mean 32.737  => +0.5798 price units  = +2.07 x one round trip (0,28 USD, gold only)
+
+XAUUSD-15m
+   broker 2022-06..2026-09    n=  856  mean +0.02381 DR20  t +2.32  p 0.0205   DR20 mean 49.049  => +1.1681 price units  = +4.17 x one round trip (0,28 USD, gold only)
+
+XAGDUKA-15m
+   W1 2010-06..2018-06        n= 1581  mean +0.00074 DR20  t +0.12  p 0.9026   DR20 mean 0.621  => +0.0005 price units  = +0.00 x one round trip (0,28 USD, gold only)
+   W2 2018-06..2026-05        n= 1549  mean +0.00751 DR20  t +1.02  p 0.3078   DR20 mean 0.893  => +0.0067 price units  = +0.02 x one round trip (0,28 USD, gold only)
+
+=== 3. WHERE THE 16-YEAR DRIFT LIVES: stretches of the NY clock (xauduka) ===
+
+ W1  (mean DR20 18.929 USD, 2027 days)
+   overnight 19-01 (the batch's asia hours)   +0.03110 DR20  +0.5886 USD  +2.10 x spread
+   day 02-16 (London + NY)                    -0.04718 DR20  -0.8931 USD  -3.19 x spread
+   NY morning 08-11 (the batch's ny-morning)  -0.00532 DR20  -0.1008 USD  -0.36 x spread
+   halt boundary 16+17+18                     -0.01333 DR20  -0.2522 USD  -0.90 x spread
+   every hour present                         -0.01574 DR20  -0.2979 USD  -1.06 x spread
+
+ W2  (mean DR20 32.877 USD, 2036 days)
+   overnight 19-01 (the batch's asia hours)   +0.01652 DR20  +0.5433 USD  +1.94 x spread
+   day 02-16 (London + NY)                    +0.00455 DR20  +0.1497 USD  +0.53 x spread
+   NY morning 08-11 (the batch's ny-morning)  +0.00154 DR20  +0.0508 USD  +0.18 x spread
+   halt boundary 16+17+18                     +0.02151 DR20  +0.7071 USD  +2.53 x spread
+   every hour present                         +0.05013 DR20  +1.6481 USD  +5.89 x spread
