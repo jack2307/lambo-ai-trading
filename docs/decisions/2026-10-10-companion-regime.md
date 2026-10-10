@@ -127,3 +127,40 @@ không mở `data-sealed/`, không chạm `main`, không chạm `config/accounts
 `config/local.toml`, VPS, `data/gold/`, `data/btc/`, hay
 `/e/rust/flowdesk/target/release/`. `--data=/e/rust/flowdesk/data` **chỉ đọc**.
 Không giết `collect.exe` pid 5044 / 38720.
+
+---
+
+## Ghi chú thêm — 2026-10-10, SAU khi thấy bảng tiền kiểm, TRƯỚC khi chạy tiếp
+
+Không viết lại dòng nào ở trên (brief §5). Thêm ba thứ, vì bảng tiền kiểm cho
+**1/24** phép so sống sót (`XAGDUKA` × `vol` × `bb-fade`, dE +0,07666 R ở cửa sổ
+A / +0,05334 R ở B, 0/1000 lần rút của **cả ba** đối chứng với tới) nên F1 **không
+bắn sạch**, và một phép so sống sót phải trả lời ba câu nữa trước khi được gọi là
+một hiệu ứng của companion:
+
+1. **NỀN TỰ-TRẠNG-THÁI** (cái tương đương nền tự tương quan của `agent/lead-lag`).
+   Tính **cùng một định nghĩa trạng thái trên CHÍNH VÀNG** (`XAUDUKA` làm companion
+   của chính nó, khớp timestamp 100%). Biến động của bạc và biến động của vàng
+   tương quan rất cao, nên nếu nền vàng phân biệt **bằng hoặc hơn**, thì
+   "thông tin của companion" **chính là** chế độ biến động của vàng **đi qua một
+   đường khác** — đúng cái `agent/lead-lag` bắt được ở Q4 (companion −0,0259 vs
+   nền −0,0268, trùng tới chữ số thứ ba). **Falsifier F6:** nếu `|dE|` của nền
+   vàng ≥ `|dE|` của companion trên **cả hai** cửa sổ thì companion **không thêm
+   gì** và trục đóng.
+2. **ỔN ĐỊNH (F7).** Chẻ 16 năm thành **4 quý 4 năm** (Q1 2010-06..2014-06,
+   Q2 2014-06..2018-06, Q3 2018-06..2022-06, Q4 2022-06..2026-06). Nếu dE
+   **lật dấu** giữa hai quý liền nhau thì đó là **hiện vật cửa sổ**, không phải
+   một chế độ — tiền lệ: ô duy nhất qua F1 của `agent/lead-lag` lật từ +0,0503
+   (Q3) sang −0,0259 (Q4).
+3. **Đối chứng thứ ba đã thêm** (khai ở đây cho đủ, nó đã chạy): ngoài
+   **xáo trộn thời gian** (bộ lọc ngẫu nhiên cùng tỉ lệ cắt, đúng thứ đăng ký
+   yêu cầu) tôi đọc thêm **xáo trộn nhãn** (giữ nguyên cỡ hai nhóm) và
+   **xáo trộn theo khối 96 nến = một ngày 15m** (giữ cấu trúc trong ngày, để một
+   hiệu ứng giờ-trong-ngày không được mượn phân phối null hẹp của xáo trộn đầy).
+   Một phép so chỉ được gọi là "phân biệt được" khi **qua cả ba**.
+
+Và một con số phải ghi ngay, vì nó quyết định số ô cổng: **F3 đã bắn ở tiền kiểm.**
+`E` **cao nhất của BẤT KỲ nhóm nào của BẤT KỲ phép so nào** là **−0,03902 R**
+(arm guards ON) / **−0,02715 R** (arm guards OFF), trong khi cổng đòi
+**≥ +0,050R**. ⇒ **không bộ lọc nào dựng từ những trạng thái này đưa được cơ chế
+nào qua cổng** ⇒ **tiêu 0 ô cổng**, đúng như đã đăng ký.
