@@ -74,6 +74,7 @@ pub fn register_all(registry: &mut Registry) {
     registry.register(Box::new(crate::screen::SqueezeBreak));
     registry.register(Box::new(crate::screen::StochReversal));
     registry.register(Box::new(crate::volman_box::VolmanBox));
+    registry.register(Box::new(crate::vprofile::VolumeProfileLevels));
     // The three instruments built by the 2026-09-23 designed-methods programme.
     // NONE of them is a candidate: all three are registered at parameters that
     // their own design window refuses, and the programme proposed no method at

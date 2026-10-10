@@ -40,8 +40,8 @@ pub use maxpain::{
 };
 pub use price_levels::{
     BarProfile, ConfirmedSwing, Direction, FairValueGap, LevelKind, LevelState, LiquidityPool, LiquiditySide,
-    OrderBlock, PeriodExtremes, PriceLevel, activity_profile, bucket_size_price, confirmed_swings,
-    liquidity_pools, order_blocks, period_extremes, period_pool, runs_split_by_gap, swing_id,
-    unfilled_fair_value_gaps,
+    OrderBlock, PeriodExtremes, PriceLevel, ProfileAudit, ProfileMeasure, activity_profile,
+    activity_profile_measured, bucket_size_price, confirmed_swings, liquidity_pools, order_blocks,
+    period_extremes, period_pool, runs_split_by_gap, swing_id, unfilled_fair_value_gaps,
 };
 pub use profile::{ProfileMode, ProfileOptions, StrikeProfile, ValueArea, build_profile, value_area};

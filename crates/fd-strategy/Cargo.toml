@@ -8,6 +8,12 @@ description = "Strategy interface, registry and the built-in methods"
 
 [dependencies]
 fd-core = { workspace = true }
+# `vprofile` reads its levels through `fd_engine::activity_profile_measured`,
+# the one place the point of control and the value-area walk are defined for
+# price bars. A second histogram written here would be a second answer to the
+# question the pre-check exists to settle, and the time arm would stop being
+# the code the reporting route already publishes.
+fd-engine = { workspace = true }
 fd-indicators = { workspace = true }
 serde = { workspace = true }
 thiserror = { workspace = true }

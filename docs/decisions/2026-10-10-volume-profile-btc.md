@@ -171,3 +171,56 @@ Khong mo `data-sealed/`. Khong cham `main`, `config/local.toml`,
 `config/accounts.toml` ngoai worktree, hai `collect.exe`, hay VPS. Khong hua chi
 tieu drawdown nao ngoai viec **in** no. Khong sua khuyet diem 14/16/17 — dem,
 khong sua.
+
+---
+
+## Ghi chu them 2026-10-10 (sau tien kiem, truoc khi tieu o cong)
+
+Khong viet lai dong nao o tren; day la bo sung theo muc 5 cua brief goc.
+
+**1. Tien kiem: F1a KHONG bat, F1b KHONG bat — hai profile PHAN BIET DUOC.**
+`vprofile_precheck`, 730 cua so 1 ngay UTC tren BTCUSDT-15m, cung bars cung
+luoi bucket (bucket = ATR14(15m)/4, trung vi **59,38 USD**; 1R = 1,5xATR14
+trung vi **356,26 USD**):
+
+    muc   cung-bucket   |d| USD p50    p90      p50 theo bucket   p50 % cua 1R
+    POC      60,7%          0,00     835,23          0,00            0,00%
+    VAH      30,1%         64,93     497,62          1,09           18,23%
+    VAL      32,3%         63,64     505,45          1,07           17,86%
+
+F1a doi >= 95% cung bucket **va** p90 <= 1 tick: thuc te 60,7% va p90 = 83.523
+tick. F1b doi **trung vi cua ca ba** < 10% cua 1R: POC dat (0,00%) nhung VAH
+(18,23%) va VAL (17,86%) **khong dat**. ⇒ tieu tiep 24 o nhu da khai.
+
+Cua so 5 ngay lech **manh hon**: POC cung-bucket 52,2%, VAH/VAL 19,4%/18,0%,
+trung vi VAH/VAL **36,30%/36,14%** cua 1R.
+
+**Phat hien dang giu nhat cua tien kiem:** khe **khong deu giua ba muc**. POC co
+**trung vi dung 0,00 USD** va cung bucket o 60,7% ngay ⇒ mot co che neo **chi
+vao POC** gan nhu la **cung mot co che** duoi hai measure. Bien value area thi
+khac that: chi trung 30%, lech trung vi ~1,1 bucket. ⇒ cot volume doi cau tra
+loi **o BIEN**, khong o POC. Dieu nay khong duoc du doan trong dang ky va no
+noi ro truoc ket qua cong se doc the nao.
+
+**2. F3 khong bat.** `volume` doc duoc tren **70.080/70.080** nen (100,000%),
+tong **15.948.687,245** don vi cua feed. Khong nen nao roi ve 1,0. Va
+`activity_profile_measured` **tu choi** (tra `None`) khi cot rong, co test
+`a_volume_measure_on_an_empty_column_returns_nothing_rather_than_a_time_profile`
+giu dieu do — nen nhanh volume khong the am tham tro thanh nhanh time.
+
+**3. SUA muc 4: stop cua `mode = 0` KHONG phai bien value area.** Dang ky viet
+"stop = bien VA phia ngoai + buffer". Do la **sai**, va sai dung kieu khuyet
+diem brief dem: trong `mode = 0` nen tin hieu **da dong ngoai** bien do, nen
+mot stop neo vao bien do se nam o phia **LAI** cua entry — vi tri chi co the
+ket thuc o lai, tuc la `wrong_side_stop`. Stop thuc dung la **bien do cua nen
+tin hieu + bufferAtr x ATR14** (giong `pdhl` che do fade), cho ca hai mode. Co
+che con **tu choi vao lenh** khi POC nam o phia lo cua entry hoac khi stop
+khong o phia lo — nen no khong the gop mot `wrong_side_stop` nao.
+
+**4. Lop stop, doc tu ma:** `VolumeProfileLevels::exits() == Exits::Engine`
+(khong `self_managed`, nen `check_exit` thi hanh stop that) va `Intent::Enter`
+mang `stop: Some(<gia>)` cong `target: Some(POC)` — **ca hai la muc gia tuyet
+doi**. ⇒ **L3**. Co test `the_exit_class_is_l3_an_enforced_stop_with_a_price_target`
+giu no.
+
+**5. Luoi dung dung 24 o da khai** (test `the_grid_is_the_twenty_four_cells_the_registration_declared`).

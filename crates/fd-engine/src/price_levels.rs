@@ -317,11 +317,85 @@ pub struct BarProfile {
     pub value_area_pct: f64,
     /// The histogram's total, in bar-buckets: one bar that traded through
     /// four buckets contributes 4.0. The denominator of the value area.
+    ///
+    /// Under a volume measure the UNIT changes and the field name does not —
+    /// read [`Self::measure`] first. `VOLUME_DISTRIBUTED` makes this the
+    /// window's total volume in the feed's own units, `VOLUME_TOUCHED` makes
+    /// it volume times buckets, and only `TIME_AT_PRICE` makes it bar-buckets.
     pub activity_total_bar_buckets: f64,
     /// The part of that total inside VAL..VAH. Divided by the line above it
     /// is at least `value_area_pct`, which is the property
     /// `the_value_area_holds_seventy_percent_of_the_activity` pins.
     pub activity_in_value_area_bar_buckets: f64,
+}
+
+/// What a bar contributes to each price bucket its range touches.
+///
+/// The profile's SHAPE — buckets, the point of control, the classic
+/// value-area walk — is identical across all three. Only the weight differs,
+/// which is the whole point: it makes "does the volume column change the
+/// levels?" a measurement instead of an argument.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum ProfileMeasure {
+    /// 1.0 per touched bucket. The market-profile TPO definition, and what
+    /// this module published before the volume arms existed.
+    #[default]
+    TimeAtPrice,
+    /// `volume / buckets touched`. The standard volume profile: the bar's
+    /// traded volume is spread over the prices it traded at, so the
+    /// histogram's total is the window's total volume.
+    VolumeDistributed,
+    /// `volume` to EVERY touched bucket. The direct analogue of the TPO
+    /// shape, in which a wide bar is counted once per bucket. The total is
+    /// not a volume, so it is kept only as the second reading and named for
+    /// what it is.
+    VolumeTouched,
+}
+
+impl ProfileMeasure {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::TimeAtPrice => "TIME_AT_PRICE",
+            Self::VolumeDistributed => "VOLUME_DISTRIBUTED",
+            Self::VolumeTouched => "VOLUME_TOUCHED",
+        }
+    }
+
+    #[must_use]
+    pub const fn needs_volume(self) -> bool {
+        matches!(self, Self::VolumeDistributed | Self::VolumeTouched)
+    }
+}
+
+/// What the histogram actually read, so a caller can tell a volume profile
+/// from a volume profile's NAME.
+///
+/// `fd_indicators`' VWAP does `match bar.volume { Some(v) if v > 0.0 => v, _
+/// => 1.0 }`, which turns a volume-weighted average into a typical-price
+/// average on a feed whose volume column is zero or null — and still prints a
+/// number. Nothing here substitutes 1.0 for a missing volume. A bar without
+/// one is SKIPPED by a volume measure and counted here, so a profile built on
+/// an empty column is visibly a profile over zero bars rather than invisibly
+/// a time profile.
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
+pub struct ProfileAudit {
+    pub measure: &'static str,
+    /// Bars whose `volume` was `Some(v)` with `v > 0` and finite.
+    pub bars_with_volume: usize,
+    /// Bars with no readable volume. Counted under EVERY measure, because it
+    /// is a fact about the feed rather than about the weight: the time
+    /// profile's own audit is how a reader learns the column was empty
+    /// without having to build a volume profile to find out. A volume measure
+    /// additionally SKIPS these bars.
+    pub bars_without_volume: usize,
+    /// The histogram's total. In bar-buckets for the time measure, in the
+    /// feed's own volume units for `VolumeDistributed`, and in
+    /// volume-times-buckets for `VolumeTouched`.
+    pub weight_total: f64,
+    /// `sum(volume)` over the bars that went in — the independent check that
+    /// `VolumeDistributed`'s total is a volume and not a bar count.
+    pub volume_sum: f64,
 }
 
 /// The high and the low of one period, each as a level.
@@ -447,6 +521,26 @@ const MAX_BUCKETS: usize = 5_000;
 /// interchangeable rows.
 #[must_use]
 pub fn activity_profile(bars: &[Bar], bucket_size_price: f64, value_area_pct: f64, buckets_per_atr: f64) -> Option<BarProfile> {
+    activity_profile_measured(bars, bucket_size_price, value_area_pct, buckets_per_atr, ProfileMeasure::TimeAtPrice)
+        .map(|(profile, _)| profile)
+}
+
+/// [`activity_profile`] with the per-bar weight chosen, plus the audit of what
+/// the volume column actually gave.
+///
+/// Everything but the weight is shared with the time profile ON PURPOSE: two
+/// histograms whose buckets, tie rule and value-area walk came from different
+/// code could differ for a reason that has nothing to do with volume, and the
+/// question this function exists to answer is exactly whether the weight
+/// moves the levels.
+#[must_use]
+pub fn activity_profile_measured(
+    bars: &[Bar],
+    bucket_size_price: f64,
+    value_area_pct: f64,
+    buckets_per_atr: f64,
+    measure: ProfileMeasure,
+) -> Option<(BarProfile, ProfileAudit)> {
     if bars.is_empty() || !(bucket_size_price.is_finite() && bucket_size_price > 0.0) {
         return None;
     }
@@ -474,13 +568,40 @@ pub fn activity_profile(bars: &[Bar], bucket_size_price: f64, value_area_pct: f6
     // different facts, and this is where the difference shows.
     let mut first_touch = vec![usize::MAX; count];
     let mut window_bars = 0usize;
+    let mut bars_with_volume = 0usize;
+    let mut bars_without_volume = 0usize;
+    let mut volume_sum = 0.0f64;
     for (i, bar) in bars.iter().enumerate() {
         if !(bar.low.is_finite() && bar.high.is_finite()) || bar.high < bar.low {
             continue;
         }
+        // A readable volume is `Some(v)`, finite and strictly positive. No
+        // substitution: a volume measure SKIPS the bar and says so, because a
+        // 1.0 standing in for a missing volume is the defect that makes a
+        // time profile answer to a volume profile's name.
+        let volume = match bar.volume {
+            Some(v) if v.is_finite() && v > 0.0 => Some(v),
+            _ => None,
+        };
+        match volume {
+            Some(v) => {
+                bars_with_volume += 1;
+                volume_sum += v;
+            }
+            None => bars_without_volume += 1,
+        }
+        let weight_per_bucket = match (measure, volume) {
+            (ProfileMeasure::TimeAtPrice, _) => 1.0,
+            (_, None) => continue,
+            (ProfileMeasure::VolumeTouched, Some(v)) => v,
+            (ProfileMeasure::VolumeDistributed, Some(v)) => {
+                let touched = index_of(bar.high) - index_of(bar.low) + 1;
+                v / touched as f64
+            }
+        };
         window_bars += 1;
         for k in index_of(bar.low)..=index_of(bar.high) {
-            activity[k] += 1.0;
+            activity[k] += weight_per_bucket;
             if first_touch[k] == usize::MAX {
                 first_touch[k] = i;
             }
@@ -524,8 +645,9 @@ pub fn activity_profile(bars: &[Bar], bucket_size_price: f64, value_area_pct: f6
         (bars[i].time, last - i)
     };
     let rule = format!(
-        "activity profile over {window_bars} bars, time-at-price, bucket = ATR(14)/{buckets_per_atr}, \
+        "activity profile over {window_bars} bars, {}, bucket = ATR(14)/{buckets_per_atr}, \
          value area {:.0}% by the classic walk",
+        measure.as_str().to_ascii_lowercase().replace('_', "-"),
         pct * 100.0
     );
 
@@ -533,8 +655,8 @@ pub fn activity_profile(bars: &[Bar], bucket_size_price: f64, value_area_pct: f6
     let (vah_ms, vah_age) = stamp(hi);
     let (val_ms, val_age) = stamp(lo);
 
-    Some(BarProfile {
-        measure: "TIME_AT_PRICE",
+    Some((BarProfile {
+        measure: measure.as_str(),
         poc: Some(PriceLevel {
             kind: LevelKind::Poc,
             // The bucket's MIDPOINT as the single price, with the bucket's own
@@ -581,7 +703,14 @@ pub fn activity_profile(bars: &[Bar], bucket_size_price: f64, value_area_pct: f6
         value_area_pct: pct,
         activity_total_bar_buckets: total,
         activity_in_value_area_bar_buckets: acc,
-    })
+    },
+    ProfileAudit {
+        measure: measure.as_str(),
+        bars_with_volume,
+        bars_without_volume,
+        weight_total: total,
+        volume_sum,
+    }))
 }
 
 /* ---------------------------------------------------- fair value gaps */
@@ -1823,6 +1952,103 @@ mod tests {
         let val = profile.val.as_ref().and_then(|l| l.price).expect("val");
         assert!(val <= poc && poc <= vah, "val {val} poc {poc} vah {vah}");
         assert_eq!(profile.measure, "TIME_AT_PRICE");
+    }
+
+    /// Bars with a volume column, so the volume arms have something to read.
+    fn vbar(i: i64, open: f64, high: f64, low: f64, close: f64, volume: f64) -> Bar {
+        Bar { time: i * M15, open, high, low, close, volume: Some(volume) }
+    }
+
+    #[test]
+    fn the_time_measure_reproduces_the_profile_published_before_the_volume_arms() {
+        // The weight is now a parameter, and the one risk of that is a
+        // refactor that quietly moved the levels this module has been
+        // publishing. The default path must be bit-identical.
+        let bars: Vec<Bar> = (0..20)
+            .map(|i| vbar(i, 100.0, 100.0 + (i % 5) as f64, 100.0 - (i % 3) as f64, 100.5, 10.0 * (i + 1) as f64))
+            .collect();
+        let old = activity_profile(&bars, 0.25, 0.7, 4.0).expect("a profile");
+        let (new, audit) =
+            activity_profile_measured(&bars, 0.25, 0.7, 4.0, ProfileMeasure::TimeAtPrice).expect("a profile");
+        assert_eq!(old, new);
+        assert_eq!(old.measure, "TIME_AT_PRICE");
+        // And the time profile's own audit says the column was full, which is
+        // how a reader learns the feed has volume without building a volume
+        // profile to find out.
+        assert_eq!(audit.bars_with_volume, 20);
+        assert_eq!(audit.bars_without_volume, 0);
+        assert_eq!(audit.weight_total, old.activity_total_bar_buckets);
+    }
+
+    #[test]
+    fn the_distributed_volume_measure_totals_the_windows_volume() {
+        // The defining property of a volume profile: the histogram's total is
+        // the volume that traded, not a count of anything. A weight that
+        // leaked bar counts in would fail here before it could be mistaken
+        // for a measurement.
+        let bars: Vec<Bar> = (0..12)
+            .map(|i| vbar(i, 100.0, 101.0 + (i % 4) as f64, 99.0, 100.5, 7.0 + i as f64))
+            .collect();
+        let expected: f64 = bars.iter().map(|b| b.volume.unwrap()).sum();
+        let (profile, audit) =
+            activity_profile_measured(&bars, 0.25, 0.7, 4.0, ProfileMeasure::VolumeDistributed).expect("a profile");
+        assert_eq!(profile.measure, "VOLUME_DISTRIBUTED");
+        assert!(
+            (profile.activity_total_bar_buckets - expected).abs() < 1e-9,
+            "total {} vs volume {expected}",
+            profile.activity_total_bar_buckets
+        );
+        assert!((audit.volume_sum - expected).abs() < 1e-9);
+        // The touched variant counts a wide bar once per bucket, so its total
+        // is strictly larger on bars wider than one bucket — and it is kept
+        // under a name that does not claim to be a volume.
+        let (touched, _) =
+            activity_profile_measured(&bars, 0.25, 0.7, 4.0, ProfileMeasure::VolumeTouched).expect("a profile");
+        assert!(touched.activity_total_bar_buckets > profile.activity_total_bar_buckets);
+        assert_eq!(touched.measure, "VOLUME_TOUCHED");
+    }
+
+    #[test]
+    fn a_volume_measure_on_an_empty_column_returns_nothing_rather_than_a_time_profile() {
+        // `fd_indicators`' VWAP substitutes 1.0 for a missing volume, which
+        // turns it into a TWAP on a feed whose volume column is zero — and it
+        // still prints a number. Every Dukascopy feed on this disk is that
+        // feed. A volume profile that did the same would be a time profile
+        // under a volume profile's name, so these arms refuse instead.
+        let bars: Vec<Bar> = (0..20).map(|i| bar(i, 100.0, 100.4, 100.0, 100.2)).collect();
+        assert!(bars.iter().all(|b| b.volume.is_none()));
+        assert!(activity_profile_measured(&bars, 0.25, 0.7, 4.0, ProfileMeasure::VolumeDistributed).is_none());
+        assert!(activity_profile_measured(&bars, 0.25, 0.7, 4.0, ProfileMeasure::VolumeTouched).is_none());
+        // A column of literal zeros is the same refusal: `Some(0.0)` is not a
+        // volume either.
+        let zeros: Vec<Bar> = (0..20).map(|i| vbar(i, 100.0, 100.4, 100.0, 100.2, 0.0)).collect();
+        assert!(activity_profile_measured(&zeros, 0.25, 0.7, 4.0, ProfileMeasure::VolumeDistributed).is_none());
+        // The time profile still works on both, and its audit names the gap.
+        let (profile, audit) =
+            activity_profile_measured(&bars, 0.25, 0.7, 4.0, ProfileMeasure::TimeAtPrice).expect("a profile");
+        assert_eq!(profile.window_bars, 20);
+        assert_eq!(audit.bars_without_volume, 20);
+        assert_eq!(audit.volume_sum, 0.0);
+    }
+
+    #[test]
+    fn the_volume_column_can_move_the_point_of_control_off_the_busiest_bucket() {
+        // Fifteen quiet bars pinned at 100 and three heavy bars at 103. Time
+        // at price puts the POC at 100 because that is where the clock was;
+        // volume puts it at 103 because that is where the trading was. If
+        // this test ever stops being possible, the two profiles are the same
+        // object and the volume arms are decoration.
+        let mut bars: Vec<Bar> = (0..15).map(|i| vbar(i, 100.0, 100.2, 100.0, 100.1, 1.0)).collect();
+        bars.push(vbar(15, 103.0, 103.2, 103.0, 103.1, 500.0));
+        bars.push(vbar(16, 103.0, 103.2, 103.0, 103.1, 500.0));
+        bars.push(vbar(17, 103.0, 103.2, 103.0, 103.1, 500.0));
+        let (time, _) = activity_profile_measured(&bars, 0.25, 0.7, 4.0, ProfileMeasure::TimeAtPrice).unwrap();
+        let (vol, _) =
+            activity_profile_measured(&bars, 0.25, 0.7, 4.0, ProfileMeasure::VolumeDistributed).unwrap();
+        let tp = time.poc.as_ref().and_then(|l| l.price).unwrap();
+        let vp = vol.poc.as_ref().and_then(|l| l.price).unwrap();
+        assert!(tp < 101.0, "time poc {tp}");
+        assert!(vp > 102.5, "volume poc {vp}");
     }
 
     #[test]
