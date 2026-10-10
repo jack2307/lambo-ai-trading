@@ -1,0 +1,92 @@
+# agent/hour-screen — the hour-of-day windows the PRE-CHECK licensed, and only
+# those.  Registered in docs/decisions/2026-10-10-hour-screen.md; the dated note
+# at the end of that file declares these 8 rows x 2 time windows x 2 guard arms
+# = 32 cells, written BEFORE the run.
+#
+# What the pre-check licensed, and nothing else:
+#   * 19:00->02:00 NY (the batch's `asia` hours) is the only non-halt stretch
+#     whose signed displacement is same-sign and p<0,05 on BOTH halves of the
+#     16 years: +0,0290 DR20 (W1, t +4,28) and +0,0177 DR20 (W2, t +2,57).
+#     The batch paired those hours with FADE methods; the measurement says the
+#     hours carry an upward drift, so the licensed expression is a HOLD, and
+#     the short arm is the sign control.
+#   * 08:00->12:00 NY (the batch's `ny-morning` hours) is rank 1 of 24 by range
+#     on BOTH halves — a range selection, not a direction one (rank 19/24 and
+#     21/24 by displacement). It is in here as the range-max control.
+#   * 18:00->02:00 is the ARTIFACT PROBE: it adds the 18:00-18:15 bar, where the
+#     whole hour-18 effect lives (+0,031 / +0,023 DR20 in that one bar) and where
+#     the open is the bar's own low on 19,0% of days against 3,2% for an ordinary
+#     bar. If this row is much better than 19:00->02:00, the "edge" is the mark
+#     across the 75-minute halt, not the clock.
+#   * 20:00->02:00 drops hour 19, the hour with the largest clean displacement.
+#
+# riskDailyRanges is held at the closed record's control value 1.000 and is NOT
+# an axis here: `session-hold` declares Exits::Strategy, so that stop is never
+# enforced (agent/stop-width) — it is the denominator of R, nothing else.
+# Every row holds strictly between two 17:00 NY rollovers, so swap_nights = 0.
+
+[run]
+# INERT under --fixed (phu luc 8 muc VI): the windows come from the CLI.
+in_sample = "xauduka:15m"
+in_sample_from = "2010-06-01"
+in_sample_to = "2018-06-01"
+out_of_sample = "xauduka:15m"
+out_of_sample_from = "2018-06-01"
+seeds = 100
+fixed = true
+
+[[hypothesis]]
+label = "ovn1900/long"
+base = "session-hold"
+filters = ["weekdays:MoTuWeTh", "hours:1900-1905"]
+overrides = { from = 1900, to = 200, side = 1, riskDailyRanges = 1.000, rangeDays = 20 }
+why = "the only non-halt stretch with a same-sign p<0,05 displacement on both halves; the batch's `asia` hours, held long instead of faded"
+
+[[hypothesis]]
+label = "ovn1900/short"
+base = "session-hold"
+filters = ["weekdays:MoTuWeTh", "hours:1900-1905"]
+overrides = { from = 1900, to = 200, side = -1, riskDailyRanges = 1.000, rangeDays = 20 }
+why = "sign control for ovn1900/long: if the short arm passes too, the row is not about direction"
+
+[[hypothesis]]
+label = "ovn1800/long"
+base = "session-hold"
+filters = ["weekdays:MoTuWeTh", "hours:1800-1805"]
+overrides = { from = 1800, to = 200, side = 1, riskDailyRanges = 1.000, rangeDays = 20 }
+why = "artifact probe: adds the 18:00-18:15 bar that carries the whole hour-18 displacement across the 75-minute halt"
+
+[[hypothesis]]
+label = "ovn1800/short"
+base = "session-hold"
+filters = ["weekdays:MoTuWeTh", "hours:1800-1805"]
+overrides = { from = 1800, to = 200, side = -1, riskDailyRanges = 1.000, rangeDays = 20 }
+why = "sign control for the artifact probe"
+
+[[hypothesis]]
+label = "ovn2000/long"
+base = "session-hold"
+filters = ["weekdays:MoTuWeTh", "hours:2000-2005"]
+overrides = { from = 2000, to = 200, side = 1, riskDailyRanges = 1.000, rangeDays = 20 }
+why = "drops hour 19, the hour with the largest clean displacement, so the row says how much of ovn1900 is that hour"
+
+[[hypothesis]]
+label = "ovn2000/short"
+base = "session-hold"
+filters = ["weekdays:MoTuWeTh", "hours:2000-2005"]
+overrides = { from = 2000, to = 200, side = -1, riskDailyRanges = 1.000, rangeDays = 20 }
+why = "sign control for ovn2000/long"
+
+[[hypothesis]]
+label = "day0800/long"
+base = "session-hold"
+filters = ["weekdays:MoTuWeTh", "hours:0800-0805"]
+overrides = { from = 800, to = 1200, side = 1, riskDailyRanges = 1.000, rangeDays = 20 }
+why = "the range-max window (rank 1 of 24 on both halves) held long: does the widest window of the day pay anything by itself"
+
+[[hypothesis]]
+label = "day0800/short"
+base = "session-hold"
+filters = ["weekdays:MoTuWeTh", "hours:0800-0805"]
+overrides = { from = 800, to = 1200, side = -1, riskDailyRanges = 1.000, rangeDays = 20 }
+why = "sign control for day0800/long"

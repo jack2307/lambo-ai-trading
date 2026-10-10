@@ -149,3 +149,35 @@ kết quả gắn nhãn đó thừa hưởng nó). Giữa bảng (hạng 8-17) =
 - **Không** đọc `volume` (cột số 0 chế ra).
 - **Không** sửa `engine.rs`, không chạm `main`, `config/local.toml`, VPS,
   `collect.exe` (pid 5044, 38720).
+
+---
+
+## Ghi chú 2026-10-10 (thêm vào cuối, không viết lại dòng nào ở trên)
+
+**Tiền kiểm đã chạy và F1 KHÔNG bắn** — có mốc sống qua cả hai cửa sổ. Nên theo
+mục 5 tôi khai **ô cổng TRƯỚC khi chạy engine**:
+
+**32 ô** = `docs/hypotheses/2026-10-10-hour-screen.toml` (**8 dòng**) × **2 cửa
+sổ thời gian** (W1 2010-06-01→2018-06-01, W2 2018-06-01→2026-05-31, cùng mốc
+chia của tiền kiểm, cùng feed `xauduka` — **không** đổi feed giữa hai cửa sổ) ×
+**2 arm guards** (off / on; arm **on** là arm duy nhất chủ cho phép).
+
+Tám dòng **chỉ** là những gì tiền kiểm cấp phép, cộng đối chứng của chính chúng:
+`ovn1900` (19:00→02:00 = đúng giờ `asia` của batch, **giữ** thay vì fade),
+`ovn1800` (thêm nến 18:00-18:15 — **đầu dò hiện vật** mốc nghỉ),
+`ovn2000` (bỏ giờ 19), `day0800` (08:00→12:00, cửa sổ rộng nhất bảng), mỗi cái
+**hai chiều** (long = cái tiền kiểm chỉ, short = đối chứng dấu).
+
+`riskDailyRanges` giữ ở 1,000 — **không** phải trục. `session-hold` khai
+`Exits::Strategy` nên cái stop đó **không bao giờ được thi hành** (kết quả
+`agent/stop-width`): nó là **mẫu số của R**, và tôi báo `PF_r` cạnh `PF_usd` để
+chuyện đó đọc được.
+
+**Thêm hai điều phải kiểm khi đọc output, vì brief cảnh báo đúng chỗ này:**
+1. `max hold: 4 h` in ra từ `[trading] max_hold_ms`. Mọi dòng `ovn*` giữ 6-8
+   giờ. **Phải đọc `--exit-mix` xem luật cửa sổ có nổ hay TIMEOUT chiếm hết** —
+   nếu TIMEOUT chiếm thì dòng đó đo cái TRẦN, không đo cửa sổ (hiện vật thứ 2).
+2. Mọi dòng giữ **hoàn toàn giữa hai mốc 17:00 NY** ⇒ `swap_nights = 0`, carry
+   tránh được (phụ lục 5 mục C). Nếu `swap$` khác 0 thì dòng đó không đọc được.
+
+**Cộng vào sổ đa phép thử:** 288 p-value tiền kiểm (đã khai) + **32 ô cổng**.
