@@ -243,3 +243,127 @@ số: sửa đăng ký = **thêm ghi chú có ngày vào CUỐI file này**.
 - **Nếu một con số của brief không khớp số tôi đo, SỐ CỦA TÔI THẮNG** và tôi
   báo nó (brief §8). Và tôi **không trích một con số đã công bố như một dữ
   kiện** (phụ lục 8 mục II: chỉ 295/452 ô chạy lại khớp `PF_usd` đã công bố).
+
+---
+
+## Ghi chú thêm — 2026-10-10, SAU ba tiền kiểm, TRƯỚC ô cổng đầu tiên
+
+Không viết lại dòng nào ở trên (brief §5). Đây là kết quả ba tiền kiểm và sổ đa
+phép thử được sửa **trước** lần chạy cổng đầu tiên.
+
+### 1. Ba tiền kiểm: KHÔNG CÁI NÀO BẮN
+
+- **P1 không bắn.** Ở bucket một tick (0,01 USD), trung vị |ΔPOC| giữa arm B1
+  và arm A là **0,31 USD (31 tick)** ở cửa sổ 1 ngày và **0,51 USD (51 tick)** ở
+  5 ngày; p90 là **9,17** và **12,39 USD**. Điều khoản "≤ 1 tick" trượt rất xa.
+  Ở bucket của chính route (ATR(14,15m)/4), hai POC chỉ rơi cùng một bucket ở
+  **63,7%** (1 ngày) / **64,1%** (5 ngày) số cửa sổ với B1, và p90 của |ΔPOC| là
+  **3,500** / **2,550 ATR(14,15m)**. ⇒ cột `volume` **có** thêm thứ gì đó.
+- **P2 không bắn** theo đúng ba điều khoản đã khai: B1 đạt **0/3**, B2 đạt
+  **1/3** (cần ≥2). Lý do nó không bắn được đo ở mục 2 dưới đây, và nó quan
+  trọng hơn chính cái không-bắn.
+- **P3 không bắn.** Cơ chế hồi quy value area cho **1.076 tín hiệu** (arm A,
+  1 ngày, ngưỡng 0) trên `XAUUSD-15m`; cắt đúng tại **2023-12-01** chia thành
+  **369 / 707**, cả hai ≥ 40. Ở cửa sổ 5 ngày: **213 tín hiệu → 75 / 138**.
+  ⇒ **Câu "mọi cách chia cho hai nửa ≥40 tín hiệu đều phải cắt bên trong chế độ
+  A" KHÔNG đúng cho cơ chế này** (brief §8: số đo thắng). Vết nối **là** một
+  điểm chia dùng được, và nó là hai cửa sổ của job này.
+
+### 2. Vì sao ba đại lượng của P2 MÙ với vết nối — đo được, không suy đoán
+
+POC và value area **chỉ đọc trọng số TƯƠNG ĐỐI bên trong một cửa sổ**, nên
+chúng **bất biến** với mọi phép nhân cột `volume` bởi một hằng số. Vết nối
+2023-12 là một bước nhảy **MỨC** (trung vị tick/nến 1.108 → 400,5, ×0,36 trong
+một tháng), nên nó **triệt tiêu** trong mỗi cửa sổ. Bất biến đó được ghim thành
+một đẳng thức, không phải một phép xấp xỉ, bằng test
+`a_constant_volume_reproduces_the_time_profile_exactly`: với volume **hằng số**,
+`volume_profile` trả **đúng cùng** POC/VAH/VAL với `activity_profile`.
+
+Nên đại lượng phải kiểm tính dừng là **HÌNH DẠNG của cột tick bên trong cửa
+sổ**, không phải mức của nó. Đo trên 1.100 ngày giao dịch, cả bốn đại lượng
+không-đơn-vị **nhảy ở đúng 2023-12 và không bao giờ quay lại**:
+
+    dai luong (trong mot ngay)   che do A   che do B   ty so   KS D    KS p
+    cv (do lech / trung binh)      0,6364     0,3189   0,501   0,823   4,6e-149
+    gini                           0,3372     0,1797   0,533   0,842   9,5e-156
+    top-10% share                  0,2362     0,1518   0,642   0,776   1,6e-132
+    entropy chuan hoa              0,9587     0,9879   1,030   0,849   1,2e-158
+    --- de doi chieu, MUC: ---
+    trung vi tick/nen             1183,0     1562,5    1,321   0,446   5,2e-44
+
+`KS D = 0,82–0,85` nghĩa là hai phân phối **gần như rời nhau**. Và chiều của nó
+là chiều **về phía profile số nến**: entropy chuẩn hoá lên **0,9879**, tức cột
+trọng số ở chế độ B **gần phẳng**, và một cột phẳng **CHÍNH LÀ** profile số nến
+theo đẳng thức ở trên.
+
+### 3. Phép đo hậu kiểm (POST-HOC, khai rõ là post-hoc)
+
+Phép đo này **không có trong đăng ký** và được nghĩ ra **sau khi** thấy mục 2,
+nên nó **không được tính là một falsifier đã đăng ký**. Nó là chứng cứ, kèm đối
+chứng, cho điều mà P2 nhắm tới.
+
+Chia P1 theo chế độ, arm B1 (arm giữ nguyên quy ước của A ⇒ một biến), bucket
+ATR(14)/4, cửa sổ 1 ngày — tỉ lệ cửa sổ mà POC khối lượng rơi **cùng bucket**
+với POC số nến:
+
+    volume THAT     : che do A 46,2%  ->  che do B 73,0%   (+26,8 diem)
+    volume XAO TRON : che do A 71,2%  ->  che do B 83,2%   (+12,0 diem)
+    khoang cach that-vs-xaotron: -25,0 diem  ->  -10,2 diem   (giam 2,45 lan)
+
+Đối chứng xáo trộn: cột `volume` được **xáo trộn bên trong từng ngày giao dịch**
+(seed 20261010), giữ nguyên phân phối và phá liên hệ với giá. Nó tái tạo **12,0
+trong 26,8 điểm** của cú dịch ⇒ gần **45%** cú dịch chỉ là phân phối phẳng đi.
+Phần còn lại là **lượng thông tin thật của cột**, và nó **giảm 2,45 lần** qua
+vết nối: −25,0 điểm ở chế độ A so với −10,2 điểm ở chế độ B.
+
+⇒ Phát biểu đo được: **cột tick volume của vàng nói về chỗ giá đã giao dịch
+mạnh hơn 2,45 lần ở nửa đầu so với nửa sau.** Nó **không** phải hai đại lượng
+rời nhau (P2 không bắn), nhưng nó **cũng không phải một đại lượng có cùng độ
+mạnh ở hai đầu**.
+
+### 4. Hai chỗ brief SAI, theo số tôi đo (brief §8)
+
+1. **Duka không "volume = 0"; nó là `null` ở 1m và `0` ở 5m/15m.** Điều tra
+   toàn bộ (không phải mẫu 50.000): `XAUDUKA-1m` **null ở 5.635.777/5.635.777
+   dòng**, còn `XAUDUKA-15m` và `-5m` là **đúng một giá trị duy nhất `0.0`** ở
+   378.749 và 1.135.389 dòng. Metadata của file 15m ghi
+   `resampled_from = XAUDUKA-1m.parquet`, nhưng `fd_store::resample`
+   (`resample.rs:25`) làm `row.volume.filter(..).unwrap_or(1.0)` ⇒ nếu nó đã
+   dựng file đó thì mỗi nến 15m phải mang **15,0**, không phải 0. Nên **con số
+   0 trong hai file Duka là do một bước chuyển đổi khác biến `null` thành `0`**
+   — đúng cái luật §8 `null != 0` cấm, ở một chỗ chưa ai đếm. (Khuyết điểm 18,
+   **đếm không sửa**.) `XAGDUKA-15m`, `EURDUKA-15m`, `AUDNZD-15m` mang cùng
+   dạng 0 tuyệt đối; `GC-1m` là `null` ở 18.709/18.709 dòng.
+2. **"85 lần ít hơn giữa 2023 và 2026" là về TỈ LỆ NẾN NGOẠI LAI, không phải
+   volume.** Trung vị tick/nến 2023 = **1.177**, 2026 = **5.130** ⇒ 2026 **NHIỀU
+   HƠN 4,36 lần**. Cái giảm 85 lần là % nến ≥ 2,5× trung vị. Số tôi đo cho % đó
+   (chuẩn theo trung vị **tháng**) là **9,51% (2023) → 0,13% (2024) → 0,00%
+   (2026)**, không phải 3,40/0,33/0,04 — định nghĩa mẫu số khác nhau, chiều thì
+   giống và mạnh hơn. `p99/p50` khớp brief: **4,80 / 3,13 / 1,76**.
+   Và quan trọng hơn: **mức tick không chỉ có một bước nhảy, nó có một đoạn
+   TĂNG ĐƠN ĐIỆU ×15,4** từ 2024-02 (388) tới 2026-03 (5.976) ⇒ **chế độ B tự
+   nó cũng không dừng yên về mức**, chỉ dừng yên về hình dạng (cv 0,24–0,46
+   suốt 34 tháng, so với 0,43–0,75 ở 18 tháng trước đó).
+
+### 5. Sổ đa phép thử SỬA — 72 ô, không 48, và vì sao
+
+Đăng ký khai 48 ô (B1 + B2). Thêm **24 ô ĐỐI CHỨNG ở `measure = 0`** — chính
+`activity_profile` đã commit, profile SỐ NẾN. Lý do: mục 2 đo được rằng ở chế độ
+B cột trọng số gần phẳng, nên **một ô volume qua cổng ở chế độ B có thể qua
+hoàn toàn nhờ phần số-nến của nó**, và không có arm đối chứng thì câu đó không
+đọc được. Khai **trước** lần chạy cổng đầu tiên:
+
+    3 nguong (0 / 0,25 / 0,50 ATR ngoai VA)
+      x 2 do dai cua so profile (1 ngay, 5 ngay)
+      x 3 measure (0 = SO NEN doi chung, 1 = tick volume/bucket, 2 = tick volume dan deu)
+      = 18 dong trong mot file batch
+      x 2 cua so do  (W1 2022-06-16..2023-11-30 ; W2 2023-12-01..2026-09-17)
+      x 2 arm        (guards off / guards on)
+      = 72 o, 4 lan goi binary
+
+Hai cửa sổ **cắt tại vết nối**, theo mục 3 của đăng ký: cửa sổ IS của hồ sơ
+(`xauduka`) không dựng được profile khối lượng nào, nên cả hai cửa sổ buộc phải
+nằm trong `XAUUSD-15m`.
+
+Binary: build từ nhánh này (`target-vp`), có `lbar_line` của `agent/stop-width`
+nên `PF_r` đọc được từ receipt. `--exit-mix` bật ở mọi lần chạy (F4).
