@@ -249,3 +249,92 @@ Nếu quá ~4 giờ đồng hồ tường thì **dừng và báo thứ đã đo 
 Không build `cargo test --workspace` ở debug (phình `target/debug` lên 11 GB);
 `--release`, `-p fd-backtest`, target dir riêng `target-ob/` trong worktree này.
 Không chạm `config/`, `main`, `data-sealed/`, VPS, hai `collect.exe`.
+
+---
+
+## Ghi chú thêm 2026-10-10, SAU tiền kiểm và TRƯỚC khi tiêu ô nào — PC1 lật một tiền đề của chính đăng ký này
+
+Theo §8 của brief ("số đo thắng"), đây là ghi chú thêm vào cuối, không viết lại
+dòng nào ở trên.
+
+### `Frame::spot` KHÔNG phải một chuỗi giá — nó là 26 tháng hợp đồng trộn vào nhau
+
+Đăng ký ở trên chọn trục GC là `Frame::spot`. Đọc mã (`fd-engine/engine.rs:191-195`):
+`spot` là `underlying_price` của **print cuối cùng**, bất kể print đó thuộc
+expiry nào. Đo trực tiếp trên 55.131 print của kho (915 file parquet):
+
+    26 symbol expiry khac nhau
+    underlying_price trung binh theo symbol: 4.146,00 (G2RV6) ... 4.385,32 (OG4U6)
+      => 239 USD giua hai dau, vi chung la quyen chon tren CAC THANG GC KHAC NHAU
+         (U6=09/2026, V6=10, X6=11, Z6=12)
+
+    Do giai toa cua underlying_price TRONG CUNG MOT PHUT, 8.316 phut co >1 print:
+      mean +10,66  sd 15,48  p10 +0,00  p50 +1,00  p90 +35,10  max +58,10 USD
+      > 0,01 USD o 6.744/8.316 phut = 81,1%
+      > 5,00 USD o 2.456      phut = 29,5%
+
+Và chạy thật với `Frame::spot` làm trục GC cho basis thô **mean +16,48 sd 16,40
+min −26,51 p10 +1,50 p50 +10,58 p90 +44,58 max +89,01** — một dải 115 USD, tức
+**không phải một basis mà là độ giải toả giữa các tháng hợp đồng.**
+
+⇒ **Sửa thiết kế, khai ở đây trước khi tiêu ô:** trục GC của basis cuộn là
+**`data/bars/GC-1m.parquet`** (close), không phải `Frame::spot`. Chuỗi đó do
+`collect.exe` ghi, **100,0% không có biên độ** (18.707/18.709 bar có
+`o==h==l==c`) nên close chính là giá tham chiếu từng phút, và nó là **một**
+chuỗi. Cặp (GC-1m, XAUUSD-15m) phủ **785 bar**, đúng cửa sổ sẽ bị đo — nên lý
+do ở §1 để không dùng cặp 1m/1m vẫn đúng, chỉ chuỗi GC là đổi.
+
+### PC1 trên cặp đúng: ba hằng số của `options-first` KHÔNG kẹp được basis của cửa sổ nó áp lên
+
+GC-1m close − XAUUSD-15m close, ghép trong cùng nến 15m (GC phút thứ 14 của nến),
+**785 bar ghép được**:
+
+    mean +42,16  sd 2,31  min +36,94  p10 +39,66  p50 +41,71  p90 +45,48  max +47,11
+    trung binh bon tu phan vi, THEO THOI GIAN:  +45,15 -> +42,84 -> +40,82 -> +39,86
+
+Tái lập được **hình dạng** của tiền kiểm cha (mean +43,70 sd 1,91, drift
+45,66 → 41,35) nhưng **không tái lập con số**, và lệch về phía thấp:
+
+* **drift KHÔNG dừng ở 41,35 — nó đi tiếp tới +39,86.** Tiền kiểm cha đo tới
+  2026-09-11 (vì `XAUUSD-1m` đóng băng ở đó); cửa sổ bị đo đi tới 2026-09-17.
+* ⇒ **41,26 không phải p10 của cửa sổ này mà là ~p33; 45,78 nằm trên p90 (45,48)
+  và gần max (47,11).** Ba hằng số p10/mean/p90 mà `options-first` chạy là
+  phân vị của **một cửa sổ khác, ngắn hơn, trên một cặp chuỗi khác** — và trên
+  cửa sổ chúng được áp lên, chúng **lệch cao** và **không kẹp** basis.
+* Theo phụ lục 8 §II, đây đúng là hạng "hồ sơ không chạy lại về đúng số của
+  chính nó", và luật §8 áp: **con số của tôi thắng, và tôi báo nó.**
+
+### Thêm một hệ quả: ba offset hằng là số IN-SAMPLE
+
+Test `a_deliberately_look_ahead_basis_fails_the_same_cut_test` trong
+`basis.rs` dùng "trung vị toàn mẫu" làm một trong hai probe nhìn trước, **và
+trung vị toàn mẫu đúng là đại lượng mà mỗi giá trị `--basis-offset=` mang.**
+Probe đó **trượt** test cắt chuỗi ở **5/5** mốc. ⇒ p10/mean/p90 của toàn vùng
+trùng **không phải thứ một người giao dịch biết được tại thời điểm đó**; chúng
+là đối chứng, không phải một cấu hình chạy được. Nói ra ở đây vì nó đổi cách
+đọc 24 ô hằng: chúng là **thước đo độ nhạy**, không phải ba ứng viên.
+
+### Ghi chú về probe và về chính test của tôi
+
+Bản test cắt chuỗi đầu tiên của tôi cắt theo **chỉ số bar** và **mù**: probe
+"đóng dấu quan sát tại giờ MỞ nến" (một số hạng sai, đúng cái "basis đọc phút
+hiện tại" mà đăng ký cấm) **đi qua** nó. Sửa thành cắt theo **tính biết được**
+(`frame.t <= tau` và `bar.time + interval <= tau`) ở **5 mốc, 4 trong đó KHÔNG
+nằm trên lưới 15m**. Đo được: probe đó bị bắt ở **4/5** mốc — **không bắt được
+ở đúng mốc nằm trên lưới bar**, vì sai số của nó bằng đúng một interval và một
+phép cắt theo interval xoá đúng các bar nguyên. Giữ lại con số 4/5 và lý do,
+để không ai "sửa" test về bản mù.
+
+Và một thứ đo được rồi mới biết: **mốc trên ĐÓNG (`(t−W, t]`) cũng nhân quả**,
+không phải lỗi — quan sát biết được đúng tại `t` đến từ một nến đóng tại `t`,
+còn nến đọc frame tại `t` thì mở tại hoặc sau `t`, nên vẫn là một nến sớm hơn.
+Mốc mở mà module này dùng là lựa chọn **bảo thủ**, không phải lựa chọn bắt buộc.
+
+### Sổ đa phép thử: KHÔNG đổi
+
+48 ô xem (24 cuộn mới + 24 hằng chạy lại) giữ nguyên. Thay đổi ở trên là **đổi
+chuỗi tham chiếu của một ước lượng**, không phải thêm một ô cổng, và nó được
+khai **trước** khi ô nào được tiêu. `W ∈ {120, 480, 1440}` và `K = 5` giữ
+nguyên. Không có ô nào bị chi cho `Frame::spot`: lần chạy tiền kiểm ở trên
+không đọc một chân cổng nào và con số của nó chỉ dùng để bác bỏ chính nó làm
+trục.
