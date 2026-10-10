@@ -56,3 +56,6 @@ config/local.toml
 # The sealed research store: a truncated copy of data/ built by seal-store for
 # design agents that must not see the withheld year. Derived, large, rebuildable.
 /data-sealed
+# agent/intrabar-shape: lop dac trung tien-tinh tu 5.635.777 nen 1m (30 MB npz)
+# va target rieng cua worktree do, de khong cham /target dung chung.
+/target-ib

@@ -236,3 +236,16 @@ tạo ứng viên — cổng desk tính PF/expectancy theo **chiều**, không t
 Nó chỉ quyết định kết luận viết ra là **"1m không chứa gì dùng được ở 15m"** hay
 **"1m chứa thông tin BIÊN ĐỘ nhưng không chứa thông tin CHIỀU ở 15m"**. Hai câu
 đó khác nhau và desk cần câu đúng.
+
+## Kết quả — 2026-10-10
+
+Đọc ở `docs/decisions/2026-10-10-intrabar-shape-result.md`. Tóm một dòng:
+**F2 bắn** (đối chứng thắng: `ΔR²_oos` âm 3/4 fold, độ chính xác dấu xấu đi 4/4,
+và `t` của phần dư **0/8 ở cả bước 1 và bước 4**), **F1 không bắn ở bước 1 nhưng
+bắn ở bước 2 và 4** (bốn người sống sót có `R²(1m ~ 15m)` 0,51–0,93 — chúng là
+nến 15m nói lại), **F3 không bắn** (C1/C2/C3 pass, C2 bắt được probe nhìn trước),
+**F4 bắn ở một đặc trưng** (`max_1m_share` lật dấu). **Tiêu 0 ô cổng.**
+Và một đối chứng **dương** làm kết luận chính xác hơn: cùng đặc trưng cùng mẫu,
+đổi kết cuộc sang **biên độ** thì `max_1m_share` đọc `|t| = 28,3 / 38,1` với
+`ΔR²_oos` dương 4/4 fold ⇒ **1m chứa thông tin biên độ, không chứa thông tin
+chiều, ở chân trời 15m.**

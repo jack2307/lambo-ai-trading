@@ -1,0 +1,216 @@
+==============================================================================
+TIEN KIEM hinh-trong-ruot — XAUDUKA, nguon tin hieu 1m cho co che 15m
+dang ky: docs/decisions/2026-10-10-intrabar-shape.md
+==============================================================================
+
+1m : 5,635,777 nen  2010-06-01T00:00:00.000 -> 2026-05-31T23:59:00.000  doc 4.56s
+15m: 378,749 nen  2010-06-01T00:00:00.000 -> 2026-05-31T23:45:00.000  doc 0.04s
+cot volume: KHONG MO (null 100% tren 1m; 15m mang mot 0.0 che ra)
+
+=== TEST NHAN QUA (dang ky muc 4) ===
+  C1 PASS: 8 dac trung x 5 moc cat, 0 gia tri doi (so sanh bit, NaN==NaN)
+  C2 PASS: PROBE_peek_m16 TRUOT C1 o 5/5 moc => test bat duoc nhin truoc
+  C3 PASS: 8 khe tren lat nay, y co so o 0 trong so do
+  NULL-KHONG-PHAI-0 PASS: 352 nen thieu, 0 mang so
+  mau lat: 3977/4000 nen co y, 3648/4000 nen co hinh
+
+TEST NHAN QUA: PASS
+
+=== PHU DU LIEU ===  (xep 1m vao o 15 phut: 1.44s)
+   1/15 nen 1m:      98 nen 15m  (0.0259%)
+   2/15 nen 1m:     145 nen 15m  (0.0383%)
+   3/15 nen 1m:     173 nen 15m  (0.0457%)
+   4/15 nen 1m:     198 nen 15m  (0.0523%)
+   5/15 nen 1m:     253 nen 15m  (0.0668%)
+   6/15 nen 1m:     264 nen 15m  (0.0697%)
+   7/15 nen 1m:     327 nen 15m  (0.0863%)
+   8/15 nen 1m:     325 nen 15m  (0.0858%)
+   9/15 nen 1m:     350 nen 15m  (0.0924%)
+  10/15 nen 1m:     454 nen 15m  (0.1199%)
+  11/15 nen 1m:     673 nen 15m  (0.1777%)
+  12/15 nen 1m:   1,332 nen 15m  (0.3517%)
+  13/15 nen 1m:   3,046 nen 15m  (0.8042%)
+  14/15 nen 1m:  11,000 nen 15m  (2.9043%)
+  15/15 nen 1m: 360,111 nen 15m  (95.0791%)
+  du 15/15 : 360,111 (95.0791%)
+  < 15     : 18,638 (4.9209%)  => DAC TRUNG NULL
+
+dac trung + ket cuoc: 3.89s
+lop dac trung ghi ra dia: target-ib\intrabar\XAUDUKA-intrabar-shape.npz  28.8 MB
+
+=== A + B. DON BIEN: t tren mau KHONG CHONG LAP, 3 buoc ===
+ket cuoc cua tin hieu i la nen i+1, cua i+1 la nen i+2 => da roi nhau o buoc 1.
+vach Bonferroni khai truoc cho 16 phep so chinh: |t| >= 2.95
+
+--- W1 2010-06 -> 2018-06   190,889 nen 15m, 189,282 co y
+dac trung          buoc1 t         r        n   buoc2 t   buoc4 t  |t|1/|t|4
+tpo_skew             4.125    0.0098  176,416     2.507     1.845       2.24
+t_high              -3.434   -0.0082  176,416    -2.096    -2.347       1.46
+t_low                3.774    0.0090  176,416     2.088     1.740       2.17
+extreme_order       -4.160   -0.0099  176,416    -2.413    -2.356       1.77
+path_eff            -3.906   -0.0093  176,416    -2.233    -1.621       2.41
+late_push           -4.449   -0.0106  176,416    -2.125    -1.372       3.24
+max_1m_share        -2.176   -0.0052  176,416    -1.264    -1.702       1.28
+tpo_poc_pos          2.705    0.0064  176,416     0.992     1.278       2.12
+  (doi chung don bien, cung mau:)
+  ret_15            -4.919   -0.0113  189,282
+  body               1.067    0.0025  189,282
+  uw                -0.039   -0.0001  189,282
+  lw                -1.243   -0.0029  189,282
+  rng_atr            1.330    0.0031  189,282
+  close_pos         -4.742   -0.0109  189,282
+
+--- W2 2018-06 -> 2026-06   187,860 nen 15m, 185,791 co y
+dac trung          buoc1 t         r        n   buoc2 t   buoc4 t  |t|1/|t|4
+tpo_skew             0.468    0.0011  180,975     1.476     1.270       0.37
+t_high              -4.017   -0.0094  180,975    -3.035    -1.720       2.34
+t_low                2.092    0.0049  180,975     1.740    -0.288       7.28
+extreme_order       -3.489   -0.0082  180,975    -2.727    -0.820       4.26
+path_eff            -4.408   -0.0104  180,975    -3.499    -1.692       2.61
+late_push           -6.319   -0.0149  180,975    -6.100    -4.279       1.48
+max_1m_share         0.277    0.0007  180,975     0.679     0.274       1.01
+tpo_poc_pos          1.715    0.0040  180,975     2.460     1.860       0.92
+  (doi chung don bien, cung mau:)
+  ret_15            -5.174   -0.0120  185,791
+  body               1.689    0.0039  185,791
+  uw                 1.569    0.0036  185,791
+  lw                -3.623   -0.0084  185,791
+  rng_atr            4.495    0.0104  185,791
+  close_pos         -6.311   -0.0146  185,791
+
+=== F1: dong dau hai cua so, |t| >= 2,95 ===
+  buoc 1: 4/8 dac trung qua vach VA cung dau
+     t_high: t(W1)=-3.434  t(W2)=-4.017
+     extreme_order: t(W1)=-4.160  t(W2)=-3.489
+     path_eff: t(W1)=-3.906  t(W2)=-4.408
+     late_push: t(W1)=-4.449  t(W2)=-6.319
+  buoc 2: 0/8 dac trung qua vach VA cung dau
+  buoc 4: 0/8 dac trung qua vach VA cung dau
+
+=== F4: dac trung lat dau giua hai cua so (hien vat cua so) ===
+  max_1m_share: t(W1)=-2.176 -> t(W2)=+0.277  LAT DAU
+
+=== F2 (DOI CHUNG BAT BUOC): cung mo hinh, cung mau, chi bo 8 dac trung 1m ===
+doc NGOAI MAU — mo hinh nhieu dac trung hon luon khop tot hon TRONG mau.
+
+--- W1 2010-06 -> 2018-06: 176,416 dong co DU ca 14 dac trung + y (cung tap cho ca hai mo hinh)
+  fit nua 1 -> doc nua 2  n_fit=88,208 n_doc=88,208
+    doi chung (6 dac trung 15m) : R2_oos +0.000075  dung dau 52.077%
+    + 8 dac trung 1m            : R2_oos +0.000052  dung dau 51.923%
+    DELTA                       : R2 -0.000023      dau -0.154 diem%   => F2 BAN
+  fit nua 2 -> doc nua 1  n_fit=88,208 n_doc=88,208
+    doi chung (6 dac trung 15m) : R2_oos +0.000120  dung dau 51.797%
+    + 8 dac trung 1m            : R2_oos +0.000128  dung dau 51.498%
+    DELTA                       : R2 +0.000008      dau -0.299 diem%   => F2 BAN
+
+--- W2 2018-06 -> 2026-06: 180,975 dong co DU ca 14 dac trung + y (cung tap cho ca hai mo hinh)
+  fit nua 1 -> doc nua 2  n_fit=90,487 n_doc=90,488
+    doi chung (6 dac trung 15m) : R2_oos -0.000031  dung dau 51.411%
+    + 8 dac trung 1m            : R2_oos -0.000259  dung dau 51.335%
+    DELTA                       : R2 -0.000229      dau -0.076 diem%   => F2 BAN
+  fit nua 2 -> doc nua 1  n_fit=90,488 n_doc=90,487
+    doi chung (6 dac trung 15m) : R2_oos +0.000223  dung dau 50.983%
+    + 8 dac trung 1m            : R2_oos +0.000151  dung dau 50.907%
+    DELTA                       : R2 -0.000072      dau -0.076 diem%   => F2 BAN
+
+=== D. BAO NHIEU PHAN CUA 'HINH TRONG RUOT' DA NAM TRONG O/H/L/C 15m ===
+R2 cua moi dac trung 1m hoi quy len 6 dac trung doi chung. 0 phep so, mot ti le.
+
+--- W1 2010-06 -> 2018-06  n = 176,416
+  tpo_skew         R2(1m ~ 15m) = 0.0035   => phan MOI = 99.65% phuong sai
+  t_high           R2(1m ~ 15m) = 0.5148   => phan MOI = 48.52% phuong sai
+  t_low            R2(1m ~ 15m) = 0.5158   => phan MOI = 48.42% phuong sai
+  extreme_order    R2(1m ~ 15m) = 0.6851   => phan MOI = 31.49% phuong sai
+  path_eff         R2(1m ~ 15m) = 0.9294   => phan MOI = 7.06% phuong sai
+  late_push        R2(1m ~ 15m) = 0.5234   => phan MOI = 47.66% phuong sai
+  max_1m_share     R2(1m ~ 15m) = 0.1442   => phan MOI = 85.58% phuong sai
+  tpo_poc_pos      R2(1m ~ 15m) = 0.0065   => phan MOI = 99.35% phuong sai
+
+--- W2 2018-06 -> 2026-06  n = 180,975
+  tpo_skew         R2(1m ~ 15m) = 0.0111   => phan MOI = 98.89% phuong sai
+  t_high           R2(1m ~ 15m) = 0.5415   => phan MOI = 45.85% phuong sai
+  t_low            R2(1m ~ 15m) = 0.5421   => phan MOI = 45.79% phuong sai
+  extreme_order    R2(1m ~ 15m) = 0.7056   => phan MOI = 29.44% phuong sai
+  path_eff         R2(1m ~ 15m) = 0.9315   => phan MOI = 6.85% phuong sai
+  late_push        R2(1m ~ 15m) = 0.5311   => phan MOI = 46.89% phuong sai
+  max_1m_share     R2(1m ~ 15m) = 0.1682   => phan MOI = 83.18% phuong sai
+  tpo_poc_pos      R2(1m ~ 15m) = 0.0069   => phan MOI = 99.31% phuong sai
+
+=== E. t CUA PHAN DU (dang don bien cua FALSIFIER) ===
+da tru phan 6 dac trung 15m giai thich duoc. vach 2.95.
+
+  buoc mau 1:
+  dac trung            t(W1)     t(W2)         n  cung dau & qua vach?
+  tpo_skew             4.304     0.892   180,975  khong
+  t_high              -0.391    -0.218   180,975  khong
+  t_low                0.947    -2.530   180,975  khong
+  extreme_order       -0.957     1.645   180,975  khong
+  path_eff             0.944     1.720   180,975  khong
+  late_push           -2.684    -2.767   180,975  khong
+  max_1m_share        -1.858     1.820   180,975  khong
+  tpo_poc_pos          2.699     2.055   180,975  khong
+  => 0/8 qua truc E o buoc 1
+
+  buoc mau 4:
+  dac trung            t(W1)     t(W2)         n  cung dau & qua vach?
+  tpo_skew             1.511     0.402    45,244  khong
+  t_high               0.730     0.698    45,244  khong
+  t_low                0.139    -0.379    45,244  khong
+  extreme_order        0.422     0.765    45,244  khong
+  path_eff             2.187     0.637    45,244  khong
+  late_push           -0.553    -1.047    45,244  khong
+  max_1m_share        -0.636     1.799    45,244  khong
+  tpo_poc_pos          0.391     0.271    45,244  khong
+  => 0/8 qua truc E o buoc 4
+
+=== F. tuong quan tung cap: 4 dac trung song sot F1 vs 2 doi chung manh nhat ===
+  W1 2010-06 -> 2018-06
+    t_high          ret_15=+0.7139  close_pos=+0.6122
+    extreme_order   ret_15=+0.8259  close_pos=+0.7064
+    path_eff        ret_15=+0.9640  close_pos=+0.7917
+    late_push       ret_15=+0.4600  close_pos=+0.6981
+  W2 2018-06 -> 2026-06
+    t_high          ret_15=+0.7335  close_pos=+0.6322
+    extreme_order   ret_15=+0.8386  close_pos=+0.7245
+    path_eff        ret_15=+0.9651  close_pos=+0.8079
+    late_push       ret_15=+0.4643  close_pos=+0.6974
+
+=== G. CUNG PHEP SO, KET CUOC = BIEN DO nen sau / ATR14(i) ===
+KHONG phai chan cong (cong do CHIEU). Chi de chon cau ket luan dung.
+
+--- W1 2010-06 -> 2018-06: 176,416 dong
+  fit nua 1 -> doc nua 2: doi chung R2_oos +0.089949 -> +1m +0.093729   DELTA +0.003780  1m THEM DUOC
+  fit nua 2 -> doc nua 1: doi chung R2_oos +0.101052 -> +1m +0.108963   DELTA +0.007911  1m THEM DUOC
+  t cua phan du (da tru 6 dac trung 15m):
+    tpo_skew            -1.682
+    t_high              12.130  <- qua vach
+    t_low                8.896  <- qua vach
+    extreme_order        2.330
+    path_eff            -0.610
+    late_push            0.187
+    max_1m_share        28.303  <- qua vach
+    tpo_poc_pos         -2.185
+
+--- W2 2018-06 -> 2026-06: 180,975 dong
+  fit nua 1 -> doc nua 2: doi chung R2_oos +0.139120 -> +1m +0.150443   DELTA +0.011323  1m THEM DUOC
+  fit nua 2 -> doc nua 1: doi chung R2_oos +0.122437 -> +1m +0.129915   DELTA +0.007478  1m THEM DUOC
+  t cua phan du (da tru 6 dac trung 15m):
+    tpo_skew            -1.118
+    t_high               9.879  <- qua vach
+    t_low                9.264  <- qua vach
+    extreme_order        0.448
+    path_eff            -0.660
+    late_push            1.061
+    max_1m_share        38.060  <- qua vach
+    tpo_poc_pos         -1.431
+
+==============================================================================
+F1 KHONG BAN: 4/8 dac trung dong dau qua vach o buoc 1
+   (buoc 4: 0/8 — xem bang tren)  truc E: 0/8 o buoc 1, 0/8 o buoc 4
+   truc G (bien do): 6/16 phan du qua vach
+F2 BAN
+=> O CONG TIEU: 0
+==============================================================================
+
+CHI PHI I/O: tong 18.1s tuong, dinh bo nho 2465 MB
+  doc 1m 4.56s · doc 15m 0.04s · xep luoi 1.44s · dac trung 3.89s
