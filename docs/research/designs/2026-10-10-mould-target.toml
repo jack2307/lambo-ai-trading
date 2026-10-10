@@ -1,0 +1,1131 @@
+# Does ANY parameterisation of an existing registry mechanism reach a gross of
+# 8.7 round-trip spreads per exposed session, on BOTH time-split windows?
+# Registered: docs/decisions/2026-10-10-mould-target.md (committed alone).
+# Rows frozen here. Excluded and why: level-reversion / maxpain-magnet /
+# flow-momentum / flow-at-level (needs_options, no timeline in this run),
+# external (no signal file), companion-unconfirmed (no --companion=),
+# and every volMult parameterisation of volume-thrust / rsi-reversal-vol
+# (dead on this feed for EVERY value, by code read - registration section 5;
+# 0 cells spent). No filters on any row: the guards arm carries the weekend
+# and the calendar.
+
+# ---------------- ANCHORS and PRE-CHECK rows ----------------
+
+[[hypothesis]]
+label = "px-1s"
+base = "session-hold"
+filters = []
+overrides = { from = 1800, to = 1600, side = 1, riskDailyRanges = 1.5, rangeDays = 20 }
+why = "ANCHOR: the session-length constant S, the drift anchor, and the ruler calibration row"
+
+[[hypothesis]]
+label = "px-1s-r05"
+base = "session-hold"
+filters = []
+overrides = { from = 1800, to = 1600, side = 1, riskDailyRanges = 0.5, rangeDays = 20 }
+why = "PRE-CHECK F2b: a self-managed stop is a DENOMINATOR; this must give the same ratio as px-1s"
+
+[[hypothesis]]
+label = "px-1s-r40"
+base = "session-hold"
+filters = []
+overrides = { from = 1800, to = 1600, side = 1, riskDailyRanges = 4.0, rangeDays = 20 }
+why = "PRE-CHECK F2b, the other end of the same invariance"
+
+[[hypothesis]]
+label = "qs-h15"
+base = "quiet-swing"
+filters = []
+overrides = { holdSessions = 15 }
+why = "ANCHOR: must reproduce the record"
+
+[[hypothesis]]
+label = "ts-l20"
+base = "tsmom"
+filters = []
+overrides = { lookbackDays = 20 }
+why = "ANCHOR: must reproduce the record"
+
+# ---------------- 24 runnable registry mechanisms at DEFAULTS ----------------
+
+[[hypothesis]]
+label = "ema-cross"
+base = "ema-cross"
+filters = []
+overrides = { }
+why = "default"
+
+[[hypothesis]]
+label = "rsi-rev"
+base = "rsi-reversion"
+filters = []
+overrides = { }
+why = "default"
+
+[[hypothesis]]
+label = "donchian"
+base = "donchian-breakout"
+filters = []
+overrides = { }
+why = "default"
+
+[[hypothesis]]
+label = "bb-fade"
+base = "bb-fade"
+filters = []
+overrides = { }
+why = "default"
+
+[[hypothesis]]
+label = "buy-hold"
+base = "buy-and-hold"
+filters = []
+overrides = { }
+why = "default; void in the guards arm by construction"
+
+[[hypothesis]]
+label = "ict-smf"
+base = "ict-sweep-mss-fvg"
+filters = []
+overrides = { }
+why = "default"
+
+[[hypothesis]]
+label = "orb"
+base = "orb"
+filters = []
+overrides = { }
+why = "default"
+
+[[hypothesis]]
+label = "pdhl"
+base = "pdhl"
+filters = []
+overrides = { }
+why = "default"
+
+[[hypothesis]]
+label = "crt"
+base = "crt"
+filters = []
+overrides = { }
+why = "default"
+
+[[hypothesis]]
+label = "sess-hold"
+base = "session-hold"
+filters = []
+overrides = { }
+why = "default"
+
+[[hypothesis]]
+label = "intraday-mom"
+base = "intraday-momentum"
+filters = []
+overrides = { }
+why = "default"
+
+[[hypothesis]]
+label = "vwap-fade"
+base = "vwap-fade"
+filters = []
+overrides = { }
+why = "default"
+
+[[hypothesis]]
+label = "tsmom"
+base = "tsmom"
+filters = []
+overrides = { }
+why = "default, lookbackDays 60"
+
+[[hypothesis]]
+label = "doji-rev"
+base = "doji-reversal"
+filters = []
+overrides = { }
+why = "default"
+
+[[hypothesis]]
+label = "gap-fade"
+base = "gap-fade"
+filters = []
+overrides = { }
+why = "default; the only family already flat across the 1600-1800 rollover"
+
+[[hypothesis]]
+label = "trend-pull"
+base = "trend-pullback"
+filters = []
+overrides = { }
+why = "default"
+
+[[hypothesis]]
+label = "vol-thrust"
+base = "volume-thrust"
+filters = []
+overrides = { }
+why = "default; expected 0 trades, the volume column is a manufactured zero"
+
+[[hypothesis]]
+label = "keltner"
+base = "keltner-break"
+filters = []
+overrides = { }
+why = "default"
+
+[[hypothesis]]
+label = "macd-cross"
+base = "macd-cross"
+filters = []
+overrides = { }
+why = "default"
+
+[[hypothesis]]
+label = "rsi2-pull"
+base = "rsi2-pullback"
+filters = []
+overrides = { }
+why = "default; the ceiling holder of the record"
+
+[[hypothesis]]
+label = "squeeze"
+base = "squeeze-break"
+filters = []
+overrides = { }
+why = "default"
+
+[[hypothesis]]
+label = "stoch-rev"
+base = "stoch-reversal"
+filters = []
+overrides = { }
+why = "default"
+
+[[hypothesis]]
+label = "volman"
+base = "volman-box"
+filters = []
+overrides = { }
+why = "default; 1 trade IS and 0 OOS in the record"
+
+[[hypothesis]]
+label = "far-stop"
+base = "far-stop-break"
+filters = []
+overrides = { }
+why = "default"
+
+[[hypothesis]]
+label = "quiet-swing"
+base = "quiet-swing"
+filters = []
+overrides = { }
+why = "default, holdSessions 5"
+
+[[hypothesis]]
+label = "rsi-rev-vol"
+base = "rsi-reversal-vol"
+filters = []
+overrides = { }
+why = "default; expected 0 trades, the volume gate is unpassable on this feed"
+
+# ---------------- rsi2-pullback: the ceiling holder, 14 rows ----------------
+
+[[hypothesis]]
+label = "r2-lv2"
+base = "rsi2-pullback"
+filters = []
+overrides = { level = 2 }
+why = "selectivity: a deeper two-bar RSI"
+
+[[hypothesis]]
+label = "r2-lv5"
+base = "rsi2-pullback"
+filters = []
+overrides = { level = 5 }
+why = "selectivity"
+
+[[hypothesis]]
+label = "r2-lv15"
+base = "rsi2-pullback"
+filters = []
+overrides = { level = 15 }
+why = "selectivity, looser"
+
+[[hypothesis]]
+label = "r2-lv25"
+base = "rsi2-pullback"
+filters = []
+overrides = { level = 25 }
+why = "selectivity, loosest"
+
+[[hypothesis]]
+label = "r2-rr05"
+base = "rsi2-pullback"
+filters = []
+overrides = { riskReward = 0.5 }
+why = "exit geometry: a nearer target shortens the hold"
+
+[[hypothesis]]
+label = "r2-rr2"
+base = "rsi2-pullback"
+filters = []
+overrides = { riskReward = 2.0 }
+why = "exit geometry"
+
+[[hypothesis]]
+label = "r2-rr4"
+base = "rsi2-pullback"
+filters = []
+overrides = { riskReward = 4.0 }
+why = "exit geometry, far target"
+
+[[hypothesis]]
+label = "r2-sa05"
+base = "rsi2-pullback"
+filters = []
+overrides = { stopAtr = 0.5 }
+why = "ENFORCED stop, Exits::Engine with target = rr x risk: a narrower stop changes the trade set"
+
+[[hypothesis]]
+label = "r2-sa10"
+base = "rsi2-pullback"
+filters = []
+overrides = { stopAtr = 1.0 }
+why = "enforced stop"
+
+[[hypothesis]]
+label = "r2-sa40"
+base = "rsi2-pullback"
+filters = []
+overrides = { stopAtr = 4.0 }
+why = "enforced stop, wide"
+
+[[hypothesis]]
+label = "r2-tr50"
+base = "rsi2-pullback"
+filters = []
+overrides = { trend = 50 }
+why = "regime filter length"
+
+[[hypothesis]]
+label = "r2-tr800"
+base = "rsi2-pullback"
+filters = []
+overrides = { trend = 800 }
+why = "regime filter length"
+
+[[hypothesis]]
+label = "r2-lv5rr4"
+base = "rsi2-pullback"
+filters = []
+overrides = { level = 5, riskReward = 4.0 }
+why = "the first declared two-parameter corner: selective entry plus far target"
+
+[[hypothesis]]
+label = "r2-lv5sa05"
+base = "rsi2-pullback"
+filters = []
+overrides = { level = 5, stopAtr = 0.5 }
+why = "the second declared corner: selective entry plus tight enforced stop"
+
+# ---------------- stoch-reversal, 7 rows ----------------
+
+[[hypothesis]]
+label = "st-lv10"
+base = "stoch-reversal"
+filters = []
+overrides = { level = 10 }
+why = "selectivity"
+
+[[hypothesis]]
+label = "st-lv35"
+base = "stoch-reversal"
+filters = []
+overrides = { level = 35 }
+why = "selectivity"
+
+[[hypothesis]]
+label = "st-rr075"
+base = "stoch-reversal"
+filters = []
+overrides = { riskReward = 0.75 }
+why = "exit geometry"
+
+[[hypothesis]]
+label = "st-rr30"
+base = "stoch-reversal"
+filters = []
+overrides = { riskReward = 3.0 }
+why = "exit geometry"
+
+[[hypothesis]]
+label = "st-sa05"
+base = "stoch-reversal"
+filters = []
+overrides = { stopAtr = 0.5 }
+why = "enforced stop"
+
+[[hypothesis]]
+label = "st-sa30"
+base = "stoch-reversal"
+filters = []
+overrides = { stopAtr = 3.0 }
+why = "enforced stop"
+
+[[hypothesis]]
+label = "st-p35"
+base = "stoch-reversal"
+filters = []
+overrides = { period = 35 }
+why = "oscillator length"
+
+# ---------------- macd-cross, 6 rows ----------------
+
+[[hypothesis]]
+label = "mc-f6"
+base = "macd-cross"
+filters = []
+overrides = { fast = 6 }
+why = "signal speed"
+
+[[hypothesis]]
+label = "mc-f24"
+base = "macd-cross"
+filters = []
+overrides = { fast = 24 }
+why = "signal speed"
+
+[[hypothesis]]
+label = "mc-rr075"
+base = "macd-cross"
+filters = []
+overrides = { riskReward = 0.75 }
+why = "exit geometry"
+
+[[hypothesis]]
+label = "mc-rr30"
+base = "macd-cross"
+filters = []
+overrides = { riskReward = 3.0 }
+why = "exit geometry"
+
+[[hypothesis]]
+label = "mc-sa05"
+base = "macd-cross"
+filters = []
+overrides = { stopAtr = 0.5 }
+why = "enforced stop"
+
+[[hypothesis]]
+label = "mc-sa30"
+base = "macd-cross"
+filters = []
+overrides = { stopAtr = 3.0 }
+why = "enforced stop"
+
+# ---------------- rsi-reversion, 7 rows ----------------
+
+[[hypothesis]]
+label = "rr-os15"
+base = "rsi-reversion"
+filters = []
+overrides = { oversold = 15, overbought = 85 }
+why = "selectivity, both sides kept symmetric"
+
+[[hypothesis]]
+label = "rr-os40"
+base = "rsi-reversion"
+filters = []
+overrides = { oversold = 40, overbought = 60 }
+why = "selectivity, loose"
+
+[[hypothesis]]
+label = "rr-p7"
+base = "rsi-reversion"
+filters = []
+overrides = { period = 7 }
+why = "oscillator length"
+
+[[hypothesis]]
+label = "rr-p28"
+base = "rsi-reversion"
+filters = []
+overrides = { period = 28 }
+why = "oscillator length"
+
+[[hypothesis]]
+label = "rr-sa05"
+base = "rsi-reversion"
+filters = []
+overrides = { stopAtr = 0.5 }
+why = "enforced stop"
+
+[[hypothesis]]
+label = "rr-sa40"
+base = "rsi-reversion"
+filters = []
+overrides = { stopAtr = 4.0 }
+why = "enforced stop"
+
+[[hypothesis]]
+label = "rr-ex65"
+base = "rsi-reversion"
+filters = []
+overrides = { exitLevel = 65 }
+why = "exit level: hold the reversion further"
+
+# ---------------- bb-fade, 6 rows ----------------
+
+[[hypothesis]]
+label = "bb-m10"
+base = "bb-fade"
+filters = []
+overrides = { mult = 1.0 }
+why = "band width is selectivity"
+
+[[hypothesis]]
+label = "bb-m30"
+base = "bb-fade"
+filters = []
+overrides = { mult = 3.0 }
+why = "band width"
+
+[[hypothesis]]
+label = "bb-p10"
+base = "bb-fade"
+filters = []
+overrides = { period = 10 }
+why = "band length"
+
+[[hypothesis]]
+label = "bb-p50"
+base = "bb-fade"
+filters = []
+overrides = { period = 50 }
+why = "band length"
+
+[[hypothesis]]
+label = "bb-sa05"
+base = "bb-fade"
+filters = []
+overrides = { stopAtr = 0.5 }
+why = "enforced stop"
+
+[[hypothesis]]
+label = "bb-sa40"
+base = "bb-fade"
+filters = []
+overrides = { stopAtr = 4.0 }
+why = "enforced stop"
+
+# ---------------- donchian-breakout, 4 rows ----------------
+
+[[hypothesis]]
+label = "dc-p10"
+base = "donchian-breakout"
+filters = []
+overrides = { period = 10 }
+why = "channel length"
+
+[[hypothesis]]
+label = "dc-p60"
+base = "donchian-breakout"
+filters = []
+overrides = { period = 60 }
+why = "channel length"
+
+[[hypothesis]]
+label = "dc-sa075"
+base = "donchian-breakout"
+filters = []
+overrides = { stopAtr = 0.75 }
+why = "enforced stop"
+
+[[hypothesis]]
+label = "dc-sa40"
+base = "donchian-breakout"
+filters = []
+overrides = { stopAtr = 4.0 }
+why = "enforced stop"
+
+# ---------------- keltner-break, 5 rows ----------------
+
+[[hypothesis]]
+label = "kl-m075"
+base = "keltner-break"
+filters = []
+overrides = { mult = 0.75 }
+why = "channel width is both selectivity and stop distance, since the stop is the middle band"
+
+[[hypothesis]]
+label = "kl-m30"
+base = "keltner-break"
+filters = []
+overrides = { mult = 3.0 }
+why = "channel width"
+
+[[hypothesis]]
+label = "kl-rr075"
+base = "keltner-break"
+filters = []
+overrides = { riskReward = 0.75 }
+why = "exit geometry"
+
+[[hypothesis]]
+label = "kl-rr30"
+base = "keltner-break"
+filters = []
+overrides = { riskReward = 3.0 }
+why = "exit geometry"
+
+[[hypothesis]]
+label = "kl-p60"
+base = "keltner-break"
+filters = []
+overrides = { period = 60 }
+why = "channel length"
+
+# ---------------- ema-cross, 4 rows ----------------
+
+[[hypothesis]]
+label = "ec-9-34"
+base = "ema-cross"
+filters = []
+overrides = { fast = 9, slow = 34 }
+why = "faster trend"
+
+[[hypothesis]]
+label = "ec-34-144"
+base = "ema-cross"
+filters = []
+overrides = { fast = 34, slow = 144 }
+why = "slower trend"
+
+[[hypothesis]]
+label = "ec-sa075"
+base = "ema-cross"
+filters = []
+overrides = { stopAtr = 0.75 }
+why = "enforced stop"
+
+[[hypothesis]]
+label = "ec-sa40"
+base = "ema-cross"
+filters = []
+overrides = { stopAtr = 4.0 }
+why = "enforced stop"
+
+# ---------------- squeeze-break, 4 rows ----------------
+
+[[hypothesis]]
+label = "sq-lb20"
+base = "squeeze-break"
+filters = []
+overrides = { lookback = 20 }
+why = "how rare the squeeze must be"
+
+[[hypothesis]]
+label = "sq-lb150"
+base = "squeeze-break"
+filters = []
+overrides = { lookback = 150 }
+why = "how rare the squeeze must be"
+
+[[hypothesis]]
+label = "sq-rr075"
+base = "squeeze-break"
+filters = []
+overrides = { riskReward = 0.75 }
+why = "exit geometry"
+
+[[hypothesis]]
+label = "sq-rr30"
+base = "squeeze-break"
+filters = []
+overrides = { riskReward = 3.0 }
+why = "exit geometry"
+
+# ---------------- crt, 5 rows ----------------
+
+[[hypothesis]]
+label = "crt-tf4"
+base = "crt"
+filters = []
+overrides = { rangeTf = 4 }
+why = "1H range candle"
+
+[[hypothesis]]
+label = "crt-tf96"
+base = "crt"
+filters = []
+overrides = { rangeTf = 96 }
+why = "1D range candle, the one the record could not reach under the 4h hold cap"
+
+[[hypothesis]]
+label = "crt-t1"
+base = "crt"
+filters = []
+overrides = { target = 1 }
+why = "target is candle 1 midpoint"
+
+[[hypothesis]]
+label = "crt-t2"
+base = "crt"
+filters = []
+overrides = { target = 2 }
+why = "target is riskReward x risk"
+
+[[hypothesis]]
+label = "crt-t2rr30"
+base = "crt"
+filters = []
+overrides = { target = 2, riskReward = 3.0 }
+why = "target is 3 x risk"
+
+# ---------------- pdhl, 5 rows ----------------
+
+[[hypothesis]]
+label = "pd-m1"
+base = "pdhl"
+filters = []
+overrides = { mode = 1 }
+why = "break instead of fade"
+
+[[hypothesis]]
+label = "pd-rr075"
+base = "pdhl"
+filters = []
+overrides = { riskReward = 0.75 }
+why = "exit geometry"
+
+[[hypothesis]]
+label = "pd-rr30"
+base = "pdhl"
+filters = []
+overrides = { riskReward = 3.0 }
+why = "exit geometry"
+
+[[hypothesis]]
+label = "pd-bp10"
+base = "pdhl"
+filters = []
+overrides = { bufferPips = 10 }
+why = "stop buffer is the enforced stop distance"
+
+[[hypothesis]]
+label = "pd-m1rr30"
+base = "pdhl"
+filters = []
+overrides = { mode = 1, riskReward = 3.0 }
+why = "break with a far target"
+
+# ---------------- orb, 6 rows ----------------
+
+[[hypothesis]]
+label = "orb-rm30"
+base = "orb"
+filters = []
+overrides = { rangeMinutes = 30 }
+why = "range length"
+
+[[hypothesis]]
+label = "orb-rm120"
+base = "orb"
+filters = []
+overrides = { rangeMinutes = 120 }
+why = "range length"
+
+[[hypothesis]]
+label = "orb-sm1"
+base = "orb"
+filters = []
+overrides = { stopMode = 1 }
+why = "stop at the range midpoint instead of the far edge, a halved enforced stop"
+
+[[hypothesis]]
+label = "orb-rr075"
+base = "orb"
+filters = []
+overrides = { riskReward = 0.75 }
+why = "exit geometry"
+
+[[hypothesis]]
+label = "orb-rr30"
+base = "orb"
+filters = []
+overrides = { riskReward = 3.0 }
+why = "exit geometry"
+
+[[hypothesis]]
+label = "orb-ldn"
+base = "orb"
+filters = []
+overrides = { rangeStart = 300, entryUntil = 800 }
+why = "the London range instead of the New York one"
+
+# ---------------- vwap-fade, 4 rows ----------------
+
+[[hypothesis]]
+label = "vw-s075"
+base = "vwap-fade"
+filters = []
+overrides = { stretchAtr = 0.75 }
+why = "how stretched before fading"
+
+[[hypothesis]]
+label = "vw-s30"
+base = "vwap-fade"
+filters = []
+overrides = { stretchAtr = 3.0 }
+why = "how stretched before fading"
+
+[[hypothesis]]
+label = "vw-sa04"
+base = "vwap-fade"
+filters = []
+overrides = { stopAtr = 0.4 }
+why = "enforced stop"
+
+[[hypothesis]]
+label = "vw-sa25"
+base = "vwap-fade"
+filters = []
+overrides = { stopAtr = 2.5 }
+why = "enforced stop"
+
+# ---------------- trend-pullback, 4 rows ----------------
+
+[[hypothesis]]
+label = "tp-f10"
+base = "trend-pullback"
+filters = []
+overrides = { fast = 10 }
+why = "pullback reference length"
+
+[[hypothesis]]
+label = "tp-f50"
+base = "trend-pullback"
+filters = []
+overrides = { fast = 50 }
+why = "pullback reference length"
+
+[[hypothesis]]
+label = "tp-rr075"
+base = "trend-pullback"
+filters = []
+overrides = { riskReward = 0.75 }
+why = "exit geometry"
+
+[[hypothesis]]
+label = "tp-rr30"
+base = "trend-pullback"
+filters = []
+overrides = { riskReward = 3.0 }
+why = "exit geometry"
+
+# ---------------- doji-reversal, 5 rows ----------------
+
+[[hypothesis]]
+label = "dj-mr05"
+base = "doji-reversal"
+filters = []
+overrides = { minRangeAtr = 0.5 }
+why = "how big the reversal candle must be"
+
+[[hypothesis]]
+label = "dj-mr25"
+base = "doji-reversal"
+filters = []
+overrides = { minRangeAtr = 2.5 }
+why = "how big the reversal candle must be"
+
+[[hypothesis]]
+label = "dj-rr075"
+base = "doji-reversal"
+filters = []
+overrides = { riskReward = 0.75 }
+why = "exit geometry"
+
+[[hypothesis]]
+label = "dj-rr30"
+base = "doji-reversal"
+filters = []
+overrides = { riskReward = 3.0 }
+why = "exit geometry"
+
+[[hypothesis]]
+label = "dj-bm025"
+base = "doji-reversal"
+filters = []
+overrides = { bodyMaxPct = 0.025 }
+why = "how doji the doji must be"
+
+# ---------------- far-stop-break, 5 rows ----------------
+
+[[hypothesis]]
+label = "fs-sm1"
+base = "far-stop-break"
+filters = []
+overrides = { stopMode = 1 }
+why = "the control arm of the designed cost instrument: stopAtr x ATR instead of the far channel edge"
+
+[[hypothesis]]
+label = "fs-msp14"
+base = "far-stop-break"
+filters = []
+overrides = { minStopPoints = 1.4 }
+why = "refuse the entry unless the spread is at most one fifth of the risk"
+
+[[hypothesis]]
+label = "fs-msp28"
+base = "far-stop-break"
+filters = []
+overrides = { minStopPoints = 2.8 }
+why = "refuse the entry unless the spread is at most one tenth of the risk"
+
+[[hypothesis]]
+label = "fs-rr20"
+base = "far-stop-break"
+filters = []
+overrides = { riskReward = 2.0 }
+why = "exit geometry"
+
+[[hypothesis]]
+label = "fs-p60"
+base = "far-stop-break"
+filters = []
+overrides = { period = 60 }
+why = "channel length"
+
+# ---------- gap-fade, 5 rows: already flat across the rollover ----------
+
+[[hypothesis]]
+label = "gf-ga05"
+base = "gap-fade"
+filters = []
+overrides = { minGapAtr = 0.5 }
+why = "how big the weekend or rollover gap must be"
+
+[[hypothesis]]
+label = "gf-ga30"
+base = "gap-fade"
+filters = []
+overrides = { minGapAtr = 3.0 }
+why = "how big the gap must be"
+
+[[hypothesis]]
+label = "gf-sg05"
+base = "gap-fade"
+filters = []
+overrides = { stopGapMult = 0.5 }
+why = "enforced stop as a multiple of the gap"
+
+[[hypothesis]]
+label = "gf-sg30"
+base = "gap-fade"
+filters = []
+overrides = { stopGapMult = 3.0 }
+why = "enforced stop as a multiple of the gap, WIDER, which is where defect 14 was"
+
+[[hypothesis]]
+label = "gf-fp50"
+base = "gap-fade"
+filters = []
+overrides = { fillPct = 50 }
+why = "take half the gap instead of all of it"
+
+# ---------------- volman-box, 3 rows ----------------
+
+[[hypothesis]]
+label = "vb-mb40"
+base = "volman-box"
+filters = []
+overrides = { maxBoxAtr = 4.0 }
+why = "the default takes 1 trade in 8 years; this loosens the box size gate"
+
+[[hypothesis]]
+label = "vb-b1"
+base = "volman-box"
+filters = []
+overrides = { boxes = 1.0 }
+why = "one box instead of two"
+
+[[hypothesis]]
+label = "vb-loose"
+base = "volman-box"
+filters = []
+overrides = { maxBoxAtr = 4.0, boxes = 1.0, maxBreakAtr = 3.0 }
+why = "all three gates loosened at once, the only way this mechanism is measurable at all"
+
+# ---------------- ict, 2 rows ----------------
+
+[[hypothesis]]
+label = "ict-ll60"
+base = "ict-sweep-mss-fvg"
+filters = []
+overrides = { liquidityLookback = 60 }
+why = "how far back the swept liquidity may sit"
+
+[[hypothesis]]
+label = "ict-ll400"
+base = "ict-sweep-mss-fvg"
+filters = []
+overrides = { liquidityLookback = 400 }
+why = "how far back the swept liquidity may sit"
+
+# -------- tsmom, 5 rows. SELF-MANAGED: the lever is hold, not stop --------
+
+[[hypothesis]]
+label = "ts-l5"
+base = "tsmom"
+filters = []
+overrides = { lookbackDays = 5 }
+why = "hold and lookback length; tests whether gross is proportional to time"
+
+[[hypothesis]]
+label = "ts-l10"
+base = "tsmom"
+filters = []
+overrides = { lookbackDays = 10 }
+why = "hold and lookback length"
+
+[[hypothesis]]
+label = "ts-l120"
+base = "tsmom"
+filters = []
+overrides = { lookbackDays = 120 }
+why = "hold and lookback length"
+
+[[hypothesis]]
+label = "ts-l240"
+base = "tsmom"
+filters = []
+overrides = { lookbackDays = 240 }
+why = "hold and lookback length"
+
+[[hypothesis]]
+label = "ts-rb1200"
+base = "tsmom"
+filters = []
+overrides = { rebalanceHHMM = 1200 }
+why = "rebalance hour, a rollover-crossing question rather than a signal one"
+
+# ---------------- quiet-swing, 8 rows. SELF-MANAGED ----------------
+
+[[hypothesis]]
+label = "qs-h1"
+base = "quiet-swing"
+filters = []
+overrides = { holdSessions = 1 }
+why = "hold length; the record measured h5 and h15 at the SAME ratio, so this is the prediction test"
+
+[[hypothesis]]
+label = "qs-h2"
+base = "quiet-swing"
+filters = []
+overrides = { holdSessions = 2 }
+why = "hold length"
+
+[[hypothesis]]
+label = "qs-h30"
+base = "quiet-swing"
+filters = []
+overrides = { holdSessions = 30 }
+why = "hold length"
+
+[[hypothesis]]
+label = "qs-qp020"
+base = "quiet-swing"
+filters = []
+overrides = { quietPct = 0.20 }
+why = "how quiet the tape must be, i.e. selectivity"
+
+[[hypothesis]]
+label = "qs-qp085"
+base = "quiet-swing"
+filters = []
+overrides = { quietPct = 0.85 }
+why = "how quiet the tape must be"
+
+[[hypothesis]]
+label = "qs-lb3"
+base = "quiet-swing"
+filters = []
+overrides = { lookbackSessions = 3 }
+why = "how long the quiet must have lasted"
+
+[[hypothesis]]
+label = "qs-lb30"
+base = "quiet-swing"
+filters = []
+overrides = { lookbackSessions = 30 }
+why = "how long the quiet must have lasted"
+
+[[hypothesis]]
+label = "qs-qp020h1"
+base = "quiet-swing"
+filters = []
+overrides = { quietPct = 0.20, holdSessions = 1 }
+why = "the declared corner: the most selective entry at the shortest hold"
+
+# ------- session-hold windows, 6 rows. SELF-MANAGED -------
+
+[[hypothesis]]
+label = "sh-ny-am"
+base = "session-hold"
+filters = []
+overrides = { from = 800, to = 1200, side = 1, riskDailyRanges = 1.5, rangeDays = 20 }
+why = "is the drift faster in some hours than in others, which is a velocity question"
+
+[[hypothesis]]
+label = "sh-ny-pm"
+base = "session-hold"
+filters = []
+overrides = { from = 1200, to = 1600, side = 1, riskDailyRanges = 1.5, rangeDays = 20 }
+why = "the other half of the New York day"
+
+[[hypothesis]]
+label = "sh-roll"
+base = "session-hold"
+filters = []
+overrides = { from = 1600, to = 1800, side = 1, riskDailyRanges = 1.5, rangeDays = 20 }
+why = "the 1600-1800 window the flat frame forgoes and gap-fade owns"
+
+[[hypothesis]]
+label = "sh-asia"
+base = "session-hold"
+filters = []
+overrides = { from = 2000, to = 200, side = 1, riskDailyRanges = 1.5, rangeDays = 20 }
+why = "Asia"
+
+[[hypothesis]]
+label = "sh-ldn"
+base = "session-hold"
+filters = []
+overrides = { from = 300, to = 800, side = 1, riskDailyRanges = 1.5, rangeDays = 20 }
+why = "London"
+
+[[hypothesis]]
+label = "sh-short"
+base = "session-hold"
+filters = []
+overrides = { from = 1800, to = 1600, side = -1, riskDailyRanges = 1.5, rangeDays = 20 }
+why = "px-1s pointing the other way; its ratio must be the negative of the px-1s ratio up to costs"
+
+# ---------------- intraday-momentum, 2 rows. SELF-MANAGED ----------------
+
+[[hypothesis]]
+label = "im-mm10"
+base = "intraday-momentum"
+filters = []
+overrides = { minMove = 1.0 }
+why = "require the first window to have moved"
+
+[[hypothesis]]
+label = "im-w1400"
+base = "intraday-momentum"
+filters = []
+overrides = { from = 1400, to = 1600 }
+why = "a longer closing window"
