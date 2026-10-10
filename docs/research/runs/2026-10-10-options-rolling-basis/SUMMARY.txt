@@ -1,0 +1,180 @@
+======================================================================================================================
+RUN HEADERS - this run's own print and bar counts (the store is written while it is read)
+======================================================================================================================
+  prints None  frames None  bars None   (first seen in PC1-tape-contract-months)
+  prints 55131  frames 9491  bars 100586   (first seen in const-39.66-guards)
+  raw basis:    raw GC-spot basis, every bar that had a frame: n 787 mean +42.17 sd 2.31 min +36.94 p10 +39.67 p50 +41.72 p90 +45.48 max +47.11 | quartile means in TIME order +45.16 -> +42.86 -> +40.82 -> +39.86
+
+======================================================================================================================
+BAR COVERAGE after the basis (the engine iterates BARS, never frames)
+======================================================================================================================
+  roll-120-guards          bars with frame  786  with LEVELS  743  REFUSED  43
+  roll-120-noguards        bars with frame  786  with LEVELS  743  REFUSED  43
+  roll-1440-guards         bars with frame  786  with LEVELS  776  REFUSED  10
+  roll-1440-noguards       bars with frame  786  with LEVELS  776  REFUSED  10
+  roll-480-guards          bars with frame  786  with LEVELS  776  REFUSED  10
+  roll-480-noguards        bars with frame  786  with LEVELS  776  REFUSED  10
+  PC1-tape-contract-months (constant offset ?: no bar line, every covered bar keeps its levels)
+  PC5-ny-hour-distribution (constant offset ?: no bar line, every covered bar keeps its levels)
+  const-39.66-guards       (constant offset +39.66: no bar line, every covered bar keeps its levels)
+  const-39.66-noguards     (constant offset +39.66: no bar line, every covered bar keeps its levels)
+  const-42.16-guards       (constant offset +42.16: no bar line, every covered bar keeps its levels)
+  const-42.16-noguards     (constant offset +42.16: no bar line, every covered bar keeps its levels)
+  const-45.48-guards       (constant offset +45.48: no bar line, every covered bar keeps its levels)
+  const-45.48-noguards     (constant offset +45.48: no bar line, every covered bar keeps its levels)
+  parent-41.26-guards      (constant offset +41.26: no bar line, every covered bar keeps its levels)
+  parent-41.26-noguards    (constant offset +41.26: no bar line, every covered bar keeps its levels)
+  parent-43.70-guards      (constant offset +43.70: no bar line, every covered bar keeps its levels)
+  parent-43.70-noguards    (constant offset +43.70: no bar line, every covered bar keeps its levels)
+  parent-45.78-guards      (constant offset +45.78: no bar line, every covered bar keeps its levels)
+  parent-45.78-noguards    (constant offset +45.78: no bar line, every covered bar keeps its levels)
+
+======================================================================================================================
+THE CELLS. Gate counted by hand against 40 trades. NO PERCENTILE IS PUBLISHED.
+======================================================================================================================
+
+---- arm: guards (THE ONLY ARM THE OWNER PERMITS) ----
+basis        arm       mechanism            n  PF_r(R)   PF_usd      gap      E(R)  Lbar(R)      DD$     DD%    cm  down  verdict
+W=120m       guards    level-reversion    108   1.1310   1.0650  +0.0660   +0.0799   0.6100     4.51    4.44  0.99   106  MISS (PF_r)
+W=1440m      guards    level-reversion    104   1.0604   1.0974  -0.0370   +0.0379   0.6281     3.80    3.65  1.00    98  MISS (PF_r+E)
+W=480m       guards    level-reversion    110   1.1021   1.0510  +0.0511   +0.0631   0.6185     4.22    4.14  0.99   108  MISS (PF_r)
++39.66       guards    level-reversion    101   1.0704   1.2179  -0.1475   +0.0432   0.6131     7.25    6.92  0.99    98  MISS (PF_r+E)
++41.26       guards    level-reversion    100   1.0057   1.0470  -0.0413   +0.0036   0.6378     7.22    7.07  0.99    97  MISS (PF_r+E)
++42.16       guards    level-reversion    105   0.8884   0.8932  -0.0048   -0.0745   0.6671     7.58    7.42  0.99   100  MISS (PF_r+E)
++43.70       guards    level-reversion    108   0.1735   1.1790  -1.0055   -2.8924   3.4998     2.84    2.70  1.00   107  MISS (PF_r+E)
++45.48       guards    level-reversion     97   1.4259   1.3437  +0.0822   +0.2348   0.5514     3.66    3.36  0.99    95  CLEARS
++45.78       guards    level-reversion     94   1.3883   1.4015  -0.0132   +0.2170   0.5589     3.77    3.48  0.99    94  CLEARS
+W=120m       guards    flow-at-level       20   2.1021   2.0446  +0.0575   +0.5110   0.4636     1.48    1.42  2.45    20  NO VERDICT (floor)
+W=1440m      guards    flow-at-level       27   0.9567   0.9757  -0.0190   -0.0282   0.6513     3.74    3.61  1.81    27  NO VERDICT (floor)
+W=480m       guards    flow-at-level       23   1.5115   1.5407  -0.0292   +0.2749   0.5374     2.04    1.96  2.13    23  NO VERDICT (floor)
++39.66       guards    flow-at-level       23   1.3277   1.1275  +0.2002   +0.1901   0.5801     2.75    2.69  2.13    23  NO VERDICT (floor)
++41.26       guards    flow-at-level       20   0.7369   0.7570  -0.0201   -0.1897   0.7209     3.02    2.97  2.45    20  NO VERDICT (floor)
++42.16       guards    flow-at-level       22   0.5008   0.5731  -0.0723   -0.3994   0.8001     4.12    4.04  2.23    22  NO VERDICT (floor)
++43.70       guards    flow-at-level       30   0.0400   0.6238  -0.5838  -10.5788  11.0194     4.17    4.11  1.63    30  NO VERDICT (floor)
++45.48       guards    flow-at-level       25   2.5818   2.7533  -0.1715   +0.6514   0.4118     1.96    1.84  1.96    25  NO VERDICT (floor)
++45.78       guards    flow-at-level       28   1.9849   2.1822  -0.1973   +0.4711   0.4784     3.65    3.45  1.75    28  NO VERDICT (floor)
+W=120m       guards    maxpain-magnet      27   1.8316   1.7055  +0.1261   +0.2599   0.3125     2.95    2.71  1.81     1  NO VERDICT (floor)
+W=1440m      guards    maxpain-magnet      28   1.6736   1.5782  +0.0954   +0.2273   0.3375     3.08    2.84  1.75     2  NO VERDICT (floor)
+W=480m       guards    maxpain-magnet      28   1.6899   1.5933  +0.0966   +0.2328   0.3375     2.97    2.74  1.75     2  NO VERDICT (floor)
++39.66       guards    maxpain-magnet      27   1.6151   1.5264  +0.0887   +0.2153   0.3500     3.00    2.78  1.81     2  NO VERDICT (floor)
++41.26       guards    maxpain-magnet      28   1.8023   1.7245  +0.0778   +0.2419   0.3015     2.44    2.25  1.75     2  NO VERDICT (floor)
++42.16       guards    maxpain-magnet      27   1.8718   1.8695  +0.0023   +0.2606   0.2989     2.93    2.69  1.81     3  NO VERDICT (floor)
++43.70       guards    maxpain-magnet      24   1.8156   1.8167  -0.0011   +0.2399   0.2941     3.31    3.06  2.04     1  NO VERDICT (floor)
++45.48       guards    maxpain-magnet      25   1.6082   1.6037  +0.0045   +0.1963   0.3227     3.36    3.13  1.96     1  NO VERDICT (floor)
++45.78       guards    maxpain-magnet      24   1.5580   1.5564  +0.0016   +0.1875   0.3361     3.37    3.15  2.04     1  NO VERDICT (floor)
+W=120m       guards    flow-momentum        4   0.5897   0.5404  +0.0493   -0.3111   0.7581     2.35    2.32 12.25     4  NO VERDICT (floor)
+W=1440m      guards    flow-momentum        4   0.5897   0.5404  +0.0493   -0.3111   0.7581     2.35    2.32 12.25     4  NO VERDICT (floor)
+W=480m       guards    flow-momentum        4   0.5897   0.5404  +0.0493   -0.3111   0.7581     2.35    2.32 12.25     4  NO VERDICT (floor)
++39.66       guards    flow-momentum        4   0.5897   0.5404  +0.0493   -0.3111   0.7581     2.35    2.32 12.25     4  NO VERDICT (floor)
++41.26       guards    flow-momentum        4   0.5897   0.5404  +0.0493   -0.3111   0.7581     2.35    2.32 12.25     4  NO VERDICT (floor)
++42.16       guards    flow-momentum        4   0.5897   0.5404  +0.0493   -0.3111   0.7581     2.35    2.32 12.25     4  NO VERDICT (floor)
++43.70       guards    flow-momentum        4   0.5897   0.5404  +0.0493   -0.3111   0.7581     2.35    2.32 12.25     4  NO VERDICT (floor)
++45.48       guards    flow-momentum        4   0.5897   0.5404  +0.0493   -0.3111   0.7581     2.35    2.32 12.25     4  NO VERDICT (floor)
++45.78       guards    flow-momentum        4   0.5897   0.5404  +0.0493   -0.3111   0.7581     2.35    2.32 12.25     4  NO VERDICT (floor)
+
+---- arm: noguards (NOT A TRADING ARM) ----
+basis        arm       mechanism            n  PF_r(R)   PF_usd      gap      E(R)  Lbar(R)      DD$     DD%    cm  down  verdict
+W=120m       noguards  level-reversion    124   1.1355   1.1343  +0.0012   +0.0837   0.6174    14.16   12.89  0.99  None  MISS (PF_r)
+W=1440m      noguards  level-reversion    124   0.9703   0.9523  +0.0180   -0.0194   0.6528    11.09   10.61  0.99  None  MISS (PF_r+E)
+W=480m       noguards  level-reversion    124   1.0836   1.0700  +0.0136   +0.0524   0.6270    10.74   10.05  0.99  None  MISS (PF_r)
++39.66       noguards  level-reversion    115   1.0113   0.9936  +0.0177   +0.0072   0.6347    20.71   19.93  0.99  None  MISS (PF_r+E)
++41.26       noguards  level-reversion    115   1.0361   1.0211  +0.0150   +0.0231   0.6406    20.30   18.89  0.99  None  MISS (PF_r+E)
++42.16       noguards  level-reversion    123   0.8834   0.8637  +0.0197   -0.0788   0.6754    19.74   19.31  0.98  None  MISS (PF_r+E)
++43.70       noguards  level-reversion    120   0.1675   0.0442  +0.1233   -2.7172   3.2640   306.86  303.85  1.00  None  MISS (PF_r+E)
++45.48       noguards  level-reversion    112   1.3614   1.3620  -0.0006   +0.2061   0.5703     6.98    5.60  0.98  None  CLEARS
++45.78       noguards  level-reversion    109   1.2314   1.2160  +0.0154   +0.1380   0.5965    10.97    9.57  0.98  None  CLEARS
+W=120m       noguards  flow-at-level       23   2.3851   2.3175  +0.0676   +0.6195   0.4473     3.39    2.92  2.17  None  NO VERDICT (floor)
+W=1440m      noguards  flow-at-level       30   0.9943   0.9827  +0.0116   -0.0038   0.6552     8.23    7.68  1.67  None  NO VERDICT (floor)
+W=480m       noguards  flow-at-level       24   1.7563   1.6999  +0.0564   +0.3895   0.5151     5.68    4.97  2.08  None  NO VERDICT (floor)
++39.66       noguards  flow-at-level       23   1.3277   1.3022  +0.0255   +0.1901   0.5801     7.20    6.79  2.17  None  NO VERDICT (floor)
++41.26       noguards  flow-at-level       22   0.8558   0.8446  +0.0112   -0.1011   0.7016     7.15    6.82  2.27  None  NO VERDICT (floor)
++42.16       noguards  flow-at-level       24   0.7803   0.7858  -0.0055   -0.1611   0.7334    10.42    9.77  2.08  None  NO VERDICT (floor)
++43.70       noguards  flow-at-level       30   0.0400   0.0071  +0.0329  -10.5788  11.0194   311.55  309.48  1.67  None  NO VERDICT (floor)
++45.48       noguards  flow-at-level       26   2.3480   2.2504  +0.0976   +0.5869   0.4354     4.48    3.84  1.92  None  NO VERDICT (floor)
++45.78       noguards  flow-at-level       29   1.8440   1.7815  +0.0625   +0.4196   0.4971     9.40    8.30  1.72  None  NO VERDICT (floor)
+W=120m       noguards  maxpain-magnet      28   2.3603   2.3905  -0.0302   +0.3979   0.2925     2.46    2.18  1.79  None  NO VERDICT (floor)
+W=1440m      noguards  maxpain-magnet      29   2.1346   2.1161  +0.0185   +0.3600   0.3173     2.47    2.21  1.72  None  NO VERDICT (floor)
+W=480m       noguards  maxpain-magnet      29   2.1533   2.1358  +0.0175   +0.3660   0.3173     2.47    2.21  1.72  None  NO VERDICT (floor)
++39.66       noguards  maxpain-magnet      28   2.0684   2.0819  -0.0135   +0.3511   0.3286     2.47    2.22  1.79  None  NO VERDICT (floor)
++41.26       noguards  maxpain-magnet      29   2.0747   2.0948  -0.0201   +0.3410   0.3173     2.43    2.18  1.72  None  NO VERDICT (floor)
++42.16       noguards  maxpain-magnet      28   2.0395   2.1072  -0.0677   +0.3370   0.3242     2.93    2.61  1.79  None  NO VERDICT (floor)
++43.70       noguards  maxpain-magnet      26   2.0203   2.0796  -0.0593   +0.3169   0.3106     2.94    2.65  1.92  None  NO VERDICT (floor)
++45.48       noguards  maxpain-magnet      26   1.8891   1.8375  +0.0516   +0.3103   0.3490     2.94    2.68  1.92  None  NO VERDICT (floor)
++45.78       noguards  maxpain-magnet      26   1.8908   1.9639  -0.0731   +0.3108   0.3490     2.94    2.66  1.92  None  NO VERDICT (floor)
+W=120m       noguards  flow-momentum        4   0.5897   0.5868  +0.0029   -0.3111   0.7581     2.88    2.83 12.50  None  NO VERDICT (floor)
+W=1440m      noguards  flow-momentum        4   0.5897   0.5868  +0.0029   -0.3111   0.7581     2.88    2.83 12.50  None  NO VERDICT (floor)
+W=480m       noguards  flow-momentum        4   0.5897   0.5868  +0.0029   -0.3111   0.7581     2.88    2.83 12.50  None  NO VERDICT (floor)
++39.66       noguards  flow-momentum        4   0.5897   0.5868  +0.0029   -0.3111   0.7581     2.88    2.83 12.50  None  NO VERDICT (floor)
++41.26       noguards  flow-momentum        4   0.5897   0.5868  +0.0029   -0.3111   0.7581     2.88    2.83 12.50  None  NO VERDICT (floor)
++42.16       noguards  flow-momentum        4   0.5897   0.5868  +0.0029   -0.3111   0.7581     2.88    2.83 12.50  None  NO VERDICT (floor)
++43.70       noguards  flow-momentum        4   0.5897   0.5868  +0.0029   -0.3111   0.7581     2.88    2.83 12.50  None  NO VERDICT (floor)
++45.48       noguards  flow-momentum        4   0.5897   0.5868  +0.0029   -0.3111   0.7581     2.88    2.83 12.50  None  NO VERDICT (floor)
++45.78       noguards  flow-momentum        4   0.5897   0.5868  +0.0029   -0.3111   0.7581     2.88    2.83 12.50  None  NO VERDICT (floor)
+
+======================================================================================================================
+CONTROL - flow-momentum reads NO price level, so it must print IDENTICALLY at every basis
+======================================================================================================================
+  arm guards: 1 distinct print(s) across 9 basis settings
+    n=4 PF_r=0.5897 E=-0.3111 Lbar=0.7581 stop=1.516 exits="STOP 3, TARGET 1"
+      at: +39.66, +41.26, +42.16, +43.70, +45.48, +45.78, W=120m, W=1440m, W=480m
+  arm noguards: 1 distinct print(s) across 9 basis settings
+    n=4 PF_r=0.5897 E=-0.3111 Lbar=0.7581 stop=1.516 exits="STOP 3, TARGET 1"
+      at: +39.66, +41.26, +42.16, +43.70, +45.48, +45.78, W=120m, W=1440m, W=480m
+
+======================================================================================================================
+IDENTITY E = Lbar x (PF_r - 1), and the PF_usd - PF_r gap direction ON THIS SET
+======================================================================================================================
+  identity held on 72/72 cells, largest residual 0.00009 R
+  PF_r read HIGHER than PF_usd on 50/72 cells = 69.4%  (gap = PF_r - PF_usd; measured on THIS set, not quoted from another)
+  widest gaps: +43.70/guards/level-reversion -1.0055; +43.70/guards/flow-at-level -0.5838; +39.66/guards/flow-at-level +0.2002; +45.78/guards/flow-at-level -0.1973
+  cells STRADDLING the gate's own 1.200 line between the two units: 2
+    +39.66/guards/level-reversion: PF_r 1.0704 (R) vs PF_usd 1.2179 (USD)
+    +39.66/guards/flow-at-level: PF_r 1.3277 (R) vs PF_usd 1.1275 (USD)
+
+======================================================================================================================
+REALISED STOP and cost/R, from each receipt's own line
+======================================================================================================================
+  level-reversion   stop 0.542-0.609 ATR14(15m) = 5.10-5.63 points, cost/R 4.97-5.49% (spread 0.28 CONFIGURED, one terminal read)
+  flow-at-level     stop 0.459-0.594 ATR14(15m) = 4.64-5.53 points, cost/R 5.06-6.04% (spread 0.28 CONFIGURED, one terminal read)
+  maxpain-magnet    stop 2.014-2.017 ATR14(15m) = 17.17-18.34 points, cost/R 1.54-1.64% (spread 0.28 CONFIGURED, one terminal read)
+  flow-momentum     stop 1.516-1.516 ATR14(15m) = 12.82-12.82 points, cost/R 2.21-2.21% (spread 0.28 CONFIGURED, one terminal read)
+
+======================================================================================================================
+EXIT MIX, guards arm — the mechanism's own rule must have fired
+======================================================================================================================
+  flow-at-level     W=120m       n   20  hold   26.2 min  exits: STOP 9, TARGET 11
+  flow-at-level     W=1440m      n   27  hold   22.2 min  exits: STOP 17, TARGET 9, TIMEOUT 1
+  flow-at-level     W=480m       n   23  hold   29.4 min  exits: STOP 12, TARGET 10, TIMEOUT 1
+  flow-at-level     +39.66       n   23  hold   30.0 min  exits: STOP 13, TARGET 10
+  flow-at-level     +41.26       n   20  hold   24.0 min  exits: STOP 14, TARGET 6
+  flow-at-level     +42.16       n   22  hold   18.4 min  exits: STOP 17, TARGET 5
+  flow-at-level     +43.70       n   30  hold   31.0 min  exits: STOP 22, TARGET 7, TIMEOUT 1
+  flow-at-level     +45.48       n   25  hold   19.2 min  exits: STOP 10, TARGET 15
+  flow-at-level     +45.78       n   28  hold   16.6 min  exits: STOP 13, TARGET 15
+  flow-momentum     W=120m       n    4  hold   67.5 min  exits: STOP 3, TARGET 1
+  flow-momentum     W=1440m      n    4  hold   67.5 min  exits: STOP 3, TARGET 1
+  flow-momentum     W=480m       n    4  hold   67.5 min  exits: STOP 3, TARGET 1
+  flow-momentum     +39.66       n    4  hold   67.5 min  exits: STOP 3, TARGET 1
+  flow-momentum     +41.26       n    4  hold   67.5 min  exits: STOP 3, TARGET 1
+  flow-momentum     +42.16       n    4  hold   67.5 min  exits: STOP 3, TARGET 1
+  flow-momentum     +43.70       n    4  hold   67.5 min  exits: STOP 3, TARGET 1
+  flow-momentum     +45.48       n    4  hold   67.5 min  exits: STOP 3, TARGET 1
+  flow-momentum     +45.78       n    4  hold   67.5 min  exits: STOP 3, TARGET 1
+  level-reversion   W=120m       n  108  hold   30.8 min  exits: END_OF_DATA 1, STOP 64, TARGET 41, TIMEOUT 1, WEEKEND_FLAT 1
+  level-reversion   W=1440m      n  104  hold   36.5 min  exits: STOP 63, TARGET 37, TIMEOUT 3, WEEKEND_FLAT 1
+  level-reversion   W=480m       n  110  hold   30.4 min  exits: STOP 66, TARGET 41, TIMEOUT 2, WEEKEND_FLAT 1
+  level-reversion   +39.66       n  101  hold   35.8 min  exits: END_OF_DATA 1, NEWS_FLAT 1, STOP 60, TARGET 36, TIMEOUT 2, WEEKEND_FLAT 1
+  level-reversion   +41.26       n  100  hold   33.3 min  exits: END_OF_DATA 1, STOP 62, TARGET 35, TIMEOUT 1, WEEKEND_FLAT 1
+  level-reversion   +42.16       n  105  hold   30.6 min  exits: STOP 68, TARGET 35, TIMEOUT 1, WEEKEND_FLAT 1
+  level-reversion   +43.70       n  108  hold   34.6 min  exits: END_OF_DATA 1, STOP 68, TARGET 36, TIMEOUT 2, WEEKEND_FLAT 1
+  level-reversion   +45.48       n   97  hold   37.0 min  exits: END_OF_DATA 1, STOP 52, TARGET 41, TIMEOUT 2, WEEKEND_FLAT 1
+  level-reversion   +45.78       n   94  hold   38.0 min  exits: END_OF_DATA 1, STOP 51, TARGET 40, TIMEOUT 1, WEEKEND_FLAT 1
+  maxpain-magnet    W=120m       n   27  hold  120.6 min  exits: END_OF_DATA 1, NEWS_FLAT 1, STOP 8, TARGET 13, TIMEOUT 4
+  maxpain-magnet    W=1440m      n   28  hold  117.3 min  exits: END_OF_DATA 1, NEWS_FLAT 1, STOP 9, TARGET 13, TIMEOUT 4
+  maxpain-magnet    W=480m       n   28  hold  117.3 min  exits: END_OF_DATA 1, NEWS_FLAT 1, STOP 9, TARGET 13, TIMEOUT 4
+  maxpain-magnet    +39.66       n   27  hold  121.1 min  exits: END_OF_DATA 1, NEWS_FLAT 1, STOP 9, TARGET 12, TIMEOUT 4
+  maxpain-magnet    +41.26       n   28  hold  116.8 min  exits: END_OF_DATA 1, NEWS_FLAT 1, STOP 8, TARGET 13, TIMEOUT 5
+  maxpain-magnet    +42.16       n   27  hold  121.1 min  exits: END_OF_DATA 1, NEWS_FLAT 1, STOP 8, TARGET 13, TIMEOUT 4
+  maxpain-magnet    +43.70       n   24  hold  136.2 min  exits: END_OF_DATA 1, NEWS_FLAT 1, STOP 7, TARGET 11, TIMEOUT 4
+  maxpain-magnet    +45.48       n   25  hold  135.0 min  exits: END_OF_DATA 1, NEWS_FLAT 1, STOP 8, TARGET 10, TIMEOUT 4, WEEKEND_FLAT 1
+  maxpain-magnet    +45.78       n   24  hold  141.9 min  exits: END_OF_DATA 1, NEWS_FLAT 1, STOP 8, TARGET 10, TIMEOUT 3, WEEKEND_FLAT 1

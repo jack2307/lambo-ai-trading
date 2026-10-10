@@ -1,0 +1,40 @@
+paired (overlapping) bars: 785 of 100586 XAUUSD-15m bars = 0.8%
+
+--- NY hour distribution of the overlapping bars ---
+  hour   bars   share   basis mean   basis sd
+  00:00     36    4.6%       +41.99       2.37
+  01:00     36    4.6%       +42.00       2.46
+  02:00     36    4.6%       +42.03       2.32
+  03:00     36    4.6%       +42.00       2.33
+  04:00     36    4.6%       +42.03       2.18
+  05:00     36    4.6%       +42.09       2.20
+  06:00     36    4.6%       +42.05       2.08
+  07:00     36    4.6%       +42.02       1.91
+  08:00     36    4.6%       +42.08       1.97
+  09:00     33    4.2%       +42.32       1.96
+  10:00     32    4.1%       +42.62       1.92
+  11:00     32    4.1%       +42.77       1.96
+  12:00     32    4.1%       +42.74       1.97
+  13:00     32    4.1%       +42.62       2.14
+  14:00     30    3.8%       +42.40       2.05
+  15:00     28    3.6%       +41.88       2.32
+  16:00     28    3.6%       +41.98       2.25
+  17:00   null   —        null         null   (no overlapping bar in this hour)
+  18:00     34    4.3%       +41.88       2.68
+  19:00     36    4.6%       +42.11       2.74
+  20:00     36    4.6%       +42.25       2.75
+  21:00     36    4.6%       +41.97       2.71
+  22:00     36    4.6%       +42.02       2.53
+  23:00     36    4.6%       +42.10       2.50
+
+--- the CME maintenance break, bar by bar ---
+  17:00-17:15 NY (into the break)    null bars — nothing measured here (not 0)
+  17:15-18:00 NY (inside the break)  null bars — nothing measured here (not 0)
+  18:00-18:15 NY (the REOPEN bar)    bars    8  basis mean  +41.51 sd  2.72  | open==low on 0 = 0.00%
+  everything else                    bars  777  basis mean  +42.17 sd  2.31  | open==low on 14 = 1.80%
+
+  baseline, ALL 100586 XAUUSD-15m bars: open==low on 2831 = 2.81%
+  baseline, the 746 REOPEN bars across all 4 years: open==low on 47 = 6.30%
+
+  distinct UTC days with overlap: 11
+  market-hours of overlap: 196.2 h

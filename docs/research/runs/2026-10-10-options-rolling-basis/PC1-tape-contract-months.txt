@@ -1,0 +1,33 @@
+tape prints read: 55131  files 915
+distinct expiry symbols: 26
+
+--- underlying_price per expiry symbol (if these differ, `spot` is not one series) ---
+  OGV6                   prints  13898: n 13898 mean +4359.53 sd 47.64 min +4241.70 p10 +4294.60 p50 +4358.20 p90 +4423.00 max +4453.50
+  OGX6                   prints  12492: n 12492 mean +4255.74 sd 108.13 min +4091.80 p10 +4141.90 p50 +4210.90 p90 +4411.70 max +4488.00
+  OGZ6                   prints   4055: n 4055 mean +4174.09 sd 33.47 min +4092.60 p10 +4129.70 p50 +4172.00 p90 +4216.50 max +4232.40
+  OG4U6                  prints   2991: n 2991 mean +4385.32 sd 51.26 min +4280.30 p10 +4317.10 p50 +4389.10 p90 +4451.40 max +4485.20
+  OG3U6                  prints   2858: n 2858 mean +4335.50 sd 45.30 min +4241.90 p10 +4266.60 p50 +4342.00 p90 +4387.00 max +4450.40
+  OG2V6                  prints   2555: n 2555 mean +4169.26 sd 33.99 min +4091.90 p10 +4130.20 p50 +4161.00 p90 +4213.30 max +4232.40
+  G3RU6                  prints   2322: n 2322 mean +4329.28 sd 38.65 min +4241.00 p10 +4274.60 p50 +4333.60 p90 +4373.60 max +4450.50
+  G2RV6                  prints   1827: n 1827 mean +4146.00 sd 22.26 min +4094.70 p10 +4121.00 p50 +4144.40 p90 +4184.70 max +4211.50
+  G2MU6                  prints   1629: n 1629 mean +4344.43 sd 44.31 min +4261.10 p10 +4281.10 p50 +4353.10 p90 +4402.20 max +4445.00
+  G3WU6                  prints   1623: n 1623 mean +4333.47 sd 39.28 min +4263.50 p10 +4290.40 p50 +4335.10 p90 +4384.20 max +4452.00
+  G3TU6                  prints   1509: n 1509 mean +4321.22 sd 41.18 min +4259.50 p10 +4282.30 p50 +4301.50 p90 +4392.10 max +4447.30
+  G1WV6                  prints   1380: n 1380 mean +4155.45 sd 34.43 min +4091.70 p10 +4107.20 p50 +4160.90 p90 +4195.70 max +4210.90
+
+--- same-MINUTE spread of underlying_price, over 8316 minutes with >1 print ---
+  spread (max-min) USD: n 8316 mean +10.66 sd 15.48 min +0.00 p10 +0.00 p50 +1.00 p90 +35.10 max +58.10
+  minutes where it is > 0.01 USD: 6744 of 8316 = 81.1%
+  minutes where it is > 5.00 USD: 2456 = 29.5%
+
+--- bar series ---
+GC-1m    18709 rows, columns ['time', 'open', 'high', 'low', 'close', 'volume']
+GC-1m    18709 bars  1788732480000 -> 1791579540000
+XAUUSD15 100586 bars  1655375400000 -> 1789650000000
+GC-1m rangeless (o==h==l==c): 18707 of 18709 = 100.0%
+
+--- GC-1m close MINUS XAUUSD-15m close, paired inside the same 15m bar ---
+  paired bars: 785
+  basis USD: n 785 mean +42.16 sd 2.31 min +36.94 p10 +39.66 p50 +41.71 p90 +45.48 max +47.11
+  quartile means in TIME order: +45.15 -> +42.84 -> +40.82 -> +39.86
+  first paired bar 1788732000000  last 1789650000000
