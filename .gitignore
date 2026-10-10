@@ -56,3 +56,5 @@ config/local.toml
 # The sealed research store: a truncated copy of data/ built by seal-store for
 # design agents that must not see the withheld year. Derived, large, rebuildable.
 /data-sealed
+# agent/companion-regime built here so it never touched the shared /target.
+/target-cr
