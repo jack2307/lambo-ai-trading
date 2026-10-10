@@ -213,3 +213,26 @@ Và một khuyết điểm của dụng cụ, vá ngay: `peak_mem_mb()` in **`na
 đầu (`psapi.GetProcessMemoryInfo` trả 0) — đúng luật `null != 0` nên nó in `nan`
 chứ không in 0, nhưng chi phí I/O là một mục bắt buộc của báo cáo nên hàm đó
 được sửa để đo được.
+
+---
+
+## Ghi chú thêm thứ hai — 2026-10-10, sau trục D/E/F, trước khi viết kết quả
+
+Trục E đọc **0/8 ở cả hai bước**, và trục D giải thích vì sao: bốn đặc trưng
+sống sót F1 có `R²(1m ~ 15m)` **0,51–0,93** — chúng là nến 15m **nói lại**.
+Nhưng kết luận "desk thôi hỏi về dữ liệu tick/1m cho lớp cơ chế này" sẽ **chính
+xác hơn** nếu biết 1m có nói được **thứ gì khác** ở chân trời 15m hay không. Nên
+một trục nữa, khai trước khi chạy:
+
+- **G. Cùng phép so, đổi kết cuộc thành BIÊN ĐỘ nến sau** —
+  `y_rng = (high(i+1) − low(i+1)) / ATR14(i)`, cùng luật C3, cùng mẫu, cùng đối
+  chứng, đọc **ngoài mẫu**: 2 cửa sổ × 2 fold = **4 phép so** (`ΔR²_oos`), cộng
+  8 đặc trưng × 2 cửa sổ **t của phần dư** = **16 phép so**. Tổng **20**.
+
+⇒ **Sổ đa phép thử sửa thành 84 + 20 = 104 phép so. Ô cổng tiêu: vẫn 0.**
+
+**Điều khoản đọc khai trước:** trục G **không phải một chân của cổng** và không
+tạo ứng viên — cổng desk tính PF/expectancy theo **chiều**, không theo biên độ.
+Nó chỉ quyết định kết luận viết ra là **"1m không chứa gì dùng được ở 15m"** hay
+**"1m chứa thông tin BIÊN ĐỘ nhưng không chứa thông tin CHIỀU ở 15m"**. Hai câu
+đó khác nhau và desk cần câu đúng.
