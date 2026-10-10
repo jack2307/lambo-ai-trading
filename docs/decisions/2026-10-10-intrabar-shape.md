@@ -179,3 +179,37 @@ chỉ dừng nếu **dưới 3 GB**.
 - Nếu F1 hoặc F2 bắn, job này **không** nói "1m vô dụng" — nó nói **ở chân trời
   15m, với 8 định nghĩa hình này, trên hai cửa sổ này**, không đo được thông tin
   dùng được vượt O/H/L/C của nến 15m.
+
+---
+
+## Ghi chú thêm — 2026-10-10, sau lần chạy đầu, TRƯỚC khi viết kết quả
+
+Lần chạy đầu (`py/research/intrabar_shape_precheck.py`, 6,1s) đã xong và nó cho
+một tình huống đăng ký gốc **không dự tính**: **F1 không bắn ở bước 1** (4/8 đặc
+trưng cùng dấu qua vạch) nhưng **F2 bắn 4/4 fold ở cả hai cửa sổ**, và ở **bước
+4 thì 0/8** đặc trưng qua vạch. Ba trục thêm, khai TRƯỚC khi chạy chúng:
+
+- **D. R² của mỗi đặc trưng 1m hồi quy lên 6 đặc trưng đối chứng** — đo xem bao
+  nhiêu phần của "hình trong ruột" **đã nằm trong** O/H/L/C của nến 15m. Đây là
+  con số giải thích vì sao `ΔR²_oos <= 0`, và nó là phép đo **không có giả
+  thuyết** (0 phép so thống kê, chỉ một tỉ lệ phương sai): 8 × 2 cửa sổ.
+- **E. `t` đơn biên sau khi ĐÃ TRỪ phần đối chứng giải thích được** (residual
+  hoá đặc trưng 1m lên 6 đặc trưng 15m, rồi `t` của phần dư với `y`). Đây là
+  **dạng đơn biên của chính falsifier** và đọc sạch hơn `ΔR²_oos` đa biến:
+  8 đặc trưng × 2 cửa sổ × 2 bước (1 và 4) = **32 phép so**.
+- **F. tương quan từng cặp** giữa 4 đặc trưng sống sót F1 và 2 đặc trưng đối
+  chứng mạnh nhất (`ret_15`, `close_pos`) — 0 phép so, chỉ in ra.
+
+⇒ **Sổ đa phép thử sửa thành: 52 + 32 = 84 phép so. Ô cổng tiêu: vẫn 0.**
+Vạch Bonferroni cho trục E giữ nguyên **|t| >= 2,95** (16 phép so chính của E ở
+bước 1); không hạ vạch.
+
+**Điều khoản đọc khai trước cho trục E:** nếu **không** đặc trưng 1m nào có phần
+dư đạt `|t| >= 2,95` **cùng dấu** ở cả hai cửa sổ, thì F2 bắn lần thứ hai bằng
+một đường độc lập với `ΔR²_oos`, và kết luận của job là **kết luận cứng**, không
+phải một "chưa đo đủ".
+
+Và một khuyết điểm của dụng cụ, vá ngay: `peak_mem_mb()` in **`nan`** ở lần chạy
+đầu (`psapi.GetProcessMemoryInfo` trả 0) — đúng luật `null != 0` nên nó in `nan`
+chứ không in 0, nhưng chi phí I/O là một mục bắt buộc của báo cáo nên hàm đó
+được sửa để đo được.
