@@ -1,0 +1,2 @@
+Filesystem      Size  Used Avail Use% Mounted on
+E:              301G  287G   14G  96% /e

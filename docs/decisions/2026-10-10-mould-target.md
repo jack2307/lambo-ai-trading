@@ -506,3 +506,112 @@ its post-drift residual.
   call.
 
 ## 12. Amendments
+
+### Note 1 — 2026-10-10, after the eight sieve runs
+
+**Cells: 612 declared, 612 run, 594 readable** (18 carry <= 1 trade:
+`vol-thrust` 0, `rsi-rev-vol` 0, `volman` 1, `vb-b1` 1, and `buy-hold`
+guards-off 1). Pre-check cells: 4 declared, 4 viewed. **Gate cells: 0** — no
+cell passed the sieve, so none was spent, exactly as section 8 registered.
+No row added to the ranking, no window changed, no arm added, no parameter
+tuned, no threshold moved, no sample floor lowered.
+Result: `receipts/mould-target/RESULT.md`.
+
+**F1 FIRES.** Max over the 594 readable cells of `min(G_IS, G_OOS)`, cells with
+>= 40 trades in both windows: **6.061** (`sh-roll`, guards on). Declared
+frame-compatible subset (`trips <= 1.5`): **1.901** (`qs-lb3`, guards on),
+**4.6x** under the 8.7 line. The 26 defaults re-ruled top out at **2.454**. On
+my own measurement of `px-1s`'s spread in R (1.09% IS / 0.83% OOS) the
+requirement is **9.2x / 12.0x**, i.e. **higher** than the brief's 8.7.
+
+**F1b FIRES** and its structural prediction is confirmed: all 42
+frame-compatible cells are self-managed; the minimum `trips_per_exposed_session`
+over 466 readable `Exits::Engine` cells is **4.444**, so no engine-exit
+parameterisation can be frame-compatible under `max_hold_ms = 4 h`.
+
+**F2 did not fire** — `px-1s`'s gross per session reproduces addendum 5 section
+B on **both** windows (**-0.0040** / **+0.0205** R) to the published digit.
+**F3 did not fire** — five anchors reproduce `agent/gross-ceiling` exactly.
+
+**F2b FIRES, in the guards arm only, and that is a finding.** Guards off, the
+invariance holds to **1.5-3.9%** across a **7.8x** stop change with **0** trades
+moving. Guards on it breaks to **81%** with trade counts moving (1982 -> 1962),
+because `max_open_loss_r = 2.0` is stated **in R** and `notional 300%` caps
+`lots = risk_usd/(risk x contract_size)` — both read the stop. **Addendum 7
+section B holds only in the arm it was measured in.**
+
+**F4 FIRES**: **98 of 297 readable row-arms (33.0%)** flip the sign of `G`
+between the halves (`agent/gross-ceiling` measured 34.7% with a different
+ruler). `r2-lv5sa05` guards on reads **+18.973 (IS)** and **-22.981 (OOS)** on
+5,428 / 5,272 trades — a cell that clears 8.7 twice over on one window.
+
+**F5** fires on `sess-hold` guards-off OOS (110% drift) and not on the maximum.
+**F6 FIRES on 86 of 594 cells / 49 row-arms, all guards-off**; worst `gf-fp50`
+OOS **273.06% = 27,828.06 USD**, and `gap-fade` OOS reproduces
+`agent/gross-ceiling`'s worst burned row to the cent.
+**F7 FIRES on 168 of 594 cells**, split **17/296 (5.7%) guards off** against
+**151/298 (50.7%) guards on** — the guards make the spread sweep
+path-dependent. The two rows the report leans on are clean on both windows.
+
+**Two corrections to the record, measured here (brief section 8):**
+
+1. `agent/gross-ceiling`'s swap-derived R unit is wrong on rows whose equity
+   collapses. Its published leverage-free ceiling of **3.94x** is **1.774x** on
+   the same row and arm — **2.22x too high** — and the correction moves the
+   whole default table the same way.
+2. **A `0` this job printed and then caught.** My first `cap_lots` count said
+   *"0 cells ride the notional cap"*; it matched a string the engine does not
+   print. The engine prints `guards: ...; sized down N`, and **486 of 618
+   guarded prints are non-zero**, up to **100% of trades** on the high-`G`
+   engine rows. Reported in RESULT.md section 7 as the bug rather than the 0.
+
+**What this plan did not foresee:** `im-mm10` prints the largest `min(G)` in the
+programme — **46.921x** — on **9 and 6 trades**. Reported as **NOT a
+measurement**, 4.4-6.7x under the record's 40-trade floor, and named so it
+cannot be quoted later.
+
+**`df -h /e`: 11 GB before the first run, 14 GB after.** Nothing was built, no
+`target/` was deleted, and `collect.exe` pids 5044 and 38720 are both still
+running.
+
+### Note 2 — 2026-10-10, AMENDMENT: a diagnostic on the ceiling holder
+
+Prompted mid-run by `agent/hour-screen`, which measured on **XAUDUKA** that the
+reopen bar after the 17:00 New York CME break has `open == low` on **19.02%** of
+bars against **3.20%** of ordinary bars, the pre-break bar `close == low` on
+**13.25%** against **1.88%**, the same on XAGDUKA, and **near-absent on the
+broker's own XAUUSD** — a provider price stamp, not a market. The unrestricted
+ceiling holder `sh-roll` is `session-hold` over New York **16:00-18:00**, so it
+holds that bar on **every** trade, and **no row in this design carries a
+`flat 16:30-18:15` filter** (`filters = []` throughout), so nothing here is
+immune by construction.
+
+**Four diagnostic rows added**, in
+`docs/research/designs/2026-10-10-mould-target-break.toml`:
+`brk-pre` 14:00-16:00, `brk-only` 16:30-18:15, `brk-1800` 18:00-20:00,
+`brk-post` 18:15-20:15, all `side = 1`, `riskDailyRanges = 1.5`. **16 new cells
+plus 8 re-measurements of `px-1s` and `sh-roll`, in 8 runs.** Declared here
+**before** they were read: these rows are **EXCLUDED from the sieve ranking
+whatever they print**, because a row that passes 8.7 by sitting on the artefact
+is the artefact and not a candidate. They did not pass: the maximum among them
+is `brk-only` at `min(G) = 5.079`.
+
+**Result: the ceiling holder's gross is located in the break.** Guards on,
+`min(G_IS, G_OOS)`: `brk-pre` **0.101** against `sh-roll` **6.061** — a
+**60-fold** collapse two hours earlier on the same rule — while `brk-only`,
+which contains nothing but the break and the reopen bar, keeps **5.079**
+(and **17.476** on OOS, more gross per round trip than `sh-roll` itself).
+`brk-1800` (entering **at** the reopen bar) reads 2.215 and `brk-post` (entirely
+after it) 2.101, so the money is in the **gap across the break**, not in the
+hour that follows it.
+
+⇒ **`6.061` is not read as a market number.** The highest reading whose exposure
+excludes 16:00-18:15 entirely is `sh-asia` (New York 20:00-02:00 long) at
+**4.212x / 4.037x**, whose per-round-trip figure `W = 1.084-1.183` sits beside
+`agent/hour-screen`'s independent **1.43-1.58x** for 19:00-02:00 — the same
+quantity, the same order, two rulers and two agents.
+
+**Not measured, declared:** what share of the `rsi2-pullback` family's gross
+sits on the reopen bar. Those rows take 8,000-10,000 trades across all hours, so
+decomposing them is a programme, not a note, and their **4.7-6.0x** is therefore
+an upper bound too — in the direction against the hypothesis.

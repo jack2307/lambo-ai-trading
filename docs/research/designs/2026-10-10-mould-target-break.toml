@@ -1,0 +1,50 @@
+# DIAGNOSTIC ONLY, registered as amendment 2026-10-10 section 12 note 2.
+# EXCLUDED from the sieve ranking whatever it prints: these rows exist to say
+# whether the unrestricted ceiling holder (sh-roll, New York 1600-1800) earns
+# its gross from the Dukascopy post-break reopen price, which agent/hour-screen
+# measured as a provider artefact (XAUDUKA open==low 19.02% at the reopen bar
+# against 3.20% on an ordinary bar; 13.25% close==low on the pre-break bar
+# against 1.88%; near-absent on the broker feed XAUUSD).
+# px-1s is carried so S and the drift anchor are measured in these runs too.
+
+[[hypothesis]]
+label = "px-1s"
+base = "session-hold"
+filters = []
+overrides = { from = 1800, to = 1600, side = 1, riskDailyRanges = 1.5, rangeDays = 20 }
+why = "ANCHOR: S and the drift anchor, same as the sieve runs"
+
+[[hypothesis]]
+label = "sh-roll"
+base = "session-hold"
+filters = []
+overrides = { from = 1600, to = 1800, side = 1, riskDailyRanges = 1.5, rangeDays = 20 }
+why = "the unrestricted ceiling holder, carried so the diagnostic is read against it in the same runs"
+
+[[hypothesis]]
+label = "brk-pre"
+base = "session-hold"
+filters = []
+overrides = { from = 1400, to = 1600, side = 1, riskDailyRanges = 1.5, rangeDays = 20 }
+why = "two hours ENTIRELY before the break: no pre-break close, no reopen open"
+
+[[hypothesis]]
+label = "brk-post"
+base = "session-hold"
+filters = []
+overrides = { from = 1815, to = 2015, side = 1, riskDailyRanges = 1.5, rangeDays = 20 }
+why = "two hours ENTIRELY after the reopen bar: the artefact bar is already past"
+
+[[hypothesis]]
+label = "brk-only"
+base = "session-hold"
+filters = []
+overrides = { from = 1630, to = 1815, side = 1, riskDailyRanges = 1.5, rangeDays = 20 }
+why = "straddles the break and the 1800-1815 reopen bar and nothing else"
+
+[[hypothesis]]
+label = "brk-1800"
+base = "session-hold"
+filters = []
+overrides = { from = 1800, to = 2000, side = 1, riskDailyRanges = 1.5, rangeDays = 20 }
+why = "starts AT the reopen bar: holds the artefact bar as its entry instead of its exit"

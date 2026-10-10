@@ -1,0 +1,85 @@
+market:   xauduka 15m
+data:     E:/rust/flowdesk/data (bars from E:/rust/flowdesk/data\bars\XAUDUKA-15m.parquet)
+bounds:   --from=2018-06-01 --to=2026-06-01 kept 187860 of 378749 bars
+spread:   0 per round trip
+trail:    off
+max hold: 4 h (14400000 ms) from [trading] max_hold_ms, no per-market override
+bars:     187860 from 2018-06-01 00:00 to 2026-05-31 23:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+companion: none loaded — every cmp series is NaN
+guards: off (every number unguarded)
+null sides: coin - 50/50, carries no drift; the null every published percentile was read against
+flags:    12 passed, every one of them read by --mode=hypotheses
+
+== hypotheses `docs/research/designs/2026-10-10-mould-target-break.toml`: 6 declared, FIXED parameters over the whole window (no selection), each against 2 matched null runs ==
+null sides: coin (50/50, carries no drift; the null every published percentile was read against)
+swap: long 0.00 / short 0.00 USD per lot per night; spread 0
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+guards: off (every number unguarded)
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+px-1s        session-hold         1982   1.126   0.021    0.992    0.992        0  100%  fail: profit factor 1.126 < 1.2; expectancy 0.021R < 0.05R
+                                  — ANCHOR: S and the drift anchor, same as the sieve runs
+                                max drawdown 1688.98 USD = 10.73% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.352 R is); net +4648.09 USD over 1982 trades
+                                Lbar 0.1679 R = |avg_loss_r| 0.3602 x loss share 0.4662 over 1982 trades; PF_r 1.1218 (R) vs PF_usd 1.1259 (USD, gap -0.0041); identity E = Lbar(PF_r-1) = +0.0205 R vs expectancy +0.0205 R, residual +0.00004 R; expectancy leg BINDS (Lbar < 0.250R)
+                                matched null 2474 trades median vs the method's 1982 — count match 1.25
+                                long share: method 1.000 vs the null's median 0.501  ** outside 40-60% long against a coin: this percentile carries the instrument's drift **
+                                spread paid: method 0.00 USD vs the null's median 0.00 USD — cost match NaN  (nothing to compare)
+                                exposure: signed share of time method +1.000 vs the null's -0.004; time in market method 2771835 min vs the null's median 4160235 min — ratio 1.50  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.992 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                exits: END_OF_DATA 1, window closed 1981; mean hold 1398.5 min
+sh-roll      session-hold         1982   1.882   0.016    1.030    1.030        0  100%  fail: expectancy 0.016R < 0.05R
+                                  — the unrestricted ceiling holder, carried so the diagnostic is read against it in the same runs
+                                max drawdown 139.41 USD = 1.02% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.049 R is); net +3598.43 USD over 1982 trades
+                                Lbar 0.0173 R = |avg_loss_r| 0.0399 x loss share 0.4329 over 1982 trades; PF_r 1.9010 (R) vs PF_usd 1.8822 (USD, gap +0.0188); identity E = Lbar(PF_r-1) = +0.0156 R vs expectancy +0.0156 R, residual +0.00004 R; expectancy leg BINDS (Lbar < 0.250R)
+                                matched null 21581 trades median vs the method's 1982 — count match 10.89  ** outside the band: this percentile is unmatched **
+                                long share: method 1.000 vs the null's median 0.498  ** outside 40-60% long against a coin: this percentile carries the instrument's drift **
+                                spread paid: method 0.00 USD vs the null's median 0.00 USD — cost match NaN  (nothing to compare)
+                                exposure: signed share of time method +1.000 vs the null's +0.001; time in market method 1424535 min vs the null's median 2754960 min — ratio 1.93  ** the control did not collect the drift the method did **
+                                exits: window closed 1982; mean hold 718.7 min
+brk-pre      session-hold         2011   1.038   0.001    1.030    1.030        0  100%  fail: profit factor 1.038 < 1.2; expectancy 0.001R < 0.05R
+                                  — two hours ENTIRELY before the break: no pre-break close, no reopen open
+                                max drawdown 363.27 USD = 3.51% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.076 R is); net +259.76 USD over 2011 trades
+                                Lbar 0.0341 R = |avg_loss_r| 0.0692 x loss share 0.4933 over 2011 trades; PF_r 1.0391 (R) vs PF_usd 1.0383 (USD, gap +0.0008); identity E = Lbar(PF_r-1) = +0.0013 R vs expectancy +0.0013 R, residual -0.00003 R; expectancy leg BINDS (Lbar < 0.250R)
+                                matched null 21581 trades median vs the method's 2011 — count match 10.73  ** outside the band: this percentile is unmatched **
+                                long share: method 1.000 vs the null's median 0.498  ** outside 40-60% long against a coin: this percentile carries the instrument's drift **
+                                spread paid: method 0.00 USD vs the null's median 0.00 USD — cost match NaN  (nothing to compare)
+                                exposure: signed share of time method +1.000 vs the null's +0.001; time in market method 250455 min vs the null's median 2754960 min — ratio 11.00  ** the control did not collect the drift the method did **
+                                exits: window closed 2011; mean hold 124.5 min
+brk-post     session-hold         2049   1.062   0.002    1.030    1.030        0  100%  fail: profit factor 1.062 < 1.2; expectancy 0.002R < 0.05R
+                                  — two hours ENTIRELY after the reopen bar: the artefact bar is already past
+                                max drawdown 702.85 USD = 6.67% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.073 R is); net +433.82 USD over 2049 trades
+                                Lbar 0.0335 R = |avg_loss_r| 0.0673 x loss share 0.4978 over 2049 trades; PF_r 1.0643 (R) vs PF_usd 1.0623 (USD, gap +0.0020); identity E = Lbar(PF_r-1) = +0.0022 R vs expectancy +0.0021 R, residual -0.00005 R; expectancy leg BINDS (Lbar < 0.250R)
+                                matched null 21581 trades median vs the method's 2049 — count match 10.53  ** outside the band: this percentile is unmatched **
+                                long share: method 1.000 vs the null's median 0.498  ** outside 40-60% long against a coin: this percentile carries the instrument's drift **
+                                spread paid: method 0.00 USD vs the null's median 0.00 USD — cost match NaN  (nothing to compare)
+                                exposure: signed share of time method +1.000 vs the null's +0.001; time in market method 271155 min vs the null's median 2754960 min — ratio 10.16  ** the control did not collect the drift the method did **
+                                exits: END_OF_DATA 1, window closed 2048; mean hold 132.3 min
+brk-only     session-hold         2048   2.111   0.018    1.005    1.005        0  100%  fail: expectancy 0.018R < 0.05R
+                                  — straddles the break and the 1800-1815 reopen bar and nothing else
+                                max drawdown 161.21 USD = 1.11% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.045 R is); net +4499.85 USD over 2048 trades
+                                Lbar 0.0159 R = |avg_loss_r| 0.0402 x loss share 0.3960 over 2048 trades; PF_r 2.1475 (R) vs PF_usd 2.1108 (USD, gap +0.0367); identity E = Lbar(PF_r-1) = +0.0183 R vs expectancy +0.0182 R, residual -0.00007 R; expectancy leg BINDS (Lbar < 0.250R)
+                                matched null 24449 trades median vs the method's 2048 — count match 11.94  ** outside the band: this percentile is unmatched **
+                                long share: method 1.000 vs the null's median 0.503  ** outside 40-60% long against a coin: this percentile carries the instrument's drift **
+                                spread paid: method 0.00 USD vs the null's median 0.00 USD — cost match NaN  (nothing to compare)
+                                exposure: signed share of time method +1.000 vs the null's -0.006; time in market method 1395780 min vs the null's median 3824925 min — ratio 2.74  ** the control did not collect the drift the method did **
+                                exits: window closed 2048; mean hold 681.5 min
+brk-1800     session-hold         2045   1.110   0.004    1.030    1.030        0  100%  fail: profit factor 1.110 < 1.2; expectancy 0.004R < 0.05R
+                                  — starts AT the reopen bar: holds the artefact bar as its entry instead of its exit
+                                max drawdown 594.01 USD = 5.53% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.068 R is); net +729.03 USD over 2045 trades
+                                Lbar 0.0314 R = |avg_loss_r| 0.0658 x loss share 0.4778 over 2045 trades; PF_r 1.1114 (R) vs PF_usd 1.1103 (USD, gap +0.0011); identity E = Lbar(PF_r-1) = +0.0035 R vs expectancy +0.0035 R, residual -0.00000 R; expectancy leg BINDS (Lbar < 0.250R)
+                                matched null 21581 trades median vs the method's 2045 — count match 10.55  ** outside the band: this percentile is unmatched **
+                                long share: method 1.000 vs the null's median 0.498  ** outside 40-60% long against a coin: this percentile carries the instrument's drift **
+                                spread paid: method 0.00 USD vs the null's median 0.00 USD — cost match NaN  (nothing to compare)
+                                exposure: signed share of time method +1.000 vs the null's +0.001; time in market method 271155 min vs the null's median 2754960 min — ratio 10.16  ** the control did not collect the drift the method did **
+                                exits: END_OF_DATA 1, window closed 2044; mean hold 132.6 min
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+
