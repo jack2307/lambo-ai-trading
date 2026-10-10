@@ -1,0 +1,1218 @@
+== cmpregime: companion as a SIMULTANEOUS regime label on an existing gold mechanism ==
+registered: docs/decisions/2026-10-10-companion-regime.md
+market:   xauduka 15m  (Gold, Dukascopy bid feed (out-of-sample structure; Vantage costs))
+data:     E:/rust/flowdesk/data (bars from E:/rust/flowdesk/data\bars\XAUDUKA-15m.parquet)
+bars:     378749 from 2010-06-01 to 2026-05-31
+spread:   0.28 per round trip
+equity:   starting_equity_usd = 10000 (defect 17 applies only at 100 USD)
+min_lot:  0.01   lot_step 0.01   contract_size 1
+news:     747 events from E:/rust/flowdesk/data\news\events.parquet
+draws:    1000 per control, seed 12345
+drop-break: trades whose SIGNAL bar is within 120 min of 17:00 New York are REMOVED (provider print artefact, agent/hour-screen)
+companion: XAGDUKA-15m 374188 bars; exact-timestamp matches on 372557 of 378749 primary bars (98.4%); k defined at 368763, vol_excess at 372044
+companion: EURDUKA-15m 398220 bars; exact-timestamp matches on 378027 of 378749 primary bars (99.8%); k defined at 377999, vol_excess at 377514
+companion: XAUDUKA-15m 378749 bars; exact-timestamp matches on 378749 of 378749 primary bars (100.0%); k defined at 375075, vol_excess at 378236
+states:
+  dir   companion 1-bar move AGREES with the trade side, |k| >= 0.25 comp-ATR
+  move  |companion 1-bar move| >= 0.75 comp-ATR, either direction
+  vol   companion ATR/close ABOVE its own trailing 500-bar median
+declared comparisons: 2 companions x 3 states x 4 mechanisms = 24 (the XAUDUKA row is the BASELINE, not a hypothesis)
+
+######## guards ON (the only arm the owner permits) ########
+-- A 2010-06-01..2018-06-01  ema-cross  (weekdays + flat 16:30-18:15)  n=2747 trades, 0 unmatched fills, 208 dropped at the CME break, cap_lots hit 2697 of 2955 entries, no-risk 0 entries
+   WHOLE BOOK  n 2747  E  -0.14688 R  PF_r  0.7545  Lbar  0.5982 R  win  35.6%  PF_usd  0.7253  maxDD   10355.97 USD /  92.99%  exits NEWS_FLAT 37 / SIGNAL 265 / STOP 1397 / TARGET 602 / TIMEOUT 417 / WEEKEND_FLAT 29
+   XAGDUKA  dir   IN   n 1339  E  -0.10453 R  PF_r  0.8231  Lbar  0.5908 R  win  36.7%   exits NEWS_FLAT 16 / SIGNAL 107 / STOP 680 / TARGET 324 / TIMEOUT 203 / WEEKEND_FLAT 9
+                  OUT  n 1387  E  -0.18790 R  PF_r  0.6896  Lbar  0.6054 R  win  34.5%   exits NEWS_FLAT 21 / SIGNAL 156 / STOP 706 / TARGET 273 / TIMEOUT 213 / WEEKEND_FLAT 18
+                  dE     0.08338 R  cut  50.9% (null mean cut  69.7%)  unlabelled 21
+                  ctrl time-shuffle |dE|>=obs in   8.3% of 1000; control reproduces  44.6% of the move
+                  ctrl label-shuffle |dE|>=obs in   5.6% of 1000; control reproduces  39.2% of the move
+                  ctrl day-block    |dE|>=obs in   8.3% of 1000; control reproduces  45.8% of the move
+                  => inside the noise of a same-cut random filter on this window
+   XAGDUKA  move  IN   n 724   E  -0.13071 R  PF_r  0.7886  Lbar  0.6182 R  win  35.5%   exits NEWS_FLAT 8 / SIGNAL 43 / STOP 392 / TARGET 176 / TIMEOUT 102 / WEEKEND_FLAT 3
+                  OUT  n 2002  E  -0.15282 R  PF_r  0.7414  Lbar  0.5911 R  win  35.6%   exits NEWS_FLAT 29 / SIGNAL 220 / STOP 994 / TARGET 421 / TIMEOUT 314 / WEEKEND_FLAT 24
+                  dE     0.02211 R  cut  73.4% (null mean cut  82.1%)  unlabelled 21
+                  ctrl time-shuffle |dE|>=obs in  69.9% of 1000; control reproduces 201.3% of the move
+                  ctrl label-shuffle |dE|>=obs in  65.5% of 1000; control reproduces 172.6% of the move
+                  ctrl day-block    |dE|>=obs in  69.7% of 1000; control reproduces 208.0% of the move
+                  => inside the noise of a same-cut random filter on this window
+   XAGDUKA  vol   IN   n 1367  E  -0.13235 R  PF_r  0.7611  Lbar  0.5539 R  win  36.6%   exits NEWS_FLAT 18 / SIGNAL 184 / STOP 637 / TARGET 264 / TIMEOUT 239 / WEEKEND_FLAT 25
+                  OUT  n 1355  E  -0.16318 R  PF_r  0.7464  Lbar  0.6435 R  win  34.4%   exits NEWS_FLAT 19 / SIGNAL 79 / STOP 748 / TARGET 332 / TIMEOUT 175 / WEEKEND_FLAT 2
+                  dE     0.03083 R  cut  49.8% (null mean cut  51.1%)  unlabelled 25
+                  ctrl time-shuffle |dE|>=obs in  47.1% of 1000; control reproduces 107.0% of the move
+                  ctrl label-shuffle |dE|>=obs in  48.5% of 1000; control reproduces 116.7% of the move
+                  ctrl day-block    |dE|>=obs in  50.6% of 1000; control reproduces 117.1% of the move
+                  => inside the noise of a same-cut random filter on this window
+   EURDUKA  dir   IN   n 1144  E  -0.16096 R  PF_r  0.7380  Lbar  0.6144 R  win  34.6%   exits NEWS_FLAT 10 / SIGNAL 88 / STOP 608 / TARGET 254 / TIMEOUT 176 / WEEKEND_FLAT 8
+                  OUT  n 1602  E  -0.13623 R  PF_r  0.7677  Lbar  0.5864 R  win  36.3%   exits NEWS_FLAT 27 / SIGNAL 177 / STOP 788 / TARGET 348 / TIMEOUT 241 / WEEKEND_FLAT 21
+                  dE    -0.02473 R  cut  58.3% (null mean cut  67.8%)  unlabelled 1
+                  ctrl time-shuffle |dE|>=obs in  59.7% of 1000; control reproduces 151.2% of the move
+                  ctrl label-shuffle |dE|>=obs in  57.8% of 1000; control reproduces 146.4% of the move
+                  ctrl day-block    |dE|>=obs in  59.0% of 1000; control reproduces 152.0% of the move
+                  => inside the noise of a same-cut random filter on this window
+   EURDUKA  move  IN   n 741   E  -0.19381 R  PF_r  0.6974  Lbar  0.6405 R  win  33.6%   exits NEWS_FLAT 3 / SIGNAL 38 / STOP 417 / TARGET 166 / TIMEOUT 110 / WEEKEND_FLAT 7
+                  OUT  n 2005  E  -0.12907 R  PF_r  0.7784  Lbar  0.5824 R  win  36.4%   exits NEWS_FLAT 34 / SIGNAL 227 / STOP 979 / TARGET 436 / TIMEOUT 307 / WEEKEND_FLAT 22
+                  dE    -0.06474 R  cut  73.0% (null mean cut  79.0%)  unlabelled 1
+                  ctrl time-shuffle |dE|>=obs in  21.4% of 1000; control reproduces  64.1% of the move
+                  ctrl label-shuffle |dE|>=obs in  18.6% of 1000; control reproduces  61.5% of the move
+                  ctrl day-block    |dE|>=obs in  21.8% of 1000; control reproduces  65.7% of the move
+                  => inside the noise of a same-cut random filter on this window
+   EURDUKA  vol   IN   n 1666  E  -0.17762 R  PF_r  0.7014  Lbar  0.5949 R  win  34.1%   exits NEWS_FLAT 28 / SIGNAL 196 / STOP 842 / TARGET 334 / TIMEOUT 240 / WEEKEND_FLAT 26
+                  OUT  n 1074  E  -0.10180 R  PF_r  0.8316  Lbar  0.6043 R  win  37.8%   exits NEWS_FLAT 9 / SIGNAL 68 / STOP 553 / TARGET 266 / TIMEOUT 175 / WEEKEND_FLAT 3
+                  dE    -0.07582 R  cut  39.2% (null mean cut  50.4%)  unlabelled 7
+                  ctrl time-shuffle |dE|>=obs in   8.2% of 1000; control reproduces  45.5% of the move
+                  ctrl label-shuffle |dE|>=obs in   7.4% of 1000; control reproduces  46.0% of the move
+                  ctrl day-block    |dE|>=obs in  10.0% of 1000; control reproduces  46.4% of the move
+                  => inside the noise of a same-cut random filter on this window
+   XAUDUKA  dir   IN   n 1515  E  -0.14150 R  PF_r  0.7671  Lbar  0.6075 R  win  35.5%   exits NEWS_FLAT 18 / SIGNAL 103 / STOP 800 / TARGET 353 / TIMEOUT 229 / WEEKEND_FLAT 12
+                  OUT  n 1231  E  -0.15410 R  PF_r  0.7376  Lbar  0.5874 R  win  35.7%   exits NEWS_FLAT 19 / SIGNAL 162 / STOP 597 / TARGET 249 / TIMEOUT 187 / WEEKEND_FLAT 17
+                  dE     0.01260 R  cut  44.8% (null mean cut  68.6%)  unlabelled 1
+                  ctrl time-shuffle |dE|>=obs in  77.5% of 1000; control reproduces 286.1% of the move
+                  ctrl label-shuffle |dE|>=obs in  76.6% of 1000; control reproduces 272.7% of the move
+                  ctrl day-block    |dE|>=obs in  78.2% of 1000; control reproduces 296.2% of the move
+                  => inside the noise of a same-cut random filter on this window
+   XAUDUKA  move  IN   n 884   E  -0.13760 R  PF_r  0.7785  Lbar  0.6213 R  win  35.4%   exits NEWS_FLAT 13 / SIGNAL 42 / STOP 489 / TARGET 214 / TIMEOUT 122 / WEEKEND_FLAT 4
+                  OUT  n 1862  E  -0.15168 R  PF_r  0.7419  Lbar  0.5876 R  win  35.7%   exits NEWS_FLAT 24 / SIGNAL 223 / STOP 908 / TARGET 388 / TIMEOUT 294 / WEEKEND_FLAT 25
+                  dE     0.01408 R  cut  67.8% (null mean cut  80.2%)  unlabelled 1
+                  ctrl time-shuffle |dE|>=obs in  79.8% of 1000; control reproduces 313.5% of the move
+                  ctrl label-shuffle |dE|>=obs in  76.0% of 1000; control reproduces 266.6% of the move
+                  ctrl day-block    |dE|>=obs in  77.8% of 1000; control reproduces 304.2% of the move
+                  => inside the noise of a same-cut random filter on this window
+   XAUDUKA  vol   IN   n 1360  E  -0.16522 R  PF_r  0.7063  Lbar  0.5626 R  win  35.7%   exits NEWS_FLAT 13 / SIGNAL 188 / STOP 646 / TARGET 242 / TIMEOUT 245 / WEEKEND_FLAT 26
+                  OUT  n 1381  E  -0.13153 R  PF_r  0.7927  Lbar  0.6344 R  win  35.4%   exits NEWS_FLAT 24 / SIGNAL 76 / STOP 750 / TARGET 358 / TIMEOUT 170 / WEEKEND_FLAT 3
+                  dE    -0.03369 R  cut  50.4% (null mean cut  50.4%)  unlabelled 6
+                  ctrl time-shuffle |dE|>=obs in  43.5% of 1000; control reproduces 100.8% of the move
+                  ctrl label-shuffle |dE|>=obs in  41.2% of 1000; control reproduces  99.1% of the move
+                  ctrl day-block    |dE|>=obs in  42.4% of 1000; control reproduces 100.9% of the move
+                  => inside the noise of a same-cut random filter on this window
+
+-- A 2010-06-01..2018-06-01  rsi-reversion  (weekdays + flat 16:30-18:15)  n=4109 trades, 0 unmatched fills, 242 dropped at the CME break, cap_lots hit 3835 of 4351 entries, no-risk 0 entries
+   WHOLE BOOK  n 4109  E  -0.13331 R  PF_r  0.7588  Lbar  0.5526 R  win  43.1%  PF_usd  0.8389  maxDD   10003.61 USD /  93.62%  exits NEWS_FLAT 45 / SIGNAL 1389 / STOP 2049 / TARGET 296 / TIMEOUT 274 / WEEKEND_FLAT 56
+   XAGDUKA  dir   IN   n 2901  E  -0.12212 R  PF_r  0.7755  Lbar  0.5440 R  win  43.9%   exits NEWS_FLAT 34 / SIGNAL 1023 / STOP 1426 / TARGET 202 / TIMEOUT 180 / WEEKEND_FLAT 36
+                  OUT  n 1180  E  -0.15799 R  PF_r  0.7243  Lbar  0.5731 R  win  41.3%   exits NEWS_FLAT 11 / SIGNAL 357 / STOP 608 / TARGET 93 / TIMEOUT 91 / WEEKEND_FLAT 20
+                  dE     0.03587 R  cut  28.9% (null mean cut  69.7%)  unlabelled 28
+                  ctrl time-shuffle |dE|>=obs in  33.2% of 1000; control reproduces  79.3% of the move
+                  ctrl label-shuffle |dE|>=obs in  32.4% of 1000; control reproduces  79.8% of the move
+                  ctrl day-block    |dE|>=obs in  30.2% of 1000; control reproduces  79.3% of the move
+                  => inside the noise of a same-cut random filter on this window
+   XAGDUKA  move  IN   n 1301  E  -0.10001 R  PF_r  0.8134  Lbar  0.5360 R  win  45.2%   exits NEWS_FLAT 14 / SIGNAL 470 / STOP 633 / TARGET 109 / TIMEOUT 64 / WEEKEND_FLAT 11
+                  OUT  n 2780  E  -0.14769 R  PF_r  0.7363  Lbar  0.5601 R  win  42.2%   exits NEWS_FLAT 31 / SIGNAL 910 / STOP 1401 / TARGET 186 / TIMEOUT 207 / WEEKEND_FLAT 45
+                  dE     0.04768 R  cut  68.1% (null mean cut  82.1%)  unlabelled 28
+                  ctrl time-shuffle |dE|>=obs in  25.3% of 1000; control reproduces  71.4% of the move
+                  ctrl label-shuffle |dE|>=obs in  14.5% of 1000; control reproduces  54.9% of the move
+                  ctrl day-block    |dE|>=obs in  27.7% of 1000; control reproduces  73.0% of the move
+                  => inside the noise of a same-cut random filter on this window
+   XAGDUKA  vol   IN   n 2611  E  -0.09399 R  PF_r  0.8184  Lbar  0.5177 R  win  44.5%   exits NEWS_FLAT 31 / SIGNAL 913 / STOP 1206 / TARGET 189 / TIMEOUT 218 / WEEKEND_FLAT 54
+                  OUT  n 1461  E  -0.19864 R  PF_r  0.6762  Lbar  0.6134 R  win  40.8%   exits NEWS_FLAT 13 / SIGNAL 465 / STOP 823 / TARGET 106 / TIMEOUT 53 / WEEKEND_FLAT 1
+                  dE     0.10464 R  cut  35.9% (null mean cut  51.1%)  unlabelled 37
+                  ctrl time-shuffle |dE|>=obs in   0.1% of 1000; control reproduces  24.6% of the move
+                  ctrl label-shuffle |dE|>=obs in   0.3% of 1000; control reproduces  25.8% of the move
+                  ctrl day-block    |dE|>=obs in   0.0% of 1000; control reproduces  23.9% of the move
+                  => SEPARATES past all three controls on this window
+   EURDUKA  dir   IN   n 1999  E  -0.12515 R  PF_r  0.7712  Lbar  0.5470 R  win  43.6%   exits NEWS_FLAT 22 / SIGNAL 687 / STOP 987 / TARGET 150 / TIMEOUT 125 / WEEKEND_FLAT 28
+                  OUT  n 2109  E  -0.14059 R  PF_r  0.7479  Lbar  0.5577 R  win  42.7%   exits NEWS_FLAT 23 / SIGNAL 702 / STOP 1061 / TARGET 146 / TIMEOUT 149 / WEEKEND_FLAT 28
+                  dE     0.01544 R  cut  51.3% (null mean cut  67.9%)  unlabelled 1
+                  ctrl time-shuffle |dE|>=obs in  64.3% of 1000; control reproduces 177.0% of the move
+                  ctrl label-shuffle |dE|>=obs in  64.6% of 1000; control reproduces 165.0% of the move
+                  ctrl day-block    |dE|>=obs in  64.9% of 1000; control reproduces 176.6% of the move
+                  => inside the noise of a same-cut random filter on this window
+   EURDUKA  move  IN   n 1149  E  -0.08647 R  PF_r  0.8393  Lbar  0.5382 R  win  45.4%   exits NEWS_FLAT 12 / SIGNAL 397 / STOP 561 / TARGET 99 / TIMEOUT 73 / WEEKEND_FLAT 7
+                  OUT  n 2959  E  -0.15118 R  PF_r  0.7291  Lbar  0.5581 R  win  42.2%   exits NEWS_FLAT 33 / SIGNAL 992 / STOP 1487 / TARGET 197 / TIMEOUT 201 / WEEKEND_FLAT 49
+                  dE     0.06471 R  cut  72.0% (null mean cut  79.0%)  unlabelled 1
+                  ctrl time-shuffle |dE|>=obs in  13.4% of 1000; control reproduces  50.3% of the move
+                  ctrl label-shuffle |dE|>=obs in   6.4% of 1000; control reproduces  43.6% of the move
+                  ctrl day-block    |dE|>=obs in   9.7% of 1000; control reproduces  47.0% of the move
+                  => inside the noise of a same-cut random filter on this window
+   EURDUKA  vol   IN   n 2696  E  -0.09995 R  PF_r  0.8120  Lbar  0.5318 R  win  43.8%   exits NEWS_FLAT 31 / SIGNAL 914 / STOP 1284 / TARGET 221 / TIMEOUT 195 / WEEKEND_FLAT 51
+                  OUT  n 1403  E  -0.19397 R  PF_r  0.6720  Lbar  0.5914 R  win  41.9%   exits NEWS_FLAT 13 / SIGNAL 473 / STOP 759 / TARGET 75 / TIMEOUT 79 / WEEKEND_FLAT 4
+                  dE     0.09402 R  cut  34.2% (null mean cut  50.4%)  unlabelled 10
+                  ctrl time-shuffle |dE|>=obs in   0.1% of 1000; control reproduces  27.0% of the move
+                  ctrl label-shuffle |dE|>=obs in   0.7% of 1000; control reproduces  29.8% of the move
+                  ctrl day-block    |dE|>=obs in   0.2% of 1000; control reproduces  27.1% of the move
+                  => SEPARATES past all three controls on this window
+   XAUDUKA  dir   IN   n 3695  E  -0.12915 R  PF_r  0.7649  Lbar  0.5492 R  win  43.5%   exits NEWS_FLAT 37 / SIGNAL 1272 / STOP 1832 / TARGET 260 / TIMEOUT 246 / WEEKEND_FLAT 48
+                  OUT  n 414   E  -0.17045 R  PF_r  0.7077  Lbar  0.5830 R  win  39.9%   exits NEWS_FLAT 8 / SIGNAL 117 / STOP 217 / TARGET 36 / TIMEOUT 28 / WEEKEND_FLAT 8
+                  dE     0.04130 R  cut  10.1% (null mean cut  68.6%)  unlabelled 0
+                  ctrl time-shuffle |dE|>=obs in  23.3% of 1000; control reproduces  67.3% of the move
+                  ctrl label-shuffle |dE|>=obs in  44.7% of 1000; control reproduces 104.2% of the move
+                  ctrl day-block    |dE|>=obs in  22.5% of 1000; control reproduces  66.2% of the move
+                  => inside the noise of a same-cut random filter on this window
+   XAUDUKA  move  IN   n 1698  E  -0.11283 R  PF_r  0.7880  Lbar  0.5323 R  win  45.5%   exits NEWS_FLAT 24 / SIGNAL 627 / STOP 817 / TARGET 119 / TIMEOUT 94 / WEEKEND_FLAT 17
+                  OUT  n 2411  E  -0.14773 R  PF_r  0.7394  Lbar  0.5670 R  win  41.5%   exits NEWS_FLAT 21 / SIGNAL 762 / STOP 1232 / TARGET 177 / TIMEOUT 180 / WEEKEND_FLAT 39
+                  dE     0.03490 R  cut  58.7% (null mean cut  80.2%)  unlabelled 0
+                  ctrl time-shuffle |dE|>=obs in  41.4% of 1000; control reproduces  97.8% of the move
+                  ctrl label-shuffle |dE|>=obs in  28.7% of 1000; control reproduces  73.5% of the move
+                  ctrl day-block    |dE|>=obs in  38.0% of 1000; control reproduces  92.8% of the move
+                  => inside the noise of a same-cut random filter on this window
+   XAUDUKA  vol   IN   n 2683  E  -0.09633 R  PF_r  0.8141  Lbar  0.5182 R  win  44.3%   exits NEWS_FLAT 33 / SIGNAL 921 / STOP 1237 / TARGET 200 / TIMEOUT 238 / WEEKEND_FLAT 54
+                  OUT  n 1417  E  -0.20059 R  PF_r  0.6749  Lbar  0.6170 R  win  41.1%   exits NEWS_FLAT 11 / SIGNAL 466 / STOP 807 / TARGET 96 / TIMEOUT 36 / WEEKEND_FLAT 1
+                  dE     0.10426 R  cut  34.6% (null mean cut  50.4%)  unlabelled 9
+                  ctrl time-shuffle |dE|>=obs in   0.0% of 1000; control reproduces  24.9% of the move
+                  ctrl label-shuffle |dE|>=obs in   0.3% of 1000; control reproduces  25.3% of the move
+                  ctrl day-block    |dE|>=obs in   0.1% of 1000; control reproduces  24.1% of the move
+                  => SEPARATES past all three controls on this window
+
+-- A 2010-06-01..2018-06-01  donchian-breakout  (weekdays + flat 16:30-18:15)  n=7837 trades, 0 unmatched fills, 559 dropped at the CME break, cap_lots hit 6554 of 8396 entries, no-risk 0 entries
+   WHOLE BOOK  n 7837  E  -0.09286 R  PF_r  0.8176  Lbar  0.5090 R  win  34.7%  PF_usd  0.7719  maxDD   10026.97 USD /  99.78%  exits NEWS_FLAT 85 / SIGNAL 2454 / STOP 2426 / TARGET 1464 / TIMEOUT 1351 / WEEKEND_FLAT 57
+   XAGDUKA  dir   IN   n 6500  E  -0.08879 R  PF_r  0.8264  Lbar  0.5113 R  win  35.0%   exits NEWS_FLAT 70 / SIGNAL 1952 / STOP 2065 / TARGET 1232 / TIMEOUT 1140 / WEEKEND_FLAT 41
+                  OUT  n 1277  E  -0.11941 R  PF_r  0.7611  Lbar  0.4998 R  win  32.8%   exits NEWS_FLAT 15 / SIGNAL 489 / STOP 343 / TARGET 219 / TIMEOUT 197 / WEEKEND_FLAT 14
+                  dE     0.03062 R  cut  16.4% (null mean cut  69.8%)  unlabelled 60
+                  ctrl time-shuffle |dE|>=obs in  25.1% of 1000; control reproduces  68.0% of the move
+                  ctrl label-shuffle |dE|>=obs in  35.0% of 1000; control reproduces  80.6% of the move
+                  ctrl day-block    |dE|>=obs in  24.4% of 1000; control reproduces  68.9% of the move
+                  => inside the noise of a same-cut random filter on this window
+   XAGDUKA  move  IN   n 4410  E  -0.06662 R  PF_r  0.8696  Lbar  0.5109 R  win  36.1%   exits NEWS_FLAT 45 / SIGNAL 1196 / STOP 1454 / TARGET 890 / TIMEOUT 799 / WEEKEND_FLAT 26
+                  OUT  n 3367  E  -0.12943 R  PF_r  0.7450  Lbar  0.5076 R  win  32.8%   exits NEWS_FLAT 40 / SIGNAL 1245 / STOP 954 / TARGET 561 / TIMEOUT 538 / WEEKEND_FLAT 29
+                  dE     0.06282 R  cut  43.3% (null mean cut  82.1%)  unlabelled 60
+                  ctrl time-shuffle |dE|>=obs in   4.3% of 1000; control reproduces  39.8% of the move
+                  ctrl label-shuffle |dE|>=obs in   0.7% of 1000; control reproduces  30.4% of the move
+                  ctrl day-block    |dE|>=obs in   4.4% of 1000; control reproduces  39.6% of the move
+                  => SEPARATES past all three controls on this window
+   XAGDUKA  vol   IN   n 3869  E  -0.09021 R  PF_r  0.8184  Lbar  0.4968 R  win  36.3%   exits NEWS_FLAT 49 / SIGNAL 1059 / STOP 1262 / TARGET 668 / TIMEOUT 779 / WEEKEND_FLAT 52
+                  OUT  n 3896  E  -0.09775 R  PF_r  0.8128  Lbar  0.5222 R  win  33.0%   exits NEWS_FLAT 35 / SIGNAL 1377 / STOP 1144 / TARGET 781 / TIMEOUT 556 / WEEKEND_FLAT 3
+                  dE     0.00754 R  cut  50.2% (null mean cut  51.1%)  unlabelled 72
+                  ctrl time-shuffle |dE|>=obs in  75.6% of 1000; control reproduces 250.8% of the move
+                  ctrl label-shuffle |dE|>=obs in  75.1% of 1000; control reproduces 258.4% of the move
+                  ctrl day-block    |dE|>=obs in  73.9% of 1000; control reproduces 256.7% of the move
+                  => inside the noise of a same-cut random filter on this window
+   EURDUKA  dir   IN   n 4401  E  -0.08566 R  PF_r  0.8327  Lbar  0.5119 R  win  35.7%   exits NEWS_FLAT 53 / SIGNAL 1280 / STOP 1409 / TARGET 833 / TIMEOUT 797 / WEEKEND_FLAT 29
+                  OUT  n 3432  E  -0.10270 R  PF_r  0.7969  Lbar  0.5056 R  win  33.4%   exits NEWS_FLAT 32 / SIGNAL 1172 / STOP 1017 / TARGET 630 / TIMEOUT 553 / WEEKEND_FLAT 28
+                  dE     0.01705 R  cut  43.8% (null mean cut  67.8%)  unlabelled 4
+                  ctrl time-shuffle |dE|>=obs in  50.0% of 1000; control reproduces 117.1% of the move
+                  ctrl label-shuffle |dE|>=obs in  45.7% of 1000; control reproduces 112.8% of the move
+                  ctrl day-block    |dE|>=obs in  48.6% of 1000; control reproduces 115.8% of the move
+                  => inside the noise of a same-cut random filter on this window
+   EURDUKA  move  IN   n 2886  E  -0.06670 R  PF_r  0.8703  Lbar  0.5144 R  win  36.0%   exits NEWS_FLAT 30 / SIGNAL 786 / STOP 961 / TARGET 592 / TIMEOUT 502 / WEEKEND_FLAT 15
+                  OUT  n 4947  E  -0.10854 R  PF_r  0.7855  Lbar  0.5061 R  win  33.9%   exits NEWS_FLAT 55 / SIGNAL 1666 / STOP 1465 / TARGET 871 / TIMEOUT 848 / WEEKEND_FLAT 42
+                  dE     0.04184 R  cut  63.2% (null mean cut  79.0%)  unlabelled 4
+                  ctrl time-shuffle |dE|>=obs in  16.5% of 1000; control reproduces  57.2% of the move
+                  ctrl label-shuffle |dE|>=obs in  10.1% of 1000; control reproduces  49.0% of the move
+                  ctrl day-block    |dE|>=obs in  13.4% of 1000; control reproduces  55.6% of the move
+                  => inside the noise of a same-cut random filter on this window
+   EURDUKA  vol   IN   n 4177  E  -0.07433 R  PF_r  0.8531  Lbar  0.5060 R  win  35.9%   exits NEWS_FLAT 55 / SIGNAL 1146 / STOP 1405 / TARGET 810 / TIMEOUT 711 / WEEKEND_FLAT 50
+                  OUT  n 3638  E  -0.11509 R  PF_r  0.7758  Lbar  0.5132 R  win  33.3%   exits NEWS_FLAT 29 / SIGNAL 1301 / STOP 1017 / TARGET 650 / TIMEOUT 634 / WEEKEND_FLAT 7
+                  dE     0.04075 R  cut  46.6% (null mean cut  50.4%)  unlabelled 22
+                  ctrl time-shuffle |dE|>=obs in   8.4% of 1000; control reproduces  45.5% of the move
+                  ctrl label-shuffle |dE|>=obs in   8.2% of 1000; control reproduces  46.4% of the move
+                  ctrl day-block    |dE|>=obs in   7.5% of 1000; control reproduces  45.9% of the move
+                  => inside the noise of a same-cut random filter on this window
+   XAUDUKA  dir   IN   n 7698  E  -0.09431 R  PF_r  0.8154  Lbar  0.5109 R  win  34.6%   exits NEWS_FLAT 84 / SIGNAL 2392 / STOP 2399 / TARGET 1443 / TIMEOUT 1324 / WEEKEND_FLAT 56
+                  OUT  n 136   E  -0.01878 R  PF_r  0.9540  Lbar  0.4082 R  win  36.8%   exits NEWS_FLAT 1 / SIGNAL 62 / STOP 27 / TARGET 21 / TIMEOUT 24 / WEEKEND_FLAT 1
+                  dE    -0.07553 R  cut   1.7% (null mean cut  68.6%)  unlabelled 3
+                  ctrl time-shuffle |dE|>=obs in   0.3% of 1000; control reproduces  26.6% of the move
+                  ctrl label-shuffle |dE|>=obs in  39.4% of 1000; control reproduces  96.0% of the move
+                  ctrl day-block    |dE|>=obs in   0.2% of 1000; control reproduces  25.8% of the move
+                  => inside the noise of a same-cut random filter on this window
+   XAUDUKA  move  IN   n 6168  E  -0.08011 R  PF_r  0.8444  Lbar  0.5147 R  win  35.5%   exits NEWS_FLAT 70 / SIGNAL 1755 / STOP 2004 / TARGET 1214 / TIMEOUT 1092 / WEEKEND_FLAT 33
+                  OUT  n 1666  E  -0.14074 R  PF_r  0.7119  Lbar  0.4886 R  win  31.8%   exits NEWS_FLAT 15 / SIGNAL 699 / STOP 422 / TARGET 250 / TIMEOUT 256 / WEEKEND_FLAT 24
+                  dE     0.06063 R  cut  21.3% (null mean cut  80.2%)  unlabelled 3
+                  ctrl time-shuffle |dE|>=obs in   3.8% of 1000; control reproduces  39.0% of the move
+                  ctrl label-shuffle |dE|>=obs in   4.1% of 1000; control reproduces  37.7% of the move
+                  ctrl day-block    |dE|>=obs in   4.4% of 1000; control reproduces  40.5% of the move
+                  => SEPARATES past all three controls on this window
+   XAUDUKA  vol   IN   n 3944  E  -0.08554 R  PF_r  0.8265  Lbar  0.4930 R  win  36.5%   exits NEWS_FLAT 41 / SIGNAL 1075 / STOP 1284 / TARGET 680 / TIMEOUT 812 / WEEKEND_FLAT 52
+                  OUT  n 3875  E  -0.10066 R  PF_r  0.8085  Lbar  0.5257 R  win  32.8%   exits NEWS_FLAT 43 / SIGNAL 1374 / STOP 1138 / TARGET 781 / TIMEOUT 534 / WEEKEND_FLAT 5
+                  dE     0.01512 R  cut  49.6% (null mean cut  50.4%)  unlabelled 18
+                  ctrl time-shuffle |dE|>=obs in  53.7% of 1000; control reproduces 126.0% of the move
+                  ctrl label-shuffle |dE|>=obs in  51.5% of 1000; control reproduces 124.8% of the move
+                  ctrl day-block    |dE|>=obs in  51.5% of 1000; control reproduces 122.3% of the move
+                  => inside the noise of a same-cut random filter on this window
+
+-- A 2010-06-01..2018-06-01  bb-fade  (weekdays + flat 16:30-18:15)  n=11331 trades, 0 unmatched fills, 730 dropped at the CME break, cap_lots hit 11101 of 12061 entries, no-risk 0 entries
+   WHOLE BOOK  n 11331 E  -0.11763 R  PF_r  0.7855  Lbar  0.5483 R  win  45.9%  PF_usd  0.8909  maxDD    9991.54 USD /  99.85%  exits NEWS_FLAT 69 / SIGNAL 2275 / STOP 5724 / TARGET 2881 / TIMEOUT 345 / WEEKEND_FLAT 37
+   XAGDUKA  dir   IN   n 650   E  -0.10691 R  PF_r  0.8020  Lbar  0.5400 R  win  45.8%   exits NEWS_FLAT 8 / SIGNAL 140 / STOP 321 / TARGET 151 / TIMEOUT 28 / WEEKEND_FLAT 2
+                  OUT  n 10598 E  -0.11658 R  PF_r  0.7872  Lbar  0.5479 R  win  46.0%   exits NEWS_FLAT 61 / SIGNAL 2120 / STOP 5352 / TARGET 2717 / TIMEOUT 314 / WEEKEND_FLAT 34
+                  dE     0.00967 R  cut  94.2% (null mean cut  69.8%)  unlabelled 83
+                  ctrl time-shuffle |dE|>=obs in  68.1% of 1000; control reproduces 180.0% of the move
+                  ctrl label-shuffle |dE|>=obs in  81.3% of 1000; control reproduces 357.3% of the move
+                  ctrl day-block    |dE|>=obs in  63.9% of 1000; control reproduces 175.1% of the move
+                  => inside the noise of a same-cut random filter on this window
+   XAGDUKA  move  IN   n 5921  E  -0.12463 R  PF_r  0.7811  Lbar  0.5694 R  win  44.4%   exits NEWS_FLAT 37 / SIGNAL 1156 / STOP 3126 / TARGET 1419 / TIMEOUT 169 / WEEKEND_FLAT 14
+                  OUT  n 5327  E  -0.10645 R  PF_r  0.7965  Lbar  0.5231 R  win  47.8%   exits NEWS_FLAT 32 / SIGNAL 1104 / STOP 2547 / TARGET 1449 / TIMEOUT 173 / WEEKEND_FLAT 22
+                  dE    -0.01818 R  cut  47.4% (null mean cut  82.1%)  unlabelled 83
+                  ctrl time-shuffle |dE|>=obs in  46.3% of 1000; control reproduces 108.2% of the move
+                  ctrl label-shuffle |dE|>=obs in  35.0% of 1000; control reproduces  85.2% of the move
+                  ctrl day-block    |dE|>=obs in  48.2% of 1000; control reproduces 112.6% of the move
+                  => inside the noise of a same-cut random filter on this window
+   XAGDUKA  vol   IN   n 5594  E  -0.07526 R  PF_r  0.8597  Lbar  0.5366 R  win  45.3%   exits NEWS_FLAT 43 / SIGNAL 1284 / STOP 2769 / TARGET 1219 / TIMEOUT 246 / WEEKEND_FLAT 33
+                  OUT  n 5634  E  -0.15611 R  PF_r  0.7203  Lbar  0.5581 R  win  46.7%   exits NEWS_FLAT 25 / SIGNAL 972 / STOP 2893 / TARGET 1645 / TIMEOUT 97 / WEEKEND_FLAT 2
+                  dE     0.08085 R  cut  50.2% (null mean cut  51.1%)  unlabelled 103
+                  ctrl time-shuffle |dE|>=obs in   0.0% of 1000; control reproduces  18.3% of the move
+                  ctrl label-shuffle |dE|>=obs in   0.0% of 1000; control reproduces  19.4% of the move
+                  ctrl day-block    |dE|>=obs in   0.0% of 1000; control reproduces  19.1% of the move
+                  => SEPARATES past all three controls on this window
+   EURDUKA  dir   IN   n 2307  E  -0.12130 R  PF_r  0.7816  Lbar  0.5553 R  win  45.2%   exits NEWS_FLAT 9 / SIGNAL 437 / STOP 1182 / TARGET 611 / TIMEOUT 63 / WEEKEND_FLAT 5
+                  OUT  n 9018  E  -0.11638 R  PF_r  0.7870  Lbar  0.5464 R  win  46.1%   exits NEWS_FLAT 60 / SIGNAL 1837 / STOP 4538 / TARGET 2269 / TIMEOUT 282 / WEEKEND_FLAT 32
+                  dE    -0.00492 R  cut  79.6% (null mean cut  67.8%)  unlabelled 6
+                  ctrl time-shuffle |dE|>=obs in  81.5% of 1000; control reproduces 346.3% of the move
+                  ctrl label-shuffle |dE|>=obs in  85.6% of 1000; control reproduces 401.7% of the move
+                  ctrl day-block    |dE|>=obs in  81.6% of 1000; control reproduces 349.3% of the move
+                  => inside the noise of a same-cut random filter on this window
+   EURDUKA  move  IN   n 4088  E  -0.11822 R  PF_r  0.7896  Lbar  0.5618 R  win  45.1%   exits NEWS_FLAT 20 / SIGNAL 774 / STOP 2124 / TARGET 1029 / TIMEOUT 135 / WEEKEND_FLAT 6
+                  OUT  n 7237  E  -0.11691 R  PF_r  0.7837  Lbar  0.5405 R  win  46.4%   exits NEWS_FLAT 49 / SIGNAL 1500 / STOP 3596 / TARGET 1851 / TIMEOUT 210 / WEEKEND_FLAT 31
+                  dE    -0.00131 R  cut  63.9% (null mean cut  79.0%)  unlabelled 6
+                  ctrl time-shuffle |dE|>=obs in  94.6% of 1000; control reproduces 1475.6% of the move
+                  ctrl label-shuffle |dE|>=obs in  96.5% of 1000; control reproduces 1230.8% of the move
+                  ctrl day-block    |dE|>=obs in  96.5% of 1000; control reproduces 1399.4% of the move
+                  => inside the noise of a same-cut random filter on this window
+   EURDUKA  vol   IN   n 6103  E  -0.09997 R  PF_r  0.8189  Lbar  0.5520 R  win  44.6%   exits NEWS_FLAT 46 / SIGNAL 1293 / STOP 3120 / TARGET 1399 / TIMEOUT 213 / WEEKEND_FLAT 32
+                  OUT  n 5196  E  -0.13666 R  PF_r  0.7485  Lbar  0.5433 R  win  47.6%   exits NEWS_FLAT 22 / SIGNAL 976 / STOP 2585 / TARGET 1477 / TIMEOUT 132 / WEEKEND_FLAT 4
+                  dE     0.03669 R  cut  46.0% (null mean cut  50.4%)  unlabelled 32
+                  ctrl time-shuffle |dE|>=obs in   7.3% of 1000; control reproduces  43.8% of the move
+                  ctrl label-shuffle |dE|>=obs in   5.1% of 1000; control reproduces  42.6% of the move
+                  ctrl day-block    |dE|>=obs in   5.4% of 1000; control reproduces  41.2% of the move
+                  => inside the noise of a same-cut random filter on this window
+   XAUDUKA  dir   IN   n 316   E  -0.11458 R  PF_r  0.7958  Lbar  0.5610 R  win  43.4%   exits NEWS_FLAT 4 / SIGNAL 88 / STOP 160 / TARGET 48 / TIMEOUT 16
+                  OUT  n 11011 E  -0.11775 R  PF_r  0.7851  Lbar  0.5479 R  win  46.0%   exits NEWS_FLAT 65 / SIGNAL 2186 / STOP 5562 / TARGET 2833 / TIMEOUT 328 / WEEKEND_FLAT 37
+                  dE     0.00317 R  cut  97.2% (null mean cut  68.6%)  unlabelled 4
+                  ctrl time-shuffle |dE|>=obs in  87.7% of 1000; control reproduces 520.3% of the move
+                  ctrl label-shuffle |dE|>=obs in  95.9% of 1000; control reproduces 1452.6% of the move
+                  ctrl day-block    |dE|>=obs in  89.3% of 1000; control reproduces 555.4% of the move
+                  => inside the noise of a same-cut random filter on this window
+   XAUDUKA  move  IN   n 8174  E  -0.11489 R  PF_r  0.7937  Lbar  0.5568 R  win  45.3%   exits NEWS_FLAT 48 / SIGNAL 1624 / STOP 4204 / TARGET 2011 / TIMEOUT 261 / WEEKEND_FLAT 26
+                  OUT  n 3153  E  -0.12487 R  PF_r  0.7627  Lbar  0.5263 R  win  47.5%   exits NEWS_FLAT 21 / SIGNAL 650 / STOP 1518 / TARGET 870 / TIMEOUT 83 / WEEKEND_FLAT 11
+                  dE     0.00998 R  cut  27.8% (null mean cut  80.2%)  unlabelled 4
+                  ctrl time-shuffle |dE|>=obs in  67.4% of 1000; control reproduces 195.5% of the move
+                  ctrl label-shuffle |dE|>=obs in  64.4% of 1000; control reproduces 172.3% of the move
+                  ctrl day-block    |dE|>=obs in  68.3% of 1000; control reproduces 196.2% of the move
+                  => inside the noise of a same-cut random filter on this window
+   XAUDUKA  vol   IN   n 5660  E  -0.08111 R  PF_r  0.8494  Lbar  0.5385 R  win  44.9%   exits NEWS_FLAT 42 / SIGNAL 1332 / STOP 2815 / TARGET 1172 / TIMEOUT 267 / WEEKEND_FLAT 32
+                  OUT  n 5645  E  -0.15317 R  PF_r  0.7253  Lbar  0.5577 R  win  47.0%   exits NEWS_FLAT 26 / SIGNAL 938 / STOP 2894 / TARGET 1705 / TIMEOUT 78 / WEEKEND_FLAT 4
+                  dE     0.07206 R  cut  49.9% (null mean cut  50.4%)  unlabelled 26
+                  ctrl time-shuffle |dE|>=obs in   0.1% of 1000; control reproduces  21.6% of the move
+                  ctrl label-shuffle |dE|>=obs in   0.0% of 1000; control reproduces  22.1% of the move
+                  ctrl day-block    |dE|>=obs in   0.0% of 1000; control reproduces  21.3% of the move
+                  => SEPARATES past all three controls on this window
+
+-- B 2018-06-01..2026-06-01  ema-cross  (weekdays + flat 16:30-18:15)  n=2734 trades, 0 unmatched fills, 189 dropped at the CME break, cap_lots hit 2625 of 2923 entries, no-risk 0 entries
+   WHOLE BOOK  n 2734  E  -0.13804 R  PF_r  0.7690  Lbar  0.5975 R  win  35.9%  PF_usd  0.7621  maxDD    9030.61 USD /  89.51%  exits NEWS_FLAT 40 / SIGNAL 258 / STOP 1415 / TARGET 601 / TIMEOUT 389 / WEEKEND_FLAT 31
+   XAGDUKA  dir   IN   n 1304  E  -0.15230 R  PF_r  0.7527  Lbar  0.6158 R  win  35.9%   exits NEWS_FLAT 18 / SIGNAL 82 / STOP 720 / TARGET 295 / TIMEOUT 178 / WEEKEND_FLAT 11
+                  OUT  n 1358  E  -0.12830 R  PF_r  0.7791  Lbar  0.5809 R  win  35.8%   exits NEWS_FLAT 22 / SIGNAL 169 / STOP 657 / TARGET 289 / TIMEOUT 201 / WEEKEND_FLAT 20
+                  dE    -0.02400 R  cut  51.0% (null mean cut  68.8%)  unlabelled 72
+                  ctrl time-shuffle |dE|>=obs in  59.7% of 1000; control reproduces 157.2% of the move
+                  ctrl label-shuffle |dE|>=obs in  57.8% of 1000; control reproduces 147.5% of the move
+                  ctrl day-block    |dE|>=obs in  63.2% of 1000; control reproduces 167.7% of the move
+                  => inside the noise of a same-cut random filter on this window
+   XAGDUKA  move  IN   n 680   E  -0.16554 R  PF_r  0.7385  Lbar  0.6329 R  win  34.7%   exits NEWS_FLAT 5 / SIGNAL 35 / STOP 386 / TARGET 152 / TIMEOUT 100 / WEEKEND_FLAT 2
+                  OUT  n 1982  E  -0.13131 R  PF_r  0.7759  Lbar  0.5860 R  win  36.2%   exits NEWS_FLAT 35 / SIGNAL 216 / STOP 991 / TARGET 432 / TIMEOUT 279 / WEEKEND_FLAT 29
+                  dE    -0.03423 R  cut  74.5% (null mean cut  81.1%)  unlabelled 72
+                  ctrl time-shuffle |dE|>=obs in  54.0% of 1000; control reproduces 130.0% of the move
+                  ctrl label-shuffle |dE|>=obs in  49.3% of 1000; control reproduces 120.2% of the move
+                  ctrl day-block    |dE|>=obs in  56.9% of 1000; control reproduces 132.8% of the move
+                  => inside the noise of a same-cut random filter on this window
+   XAGDUKA  vol   IN   n 1343  E  -0.14778 R  PF_r  0.7357  Lbar  0.5592 R  win  36.6%   exits NEWS_FLAT 25 / SIGNAL 168 / STOP 635 / TARGET 241 / TIMEOUT 245 / WEEKEND_FLAT 29
+                  OUT  n 1319  E  -0.13219 R  PF_r  0.7927  Lbar  0.6375 R  win  35.0%   exits NEWS_FLAT 15 / SIGNAL 83 / STOP 742 / TARGET 343 / TIMEOUT 134 / WEEKEND_FLAT 2
+                  dE    -0.01559 R  cut  49.5% (null mean cut  50.7%)  unlabelled 72
+                  ctrl time-shuffle |dE|>=obs in  73.2% of 1000; control reproduces 221.0% of the move
+                  ctrl label-shuffle |dE|>=obs in  73.6% of 1000; control reproduces 234.1% of the move
+                  ctrl day-block    |dE|>=obs in  74.9% of 1000; control reproduces 232.8% of the move
+                  => inside the noise of a same-cut random filter on this window
+   EURDUKA  dir   IN   n 1185  E  -0.11851 R  PF_r  0.8006  Lbar  0.5943 R  win  36.9%   exits NEWS_FLAT 16 / SIGNAL 93 / STOP 618 / TARGET 272 / TIMEOUT 175 / WEEKEND_FLAT 11
+                  OUT  n 1531  E  -0.14779 R  PF_r  0.7530  Lbar  0.5983 R  win  35.4%   exits NEWS_FLAT 24 / SIGNAL 162 / STOP 786 / TARGET 328 / TIMEOUT 211 / WEEKEND_FLAT 20
+                  dE     0.02928 R  cut  56.4% (null mean cut  67.0%)  unlabelled 18
+                  ctrl time-shuffle |dE|>=obs in  52.4% of 1000; control reproduces 124.1% of the move
+                  ctrl label-shuffle |dE|>=obs in  49.4% of 1000; control reproduces 117.8% of the move
+                  ctrl day-block    |dE|>=obs in  52.2% of 1000; control reproduces 128.5% of the move
+                  => inside the noise of a same-cut random filter on this window
+   EURDUKA  move  IN   n 771   E  -0.15601 R  PF_r  0.7529  Lbar  0.6315 R  win  34.6%   exits NEWS_FLAT 8 / SIGNAL 41 / STOP 434 / TARGET 185 / TIMEOUT 101 / WEEKEND_FLAT 2
+                  OUT  n 1945  E  -0.12670 R  PF_r  0.7826  Lbar  0.5827 R  win  36.6%   exits NEWS_FLAT 32 / SIGNAL 214 / STOP 970 / TARGET 415 / TIMEOUT 285 / WEEKEND_FLAT 29
+                  dE    -0.02932 R  cut  71.6% (null mean cut  77.7%)  unlabelled 18
+                  ctrl time-shuffle |dE|>=obs in  57.9% of 1000; control reproduces 144.4% of the move
+                  ctrl label-shuffle |dE|>=obs in  54.3% of 1000; control reproduces 132.1% of the move
+                  ctrl day-block    |dE|>=obs in  57.4% of 1000; control reproduces 144.9% of the move
+                  => inside the noise of a same-cut random filter on this window
+   EURDUKA  vol   IN   n 1527  E  -0.10791 R  PF_r  0.8069  Lbar  0.5589 R  win  37.7%   exits NEWS_FLAT 29 / SIGNAL 177 / STOP 732 / TARGET 314 / TIMEOUT 248 / WEEKEND_FLAT 27
+                  OUT  n 1189  E  -0.16984 R  PF_r  0.7367  Lbar  0.6450 R  win  34.0%   exits NEWS_FLAT 11 / SIGNAL 78 / STOP 672 / TARGET 286 / TIMEOUT 138 / WEEKEND_FLAT 4
+                  dE     0.06193 R  cut  43.8% (null mean cut  50.3%)  unlabelled 18
+                  ctrl time-shuffle |dE|>=obs in  15.4% of 1000; control reproduces  56.5% of the move
+                  ctrl label-shuffle |dE|>=obs in  17.6% of 1000; control reproduces  57.8% of the move
+                  ctrl day-block    |dE|>=obs in  17.5% of 1000; control reproduces  58.9% of the move
+                  => inside the noise of a same-cut random filter on this window
+   XAUDUKA  dir   IN   n 1491  E  -0.15506 R  PF_r  0.7481  Lbar  0.6156 R  win  35.8%   exits NEWS_FLAT 22 / SIGNAL 86 / STOP 825 / TARGET 332 / TIMEOUT 213 / WEEKEND_FLAT 13
+                  OUT  n 1243  E  -0.11763 R  PF_r  0.7957  Lbar  0.5757 R  win  36.0%   exits NEWS_FLAT 18 / SIGNAL 172 / STOP 590 / TARGET 269 / TIMEOUT 176 / WEEKEND_FLAT 18
+                  dE    -0.03744 R  cut  45.5% (null mean cut  68.1%)  unlabelled 0
+                  ctrl time-shuffle |dE|>=obs in  43.8% of 1000; control reproduces 101.9% of the move
+                  ctrl label-shuffle |dE|>=obs in  37.0% of 1000; control reproduces  91.4% of the move
+                  ctrl day-block    |dE|>=obs in  43.0% of 1000; control reproduces 101.6% of the move
+                  => inside the noise of a same-cut random filter on this window
+   XAUDUKA  move  IN   n 803   E  -0.15540 R  PF_r  0.7525  Lbar  0.6280 R  win  35.5%   exits NEWS_FLAT 7 / SIGNAL 36 / STOP 457 / TARGET 181 / TIMEOUT 118 / WEEKEND_FLAT 4
+                  OUT  n 1931  E  -0.13082 R  PF_r  0.7763  Lbar  0.5848 R  win  36.1%   exits NEWS_FLAT 33 / SIGNAL 222 / STOP 958 / TARGET 420 / TIMEOUT 271 / WEEKEND_FLAT 27
+                  dE    -0.02458 R  cut  70.6% (null mean cut  79.8%)  unlabelled 0
+                  ctrl time-shuffle |dE|>=obs in  63.9% of 1000; control reproduces 177.2% of the move
+                  ctrl label-shuffle |dE|>=obs in  63.1% of 1000; control reproduces 158.3% of the move
+                  ctrl day-block    |dE|>=obs in  65.1% of 1000; control reproduces 180.6% of the move
+                  => inside the noise of a same-cut random filter on this window
+   XAUDUKA  vol   IN   n 1389  E  -0.14711 R  PF_r  0.7360  Lbar  0.5571 R  win  36.9%   exits NEWS_FLAT 24 / SIGNAL 180 / STOP 656 / TARGET 244 / TIMEOUT 257 / WEEKEND_FLAT 28
+                  OUT  n 1345  E  -0.12868 R  PF_r  0.7987  Lbar  0.6391 R  win  34.9%   exits NEWS_FLAT 16 / SIGNAL 78 / STOP 759 / TARGET 357 / TIMEOUT 132 / WEEKEND_FLAT 3
+                  dE    -0.01842 R  cut  49.2% (null mean cut  50.8%)  unlabelled 0
+                  ctrl time-shuffle |dE|>=obs in  68.1% of 1000; control reproduces 192.5% of the move
+                  ctrl label-shuffle |dE|>=obs in  67.2% of 1000; control reproduces 191.2% of the move
+                  ctrl day-block    |dE|>=obs in  67.0% of 1000; control reproduces 193.5% of the move
+                  => inside the noise of a same-cut random filter on this window
+
+-- B 2018-06-01..2026-06-01  rsi-reversion  (weekdays + flat 16:30-18:15)  n=4026 trades, 0 unmatched fills, 214 dropped at the CME break, cap_lots hit 3658 of 4240 entries, no-risk 0 entries
+   WHOLE BOOK  n 4026  E  -0.08324 R  PF_r  0.8418  Lbar  0.5263 R  win  44.7%  PF_usd  0.8161  maxDD    9297.30 USD /  89.35%  exits NEWS_FLAT 46 / SIGNAL 1434 / STOP 1940 / TARGET 278 / TIMEOUT 276 / WEEKEND_FLAT 52
+   XAGDUKA  dir   IN   n 2825  E  -0.06507 R  PF_r  0.8737  Lbar  0.5151 R  win  45.8%   exits NEWS_FLAT 32 / SIGNAL 1052 / STOP 1337 / TARGET 191 / TIMEOUT 181 / WEEKEND_FLAT 32
+                  OUT  n 1107  E  -0.13781 R  PF_r  0.7528  Lbar  0.5575 R  win  41.3%   exits NEWS_FLAT 14 / SIGNAL 348 / STOP 560 / TARGET 77 / TIMEOUT 88 / WEEKEND_FLAT 20
+                  dE     0.07274 R  cut  28.2% (null mean cut  68.8%)  unlabelled 94
+                  ctrl time-shuffle |dE|>=obs in   3.1% of 1000; control reproduces  39.0% of the move
+                  ctrl label-shuffle |dE|>=obs in   4.6% of 1000; control reproduces  40.9% of the move
+                  ctrl day-block    |dE|>=obs in   4.6% of 1000; control reproduces  41.4% of the move
+                  => SEPARATES past all three controls on this window
+   XAGDUKA  move  IN   n 1405  E  -0.03983 R  PF_r  0.9208  Lbar  0.5027 R  win  47.2%   exits NEWS_FLAT 9 / SIGNAL 542 / STOP 654 / TARGET 102 / TIMEOUT 91 / WEEKEND_FLAT 7
+                  OUT  n 2527  E  -0.11097 R  PF_r  0.7947  Lbar  0.5406 R  win  43.1%   exits NEWS_FLAT 37 / SIGNAL 858 / STOP 1243 / TARGET 166 / TIMEOUT 178 / WEEKEND_FLAT 45
+                  dE     0.07114 R  cut  64.3% (null mean cut  81.1%)  unlabelled 94
+                  ctrl time-shuffle |dE|>=obs in   9.3% of 1000; control reproduces  46.5% of the move
+                  ctrl label-shuffle |dE|>=obs in   3.9% of 1000; control reproduces  38.2% of the move
+                  ctrl day-block    |dE|>=obs in   9.7% of 1000; control reproduces  48.2% of the move
+                  => inside the noise of a same-cut random filter on this window
+   XAGDUKA  vol   IN   n 2508  E  -0.07327 R  PF_r  0.8541  Lbar  0.5023 R  win  45.0%   exits NEWS_FLAT 24 / SIGNAL 903 / STOP 1141 / TARGET 166 / TIMEOUT 226 / WEEKEND_FLAT 48
+                  OUT  n 1424  E  -0.10717 R  PF_r  0.8121  Lbar  0.5705 R  win  43.8%   exits NEWS_FLAT 22 / SIGNAL 497 / STOP 756 / TARGET 102 / TIMEOUT 43 / WEEKEND_FLAT 4
+                  dE     0.03390 R  cut  36.2% (null mean cut  50.7%)  unlabelled 94
+                  ctrl time-shuffle |dE|>=obs in  30.8% of 1000; control reproduces  77.4% of the move
+                  ctrl label-shuffle |dE|>=obs in  32.4% of 1000; control reproduces  79.2% of the move
+                  ctrl day-block    |dE|>=obs in  31.8% of 1000; control reproduces  79.3% of the move
+                  => inside the noise of a same-cut random filter on this window
+   EURDUKA  dir   IN   n 2094  E  -0.07240 R  PF_r  0.8612  Lbar  0.5214 R  win  45.7%   exits NEWS_FLAT 19 / SIGNAL 771 / STOP 1004 / TARGET 146 / TIMEOUT 127 / WEEKEND_FLAT 27
+                  OUT  n 1923  E  -0.09522 R  PF_r  0.8210  Lbar  0.5318 R  win  43.5%   exits NEWS_FLAT 27 / SIGNAL 658 / STOP 932 / TARGET 132 / TIMEOUT 149 / WEEKEND_FLAT 25
+                  dE     0.02282 R  cut  47.9% (null mean cut  67.0%)  unlabelled 9
+                  ctrl time-shuffle |dE|>=obs in  49.5% of 1000; control reproduces 117.8% of the move
+                  ctrl label-shuffle |dE|>=obs in  49.2% of 1000; control reproduces 113.6% of the move
+                  ctrl day-block    |dE|>=obs in  51.5% of 1000; control reproduces 118.8% of the move
+                  => inside the noise of a same-cut random filter on this window
+   EURDUKA  move  IN   n 1292  E  -0.06887 R  PF_r  0.8711  Lbar  0.5343 R  win  45.4%   exits NEWS_FLAT 11 / SIGNAL 447 / STOP 642 / TARGET 102 / TIMEOUT 83 / WEEKEND_FLAT 7
+                  OUT  n 2725  E  -0.09017 R  PF_r  0.8275  Lbar  0.5227 R  win  44.3%   exits NEWS_FLAT 35 / SIGNAL 982 / STOP 1294 / TARGET 176 / TIMEOUT 193 / WEEKEND_FLAT 45
+                  dE     0.02130 R  cut  67.8% (null mean cut  77.7%)  unlabelled 9
+                  ctrl time-shuffle |dE|>=obs in  57.4% of 1000; control reproduces 147.1% of the move
+                  ctrl label-shuffle |dE|>=obs in  52.7% of 1000; control reproduces 131.7% of the move
+                  ctrl day-block    |dE|>=obs in  59.2% of 1000; control reproduces 149.2% of the move
+                  => inside the noise of a same-cut random filter on this window
+   EURDUKA  vol   IN   n 2551  E  -0.06536 R  PF_r  0.8702  Lbar  0.5037 R  win  45.3%   exits NEWS_FLAT 35 / SIGNAL 900 / STOP 1166 / TARGET 192 / TIMEOUT 207 / WEEKEND_FLAT 51
+                  OUT  n 1466  E  -0.11457 R  PF_r  0.7975  Lbar  0.5659 R  win  43.6%   exits NEWS_FLAT 11 / SIGNAL 529 / STOP 770 / TARGET 86 / TIMEOUT 69 / WEEKEND_FLAT 1
+                  dE     0.04921 R  cut  36.5% (null mean cut  50.3%)  unlabelled 9
+                  ctrl time-shuffle |dE|>=obs in  12.1% of 1000; control reproduces  51.6% of the move
+                  ctrl label-shuffle |dE|>=obs in  15.5% of 1000; control reproduces  57.1% of the move
+                  ctrl day-block    |dE|>=obs in  13.4% of 1000; control reproduces  53.2% of the move
+                  => inside the noise of a same-cut random filter on this window
+   XAUDUKA  dir   IN   n 3639  E  -0.07572 R  PF_r  0.8549  Lbar  0.5217 R  win  45.2%   exits NEWS_FLAT 38 / SIGNAL 1316 / STOP 1740 / TARGET 250 / TIMEOUT 252 / WEEKEND_FLAT 43
+                  OUT  n 386   E  -0.15413 R  PF_r  0.7300  Lbar  0.5708 R  win  39.9%   exits NEWS_FLAT 8 / SIGNAL 117 / STOP 200 / TARGET 28 / TIMEOUT 24 / WEEKEND_FLAT 9
+                  dE     0.07840 R  cut   9.6% (null mean cut  68.1%)  unlabelled 1
+                  ctrl time-shuffle |dE|>=obs in   1.7% of 1000; control reproduces  35.6% of the move
+                  ctrl label-shuffle |dE|>=obs in  15.8% of 1000; control reproduces  56.1% of the move
+                  ctrl day-block    |dE|>=obs in   2.3% of 1000; control reproduces  37.2% of the move
+                  => inside the noise of a same-cut random filter on this window
+   XAUDUKA  move  IN   n 1803  E  -0.04078 R  PF_r  0.9182  Lbar  0.4986 R  win  47.8%   exits NEWS_FLAT 18 / SIGNAL 721 / STOP 831 / TARGET 115 / TIMEOUT 106 / WEEKEND_FLAT 12
+                  OUT  n 2222  E  -0.11769 R  PF_r  0.7856  Lbar  0.5489 R  win  42.1%   exits NEWS_FLAT 28 / SIGNAL 712 / STOP 1109 / TARGET 163 / TIMEOUT 170 / WEEKEND_FLAT 40
+                  dE     0.07691 R  cut  55.2% (null mean cut  79.8%)  unlabelled 1
+                  ctrl time-shuffle |dE|>=obs in   5.1% of 1000; control reproduces  41.3% of the move
+                  ctrl label-shuffle |dE|>=obs in   1.6% of 1000; control reproduces  33.9% of the move
+                  ctrl day-block    |dE|>=obs in   4.7% of 1000; control reproduces  41.0% of the move
+                  => inside the noise of a same-cut random filter on this window
+   XAUDUKA  vol   IN   n 2612  E  -0.06697 R  PF_r  0.8655  Lbar  0.4981 R  win  45.3%   exits NEWS_FLAT 28 / SIGNAL 938 / STOP 1177 / TARGET 181 / TIMEOUT 239 / WEEKEND_FLAT 49
+                  OUT  n 1414  E  -0.11330 R  PF_r  0.8041  Lbar  0.5784 R  win  43.4%   exits NEWS_FLAT 18 / SIGNAL 496 / STOP 763 / TARGET 97 / TIMEOUT 37 / WEEKEND_FLAT 3
+                  dE     0.04633 R  cut  35.1% (null mean cut  50.8%)  unlabelled 0
+                  ctrl time-shuffle |dE|>=obs in  15.5% of 1000; control reproduces  56.5% of the move
+                  ctrl label-shuffle |dE|>=obs in  19.1% of 1000; control reproduces  61.2% of the move
+                  ctrl day-block    |dE|>=obs in  17.8% of 1000; control reproduces  58.7% of the move
+                  => inside the noise of a same-cut random filter on this window
+
+-- B 2018-06-01..2026-06-01  donchian-breakout  (weekdays + flat 16:30-18:15)  n=7932 trades, 0 unmatched fills, 612 dropped at the CME break, cap_lots hit 6467 of 8544 entries, no-risk 0 entries
+   WHOLE BOOK  n 7932  E  -0.07801 R  PF_r  0.8432  Lbar  0.4977 R  win  35.7%  PF_usd  0.7987  maxDD    9961.23 USD /  98.99%  exits NEWS_FLAT 89 / SIGNAL 2582 / STOP 2319 / TARGET 1426 / TIMEOUT 1445 / WEEKEND_FLAT 71
+   XAGDUKA  dir   IN   n 6327  E  -0.08921 R  PF_r  0.8225  Lbar  0.5026 R  win  35.3%   exits NEWS_FLAT 65 / SIGNAL 2051 / STOP 1872 / TARGET 1112 / TIMEOUT 1172 / WEEKEND_FLAT 55
+                  OUT  n 1393  E  -0.02963 R  PF_r  0.9377  Lbar  0.4757 R  win  37.4%   exits NEWS_FLAT 22 / SIGNAL 459 / STOP 387 / TARGET 273 / TIMEOUT 239 / WEEKEND_FLAT 13
+                  dE    -0.05958 R  cut  18.0% (null mean cut  68.8%)  unlabelled 212
+                  ctrl time-shuffle |dE|>=obs in   1.9% of 1000; control reproduces  35.5% of the move
+                  ctrl label-shuffle |dE|>=obs in   4.4% of 1000; control reproduces  40.7% of the move
+                  ctrl day-block    |dE|>=obs in   2.3% of 1000; control reproduces  35.8% of the move
+                  => SEPARATES past all three controls on this window
+   XAGDUKA  move  IN   n 4062  E  -0.07715 R  PF_r  0.8476  Lbar  0.5062 R  win  35.7%   exits NEWS_FLAT 30 / SIGNAL 1222 / STOP 1249 / TARGET 752 / TIMEOUT 790 / WEEKEND_FLAT 19
+                  OUT  n 3658  E  -0.07991 R  PF_r  0.8364  Lbar  0.4884 R  win  35.6%   exits NEWS_FLAT 57 / SIGNAL 1288 / STOP 1010 / TARGET 633 / TIMEOUT 621 / WEEKEND_FLAT 49
+                  dE     0.00276 R  cut  47.4% (null mean cut  81.1%)  unlabelled 212
+                  ctrl time-shuffle |dE|>=obs in  93.1% of 1000; control reproduces 870.6% of the move
+                  ctrl label-shuffle |dE|>=obs in  89.1% of 1000; control reproduces 685.0% of the move
+                  ctrl day-block    |dE|>=obs in  92.5% of 1000; control reproduces 840.6% of the move
+                  => inside the noise of a same-cut random filter on this window
+   XAGDUKA  vol   IN   n 3879  E  -0.06999 R  PF_r  0.8548  Lbar  0.4819 R  win  37.2%   exits NEWS_FLAT 44 / SIGNAL 1126 / STOP 1167 / TARGET 648 / TIMEOUT 834 / WEEKEND_FLAT 60
+                  OUT  n 3847  E  -0.08655 R  PF_r  0.8314  Lbar  0.5134 R  win  34.1%   exits NEWS_FLAT 43 / SIGNAL 1387 / STOP 1092 / TARGET 738 / TIMEOUT 579 / WEEKEND_FLAT 8
+                  dE     0.01655 R  cut  49.8% (null mean cut  50.7%)  unlabelled 206
+                  ctrl time-shuffle |dE|>=obs in  51.6% of 1000; control reproduces 121.0% of the move
+                  ctrl label-shuffle |dE|>=obs in  48.0% of 1000; control reproduces 115.3% of the move
+                  ctrl day-block    |dE|>=obs in  49.4% of 1000; control reproduces 114.3% of the move
+                  => inside the noise of a same-cut random filter on this window
+   EURDUKA  dir   IN   n 4636  E  -0.07573 R  PF_r  0.8476  Lbar  0.4969 R  win  36.0%   exits NEWS_FLAT 45 / SIGNAL 1477 / STOP 1363 / TARGET 827 / TIMEOUT 889 / WEEKEND_FLAT 35
+                  OUT  n 3268  E  -0.07827 R  PF_r  0.8428  Lbar  0.4978 R  win  35.4%   exits NEWS_FLAT 44 / SIGNAL 1090 / STOP 949 / TARGET 598 / TIMEOUT 551 / WEEKEND_FLAT 36
+                  dE     0.00254 R  cut  41.3% (null mean cut  67.0%)  unlabelled 28
+                  ctrl time-shuffle |dE|>=obs in  90.5% of 1000; control reproduces 765.9% of the move
+                  ctrl label-shuffle |dE|>=obs in  91.4% of 1000; control reproduces 764.9% of the move
+                  ctrl day-block    |dE|>=obs in  91.7% of 1000; control reproduces 800.5% of the move
+                  => inside the noise of a same-cut random filter on this window
+   EURDUKA  move  IN   n 3051  E  -0.05155 R  PF_r  0.8964  Lbar  0.4974 R  win  36.8%   exits NEWS_FLAT 30 / SIGNAL 914 / STOP 924 / TARGET 596 / TIMEOUT 570 / WEEKEND_FLAT 17
+                  OUT  n 4853  E  -0.09264 R  PF_r  0.8137  Lbar  0.4971 R  win  35.1%   exits NEWS_FLAT 59 / SIGNAL 1653 / STOP 1388 / TARGET 829 / TIMEOUT 870 / WEEKEND_FLAT 54
+                  dE     0.04109 R  cut  61.4% (null mean cut  77.7%)  unlabelled 28
+                  ctrl time-shuffle |dE|>=obs in  15.4% of 1000; control reproduces  55.4% of the move
+                  ctrl label-shuffle |dE|>=obs in   9.4% of 1000; control reproduces  48.0% of the move
+                  ctrl day-block    |dE|>=obs in  13.3% of 1000; control reproduces  54.2% of the move
+                  => inside the noise of a same-cut random filter on this window
+   EURDUKA  vol   IN   n 4121  E  -0.05688 R  PF_r  0.8837  Lbar  0.4890 R  win  37.2%   exits NEWS_FLAT 57 / SIGNAL 1198 / STOP 1278 / TARGET 761 / TIMEOUT 766 / WEEKEND_FLAT 61
+                  OUT  n 3783  E  -0.09846 R  PF_r  0.8055  Lbar  0.5063 R  win  34.2%   exits NEWS_FLAT 32 / SIGNAL 1369 / STOP 1034 / TARGET 664 / TIMEOUT 674 / WEEKEND_FLAT 10
+                  dE     0.04158 R  cut  47.9% (null mean cut  50.3%)  unlabelled 28
+                  ctrl time-shuffle |dE|>=obs in   7.8% of 1000; control reproduces  47.4% of the move
+                  ctrl label-shuffle |dE|>=obs in   8.5% of 1000; control reproduces  46.4% of the move
+                  ctrl day-block    |dE|>=obs in   6.2% of 1000; control reproduces  42.7% of the move
+                  => inside the noise of a same-cut random filter on this window
+   XAUDUKA  dir   IN   n 7754  E  -0.07964 R  PF_r  0.8404  Lbar  0.4988 R  win  35.7%   exits NEWS_FLAT 88 / SIGNAL 2513 / STOP 2276 / TARGET 1392 / TIMEOUT 1416 / WEEKEND_FLAT 69
+                  OUT  n 174   E  -0.00644 R  PF_r  0.9856  Lbar  0.4457 R  win  35.6%   exits NEWS_FLAT 1 / SIGNAL 68 / STOP 43 / TARGET 33 / TIMEOUT 27 / WEEKEND_FLAT 2
+                  dE    -0.07320 R  cut   2.2% (null mean cut  68.1%)  unlabelled 4
+                  ctrl time-shuffle |dE|>=obs in   0.4% of 1000; control reproduces  26.9% of the move
+                  ctrl label-shuffle |dE|>=obs in  35.7% of 1000; control reproduces  85.9% of the move
+                  ctrl day-block    |dE|>=obs in   0.6% of 1000; control reproduces  27.7% of the move
+                  => inside the noise of a same-cut random filter on this window
+   XAUDUKA  move  IN   n 5783  E  -0.08494 R  PF_r  0.8333  Lbar  0.5096 R  win  35.7%   exits NEWS_FLAT 61 / SIGNAL 1736 / STOP 1795 / TARGET 1069 / TIMEOUT 1082 / WEEKEND_FLAT 40
+                  OUT  n 2145  E  -0.05941 R  PF_r  0.8724  Lbar  0.4655 R  win  35.7%   exits NEWS_FLAT 28 / SIGNAL 845 / STOP 524 / TARGET 356 / TIMEOUT 361 / WEEKEND_FLAT 31
+                  dE    -0.02553 R  cut  27.1% (null mean cut  79.8%)  unlabelled 4
+                  ctrl time-shuffle |dE|>=obs in  38.1% of 1000; control reproduces  91.8% of the move
+                  ctrl label-shuffle |dE|>=obs in  32.8% of 1000; control reproduces  80.6% of the move
+                  ctrl day-block    |dE|>=obs in  39.3% of 1000; control reproduces  91.8% of the move
+                  => inside the noise of a same-cut random filter on this window
+   XAUDUKA  vol   IN   n 3992  E  -0.06570 R  PF_r  0.8629  Lbar  0.4792 R  win  37.9%   exits NEWS_FLAT 44 / SIGNAL 1132 / STOP 1217 / TARGET 666 / TIMEOUT 871 / WEEKEND_FLAT 62
+                  OUT  n 3940  E  -0.09048 R  PF_r  0.8248  Lbar  0.5164 R  win  33.6%   exits NEWS_FLAT 45 / SIGNAL 1450 / STOP 1102 / TARGET 760 / TIMEOUT 574 / WEEKEND_FLAT 9
+                  dE     0.02478 R  cut  49.7% (null mean cut  50.8%)  unlabelled 0
+                  ctrl time-shuffle |dE|>=obs in  28.6% of 1000; control reproduces  76.1% of the move
+                  ctrl label-shuffle |dE|>=obs in  28.8% of 1000; control reproduces  74.6% of the move
+                  ctrl day-block    |dE|>=obs in  28.7% of 1000; control reproduces  73.5% of the move
+                  => inside the noise of a same-cut random filter on this window
+
+-- B 2018-06-01..2026-06-01  bb-fade  (weekdays + flat 16:30-18:15)  n=11199 trades, 0 unmatched fills, 604 dropped at the CME break, cap_lots hit 10399 of 11803 entries, no-risk 0 entries
+   WHOLE BOOK  n 11199 E  -0.10597 R  PF_r  0.8069  Lbar  0.5486 R  win  45.4%  PF_usd  0.7364  maxDD   10053.28 USD /  99.72%  exits NEWS_FLAT 68 / SIGNAL 2214 / STOP 5753 / TARGET 2819 / TIMEOUT 313 / WEEKEND_FLAT 32
+   XAGDUKA  dir   IN   n 697   E  -0.04879 R  PF_r  0.9086  Lbar  0.5338 R  win  46.8%   exits NEWS_FLAT 3 / SIGNAL 151 / STOP 348 / TARGET 177 / TIMEOUT 17 / WEEKEND_FLAT 1
+                  OUT  n 10226 E  -0.10872 R  PF_r  0.8019  Lbar  0.5489 R  win  45.3%   exits NEWS_FLAT 64 / SIGNAL 2017 / STOP 5254 / TARGET 2574 / TIMEOUT 287 / WEEKEND_FLAT 30
+                  dE     0.05993 R  cut  93.6% (null mean cut  68.8%)  unlabelled 276
+                  ctrl time-shuffle |dE|>=obs in   0.8% of 1000; control reproduces  28.5% of the move
+                  ctrl label-shuffle |dE|>=obs in  14.9% of 1000; control reproduces  56.3% of the move
+                  ctrl day-block    |dE|>=obs in   0.7% of 1000; control reproduces  27.9% of the move
+                  => inside the noise of a same-cut random filter on this window
+   XAGDUKA  move  IN   n 5555  E  -0.12207 R  PF_r  0.7848  Lbar  0.5671 R  win  43.8%   exits NEWS_FLAT 25 / SIGNAL 1053 / STOP 2957 / TARGET 1351 / TIMEOUT 164 / WEEKEND_FLAT 5
+                  OUT  n 5368  E  -0.08713 R  PF_r  0.8350  Lbar  0.5281 R  win  47.1%   exits NEWS_FLAT 42 / SIGNAL 1115 / STOP 2645 / TARGET 1400 / TIMEOUT 140 / WEEKEND_FLAT 26
+                  dE    -0.03494 R  cut  49.1% (null mean cut  81.1%)  unlabelled 276
+                  ctrl time-shuffle |dE|>=obs in  16.0% of 1000; control reproduces  57.5% of the move
+                  ctrl label-shuffle |dE|>=obs in   8.3% of 1000; control reproduces  44.9% of the move
+                  ctrl day-block    |dE|>=obs in  17.4% of 1000; control reproduces  58.0% of the move
+                  => inside the noise of a same-cut random filter on this window
+   XAGDUKA  vol   IN   n 5578  E  -0.07535 R  PF_r  0.8601  Lbar  0.5384 R  win  45.0%   exits NEWS_FLAT 39 / SIGNAL 1262 / STOP 2810 / TARGET 1222 / TIMEOUT 218 / WEEKEND_FLAT 27
+                  OUT  n 5350  E  -0.13542 R  PF_r  0.7571  Lbar  0.5575 R  win  45.9%   exits NEWS_FLAT 28 / SIGNAL 907 / STOP 2793 / TARGET 1531 / TIMEOUT 87 / WEEKEND_FLAT 4
+                  dE     0.06007 R  cut  49.0% (null mean cut  50.7%)  unlabelled 271
+                  ctrl time-shuffle |dE|>=obs in   0.1% of 1000; control reproduces  26.9% of the move
+                  ctrl label-shuffle |dE|>=obs in   0.4% of 1000; control reproduces  25.7% of the move
+                  ctrl day-block    |dE|>=obs in   0.1% of 1000; control reproduces  27.0% of the move
+                  => SEPARATES past all three controls on this window
+   EURDUKA  dir   IN   n 2200  E  -0.12182 R  PF_r  0.7838  Lbar  0.5633 R  win  44.4%   exits NEWS_FLAT 15 / SIGNAL 403 / STOP 1168 / TARGET 562 / TIMEOUT 50 / WEEKEND_FLAT 2
+                  OUT  n 8966  E  -0.10321 R  PF_r  0.8108  Lbar  0.5456 R  win  45.5%   exits NEWS_FLAT 53 / SIGNAL 1805 / STOP 4572 / TARGET 2243 / TIMEOUT 263 / WEEKEND_FLAT 30
+                  dE    -0.01861 R  cut  80.3% (null mean cut  67.0%)  unlabelled 33
+                  ctrl time-shuffle |dE|>=obs in  38.2% of 1000; control reproduces  89.5% of the move
+                  ctrl label-shuffle |dE|>=obs in  45.5% of 1000; control reproduces 107.2% of the move
+                  ctrl day-block    |dE|>=obs in  38.0% of 1000; control reproduces  89.2% of the move
+                  => inside the noise of a same-cut random filter on this window
+   EURDUKA  move  IN   n 4314  E  -0.11325 R  PF_r  0.7979  Lbar  0.5603 R  win  44.7%   exits NEWS_FLAT 19 / SIGNAL 790 / STOP 2275 / TARGET 1104 / TIMEOUT 119 / WEEKEND_FLAT 7
+                  OUT  n 6852  E  -0.10287 R  PF_r  0.8102  Lbar  0.5420 R  win  45.7%   exits NEWS_FLAT 49 / SIGNAL 1418 / STOP 3465 / TARGET 1701 / TIMEOUT 194 / WEEKEND_FLAT 25
+                  dE    -0.01038 R  cut  61.4% (null mean cut  77.7%)  unlabelled 33
+                  ctrl time-shuffle |dE|>=obs in  65.7% of 1000; control reproduces 174.3% of the move
+                  ctrl label-shuffle |dE|>=obs in  60.5% of 1000; control reproduces 157.0% of the move
+                  ctrl day-block    |dE|>=obs in  67.0% of 1000; control reproduces 185.9% of the move
+                  => inside the noise of a same-cut random filter on this window
+   EURDUKA  vol   IN   n 5788  E  -0.08862 R  PF_r  0.8385  Lbar  0.5488 R  win  44.1%   exits NEWS_FLAT 50 / SIGNAL 1208 / STOP 2971 / TARGET 1325 / TIMEOUT 208 / WEEKEND_FLAT 26
+                  OUT  n 5378  E  -0.12653 R  PF_r  0.7697  Lbar  0.5494 R  win  46.6%   exits NEWS_FLAT 18 / SIGNAL 1000 / STOP 2769 / TARGET 1480 / TIMEOUT 105 / WEEKEND_FLAT 6
+                  dE     0.03792 R  cut  48.2% (null mean cut  50.3%)  unlabelled 33
+                  ctrl time-shuffle |dE|>=obs in   5.1% of 1000; control reproduces  41.2% of the move
+                  ctrl label-shuffle |dE|>=obs in   4.8% of 1000; control reproduces  42.2% of the move
+                  ctrl day-block    |dE|>=obs in   6.9% of 1000; control reproduces  42.5% of the move
+                  => inside the noise of a same-cut random filter on this window
+   XAUDUKA  dir   IN   n 261   E  -0.00087 R  PF_r  0.9983  Lbar  0.5196 R  win  48.3%   exits NEWS_FLAT 1 / SIGNAL 76 / STOP 127 / TARGET 49 / TIMEOUT 8
+                  OUT  n 10934 E  -0.10862 R  PF_r  0.8023  Lbar  0.5494 R  win  45.3%   exits NEWS_FLAT 67 / SIGNAL 2137 / STOP 5625 / TARGET 2770 / TIMEOUT 303 / WEEKEND_FLAT 32
+                  dE     0.10774 R  cut  97.7% (null mean cut  68.1%)  unlabelled 4
+                  ctrl time-shuffle |dE|>=obs in   0.0% of 1000; control reproduces  15.0% of the move
+                  ctrl label-shuffle |dE|>=obs in  11.4% of 1000; control reproduces  50.3% of the move
+                  ctrl day-block    |dE|>=obs in   0.0% of 1000; control reproduces  15.6% of the move
+                  => inside the noise of a same-cut random filter on this window
+   XAUDUKA  move  IN   n 7865  E  -0.09716 R  PF_r  0.8242  Lbar  0.5528 R  win  44.9%   exits NEWS_FLAT 49 / SIGNAL 1533 / STOP 4074 / TARGET 1963 / TIMEOUT 227 / WEEKEND_FLAT 19
+                  OUT  n 3330  E  -0.12723 R  PF_r  0.7640  Lbar  0.5392 R  win  46.3%   exits NEWS_FLAT 19 / SIGNAL 680 / STOP 1678 / TARGET 856 / TIMEOUT 84 / WEEKEND_FLAT 13
+                  dE     0.03008 R  cut  29.7% (null mean cut  79.8%)  unlabelled 4
+                  ctrl time-shuffle |dE|>=obs in  21.6% of 1000; control reproduces  67.0% of the move
+                  ctrl label-shuffle |dE|>=obs in  17.1% of 1000; control reproduces  57.6% of the move
+                  ctrl day-block    |dE|>=obs in  22.0% of 1000; control reproduces  65.1% of the move
+                  => inside the noise of a same-cut random filter on this window
+   XAUDUKA  vol   IN   n 5662  E  -0.07907 R  PF_r  0.8545  Lbar  0.5436 R  win  44.3%   exits NEWS_FLAT 39 / SIGNAL 1310 / STOP 2880 / TARGET 1176 / TIMEOUT 228 / WEEKEND_FLAT 29
+                  OUT  n 5537  E  -0.13347 R  PF_r  0.7590  Lbar  0.5538 R  win  46.4%   exits NEWS_FLAT 29 / SIGNAL 904 / STOP 2873 / TARGET 1643 / TIMEOUT 85 / WEEKEND_FLAT 3
+                  dE     0.05440 R  cut  49.4% (null mean cut  50.8%)  unlabelled 0
+                  ctrl time-shuffle |dE|>=obs in   0.7% of 1000; control reproduces  30.0% of the move
+                  ctrl label-shuffle |dE|>=obs in   0.8% of 1000; control reproduces  29.5% of the move
+                  ctrl day-block    |dE|>=obs in   0.9% of 1000; control reproduces  29.3% of the move
+                  => SEPARATES past all three controls on this window
+
+######## guards OFF (read only, not a trading arm) ########
+-- A 2010-06-01..2018-06-01  ema-cross  (weekdays + flat 16:30-18:15)  n=2854 trades, 0 unmatched fills, 215 dropped at the CME break, cap_lots hit 0 of 3069 entries, no-risk 0 entries
+   WHOLE BOOK  n 2854  E  -0.13617 R  PF_r  0.7736  Lbar  0.6015 R  win  35.9%  PF_usd  0.7287  maxDD   11099.76 USD /  98.97%  exits SIGNAL 297 / STOP 1471 / TARGET 656 / TIMEOUT 430
+   XAGDUKA  dir   IN   n 1418  E  -0.08937 R  PF_r  0.8491  Lbar  0.5922 R  win  37.2%   exits SIGNAL 118 / STOP 729 / TARGET 361 / TIMEOUT 210
+                  OUT  n 1413  E  -0.18393 R  PF_r  0.6991  Lbar  0.6112 R  win  34.6%   exits SIGNAL 175 / STOP 730 / TARGET 289 / TIMEOUT 219
+                  dE     0.09455 R  cut  49.9% (null mean cut  69.7%)  unlabelled 23
+                  ctrl time-shuffle |dE|>=obs in   4.5% of 1000; control reproduces  39.7% of the move
+                  ctrl label-shuffle |dE|>=obs in   3.6% of 1000; control reproduces  37.5% of the move
+                  ctrl day-block    |dE|>=obs in   4.8% of 1000; control reproduces  39.9% of the move
+                  => SEPARATES past all three controls on this window
+   XAGDUKA  move  IN   n 784   E  -0.09709 R  PF_r  0.8417  Lbar  0.6135 R  win  36.7%   exits SIGNAL 46 / STOP 425 / TARGET 206 / TIMEOUT 107
+                  OUT  n 2047  E  -0.15169 R  PF_r  0.7460  Lbar  0.5971 R  win  35.6%   exits SIGNAL 247 / STOP 1034 / TARGET 444 / TIMEOUT 322
+                  dE     0.05460 R  cut  72.3% (null mean cut  82.1%)  unlabelled 23
+                  ctrl time-shuffle |dE|>=obs in  34.3% of 1000; control reproduces  81.9% of the move
+                  ctrl label-shuffle |dE|>=obs in  28.4% of 1000; control reproduces  74.5% of the move
+                  ctrl day-block    |dE|>=obs in  33.9% of 1000; control reproduces  84.8% of the move
+                  => inside the noise of a same-cut random filter on this window
+   XAGDUKA  vol   IN   n 1444  E  -0.11400 R  PF_r  0.7956  Lbar  0.5577 R  win  37.2%   exits SIGNAL 211 / STOP 684 / TARGET 302 / TIMEOUT 247
+                  OUT  n 1383  E  -0.16157 R  PF_r  0.7507  Lbar  0.6480 R  win  34.5%   exits SIGNAL 82 / STOP 774 / TARGET 347 / TIMEOUT 180
+                  dE     0.04757 R  cut  48.9% (null mean cut  51.1%)  unlabelled 27
+                  ctrl time-shuffle |dE|>=obs in  24.4% of 1000; control reproduces  69.4% of the move
+                  ctrl label-shuffle |dE|>=obs in  30.1% of 1000; control reproduces  73.4% of the move
+                  ctrl day-block    |dE|>=obs in  28.9% of 1000; control reproduces  75.2% of the move
+                  => inside the noise of a same-cut random filter on this window
+   EURDUKA  dir   IN   n 1211  E  -0.14300 R  PF_r  0.7669  Lbar  0.6136 R  win  35.0%   exits SIGNAL 101 / STOP 646 / TARGET 284 / TIMEOUT 180
+                  OUT  n 1642  E  -0.13056 R  PF_r  0.7796  Lbar  0.5924 R  win  36.7%   exits SIGNAL 196 / STOP 824 / TARGET 372 / TIMEOUT 250
+                  dE    -0.01244 R  cut  57.6% (null mean cut  67.8%)  unlabelled 1
+                  ctrl time-shuffle |dE|>=obs in  78.7% of 1000; control reproduces 294.3% of the move
+                  ctrl label-shuffle |dE|>=obs in  76.5% of 1000; control reproduces 272.5% of the move
+                  ctrl day-block    |dE|>=obs in  76.6% of 1000; control reproduces 293.2% of the move
+                  => inside the noise of a same-cut random filter on this window
+   EURDUKA  move  IN   n 798   E  -0.16709 R  PF_r  0.7364  Lbar  0.6338 R  win  34.5%   exits SIGNAL 48 / STOP 447 / TARGET 189 / TIMEOUT 114
+                  OUT  n 2055  E  -0.12370 R  PF_r  0.7899  Lbar  0.5888 R  win  36.5%   exits SIGNAL 249 / STOP 1023 / TARGET 467 / TIMEOUT 316
+                  dE    -0.04339 R  cut  72.0% (null mean cut  79.0%)  unlabelled 1
+                  ctrl time-shuffle |dE|>=obs in  41.4% of 1000; control reproduces  96.7% of the move
+                  ctrl label-shuffle |dE|>=obs in  34.3% of 1000; control reproduces  84.8% of the move
+                  ctrl day-block    |dE|>=obs in  42.9% of 1000; control reproduces  97.9% of the move
+                  => inside the noise of a same-cut random filter on this window
+   EURDUKA  vol   IN   n 1749  E  -0.16143 R  PF_r  0.7305  Lbar  0.5990 R  win  34.6%   exits SIGNAL 224 / STOP 899 / TARGET 377 / TIMEOUT 249
+                  OUT  n 1098  E  -0.09843 R  PF_r  0.8377  Lbar  0.6065 R  win  37.9%   exits SIGNAL 72 / STOP 570 / TARGET 277 / TIMEOUT 179
+                  dE    -0.06300 R  cut  38.6% (null mean cut  50.4%)  unlabelled 7
+                  ctrl time-shuffle |dE|>=obs in  15.3% of 1000; control reproduces  55.1% of the move
+                  ctrl label-shuffle |dE|>=obs in  14.6% of 1000; control reproduces  56.3% of the move
+                  ctrl day-block    |dE|>=obs in  15.1% of 1000; control reproduces  54.7% of the move
+                  => inside the noise of a same-cut random filter on this window
+   XAUDUKA  dir   IN   n 1610  E  -0.13037 R  PF_r  0.7866  Lbar  0.6108 R  win  35.9%   exits SIGNAL 118 / STOP 862 / TARGET 393 / TIMEOUT 237
+                  OUT  n 1243  E  -0.14428 R  PF_r  0.7554  Lbar  0.5900 R  win  36.0%   exits SIGNAL 179 / STOP 609 / TARGET 263 / TIMEOUT 192
+                  dE     0.01392 R  cut  43.6% (null mean cut  68.6%)  unlabelled 1
+                  ctrl time-shuffle |dE|>=obs in  75.5% of 1000; control reproduces 261.7% of the move
+                  ctrl label-shuffle |dE|>=obs in  76.2% of 1000; control reproduces 246.4% of the move
+                  ctrl day-block    |dE|>=obs in  77.4% of 1000; control reproduces 267.3% of the move
+                  => inside the noise of a same-cut random filter on this window
+   XAUDUKA  move  IN   n 968   E  -0.11397 R  PF_r  0.8156  Lbar  0.6182 R  win  36.1%   exits SIGNAL 50 / STOP 536 / TARGET 250 / TIMEOUT 132
+                  OUT  n 1885  E  -0.14796 R  PF_r  0.7506  Lbar  0.5933 R  win  35.9%   exits SIGNAL 247 / STOP 935 / TARGET 406 / TIMEOUT 297
+                  dE     0.03399 R  cut  66.1% (null mean cut  80.2%)  unlabelled 1
+                  ctrl time-shuffle |dE|>=obs in  51.2% of 1000; control reproduces 126.6% of the move
+                  ctrl label-shuffle |dE|>=obs in  47.1% of 1000; control reproduces 109.6% of the move
+                  ctrl day-block    |dE|>=obs in  51.4% of 1000; control reproduces 126.2% of the move
+                  => inside the noise of a same-cut random filter on this window
+   XAUDUKA  vol   IN   n 1436  E  -0.13216 R  PF_r  0.7634  Lbar  0.5585 R  win  36.8%   exits SIGNAL 215 / STOP 683 / TARGET 283 / TIMEOUT 255
+                  OUT  n 1412  E  -0.14286 R  PF_r  0.7790  Lbar  0.6464 R  win  34.9%   exits SIGNAL 81 / STOP 787 / TARGET 371 / TIMEOUT 173
+                  dE     0.01071 R  cut  49.6% (null mean cut  50.4%)  unlabelled 6
+                  ctrl time-shuffle |dE|>=obs in  79.2% of 1000; control reproduces 311.9% of the move
+                  ctrl label-shuffle |dE|>=obs in  81.9% of 1000; control reproduces 334.5% of the move
+                  ctrl day-block    |dE|>=obs in  80.3% of 1000; control reproduces 315.8% of the move
+                  => inside the noise of a same-cut random filter on this window
+
+-- A 2010-06-01..2018-06-01  rsi-reversion  (weekdays + flat 16:30-18:15)  n=4189 trades, 0 unmatched fills, 246 dropped at the CME break, cap_lots hit 0 of 4435 entries, no-risk 0 entries
+   WHOLE BOOK  n 4189  E  -0.13200 R  PF_r  0.7634  Lbar  0.5579 R  win  42.9%  PF_usd  0.8253  maxDD   11066.35 USD /  99.74%  exits SIGNAL 1473 / STOP 2114 / TARGET 325 / TIMEOUT 277
+   XAGDUKA  dir   IN   n 2959  E  -0.12156 R  PF_r  0.7789  Lbar  0.5498 R  win  43.7%   exits SIGNAL 1080 / STOP 1474 / TARGET 222 / TIMEOUT 183
+                  OUT  n 1200  E  -0.15575 R  PF_r  0.7302  Lbar  0.5772 R  win  41.1%   exits SIGNAL 384 / STOP 624 / TARGET 101 / TIMEOUT 91
+                  dE     0.03420 R  cut  28.9% (null mean cut  69.7%)  unlabelled 30
+                  ctrl time-shuffle |dE|>=obs in  34.4% of 1000; control reproduces  83.2% of the move
+                  ctrl label-shuffle |dE|>=obs in  35.9% of 1000; control reproduces  85.8% of the move
+                  ctrl day-block    |dE|>=obs in  33.7% of 1000; control reproduces  83.9% of the move
+                  => inside the noise of a same-cut random filter on this window
+   XAGDUKA  move  IN   n 1337  E  -0.09500 R  PF_r  0.8238  Lbar  0.5393 R  win  45.2%   exits SIGNAL 495 / STOP 657 / TARGET 119 / TIMEOUT 66
+                  OUT  n 2822  E  -0.14868 R  PF_r  0.7375  Lbar  0.5664 R  win  41.8%   exits SIGNAL 969 / STOP 1441 / TARGET 204 / TIMEOUT 208
+                  dE     0.05367 R  cut  67.9% (null mean cut  82.1%)  unlabelled 30
+                  ctrl time-shuffle |dE|>=obs in  18.1% of 1000; control reproduces  62.3% of the move
+                  ctrl label-shuffle |dE|>=obs in  12.0% of 1000; control reproduces  50.8% of the move
+                  ctrl day-block    |dE|>=obs in  21.2% of 1000; control reproduces  64.4% of the move
+                  => inside the noise of a same-cut random filter on this window
+   XAGDUKA  vol   IN   n 2676  E  -0.09170 R  PF_r  0.8248  Lbar  0.5236 R  win  44.2%   exits SIGNAL 987 / STOP 1255 / TARGET 213 / TIMEOUT 221
+                  OUT  n 1474  E  -0.20203 R  PF_r  0.6735  Lbar  0.6188 R  win  40.7%   exits SIGNAL 474 / STOP 838 / TARGET 109 / TIMEOUT 53
+                  dE     0.11032 R  cut  35.5% (null mean cut  51.1%)  unlabelled 39
+                  ctrl time-shuffle |dE|>=obs in   0.0% of 1000; control reproduces  23.4% of the move
+                  ctrl label-shuffle |dE|>=obs in   0.1% of 1000; control reproduces  24.7% of the move
+                  ctrl day-block    |dE|>=obs in   0.0% of 1000; control reproduces  22.7% of the move
+                  => SEPARATES past all three controls on this window
+   EURDUKA  dir   IN   n 2043  E  -0.12595 R  PF_r  0.7722  Lbar  0.5528 R  win  43.4%   exits SIGNAL 733 / STOP 1021 / TARGET 162 / TIMEOUT 127
+                  OUT  n 2145  E  -0.13731 R  PF_r  0.7559  Lbar  0.5625 R  win  42.5%   exits SIGNAL 740 / STOP 1092 / TARGET 163 / TIMEOUT 150
+                  dE     0.01136 R  cut  51.2% (null mean cut  67.9%)  unlabelled 1
+                  ctrl time-shuffle |dE|>=obs in  71.8% of 1000; control reproduces 239.9% of the move
+                  ctrl label-shuffle |dE|>=obs in  71.4% of 1000; control reproduces 222.1% of the move
+                  ctrl day-block    |dE|>=obs in  72.1% of 1000; control reproduces 237.7% of the move
+                  => inside the noise of a same-cut random filter on this window
+   EURDUKA  move  IN   n 1181  E  -0.08554 R  PF_r  0.8422  Lbar  0.5422 R  win  45.2%   exits SIGNAL 418 / STOP 582 / TARGET 106 / TIMEOUT 75
+                  OUT  n 3007  E  -0.14993 R  PF_r  0.7341  Lbar  0.5639 R  win  42.0%   exits SIGNAL 1055 / STOP 1531 / TARGET 219 / TIMEOUT 202
+                  dE     0.06439 R  cut  71.8% (null mean cut  79.0%)  unlabelled 1
+                  ctrl time-shuffle |dE|>=obs in  13.2% of 1000; control reproduces  50.4% of the move
+                  ctrl label-shuffle |dE|>=obs in   8.0% of 1000; control reproduces  46.6% of the move
+                  ctrl day-block    |dE|>=obs in   9.3% of 1000; control reproduces  47.0% of the move
+                  => inside the noise of a same-cut random filter on this window
+   EURDUKA  vol   IN   n 2766  E  -0.10147 R  PF_r  0.8116  Lbar  0.5387 R  win  43.4%   exits SIGNAL 986 / STOP 1340 / TARGET 242 / TIMEOUT 198
+                  OUT  n 1413  E  -0.18950 R  PF_r  0.6811  Lbar  0.5943 R  win  42.1%   exits SIGNAL 484 / STOP 768 / TARGET 82 / TIMEOUT 79
+                  dE     0.08803 R  cut  33.8% (null mean cut  50.4%)  unlabelled 10
+                  ctrl time-shuffle |dE|>=obs in   0.4% of 1000; control reproduces  28.8% of the move
+                  ctrl label-shuffle |dE|>=obs in   0.5% of 1000; control reproduces  31.2% of the move
+                  ctrl day-block    |dE|>=obs in   0.4% of 1000; control reproduces  28.8% of the move
+                  => SEPARATES past all three controls on this window
+   XAUDUKA  dir   IN   n 3770  E  -0.12956 R  PF_r  0.7665  Lbar  0.5549 R  win  43.2%   exits SIGNAL 1344 / STOP 1893 / TARGET 284 / TIMEOUT 249
+                  OUT  n 419   E  -0.15387 R  PF_r  0.7371  Lbar  0.5852 R  win  40.1%   exits SIGNAL 129 / STOP 221 / TARGET 41 / TIMEOUT 28
+                  dE     0.02431 R  cut  10.0% (null mean cut  68.6%)  unlabelled 0
+                  ctrl time-shuffle |dE|>=obs in  50.0% of 1000; control reproduces 113.6% of the move
+                  ctrl label-shuffle |dE|>=obs in  66.0% of 1000; control reproduces 176.9% of the move
+                  ctrl day-block    |dE|>=obs in  46.2% of 1000; control reproduces 112.0% of the move
+                  => inside the noise of a same-cut random filter on this window
+   XAUDUKA  move  IN   n 1750  E  -0.10770 R  PF_r  0.7998  Lbar  0.5381 R  win  45.3%   exits SIGNAL 662 / STOP 854 / TARGET 138 / TIMEOUT 96
+                  OUT  n 2439  E  -0.14943 R  PF_r  0.7388  Lbar  0.5721 R  win  41.2%   exits SIGNAL 811 / STOP 1260 / TARGET 187 / TIMEOUT 181
+                  dE     0.04172 R  cut  58.2% (null mean cut  80.2%)  unlabelled 0
+                  ctrl time-shuffle |dE|>=obs in  32.4% of 1000; control reproduces  81.7% of the move
+                  ctrl label-shuffle |dE|>=obs in  20.7% of 1000; control reproduces  62.5% of the move
+                  ctrl day-block    |dE|>=obs in  30.2% of 1000; control reproduces  77.9% of the move
+                  => inside the noise of a same-cut random filter on this window
+   XAUDUKA  vol   IN   n 2753  E  -0.09483 R  PF_r  0.8193  Lbar  0.5247 R  win  44.0%   exits SIGNAL 996 / STOP 1291 / TARGET 225 / TIMEOUT 241
+                  OUT  n 1427  E  -0.20214 R  PF_r  0.6745  Lbar  0.6211 R  win  41.1%   exits SIGNAL 474 / STOP 818 / TARGET 99 / TIMEOUT 36
+                  dE     0.10731 R  cut  34.1% (null mean cut  50.4%)  unlabelled 9
+                  ctrl time-shuffle |dE|>=obs in   0.0% of 1000; control reproduces  24.1% of the move
+                  ctrl label-shuffle |dE|>=obs in   0.1% of 1000; control reproduces  23.7% of the move
+                  ctrl day-block    |dE|>=obs in   0.1% of 1000; control reproduces  23.3% of the move
+                  => SEPARATES past all three controls on this window
+
+-- A 2010-06-01..2018-06-01  donchian-breakout  (weekdays + flat 16:30-18:15)  n=8068 trades, 0 unmatched fills, 570 dropped at the CME break, cap_lots hit 0 of 8638 entries, no-risk 0 entries
+   WHOLE BOOK  n 8068  E  -0.08591 R  PF_r  0.8325  Lbar  0.5130 R  win  34.8%  PF_usd  0.7615  maxDD   10048.67 USD /  99.97%  exits SIGNAL 2554 / STOP 2556 / TARGET 1575 / TIMEOUT 1383
+   XAGDUKA  dir   IN   n 6708  E  -0.08145 R  PF_r  0.8418  Lbar  0.5147 R  win  35.1%   exits SIGNAL 2034 / STOP 2175 / TARGET 1327 / TIMEOUT 1172
+                  OUT  n 1298  E  -0.11457 R  PF_r  0.7740  Lbar  0.5070 R  win  32.9%   exits SIGNAL 505 / STOP 362 / TARGET 235 / TIMEOUT 196
+                  dE     0.03312 R  cut  16.2% (null mean cut  69.8%)  unlabelled 62
+                  ctrl time-shuffle |dE|>=obs in  20.4% of 1000; control reproduces  61.8% of the move
+                  ctrl label-shuffle |dE|>=obs in  30.0% of 1000; control reproduces  77.1% of the move
+                  ctrl day-block    |dE|>=obs in  21.3% of 1000; control reproduces  63.3% of the move
+                  => inside the noise of a same-cut random filter on this window
+   XAGDUKA  move  IN   n 4609  E  -0.05724 R  PF_r  0.8885  Lbar  0.5134 R  win  36.3%   exits SIGNAL 1257 / STOP 1551 / TARGET 970 / TIMEOUT 831
+                  OUT  n 3397  E  -0.12695 R  PF_r  0.7528  Lbar  0.5135 R  win  32.6%   exits SIGNAL 1282 / STOP 986 / TARGET 592 / TIMEOUT 537
+                  dE     0.06971 R  cut  42.4% (null mean cut  82.1%)  unlabelled 62
+                  ctrl time-shuffle |dE|>=obs in   2.6% of 1000; control reproduces  35.7% of the move
+                  ctrl label-shuffle |dE|>=obs in   0.4% of 1000; control reproduces  27.1% of the move
+                  ctrl day-block    |dE|>=obs in   2.3% of 1000; control reproduces  35.7% of the move
+                  => SEPARATES past all three controls on this window
+   XAGDUKA  vol   IN   n 4045  E  -0.07939 R  PF_r  0.8419  Lbar  0.5022 R  win  36.4%   exits SIGNAL 1139 / STOP 1355 / TARGET 751 / TIMEOUT 800
+                  OUT  n 3949  E  -0.09466 R  PF_r  0.8197  Lbar  0.5251 R  win  33.0%   exits SIGNAL 1395 / STOP 1179 / TARGET 809 / TIMEOUT 566
+                  dE     0.01526 R  cut  49.4% (null mean cut  51.1%)  unlabelled 74
+                  ctrl time-shuffle |dE|>=obs in  52.1% of 1000; control reproduces 123.4% of the move
+                  ctrl label-shuffle |dE|>=obs in  51.3% of 1000; control reproduces 122.0% of the move
+                  ctrl day-block    |dE|>=obs in  53.3% of 1000; control reproduces 127.9% of the move
+                  => inside the noise of a same-cut random filter on this window
+   EURDUKA  dir   IN   n 4571  E  -0.07448 R  PF_r  0.8552  Lbar  0.5144 R  win  35.9%   exits SIGNAL 1340 / STOP 1494 / TARGET 910 / TIMEOUT 827
+                  OUT  n 3493  E  -0.10147 R  PF_r  0.8016  Lbar  0.5114 R  win  33.3%   exits SIGNAL 1212 / STOP 1062 / TARGET 664 / TIMEOUT 555
+                  dE     0.02699 R  cut  43.3% (null mean cut  67.8%)  unlabelled 4
+                  ctrl time-shuffle |dE|>=obs in  27.9% of 1000; control reproduces  74.5% of the move
+                  ctrl label-shuffle |dE|>=obs in  23.8% of 1000; control reproduces  69.9% of the move
+                  ctrl day-block    |dE|>=obs in  28.5% of 1000; control reproduces  73.4% of the move
+                  => inside the noise of a same-cut random filter on this window
+   EURDUKA  move  IN   n 3065  E  -0.05097 R  PF_r  0.9009  Lbar  0.5146 R  win  36.4%   exits SIGNAL 829 / STOP 1038 / TARGET 660 / TIMEOUT 538
+                  OUT  n 4999  E  -0.10775 R  PF_r  0.7896  Lbar  0.5122 R  win  33.8%   exits SIGNAL 1723 / STOP 1518 / TARGET 914 / TIMEOUT 844
+                  dE     0.05678 R  cut  62.0% (null mean cut  79.0%)  unlabelled 4
+                  ctrl time-shuffle |dE|>=obs in   6.3% of 1000; control reproduces  41.6% of the move
+                  ctrl label-shuffle |dE|>=obs in   1.9% of 1000; control reproduces  33.9% of the move
+                  ctrl day-block    |dE|>=obs in   5.0% of 1000; control reproduces  40.6% of the move
+                  => inside the noise of a same-cut random filter on this window
+   EURDUKA  vol   IN   n 4365  E  -0.06199 R  PF_r  0.8784  Lbar  0.5098 R  win  36.1%   exits SIGNAL 1229 / STOP 1500 / TARGET 902 / TIMEOUT 734
+                  OUT  n 3681  E  -0.11508 R  PF_r  0.7775  Lbar  0.5173 R  win  33.2%   exits SIGNAL 1318 / STOP 1051 / TARGET 669 / TIMEOUT 643
+                  dE     0.05309 R  cut  45.7% (null mean cut  50.4%)  unlabelled 22
+                  ctrl time-shuffle |dE|>=obs in   2.0% of 1000; control reproduces  34.3% of the move
+                  ctrl label-shuffle |dE|>=obs in   2.5% of 1000; control reproduces  36.8% of the move
+                  ctrl day-block    |dE|>=obs in   2.3% of 1000; control reproduces  35.6% of the move
+                  => SEPARATES past all three controls on this window
+   XAUDUKA  dir   IN   n 7930  E  -0.08686 R  PF_r  0.8312  Lbar  0.5147 R  win  34.8%   exits SIGNAL 2491 / STOP 2528 / TARGET 1555 / TIMEOUT 1356
+                  OUT  n 135   E  -0.03842 R  PF_r  0.9080  Lbar  0.4176 R  win  36.3%   exits SIGNAL 63 / STOP 28 / TARGET 20 / TIMEOUT 24
+                  dE    -0.04844 R  cut   1.7% (null mean cut  68.6%)  unlabelled 3
+                  ctrl time-shuffle |dE|>=obs in   5.8% of 1000; control reproduces  40.9% of the move
+                  ctrl label-shuffle |dE|>=obs in  56.8% of 1000; control reproduces 149.6% of the move
+                  ctrl day-block    |dE|>=obs in   6.0% of 1000; control reproduces  41.1% of the move
+                  => inside the noise of a same-cut random filter on this window
+   XAUDUKA  move  IN   n 6401  E  -0.07001 R  PF_r  0.8647  Lbar  0.5175 R  win  35.7%   exits SIGNAL 1830 / STOP 2121 / TARGET 1321 / TIMEOUT 1129
+                  OUT  n 1664  E  -0.14776 R  PF_r  0.7023  Lbar  0.4963 R  win  31.2%   exits SIGNAL 724 / STOP 435 / TARGET 254 / TIMEOUT 251
+                  dE     0.07775 R  cut  20.6% (null mean cut  80.2%)  unlabelled 3
+                  ctrl time-shuffle |dE|>=obs in   0.9% of 1000; control reproduces  30.2% of the move
+                  ctrl label-shuffle |dE|>=obs in   0.5% of 1000; control reproduces  28.8% of the move
+                  ctrl day-block    |dE|>=obs in   0.7% of 1000; control reproduces  31.5% of the move
+                  => SEPARATES past all three controls on this window
+   XAUDUKA  vol   IN   n 4128  E  -0.07166 R  PF_r  0.8557  Lbar  0.4964 R  win  36.7%   exits SIGNAL 1152 / STOP 1373 / TARGET 765 / TIMEOUT 838
+                  OUT  n 3922  E  -0.10113 R  PF_r  0.8094  Lbar  0.5307 R  win  32.7%   exits SIGNAL 1397 / STOP 1178 / TARGET 807 / TIMEOUT 540
+                  dE     0.02948 R  cut  48.7% (null mean cut  50.4%)  unlabelled 18
+                  ctrl time-shuffle |dE|>=obs in  20.3% of 1000; control reproduces  64.5% of the move
+                  ctrl label-shuffle |dE|>=obs in  22.7% of 1000; control reproduces  63.7% of the move
+                  ctrl day-block    |dE|>=obs in  21.0% of 1000; control reproduces  64.1% of the move
+                  => inside the noise of a same-cut random filter on this window
+
+-- A 2010-06-01..2018-06-01  bb-fade  (weekdays + flat 16:30-18:15)  n=12144 trades, 0 unmatched fills, 747 dropped at the CME break, cap_lots hit 0 of 12891 entries, no-risk 0 entries
+   WHOLE BOOK  n 12144 E  -0.11540 R  PF_r  0.7924  Lbar  0.5560 R  win  45.4%  PF_usd  0.8825  maxDD   10250.13 USD / 100.09%  exits SIGNAL 2428 / STOP 6239 / TARGET 3086 / TIMEOUT 391
+   XAGDUKA  dir   IN   n 443   E  -0.04982 R  PF_r  0.9022  Lbar  0.5095 R  win  49.0%   exits SIGNAL 94 / STOP 208 / TARGET 125 / TIMEOUT 16
+                  OUT  n 11610 E  -0.11657 R  PF_r  0.7907  Lbar  0.5570 R  win  45.3%   exits SIGNAL 2316 / STOP 5976 / TARGET 2946 / TIMEOUT 372
+                  dE     0.06675 R  cut  96.3% (null mean cut  69.7%)  unlabelled 91
+                  ctrl time-shuffle |dE|>=obs in   0.1% of 1000; control reproduces  25.3% of the move
+                  ctrl label-shuffle |dE|>=obs in  17.9% of 1000; control reproduces  59.8% of the move
+                  ctrl day-block    |dE|>=obs in   0.1% of 1000; control reproduces  24.7% of the move
+                  => inside the noise of a same-cut random filter on this window
+   XAGDUKA  move  IN   n 6682  E  -0.12516 R  PF_r  0.7839  Lbar  0.5792 R  win  43.4%   exits SIGNAL 1296 / STOP 3600 / TARGET 1573 / TIMEOUT 213
+                  OUT  n 5371  E  -0.10037 R  PF_r  0.8090  Lbar  0.5255 R  win  47.9%   exits SIGNAL 1114 / STOP 2584 / TARGET 1498 / TIMEOUT 175
+                  dE    -0.02479 R  cut  44.6% (null mean cut  82.1%)  unlabelled 91
+                  ctrl time-shuffle |dE|>=obs in  33.3% of 1000; control reproduces  81.2% of the move
+                  ctrl label-shuffle |dE|>=obs in  18.8% of 1000; control reproduces  61.8% of the move
+                  ctrl day-block    |dE|>=obs in  33.5% of 1000; control reproduces  81.3% of the move
+                  => inside the noise of a same-cut random filter on this window
+   XAGDUKA  vol   IN   n 6128  E  -0.07918 R  PF_r  0.8559  Lbar  0.5496 R  win  44.3%   exits SIGNAL 1386 / STOP 3121 / TARGET 1340 / TIMEOUT 281
+                  OUT  n 5899  E  -0.15016 R  PF_r  0.7324  Lbar  0.5611 R  win  46.6%   exits SIGNAL 1016 / STOP 3049 / TARGET 1726 / TIMEOUT 108
+                  dE     0.07098 R  cut  49.0% (null mean cut  51.1%)  unlabelled 117
+                  ctrl time-shuffle |dE|>=obs in   0.1% of 1000; control reproduces  21.3% of the move
+                  ctrl label-shuffle |dE|>=obs in   0.0% of 1000; control reproduces  21.9% of the move
+                  ctrl day-block    |dE|>=obs in   0.0% of 1000; control reproduces  21.5% of the move
+                  => SEPARATES past all three controls on this window
+   EURDUKA  dir   IN   n 2366  E  -0.11240 R  PF_r  0.7987  Lbar  0.5584 R  win  45.2%   exits SIGNAL 442 / STOP 1222 / TARGET 643 / TIMEOUT 59
+                  OUT  n 9772  E  -0.11584 R  PF_r  0.7914  Lbar  0.5553 R  win  45.4%   exits SIGNAL 1985 / STOP 5013 / TARGET 2442 / TIMEOUT 332
+                  dE     0.00343 R  cut  80.5% (null mean cut  67.8%)  unlabelled 6
+                  ctrl time-shuffle |dE|>=obs in  88.2% of 1000; control reproduces 483.0% of the move
+                  ctrl label-shuffle |dE|>=obs in  87.8% of 1000; control reproduces 563.6% of the move
+                  ctrl day-block    |dE|>=obs in  86.8% of 1000; control reproduces 483.7% of the move
+                  => inside the noise of a same-cut random filter on this window
+   EURDUKA  move  IN   n 4593  E  -0.11987 R  PF_r  0.7906  Lbar  0.5723 R  win  44.2%   exits SIGNAL 859 / STOP 2440 / TARGET 1138 / TIMEOUT 156
+                  OUT  n 7545  E  -0.11230 R  PF_r  0.7943  Lbar  0.5459 R  win  46.1%   exits SIGNAL 1568 / STOP 3795 / TARGET 1947 / TIMEOUT 235
+                  dE    -0.00757 R  cut  62.2% (null mean cut  79.0%)  unlabelled 6
+                  ctrl time-shuffle |dE|>=obs in  73.9% of 1000; control reproduces 255.0% of the move
+                  ctrl label-shuffle |dE|>=obs in  68.0% of 1000; control reproduces 198.7% of the move
+                  ctrl day-block    |dE|>=obs in  74.3% of 1000; control reproduces 240.7% of the move
+                  => inside the noise of a same-cut random filter on this window
+   EURDUKA  vol   IN   n 6660  E  -0.10109 R  PF_r  0.8204  Lbar  0.5628 R  win  43.8%   exits SIGNAL 1387 / STOP 3485 / TARGET 1542 / TIMEOUT 246
+                  OUT  n 5447  E  -0.13155 R  PF_r  0.7596  Lbar  0.5472 R  win  47.3%   exits SIGNAL 1031 / STOP 2733 / TARGET 1538 / TIMEOUT 145
+                  dE     0.03046 R  cut  45.0% (null mean cut  50.4%)  unlabelled 37
+                  ctrl time-shuffle |dE|>=obs in  11.5% of 1000; control reproduces  49.5% of the move
+                  ctrl label-shuffle |dE|>=obs in  12.4% of 1000; control reproduces  53.1% of the move
+                  ctrl day-block    |dE|>=obs in   9.3% of 1000; control reproduces  48.1% of the move
+                  => inside the noise of a same-cut random filter on this window
+   XAUDUKA  dir   IN   n 43    E  -0.14770 R  PF_r  0.7305  Lbar  0.5480 R  win  41.9%   exits SIGNAL 12 / STOP 21 / TARGET 8 / TIMEOUT 2
+                  OUT  n 12098 E  -0.11519 R  PF_r  0.7928  Lbar  0.5560 R  win  45.4%   exits SIGNAL 2415 / STOP 6216 / TARGET 3078 / TIMEOUT 389
+                  dE    -0.03250 R  cut  99.6% (null mean cut  68.6%)  unlabelled 3
+                  ctrl time-shuffle |dE|>=obs in  10.7% of 1000; control reproduces  51.2% of the move
+                  ctrl label-shuffle |dE|>=obs in  84.2% of 1000; control reproduces 393.4% of the move
+                  ctrl day-block    |dE|>=obs in  12.9% of 1000; control reproduces  52.9% of the move
+                  => inside the noise of a same-cut random filter on this window
+   XAUDUKA  move  IN   n 9417  E  -0.11946 R  PF_r  0.7901  Lbar  0.5691 R  win  44.2%   exits SIGNAL 1891 / STOP 4963 / TARGET 2233 / TIMEOUT 330
+                  OUT  n 2724  E  -0.10097 R  PF_r  0.8022  Lbar  0.5104 R  win  49.4%   exits SIGNAL 536 / STOP 1274 / TARGET 853 / TIMEOUT 61
+                  dE    -0.01849 R  cut  22.4% (null mean cut  80.2%)  unlabelled 3
+                  ctrl time-shuffle |dE|>=obs in  44.1% of 1000; control reproduces 105.4% of the move
+                  ctrl label-shuffle |dE|>=obs in  44.0% of 1000; control reproduces 101.3% of the move
+                  ctrl day-block    |dE|>=obs in  45.6% of 1000; control reproduces 103.6% of the move
+                  => inside the noise of a same-cut random filter on this window
+   XAUDUKA  vol   IN   n 6236  E  -0.08527 R  PF_r  0.8454  Lbar  0.5516 R  win  43.9%   exits SIGNAL 1439 / STOP 3191 / TARGET 1302 / TIMEOUT 304
+                  OUT  n 5877  E  -0.14660 R  PF_r  0.7384  Lbar  0.5604 R  win  46.9%   exits SIGNAL 980 / STOP 3031 / TARGET 1779 / TIMEOUT 87
+                  dE     0.06133 R  cut  48.5% (null mean cut  50.4%)  unlabelled 31
+                  ctrl time-shuffle |dE|>=obs in   0.1% of 1000; control reproduces  25.7% of the move
+                  ctrl label-shuffle |dE|>=obs in   0.0% of 1000; control reproduces  24.8% of the move
+                  ctrl day-block    |dE|>=obs in   0.1% of 1000; control reproduces  24.7% of the move
+                  => SEPARATES past all three controls on this window
+
+-- B 2018-06-01..2026-06-01  ema-cross  (weekdays + flat 16:30-18:15)  n=2821 trades, 0 unmatched fills, 195 dropped at the CME break, cap_lots hit 0 of 3016 entries, no-risk 0 entries
+   WHOLE BOOK  n 2821  E  -0.13354 R  PF_r  0.7788  Lbar  0.6036 R  win  36.0%  PF_usd  0.7737  maxDD   10071.30 USD /  98.33%  exits SIGNAL 292 / STOP 1485 / TARGET 641 / TIMEOUT 403
+   XAGDUKA  dir   IN   n 1371  E  -0.14417 R  PF_r  0.7678  Lbar  0.6210 R  win  36.0%   exits SIGNAL 94 / STOP 767 / TARGET 322 / TIMEOUT 188
+                  OUT  n 1377  E  -0.12800 R  PF_r  0.7823  Lbar  0.5881 R  win  35.8%   exits SIGNAL 191 / STOP 680 / TARGET 301 / TIMEOUT 205
+                  dE    -0.01617 R  cut  50.1% (null mean cut  68.8%)  unlabelled 73
+                  ctrl time-shuffle |dE|>=obs in  72.6% of 1000; control reproduces 235.3% of the move
+                  ctrl label-shuffle |dE|>=obs in  73.3% of 1000; control reproduces 223.2% of the move
+                  ctrl day-block    |dE|>=obs in  73.9% of 1000; control reproduces 251.7% of the move
+                  => inside the noise of a same-cut random filter on this window
+   XAGDUKA  move  IN   n 739   E  -0.15241 R  PF_r  0.7591  Lbar  0.6327 R  win  35.2%   exits SIGNAL 38 / STOP 421 / TARGET 171 / TIMEOUT 109
+                  OUT  n 2009  E  -0.13005 R  PF_r  0.7811  Lbar  0.5941 R  win  36.2%   exits SIGNAL 247 / STOP 1026 / TARGET 452 / TIMEOUT 284
+                  dE    -0.02236 R  cut  73.1% (null mean cut  81.1%)  unlabelled 73
+                  ctrl time-shuffle |dE|>=obs in  67.1% of 1000; control reproduces 197.1% of the move
+                  ctrl label-shuffle |dE|>=obs in  65.1% of 1000; control reproduces 180.2% of the move
+                  ctrl day-block    |dE|>=obs in  68.9% of 1000; control reproduces 203.3% of the move
+                  => inside the noise of a same-cut random filter on this window
+   XAGDUKA  vol   IN   n 1400  E  -0.14557 R  PF_r  0.7451  Lbar  0.5710 R  win  36.6%   exits SIGNAL 199 / STOP 684 / TARGET 266 / TIMEOUT 251
+                  OUT  n 1348  E  -0.12620 R  PF_r  0.8026  Lbar  0.6392 R  win  35.2%   exits SIGNAL 86 / STOP 763 / TARGET 357 / TIMEOUT 142
+                  dE    -0.01937 R  cut  49.1% (null mean cut  50.7%)  unlabelled 73
+                  ctrl time-shuffle |dE|>=obs in  65.8% of 1000; control reproduces 175.9% of the move
+                  ctrl label-shuffle |dE|>=obs in  67.7% of 1000; control reproduces 189.9% of the move
+                  ctrl day-block    |dE|>=obs in  68.8% of 1000; control reproduces 186.7% of the move
+                  => inside the noise of a same-cut random filter on this window
+   EURDUKA  dir   IN   n 1242  E  -0.11789 R  PF_r  0.8042  Lbar  0.6022 R  win  36.7%   exits SIGNAL 106 / STOP 660 / TARGET 292 / TIMEOUT 184
+                  OUT  n 1561  E  -0.14068 R  PF_r  0.7668  Lbar  0.6032 R  win  35.7%   exits SIGNAL 183 / STOP 814 / TARGET 348 / TIMEOUT 216
+                  dE     0.02279 R  cut  55.7% (null mean cut  67.0%)  unlabelled 18
+                  ctrl time-shuffle |dE|>=obs in  61.6% of 1000; control reproduces 156.2% of the move
+                  ctrl label-shuffle |dE|>=obs in  62.7% of 1000; control reproduces 161.1% of the move
+                  ctrl day-block    |dE|>=obs in  62.2% of 1000; control reproduces 165.5% of the move
+                  => inside the noise of a same-cut random filter on this window
+   EURDUKA  move  IN   n 817   E  -0.14849 R  PF_r  0.7659  Lbar  0.6343 R  win  35.0%   exits SIGNAL 44 / STOP 466 / TARGET 201 / TIMEOUT 106
+                  OUT  n 1986  E  -0.12321 R  PF_r  0.7911  Lbar  0.5898 R  win  36.6%   exits SIGNAL 245 / STOP 1008 / TARGET 439 / TIMEOUT 294
+                  dE    -0.02528 R  cut  70.9% (null mean cut  77.7%)  unlabelled 18
+                  ctrl time-shuffle |dE|>=obs in  63.3% of 1000; control reproduces 166.4% of the move
+                  ctrl label-shuffle |dE|>=obs in  62.6% of 1000; control reproduces 159.3% of the move
+                  ctrl day-block    |dE|>=obs in  63.2% of 1000; control reproduces 165.4% of the move
+                  => inside the noise of a same-cut random filter on this window
+   EURDUKA  vol   IN   n 1594  E  -0.10327 R  PF_r  0.8187  Lbar  0.5696 R  win  37.7%   exits SIGNAL 206 / STOP 787 / TARGET 345 / TIMEOUT 256
+                  OUT  n 1209  E  -0.16659 R  PF_r  0.7423  Lbar  0.6464 R  win  34.1%   exits SIGNAL 83 / STOP 687 / TARGET 295 / TIMEOUT 144
+                  dE     0.06332 R  cut  43.1% (null mean cut  50.3%)  unlabelled 18
+                  ctrl time-shuffle |dE|>=obs in  14.8% of 1000; control reproduces  55.4% of the move
+                  ctrl label-shuffle |dE|>=obs in  14.3% of 1000; control reproduces  56.0% of the move
+                  ctrl day-block    |dE|>=obs in  16.6% of 1000; control reproduces  57.4% of the move
+                  => inside the noise of a same-cut random filter on this window
+   XAUDUKA  dir   IN   n 1560  E  -0.15017 R  PF_r  0.7586  Lbar  0.6222 R  win  35.8%   exits SIGNAL 101 / STOP 876 / TARGET 360 / TIMEOUT 223
+                  OUT  n 1261  E  -0.11297 R  PF_r  0.8054  Lbar  0.5806 R  win  36.3%   exits SIGNAL 191 / STOP 609 / TARGET 281 / TIMEOUT 180
+                  dE    -0.03721 R  cut  44.7% (null mean cut  68.1%)  unlabelled 0
+                  ctrl time-shuffle |dE|>=obs in  43.5% of 1000; control reproduces 101.3% of the move
+                  ctrl label-shuffle |dE|>=obs in  42.5% of 1000; control reproduces  95.4% of the move
+                  ctrl day-block    |dE|>=obs in  44.1% of 1000; control reproduces 101.1% of the move
+                  => inside the noise of a same-cut random filter on this window
+   XAUDUKA  move  IN   n 870   E  -0.15608 R  PF_r  0.7537  Lbar  0.6336 R  win  35.3%   exits SIGNAL 43 / STOP 500 / TARGET 200 / TIMEOUT 127
+                  OUT  n 1951  E  -0.12349 R  PF_r  0.7908  Lbar  0.5902 R  win  36.3%   exits SIGNAL 249 / STOP 985 / TARGET 441 / TIMEOUT 276
+                  dE    -0.03259 R  cut  69.2% (null mean cut  79.8%)  unlabelled 0
+                  ctrl time-shuffle |dE|>=obs in  53.9% of 1000; control reproduces 134.9% of the move
+                  ctrl label-shuffle |dE|>=obs in  48.9% of 1000; control reproduces 118.1% of the move
+                  ctrl day-block    |dE|>=obs in  54.3% of 1000; control reproduces 137.3% of the move
+                  => inside the noise of a same-cut random filter on this window
+   XAUDUKA  vol   IN   n 1447  E  -0.14318 R  PF_r  0.7475  Lbar  0.5669 R  win  37.0%   exits SIGNAL 210 / STOP 702 / TARGET 269 / TIMEOUT 266
+                  OUT  n 1374  E  -0.12340 R  PF_r  0.8079  Lbar  0.6422 R  win  35.0%   exits SIGNAL 82 / STOP 783 / TARGET 372 / TIMEOUT 137
+                  dE    -0.01978 R  cut  48.7% (null mean cut  50.8%)  unlabelled 0
+                  ctrl time-shuffle |dE|>=obs in  64.2% of 1000; control reproduces 176.8% of the move
+                  ctrl label-shuffle |dE|>=obs in  65.8% of 1000; control reproduces 177.1% of the move
+                  ctrl day-block    |dE|>=obs in  65.0% of 1000; control reproduces 178.0% of the move
+                  => inside the noise of a same-cut random filter on this window
+
+-- B 2018-06-01..2026-06-01  rsi-reversion  (weekdays + flat 16:30-18:15)  n=4084 trades, 0 unmatched fills, 222 dropped at the CME break, cap_lots hit 0 of 4306 entries, no-risk 0 entries
+   WHOLE BOOK  n 4084  E  -0.08180 R  PF_r  0.8458  Lbar  0.5304 R  win  44.7%  PF_usd  0.7763  maxDD   10491.08 USD /  98.22%  exits SIGNAL 1517 / STOP 1992 / TARGET 296 / TIMEOUT 279
+   XAGDUKA  dir   IN   n 2870  E  -0.05975 R  PF_r  0.8846  Lbar  0.5178 R  win  46.1%   exits SIGNAL 1108 / STOP 1371 / TARGET 207 / TIMEOUT 184
+                  OUT  n 1118  E  -0.14722 R  PF_r  0.7397  Lbar  0.5655 R  win  40.9%   exits SIGNAL 375 / STOP 577 / TARGET 78 / TIMEOUT 88
+                  dE     0.08747 R  cut  28.0% (null mean cut  68.8%)  unlabelled 96
+                  ctrl time-shuffle |dE|>=obs in   0.9% of 1000; control reproduces  32.4% of the move
+                  ctrl label-shuffle |dE|>=obs in   1.7% of 1000; control reproduces  32.7% of the move
+                  ctrl day-block    |dE|>=obs in   2.0% of 1000; control reproduces  34.2% of the move
+                  => SEPARATES past all three controls on this window
+   XAGDUKA  move  IN   n 1436  E  -0.04144 R  PF_r  0.9182  Lbar  0.5065 R  win  47.1%   exits SIGNAL 562 / STOP 674 / TARGET 107 / TIMEOUT 93
+                  OUT  n 2552  E  -0.10837 R  PF_r  0.8012  Lbar  0.5451 R  win  43.2%   exits SIGNAL 921 / STOP 1274 / TARGET 178 / TIMEOUT 179
+                  dE     0.06692 R  cut  64.0% (null mean cut  81.1%)  unlabelled 96
+                  ctrl time-shuffle |dE|>=obs in  11.6% of 1000; control reproduces  49.1% of the move
+                  ctrl label-shuffle |dE|>=obs in   5.3% of 1000; control reproduces  41.1% of the move
+                  ctrl day-block    |dE|>=obs in  11.7% of 1000; control reproduces  51.4% of the move
+                  => inside the noise of a same-cut random filter on this window
+   XAGDUKA  vol   IN   n 2556  E  -0.07298 R  PF_r  0.8561  Lbar  0.5071 R  win  45.0%   exits SIGNAL 970 / STOP 1178 / TARGET 180 / TIMEOUT 228
+                  OUT  n 1432  E  -0.10442 R  PF_r  0.8182  Lbar  0.5742 R  win  43.9%   exits SIGNAL 513 / STOP 770 / TARGET 105 / TIMEOUT 44
+                  dE     0.03144 R  cut  35.9% (null mean cut  50.7%)  unlabelled 96
+                  ctrl time-shuffle |dE|>=obs in  35.5% of 1000; control reproduces  84.7% of the move
+                  ctrl label-shuffle |dE|>=obs in  33.6% of 1000; control reproduces  83.2% of the move
+                  ctrl day-block    |dE|>=obs in  36.0% of 1000; control reproduces  85.7% of the move
+                  => inside the noise of a same-cut random filter on this window
+   EURDUKA  dir   IN   n 2129  E  -0.07480 R  PF_r  0.8579  Lbar  0.5263 R  win  45.5%   exits SIGNAL 813 / STOP 1032 / TARGET 154 / TIMEOUT 130
+                  OUT  n 1946  E  -0.08963 R  PF_r  0.8325  Lbar  0.5351 R  win  43.9%   exits SIGNAL 699 / STOP 956 / TARGET 142 / TIMEOUT 149
+                  dE     0.01483 R  cut  47.8% (null mean cut  67.0%)  unlabelled 9
+                  ctrl time-shuffle |dE|>=obs in  65.2% of 1000; control reproduces 181.2% of the move
+                  ctrl label-shuffle |dE|>=obs in  65.4% of 1000; control reproduces 176.6% of the move
+                  ctrl day-block    |dE|>=obs in  67.7% of 1000; control reproduces 183.1% of the move
+                  => inside the noise of a same-cut random filter on this window
+   EURDUKA  move  IN   n 1314  E  -0.06533 R  PF_r  0.8781  Lbar  0.5358 R  win  45.7%   exits SIGNAL 466 / STOP 656 / TARGET 108 / TIMEOUT 84
+                  OUT  n 2761  E  -0.08975 R  PF_r  0.8300  Lbar  0.5280 R  win  44.3%   exits SIGNAL 1046 / STOP 1332 / TARGET 188 / TIMEOUT 195
+                  dE     0.02442 R  cut  67.8% (null mean cut  77.7%)  unlabelled 9
+                  ctrl time-shuffle |dE|>=obs in  51.9% of 1000; control reproduces 127.1% of the move
+                  ctrl label-shuffle |dE|>=obs in  49.6% of 1000; control reproduces 117.5% of the move
+                  ctrl day-block    |dE|>=obs in  53.7% of 1000; control reproduces 130.1% of the move
+                  => inside the noise of a same-cut random filter on this window
+   EURDUKA  vol   IN   n 2597  E  -0.06341 R  PF_r  0.8755  Lbar  0.5091 R  win  45.4%   exits SIGNAL 973 / STOP 1207 / TARGET 208 / TIMEOUT 209
+                  OUT  n 1478  E  -0.11433 R  PF_r  0.7988  Lbar  0.5681 R  win  43.6%   exits SIGNAL 539 / STOP 781 / TARGET 88 / TIMEOUT 70
+                  dE     0.05092 R  cut  36.3% (null mean cut  50.3%)  unlabelled 9
+                  ctrl time-shuffle |dE|>=obs in  10.8% of 1000; control reproduces  49.9% of the move
+                  ctrl label-shuffle |dE|>=obs in  14.0% of 1000; control reproduces  54.1% of the move
+                  ctrl day-block    |dE|>=obs in  12.8% of 1000; control reproduces  51.8% of the move
+                  => inside the noise of a same-cut random filter on this window
+   XAUDUKA  dir   IN   n 3693  E  -0.07372 R  PF_r  0.8597  Lbar  0.5255 R  win  45.2%   exits SIGNAL 1384 / STOP 1786 / TARGET 268 / TIMEOUT 255
+                  OUT  n 390   E  -0.15834 R  PF_r  0.7259  Lbar  0.5778 R  win  40.0%   exits SIGNAL 132 / STOP 206 / TARGET 28 / TIMEOUT 24
+                  dE     0.08462 R  cut   9.6% (null mean cut  68.1%)  unlabelled 1
+                  ctrl time-shuffle |dE|>=obs in   1.2% of 1000; control reproduces  33.0% of the move
+                  ctrl label-shuffle |dE|>=obs in  12.5% of 1000; control reproduces  52.7% of the move
+                  ctrl day-block    |dE|>=obs in   1.5% of 1000; control reproduces  34.7% of the move
+                  => inside the noise of a same-cut random filter on this window
+   XAUDUKA  move  IN   n 1839  E  -0.03869 R  PF_r  0.9230  Lbar  0.5022 R  win  47.9%   exits SIGNAL 751 / STOP 856 / TARGET 124 / TIMEOUT 108
+                  OUT  n 2244  E  -0.11714 R  PF_r  0.7885  Lbar  0.5537 R  win  42.2%   exits SIGNAL 765 / STOP 1136 / TARGET 172 / TIMEOUT 171
+                  dE     0.07845 R  cut  55.0% (null mean cut  79.8%)  unlabelled 1
+                  ctrl time-shuffle |dE|>=obs in   4.6% of 1000; control reproduces  40.5% of the move
+                  ctrl label-shuffle |dE|>=obs in   1.6% of 1000; control reproduces  34.3% of the move
+                  ctrl day-block    |dE|>=obs in   3.7% of 1000; control reproduces  39.8% of the move
+                  => SEPARATES past all three controls on this window
+   XAUDUKA  vol   IN   n 2662  E  -0.06582 R  PF_r  0.8691  Lbar  0.5027 R  win  45.4%   exits SIGNAL 1008 / STOP 1216 / TARGET 196 / TIMEOUT 242
+                  OUT  n 1422  E  -0.11173 R  PF_r  0.8081  Lbar  0.5822 R  win  43.5%   exits SIGNAL 509 / STOP 776 / TARGET 100 / TIMEOUT 37
+                  dE     0.04591 R  cut  34.8% (null mean cut  50.8%)  unlabelled 0
+                  ctrl time-shuffle |dE|>=obs in  16.9% of 1000; control reproduces  56.6% of the move
+                  ctrl label-shuffle |dE|>=obs in  17.4% of 1000; control reproduces  59.4% of the move
+                  ctrl day-block    |dE|>=obs in  19.7% of 1000; control reproduces  59.3% of the move
+                  => inside the noise of a same-cut random filter on this window
+
+-- B 2018-06-01..2026-06-01  donchian-breakout  (weekdays + flat 16:30-18:15)  n=8138 trades, 0 unmatched fills, 620 dropped at the CME break, cap_lots hit 0 of 8758 entries, no-risk 0 entries
+   WHOLE BOOK  n 8138  E  -0.07833 R  PF_r  0.8447  Lbar  0.5045 R  win  35.6%  PF_usd  0.7899  maxDD   10353.45 USD / 100.03%  exits SIGNAL 2695 / STOP 2465 / TARGET 1508 / TIMEOUT 1470
+   XAGDUKA  dir   IN   n 6517  E  -0.08796 R  PF_r  0.8271  Lbar  0.5088 R  win  35.3%   exits SIGNAL 2143 / STOP 1993 / TARGET 1185 / TIMEOUT 1196
+                  OUT  n 1404  E  -0.03468 R  PF_r  0.9284  Lbar  0.4843 R  win  37.2%   exits SIGNAL 476 / STOP 407 / TARGET 280 / TIMEOUT 241
+                  dE    -0.05328 R  cut  17.7% (null mean cut  68.8%)  unlabelled 217
+                  ctrl time-shuffle |dE|>=obs in   4.0% of 1000; control reproduces  40.1% of the move
+                  ctrl label-shuffle |dE|>=obs in   8.2% of 1000; control reproduces  45.9% of the move
+                  ctrl day-block    |dE|>=obs in   4.1% of 1000; control reproduces  40.1% of the move
+                  => inside the noise of a same-cut random filter on this window
+   XAGDUKA  move  IN   n 4233  E  -0.07539 R  PF_r  0.8526  Lbar  0.5116 R  win  35.8%   exits SIGNAL 1272 / STOP 1346 / TARGET 808 / TIMEOUT 807
+                  OUT  n 3688  E  -0.08210 R  PF_r  0.8345  Lbar  0.4962 R  win  35.4%   exits SIGNAL 1347 / STOP 1054 / TARGET 657 / TIMEOUT 630
+                  dE     0.00672 R  cut  46.6% (null mean cut  81.1%)  unlabelled 217
+                  ctrl time-shuffle |dE|>=obs in  81.7% of 1000; control reproduces 357.6% of the move
+                  ctrl label-shuffle |dE|>=obs in  76.0% of 1000; control reproduces 281.8% of the move
+                  ctrl day-block    |dE|>=obs in  81.7% of 1000; control reproduces 338.7% of the move
+                  => inside the noise of a same-cut random filter on this window
+   XAGDUKA  vol   IN   n 4031  E  -0.06908 R  PF_r  0.8590  Lbar  0.4900 R  win  37.2%   exits SIGNAL 1211 / STOP 1265 / TARGET 702 / TIMEOUT 853
+                  OUT  n 3896  E  -0.08784 R  PF_r  0.8307  Lbar  0.5190 R  win  34.0%   exits SIGNAL 1411 / STOP 1135 / TARGET 764 / TIMEOUT 586
+                  dE     0.01877 R  cut  49.1% (null mean cut  50.7%)  unlabelled 211
+                  ctrl time-shuffle |dE|>=obs in  45.5% of 1000; control reproduces 106.2% of the move
+                  ctrl label-shuffle |dE|>=obs in  42.3% of 1000; control reproduces 101.1% of the move
+                  ctrl day-block    |dE|>=obs in  41.4% of 1000; control reproduces  99.0% of the move
+                  => inside the noise of a same-cut random filter on this window
+   EURDUKA  dir   IN   n 4806  E  -0.07956 R  PF_r  0.8425  Lbar  0.5051 R  win  35.9%   exits SIGNAL 1548 / STOP 1473 / TARGET 880 / TIMEOUT 905
+                  OUT  n 3303  E  -0.07331 R  PF_r  0.8541  Lbar  0.5025 R  win  35.5%   exits SIGNAL 1132 / STOP 984 / TARGET 627 / TIMEOUT 560
+                  dE    -0.00625 R  cut  40.7% (null mean cut  67.0%)  unlabelled 29
+                  ctrl time-shuffle |dE|>=obs in  80.3% of 1000; control reproduces 314.3% of the move
+                  ctrl label-shuffle |dE|>=obs in  80.4% of 1000; control reproduces 313.4% of the move
+                  ctrl day-block    |dE|>=obs in  82.3% of 1000; control reproduces 325.4% of the move
+                  => inside the noise of a same-cut random filter on this window
+   EURDUKA  move  IN   n 3208  E  -0.05303 R  PF_r  0.8950  Lbar  0.5053 R  win  36.8%   exits SIGNAL 959 / STOP 1015 / TARGET 644 / TIMEOUT 590
+                  OUT  n 4901  E  -0.09272 R  PF_r  0.8158  Lbar  0.5033 R  win  35.0%   exits SIGNAL 1721 / STOP 1442 / TARGET 863 / TIMEOUT 875
+                  dE     0.03969 R  cut  60.4% (null mean cut  77.7%)  unlabelled 29
+                  ctrl time-shuffle |dE|>=obs in  17.8% of 1000; control reproduces  57.2% of the move
+                  ctrl label-shuffle |dE|>=obs in   8.4% of 1000; control reproduces  48.2% of the move
+                  ctrl day-block    |dE|>=obs in  15.1% of 1000; control reproduces  55.6% of the move
+                  => inside the noise of a same-cut random filter on this window
+   EURDUKA  vol   IN   n 4293  E  -0.05841 R  PF_r  0.8829  Lbar  0.4988 R  win  37.0%   exits SIGNAL 1288 / STOP 1395 / TARGET 824 / TIMEOUT 786
+                  OUT  n 3816  E  -0.09795 R  PF_r  0.8079  Lbar  0.5099 R  win  34.2%   exits SIGNAL 1392 / STOP 1062 / TARGET 683 / TIMEOUT 679
+                  dE     0.03954 R  cut  47.1% (null mean cut  50.3%)  unlabelled 29
+                  ctrl time-shuffle |dE|>=obs in   9.3% of 1000; control reproduces  50.2% of the move
+                  ctrl label-shuffle |dE|>=obs in  10.3% of 1000; control reproduces  48.3% of the move
+                  ctrl day-block    |dE|>=obs in   7.8% of 1000; control reproduces  44.5% of the move
+                  => inside the noise of a same-cut random filter on this window
+   XAUDUKA  dir   IN   n 7964  E  -0.07917 R  PF_r  0.8434  Lbar  0.5054 R  win  35.7%   exits SIGNAL 2624 / STOP 2421 / TARGET 1476 / TIMEOUT 1443
+                  OUT  n 170   E  -0.04033 R  PF_r  0.9128  Lbar  0.4623 R  win  34.1%   exits SIGNAL 70 / STOP 44 / TARGET 31 / TIMEOUT 25
+                  dE    -0.03884 R  cut   2.1% (null mean cut  68.1%)  unlabelled 4
+                  ctrl time-shuffle |dE|>=obs in  12.2% of 1000; control reproduces  50.9% of the move
+                  ctrl label-shuffle |dE|>=obs in  63.0% of 1000; control reproduces 168.8% of the move
+                  ctrl day-block    |dE|>=obs in  13.2% of 1000; control reproduces  53.1% of the move
+                  => inside the noise of a same-cut random filter on this window
+   XAUDUKA  move  IN   n 5980  E  -0.08535 R  PF_r  0.8349  Lbar  0.5169 R  win  35.6%   exits SIGNAL 1811 / STOP 1924 / TARGET 1139 / TIMEOUT 1106
+                  OUT  n 2154  E  -0.05894 R  PF_r  0.8746  Lbar  0.4702 R  win  35.7%   exits SIGNAL 883 / STOP 541 / TARGET 368 / TIMEOUT 362
+                  dE    -0.02640 R  cut  26.5% (null mean cut  79.8%)  unlabelled 4
+                  ctrl time-shuffle |dE|>=obs in  34.9% of 1000; control reproduces  87.3% of the move
+                  ctrl label-shuffle |dE|>=obs in  31.1% of 1000; control reproduces  79.1% of the move
+                  ctrl day-block    |dE|>=obs in  36.5% of 1000; control reproduces  87.6% of the move
+                  => inside the noise of a same-cut random filter on this window
+   XAUDUKA  vol   IN   n 4148  E  -0.06601 R  PF_r  0.8646  Lbar  0.4874 R  win  37.8%   exits SIGNAL 1223 / STOP 1316 / TARGET 719 / TIMEOUT 890
+                  OUT  n 3990  E  -0.09115 R  PF_r  0.8255  Lbar  0.5223 R  win  33.5%   exits SIGNAL 1472 / STOP 1149 / TARGET 789 / TIMEOUT 580
+                  dE     0.02514 R  cut  49.0% (null mean cut  50.8%)  unlabelled 0
+                  ctrl time-shuffle |dE|>=obs in  28.7% of 1000; control reproduces  74.9% of the move
+                  ctrl label-shuffle |dE|>=obs in  27.8% of 1000; control reproduces  74.3% of the move
+                  ctrl day-block    |dE|>=obs in  26.8% of 1000; control reproduces  71.9% of the move
+                  => inside the noise of a same-cut random filter on this window
+
+-- B 2018-06-01..2026-06-01  bb-fade  (weekdays + flat 16:30-18:15)  n=11893 trades, 0 unmatched fills, 617 dropped at the CME break, cap_lots hit 0 of 12510 entries, no-risk 0 entries
+   WHOLE BOOK  n 11893 E  -0.10380 R  PF_r  0.8129  Lbar  0.5550 R  win  44.9%  PF_usd  0.6275  maxDD   10289.09 USD / 100.22%  exits SIGNAL 2358 / STOP 6197 / TARGET 2988 / TIMEOUT 350
+   XAGDUKA  dir   IN   n 524   E  -0.07923 R  PF_r  0.8557  Lbar  0.5491 R  win  45.4%   exits SIGNAL 102 / STOP 271 / TARGET 145 / TIMEOUT 6
+                  OUT  n 11068 E  -0.10399 R  PF_r  0.8125  Lbar  0.5545 R  win  44.9%   exits SIGNAL 2205 / STOP 5759 / TARGET 2770 / TIMEOUT 334
+                  dE     0.02476 R  cut  95.5% (null mean cut  68.8%)  unlabelled 301
+                  ctrl time-shuffle |dE|>=obs in  24.5% of 1000; control reproduces  69.2% of the move
+                  ctrl label-shuffle |dE|>=obs in  62.1% of 1000; control reproduces 154.2% of the move
+                  ctrl day-block    |dE|>=obs in  23.8% of 1000; control reproduces  68.1% of the move
+                  => inside the noise of a same-cut random filter on this window
+   XAGDUKA  move  IN   n 6210  E  -0.12328 R  PF_r  0.7861  Lbar  0.5763 R  win  43.0%   exits SIGNAL 1187 / STOP 3366 / TARGET 1458 / TIMEOUT 199
+                  OUT  n 5382  E  -0.07932 R  PF_r  0.8500  Lbar  0.5288 R  win  47.2%   exits SIGNAL 1120 / STOP 2664 / TARGET 1457 / TIMEOUT 141
+                  dE    -0.04396 R  cut  46.4% (null mean cut  81.1%)  unlabelled 301
+                  ctrl time-shuffle |dE|>=obs in   8.4% of 1000; control reproduces  46.3% of the move
+                  ctrl label-shuffle |dE|>=obs in   2.2% of 1000; control reproduces  35.8% of the move
+                  ctrl day-block    |dE|>=obs in   7.6% of 1000; control reproduces  45.5% of the move
+                  => inside the noise of a same-cut random filter on this window
+   XAGDUKA  vol   IN   n 6027  E  -0.07364 R  PF_r  0.8653  Lbar  0.5466 R  win  44.4%   exits SIGNAL 1368 / STOP 3095 / TARGET 1317 / TIMEOUT 247
+                  OUT  n 5570  E  -0.13423 R  PF_r  0.7613  Lbar  0.5623 R  win  45.5%   exits SIGNAL 940 / STOP 2936 / TARGET 1600 / TIMEOUT 94
+                  dE     0.06058 R  cut  48.0% (null mean cut  50.7%)  unlabelled 296
+                  ctrl time-shuffle |dE|>=obs in   0.1% of 1000; control reproduces  27.2% of the move
+                  ctrl label-shuffle |dE|>=obs in   0.4% of 1000; control reproduces  26.8% of the move
+                  ctrl day-block    |dE|>=obs in   0.1% of 1000; control reproduces  26.4% of the move
+                  => SEPARATES past all three controls on this window
+   EURDUKA  dir   IN   n 2224  E  -0.11646 R  PF_r  0.7943  Lbar  0.5662 R  win  44.3%   exits SIGNAL 405 / STOP 1191 / TARGET 575 / TIMEOUT 53
+                  OUT  n 9631  E  -0.10244 R  PF_r  0.8148  Lbar  0.5530 R  win  45.0%   exits SIGNAL 1946 / STOP 4992 / TARGET 2396 / TIMEOUT 297
+                  dE    -0.01402 R  cut  81.2% (null mean cut  67.0%)  unlabelled 38
+                  ctrl time-shuffle |dE|>=obs in  49.9% of 1000; control reproduces 119.7% of the move
+                  ctrl label-shuffle |dE|>=obs in  58.6% of 1000; control reproduces 145.4% of the move
+                  ctrl day-block    |dE|>=obs in  53.8% of 1000; control reproduces 123.1% of the move
+                  => inside the noise of a same-cut random filter on this window
+   EURDUKA  move  IN   n 4759  E  -0.10181 R  PF_r  0.8194  Lbar  0.5638 R  win  44.4%   exits SIGNAL 878 / STOP 2529 / TARGET 1210 / TIMEOUT 142
+                  OUT  n 7096  E  -0.10726 R  PF_r  0.8050  Lbar  0.5500 R  win  45.1%   exits SIGNAL 1473 / STOP 3654 / TARGET 1761 / TIMEOUT 208
+                  dE     0.00544 R  cut  59.9% (null mean cut  77.7%)  unlabelled 38
+                  ctrl time-shuffle |dE|>=obs in  81.2% of 1000; control reproduces 342.1% of the move
+                  ctrl label-shuffle |dE|>=obs in  77.9% of 1000; control reproduces 288.0% of the move
+                  ctrl day-block    |dE|>=obs in  85.3% of 1000; control reproduces 358.2% of the move
+                  => inside the noise of a same-cut random filter on this window
+   EURDUKA  vol   IN   n 6282  E  -0.09185 R  PF_r  0.8358  Lbar  0.5595 R  win  43.4%   exits SIGNAL 1306 / STOP 3304 / TARGET 1445 / TIMEOUT 227
+                  OUT  n 5573  E  -0.11997 R  PF_r  0.7823  Lbar  0.5510 R  win  46.5%   exits SIGNAL 1045 / STOP 2879 / TARGET 1526 / TIMEOUT 123
+                  dE     0.02812 R  cut  47.0% (null mean cut  50.3%)  unlabelled 38
+                  ctrl time-shuffle |dE|>=obs in  15.2% of 1000; control reproduces  55.7% of the move
+                  ctrl label-shuffle |dE|>=obs in  13.2% of 1000; control reproduces  54.0% of the move
+                  ctrl day-block    |dE|>=obs in  15.7% of 1000; control reproduces  57.1% of the move
+                  => inside the noise of a same-cut random filter on this window
+   XAUDUKA  dir   IN   n 45    E   0.16509 R  PF_r  1.3257  Lbar  0.5068 R  win  51.1%   exits SIGNAL 11 / STOP 22 / TARGET 12
+                  OUT  n 11844 E  -0.10496 R  PF_r  0.8110  Lbar  0.5552 R  win  44.9%   exits SIGNAL 2346 / STOP 6174 / TARGET 2976 / TIMEOUT 348
+                  dE     0.27005 R  cut  99.6% (null mean cut  68.0%)  unlabelled 4
+                  ctrl time-shuffle |dE|>=obs in   0.0% of 1000; control reproduces   5.9% of the move
+                  ctrl label-shuffle |dE|>=obs in   8.5% of 1000; control reproduces  46.1% of the move
+                  ctrl day-block    |dE|>=obs in   0.0% of 1000; control reproduces   6.1% of the move
+                  => inside the noise of a same-cut random filter on this window
+   XAUDUKA  move  IN   n 8912  E  -0.09572 R  PF_r  0.8297  Lbar  0.5622 R  win  44.2%   exits SIGNAL 1766 / STOP 4705 / TARGET 2157 / TIMEOUT 284
+                  OUT  n 2977  E  -0.12852 R  PF_r  0.7592  Lbar  0.5336 R  win  47.0%   exits SIGNAL 591 / STOP 1491 / TARGET 831 / TIMEOUT 64
+                  dE     0.03280 R  cut  25.0% (null mean cut  79.8%)  unlabelled 4
+                  ctrl time-shuffle |dE|>=obs in  19.5% of 1000; control reproduces  59.8% of the move
+                  ctrl label-shuffle |dE|>=obs in  12.2% of 1000; control reproduces  52.8% of the move
+                  ctrl day-block    |dE|>=obs in  17.4% of 1000; control reproduces  59.9% of the move
+                  => inside the noise of a same-cut random filter on this window
+   XAUDUKA  vol   IN   n 6144  E  -0.07450 R  PF_r  0.8648  Lbar  0.5510 R  win  43.8%   exits SIGNAL 1425 / STOP 3181 / TARGET 1282 / TIMEOUT 256
+                  OUT  n 5749  E  -0.13512 R  PF_r  0.7583  Lbar  0.5592 R  win  46.0%   exits SIGNAL 933 / STOP 3016 / TARGET 1706 / TIMEOUT 94
+                  dE     0.06063 R  cut  48.3% (null mean cut  50.8%)  unlabelled 0
+                  ctrl time-shuffle |dE|>=obs in   0.1% of 1000; control reproduces  26.4% of the move
+                  ctrl label-shuffle |dE|>=obs in   0.2% of 1000; control reproduces  25.8% of the move
+                  ctrl day-block    |dE|>=obs in   0.0% of 1000; control reproduces  25.3% of the move
+                  => SEPARATES past all three controls on this window
+
+######## DECISION LEDGER - F1 as registered ########
+F1 needs, for ONE comparison: |dE| past all three controls' 5% band on BOTH windows, SAME SIGN, both groups >= 40 trades.
+
+-- guards ON --
+companion state  mechanism             dE A (R)   dE B (R)  pA min%  pB min%  verdict
+XAGDUKA   dir    ema-cross              0.08338   -0.02400      5.6     57.8  sign flips between windows
+XAGDUKA   dir    rsi-reversion          0.03587    0.07274     30.2      3.1  same sign, inside the noise
+XAGDUKA   dir    donchian-breakout      0.03062   -0.05958     24.4      1.9  sign flips between windows
+XAGDUKA   dir    bb-fade                0.00967    0.05993     63.9      0.7  same sign, inside the noise
+XAGDUKA   move   ema-cross              0.02211   -0.03423     65.5     49.3  sign flips between windows
+XAGDUKA   move   rsi-reversion          0.04768    0.07114     14.5      3.9  same sign, inside the noise
+XAGDUKA   move   donchian-breakout      0.06282    0.00276      0.7     89.1  same sign, inside the noise
+XAGDUKA   move   bb-fade               -0.01818   -0.03494     35.0      8.3  same sign, inside the noise
+XAGDUKA   vol    ema-cross              0.03083   -0.01559     47.1     73.2  sign flips between windows
+XAGDUKA   vol    rsi-reversion          0.10464    0.03390      0.0     30.8  same sign, inside the noise
+XAGDUKA   vol    donchian-breakout      0.00754    0.01655     73.9     48.0  same sign, inside the noise
+XAGDUKA   vol    bb-fade                0.08085    0.06007      0.0      0.1  ** SEPARATES on BOTH windows, same sign **
+EURDUKA   dir    ema-cross             -0.02473    0.02928     57.8     49.4  sign flips between windows
+EURDUKA   dir    rsi-reversion          0.01544    0.02282     64.3     49.2  same sign, inside the noise
+EURDUKA   dir    donchian-breakout      0.01705    0.00254     45.7     90.5  same sign, inside the noise
+EURDUKA   dir    bb-fade               -0.00492   -0.01861     81.5     38.0  same sign, inside the noise
+EURDUKA   move   ema-cross             -0.06474   -0.02932     18.6     54.3  same sign, inside the noise
+EURDUKA   move   rsi-reversion          0.06471    0.02130      6.4     52.7  same sign, inside the noise
+EURDUKA   move   donchian-breakout      0.04184    0.04109     10.1      9.4  same sign, inside the noise
+EURDUKA   move   bb-fade               -0.00131   -0.01038     94.6     60.5  same sign, inside the noise
+EURDUKA   vol    ema-cross             -0.07582    0.06193      7.4     15.4  sign flips between windows
+EURDUKA   vol    rsi-reversion          0.09402    0.04921      0.1     12.1  same sign, inside the noise
+EURDUKA   vol    donchian-breakout      0.04075    0.04158      7.5      6.2  same sign, inside the noise
+EURDUKA   vol    bb-fade                0.03669    0.03792      5.1      4.8  same sign, inside the noise
+XAUDUKA   dir    ema-cross              0.01260   -0.03744     76.6     37.0  sign flips between windows
+XAUDUKA   dir    rsi-reversion          0.04130    0.07840     22.5      1.7  same sign, inside the noise
+XAUDUKA   dir    donchian-breakout     -0.07553   -0.07320      0.2      0.4  same sign, inside the noise
+XAUDUKA   dir    bb-fade                0.00317    0.10774     87.7      0.0  same sign, inside the noise
+XAUDUKA   move   ema-cross              0.01408   -0.02458     76.0     63.1  sign flips between windows
+XAUDUKA   move   rsi-reversion          0.03490    0.07691     28.7      1.6  same sign, inside the noise
+XAUDUKA   move   donchian-breakout      0.06063   -0.02553      3.8     32.8  sign flips between windows
+XAUDUKA   move   bb-fade                0.00998    0.03008     64.4     17.1  same sign, inside the noise
+XAUDUKA   vol    ema-cross             -0.03369   -0.01842     41.2     67.0  same sign, inside the noise
+XAUDUKA   vol    rsi-reversion          0.10426    0.04633      0.0     15.5  same sign, inside the noise
+XAUDUKA   vol    donchian-breakout      0.01512    0.02478     51.5     28.6  same sign, inside the noise
+XAUDUKA   vol    bb-fade                0.07206    0.05440      0.0      0.7  ** SEPARATES on BOTH windows, same sign **
+guards ON: 2 of 36 declared comparisons separate on BOTH windows with the SAME sign (a coin gives about 0.09); 27 of 36 merely share a sign (a coin gives 18.0); 0 not measurable
+guards ON: F3 ceiling - the BEST E of any group of any comparison is -0.00087 R (XAUDUKA dir bb-fade window B); the gate needs >= +0.050 R
+
+guards ON: F6 baseline - the same state computed on XAUDUKA (the PRIMARY itself), beside the companion
+companion state  mechanism             cmp dE A  base dE A   cmp dE B  base dE B  does the companion add anything?
+XAGDUKA   dir    ema-cross              0.08338    0.01260   -0.02400   -0.03744  mixed - companion more on one window, less on the other
+XAGDUKA   dir    rsi-reversion          0.03587    0.04130    0.07274    0.07840  NO - the primary's own state separates at least as much on BOTH windows
+XAGDUKA   dir    donchian-breakout      0.03062   -0.07553   -0.05958   -0.07320  NO - the primary's own state separates at least as much on BOTH windows
+XAGDUKA   dir    bb-fade                0.00967    0.00317    0.05993    0.10774  mixed - companion more on one window, less on the other
+XAGDUKA   move   ema-cross              0.02211    0.01408   -0.03423   -0.02458  yes - companion separates MORE on both windows
+XAGDUKA   move   rsi-reversion          0.04768    0.03490    0.07114    0.07691  mixed - companion more on one window, less on the other
+XAGDUKA   move   donchian-breakout      0.06282    0.06063    0.00276   -0.02553  mixed - companion more on one window, less on the other
+XAGDUKA   move   bb-fade               -0.01818    0.00998   -0.03494    0.03008  yes - companion separates MORE on both windows
+XAGDUKA   vol    ema-cross              0.03083   -0.03369   -0.01559   -0.01842  NO - the primary's own state separates at least as much on BOTH windows
+XAGDUKA   vol    rsi-reversion          0.10464    0.10426    0.03390    0.04633  mixed - companion more on one window, less on the other
+XAGDUKA   vol    donchian-breakout      0.00754    0.01512    0.01655    0.02478  NO - the primary's own state separates at least as much on BOTH windows
+XAGDUKA   vol    bb-fade                0.08085    0.07206    0.06007    0.05440  yes - companion separates MORE on both windows
+EURDUKA   dir    ema-cross             -0.02473    0.01260    0.02928   -0.03744  mixed - companion more on one window, less on the other
+EURDUKA   dir    rsi-reversion          0.01544    0.04130    0.02282    0.07840  NO - the primary's own state separates at least as much on BOTH windows
+EURDUKA   dir    donchian-breakout      0.01705   -0.07553    0.00254   -0.07320  NO - the primary's own state separates at least as much on BOTH windows
+EURDUKA   dir    bb-fade               -0.00492    0.00317   -0.01861    0.10774  mixed - companion more on one window, less on the other
+EURDUKA   move   ema-cross             -0.06474    0.01408   -0.02932   -0.02458  yes - companion separates MORE on both windows
+EURDUKA   move   rsi-reversion          0.06471    0.03490    0.02130    0.07691  mixed - companion more on one window, less on the other
+EURDUKA   move   donchian-breakout      0.04184    0.06063    0.04109   -0.02553  mixed - companion more on one window, less on the other
+EURDUKA   move   bb-fade               -0.00131    0.00998   -0.01038    0.03008  NO - the primary's own state separates at least as much on BOTH windows
+EURDUKA   vol    ema-cross             -0.07582   -0.03369    0.06193   -0.01842  yes - companion separates MORE on both windows
+EURDUKA   vol    rsi-reversion          0.09402    0.10426    0.04921    0.04633  mixed - companion more on one window, less on the other
+EURDUKA   vol    donchian-breakout      0.04075    0.01512    0.04158    0.02478  yes - companion separates MORE on both windows
+EURDUKA   vol    bb-fade                0.03669    0.07206    0.03792    0.05440  NO - the primary's own state separates at least as much on BOTH windows
+guards ON: companion separates MORE than the primary's own state on both windows in 6 comparisons; the PRIMARY's own state wins on both in 8
+
+-- guards OFF --
+companion state  mechanism             dE A (R)   dE B (R)  pA min%  pB min%  verdict
+XAGDUKA   dir    ema-cross              0.09455   -0.01617      3.6     72.6  sign flips between windows
+XAGDUKA   dir    rsi-reversion          0.03420    0.08747     33.7      0.9  same sign, inside the noise
+XAGDUKA   dir    donchian-breakout      0.03312   -0.05328     20.4      4.0  sign flips between windows
+XAGDUKA   dir    bb-fade                0.06675    0.02476      0.1     23.8  same sign, inside the noise
+XAGDUKA   move   ema-cross              0.05460   -0.02236     28.4     65.1  sign flips between windows
+XAGDUKA   move   rsi-reversion          0.05367    0.06692     12.0      5.3  same sign, inside the noise
+XAGDUKA   move   donchian-breakout      0.06971    0.00672      0.4     76.0  same sign, inside the noise
+XAGDUKA   move   bb-fade               -0.02479   -0.04396     18.8      2.2  same sign, inside the noise
+XAGDUKA   vol    ema-cross              0.04757   -0.01937     24.4     65.8  sign flips between windows
+XAGDUKA   vol    rsi-reversion          0.11032    0.03144      0.0     33.6  same sign, inside the noise
+XAGDUKA   vol    donchian-breakout      0.01526    0.01877     51.3     41.4  same sign, inside the noise
+XAGDUKA   vol    bb-fade                0.07098    0.06058      0.0      0.1  ** SEPARATES on BOTH windows, same sign **
+EURDUKA   dir    ema-cross             -0.01244    0.02279     76.5     61.6  sign flips between windows
+EURDUKA   dir    rsi-reversion          0.01136    0.01483     71.4     65.2  same sign, inside the noise
+EURDUKA   dir    donchian-breakout      0.02699   -0.00625     23.8     80.3  sign flips between windows
+EURDUKA   dir    bb-fade                0.00343   -0.01402     86.8     49.9  sign flips between windows
+EURDUKA   move   ema-cross             -0.04339   -0.02528     34.3     62.6  same sign, inside the noise
+EURDUKA   move   rsi-reversion          0.06439    0.02442      8.0     49.6  same sign, inside the noise
+EURDUKA   move   donchian-breakout      0.05678    0.03969      1.9      8.4  same sign, inside the noise
+EURDUKA   move   bb-fade               -0.00757    0.00544     68.0     77.9  sign flips between windows
+EURDUKA   vol    ema-cross             -0.06300    0.06332     14.6     14.3  sign flips between windows
+EURDUKA   vol    rsi-reversion          0.08803    0.05092      0.4     10.8  same sign, inside the noise
+EURDUKA   vol    donchian-breakout      0.05309    0.03954      2.0      7.8  same sign, inside the noise
+EURDUKA   vol    bb-fade                0.03046    0.02812      9.3     13.2  same sign, inside the noise
+XAUDUKA   dir    ema-cross              0.01392   -0.03721     75.5     42.5  sign flips between windows
+XAUDUKA   dir    rsi-reversion          0.02431    0.08462     46.2      1.2  same sign, inside the noise
+XAUDUKA   dir    donchian-breakout     -0.04844   -0.03884      5.8     12.2  same sign, inside the noise
+XAUDUKA   dir    bb-fade               -0.03250    0.27005     10.7      0.0  sign flips between windows
+XAUDUKA   move   ema-cross              0.03399   -0.03259     47.1     48.9  sign flips between windows
+XAUDUKA   move   rsi-reversion          0.04172    0.07845     20.7      1.6  same sign, inside the noise
+XAUDUKA   move   donchian-breakout      0.07775   -0.02640      0.5     31.1  sign flips between windows
+XAUDUKA   move   bb-fade               -0.01849    0.03280     44.0     12.2  sign flips between windows
+XAUDUKA   vol    ema-cross              0.01071   -0.01978     79.2     64.2  sign flips between windows
+XAUDUKA   vol    rsi-reversion          0.10731    0.04591      0.0     16.9  same sign, inside the noise
+XAUDUKA   vol    donchian-breakout      0.02948    0.02514     20.3     26.8  same sign, inside the noise
+XAUDUKA   vol    bb-fade                0.06133    0.06063      0.0      0.0  ** SEPARATES on BOTH windows, same sign **
+guards OFF: 2 of 36 declared comparisons separate on BOTH windows with the SAME sign (a coin gives about 0.09); 21 of 36 merely share a sign (a coin gives 18.0); 0 not measurable
+guards OFF: F3 ceiling - the BEST E of any group of any comparison is 0.16509 R (XAUDUKA dir bb-fade window B); the gate needs >= +0.050 R
+
+guards OFF: F6 baseline - the same state computed on XAUDUKA (the PRIMARY itself), beside the companion
+companion state  mechanism             cmp dE A  base dE A   cmp dE B  base dE B  does the companion add anything?
+XAGDUKA   dir    ema-cross              0.09455    0.01392   -0.01617   -0.03721  mixed - companion more on one window, less on the other
+XAGDUKA   dir    rsi-reversion          0.03420    0.02431    0.08747    0.08462  yes - companion separates MORE on both windows
+XAGDUKA   dir    donchian-breakout      0.03312   -0.04844   -0.05328   -0.03884  mixed - companion more on one window, less on the other
+XAGDUKA   dir    bb-fade                0.06675   -0.03250    0.02476    0.27005  mixed - companion more on one window, less on the other
+XAGDUKA   move   ema-cross              0.05460    0.03399   -0.02236   -0.03259  mixed - companion more on one window, less on the other
+XAGDUKA   move   rsi-reversion          0.05367    0.04172    0.06692    0.07845  mixed - companion more on one window, less on the other
+XAGDUKA   move   donchian-breakout      0.06971    0.07775    0.00672   -0.02640  NO - the primary's own state separates at least as much on BOTH windows
+XAGDUKA   move   bb-fade               -0.02479   -0.01849   -0.04396    0.03280  yes - companion separates MORE on both windows
+XAGDUKA   vol    ema-cross              0.04757    0.01071   -0.01937   -0.01978  mixed - companion more on one window, less on the other
+XAGDUKA   vol    rsi-reversion          0.11032    0.10731    0.03144    0.04591  mixed - companion more on one window, less on the other
+XAGDUKA   vol    donchian-breakout      0.01526    0.02948    0.01877    0.02514  NO - the primary's own state separates at least as much on BOTH windows
+XAGDUKA   vol    bb-fade                0.07098    0.06133    0.06058    0.06063  mixed - companion more on one window, less on the other
+EURDUKA   dir    ema-cross             -0.01244    0.01392    0.02279   -0.03721  NO - the primary's own state separates at least as much on BOTH windows
+EURDUKA   dir    rsi-reversion          0.01136    0.02431    0.01483    0.08462  NO - the primary's own state separates at least as much on BOTH windows
+EURDUKA   dir    donchian-breakout      0.02699   -0.04844   -0.00625   -0.03884  NO - the primary's own state separates at least as much on BOTH windows
+EURDUKA   dir    bb-fade                0.00343   -0.03250   -0.01402    0.27005  NO - the primary's own state separates at least as much on BOTH windows
+EURDUKA   move   ema-cross             -0.04339    0.03399   -0.02528   -0.03259  mixed - companion more on one window, less on the other
+EURDUKA   move   rsi-reversion          0.06439    0.04172    0.02442    0.07845  mixed - companion more on one window, less on the other
+EURDUKA   move   donchian-breakout      0.05678    0.07775    0.03969   -0.02640  mixed - companion more on one window, less on the other
+EURDUKA   move   bb-fade               -0.00757   -0.01849    0.00544    0.03280  NO - the primary's own state separates at least as much on BOTH windows
+EURDUKA   vol    ema-cross             -0.06300    0.01071    0.06332   -0.01978  yes - companion separates MORE on both windows
+EURDUKA   vol    rsi-reversion          0.08803    0.10731    0.05092    0.04591  mixed - companion more on one window, less on the other
+EURDUKA   vol    donchian-breakout      0.05309    0.02948    0.03954    0.02514  yes - companion separates MORE on both windows
+EURDUKA   vol    bb-fade                0.03046    0.06133    0.02812    0.06063  NO - the primary's own state separates at least as much on BOTH windows
+guards OFF: companion separates MORE than the primary's own state on both windows in 4 comparisons; the PRIMARY's own state wins on both in 8
