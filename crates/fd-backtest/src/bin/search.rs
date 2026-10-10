@@ -660,7 +660,7 @@ fn roll_line(cfg: &fd_backtest::RollingBasis, report: Option<&fd_backtest::basis
         ),
     };
     format!(
-        "{head}\nbasis:    BARS (the engine's own denominator): {} of the bar series carry a frame, and {} of those still carry LEVELS after the basis — {} bars REFUSED, i.e. the rule could not place a level there and took nothing (that is `null`, not an offset of 0.00)\nbasis:    frames {} = shifted {} + refused {}, of which {} are DUPLICATE timestamps (build_timeline stamps every step with the last print's time, so a tape gap repeats one instant) — read the BAR line above, not these\nbasis:    raw observations {}\n{}\n{}",
+        "{head}\nbasis:    BARS (the engine's own denominator): {} of the bar series carry a frame, and {} of those still carry LEVELS after the basis — {} bars REFUSED, i.e. the rule could not place a level there and took nothing (that is `null`, not an offset of 0.00)\nbasis:    frames {} = shifted {} + refused {}, of which {} are DUPLICATE timestamps (build_timeline stamps every step with the last print's time, so a tape gap repeats one instant) — read the BAR line above, not these\nbasis:    raw observations {}\n{}\n{}\n{}",
         r.bars_covered,
         r.bars_with_levels,
         r.bars_covered - r.bars_with_levels,
@@ -670,7 +670,8 @@ fn roll_line(cfg: &fd_backtest::RollingBasis, report: Option<&fd_backtest::basis
         r.duplicate_frames,
         r.observations,
         spread("raw GC-spot basis, every bar that had a frame", r.raw.as_ref()),
-        spread("APPLIED rolling estimates", r.applied.as_ref()),
+        spread("the basis AS EACH TRADABLE BAR SAW IT (BAR-weighted, one value per tradable bar: THIS is the series a constant offset must be compared against, because a constant is also one number per bar)", r.at_bars.as_ref()),
+        spread("APPLIED per frame (frame-weighted, so DISTORTED by the duplicate timestamps above - do not read as coverage)", r.applied.as_ref()),
     )
 }
 

@@ -268,8 +268,25 @@ pub struct Report {
     pub bars_with_levels: usize,
     /// Raw observations available at all, over the whole bar series.
     pub observations: usize,
-    /// Distribution of the APPLIED estimates, `None` when nothing was applied.
+    /// Distribution of the APPLIED estimates, one per frame, `None` when
+    /// nothing was applied.
+    ///
+    /// ⚠️ **Frame-weighted, and therefore distorted** on this tape: 63% of the
+    /// frames are duplicate timestamps (see `duplicate_frames`), all stamped
+    /// at the last print before the tape's gap, which is where the basis is at
+    /// its lowest. Read [`Report::at_bars`] for the number the engine actually
+    /// traded on.
     pub applied: Option<Spread>,
+    /// Distribution of the basis **as each covered BAR saw it** — the estimate
+    /// carried by the frame that bar's own lookup returns.
+    ///
+    /// This is the honest description of the correction: one value per bar the
+    /// engine can trade, in bar order, BAR-weighted rather than frame-weighted.
+    /// It is the series to compare a constant offset against, because a
+    /// constant offset is also one number per bar. (Two bars can read the same
+    /// frame, so a frame may appear twice here — that is correct: what is being
+    /// described is what the bars traded on, not what the timeline holds.)
+    pub at_bars: Option<Spread>,
     /// Distribution of the RAW observations, `None` when there are none.
     pub raw: Option<Spread>,
 }
@@ -376,11 +393,17 @@ pub fn apply(
     // inflated by `duplicate_frames` besides.
     let mut bars_covered = 0usize;
     let mut bars_with_levels = 0usize;
+    // The basis per BAR, re-derived at the frame time that bar's own lookup
+    // lands on, so it is the same number the rules were run with.
+    let mut at_bars = Vec::new();
     for bar in bars {
         if let Some(f) = shifted_timeline.at(bar.time) {
             bars_covered += 1;
             if !f.clusters.is_empty() {
                 bars_with_levels += 1;
+                if let Some(b) = estimate(&obs, f.t, cfg) {
+                    at_bars.push(b);
+                }
             }
         }
     }
@@ -393,6 +416,7 @@ pub fn apply(
         bars_with_levels,
         observations: obs.len(),
         applied: Spread::of(&applied_values),
+        at_bars: Spread::of(&at_bars),
         raw,
     };
     (shifted_timeline, report)
@@ -475,6 +499,7 @@ mod tests {
         assert_eq!(report.shifted, 0);
         assert_eq!(report.refused, frames.len(), "every frame refused, and counted as refused");
         assert!(report.applied.is_none(), "nothing applied is `null`, not a spread of zeros");
+        assert!(report.at_bars.is_none(), "and no bar traded on a basis, which is `null` too");
         assert_eq!(report.bars_with_levels, 0, "no basis means no bar can read a level");
         assert!(report.bars_covered > 0, "the bars are still covered by frames; it is the LEVELS that went");
     }
