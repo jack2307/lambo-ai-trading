@@ -891,10 +891,20 @@ ngày UTC**, **0,8%** bộ nến — và cổng desk đòi **hai** cửa sổ.
 
 ### Đĩa và hạ tầng
 
-`df -h /e`: **16 GB** rảnh (95%) trước → **14 GB** (96%) sau, tức
-**−2 GB** cho `target-ob/` của worktree này (build release của một crate).
-**Không xoá `target/`** của ai — theo phụ lục 8 §VI, thủ phạm các cú tụt lớn là
-`pagefile.sys`, không phải `target/`, và 14 GB còn xa sàn 3 GB. Không chạy
-`cargo test --workspace` ở debug lần nào. Hai `collect.exe` (pid 5044 gold, 38720 btc) **không bị
+`df -h /e`: **16 GB** rảnh (95%) trước → **14 GB** (96%) ngay sau build+run →
+**15 GB** (96%) sau khi mọi `search.exe` thoát. Tức con số **dao động 1 GB
+trong vài phút mà không ai xoá gì** — đúng cái hiện tượng phụ lục 8 §VI nói:
+thủ phạm là `pagefile.sys` tự nới/co theo áp lực bộ nhớ, **không phải
+`target/`**. `target-ob/` của worktree này tốn ~2 GB (build release một crate).
+**Không xoá `target/` của ai**, và 15 GB còn xa sàn 3 GB. Không chạy
+`cargo test --workspace` ở debug lần nào.
+
+Bộ test: **205 test `--release` trên `-p fd-backtest`, 0 lỗi**, trong đó 118
+test `--lib` (10 cái mới của `basis.rs`) và cổng golden parity
+(`parity.rs`, `timeline_parity.rs`, `paper_parity.rs`) **không đổi**.
+
+Hai `collect.exe` **pid 5044 (gold) và 38720 (btc) còn sống sau khi job xong**,
+đã kiểm bằng `tasklist`. Không `taskkill`, không chạm
+`/e/rust/flowdesk/target/release/`, `data/gold/`, `data/btc/`. Hai `collect.exe` (pid 5044 gold, 38720 btc) **không bị
 chạm**; tape đi 53.479 → **55.131** print giữa `options-first` và run này, tức
 chúng vẫn đang ghi.
