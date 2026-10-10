@@ -853,6 +853,7 @@ name = "fd-strategy"
 version = "0.1.0"
 dependencies = [
  "fd-core",
+ "fd-engine",
  "fd-indicators",
  "serde",
  "serde_json",

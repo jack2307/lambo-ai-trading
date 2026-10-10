@@ -1,0 +1,180 @@
+# The 24 cells registered in docs/decisions/2026-10-10-volume-profile-btc.md
+# BEFORE anything was run: 2 measures x 2 modes x 2 window sizes x 3 buffers.
+# `measure` 0 = VOLUME_DISTRIBUTED (traded volume spread over the prices a bar
+# traded at), 1 = TIME_AT_PRICE (the TPO weight this module already published).
+# Both arms are the same rule on the same bars; the contrast between them IS
+# the experiment, which is why the time arm is in the batch rather than being
+# argued about.
+#
+# Seat order is alphabetical by label on purpose. `SURVIVES` has been measured
+# to depend on a row's SEAT in the file (null p95 1.297 vs 2.036 for one
+# method at two seats), so this file fixes the seats and this run does not
+# publish percentiles.
+
+[[hypothesis]]
+label = "vp-vol-ret-1d-b025"
+base = "vprofile"
+filters = []
+overrides = { measure = 0.0, mode = 0.0, profileDays = 1.0, bufferAtr = 0.25 }
+why = "a close outside the prior value area, entered back towards the POC; profile over the prior 1 UTC day(s) weighted by traded volume spread over the prices it traded at"
+
+[[hypothesis]]
+label = "vp-vol-ret-1d-b05"
+base = "vprofile"
+filters = []
+overrides = { measure = 0.0, mode = 0.0, profileDays = 1.0, bufferAtr = 0.5 }
+why = "a close outside the prior value area, entered back towards the POC; profile over the prior 1 UTC day(s) weighted by traded volume spread over the prices it traded at"
+
+[[hypothesis]]
+label = "vp-vol-ret-1d-b10"
+base = "vprofile"
+filters = []
+overrides = { measure = 0.0, mode = 0.0, profileDays = 1.0, bufferAtr = 1.0 }
+why = "a close outside the prior value area, entered back towards the POC; profile over the prior 1 UTC day(s) weighted by traded volume spread over the prices it traded at"
+
+[[hypothesis]]
+label = "vp-vol-ret-5d-b025"
+base = "vprofile"
+filters = []
+overrides = { measure = 0.0, mode = 0.0, profileDays = 5.0, bufferAtr = 0.25 }
+why = "a close outside the prior value area, entered back towards the POC; profile over the prior 5 UTC day(s) weighted by traded volume spread over the prices it traded at"
+
+[[hypothesis]]
+label = "vp-vol-ret-5d-b05"
+base = "vprofile"
+filters = []
+overrides = { measure = 0.0, mode = 0.0, profileDays = 5.0, bufferAtr = 0.5 }
+why = "a close outside the prior value area, entered back towards the POC; profile over the prior 5 UTC day(s) weighted by traded volume spread over the prices it traded at"
+
+[[hypothesis]]
+label = "vp-vol-ret-5d-b10"
+base = "vprofile"
+filters = []
+overrides = { measure = 0.0, mode = 0.0, profileDays = 5.0, bufferAtr = 1.0 }
+why = "a close outside the prior value area, entered back towards the POC; profile over the prior 5 UTC day(s) weighted by traded volume spread over the prices it traded at"
+
+[[hypothesis]]
+label = "vp-vol-rej-1d-b025"
+base = "vprofile"
+filters = []
+overrides = { measure = 0.0, mode = 1.0, profileDays = 1.0, bufferAtr = 0.25 }
+why = "a poke through a value-area edge that closes back inside, entered towards the POC; profile over the prior 1 UTC day(s) weighted by traded volume spread over the prices it traded at"
+
+[[hypothesis]]
+label = "vp-vol-rej-1d-b05"
+base = "vprofile"
+filters = []
+overrides = { measure = 0.0, mode = 1.0, profileDays = 1.0, bufferAtr = 0.5 }
+why = "a poke through a value-area edge that closes back inside, entered towards the POC; profile over the prior 1 UTC day(s) weighted by traded volume spread over the prices it traded at"
+
+[[hypothesis]]
+label = "vp-vol-rej-1d-b10"
+base = "vprofile"
+filters = []
+overrides = { measure = 0.0, mode = 1.0, profileDays = 1.0, bufferAtr = 1.0 }
+why = "a poke through a value-area edge that closes back inside, entered towards the POC; profile over the prior 1 UTC day(s) weighted by traded volume spread over the prices it traded at"
+
+[[hypothesis]]
+label = "vp-vol-rej-5d-b025"
+base = "vprofile"
+filters = []
+overrides = { measure = 0.0, mode = 1.0, profileDays = 5.0, bufferAtr = 0.25 }
+why = "a poke through a value-area edge that closes back inside, entered towards the POC; profile over the prior 5 UTC day(s) weighted by traded volume spread over the prices it traded at"
+
+[[hypothesis]]
+label = "vp-vol-rej-5d-b05"
+base = "vprofile"
+filters = []
+overrides = { measure = 0.0, mode = 1.0, profileDays = 5.0, bufferAtr = 0.5 }
+why = "a poke through a value-area edge that closes back inside, entered towards the POC; profile over the prior 5 UTC day(s) weighted by traded volume spread over the prices it traded at"
+
+[[hypothesis]]
+label = "vp-vol-rej-5d-b10"
+base = "vprofile"
+filters = []
+overrides = { measure = 0.0, mode = 1.0, profileDays = 5.0, bufferAtr = 1.0 }
+why = "a poke through a value-area edge that closes back inside, entered towards the POC; profile over the prior 5 UTC day(s) weighted by traded volume spread over the prices it traded at"
+
+[[hypothesis]]
+label = "vp-tpo-ret-1d-b025"
+base = "vprofile"
+filters = []
+overrides = { measure = 1.0, mode = 0.0, profileDays = 1.0, bufferAtr = 0.25 }
+why = "a close outside the prior value area, entered back towards the POC; profile over the prior 1 UTC day(s) weighted by time at price, the same rule on the histogram the volume column does not touch"
+
+[[hypothesis]]
+label = "vp-tpo-ret-1d-b05"
+base = "vprofile"
+filters = []
+overrides = { measure = 1.0, mode = 0.0, profileDays = 1.0, bufferAtr = 0.5 }
+why = "a close outside the prior value area, entered back towards the POC; profile over the prior 1 UTC day(s) weighted by time at price, the same rule on the histogram the volume column does not touch"
+
+[[hypothesis]]
+label = "vp-tpo-ret-1d-b10"
+base = "vprofile"
+filters = []
+overrides = { measure = 1.0, mode = 0.0, profileDays = 1.0, bufferAtr = 1.0 }
+why = "a close outside the prior value area, entered back towards the POC; profile over the prior 1 UTC day(s) weighted by time at price, the same rule on the histogram the volume column does not touch"
+
+[[hypothesis]]
+label = "vp-tpo-ret-5d-b025"
+base = "vprofile"
+filters = []
+overrides = { measure = 1.0, mode = 0.0, profileDays = 5.0, bufferAtr = 0.25 }
+why = "a close outside the prior value area, entered back towards the POC; profile over the prior 5 UTC day(s) weighted by time at price, the same rule on the histogram the volume column does not touch"
+
+[[hypothesis]]
+label = "vp-tpo-ret-5d-b05"
+base = "vprofile"
+filters = []
+overrides = { measure = 1.0, mode = 0.0, profileDays = 5.0, bufferAtr = 0.5 }
+why = "a close outside the prior value area, entered back towards the POC; profile over the prior 5 UTC day(s) weighted by time at price, the same rule on the histogram the volume column does not touch"
+
+[[hypothesis]]
+label = "vp-tpo-ret-5d-b10"
+base = "vprofile"
+filters = []
+overrides = { measure = 1.0, mode = 0.0, profileDays = 5.0, bufferAtr = 1.0 }
+why = "a close outside the prior value area, entered back towards the POC; profile over the prior 5 UTC day(s) weighted by time at price, the same rule on the histogram the volume column does not touch"
+
+[[hypothesis]]
+label = "vp-tpo-rej-1d-b025"
+base = "vprofile"
+filters = []
+overrides = { measure = 1.0, mode = 1.0, profileDays = 1.0, bufferAtr = 0.25 }
+why = "a poke through a value-area edge that closes back inside, entered towards the POC; profile over the prior 1 UTC day(s) weighted by time at price, the same rule on the histogram the volume column does not touch"
+
+[[hypothesis]]
+label = "vp-tpo-rej-1d-b05"
+base = "vprofile"
+filters = []
+overrides = { measure = 1.0, mode = 1.0, profileDays = 1.0, bufferAtr = 0.5 }
+why = "a poke through a value-area edge that closes back inside, entered towards the POC; profile over the prior 1 UTC day(s) weighted by time at price, the same rule on the histogram the volume column does not touch"
+
+[[hypothesis]]
+label = "vp-tpo-rej-1d-b10"
+base = "vprofile"
+filters = []
+overrides = { measure = 1.0, mode = 1.0, profileDays = 1.0, bufferAtr = 1.0 }
+why = "a poke through a value-area edge that closes back inside, entered towards the POC; profile over the prior 1 UTC day(s) weighted by time at price, the same rule on the histogram the volume column does not touch"
+
+[[hypothesis]]
+label = "vp-tpo-rej-5d-b025"
+base = "vprofile"
+filters = []
+overrides = { measure = 1.0, mode = 1.0, profileDays = 5.0, bufferAtr = 0.25 }
+why = "a poke through a value-area edge that closes back inside, entered towards the POC; profile over the prior 5 UTC day(s) weighted by time at price, the same rule on the histogram the volume column does not touch"
+
+[[hypothesis]]
+label = "vp-tpo-rej-5d-b05"
+base = "vprofile"
+filters = []
+overrides = { measure = 1.0, mode = 1.0, profileDays = 5.0, bufferAtr = 0.5 }
+why = "a poke through a value-area edge that closes back inside, entered towards the POC; profile over the prior 5 UTC day(s) weighted by time at price, the same rule on the histogram the volume column does not touch"
+
+[[hypothesis]]
+label = "vp-tpo-rej-5d-b10"
+base = "vprofile"
+filters = []
+overrides = { measure = 1.0, mode = 1.0, profileDays = 5.0, bufferAtr = 1.0 }
+why = "a poke through a value-area edge that closes back inside, entered towards the POC; profile over the prior 5 UTC day(s) weighted by time at price, the same rule on the histogram the volume column does not touch"

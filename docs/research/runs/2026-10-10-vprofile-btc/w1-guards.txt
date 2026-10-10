@@ -1,0 +1,343 @@
+market:   btc 15m
+data:     E:/rust/flowdesk/data (bars from E:/rust/flowdesk/data\bars\BTCUSDT-15m.parquet)
+bounds:   --from=2024-09-12 --to=2025-09-12 kept 34999 of 70080 bars
+spread:   5 per round trip
+trail:    off
+max hold: 4 h (14400000 ms) from [trading] max_hold_ms, no per-market override
+bars:     34999 from 2024-09-12 10:15 to 2025-09-11 23:45
+timeline: 8407 frames from 2026-09-11 05:36 to 2026-10-10 10:05
+          the tape covers 0 of 34999 bars (0.0%)
+
+tape:     70324 prints, 8407 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+companion: none loaded — every cmp series is NaN
+guards: on — max_open_loss_r 2.0, notional 300%, weekend flat 16:40 NY, news flat 60/30 (impact≥3, USD), daily cap 20, loss limit $300, cooldown 30 min
+null sides: coin - 50/50, carries no drift; the null every published percentile was read against
+flags:    11 passed, every one of them read by --mode=hypotheses
+
+== hypotheses `docs/research/designs/2026-10-10-vprofile-btc.toml`: 24 declared, FIXED parameters over the whole window (no selection), each against 10 matched null runs ==
+null sides: coin (50/50, carries no drift; the null every published percentile was read against)
+swap: long 0.00 / short 0.00 USD per lot per night; spread 5
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+guards: on — max_open_loss_r 2.0, notional 300%, weekend flat 16:40 NY, news flat 60/30 (impact≥3, USD), daily cap 20, loss limit $300, cooldown 30 min
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+vp-vol-ret-1d-b025 vprofile              332   0.881  -0.007    0.923    1.022        0   50%  fail: profit factor 0.881 < 1.2; expectancy -0.007R < 0.05R
+                                  — a close outside the prior value area, entered back towards the POC; profile over the prior 1 UTC day(s) weighted by traded volume spread over the prices it traded at
+                                max drawdown 2221.88 USD = 22.22% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.895 R is); net -1421.76 USD over 332 trades
+                                Lbar 0.8089 R = |avg_loss_r| 1.0173 x loss share 0.7952 over 332 trades; PF_r 0.9914 (R) vs PF_usd 0.8812 (USD, gap +0.1102); identity E = Lbar(PF_r-1) = -0.0070 R vs expectancy -0.0070 R, residual -0.00001 R; expectancy leg REDUNDANT (Lbar >= 0.250R)
+                                matched null 308 trades median vs the method's 332 — count match 0.93
+                                long share: method 0.455 vs the null's median 0.511
+                                spread paid: method 440.93 USD vs the null's median 483.02 USD — cost match 1.10
+                                exposure: signed share of time method -0.192 vs the null's -0.006; time in market method 19500 min vs the null's median 4568 min — ratio 0.23  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.923 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 0.500 ATR = 137.10 points, cost 3.65% of R (realised median, structural)
+                                the method's own realised stop: median 0.500 ATR = 137.10 points over 332 trades
+                                guards: refused COOLDOWN 6, NEWS_FLAT 2, WEEKEND_FLAT 82; closed NEWS_FLAT 1; sized down 272
+                                exits: NEWS_FLAT 1, STOP 261, TARGET 32, TIMEOUT 38; mean hold 58.7 min
+vp-vol-ret-1d-b05 vprofile              332   0.945  -0.050    0.913    1.097        0   60%  fail: profit factor 0.945 < 1.2; expectancy -0.050R < 0.05R
+                                  — a close outside the prior value area, entered back towards the POC; profile over the prior 1 UTC day(s) weighted by traded volume spread over the prices it traded at
+                                max drawdown 1290.35 USD = 12.58% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.851 R is); net -851.95 USD over 332 trades
+                                Lbar 0.7399 R = |avg_loss_r| 1.0027 x loss share 0.7380 over 332 trades; PF_r 0.9323 (R) vs PF_usd 0.9446 (USD, gap -0.0123); identity E = Lbar(PF_r-1) = -0.0501 R vs expectancy -0.0501 R, residual +0.00003 R; expectancy leg REDUNDANT (Lbar >= 0.250R)
+                                matched null 311 trades median vs the method's 332 — count match 0.94
+                                long share: method 0.455 vs the null's median 0.512
+                                spread paid: method 456.14 USD vs the null's median 471.87 USD — cost match 1.03
+                                exposure: signed share of time method -0.196 vs the null's +0.034; time in market method 24585 min vs the null's median 11865 min — ratio 0.48  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.913 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 0.750 ATR = 203.91 points, cost 2.45% of R (realised median, structural)
+                                the method's own realised stop: median 0.750 ATR = 203.91 points over 332 trades
+                                guards: refused COOLDOWN 5, NEWS_FLAT 2, WEEKEND_FLAT 82; closed NEWS_FLAT 1, WEEKEND_FLAT 1; sized down 231
+                                exits: NEWS_FLAT 1, STOP 240, TARGET 44, TIMEOUT 46, WEEKEND_FLAT 1; mean hold 74.0 min
+vp-vol-ret-1d-b10 vprofile              326   0.855  -0.085    0.874    1.089        0   50%  fail: profit factor 0.855 < 1.2; expectancy -0.085R < 0.05R
+                                  — a close outside the prior value area, entered back towards the POC; profile over the prior 1 UTC day(s) weighted by traded volume spread over the prices it traded at
+                                max drawdown 2646.06 USD = 25.86% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.778 R is); net -2266.44 USD over 326 trades
+                                Lbar 0.6276 R = |avg_loss_r| 0.9789 x loss share 0.6411 over 326 trades; PF_r 0.8642 (R) vs PF_usd 0.8553 (USD, gap +0.0089); identity E = Lbar(PF_r-1) = -0.0852 R vs expectancy -0.0852 R, residual +0.00005 R; expectancy leg REDUNDANT (Lbar >= 0.250R)
+                                matched null 323 trades median vs the method's 326 — count match 0.99
+                                long share: method 0.463 vs the null's median 0.509
+                                spread paid: method 359.53 USD vs the null's median 375.16 USD — cost match 1.04
+                                exposure: signed share of time method -0.099 vs the null's +0.067; time in market method 33045 min vs the null's median 30495 min — ratio 0.92  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.874 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 1.247 ATR = 346.31 points, cost 1.44% of R (realised median, structural)
+                                the method's own realised stop: median 1.247 ATR = 346.31 points over 326 trades
+                                guards: refused COOLDOWN 3, NEWS_FLAT 2, WEEKEND_FLAT 82; closed NEWS_FLAT 1, WEEKEND_FLAT 2; sized down 142
+                                exits: NEWS_FLAT 1, STOP 198, TARGET 56, TIMEOUT 69, WEEKEND_FLAT 2; mean hold 101.4 min
+vp-vol-ret-5d-b025 vprofile              273   1.032   0.102    0.917    1.044        0   90%  fail: profit factor 1.032 < 1.2
+                                  — a close outside the prior value area, entered back towards the POC; profile over the prior 5 UTC day(s) weighted by traded volume spread over the prices it traded at
+                                max drawdown 1637.67 USD = 14.99% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.898 R is); net +375.29 USD over 273 trades
+                                Lbar 0.8123 R = |avg_loss_r| 1.0172 x loss share 0.7985 over 273 trades; PF_r 1.1250 (R) vs PF_usd 1.0324 (USD, gap +0.0926); identity E = Lbar(PF_r-1) = +0.1015 R vs expectancy +0.1016 R, residual +0.00008 R; expectancy leg REDUNDANT (Lbar >= 0.250R)
+                                matched null 260 trades median vs the method's 273 — count match 0.95
+                                long share: method 0.410 vs the null's median 0.518
+                                spread paid: method 415.28 USD vs the null's median 402.28 USD — cost match 0.97
+                                exposure: signed share of time method -0.270 vs the null's +0.034; time in market method 18090 min vs the null's median 4012 min — ratio 0.22  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.917 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 0.514 ATR = 150.20 points, cost 3.33% of R (realised median, structural)
+                                the method's own realised stop: median 0.514 ATR = 150.20 points over 273 trades
+                                guards: refused COOLDOWN 3, NEWS_FLAT 1, WEEKEND_FLAT 38; closed WEEKEND_FLAT 2; sized down 232
+                                exits: STOP 217, TARGET 14, TIMEOUT 40, WEEKEND_FLAT 2; mean hold 66.3 min
+vp-vol-ret-5d-b05 vprofile              272   1.030   0.053    0.888    1.055        0   80%  fail: profit factor 1.030 < 1.2
+                                  — a close outside the prior value area, entered back towards the POC; profile over the prior 5 UTC day(s) weighted by traded volume spread over the prices it traded at
+                                max drawdown 1367.32 USD = 11.97% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.853 R is); net +425.33 USD over 272 trades
+                                Lbar 0.7293 R = |avg_loss_r| 1.0070 x loss share 0.7243 over 272 trades; PF_r 1.0734 (R) vs PF_usd 1.0299 (USD, gap +0.0435); identity E = Lbar(PF_r-1) = +0.0535 R vs expectancy +0.0535 R, residual -0.00001 R; expectancy leg REDUNDANT (Lbar >= 0.250R)
+                                matched null 264 trades median vs the method's 272 — count match 0.97
+                                long share: method 0.412 vs the null's median 0.513
+                                spread paid: method 400.62 USD vs the null's median 386.32 USD — cost match 0.96
+                                exposure: signed share of time method -0.215 vs the null's +0.039; time in market method 23505 min vs the null's median 10170 min — ratio 0.43  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.888 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 0.763 ATR = 228.07 points, cost 2.19% of R (realised median, structural)
+                                the method's own realised stop: median 0.763 ATR = 228.07 points over 272 trades
+                                guards: refused COOLDOWN 2, NEWS_FLAT 1, WEEKEND_FLAT 38; closed WEEKEND_FLAT 2; sized down 182
+                                exits: STOP 195, TARGET 20, TIMEOUT 55, WEEKEND_FLAT 2; mean hold 86.4 min
+vp-vol-ret-5d-b10 vprofile              262   1.043   0.035    0.883    1.042        0  100%  fail: profit factor 1.043 < 1.2; expectancy 0.035R < 0.05R
+                                  — a close outside the prior value area, entered back towards the POC; profile over the prior 5 UTC day(s) weighted by traded volume spread over the prices it traded at
+                                max drawdown 1633.76 USD = 14.02% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.770 R is); net +639.37 USD over 262 trades
+                                Lbar 0.5961 R = |avg_loss_r| 0.9823 x loss share 0.6069 over 262 trades; PF_r 1.0578 (R) vs PF_usd 1.0433 (USD, gap +0.0145); identity E = Lbar(PF_r-1) = +0.0345 R vs expectancy +0.0345 R, residual +0.00005 R; expectancy leg REDUNDANT (Lbar >= 0.250R)
+                                matched null 266 trades median vs the method's 262 — count match 1.01
+                                long share: method 0.408 vs the null's median 0.515
+                                spread paid: method 330.88 USD vs the null's median 317.40 USD — cost match 0.96
+                                exposure: signed share of time method -0.238 vs the null's +0.073; time in market method 32325 min vs the null's median 25402 min — ratio 0.79  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.883 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 1.263 ATR = 386.72 points, cost 1.29% of R (realised median, structural)
+                                the method's own realised stop: median 1.263 ATR = 386.72 points over 262 trades
+                                guards: refused NEWS_FLAT 1, WEEKEND_FLAT 38; closed NEWS_FLAT 1, WEEKEND_FLAT 3; sized down 84
+                                exits: NEWS_FLAT 1, STOP 152, TARGET 24, TIMEOUT 82, WEEKEND_FLAT 3; mean hold 123.4 min
+vp-vol-rej-1d-b025 vprofile              287   0.857  -0.091    0.885    1.033        0   30%  fail: profit factor 0.857 < 1.2; expectancy -0.091R < 0.05R
+                                  — a poke through a value-area edge that closes back inside, entered towards the POC; profile over the prior 1 UTC day(s) weighted by traded volume spread over the prices it traded at
+                                max drawdown 2031.08 USD = 20.31% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.728 R is); net -1637.42 USD over 287 trades
+                                Lbar 0.5965 R = |avg_loss_r| 0.9895 x loss share 0.6028 over 287 trades; PF_r 0.8478 (R) vs PF_usd 0.8573 (USD, gap -0.0095); identity E = Lbar(PF_r-1) = -0.0908 R vs expectancy -0.0908 R, residual +0.00001 R; expectancy leg REDUNDANT (Lbar >= 0.250R)
+                                matched null 284 trades median vs the method's 287 — count match 0.99
+                                long share: method 0.470 vs the null's median 0.512
+                                spread paid: method 342.13 USD vs the null's median 368.52 USD — cost match 1.08
+                                exposure: signed share of time method -0.025 vs the null's +0.054; time in market method 20145 min vs the null's median 22890 min — ratio 1.14  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.885 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 1.117 ATR = 290.50 points, cost 1.72% of R (realised median, structural)
+                                the method's own realised stop: median 1.117 ATR = 290.50 points over 287 trades
+                                guards: refused COOLDOWN 7, NEWS_FLAT 1, WEEKEND_FLAT 74; closed NEWS_FLAT 1, WEEKEND_FLAT 1; sized down 160
+                                exits: NEWS_FLAT 1, STOP 168, TARGET 91, TIMEOUT 26, WEEKEND_FLAT 1; mean hold 70.2 min
+vp-vol-rej-1d-b05 vprofile              278   0.839  -0.060    0.915    0.993        0   30%  fail: profit factor 0.839 < 1.2; expectancy -0.060R < 0.05R
+                                  — a poke through a value-area edge that closes back inside, entered towards the POC; profile over the prior 1 UTC day(s) weighted by traded volume spread over the prices it traded at
+                                max drawdown 2260.34 USD = 22.60% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.692 R is); net -1766.15 USD over 278 trades
+                                Lbar 0.5342 R = |avg_loss_r| 0.9519 x loss share 0.5612 over 278 trades; PF_r 0.8884 (R) vs PF_usd 0.8391 (USD, gap +0.0493); identity E = Lbar(PF_r-1) = -0.0596 R vs expectancy -0.0596 R, residual -0.00001 R; expectancy leg REDUNDANT (Lbar >= 0.250R)
+                                matched null 278 trades median vs the method's 278 — count match 1.00
+                                long share: method 0.464 vs the null's median 0.507
+                                spread paid: method 293.50 USD vs the null's median 322.97 USD — cost match 1.10
+                                exposure: signed share of time method -0.054 vs the null's +0.038; time in market method 24255 min vs the null's median 29572 min — ratio 1.22  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.915 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 1.368 ATR = 361.08 points, cost 1.38% of R (realised median, structural)
+                                the method's own realised stop: median 1.368 ATR = 361.08 points over 278 trades
+                                guards: refused COOLDOWN 3, NEWS_FLAT 1, WEEKEND_FLAT 74; closed NEWS_FLAT 3, WEEKEND_FLAT 1; sized down 110
+                                exits: NEWS_FLAT 3, STOP 143, TARGET 92, TIMEOUT 39, WEEKEND_FLAT 1; mean hold 87.2 min
+vp-vol-rej-1d-b10 vprofile              262   0.856  -0.051    0.965    1.180        0   30%  fail: profit factor 0.856 < 1.2; expectancy -0.051R < 0.05R
+                                  — a poke through a value-area edge that closes back inside, entered towards the POC; profile over the prior 1 UTC day(s) weighted by traded volume spread over the prices it traded at
+                                max drawdown 2008.53 USD = 20.09% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.640 R is); net -1435.06 USD over 262 trades
+                                Lbar 0.4549 R = |avg_loss_r| 0.9098 x loss share 0.5000 over 262 trades; PF_r 0.8874 (R) vs PF_usd 0.8564 (USD, gap +0.0310); identity E = Lbar(PF_r-1) = -0.0512 R vs expectancy -0.0512 R, residual +0.00000 R; expectancy leg REDUNDANT (Lbar >= 0.250R)
+                                matched null 272 trades median vs the method's 262 — count match 1.04
+                                long share: method 0.462 vs the null's median 0.510
+                                spread paid: method 237.78 USD vs the null's median 261.06 USD — cost match 1.10
+                                exposure: signed share of time method -0.064 vs the null's +0.040; time in market method 28905 min vs the null's median 39600 min — ratio 1.37  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.965 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 1.823 ATR = 488.32 points, cost 1.02% of R (realised median, structural)
+                                the method's own realised stop: median 1.823 ATR = 488.32 points over 262 trades
+                                guards: refused COOLDOWN 1, NEWS_FLAT 1, WEEKEND_FLAT 71; closed NEWS_FLAT 4, WEEKEND_FLAT 1; sized down 47
+                                exits: NEWS_FLAT 4, STOP 113, TARGET 94, TIMEOUT 50, WEEKEND_FLAT 1; mean hold 110.3 min
+vp-vol-rej-5d-b025 vprofile              201   1.003  -0.030    0.992    1.100        0   60%  fail: profit factor 1.003 < 1.2; expectancy -0.030R < 0.05R
+                                  — a poke through a value-area edge that closes back inside, entered towards the POC; profile over the prior 5 UTC day(s) weighted by traded volume spread over the prices it traded at
+                                max drawdown 1509.68 USD = 13.72% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.772 R is); net +26.50 USD over 201 trades
+                                Lbar 0.5959 R = |avg_loss_r| 0.9357 x loss share 0.6368 over 201 trades; PF_r 0.9503 (R) vs PF_usd 1.0027 (USD, gap -0.0524); identity E = Lbar(PF_r-1) = -0.0296 R vs expectancy -0.0296 R, residual -0.00001 R; expectancy leg REDUNDANT (Lbar >= 0.250R)
+                                matched null 207 trades median vs the method's 201 — count match 1.03
+                                long share: method 0.453 vs the null's median 0.508
+                                spread paid: method 262.95 USD vs the null's median 273.57 USD — cost match 1.04
+                                exposure: signed share of time method -0.076 vs the null's +0.039; time in market method 21810 min vs the null's median 17595 min — ratio 0.81  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.992 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 1.181 ATR = 359.64 points, cost 1.39% of R (realised median, structural)
+                                the method's own realised stop: median 1.181 ATR = 359.64 points over 201 trades
+                                guards: refused COOLDOWN 2, NEWS_FLAT 2, WEEKEND_FLAT 18; closed NEWS_FLAT 2, WEEKEND_FLAT 2; sized down 85
+                                exits: NEWS_FLAT 2, STOP 116, TARGET 30, TIMEOUT 51, WEEKEND_FLAT 2; mean hold 108.5 min
+vp-vol-rej-5d-b05 vprofile              198   1.018  -0.008    0.958    1.112        0   80%  fail: profit factor 1.018 < 1.2; expectancy -0.008R < 0.05R
+                                  — a poke through a value-area edge that closes back inside, entered towards the POC; profile over the prior 5 UTC day(s) weighted by traded volume spread over the prices it traded at
+                                max drawdown 1213.12 USD = 10.84% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.728 R is); net +176.02 USD over 198 trades
+                                Lbar 0.5344 R = |avg_loss_r| 0.9201 x loss share 0.5808 over 198 trades; PF_r 0.9842 (R) vs PF_usd 1.0180 (USD, gap -0.0338); identity E = Lbar(PF_r-1) = -0.0084 R vs expectancy -0.0084 R, residual +0.00004 R; expectancy leg REDUNDANT (Lbar >= 0.250R)
+                                matched null 206 trades median vs the method's 198 — count match 1.04
+                                long share: method 0.460 vs the null's median 0.515
+                                spread paid: method 239.01 USD vs the null's median 240.94 USD — cost match 1.01
+                                exposure: signed share of time method -0.050 vs the null's +0.037; time in market method 24315 min vs the null's median 23272 min — ratio 0.96  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.958 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 1.414 ATR = 438.69 points, cost 1.14% of R (realised median, structural)
+                                the method's own realised stop: median 1.414 ATR = 438.69 points over 198 trades
+                                guards: refused NEWS_FLAT 2, WEEKEND_FLAT 18; closed NEWS_FLAT 2, WEEKEND_FLAT 2; sized down 56
+                                exits: NEWS_FLAT 2, STOP 103, TARGET 35, TIMEOUT 56, WEEKEND_FLAT 2; mean hold 122.8 min
+vp-vol-rej-5d-b10 vprofile              184   0.949  -0.021    0.991    1.392        0   30%  fail: profit factor 0.949 < 1.2; expectancy -0.021R < 0.05R
+                                  — a poke through a value-area edge that closes back inside, entered towards the POC; profile over the prior 5 UTC day(s) weighted by traded volume spread over the prices it traded at
+                                max drawdown 1765.07 USD = 15.98% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.673 R is); net -419.11 USD over 184 trades
+                                Lbar 0.4579 R = |avg_loss_r| 0.8511 x loss share 0.5380 over 184 trades; PF_r 0.9547 (R) vs PF_usd 0.9490 (USD, gap +0.0057); identity E = Lbar(PF_r-1) = -0.0207 R vs expectancy -0.0207 R, residual +0.00003 R; expectancy leg REDUNDANT (Lbar >= 0.250R)
+                                matched null 196 trades median vs the method's 184 — count match 1.07
+                                long share: method 0.484 vs the null's median 0.518
+                                spread paid: method 176.35 USD vs the null's median 191.49 USD — cost match 1.09
+                                exposure: signed share of time method -0.060 vs the null's +0.041; time in market method 28140 min vs the null's median 29670 min — ratio 1.05  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.991 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 1.881 ATR = 560.94 points, cost 0.89% of R (realised median, structural)
+                                the method's own realised stop: median 1.881 ATR = 560.94 points over 184 trades
+                                guards: refused NEWS_FLAT 2, WEEKEND_FLAT 16; closed NEWS_FLAT 2, WEEKEND_FLAT 3; sized down 24
+                                exits: NEWS_FLAT 2, STOP 79, TARGET 32, TIMEOUT 68, WEEKEND_FLAT 3; mean hold 152.9 min
+vp-tpo-ret-1d-b025 vprofile              340   0.913   0.038    0.915    1.035        0   50%  fail: profit factor 0.913 < 1.2; expectancy 0.038R < 0.05R
+                                  — a close outside the prior value area, entered back towards the POC; profile over the prior 1 UTC day(s) weighted by time at price, the same rule on the histogram the volume column does not touch
+                                max drawdown 2665.86 USD = 25.92% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.874 R is); net -1080.14 USD over 340 trades
+                                Lbar 0.7806 R = |avg_loss_r| 1.0130 x loss share 0.7706 over 340 trades; PF_r 1.0487 (R) vs PF_usd 0.9134 (USD, gap +0.1353); identity E = Lbar(PF_r-1) = +0.0380 R vs expectancy +0.0381 R, residual +0.00005 R; expectancy leg REDUNDANT (Lbar >= 0.250R)
+                                matched null 317 trades median vs the method's 340 — count match 0.93
+                                long share: method 0.474 vs the null's median 0.512
+                                spread paid: method 463.95 USD vs the null's median 498.32 USD — cost match 1.07
+                                exposure: signed share of time method -0.106 vs the null's -0.016; time in market method 20835 min vs the null's median 5850 min — ratio 0.28  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.915 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 0.541 ATR = 147.17 points, cost 3.40% of R (realised median, structural)
+                                the method's own realised stop: median 0.541 ATR = 147.17 points over 340 trades
+                                guards: refused COOLDOWN 9, NEWS_FLAT 3, WEEKEND_FLAT 85; closed NEWS_FLAT 1, WEEKEND_FLAT 1; sized down 276
+                                exits: NEWS_FLAT 1, STOP 258, TARGET 39, TIMEOUT 41, WEEKEND_FLAT 1; mean hold 61.3 min
+vp-tpo-ret-1d-b05 vprofile              340   0.954  -0.004    0.963    1.098        0   50%  fail: profit factor 0.954 < 1.2; expectancy -0.004R < 0.05R
+                                  — a close outside the prior value area, entered back towards the POC; profile over the prior 1 UTC day(s) weighted by time at price, the same rule on the histogram the volume column does not touch
+                                max drawdown 1371.21 USD = 13.13% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.821 R is); net -721.26 USD over 340 trades
+                                Lbar 0.7014 R = |avg_loss_r| 0.9936 x loss share 0.7059 over 340 trades; PF_r 0.9944 (R) vs PF_usd 0.9541 (USD, gap +0.0403); identity E = Lbar(PF_r-1) = -0.0040 R vs expectancy -0.0040 R, residual -0.00005 R; expectancy leg REDUNDANT (Lbar >= 0.250R)
+                                matched null 322 trades median vs the method's 340 — count match 0.95
+                                long share: method 0.474 vs the null's median 0.509
+                                spread paid: method 474.79 USD vs the null's median 469.01 USD — cost match 0.99
+                                exposure: signed share of time method -0.104 vs the null's +0.064; time in market method 26445 min vs the null's median 13890 min — ratio 0.53  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.963 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 0.791 ATR = 222.19 points, cost 2.25% of R (realised median, structural)
+                                the method's own realised stop: median 0.791 ATR = 222.19 points over 340 trades
+                                guards: refused COOLDOWN 8, NEWS_FLAT 3, WEEKEND_FLAT 85; closed NEWS_FLAT 1, WEEKEND_FLAT 3; sized down 226
+                                exits: NEWS_FLAT 1, STOP 232, TARGET 54, TIMEOUT 50, WEEKEND_FLAT 3; mean hold 77.8 min
+vp-tpo-ret-1d-b10 vprofile              337   0.920  -0.034    0.875    1.104        0   60%  fail: profit factor 0.920 < 1.2; expectancy -0.034R < 0.05R
+                                  — a close outside the prior value area, entered back towards the POC; profile over the prior 1 UTC day(s) weighted by time at price, the same rule on the histogram the volume column does not touch
+                                max drawdown 2597.25 USD = 23.51% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.747 R is); net -1353.76 USD over 337 trades
+                                Lbar 0.5931 R = |avg_loss_r| 0.9702 x loss share 0.6113 over 337 trades; PF_r 0.9436 (R) vs PF_usd 0.9198 (USD, gap +0.0238); identity E = Lbar(PF_r-1) = -0.0335 R vs expectancy -0.0335 R, residual -0.00005 R; expectancy leg REDUNDANT (Lbar >= 0.250R)
+                                matched null 336 trades median vs the method's 337 — count match 1.00
+                                long share: method 0.475 vs the null's median 0.505
+                                spread paid: method 400.37 USD vs the null's median 384.03 USD — cost match 0.96
+                                exposure: signed share of time method -0.102 vs the null's +0.050; time in market method 35145 min vs the null's median 32798 min — ratio 0.93  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.875 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 1.290 ATR = 364.81 points, cost 1.37% of R (realised median, structural)
+                                the method's own realised stop: median 1.290 ATR = 364.81 points over 337 trades
+                                guards: refused COOLDOWN 4, NEWS_FLAT 3, WEEKEND_FLAT 85; closed NEWS_FLAT 1, WEEKEND_FLAT 3; sized down 139
+                                exits: NEWS_FLAT 1, STOP 193, TARGET 66, TIMEOUT 74, WEEKEND_FLAT 3; mean hold 104.3 min
+vp-tpo-ret-5d-b025 vprofile              274   0.818  -0.126    0.947    1.069        0   10%  fail: profit factor 0.818 < 1.2; expectancy -0.126R < 0.05R
+                                  — a close outside the prior value area, entered back towards the POC; profile over the prior 5 UTC day(s) weighted by time at price, the same rule on the histogram the volume column does not touch
+                                max drawdown 1987.44 USD = 19.87% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.911 R is); net -1944.50 USD over 274 trades
+                                Lbar 0.8248 R = |avg_loss_r| 1.0134 x loss share 0.8139 over 274 trades; PF_r 0.8467 (R) vs PF_usd 0.8177 (USD, gap +0.0290); identity E = Lbar(PF_r-1) = -0.1264 R vs expectancy -0.1264 R, residual +0.00003 R; expectancy leg REDUNDANT (Lbar >= 0.250R)
+                                matched null 260 trades median vs the method's 274 — count match 0.95
+                                long share: method 0.405 vs the null's median 0.516
+                                spread paid: method 369.20 USD vs the null's median 405.73 USD — cost match 1.10
+                                exposure: signed share of time method -0.349 vs the null's +0.020; time in market method 17835 min vs the null's median 4530 min — ratio 0.25  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.947 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 0.534 ATR = 158.00 points, cost 3.16% of R (realised median, structural)
+                                the method's own realised stop: median 0.534 ATR = 158.00 points over 274 trades
+                                guards: refused COOLDOWN 6, WEEKEND_FLAT 44; closed NEWS_FLAT 1, WEEKEND_FLAT 1; sized down 225
+                                exits: NEWS_FLAT 1, STOP 221, TARGET 10, TIMEOUT 41, WEEKEND_FLAT 1; mean hold 65.1 min
+vp-tpo-ret-5d-b05 vprofile              273   0.972  -0.024    0.889    1.056        0   60%  fail: profit factor 0.972 < 1.2; expectancy -0.024R < 0.05R
+                                  — a close outside the prior value area, entered back towards the POC; profile over the prior 5 UTC day(s) weighted by time at price, the same rule on the histogram the volume column does not touch
+                                max drawdown 2000.15 USD = 18.15% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.857 R is); net -382.45 USD over 273 trades
+                                Lbar 0.7236 R = |avg_loss_r| 1.0028 x loss share 0.7216 over 273 trades; PF_r 0.9675 (R) vs PF_usd 0.9719 (USD, gap -0.0044); identity E = Lbar(PF_r-1) = -0.0235 R vs expectancy -0.0235 R, residual -0.00001 R; expectancy leg REDUNDANT (Lbar >= 0.250R)
+                                matched null 265 trades median vs the method's 273 — count match 0.97
+                                long share: method 0.403 vs the null's median 0.514
+                                spread paid: method 383.26 USD vs the null's median 381.41 USD — cost match 1.00
+                                exposure: signed share of time method -0.297 vs the null's +0.063; time in market method 24570 min vs the null's median 10822 min — ratio 0.44  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.889 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 0.787 ATR = 237.75 points, cost 2.10% of R (realised median, structural)
+                                the method's own realised stop: median 0.787 ATR = 237.75 points over 273 trades
+                                guards: refused COOLDOWN 5, WEEKEND_FLAT 44; closed NEWS_FLAT 1, WEEKEND_FLAT 2; sized down 177
+                                exits: NEWS_FLAT 1, STOP 194, TARGET 16, TIMEOUT 60, WEEKEND_FLAT 2; mean hold 90.0 min
+vp-tpo-ret-5d-b10 vprofile              269   1.069   0.036    0.889    1.034        0  100%  fail: profit factor 1.069 < 1.2; expectancy 0.036R < 0.05R
+                                  — a close outside the prior value area, entered back towards the POC; profile over the prior 5 UTC day(s) weighted by time at price, the same rule on the histogram the volume column does not touch
+                                max drawdown 1302.31 USD = 11.09% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.772 R is); net +978.27 USD over 269 trades
+                                Lbar 0.5739 R = |avg_loss_r| 0.9709 x loss share 0.5911 over 269 trades; PF_r 1.0625 (R) vs PF_usd 1.0692 (USD, gap -0.0067); identity E = Lbar(PF_r-1) = +0.0359 R vs expectancy +0.0359 R, residual +0.00003 R; expectancy leg REDUNDANT (Lbar >= 0.250R)
+                                matched null 268 trades median vs the method's 269 — count match 1.00
+                                long share: method 0.405 vs the null's median 0.512
+                                spread paid: method 330.33 USD vs the null's median 322.60 USD — cost match 0.98
+                                exposure: signed share of time method -0.297 vs the null's +0.064; time in market method 34845 min vs the null's median 26415 min — ratio 0.76  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.889 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 1.282 ATR = 397.18 points, cost 1.26% of R (realised median, structural)
+                                the method's own realised stop: median 1.282 ATR = 397.18 points over 269 trades
+                                guards: refused COOLDOWN 1, WEEKEND_FLAT 44; closed NEWS_FLAT 2, WEEKEND_FLAT 2; sized down 90
+                                exits: NEWS_FLAT 2, STOP 150, TARGET 24, TIMEOUT 91, WEEKEND_FLAT 2; mean hold 129.5 min
+vp-tpo-rej-1d-b025 vprofile              278   0.728  -0.178    0.876    1.058        0    0%  fail: profit factor 0.728 < 1.2; expectancy -0.178R < 0.05R
+                                  — a poke through a value-area edge that closes back inside, entered towards the POC; profile over the prior 1 UTC day(s) weighted by time at price, the same rule on the histogram the volume column does not touch
+                                max drawdown 3038.81 USD = 30.28% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.739 R is); net -2763.26 USD over 278 trades
+                                Lbar 0.6023 R = |avg_loss_r| 0.9908 x loss share 0.6079 over 278 trades; PF_r 0.7042 (R) vs PF_usd 0.7278 (USD, gap -0.0236); identity E = Lbar(PF_r-1) = -0.1782 R vs expectancy -0.1782 R, residual -0.00004 R; expectancy leg REDUNDANT (Lbar >= 0.250R)
+                                matched null 277 trades median vs the method's 278 — count match 1.00
+                                long share: method 0.457 vs the null's median 0.516
+                                spread paid: method 300.21 USD vs the null's median 365.22 USD — cost match 1.22
+                                exposure: signed share of time method -0.164 vs the null's +0.084; time in market method 18840 min vs the null's median 20775 min — ratio 1.10  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.876 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 1.084 ATR = 293.97 points, cost 1.70% of R (realised median, structural)
+                                the method's own realised stop: median 1.084 ATR = 293.97 points over 278 trades
+                                guards: refused COOLDOWN 3, NEWS_FLAT 2, WEEKEND_FLAT 79; closed NEWS_FLAT 1, WEEKEND_FLAT 2; sized down 151
+                                exits: NEWS_FLAT 1, STOP 164, TARGET 87, TIMEOUT 24, WEEKEND_FLAT 2; mean hold 67.8 min
+vp-tpo-rej-1d-b05 vprofile              273   0.790  -0.098    0.921    1.014        0   10%  fail: profit factor 0.790 < 1.2; expectancy -0.098R < 0.05R
+                                  — a poke through a value-area edge that closes back inside, entered towards the POC; profile over the prior 1 UTC day(s) weighted by time at price, the same rule on the histogram the volume column does not touch
+                                max drawdown 2727.20 USD = 27.20% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.708 R is); net -2163.85 USD over 273 trades
+                                Lbar 0.5413 R = |avg_loss_r| 0.9786 x loss share 0.5531 over 273 trades; PF_r 0.8196 (R) vs PF_usd 0.7905 (USD, gap +0.0291); identity E = Lbar(PF_r-1) = -0.0977 R vs expectancy -0.0976 R, residual +0.00005 R; expectancy leg REDUNDANT (Lbar >= 0.250R)
+                                matched null 274 trades median vs the method's 273 — count match 1.01
+                                long share: method 0.454 vs the null's median 0.509
+                                spread paid: method 277.58 USD vs the null's median 325.92 USD — cost match 1.17
+                                exposure: signed share of time method -0.158 vs the null's +0.041; time in market method 23475 min vs the null's median 28328 min — ratio 1.21  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.921 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 1.334 ATR = 364.07 points, cost 1.37% of R (realised median, structural)
+                                the method's own realised stop: median 1.334 ATR = 364.07 points over 273 trades
+                                guards: refused COOLDOWN 2, NEWS_FLAT 2, WEEKEND_FLAT 79; closed NEWS_FLAT 1, WEEKEND_FLAT 2; sized down 107
+                                exits: NEWS_FLAT 1, STOP 145, TARGET 94, TIMEOUT 31, WEEKEND_FLAT 2; mean hold 86.0 min
+vp-tpo-rej-1d-b10 vprofile              254   0.814  -0.074    0.952    1.130        0    0%  fail: profit factor 0.814 < 1.2; expectancy -0.074R < 0.05R
+                                  — a poke through a value-area edge that closes back inside, entered towards the POC; profile over the prior 1 UTC day(s) weighted by time at price, the same rule on the histogram the volume column does not touch
+                                max drawdown 2545.52 USD = 25.34% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.655 R is); net -1681.22 USD over 254 trades
+                                Lbar 0.4508 R = |avg_loss_r| 0.9016 x loss share 0.5000 over 254 trades; PF_r 0.8362 (R) vs PF_usd 0.8140 (USD, gap +0.0222); identity E = Lbar(PF_r-1) = -0.0738 R vs expectancy -0.0738 R, residual +0.00005 R; expectancy leg REDUNDANT (Lbar >= 0.250R)
+                                matched null 266 trades median vs the method's 254 — count match 1.05
+                                long share: method 0.449 vs the null's median 0.511
+                                spread paid: method 223.41 USD vs the null's median 266.59 USD — cost match 1.19
+                                exposure: signed share of time method -0.130 vs the null's +0.059; time in market method 28665 min vs the null's median 37050 min — ratio 1.29  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.952 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 1.758 ATR = 490.14 points, cost 1.02% of R (realised median, structural)
+                                the method's own realised stop: median 1.758 ATR = 490.14 points over 254 trades
+                                guards: refused NEWS_FLAT 2, WEEKEND_FLAT 73; closed NEWS_FLAT 3, WEEKEND_FLAT 3; sized down 53
+                                exits: NEWS_FLAT 3, STOP 107, TARGET 93, TIMEOUT 48, WEEKEND_FLAT 3; mean hold 112.8 min
+vp-tpo-rej-5d-b025 vprofile              212   0.753  -0.169    0.914    1.135        0   10%  fail: profit factor 0.753 < 1.2; expectancy -0.169R < 0.05R
+                                  — a poke through a value-area edge that closes back inside, entered towards the POC; profile over the prior 5 UTC day(s) weighted by time at price, the same rule on the histogram the volume column does not touch
+                                max drawdown 2998.37 USD = 28.91% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.803 R is); net -2435.76 USD over 212 trades
+                                Lbar 0.6529 R = |avg_loss_r| 0.9747 x loss share 0.6698 over 212 trades; PF_r 0.7414 (R) vs PF_usd 0.7532 (USD, gap -0.0118); identity E = Lbar(PF_r-1) = -0.1688 R vs expectancy -0.1688 R, residual +0.00004 R; expectancy leg REDUNDANT (Lbar >= 0.250R)
+                                matched null 218 trades median vs the method's 212 — count match 1.03
+                                long share: method 0.443 vs the null's median 0.512
+                                spread paid: method 239.50 USD vs the null's median 288.29 USD — cost match 1.20
+                                exposure: signed share of time method -0.054 vs the null's +0.076; time in market method 19860 min vs the null's median 16830 min — ratio 0.85  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.914 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 1.118 ATR = 326.05 points, cost 1.53% of R (realised median, structural)
+                                the method's own realised stop: median 1.118 ATR = 326.05 points over 212 trades
+                                guards: refused COOLDOWN 1, NEWS_FLAT 2, WEEKEND_FLAT 24; closed NEWS_FLAT 1, WEEKEND_FLAT 1; sized down 104
+                                exits: NEWS_FLAT 1, STOP 134, TARGET 36, TIMEOUT 40, WEEKEND_FLAT 1; mean hold 93.7 min
+vp-tpo-rej-5d-b05 vprofile              208   0.793  -0.123    0.928    1.128        0    0%  fail: profit factor 0.793 < 1.2; expectancy -0.123R < 0.05R
+                                  — a poke through a value-area edge that closes back inside, entered towards the POC; profile over the prior 5 UTC day(s) weighted by time at price, the same rule on the histogram the volume column does not touch
+                                max drawdown 2412.19 USD = 23.50% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.764 R is); net -2042.62 USD over 208 trades
+                                Lbar 0.5826 R = |avg_loss_r| 0.9541 x loss share 0.6106 over 208 trades; PF_r 0.7883 (R) vs PF_usd 0.7934 (USD, gap -0.0051); identity E = Lbar(PF_r-1) = -0.1233 R vs expectancy -0.1233 R, residual +0.00004 R; expectancy leg REDUNDANT (Lbar >= 0.250R)
+                                matched null 216 trades median vs the method's 208 — count match 1.04
+                                long share: method 0.442 vs the null's median 0.512
+                                spread paid: method 221.59 USD vs the null's median 258.44 USD — cost match 1.17
+                                exposure: signed share of time method -0.091 vs the null's +0.047; time in market method 23310 min vs the null's median 23115 min — ratio 0.99  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.928 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 1.370 ATR = 404.32 points, cost 1.24% of R (realised median, structural)
+                                the method's own realised stop: median 1.370 ATR = 404.32 points over 208 trades
+                                guards: refused NEWS_FLAT 2, WEEKEND_FLAT 23; closed NEWS_FLAT 1, WEEKEND_FLAT 1; sized down 66
+                                exits: NEWS_FLAT 1, STOP 116, TARGET 41, TIMEOUT 49, WEEKEND_FLAT 1; mean hold 112.1 min
+vp-tpo-rej-5d-b10 vprofile              200   0.880  -0.058    0.939    1.305        0   20%  fail: profit factor 0.880 < 1.2; expectancy -0.058R < 0.05R
+                                  — a poke through a value-area edge that closes back inside, entered towards the POC; profile over the prior 5 UTC day(s) weighted by time at price, the same rule on the histogram the volume column does not touch
+                                max drawdown 1394.33 USD = 13.78% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.701 R is); net -1093.64 USD over 200 trades
+                                Lbar 0.4932 R = |avg_loss_r| 0.9133 x loss share 0.5400 over 200 trades; PF_r 0.8831 (R) vs PF_usd 0.8797 (USD, gap +0.0034); identity E = Lbar(PF_r-1) = -0.0577 R vs expectancy -0.0577 R, residual -0.00005 R; expectancy leg REDUNDANT (Lbar >= 0.250R)
+                                matched null 214 trades median vs the method's 200 — count match 1.07
+                                long share: method 0.440 vs the null's median 0.513
+                                spread paid: method 178.47 USD vs the null's median 201.89 USD — cost match 1.13
+                                exposure: signed share of time method -0.144 vs the null's +0.039; time in market method 27420 min vs the null's median 31628 min — ratio 1.15  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.939 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 1.857 ATR = 554.02 points, cost 0.90% of R (realised median, structural)
+                                the method's own realised stop: median 1.857 ATR = 554.02 points over 200 trades
+                                guards: refused NEWS_FLAT 2, WEEKEND_FLAT 23; closed NEWS_FLAT 1, WEEKEND_FLAT 1; sized down 22
+                                exits: NEWS_FLAT 1, STOP 94, TARGET 41, TIMEOUT 63, WEEKEND_FLAT 1; mean hold 137.1 min
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+
