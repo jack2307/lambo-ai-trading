@@ -89,6 +89,12 @@ const BY_MODE: &[(&str, &[&str])] = &[
     // for the timeline, so a basis offset there would be a setting applied to
     // nothing — which is the class of defect this table exists to denounce.
     ("basis-offset", &["all", "compare", "sweep", "wf", "hypotheses", "null", "null-dir", "volume", "costs"]),
+    // The ROLLING basis, same modes for the same reason. It is the answer to
+    // the constant above having decided a verdict by itself: see
+    // `fd_backtest::basis` and docs/decisions/2026-10-10-options-rolling-basis.md.
+    ("basis-roll", &["all", "compare", "sweep", "wf", "hypotheses", "null", "null-dir", "volume", "costs"]),
+    ("basis-roll-min", &["all", "compare", "sweep", "wf", "hypotheses", "null", "null-dir", "volume", "costs"]),
+    ("basis-ref", &["all", "compare", "sweep", "wf", "hypotheses", "null", "null-dir", "volume", "costs"]),
 ];
 
 /// What this mode will IGNORE out of what was passed, as lines for the receipt
@@ -245,8 +251,34 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // and every price a receipt quotes, while the distances the rules trigger
     // on are identical either way.
     let basis = basis_offset()?;
-    let timeline = shift_basis(timeline, basis);
-    println!("{}", basis_line(basis, timeline.is_some()));
+    let roll = basis_roll()?;
+    if basis.is_some() && roll.is_some() {
+        return Err("--basis-offset= and --basis-roll= are two different corrections; pass one. The constant is the control, the rolling one is the measurement, and a run claiming both would be neither.".into());
+    }
+    let timeline = match roll {
+        // ROLLING: the estimate is re-taken at every frame from observations
+        // knowable strictly before it, and a frame with too little past has
+        // its LEVELS REFUSED rather than shifted by a fabricated number. See
+        // `fd_backtest::basis` for the causality argument and its test.
+        Some(cfg) => {
+            let (reference, ref_line) = load_basis_reference(&data);
+            println!("{ref_line}");
+            let (shifted, report) = match timeline {
+                Some(t) => {
+                    let (t, r) = fd_backtest::basis::apply(t, &reference, &bars, &cfg);
+                    (Some(t), Some(r))
+                }
+                None => (None, None),
+            };
+            println!("{}", roll_line(&cfg, report.as_ref()));
+            shifted
+        }
+        None => {
+            let timeline = shift_basis(timeline, basis);
+            println!("{}", basis_line(basis, timeline.is_some()));
+            timeline
+        }
+    };
     describe(&bars, timeline.as_ref());
     let prints = spec
         .tape_id()
@@ -518,6 +550,130 @@ fn basis_offset() -> Result<Option<f64>, String> {
     }
 }
 
+/// `--basis-ref=<SYMBOL-INTERVAL>`: the GC-axis bar series the rolling basis is
+/// estimated from, read from `<data>/bars/<name>.parquet`. Default `GC-1m`.
+///
+/// It is a BAR SERIES, deliberately, and not the tape's own `Frame::spot`.
+/// `Frame::spot` is the `underlying_price` of the last print, whichever of the
+/// store's **26 expiry symbols** that print belonged to; those symbols are
+/// options on four different GC contract months and their mean underlying runs
+/// 4,146.00 to 4,385.32, so within one minute the dispersion is mean +10.66
+/// USD, p90 +35.10, max +58.10, non-zero in 81.1% of minutes. Using it as the
+/// axis gave a "basis" of sd 16.40 over a 115 USD range — the contract-month
+/// dispersion, not a basis. `GC-1m` is one series (18,707 of 18,709 bars have
+/// `open == high == low == close`), and against `XAUUSD-15m` it reads mean
+/// +42.16 sd 2.31.
+///
+/// A named series that cannot be read is NOT an error and NOT a silent zero:
+/// the loader says so, and with no observations every frame is refused, which
+/// the basis line then counts. The failure mode this avoids is a run that reads
+/// GC levels as spot levels 42 dollars out and prints like a measurement.
+fn load_basis_reference(data: &std::path::Path) -> (Vec<Bar>, String) {
+    let name = arg("basis-ref", "GC-1m");
+    let path = data.join("bars").join(format!("{name}.parquet"));
+    match read_bars(&path) {
+        Err(e) => (
+            Vec::new(),
+            format!(
+                "basis ref: ** could not read {} ({e}) — there is no GC axis, so EVERY frame will be refused; that is `null`, not an offset of 0.00 **",
+                path.display()
+            ),
+        ),
+        Ok(bars) if bars.is_empty() => (
+            Vec::new(),
+            format!("basis ref: ** {} holds 0 bars — every frame will be refused **", path.display()),
+        ),
+        Ok(bars) => {
+            let flat = bars.iter().filter(|b| b.open == b.high && b.high == b.low && b.low == b.close).count();
+            let line = format!(
+                "basis ref: {name} {} bars from {} to {} ({}) — {flat} of {} are rangeless (o==h==l==c), so the close is a reference price and not a traded range; NOT Frame::spot, which is 26 expiry symbols on four GC contract months interleaved (same-minute dispersion p90 +35.10 USD)",
+                bars.len(),
+                iso(bars[0].time),
+                iso(bars[bars.len() - 1].time),
+                path.display(),
+                bars.len()
+            );
+            (bars, line)
+        }
+    }
+}
+
+/// `--basis-roll=<minutes>` and `--basis-roll-min=<n>`, parsed together.
+///
+/// `None` means the flag was not passed, which is NOT the same as a window of
+/// zero: a window of zero is refused outright, because a rolling estimate with
+/// no window is a constant with no number.
+///
+/// `--basis-roll-min=` defaults to **5**, the value the registration fixed and
+/// holds constant across the three declared windows so that the only thing
+/// changing between those cells is the window length. Passing it is a declared
+/// amendment, and the receipt prints whichever was used.
+fn basis_roll() -> Result<Option<fd_backtest::RollingBasis>, String> {
+    let Some(v) = std::env::args().find_map(|a| a.strip_prefix("--basis-roll=").map(str::to_string)) else {
+        return Ok(None);
+    };
+    let minutes: i64 =
+        v.trim().parse().map_err(|_| format!("--basis-roll wants a trailing window in MINUTES, got `{v}`"))?;
+    if minutes <= 0 {
+        return Err(format!("--basis-roll wants a window of at least one minute, got `{v}`"));
+    }
+    let min_obs: usize = match std::env::args().find_map(|a| a.strip_prefix("--basis-roll-min=").map(str::to_string)) {
+        None => 5,
+        Some(m) => {
+            let n: usize =
+                m.trim().parse().map_err(|_| format!("--basis-roll-min wants a count of observations, got `{m}`"))?;
+            if n == 0 {
+                return Err("--basis-roll-min=0 would make a median of nothing an estimate; `null` is not `0`".into());
+            }
+            n
+        }
+    };
+    Ok(Some(fd_backtest::RollingBasis { window_ms: minutes * 60_000, min_obs }))
+}
+
+/// The receipt line for the ROLLING basis.
+///
+/// It prints the window and the statistic, the counts of shifted and REFUSED
+/// frames separately (a refusal is not a shift of zero), how many raw
+/// observations existed at all, and the distribution of both the raw basis and
+/// the applied estimates — including the four quartile means in time order,
+/// because the monotone drift in this series is the reason a constant was not
+/// enough and a reader has to be able to see whether the rolling estimate
+/// tracked it.
+fn roll_line(cfg: &fd_backtest::RollingBasis, report: Option<&fd_backtest::basis::Report>) -> String {
+    let head = format!(
+        "basis:    ROLLING median over a trailing {} min window, >= {} observations, bound (t-W, t) OPEN so a bar never contributes to the basis it is traded on; levels moved, bars untouched",
+        cfg.window_ms / 60_000,
+        cfg.min_obs
+    );
+    let Some(r) = report else {
+        return format!(
+            "{head}\nbasis:    ** --basis-roll CHANGED NOTHING: there is no options timeline on this run **"
+        );
+    };
+    let spread = |label: &str, s: Option<&fd_backtest::basis::Spread>| match s {
+        None => format!("basis:    {label}: null — no value was produced (not 0.00)"),
+        Some(s) => format!(
+            "basis:    {label}: n {} mean {:+.2} sd {:.2} min {:+.2} p10 {:+.2} p50 {:+.2} p90 {:+.2} max {:+.2} | quartile means in TIME order {:+.2} -> {:+.2} -> {:+.2} -> {:+.2}",
+            s.n, s.mean, s.sd, s.min, s.p10, s.p50, s.p90, s.max,
+            s.quartile_means[0], s.quartile_means[1], s.quartile_means[2], s.quartile_means[3]
+        ),
+    };
+    format!(
+        "{head}\nbasis:    BARS (the engine's own denominator): {} of the bar series carry a frame, and {} of those still carry LEVELS after the basis — {} bars REFUSED, i.e. the rule could not place a level there and took nothing (that is `null`, not an offset of 0.00)\nbasis:    frames {} = shifted {} + refused {}, of which {} are DUPLICATE timestamps (build_timeline stamps every step with the last print's time, so a tape gap repeats one instant) — read the BAR line above, not these\nbasis:    raw observations {}\n{}\n{}",
+        r.bars_covered,
+        r.bars_with_levels,
+        r.bars_covered - r.bars_with_levels,
+        r.frames,
+        r.shifted,
+        r.refused,
+        r.duplicate_frames,
+        r.observations,
+        spread("raw GC-spot basis, every bar that had a frame", r.raw.as_ref()),
+        spread("APPLIED rolling estimates", r.applied.as_ref()),
+    )
+}
+
 /// Move every price in the timeline DOWN by `offset`, onto the bars' axis.
 ///
 /// Everything price-valued in a frame comes off the option tape's strike grid
@@ -537,23 +693,16 @@ fn shift_basis(timeline: Option<OptionsTimeline>, offset: Option<f64>) -> Option
     if offset == 0.0 {
         return Some(timeline);
     }
-    let down = |v: f64| v - offset;
+    // The field list lives in ONE place, `basis::shift_frame_down`, so the
+    // constant control and the rolling measurement shift exactly the same
+    // things and the comparison between them is a comparison of the ESTIMATE
+    // rather than of two field lists that drifted apart.
     let frames = timeline
         .frames()
         .iter()
         .map(|f| {
             let mut f = f.clone();
-            f.spot = down(f.spot);
-            for c in &mut f.clusters {
-                c.low = down(c.low);
-                c.high = down(c.high);
-                c.center = down(c.center);
-            }
-            for c in &mut f.contexts {
-                for slot in [&mut c.max_pain, &mut c.poc, &mut c.w_sup, &mut c.w_res, &mut c.call_be, &mut c.put_be] {
-                    *slot = slot.map(down);
-                }
-            }
+            fd_backtest::basis::shift_frame_down(&mut f, offset);
             f
         })
         .collect();

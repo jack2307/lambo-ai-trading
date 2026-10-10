@@ -8,6 +8,7 @@
 //! in Rust at all: finding an edge means searching a hypothesis space, and the
 //! JavaScript prototype searched it one cell at a time.
 
+pub mod basis;
 pub mod context;
 pub mod control;
 pub mod control_hold;
@@ -21,6 +22,7 @@ pub mod rebate;
 pub mod sweep;
 pub mod timeline;
 
+pub use basis::{RollingBasis, shift_frame_down};
 pub use context::{Frame, OptionsTimeline};
 pub use control::RandomEntry;
 pub use control_hold::RandomHold;

@@ -59,3 +59,8 @@ config/local.toml
 # agent/options-first built here so it never touched the shared /target while
 # other worktrees were running.
 /target-of
+# agent/options-basis builds here: a separate dir again, and this job must
+# NOT reuse another worktree's search.exe because an older binary swallows a
+# flag it does not know in silence (exit 0, nothing printed), which on this
+# axis would print an un-corrected run as if it were a basis measurement.
+/target-ob
