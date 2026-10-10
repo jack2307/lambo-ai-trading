@@ -1,0 +1,66 @@
+bar step = 15 min; trading-day runs = 1100
+
+within-window SHAPE of the tick column (what POC/value area actually read),
+vs the LEVEL of it (what the 2023-12 seam moved):
+  quantity                                 medA       medB  ratio B/A    KS D        KS p
+  cv                                     0.6364     0.3189      0.501   0.823   4.58e-149
+  top10_share                            0.2362     0.1518      0.642   0.776   1.58e-132
+  gini                                   0.3372     0.1797      0.533   0.842   9.54e-156
+  entropy_norm                           0.9587     0.9879      1.030   0.849   1.21e-158
+  median_ticks                        1183.0000  1562.5000      1.321   0.446    5.17e-44  <- LEVEL
+
+windows: regime A = 379, regime B = 721
+
+the LEVEL, month by month, beside the SHAPE (cv), to show which one has the seam:
+  2022-06  median_ticks=  1154.8  cv=0.528  n=12
+  2022-07  median_ticks=  1222.5  cv=0.564  n=21
+  2022-08  median_ticks=   991.5  cv=0.611  n=23
+  2022-09  median_ticks=   841.0  cv=0.460  n=21
+  2022-10  median_ticks=   803.0  cv=0.435  n=22
+  2022-11  median_ticks=   817.8  cv=0.430  n=22
+  2022-12  median_ticks=  1316.0  cv=0.629  n=20
+  2023-01  median_ticks=  1468.2  cv=0.588  n=22
+  2023-02  median_ticks=  1436.0  cv=0.634  n=20
+  2023-03  median_ticks=  1535.0  cv=0.633  n=22
+  2023-04  median_ticks=  1414.5  cv=0.673  n=20
+  2023-05  median_ticks=  1477.5  cv=0.683  n=23
+  2023-06  median_ticks=  1225.0  cv=0.691  n=21
+  2023-07  median_ticks=  1182.8  cv=0.694  n=22
+  2023-08  median_ticks=  1017.5  cv=0.726  n=23
+  2023-09  median_ticks=   893.2  cv=0.754  n=20
+  2023-10  median_ticks=  1291.5  cv=0.732  n=23
+  2023-11  median_ticks=  1140.8  cv=0.652  n=22
+  2023-12  median_ticks=   391.0  cv=0.344  n=19   <<<< LEVEL STEP
+  2024-01  median_ticks=   413.5  cv=0.355  n=23
+  2024-02  median_ticks=   382.5  cv=0.461  n=21
+  2024-03  median_ticks=   402.8  cv=0.393  n=20
+  2024-04  median_ticks=   512.5  cv=0.316  n=22
+  2024-05  median_ticks=   472.2  cv=0.321  n=22
+  2024-06  median_ticks=   462.0  cv=0.345  n=21
+  2024-07  median_ticks=   506.5  cv=0.330  n=23
+  2024-08  median_ticks=   527.0  cv=0.289  n=21
+  2024-09  median_ticks=   528.5  cv=0.310  n=22
+  2024-10  median_ticks=   532.0  cv=0.311  n=23
+  2024-11  median_ticks=   730.2  cv=0.295  n=20
+  2024-12  median_ticks=  1002.5  cv=0.366  n=21
+  2025-01  median_ticks=   963.0  cv=0.380  n=22
+  2025-02  median_ticks=  1054.0  cv=0.351  n=20
+  2025-03  median_ticks=  1135.2  cv=0.335  n=22
+  2025-04  median_ticks=  1503.0  cv=0.307  n=21
+  2025-05  median_ticks=  2143.0  cv=0.402  n=21
+  2025-06  median_ticks=  2175.8  cv=0.423  n=22
+  2025-07  median_ticks=  2775.0  cv=0.397  n=23
+  2025-08  median_ticks=  2652.0  cv=0.412  n=21
+  2025-09  median_ticks=  3513.0  cv=0.366  n=22
+  2025-10  median_ticks=  4639.0  cv=0.264  n=22
+  2025-11  median_ticks=  4219.5  cv=0.256  n=22
+  2025-12  median_ticks=  4032.0  cv=0.304  n=21
+  2026-01  median_ticks=  4530.5  cv=0.276  n=21
+  2026-02  median_ticks=  5273.2  cv=0.255  n=20
+  2026-03  median_ticks=  6241.5  cv=0.243  n=23
+  2026-04  median_ticks=  5027.0  cv=0.287  n=21
+  2026-05  median_ticks=  4790.0  cv=0.289  n=21
+  2026-06  median_ticks=  4968.5  cv=0.272  n=22
+  2026-07  median_ticks=  4929.2  cv=0.275  n=22
+  2026-08  median_ticks=  5037.0  cv=0.282  n=22
+  2026-09  median_ticks=  5089.2  cv=0.281  n=12

@@ -7,6 +7,9 @@ license.workspace = true
 description = "Strategy interface, registry and the built-in methods"
 
 [dependencies]
+# `vprofile_reversion` reads the COMMITTED profile functions rather than its own
+# copy of them, so the gate measures the same histogram the prechecks did.
+fd-engine = { workspace = true }
 fd-core = { workspace = true }
 fd-indicators = { workspace = true }
 serde = { workspace = true }

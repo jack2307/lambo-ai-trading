@@ -1,0 +1,12 @@
+window_days=1  arm=A_TIME_AT_PRICE            close outside VA     signals= 1076 | at the 2023-12 seam: A= 369 B= 707 (A is 34.3% of all) -> P3 does NOT fire
+window_days=1  arm=A_TIME_AT_PRICE            >=0.25 ATR outside   signals= 1064 | at the 2023-12 seam: A= 365 B= 699 (A is 34.3% of all) -> P3 does NOT fire
+window_days=1  arm=A_TIME_AT_PRICE            >=0.50 ATR outside   signals= 1060 | at the 2023-12 seam: A= 364 B= 696 (A is 34.3% of all) -> P3 does NOT fire
+window_days=1  arm=B1_TICK_VOLUME_PER_BUCKET  close outside VA     signals= 1068 | at the 2023-12 seam: A= 364 B= 704 (A is 34.1% of all) -> P3 does NOT fire
+window_days=1  arm=B1_TICK_VOLUME_PER_BUCKET  >=0.25 ATR outside   signals= 1063 | at the 2023-12 seam: A= 362 B= 701 (A is 34.1% of all) -> P3 does NOT fire
+window_days=1  arm=B1_TICK_VOLUME_PER_BUCKET  >=0.50 ATR outside   signals= 1055 | at the 2023-12 seam: A= 360 B= 695 (A is 34.1% of all) -> P3 does NOT fire
+window_days=5  arm=A_TIME_AT_PRICE            close outside VA     signals=  213 | at the 2023-12 seam: A=  75 B= 138 (A is 35.2% of all) -> P3 does NOT fire
+window_days=5  arm=A_TIME_AT_PRICE            >=0.25 ATR outside   signals=  213 | at the 2023-12 seam: A=  75 B= 138 (A is 35.2% of all) -> P3 does NOT fire
+window_days=5  arm=A_TIME_AT_PRICE            >=0.50 ATR outside   signals=  213 | at the 2023-12 seam: A=  75 B= 138 (A is 35.2% of all) -> P3 does NOT fire
+window_days=5  arm=B1_TICK_VOLUME_PER_BUCKET  close outside VA     signals=  215 | at the 2023-12 seam: A=  75 B= 140 (A is 34.9% of all) -> P3 does NOT fire
+window_days=5  arm=B1_TICK_VOLUME_PER_BUCKET  >=0.25 ATR outside   signals=  214 | at the 2023-12 seam: A=  74 B= 140 (A is 34.6% of all) -> P3 does NOT fire
+window_days=5  arm=B1_TICK_VOLUME_PER_BUCKET  >=0.50 ATR outside   signals=  213 | at the 2023-12 seam: A=  74 B= 139 (A is 34.7% of all) -> P3 does NOT fire

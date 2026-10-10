@@ -1,0 +1,30 @@
+precheck 1 — POC / value-area distance between arms, by window length and bucket scheme
+(distance in USD and in ticks of 0.01 USD; 'same bucket' = distance < bucket_size)
+
+ win bucket scheme            arm B                          n  med|dPOC|  p90|dPOC|  med tick  p90 tick  same bkt      =0  med|dVAH|  med|dVAL| med VAwid A med VAwid B
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+   1 ATR14_OVER_4             B1_TICK_VOLUME_PER_BUCKET   1100      0.000     10.187       0.0    1018.7     63.7%   58.2%      1.100      0.858      17.417      17.561
+   1 ATR14_OVER_4             B2_TICK_VOLUME_SPREAD       1100      0.000      5.521       0.0     552.1     73.4%   68.0%      0.534      0.543      17.417      16.847
+   1 FIXED_0.10_USD           B1_TICK_VOLUME_PER_BUCKET   1099      0.100      9.940      10.0     994.0     49.2%   46.6%      1.000      0.900      17.200      17.400
+   1 FIXED_0.10_USD           B2_TICK_VOLUME_SPREAD       1099      0.000      6.160       0.0     616.0     56.6%   54.5%      0.500      0.600      17.200      16.500
+   1 FIXED_0.01_USD_ONE_TICK  B1_TICK_VOLUME_PER_BUCKET    747      0.310      9.168      31.0     916.8     40.7%   40.6%      0.770      0.660      12.460      12.610
+   1 FIXED_0.01_USD_ONE_TICK  B2_TICK_VOLUME_SPREAD        747      0.000      4.796       0.0     479.6     52.2%   52.1%      0.410      0.410      12.460      12.350
+   5 ATR14_OVER_4             B1_TICK_VOLUME_PER_BUCKET    220      0.000      8.289       0.0     828.9     64.1%   57.3%      1.335      1.608      38.681      38.383
+   5 ATR14_OVER_4             B2_TICK_VOLUME_SPREAD        220      0.000      6.278       0.0     627.8     71.8%   67.3%      0.699      0.721      38.681      38.905
+   5 FIXED_0.10_USD           B1_TICK_VOLUME_PER_BUCKET    217      0.200      9.740      20.0     974.0     46.1%   41.5%      1.100      1.500      38.200      38.000
+   5 FIXED_0.10_USD           B2_TICK_VOLUME_SPREAD        217      0.000     11.160       0.0    1116.0     56.2%   51.6%      0.900      0.900      38.200      37.600
+   5 FIXED_0.01_USD_ONE_TICK  B1_TICK_VOLUME_PER_BUCKET     58      0.510     12.385      51.0    1238.5     27.6%   24.1%      0.865      0.775      18.990      18.780
+   5 FIXED_0.01_USD_ONE_TICK  B2_TICK_VOLUME_SPREAD         58      0.150      7.538      15.0     753.8     43.1%   43.1%      0.485      0.385      18.990      18.670
+
+FALSIFIER P1 as registered: fires iff, at the ONE-TICK bucket scheme,
+  median|dPOC| <= 1 tick (0.01 USD) AND p90|dPOC| <= 1 tick.
+  window_days=1 B1_TICK_VOLUME_PER_BUCKET: median=0.3100 USD (31.0 ticks), p90=9.1680 USD (916.8 ticks)  ->  does NOT fire
+  window_days=1 B2_TICK_VOLUME_SPREAD: median=0.0000 USD (0.0 ticks), p90=4.7960 USD (479.6 ticks)  ->  does NOT fire
+  window_days=5 B1_TICK_VOLUME_PER_BUCKET: median=0.5100 USD (51.0 ticks), p90=12.3850 USD (1238.5 ticks)  ->  does NOT fire
+  window_days=5 B2_TICK_VOLUME_SPREAD: median=0.1500 USD (15.0 ticks), p90=7.5380 USD (753.8 ticks)  ->  does NOT fire
+
+scale of the disagreement, ATR14_OVER_4 (the route's own bucket):
+  window_days=1 B1_TICK_VOLUME_PER_BUCKET: median |dPOC| = 0.000 USD = 0.000 ATR(14,15m);  p90 = 3.500 ATR
+  window_days=1 B2_TICK_VOLUME_SPREAD: median |dPOC| = 0.000 USD = 0.000 ATR(14,15m);  p90 = 2.000 ATR
+  window_days=5 B1_TICK_VOLUME_PER_BUCKET: median |dPOC| = 0.000 USD = 0.000 ATR(14,15m);  p90 = 2.550 ATR
+  window_days=5 B2_TICK_VOLUME_SPREAD: median |dPOC| = 0.000 USD = 0.000 ATR(14,15m);  p90 = 1.500 ATR

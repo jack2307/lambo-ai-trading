@@ -584,6 +584,252 @@ pub fn activity_profile(bars: &[Bar], bucket_size_price: f64, value_area_pct: f6
     })
 }
 
+/* ------------------------------------------- tick volume at price */
+
+/// How a bar's `volume` is spread across the buckets its range touched.
+///
+/// Declared as a closed set before any number was looked at
+/// (`docs/decisions/2026-10-10-vprofile-gold.md` section 4), because the two
+/// conventions answer the same question differently and picking one after
+/// seeing the result would be picking the result.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum VolumeWeighting {
+    /// `+= volume` into EVERY bucket the bar's range touched. The same
+    /// convention [`activity_profile`] uses for its `1.0`, so the only
+    /// difference between the two histograms is the weight itself — which is
+    /// what makes the pair a one-variable comparison.
+    PerTouchedBucket,
+    /// `+= volume / buckets_touched`. Conserves the bar's volume, so the
+    /// histogram's total is the window's total volume rather than a
+    /// range-inflated multiple of it.
+    SpreadOverTouchedBuckets,
+}
+
+impl VolumeWeighting {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::PerTouchedBucket => "PER_TOUCHED_BUCKET",
+            Self::SpreadOverTouchedBuckets => "SPREAD_OVER_TOUCHED_BUCKETS",
+        }
+    }
+}
+
+/// A histogram of the feed's `volume` column across price buckets.
+///
+/// Deliberately NOT a [`BarProfile`]: that struct's `measure` is the constant
+/// `"TIME_AT_PRICE"` and its totals are named `*_bar_buckets`, and reusing it
+/// here would publish a tick count under a field name that says bars.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct TickVolumeProfile {
+    /// `TICK_VOLUME_AT_PRICE`, always.
+    ///
+    /// **Not volume.** Every feed on this desk that carries a non-zero
+    /// `volume` for gold carries MT5 *tick* volume — the number of price
+    /// changes in the bar — and `py/ingest/mt5_export.py` says so in the
+    /// file's own metadata (`volume = "tick_volume (price changes per bar),
+    /// not contracts"`), because CFD real volume is always zero. So this
+    /// field never reads `VOLUME_AT_PRICE`: a profile of price changes is not
+    /// a profile of size, and the name is the only place a reader of the JSON
+    /// would find that out.
+    pub measure: &'static str,
+    pub weighting: VolumeWeighting,
+    pub poc: Option<PriceLevel>,
+    pub vah: Option<PriceLevel>,
+    pub val: Option<PriceLevel>,
+    pub bucket_size_price: f64,
+    pub buckets_per_atr: f64,
+    pub buckets: usize,
+    /// Bars that contributed. A bar whose `volume` is `None` is NOT one of
+    /// them — see [`Self::bars_without_volume`].
+    pub window_bars: usize,
+    /// Bars skipped because the feed published no `volume` for them.
+    ///
+    /// They are counted and excluded, never substituted. `fd_indicators`'
+    /// VWAP substitutes `1.0` per bar where the feed has none, and
+    /// `fd_store::resample` does the same at its own call site
+    /// (`resample.rs:25`, `row.volume.filter(|v| v.is_finite()).unwrap_or(1.0)`)
+    /// — a constant weight per bar IS the time profile, so substituting it
+    /// here would turn this histogram into [`activity_profile`] wearing a
+    /// volume profile's name while reporting nothing about the swap.
+    pub bars_without_volume: usize,
+    pub window_start_bar_ms: i64,
+    pub window_end_bar_ms: i64,
+    pub value_area_pct: f64,
+    /// The histogram's total, in ticks x buckets under
+    /// [`VolumeWeighting::PerTouchedBucket`] and in ticks under
+    /// [`VolumeWeighting::SpreadOverTouchedBuckets`]. The denominator of the
+    /// value area.
+    pub total_weight: f64,
+    /// The part of that total inside VAL..VAH.
+    pub in_value_area_weight: f64,
+}
+
+/// The tick-volume profile over price bars, with its point of control and
+/// value area.
+///
+/// Written beside [`activity_profile`] rather than sharing a generic with it,
+/// for the reason the module header gives for the second value-area walk: the
+/// point of the pair is that one histogram is the committed code and the other
+/// is the candidate, and a shared body would make "the existing profile" and
+/// "the new profile" the same function with a flag.
+///
+/// **Identical to [`activity_profile`] in every line except the weight added
+/// per touched bucket**, including the bucket anchor (`min_low` of the
+/// window), the `floor` indexing, the LOWER-bucket tie rule for the POC, the
+/// classic outward value-area walk, and the POC-midpoint / VAH-outer-edge /
+/// VAL-outer-edge convention. That is what makes a difference between the two
+/// attributable to the `volume` column and to nothing else.
+#[must_use]
+pub fn volume_profile(
+    bars: &[Bar],
+    bucket_size_price: f64,
+    value_area_pct: f64,
+    buckets_per_atr: f64,
+    weighting: VolumeWeighting,
+) -> Option<TickVolumeProfile> {
+    if bars.is_empty() || !(bucket_size_price.is_finite() && bucket_size_price > 0.0) {
+        return None;
+    }
+    let pct = if value_area_pct.is_finite() { value_area_pct.clamp(0.0, 1.0) } else { return None };
+
+    let min_low = bars.iter().map(|b| b.low).filter(|v| v.is_finite()).fold(f64::INFINITY, f64::min);
+    let max_high = bars.iter().map(|b| b.high).filter(|v| v.is_finite()).fold(f64::NEG_INFINITY, f64::max);
+    if !min_low.is_finite() || !max_high.is_finite() || max_high < min_low {
+        return None;
+    }
+    let span = ((max_high - min_low) / bucket_size_price).floor();
+    if !span.is_finite() || span < 0.0 || span > MAX_BUCKETS as f64 {
+        return None;
+    }
+    let count = span as usize + 1;
+
+    let index_of = |price: f64| -> usize {
+        let raw = ((price - min_low) / bucket_size_price).floor();
+        (raw.max(0.0) as usize).min(count - 1)
+    };
+
+    let mut weight = vec![0.0f64; count];
+    let mut first_touch = vec![usize::MAX; count];
+    let mut window_bars = 0usize;
+    let mut bars_without_volume = 0usize;
+    for (i, bar) in bars.iter().enumerate() {
+        if !(bar.low.is_finite() && bar.high.is_finite()) || bar.high < bar.low {
+            continue;
+        }
+        // A bar the feed published no volume for is COUNTED AND SKIPPED. No
+        // `unwrap_or(1.0)`: `null` is not `0` and it is not `1` either.
+        let Some(volume) = bar.volume.filter(|v| v.is_finite()) else {
+            bars_without_volume += 1;
+            continue;
+        };
+        window_bars += 1;
+        let lo_index = index_of(bar.low);
+        let hi_index = index_of(bar.high);
+        let touched = hi_index - lo_index + 1;
+        let per_bucket = match weighting {
+            VolumeWeighting::PerTouchedBucket => volume,
+            VolumeWeighting::SpreadOverTouchedBuckets => volume / touched as f64,
+        };
+        for k in lo_index..=hi_index {
+            weight[k] += per_bucket;
+            if first_touch[k] == usize::MAX {
+                first_touch[k] = i;
+            }
+        }
+    }
+    let total: f64 = weight.iter().sum();
+    if window_bars == 0 || total <= 0.0 {
+        return None;
+    }
+
+    // Ties go to the LOWER bucket, same stated rule as `activity_profile`.
+    let mut poc = 0usize;
+    for i in 1..count {
+        if weight[i] > weight[poc] {
+            poc = i;
+        }
+    }
+
+    let target = total * pct;
+    let (mut lo, mut hi) = (poc, poc);
+    let mut acc = weight[poc];
+    while acc < target && (lo > 0 || hi < count - 1) {
+        let below = if lo > 0 { weight[lo - 1] } else { f64::NEG_INFINITY };
+        let above = if hi < count - 1 { weight[hi + 1] } else { f64::NEG_INFINITY };
+        if above >= below {
+            hi += 1;
+            acc += weight[hi];
+        } else {
+            lo -= 1;
+            acc += weight[lo];
+        }
+    }
+
+    let last = bars.len() - 1;
+    let edge = |k: usize| min_low + k as f64 * bucket_size_price;
+    let stamp = |k: usize| -> (i64, usize) {
+        let i = if first_touch[k] == usize::MAX { last } else { first_touch[k] };
+        (bars[i].time, last - i)
+    };
+    let rule = format!(
+        "tick-volume profile over {window_bars} bars ({bars_without_volume} skipped for no volume), \
+         weighting {}, bucket = ATR(14)/{buckets_per_atr}, value area {:.0}% by the classic walk",
+        weighting.as_str(),
+        pct * 100.0
+    );
+
+    let (poc_ms, poc_age) = stamp(poc);
+    let (vah_ms, vah_age) = stamp(hi);
+    let (val_ms, val_age) = stamp(lo);
+
+    Some(TickVolumeProfile {
+        measure: "TICK_VOLUME_AT_PRICE",
+        weighting,
+        poc: Some(PriceLevel {
+            kind: LevelKind::Poc,
+            price: Some(edge(poc) + bucket_size_price / 2.0),
+            band_low: Some(edge(poc)),
+            band_high: Some(edge(poc + 1)),
+            formed_at_bar_ms: poc_ms,
+            age_bars: poc_age,
+            state: LevelState::Current,
+            rule: rule.clone(),
+        }),
+        vah: Some(PriceLevel {
+            kind: LevelKind::Vah,
+            price: Some(edge(hi + 1)),
+            band_low: None,
+            band_high: None,
+            formed_at_bar_ms: vah_ms,
+            age_bars: vah_age,
+            state: LevelState::Current,
+            rule: rule.clone(),
+        }),
+        val: Some(PriceLevel {
+            kind: LevelKind::Val,
+            price: Some(edge(lo)),
+            band_low: None,
+            band_high: None,
+            formed_at_bar_ms: val_ms,
+            age_bars: val_age,
+            state: LevelState::Current,
+            rule,
+        }),
+        bucket_size_price,
+        buckets_per_atr,
+        buckets: count,
+        window_bars,
+        bars_without_volume,
+        window_start_bar_ms: bars[0].time,
+        window_end_bar_ms: bars[last].time,
+        value_area_pct: pct,
+        total_weight: total,
+        in_value_area_weight: acc,
+    })
+}
+
 /* ---------------------------------------------------- fair value gaps */
 
 /// Unfilled three-bar imbalances, oldest first.

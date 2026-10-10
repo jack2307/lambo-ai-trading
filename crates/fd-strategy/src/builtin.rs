@@ -74,6 +74,10 @@ pub fn register_all(registry: &mut Registry) {
     registry.register(Box::new(crate::screen::SqueezeBreak));
     registry.register(Box::new(crate::screen::StochReversal));
     registry.register(Box::new(crate::volman_box::VolmanBox));
+    // Value-area reversion on the price profile. Registered in
+    // docs/decisions/2026-10-10-vprofile-gold.md; `measure` picks the committed
+    // TIME profile (0, the control) or the tick-volume profile (1, 2).
+    registry.register(Box::new(crate::vprofile_reversion::ValueAreaReversion));
     // The three instruments built by the 2026-09-23 designed-methods programme.
     // NONE of them is a candidate: all three are registered at parameters that
     // their own design window refuses, and the programme proposed no method at

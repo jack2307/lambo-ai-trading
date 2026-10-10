@@ -1,0 +1,142 @@
+
+=== window_days=1  bucket=ATR14_OVER_4 ===
+    windows: regime A ~379, regime B ~721
+    quantity                                   arm                             medA      medB   |dmed|    KS D       KS p
+    value-area width / ATR(14,15m)             A_TIME_AT_PRICE               5.7500    5.7500   0.0000   0.061      0.314
+    value-area width / ATR(14,15m)             B1_TICK_VOLUME_PER_BUCKET     5.7500    5.7500   0.0000   0.060      0.319
+    value-area width / ATR(14,15m)             B2_TICK_VOLUME_SPREAD         5.7500    5.7500   0.0000   0.043      0.744
+
+    POC position in window range (0..1)        A_TIME_AT_PRICE               0.4540    0.5138   0.0598   0.103    0.00952
+    POC position in window range (0..1)        B1_TICK_VOLUME_PER_BUCKET     0.4944    0.5283   0.0339   0.092     0.0289
+    POC position in window range (0..1)        B2_TICK_VOLUME_SPREAD         0.4655    0.5337   0.0682   0.137   0.000156
+
+    POC-bucket share of total (concentration)  A_TIME_AT_PRICE               0.0548    0.0550   0.0002   0.030      0.975
+    POC-bucket share of total (concentration)  B1_TICK_VOLUME_PER_BUCKET     0.0486    0.0516   0.0029   0.096     0.0184
+    POC-bucket share of total (concentration)  B2_TICK_VOLUME_SPREAD         0.0543    0.0584   0.0040   0.107    0.00603
+
+    normalised histogram entropy               A_TIME_AT_PRICE               0.9344    0.9358   0.0014   0.048      0.597
+    normalised histogram entropy               B1_TICK_VOLUME_PER_BUCKET     0.9467    0.9426   0.0040   0.114    0.00281
+    normalised histogram entropy               B2_TICK_VOLUME_SPREAD         0.9313    0.9273   0.0040   0.113    0.00325
+
+    FALSIFIER P2 as registered (primary bucket = the route's own):
+      fires iff, for >= 2 of 3 quantities, arm B has KS p < 0.01 AND
+      |median shift| at least 2x the control arm A's.
+      B1_TICK_VOLUME_PER_BUCKET: 0/3 clauses met -> does NOT fire
+        value-area width / ATR(14,15m)             p=0.319      |dmed|B=0.0000 |dmed|A=0.0000 ratio=2.74 -
+        POC position in window range (0..1)        p=0.0289     |dmed|B=0.0339 |dmed|A=0.0598 ratio=0.57 -
+        POC-bucket share of total (concentration)  p=0.0184     |dmed|B=0.0029 |dmed|A=0.0002 ratio=13.65 -
+      B2_TICK_VOLUME_SPREAD: 1/3 clauses met -> does NOT fire
+        value-area width / ATR(14,15m)             p=0.744      |dmed|B=0.0000 |dmed|A=0.0000 ratio=0.04 -
+        POC position in window range (0..1)        p=0.000156   |dmed|B=0.0682 |dmed|A=0.0598 ratio=1.14 -
+        POC-bucket share of total (concentration)  p=0.00603    |dmed|B=0.0040 |dmed|A=0.0002 ratio=18.81 MET
+
+=== window_days=1  bucket=FIXED_0.10_USD ===
+    windows: regime A ~379, regime B ~720
+    quantity                                   arm                             medA      medB   |dmed|    KS D       KS p
+    value-area width / ATR(14,15m)             A_TIME_AT_PRICE               5.8567    5.7921   0.0647   0.064      0.253
+    value-area width / ATR(14,15m)             B1_TICK_VOLUME_PER_BUCKET     5.6397    5.7400   0.1004   0.068      0.194
+    value-area width / ATR(14,15m)             B2_TICK_VOLUME_SPREAD         5.6492    5.6707   0.0215   0.039      0.846
+
+    POC position in window range (0..1)        A_TIME_AT_PRICE               0.4495    0.5096   0.0601   0.100     0.0124
+    POC position in window range (0..1)        B1_TICK_VOLUME_PER_BUCKET     0.4857    0.5263   0.0406   0.079     0.0842
+    POC position in window range (0..1)        B2_TICK_VOLUME_SPREAD         0.4658    0.5316   0.0657   0.115    0.00255
+
+    POC-bucket share of total (concentration)  A_TIME_AT_PRICE               0.0132    0.0061   0.0071   0.610   5.59e-82
+    POC-bucket share of total (concentration)  B1_TICK_VOLUME_PER_BUCKET     0.0111    0.0056   0.0054   0.552    2.7e-67
+    POC-bucket share of total (concentration)  B2_TICK_VOLUME_SPREAD         0.0133    0.0070   0.0062   0.575   8.07e-73
+
+    normalised histogram entropy               A_TIME_AT_PRICE               0.9528    0.9596   0.0068   0.185   6.76e-08
+    normalised histogram entropy               B1_TICK_VOLUME_PER_BUCKET     0.9613    0.9638   0.0025   0.086     0.0477
+    normalised histogram entropy               B2_TICK_VOLUME_SPREAD         0.9473    0.9508   0.0034   0.057      0.391
+
+
+=== window_days=1  bucket=FIXED_0.01_USD_ONE_TICK ===
+    windows: regime A ~369, regime B ~378
+    quantity                                   arm                             medA      medB   |dmed|    KS D       KS p
+    value-area width / ATR(14,15m)             A_TIME_AT_PRICE               5.7506    5.2637   0.4869   0.087      0.114
+    value-area width / ATR(14,15m)             B1_TICK_VOLUME_PER_BUCKET     5.5409    5.2510   0.2899   0.081      0.165
+    value-area width / ATR(14,15m)             B2_TICK_VOLUME_SPREAD         5.4562    5.1575   0.2987   0.078      0.197
+
+    POC position in window range (0..1)        A_TIME_AT_PRICE               0.4473    0.5010   0.0537   0.096     0.0614
+    POC position in window range (0..1)        B1_TICK_VOLUME_PER_BUCKET     0.4767    0.5187   0.0420   0.100     0.0449
+    POC position in window range (0..1)        B2_TICK_VOLUME_SPREAD         0.4767    0.5135   0.0368   0.097     0.0558
+
+    POC-bucket share of total (concentration)  A_TIME_AT_PRICE               0.0014    0.0009   0.0004   0.423   6.24e-30
+    POC-bucket share of total (concentration)  B1_TICK_VOLUME_PER_BUCKET     0.0011    0.0008   0.0003   0.334   7.66e-19
+    POC-bucket share of total (concentration)  B2_TICK_VOLUME_SPREAD         0.0014    0.0010   0.0004   0.376   8.28e-24
+
+    normalised histogram entropy               A_TIME_AT_PRICE               0.9673    0.9704   0.0031   0.127     0.0045
+    normalised histogram entropy               B1_TICK_VOLUME_PER_BUCKET     0.9733    0.9735   0.0003   0.049      0.746
+    normalised histogram entropy               B2_TICK_VOLUME_SPREAD         0.9629    0.9648   0.0019   0.055      0.613
+
+
+=== window_days=5  bucket=ATR14_OVER_4 ===
+    windows: regime A ~76, regime B ~144
+    quantity                                   arm                             medA      medB   |dmed|    KS D       KS p
+    value-area width / ATR(14,15m)             A_TIME_AT_PRICE              14.0000   15.2500   1.2500   0.133      0.323
+    value-area width / ATR(14,15m)             B1_TICK_VOLUME_PER_BUCKET    14.1250   15.1250   1.0000   0.157      0.156
+    value-area width / ATR(14,15m)             B2_TICK_VOLUME_SPREAD        14.1250   14.3750   0.2500   0.126      0.387
+
+    POC position in window range (0..1)        A_TIME_AT_PRICE               0.4502    0.5324   0.0822   0.103      0.642
+    POC position in window range (0..1)        B1_TICK_VOLUME_PER_BUCKET     0.4523    0.5222   0.0699   0.084      0.859
+    POC position in window range (0..1)        B2_TICK_VOLUME_SPREAD         0.4450    0.5299   0.0849   0.117      0.479
+
+    POC-bucket share of total (concentration)  A_TIME_AT_PRICE               0.0272    0.0275   0.0003   0.079      0.907
+    POC-bucket share of total (concentration)  B1_TICK_VOLUME_PER_BUCKET     0.0229    0.0259   0.0031   0.205     0.0259
+    POC-bucket share of total (concentration)  B2_TICK_VOLUME_SPREAD         0.0257    0.0283   0.0025   0.158       0.15
+
+    normalised histogram entropy               A_TIME_AT_PRICE               0.9372    0.9359   0.0012   0.102       0.66
+    normalised histogram entropy               B1_TICK_VOLUME_PER_BUCKET     0.9474    0.9451   0.0023   0.103      0.642
+    normalised histogram entropy               B2_TICK_VOLUME_SPREAD         0.9345    0.9289   0.0056   0.134       0.31
+
+    FALSIFIER P2 as registered (primary bucket = the route's own):
+      fires iff, for >= 2 of 3 quantities, arm B has KS p < 0.01 AND
+      |median shift| at least 2x the control arm A's.
+      B1_TICK_VOLUME_PER_BUCKET: 0/3 clauses met -> does NOT fire
+        value-area width / ATR(14,15m)             p=0.156      |dmed|B=1.0000 |dmed|A=1.2500 ratio=0.80 -
+        POC position in window range (0..1)        p=0.859      |dmed|B=0.0699 |dmed|A=0.0822 ratio=0.85 -
+        POC-bucket share of total (concentration)  p=0.0259     |dmed|B=0.0031 |dmed|A=0.0003 ratio=10.01 -
+      B2_TICK_VOLUME_SPREAD: 0/3 clauses met -> does NOT fire
+        value-area width / ATR(14,15m)             p=0.387      |dmed|B=0.2500 |dmed|A=1.2500 ratio=0.20 -
+        POC position in window range (0..1)        p=0.479      |dmed|B=0.0849 |dmed|A=0.0822 ratio=1.03 -
+        POC-bucket share of total (concentration)  p=0.15       |dmed|B=0.0025 |dmed|A=0.0003 ratio=8.30 -
+
+=== window_days=5  bucket=FIXED_0.10_USD ===
+    windows: regime A ~76, regime B ~141
+    quantity                                   arm                             medA      medB   |dmed|    KS D       KS p
+    value-area width / ATR(14,15m)             A_TIME_AT_PRICE              13.9754   14.9611   0.9857   0.134      0.316
+    value-area width / ATR(14,15m)             B1_TICK_VOLUME_PER_BUCKET    14.1637   15.2163   1.0526   0.145      0.229
+    value-area width / ATR(14,15m)             B2_TICK_VOLUME_SPREAD        13.9557   14.4229   0.4672   0.127       0.38
+
+    POC position in window range (0..1)        A_TIME_AT_PRICE               0.4243    0.5252   0.1009   0.147      0.216
+    POC position in window range (0..1)        B1_TICK_VOLUME_PER_BUCKET     0.4655    0.5095   0.0440   0.072      0.951
+    POC position in window range (0..1)        B2_TICK_VOLUME_SPREAD         0.4513    0.5177   0.0665   0.104       0.64
+
+    POC-bucket share of total (concentration)  A_TIME_AT_PRICE               0.0062    0.0028   0.0034   0.721   1.28e-23
+    POC-bucket share of total (concentration)  B1_TICK_VOLUME_PER_BUCKET     0.0057    0.0027   0.0030   0.634   2.35e-18
+    POC-bucket share of total (concentration)  B2_TICK_VOLUME_SPREAD         0.0064    0.0033   0.0031   0.678   6.66e-21
+
+    normalised histogram entropy               A_TIME_AT_PRICE               0.9513    0.9589   0.0077   0.227       0.01
+    normalised histogram entropy               B1_TICK_VOLUME_PER_BUCKET     0.9601    0.9639   0.0038   0.155      0.168
+    normalised histogram entropy               B2_TICK_VOLUME_SPREAD         0.9501    0.9521   0.0020   0.104      0.633
+
+
+=== window_days=5  bucket=FIXED_0.01_USD_ONE_TICK ===
+    windows: regime A ~45, regime B ~13
+    quantity                                   arm                             medA      medB   |dmed|    KS D       KS p
+    value-area width / ATR(14,15m)             A_TIME_AT_PRICE              12.2988    8.0741   4.2247   0.448     0.0234
+    value-area width / ATR(14,15m)             B1_TICK_VOLUME_PER_BUCKET    12.8201    8.4773   4.3429   0.513    0.00585
+    value-area width / ATR(14,15m)             B2_TICK_VOLUME_SPREAD        13.1437    8.2671   4.8766   0.468     0.0154
+
+    POC position in window range (0..1)        A_TIME_AT_PRICE               0.4216    0.5012   0.0797   0.168      0.915
+    POC position in window range (0..1)        B1_TICK_VOLUME_PER_BUCKET     0.4594    0.5230   0.0636   0.248      0.503
+    POC position in window range (0..1)        B2_TICK_VOLUME_SPREAD         0.4728    0.5382   0.0654   0.226      0.625
+
+    POC-bucket share of total (concentration)  A_TIME_AT_PRICE               0.0007    0.0006   0.0001   0.280      0.348
+    POC-bucket share of total (concentration)  B1_TICK_VOLUME_PER_BUCKET     0.0006    0.0006   0.0000   0.195      0.794
+    POC-bucket share of total (concentration)  B2_TICK_VOLUME_SPREAD         0.0007    0.0007   0.0001   0.191      0.811
+
+    normalised histogram entropy               A_TIME_AT_PRICE               0.9648    0.9650   0.0002   0.236      0.568
+    normalised histogram entropy               B1_TICK_VOLUME_PER_BUCKET     0.9718    0.9680   0.0037   0.161      0.937
+    normalised histogram entropy               B2_TICK_VOLUME_SPREAD         0.9639    0.9632   0.0007   0.125      0.995
+

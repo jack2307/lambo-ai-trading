@@ -4,6 +4,8 @@
 # agent/stop-width built here so it never touched the shared /target while the
 # two collect.exe processes were running.
 /target-sw
+# agent/vprofile-gold built here, same reason.
+/target-vp
 **/*.rs.bk
 
 # Data is fetched, not committed — except the golden files, which are the

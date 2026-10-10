@@ -1,0 +1,143 @@
+# agent/vprofile-gold - value-area reversion on the price profile, with the
+# COMMITTED time profile as the control arm.  Registered in
+# docs/decisions/2026-10-10-vprofile-gold.md; 18 declared rows here, run over
+# two windows and two guard arms = 72 cells.
+#
+# `measure` is the axis:
+#   0 = TIME_AT_PRICE          - fd_engine::activity_profile, the committed
+#                                function, which never reads `volume`.  CONTROL.
+#   1 = TICK_VOLUME_AT_PRICE   - fd_engine::volume_profile, PER_TOUCHED_BUCKET:
+#                                the same histogram with the bar's `volume` as
+#                                the weight instead of 1.0.  ONE variable.
+#   2 = TICK_VOLUME_AT_PRICE   - the same, SPREAD_OVER_TOUCHED_BUCKETS.
+#
+# The volume is MT5 TICK volume - price changes per bar, not size; the parquet
+# metadata says so (`volume = "tick_volume (price changes per bar), not
+# contracts"`), because CFD real volume is always zero.  Every Dukascopy feed
+# publishes 0 or null, so the two volume arms exist ONLY on xauusd:15m, which
+# is why both windows below are carved out of that one feed.
+#
+# The windows cut at the 2023-12 seam, where the within-window SHAPE of the
+# tick column steps and never returns (gini 0.337 -> 0.180, entropy 0.959 ->
+# 0.988, KS D 0.82-0.85 over 1,100 trading days).
+[run]
+in_sample = "xauusd:15m"
+in_sample_from = "2022-06-16"
+in_sample_to = "2023-11-30"
+out_of_sample = "xauusd:15m"
+out_of_sample_from = "2023-12-01"
+seeds = 100
+direction_samples = 1000
+fixed = true
+# NOTE: every key in [run] is DOCUMENTATION.  `batch_from_file` reads only the
+# `[[hypothesis]]` tables; the windows, `--fixed`, `--seeds` and `--null-sides`
+# come from the CLI (AGENT-BRIEF-ADDENDUM-8 section VI).  The receipt header is
+# the record of what actually ran.
+
+[[hypothesis]]
+label = "time/d1/t0.00"
+base = "vprofile-reversion"
+overrides = { measure = 0.0, windowDays = 1.0, thresholdAtr = 0.00, bucketsPerAtr = 4.0, valueAreaPct = 0.70, bufferAtr = 0.10, maxRiskAtr = 3.0, minTargetAtr = 0.25, atrPeriod = 14.0 }
+why = "TIME_AT_PRICE (committed activity_profile; CONTROL, reads no volume); prior 1 complete NY day(s); close >= 0.00 ATR(14,15m) outside the value area; target the POC"
+
+[[hypothesis]]
+label = "time/d1/t0.25"
+base = "vprofile-reversion"
+overrides = { measure = 0.0, windowDays = 1.0, thresholdAtr = 0.25, bucketsPerAtr = 4.0, valueAreaPct = 0.70, bufferAtr = 0.10, maxRiskAtr = 3.0, minTargetAtr = 0.25, atrPeriod = 14.0 }
+why = "TIME_AT_PRICE (committed activity_profile; CONTROL, reads no volume); prior 1 complete NY day(s); close >= 0.25 ATR(14,15m) outside the value area; target the POC"
+
+[[hypothesis]]
+label = "time/d1/t0.50"
+base = "vprofile-reversion"
+overrides = { measure = 0.0, windowDays = 1.0, thresholdAtr = 0.50, bucketsPerAtr = 4.0, valueAreaPct = 0.70, bufferAtr = 0.10, maxRiskAtr = 3.0, minTargetAtr = 0.25, atrPeriod = 14.0 }
+why = "TIME_AT_PRICE (committed activity_profile; CONTROL, reads no volume); prior 1 complete NY day(s); close >= 0.50 ATR(14,15m) outside the value area; target the POC"
+
+[[hypothesis]]
+label = "time/d5/t0.00"
+base = "vprofile-reversion"
+overrides = { measure = 0.0, windowDays = 5.0, thresholdAtr = 0.00, bucketsPerAtr = 4.0, valueAreaPct = 0.70, bufferAtr = 0.10, maxRiskAtr = 3.0, minTargetAtr = 0.25, atrPeriod = 14.0 }
+why = "TIME_AT_PRICE (committed activity_profile; CONTROL, reads no volume); prior 5 complete NY day(s); close >= 0.00 ATR(14,15m) outside the value area; target the POC"
+
+[[hypothesis]]
+label = "time/d5/t0.25"
+base = "vprofile-reversion"
+overrides = { measure = 0.0, windowDays = 5.0, thresholdAtr = 0.25, bucketsPerAtr = 4.0, valueAreaPct = 0.70, bufferAtr = 0.10, maxRiskAtr = 3.0, minTargetAtr = 0.25, atrPeriod = 14.0 }
+why = "TIME_AT_PRICE (committed activity_profile; CONTROL, reads no volume); prior 5 complete NY day(s); close >= 0.25 ATR(14,15m) outside the value area; target the POC"
+
+[[hypothesis]]
+label = "time/d5/t0.50"
+base = "vprofile-reversion"
+overrides = { measure = 0.0, windowDays = 5.0, thresholdAtr = 0.50, bucketsPerAtr = 4.0, valueAreaPct = 0.70, bufferAtr = 0.10, maxRiskAtr = 3.0, minTargetAtr = 0.25, atrPeriod = 14.0 }
+why = "TIME_AT_PRICE (committed activity_profile; CONTROL, reads no volume); prior 5 complete NY day(s); close >= 0.50 ATR(14,15m) outside the value area; target the POC"
+
+[[hypothesis]]
+label = "tvol/d1/t0.00"
+base = "vprofile-reversion"
+overrides = { measure = 1.0, windowDays = 1.0, thresholdAtr = 0.00, bucketsPerAtr = 4.0, valueAreaPct = 0.70, bufferAtr = 0.10, maxRiskAtr = 3.0, minTargetAtr = 0.25, atrPeriod = 14.0 }
+why = "TICK_VOLUME_AT_PRICE / PER_TOUCHED_BUCKET; prior 1 complete NY day(s); close >= 0.00 ATR(14,15m) outside the value area; target the POC"
+
+[[hypothesis]]
+label = "tvol/d1/t0.25"
+base = "vprofile-reversion"
+overrides = { measure = 1.0, windowDays = 1.0, thresholdAtr = 0.25, bucketsPerAtr = 4.0, valueAreaPct = 0.70, bufferAtr = 0.10, maxRiskAtr = 3.0, minTargetAtr = 0.25, atrPeriod = 14.0 }
+why = "TICK_VOLUME_AT_PRICE / PER_TOUCHED_BUCKET; prior 1 complete NY day(s); close >= 0.25 ATR(14,15m) outside the value area; target the POC"
+
+[[hypothesis]]
+label = "tvol/d1/t0.50"
+base = "vprofile-reversion"
+overrides = { measure = 1.0, windowDays = 1.0, thresholdAtr = 0.50, bucketsPerAtr = 4.0, valueAreaPct = 0.70, bufferAtr = 0.10, maxRiskAtr = 3.0, minTargetAtr = 0.25, atrPeriod = 14.0 }
+why = "TICK_VOLUME_AT_PRICE / PER_TOUCHED_BUCKET; prior 1 complete NY day(s); close >= 0.50 ATR(14,15m) outside the value area; target the POC"
+
+[[hypothesis]]
+label = "tvol/d5/t0.00"
+base = "vprofile-reversion"
+overrides = { measure = 1.0, windowDays = 5.0, thresholdAtr = 0.00, bucketsPerAtr = 4.0, valueAreaPct = 0.70, bufferAtr = 0.10, maxRiskAtr = 3.0, minTargetAtr = 0.25, atrPeriod = 14.0 }
+why = "TICK_VOLUME_AT_PRICE / PER_TOUCHED_BUCKET; prior 5 complete NY day(s); close >= 0.00 ATR(14,15m) outside the value area; target the POC"
+
+[[hypothesis]]
+label = "tvol/d5/t0.25"
+base = "vprofile-reversion"
+overrides = { measure = 1.0, windowDays = 5.0, thresholdAtr = 0.25, bucketsPerAtr = 4.0, valueAreaPct = 0.70, bufferAtr = 0.10, maxRiskAtr = 3.0, minTargetAtr = 0.25, atrPeriod = 14.0 }
+why = "TICK_VOLUME_AT_PRICE / PER_TOUCHED_BUCKET; prior 5 complete NY day(s); close >= 0.25 ATR(14,15m) outside the value area; target the POC"
+
+[[hypothesis]]
+label = "tvol/d5/t0.50"
+base = "vprofile-reversion"
+overrides = { measure = 1.0, windowDays = 5.0, thresholdAtr = 0.50, bucketsPerAtr = 4.0, valueAreaPct = 0.70, bufferAtr = 0.10, maxRiskAtr = 3.0, minTargetAtr = 0.25, atrPeriod = 14.0 }
+why = "TICK_VOLUME_AT_PRICE / PER_TOUCHED_BUCKET; prior 5 complete NY day(s); close >= 0.50 ATR(14,15m) outside the value area; target the POC"
+
+[[hypothesis]]
+label = "tvsp/d1/t0.00"
+base = "vprofile-reversion"
+overrides = { measure = 2.0, windowDays = 1.0, thresholdAtr = 0.00, bucketsPerAtr = 4.0, valueAreaPct = 0.70, bufferAtr = 0.10, maxRiskAtr = 3.0, minTargetAtr = 0.25, atrPeriod = 14.0 }
+why = "TICK_VOLUME_AT_PRICE / SPREAD_OVER_TOUCHED_BUCKETS; prior 1 complete NY day(s); close >= 0.00 ATR(14,15m) outside the value area; target the POC"
+
+[[hypothesis]]
+label = "tvsp/d1/t0.25"
+base = "vprofile-reversion"
+overrides = { measure = 2.0, windowDays = 1.0, thresholdAtr = 0.25, bucketsPerAtr = 4.0, valueAreaPct = 0.70, bufferAtr = 0.10, maxRiskAtr = 3.0, minTargetAtr = 0.25, atrPeriod = 14.0 }
+why = "TICK_VOLUME_AT_PRICE / SPREAD_OVER_TOUCHED_BUCKETS; prior 1 complete NY day(s); close >= 0.25 ATR(14,15m) outside the value area; target the POC"
+
+[[hypothesis]]
+label = "tvsp/d1/t0.50"
+base = "vprofile-reversion"
+overrides = { measure = 2.0, windowDays = 1.0, thresholdAtr = 0.50, bucketsPerAtr = 4.0, valueAreaPct = 0.70, bufferAtr = 0.10, maxRiskAtr = 3.0, minTargetAtr = 0.25, atrPeriod = 14.0 }
+why = "TICK_VOLUME_AT_PRICE / SPREAD_OVER_TOUCHED_BUCKETS; prior 1 complete NY day(s); close >= 0.50 ATR(14,15m) outside the value area; target the POC"
+
+[[hypothesis]]
+label = "tvsp/d5/t0.00"
+base = "vprofile-reversion"
+overrides = { measure = 2.0, windowDays = 5.0, thresholdAtr = 0.00, bucketsPerAtr = 4.0, valueAreaPct = 0.70, bufferAtr = 0.10, maxRiskAtr = 3.0, minTargetAtr = 0.25, atrPeriod = 14.0 }
+why = "TICK_VOLUME_AT_PRICE / SPREAD_OVER_TOUCHED_BUCKETS; prior 5 complete NY day(s); close >= 0.00 ATR(14,15m) outside the value area; target the POC"
+
+[[hypothesis]]
+label = "tvsp/d5/t0.25"
+base = "vprofile-reversion"
+overrides = { measure = 2.0, windowDays = 5.0, thresholdAtr = 0.25, bucketsPerAtr = 4.0, valueAreaPct = 0.70, bufferAtr = 0.10, maxRiskAtr = 3.0, minTargetAtr = 0.25, atrPeriod = 14.0 }
+why = "TICK_VOLUME_AT_PRICE / SPREAD_OVER_TOUCHED_BUCKETS; prior 5 complete NY day(s); close >= 0.25 ATR(14,15m) outside the value area; target the POC"
+
+[[hypothesis]]
+label = "tvsp/d5/t0.50"
+base = "vprofile-reversion"
+overrides = { measure = 2.0, windowDays = 5.0, thresholdAtr = 0.50, bucketsPerAtr = 4.0, valueAreaPct = 0.70, bufferAtr = 0.10, maxRiskAtr = 3.0, minTargetAtr = 0.25, atrPeriod = 14.0 }
+why = "TICK_VOLUME_AT_PRICE / SPREAD_OVER_TOUCHED_BUCKETS; prior 5 complete NY day(s); close >= 0.50 ATR(14,15m) outside the value area; target the POC"

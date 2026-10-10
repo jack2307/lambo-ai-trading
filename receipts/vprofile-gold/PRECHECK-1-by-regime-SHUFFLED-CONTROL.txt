@@ -1,0 +1,63 @@
+precheck 1, split at the 2023-12 seam: agreement between the tick-volume
+POC and the committed time POC, per regime.
+
+ win bucket                   arm B                      regime                     n  same bkt  exact =  med|dPOC| ATR   p90 ATR  med|dVA| ATR
+-----------------------------------------------------------------------------------------------------------------------------------------------
+   1 ATR14_OVER_4             B1_TICK_VOLUME_PER_BUCKET  A (2022-06..2023-11)     379     71.2%    62.5%          0.000     1.300         0.250
+   1 ATR14_OVER_4             B1_TICK_VOLUME_PER_BUCKET  B (2023-12..2026-09)     721     83.2%    76.7%          0.000     0.750         0.250
+
+   1 ATR14_OVER_4             B2_TICK_VOLUME_SPREAD      A (2022-06..2023-11)     379     59.4%    50.4%          0.000     4.300         0.500
+   1 ATR14_OVER_4             B2_TICK_VOLUME_SPREAD      B (2023-12..2026-09)     721     70.5%    62.8%          0.000     2.750         0.500
+
+   1 FIXED_0.10_USD           B1_TICK_VOLUME_PER_BUCKET  A (2022-06..2023-11)     379     54.4%    52.0%          0.000     1.954         0.270
+   1 FIXED_0.10_USD           B1_TICK_VOLUME_PER_BUCKET  B (2023-12..2026-09)     720     64.7%    62.9%          0.000     0.669         0.149
+
+   1 FIXED_0.10_USD           B2_TICK_VOLUME_SPREAD      A (2022-06..2023-11)     379     40.9%    38.3%          0.157     4.969         0.646
+   1 FIXED_0.10_USD           B2_TICK_VOLUME_SPREAD      B (2023-12..2026-09)     720     44.9%    42.5%          0.077     3.551         0.487
+
+   1 FIXED_0.01_USD_ONE_TICK  B1_TICK_VOLUME_PER_BUCKET  A (2022-06..2023-11)     369     51.2%    51.2%          0.000     1.875         0.283
+   1 FIXED_0.01_USD_ONE_TICK  B1_TICK_VOLUME_PER_BUCKET  B (2023-12..2026-09)     378     58.5%    58.5%          0.000     1.093         0.152
+
+   1 FIXED_0.01_USD_ONE_TICK  B2_TICK_VOLUME_SPREAD      A (2022-06..2023-11)     369     33.1%    33.1%          0.181     5.110         0.641
+   1 FIXED_0.01_USD_ONE_TICK  B2_TICK_VOLUME_SPREAD      B (2023-12..2026-09)     378     37.8%    37.8%          0.110     4.137         0.451
+
+   5 ATR14_OVER_4             B1_TICK_VOLUME_PER_BUCKET  A (2022-06..2023-11)      76     65.8%    61.8%          0.000     1.500         0.500
+   5 ATR14_OVER_4             B1_TICK_VOLUME_PER_BUCKET  B (2023-12..2026-09)     144     75.0%    68.8%          0.000     1.175         0.500
+
+   5 ATR14_OVER_4             B2_TICK_VOLUME_SPREAD      A (2022-06..2023-11)      76     60.5%    50.0%          0.125     6.625         0.500
+   5 ATR14_OVER_4             B2_TICK_VOLUME_SPREAD      B (2023-12..2026-09)     144     63.9%    57.6%          0.000     1.850         0.500
+
+   5 FIXED_0.10_USD           B1_TICK_VOLUME_PER_BUCKET  A (2022-06..2023-11)      76     46.1%    36.8%          0.113     2.057         0.460
+   5 FIXED_0.10_USD           B1_TICK_VOLUME_PER_BUCKET  B (2023-12..2026-09)     141     54.6%    52.5%          0.000     1.193         0.296
+
+   5 FIXED_0.10_USD           B2_TICK_VOLUME_SPREAD      A (2022-06..2023-11)      76     39.5%    27.6%          0.168    10.486         0.679
+   5 FIXED_0.10_USD           B2_TICK_VOLUME_SPREAD      B (2023-12..2026-09)     141     39.0%    34.0%          0.077     3.060         0.646
+
+   5 FIXED_0.01_USD_ONE_TICK  B1_TICK_VOLUME_PER_BUCKET  A (2022-06..2023-11)      45     31.1%    31.1%          0.115     2.143         0.299
+   5 FIXED_0.01_USD_ONE_TICK  B1_TICK_VOLUME_PER_BUCKET  B (2023-12..2026-09)      13     38.5%    38.5%          0.046     0.514         0.108
+
+   5 FIXED_0.01_USD_ONE_TICK  B2_TICK_VOLUME_SPREAD      A (2022-06..2023-11)      45     28.9%    28.9%          0.188    10.696         0.374
+   5 FIXED_0.01_USD_ONE_TICK  B2_TICK_VOLUME_SPREAD      B (2023-12..2026-09)      13      7.7%     7.7%          0.342     3.505         0.391
+
+the one number this job turns on — share of windows where the tick-volume POC
+falls in the SAME bucket as the committed time POC, regime A vs regime B:
+
+   win bucket                   arm B                             A        B    B - A
+     1 ATR14_OVER_4             B1_TICK_VOLUME_PER_BUCKET     71.2%    83.2%   +12.0pp
+     1 ATR14_OVER_4             B2_TICK_VOLUME_SPREAD         59.4%    70.5%   +11.1pp
+     1 FIXED_0.10_USD           B1_TICK_VOLUME_PER_BUCKET     54.4%    64.7%   +10.4pp
+     1 FIXED_0.10_USD           B2_TICK_VOLUME_SPREAD         40.9%    44.9%    +4.0pp
+     1 FIXED_0.01_USD_ONE_TICK  B1_TICK_VOLUME_PER_BUCKET     51.2%    58.5%    +7.2pp
+     1 FIXED_0.01_USD_ONE_TICK  B2_TICK_VOLUME_SPREAD         33.1%    37.8%    +4.8pp
+     5 ATR14_OVER_4             B1_TICK_VOLUME_PER_BUCKET     65.8%    75.0%    +9.2pp
+     5 ATR14_OVER_4             B2_TICK_VOLUME_SPREAD         60.5%    63.9%    +3.4pp
+     5 FIXED_0.10_USD           B1_TICK_VOLUME_PER_BUCKET     46.1%    54.6%    +8.6pp
+     5 FIXED_0.10_USD           B2_TICK_VOLUME_SPREAD         39.5%    39.0%    -0.5pp
+     5 FIXED_0.01_USD_ONE_TICK  B1_TICK_VOLUME_PER_BUCKET     31.1%    38.5%    +7.4pp
+     5 FIXED_0.01_USD_ONE_TICK  B2_TICK_VOLUME_SPREAD         28.9%     7.7%   -21.2pp
+
+MAX_BUCKETS = 5000 selection on the one-tick scheme (price_levels.rs:432):
+  window_days=1 regime A (2022-06..2023-11): 369/379 windows survive a 0.01 USD bucket (97.4%)
+  window_days=1 regime B (2023-12..2026-09): 378/721 windows survive a 0.01 USD bucket (52.4%)
+  window_days=5 regime A (2022-06..2023-11): 45/76 windows survive a 0.01 USD bucket (59.2%)
+  window_days=5 regime B (2023-12..2026-09): 13/144 windows survive a 0.01 USD bucket (9.0%)
