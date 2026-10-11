@@ -226,6 +226,44 @@ pub fn aligned_change(
     (change, atr_out, close_out)
 }
 
+/// The companion bar's **own open, high and low**, as of each primary bar's
+/// timestamp — pass-through, no arithmetic.
+///
+/// Same matching rule as [`aligned_change`]: an **exact** timestamp or `NaN`,
+/// never a nearest or previous bar. Three outputs rather than one because a
+/// companion file is not always a second instrument's price — a research
+/// companion can carry **one number per bar in each OHLC slot**, which is how
+/// `agent/l3-target` delivers a stop multiplier and a target distance for the
+/// same bar without installing two companions (only one can be installed per
+/// process, by design: see [`install`]).
+///
+/// ⚠️ When a file is used that way, the `atr` and `change` outputs of the
+/// `cmp` indicator are arithmetic over slots that are not a price series, so
+/// they are **not meaningful** and must not be read. That is a property of the
+/// file, not of this function, and it is why these three are pass-through:
+/// a reader gets exactly what the file holds.
+#[must_use]
+pub fn aligned_ohl(primary: &[Bar], companion: &Companion) -> (Vec<f64>, Vec<f64>, Vec<f64>) {
+    let n = primary.len();
+    let (mut open, mut high, mut low) = (vec![f64::NAN; n], vec![f64::NAN; n], vec![f64::NAN; n]);
+    if companion.bars.is_empty() {
+        return (open, high, low);
+    }
+    let mut cursor = 0usize;
+    for (i, bar) in primary.iter().enumerate() {
+        while cursor < companion.bars.len() && companion.bars[cursor].time < bar.time {
+            cursor += 1;
+        }
+        if cursor >= companion.bars.len() || companion.bars[cursor].time != bar.time {
+            continue; // missing, not zero and not the previous value
+        }
+        open[i] = companion.bars[cursor].open;
+        high[i] = companion.bars[cursor].high;
+        low[i] = companion.bars[cursor].low;
+    }
+    (open, high, low)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

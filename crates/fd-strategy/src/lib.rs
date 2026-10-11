@@ -22,6 +22,8 @@ pub mod orb;
 pub mod pdhl;
 pub mod rsi_reversal_vol;
 pub mod quiet_swing;
+pub mod range_stop;
+pub mod range_stop_l3;
 pub mod registry;
 pub mod screen;
 pub mod external;

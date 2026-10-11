@@ -236,7 +236,13 @@ pub static INDICATORS: &[IndicatorDef] = &[
         name: "Companion instrument",
         pane: Pane::Separate,
         params: &[("period", 2.0), ("atrPeriod", 14.0)],
-        outputs: &["change", "atr", "close"],
+        // `open`/`high`/`low` are PASS-THROUGH slots of the companion bar,
+        // added 2026-10-11 for `agent/l3-target`: one companion file carries a
+        // stop multiplier in `close` and a target distance in `high`, because
+        // only one companion can be installed per process. On such a file
+        // `change` and `atr` are arithmetic over slots that are not a price
+        // series and must not be read; see `companion::aligned_ohl`.
+        outputs: &["change", "atr", "close", "open", "high", "low"],
     },
 ];
 
@@ -543,12 +549,27 @@ fn compute_one(def: &IndicatorDef, p: &[f64], source: Source, bars: &[Bar]) -> V
         "cmp" => match companion::installed() {
             None => {
                 let nan = || vec![f64::NAN; bars.len()];
-                vec![("change", nan()), ("atr", nan()), ("close", nan())]
+                vec![
+                    ("change", nan()),
+                    ("atr", nan()),
+                    ("close", nan()),
+                    ("open", nan()),
+                    ("high", nan()),
+                    ("low", nan()),
+                ]
             }
             Some(c) => {
                 let (change, atr, close) =
                     companion::aligned_change(bars, c, period("period"), period("atrPeriod"));
-                vec![("change", change), ("atr", atr), ("close", close)]
+                let (open, high, low) = companion::aligned_ohl(bars, c);
+                vec![
+                    ("change", change),
+                    ("atr", atr),
+                    ("close", close),
+                    ("open", open),
+                    ("high", high),
+                    ("low", low),
+                ]
             }
         },
         other => unreachable!("indicator {other} is registered but not implemented"),

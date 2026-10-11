@@ -94,6 +94,15 @@ pub fn register_all(registry: &mut Registry) {
     // volume over its 30-bar mean, all on one bar. Reward-to-risk 0.375, so it
     // needs a 72.7% win rate to break even before costs - read its drawdown.
     registry.register(Box::new(crate::rsi_reversal_vol::RsiReversalVol));
+    // Stop width from a range forecast, registered in
+    // docs/decisions/2026-10-11-range-sizing.md BEFORE this line existed.
+    // Empty grid: every cell it is run in is declared by label there.
+    registry.register(Box::new(crate::range_stop::RangeStop));
+    // Layer L3: the same breakout and the same forecast stop, with the
+    // target a PRICE instead of `reward_risk` x the risk. Registered in
+    // docs/decisions/2026-10-11-l3-target.md BEFORE this line existed; empty
+    // grid for the same reason as above.
+    registry.register(Box::new(crate::range_stop_l3::RangeStopL3));
 }
 
 /* ---------------- classic technical baselines ---------------- */
