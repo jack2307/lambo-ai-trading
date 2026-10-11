@@ -65,7 +65,6 @@ from intrabar_shape_precheck import (  # noqa: E402
     iso,
     ms_of,
     ols_fit,
-    ols_pred,
     outcome,
     peak_mem_mb,
     read_bars,
@@ -110,6 +109,23 @@ def stack(d: dict, names: list[str]) -> np.ndarray:
 # ------------------------------------------------------- khop di bo tien, OLS
 
 
+def predict_rows(beta: np.ndarray, X: np.ndarray) -> np.ndarray:
+    """`beta[0] + sum_j beta[j+1] * X[:, j]`, cong theo THU TU j co dinh.
+
+    KHONG dung `X @ beta`. Phep do dau tien cua dung cu nay TRUOT C1 o 1 gia
+    tri tren 1 trong 5 moc: `0.9963305513228559` so voi `0.996330551322856`.
+    Khong phai mot ro nhan qua — tap khop bang nhau tung dong nen `beta` bang
+    nhau — ma la GEMM cua BLAS doi THU TU CONG khi so dong cua lo doi, va cat
+    chuoi doi so dong cua lo du bao. Cong tung phan tu theo truc dac trung
+    lam moi dong doc lap voi moi dong khac, nen gia tri bang TUNG BIT bat ke
+    lo dai bao nhieu. Giu C1 o muc "tung bit" chu khong ha xuong "trong 1 ulp".
+    """
+    out = np.full(X.shape[0], float(beta[0]))
+    for j in range(X.shape[1]):
+        out = out + beta[j + 1] * X[:, j]
+    return out
+
+
 def month_starts(t15: np.ndarray) -> np.ndarray:
     """Moc dau moi thang lich UTC nam trong [t15[0], t15[-1]]."""
     days = t15.astype("datetime64[ms]").astype("datetime64[M]")
@@ -143,7 +159,7 @@ def walkforward(
             return pred, 0
         beta = ols_fit(X[i], y[i])
         j = np.flatnonzero(rows_ok)
-        pred[j] = ols_pred(beta, X[j])
+        pred[j] = predict_rows(beta, X[j])
         return pred, 1
 
     bounds = month_starts(t15)
@@ -157,7 +173,7 @@ def walkforward(
         refits += 1
         te = np.flatnonzero(rows_ok & (t15 >= b) & (t15 < hi))
         if te.size:
-            pred[te] = ols_pred(beta, X[te])
+            pred[te] = predict_rows(beta, X[te])
     return pred, refits
 
 
@@ -379,16 +395,20 @@ def main() -> int:
     print(f"  nen tin hieu (donchian {DONCHIAN}, nen hien tai LOAI): {int(sig.sum())}")
 
     print("\n=== DOI CHUNG DUONG 1: du bao co doc duoc khong (ngoai mau) ===")
-    print("  cua so            nguon   R2_oos      corr      n")
+    print("  Hai nguon doc tren DUNG CUNG TAP DONG. `fc15` khong can nen 1m nen no co")
+    print("  nhieu dong hon (4,9209% nen 15m thieu nen 1m); so hai R2 tren hai mau")
+    print("  khac nhau KHONG phai mot phep so — `intrabar-shape` muc 6 noi dung the.")
+    print("  cua so  nguon   R2_oos      corr    n(chung)")
     best = {}
+    common = np.isfinite(pred15) & np.isfinite(pred1m) & np.isfinite(d["y"])
     for wl, (fr, to) in WINDOWS.items():
-        w = (t15 >= ms_of(fr)) & (t15 < ms_of(to))
+        w = (t15 >= ms_of(fr)) & (t15 < ms_of(to)) & common
         for nm, pr in (("fc15", pred15), ("fc1m", pred1m)):
             r2, c, k = r2_corr(np.where(w, pr, np.nan), d["y"])
             best[(wl, nm)] = r2
-            print(f"  {wl[:2]} {fr}  {nm:5s}  {r2:+.6f}  {c:+.4f}  {k}")
+            print(f"  {wl[:2]}      {nm:5s}  {r2:+.6f}  {c:+.4f}  {k}")
         dd = best[(wl, "fc1m")] - best[(wl, "fc15")]
-        print(f"     => DELTA R2_oos (1m THEM vao) = {dd:+.6f}")
+        print(f"     => DELTA R2_oos (1m THEM vao, cung tap dong) = {dd:+.6f}")
 
     print("\n=== PHAN PHOI CO SO NHAN STOP m ===")
     print("  cua so  nguon   p10     p50     p90    mean   p90/p10   n")
@@ -432,12 +452,41 @@ def main() -> int:
                 f"= {pct(dv, 50):.3f} USD"
             )
 
+    print("\n=== HANG SO KHOP CO: mot so moi (cua so, nguon), KHAI RA ===")
+    print("  m_khop(i) = m(i) / ti so o tren, nen co stop trung binh tren nen tin hieu")
+    print("  BANG stop ATR o cung `stopAtr`. Day la mot hang so TRONG MAU va no la")
+    print("  gia phai tra de doi chung (a) la mot doi chung chu khong phai mot phep")
+    print("  doi co — lop ma `agent/stop-width` da do tren 200 o.")
+    matched = {nm: np.full(t15.shape[0], np.nan) for nm in SOURCES}
+    for wl, (fr, to) in WINDOWS.items():
+        w = (t15 >= ms_of(fr)) & (t15 < ms_of(to)) & sig
+        base = np.where(w & np.isfinite(m["fc1m"]), d["atr"], np.nan)
+        ref = float(np.nanmean(base))
+        inw = (t15 >= ms_of(fr)) & (t15 < ms_of(to))
+        for nm in SOURCES:
+            mu = float(np.nanmean(base * np.where(np.isfinite(m[nm]), m[nm], np.nan)))
+            r = mu / ref
+            matched[nm][inw] = m[nm][inw] / r
+            print(f"  {wl[:2]} {nm:5s} ti so co = {r:.6f}  => m chia cho no")
+    print("  kiem lai sau khi chia (phai doc 0,0000%):")
+    for wl, (fr, to) in WINDOWS.items():
+        w = (t15 >= ms_of(fr)) & (t15 < ms_of(to)) & sig
+        base = np.where(w & np.isfinite(m["fc1m"]), d["atr"], np.nan)
+        ref = float(np.nanmean(base))
+        row = [f"  {wl[:2]}:"]
+        for nm in SOURCES:
+            mu = float(np.nanmean(base * np.where(np.isfinite(matched[nm]), matched[nm], np.nan)))
+            row.append(f"{nm} {100.0 * (mu / ref - 1.0):+.4f}%")
+        print("   ".join(row))
+        mk = np.where(w, matched["fc1m"], np.nan)
+        print(f"       m_khop(fc1m) tren nen tin hieu: p10 {pct(mk, 10):.4f} p50 {pct(mk, 50):.4f} p90 {pct(mk, 90):.4f}")
+
     if a.write:
         out = Path(a.out)
         out.mkdir(parents=True, exist_ok=True)
-        print("\n=== GHI PARQUET COMPANION ===")
+        print("\n=== GHI PARQUET COMPANION (m DA KHOP CO) ===")
         for nm in SOURCES:
-            v = m[nm]
+            v = matched[nm]
             tb = pa.table(
                 {
                     "time": pa.array(t15, type=pa.timestamp("ms", tz="UTC")),
@@ -451,8 +500,8 @@ def main() -> int:
             path = out / f"{COMPANION[nm]}-15m.parquet"
             pq.write_table(tb, path)
             print(f"  {path} — {v.shape[0]} dong, {int(np.isfinite(v).sum())} co so, volume NULL het")
-        print(f"  (nen 15m co m: {int(np.isfinite(m['fc1m']).sum())} / {t15.shape[0]} = "
-              f"{100.0 * np.isfinite(m['fc1m']).sum() / t15.shape[0]:.4f}%)")
+        print(f"  (nen 15m co m: {int(np.isfinite(matched['fc1m']).sum())} / {t15.shape[0]} = "
+              f"{100.0 * np.isfinite(matched['fc1m']).sum() / t15.shape[0]:.4f}%)")
 
     print(f"\ntong {time.perf_counter() - t0:.1f} s · dinh bo nho {peak_mem_mb():.0f} MB")
     return 0
