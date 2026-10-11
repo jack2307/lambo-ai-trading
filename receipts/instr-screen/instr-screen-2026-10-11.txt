@@ -536,6 +536,25 @@ mark 2: the mould's threshold. `agent/mould-target` requires gross/spread >= 8.7
   xauduka      10.566%     10.566%         1.00x MEASURED         0.06118 -- the benchmark itself     
   xauusd        6.168%     10.566%         1.71x MEASURED         0.10481 NO  (2.67x short of 4.576x) 
 
+--- the factor on a PAIRWISE MATCHED window: each instrument vs GOLD on THEIR shared span ---
+
+W1/W2 are matched CALENDAR windows but NOT matched COVERAGE. CM is matched coverage but is
+set by the shortest-covering instrument in the whole table, so it drags every row with it.
+Pairwise holds the sample set fixed WITHOUT letting a third instrument choose it.
+
+market    shared from    shared to      cost/R        n   gold same   n gold  x cheaper vs the W2 column        
+audnzd     2010-06-02   2026-05-29     30.477%   371135     10.566%   378645      0.35x W2 said 0.22x -> +54%   
+btc        2024-09-12   2026-05-31      1.337%    60138      3.491%    39916      2.61x W2 said 6.25x -> -58%   
+btcusd     2023-10-05   2026-05-31      4.958%    90546      4.914%    62046      0.99x W2 said 1.68x -> -41%   
+eurduka    2010-06-01   2026-05-31     13.192%   398207     10.566%   378736      0.80x W2 said 0.54x -> +49%   
+eurusd     2024-03-29   2026-05-31     15.888%    53874      4.168%    50781      0.26x W2 said 0.53x -> -50%   
+xagduka    2010-06-01   2026-05-31     26.891%   374175     10.566%   378736      0.39x W2 said 0.34x -> +14%   
+xauduka    2010-06-01   2026-05-31     10.566%   378736     10.566%   378736      1.00x -- the benchmark itself 
+xauusd     2022-06-16   2026-05-31      6.581%    93386      6.500%    92689      0.99x W2 said 1.27x -> -22%   
+
+The screen still needs >= 4.577x. A row whose factor FALLS when the sample set is
+matched was reading A WINDOW, not an instrument.
+
 --- defect 17, checked PER MARKET: does the risk sizing survive min_lot? ---
 
 raw_lots = (equity x 0.01) / (median stop x contract_size); lots = max(floor(raw/lot_step)*lot_step, min_lot)

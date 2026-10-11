@@ -808,6 +808,98 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
+    // ----------------------------- the factor on a PAIRWISE MATCHED window ---
+    // Lesson from `agent/range-sizing`: comparing two things on two DIFFERENT
+    // sample sets can FLIP the sign of a conclusion (R^2 -0.000683 -> +0.006178
+    // once compared on the shared rows only). The W1/W2 columns above are
+    // matched CALENDAR windows applied identically — but coverage inside them is
+    // NOT matched: in W2 `btc` holds 2024-09..2026-06 while gold holds
+    // 2018-06..2026-06, and `spread/ATR` moves with the price level. So "btc is
+    // 6.25x cheaper in W2" is exactly that trap.
+    //
+    // `CM` fixes it but overcorrects: CM is set by the shortest-covering
+    // instrument in the WHOLE table, so one late-starting third party drags
+    // every other row's window with it. The clean form is PAIRWISE: for each
+    // instrument X, intersect X's own span with gold's and read BOTH sides on
+    // that intersection only.
+    println!("--- the factor on a PAIRWISE MATCHED window: each instrument vs GOLD on THEIR shared span ---\n");
+    println!("W1/W2 are matched CALENDAR windows but NOT matched COVERAGE. CM is matched coverage but is");
+    println!("set by the shortest-covering instrument in the whole table, so it drags every row with it.");
+    println!("Pairwise holds the sample set fixed WITHOUT letting a third instrument choose it.\n");
+    if let Some(g) = gold {
+        let gpath = data.join("bars").join(format!("{}-15m.parquet", g.bar_symbol));
+        match read_bars(&gpath) {
+            Err(e) => println!("gold's 15m store unreadable ({e}) -> every pairwise figure is null, not 0.\n"),
+            Ok(gbars) => {
+                let gatr = fd_indicators::atr(&gbars, ATR_15M);
+                let grows = per_bar(&gbars, &gatr, STOP_ATR, Some(g.spread));
+                let gold_w2 = g.dist[0][1];
+                println!(
+                    "{:<8} {:>12} {:>12} {:>11} {:>8} {:>11} {:>8} {:>10} {:<24}",
+                    "market", "shared from", "shared to", "cost/R", "n", "gold same", "n gold", "x cheaper", "vs the W2 column"
+                );
+                for r in &rows {
+                    let path = data.join("bars").join(format!("{}-15m.parquet", r.bar_symbol));
+                    let Ok(xb) = read_bars(&path) else { continue };
+                    let from = xb[0].time.max(gbars[0].time);
+                    let to = xb[xb.len() - 1].time.min(gbars[gbars.len() - 1].time) + 1;
+                    if to <= from {
+                        println!("{:<8} {:>12} {:>12} {:>11} {:>8} {:>11} {:>8} {:>10} {:<24}", r.market, "-", "-", "null", 0, "null", 0, "null", "NO OVERLAP WITH GOLD");
+                        continue;
+                    }
+                    let era = Era { label: "pair", from_ms: from, to_ms: to };
+                    let xatr = fd_indicators::atr(&xb, ATR_15M);
+                    let xrows = per_bar(&xb, &xatr, STOP_ATR, Some(r.spread));
+                    let pick = |rws: &[(i64, f64, f64)]| -> Option<Dist> {
+                        let (mut v, mut s) = (Vec::new(), Vec::new());
+                        for (t, stop, ratio) in rws {
+                            if !era.contains(*t) {
+                                continue;
+                            }
+                            v.push(*ratio);
+                            s.push(*stop);
+                        }
+                        summarise(&v, &s)
+                    };
+                    match (pick(&xrows), pick(&grows)) {
+                        (Some(xd), Some(gd)) => {
+                            let f = gd.p50 / xd.p50;
+                            let note = if r.market == gold_bench {
+                                "-- the benchmark itself".to_string()
+                            } else {
+                                match (r.dist[0][1], gold_w2) {
+                                    (Some(xw2), Some(gw2)) => {
+                                        let fw2 = gw2.p50 / xw2.p50;
+                                        format!("W2 said {fw2:.2}x -> {:+.0}%", (f / fw2 - 1.0) * 100.0)
+                                    }
+                                    _ => "W2 was null".to_string(),
+                                }
+                            };
+                            println!(
+                                "{:<8} {:>12} {:>12} {:>10.3}% {:>8} {:>10.3}% {:>8} {:>9.2}x {:<24}",
+                                r.market,
+                                ymd(from),
+                                ymd(to - 1),
+                                xd.p50 * 100.0,
+                                xd.n,
+                                gd.p50 * 100.0,
+                                gd.n,
+                                f,
+                                note
+                            );
+                        }
+                        _ => println!(
+                            "{:<8} {:>12} {:>12} {:>11} {:>8} {:>11} {:>8} {:>10} {:<24}",
+                            r.market, ymd(from), ymd(to - 1), "null", 0, "null", 0, "null", "no ratio on shared span"
+                        ),
+                    }
+                }
+                println!("\nThe screen still needs >= {:.3}x. A row whose factor FALLS when the sample set is", needed_factor());
+                println!("matched was reading A WINDOW, not an instrument.\n");
+            }
+        }
+    }
+
     // ------------------------------------------------- defect 17, per market
     println!("--- defect 17, checked PER MARKET: does the risk sizing survive min_lot? ---\n");
     println!("raw_lots = (equity x 0.01) / (median stop x contract_size); lots = max(floor(raw/lot_step)*lot_step, min_lot)");

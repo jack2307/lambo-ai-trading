@@ -12,8 +12,11 @@ một ô cổng nào. Nó quyết định ô nào đáng tiêu về sau.
 
 **F1 BẮN.** Không instrument nào trong kho — với spread có provenance **ĐO** —
 rẻ hơn vàng 15m đủ hệ số **4,577×** để đóng khe `1,901× → 8,7×` của khuôn, trên
-**bất kỳ** cửa sổ nào và trên **cả ba** thước chân trời. Hàng duy nhất vượt vạch
-là `markets.btc` (Binance spot) ở **6,25×** cửa sổ W2 — và nó trượt **cả ba** phép
+**bất kỳ** cửa sổ nào và trên **cả ba** thước chân trời. Trên tập mẫu **khớp phủ** (§4.2) hàng tốt
+nhất cả kho là `markets.btc` ở **2,61×** — thiếu 1,75 lần — và hàng tốt nhất có
+spread **ĐO** là **0,99×**, tức **không instrument nào có spread đo rẻ hơn vàng
+dù chỉ một chút**. Trên cột cửa sổ-lịch W2 `btc` đọc 6,25×, nhưng đó là một hiện
+vật phủ không khớp. `btc` trượt **cả ba** phép
 kiểm: spread **5,00 là GIẢ ĐỊNH** (chính config ghi thế), kho nến **không phủ W1**
 (bắt đầu 2024-09-12), `swap` **là key VẮNG MẶT** nên 0,00 của nó là một `null`.
 Và nó **không phải tài khoản desk giao dịch được** — BTC thật của Vantage là
@@ -262,7 +265,60 @@ Cửa sổ **W1**: chỉ bốn instrument có hàng, và cái gần nhất là `
 rẻ nhất, 3,491%): hàng tốt nhất là `btc` ở **2,62×**, thiếu 1,75 lần. Cửa sổ
 **PL** (trộn thập kỷ, **không dùng để so instrument**): `btc` **7,48×**.
 
-### 4.2 Hàng rẻ bất thường duy nhất, và ba phép kiểm nó trượt
+### 4.2 CỬA SỔ KHỚP LỊCH ≠ PHỦ KHỚP — và sửa chỗ đó làm F1 MẠNH HƠN
+
+`agent/range-sizing` đo được rằng **so hai thứ trên hai TẬP MẪU của riêng chúng
+có thể LẬT DẤU kết luận** (`R²` −0,000683 → +0,006178 khi so trên tập dòng
+chung). **Lỗi đó có trong bảng 4.1 của tôi và tôi đã sửa.**
+
+Cột W1/W2 là **cửa sổ LỊCH khớp nhau**, áp y hệt cho mọi hàng — nhưng **phủ bên
+trong nó KHÔNG khớp**: trong W2, `btc` chỉ có 2024-09→2026-06 còn vàng có
+2018-06→2026-06. Và vì `spread/ATR` **đi theo mức giá**, vàng của **nửa sau** W2
+rẻ hơn vàng của **cả** W2 (3,491% so với 8,354%). ⇒ so `btc` với vàng-cả-W2 là
+**so với một con số vàng mà `btc` chưa từng tồn tại ở đó.**
+
+`CM` sửa được nhưng **sửa quá**: CM do instrument phủ ngắn nhất **cả bảng** đặt,
+nên một hàng bắt đầu muộn kéo cửa sổ của mọi hàng khác theo. Dạng sạch là
+**PAIRWISE**: với mỗi instrument X, giao span của **chính X** với span của vàng,
+rồi đọc **cả hai phía** chỉ trên chỗ giao đó.
+
+| market | span chung với vàng | cost/R (n) | vàng CÙNG span (n) | **rẻ hơn** | W2 nói gì | lệch |
+|---|---|---|---|---|---|---|
+| btc | 2024-09-12 … 2026-05-31 | 1,337% (60 138) | **3,491%** (39 916) | **2,61×** | 6,25× | **−58%** |
+| btcusd | 2023-10-05 … 2026-05-31 | 4,958% (90 546) | **4,914%** (62 046) | **0,99×** | 1,68× | **−41%** |
+| xauusd | 2022-06-16 … 2026-05-31 | 6,581% (93 386) | **6,500%** (92 689) | **0,99×** | 1,27× | **−22%** |
+| eurusd | 2024-03-29 … 2026-05-31 | 15,888% (53 874) | **4,168%** (50 781) | **0,26×** | 0,53× | **−50%** |
+| eurduka | 2010-06-01 … 2026-05-31 | 13,192% | 10,566% | 0,80× | 0,54× | +49% |
+| xagduka | 2010-06-01 … 2026-05-31 | 26,891% | 10,566% | 0,39× | 0,34× | +14% |
+| audnzd | 2010-06-02 … 2026-05-29 | 30,477% | 10,566% | 0,35× | 0,22× | +54% |
+| xauduka | — | 10,566% | 10,566% | 1,00× | mốc | — |
+
+**Sai lệch đi theo PHỦ, đúng một chiều, và đo được:** cả **bốn** hàng phủ ngắn bị
+cột W2 **làm đẹp** (−22% … −58% khi sửa), cả **ba** hàng phủ đủ 16 năm bị **làm
+xấu** (+14% … +54%). Không phải nhiễu — nó là mức giá vàng len vào mẫu số.
+
+**Và dữ liệu tự cấp cho tôi một đối chứng dương tôi không phải dựng:**
+`xauusd` vs `xauduka` là **cùng một kim loại, cùng spread cấu hình 0,28**, hai
+feed khác nhau. Một phép so khớp mẫu **BẮT BUỘC** phải đọc ~**1,00×** — và
+pairwise đọc **0,99×** (6,581% vs 6,500%). Cột W2 đọc **1,27×**, tức **sai 27%
+chỉ do phủ không khớp**. ⇒ phương pháp pairwise **được dữ liệu xác nhận**, và
+cột W2 **được dữ liệu bắt lỗi**.
+
+### 4.3 F1 không chỉ vẫn bắn — nó bắn MẠNH HƠN
+
+Trên tập mẫu khớp:
+
+- Hàng **tốt nhất cả kho** là `btc` ở **2,61×** — vẫn thiếu **1,75 lần**, và nó
+  vẫn trượt F2 (spread GIẢ ĐỊNH), F3 (không phủ W1), F4 (`swap` key vắng mặt).
+- Hàng **tốt nhất có spread ĐO** là **0,99×** (`xauusd`, tức **chính vàng trên
+  feed sàn**). ⇒ **KHÔNG instrument nào trong kho có spread ĐO rẻ hơn vàng, dù
+  chỉ một chút** — chứ chưa nói rẻ hơn 4,577 lần.
+
+⇒ Câu "hàng tốt nhất với spread ĐO là `xauusd` ở **1,27×**" ở §9 bản đầu là một
+**hiện vật phủ không khớp**. Con số đúng là **0,99×**, và nó làm kết luận **dứt
+khoát hơn**: khe không phải 3,61 lần mà là **4,58 lần**, tức **toàn bộ** khe.
+
+### 4.4 Hàng rẻ bất thường duy nhất, và ba phép kiểm nó trượt
 
 `markets.btc` đọc **1,337%** ở W2 — rẻ nhất cả bảng, và nó tái tạo đúng con số
 «BTC 1,33%» đang lưu hành. Ba phép kiểm:
@@ -405,7 +461,7 @@ lý do nữa để đọc `PF_r`/`E`, không `PF_usd`.
 
 | | kết | ở đâu |
 |---|---|---|
-| **F1** (không instrument nào đóng được khe 4,577×) | **BẮN** | Bảng 4.1 + 3.2. 0/8 hàng đạt 4,577× trên W1+W2 với spread ĐO. Trên cả ba thước. |
+| **F1** (không instrument nào đóng được khe 4,577×) | **BẮN, và mạnh hơn sau khi khớp phủ** | §4.1 + §3.2 + **§4.2**. Trên tập mẫu khớp: hàng tốt nhất cả kho 2,61× (`btc`, vẫn trượt F2/F3/F4), hàng tốt nhất có spread ĐO **0,99×**. 0/8 hàng đạt 4,577× trên bất kỳ cửa sổ nào, trên cả ba thước. |
 | **F2** (hàng rẻ nhất có provenance GIẢ ĐỊNH) | **BẮN** | `markets.btc`, spread 5,00, config tự ghi là giả định. |
 | **F3** (hàng chỉ phủ một cửa sổ) | **BẮN, 4 hàng** | btc (2024-09), btcusd (2023-10), eurusd (2024-03), xauusd (2022-06). |
 | **F4** (`swap` là `null` đóng vai 0) | **BẮN, 7/9 hàng** | Vắng key: gold, btc. Khai 0,0 mà phép đo không trên symbol đó: xagduka, eurduka, eurusd, audnzd, btcusd. Chỉ `xauusd` có phép đo thật; `xauduka` borrow. |
@@ -416,7 +472,7 @@ lý do nữa để đọc `PF_r`/`E`, không `PF_usd`.
 
 | | khai trước | thật sự xem | ghi chú |
 |---|---|---|---|
-| chi phí/R | 9 × 3 thước × 4 cửa sổ = **108** | **108** (36 là `null` vì không phủ cửa sổ / không có file 15m) | đúng khai |
+| chi phí/R | 9 × 3 thước × 4 cửa sổ = **108** | **96** (8 hàng × 3 × 4; 36 là `null` vì không phủ cửa sổ) **+ 8 cửa sổ PAIRWISE × 2 phía = 16 con số không khai trước** | trục pairwise thêm sau khi `agent/range-sizing` chỉ ra lỗi tập-mẫu-không-khớp; nó **sửa** một con số đã viết, không thêm một kết quả dương |
 | kiểm kho nến | 24 file | **24** đọc hết + 4 `.bak` liệt kê + 2 store khai-mà-vắng | đúng khai |
 | cột volume | 24 file × 4 trạng thái | **24** + **một trục KHÔNG khai trước: per-year** (8 market × 2 cỡ nến × số năm = 118 dòng) | **thêm một trục**, xem dưới |
 | dấu in | 9 × 4 phép thử × 2 lớp = **72** | **64** (8 hàng × 4 phép thử × 2 lớp) + lớp nền `ord` đã khai | ít hơn khai, vì `gold` không có nến 15m. **Lớp `ny18` chạy HAI bề rộng** (cả giờ, rồi đúng nến) ⇒ **thêm 32 tỉ lệ không khai trước**; bản đầu bị bỏ, lý do ở §5.3 |
@@ -448,10 +504,15 @@ nó sẽ khai "`ny18`: 0 nến" trên tám instrument và đọc như một dữ
 
 ## 9. Con số đáng giữ nhất
 
-**4,577×** là khe phải đóng, và **hàng tốt nhất với một spread ĐO là `xauusd` ở
-1,27×** — tức chính vàng, trên feed của sàn, trong cửa sổ gần. Khoảng cách còn
-lại là **3,61 lần**, và nó phải đến từ một spread **không tồn tại trên bất kỳ
+**4,577×** là khe phải đóng, và trên tập mẫu **khớp phủ** (§4.2) hàng tốt nhất
+với một spread **ĐO** là **0,99×** — tức **không instrument nào trong kho có
+spread đo rẻ hơn vàng, dù chỉ một chút**. Khe còn lại là **4,58 lần**, tức
+**toàn bộ** khe, và nó phải đến từ một spread **không tồn tại trên bất kỳ
 instrument nào trong kho này**.
+
+(Bản đầu của báo cáo này viết "hàng tốt nhất là `xauusd` ở **1,27×**, còn thiếu
+3,61 lần". Con số 1,27× là một **hiện vật phủ không khớp** — xem §4.2. Số đúng
+làm kết luận **dứt khoát hơn**, không nhẹ hơn.)
 
 Cách nói thứ hai, bằng cột "spread cần": để đạt khuôn với tín hiệu vàng hiện có,
 `xauusd` cần spread **0,0777** thay vì **0,28** đang tính (hay 0,220 đo được) —

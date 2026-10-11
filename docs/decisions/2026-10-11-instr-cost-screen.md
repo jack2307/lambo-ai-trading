@@ -207,3 +207,18 @@ sổ bên cạnh:
    nên chúng là phép kiểm rằng block `audnzd` cherry-pick không làm hỏng gì),
    0 fail. Build ở `target-is/` riêng của worktree, toolchain
    `+stable-x86_64-pc-windows-gnu`, không bao giờ `--workspace` ở debug.
+8. **Ghi chú thứ tám, 2026-10-11 — trục PAIRWISE, thêm sau khi `agent/range-sizing`
+   chỉ ra lỗi tập-mẫu-không-khớp, và nó SỬA một con số tôi đã viết.** Cột W1/W2
+   là cửa sổ **lịch** khớp nhau nhưng **phủ** bên trong không khớp (trong W2 `btc`
+   có 2024-09→2026-06, vàng có 2018-06→2026-06), và vì `spread/ATR` đi theo mức
+   giá thì vàng nửa sau W2 rẻ hơn vàng cả W2 (3,491% vs 8,354%). ⇒ phép so
+   `btc`-vs-vàng-cả-W2 là so với một con số vàng ở chỗ `btc` chưa tồn tại. Thêm
+   **8 cửa sổ pairwise × 2 phía = 16 con số không khai trước**. Kết quả: bốn hàng
+   phủ ngắn bị cột W2 **làm đẹp** (−22% … −58%), ba hàng phủ 16 năm bị **làm xấu**
+   (+14% … +54%). **`btc` 6,25× → 2,61×; `btcusd` 1,68× → 0,99×; `xauusd`
+   1,27× → 0,99×.** Và **dữ liệu tự cấp một đối chứng dương**: `xauusd` vs
+   `xauduka` là cùng kim loại cùng spread 0,28 trên hai feed, nên phép so khớp mẫu
+   **phải** đọc ~1,00× — pairwise đọc **0,99%**/0,99×, cột W2 đọc 1,27×, tức sai
+   27% chỉ do phủ. ⇒ trục này **không mua một kết quả dương nào**; nó **sửa** con
+   số §9 và làm **F1 bắn mạnh hơn** (khe còn lại từ 3,61 lần thành **4,58 lần**,
+   tức toàn bộ khe).
