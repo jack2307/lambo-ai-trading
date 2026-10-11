@@ -1,0 +1,65 @@
+================================================================================================================
+WHY 34 DECISION-RECORD ROWS NO LONGER RE-RUN TO THEIR PUBLISHED NUMBER - NO GATE
+Registration: docs/decisions/2026-10-11-receipt-reconcile.md (classification table declared before any run)
+Binary: /e/rust/fd-stop-width/target-sw/release/search.exe (= 29c8635, lbar_line). Nothing built on this axis.
+================================================================================================================
+population                                                       count
+  vanished band keys rebuilt from agent/pfr-audit artifacts         51
+  of them sitting in docs/decisions/  <- THE SET                    34
+  distinct decision docs they sit in                                 9
+
+THE ANSWER IN ONE LINE
+  23 of 34 return their PUBLISHED TRADE COUNT **exactly** once the thing that moved is pinned back.
+  15 of those also return the published PF to printed width. 0 of 34 are a PF_usd-vs-PF_r unit mistake.
+================================================================================================================
+CLASSIFICATION - every row, with the positive control that assigns it
+================================================================================================================
+label                   pubN   pubPF   argvN   ctlN   ctlPF   =?  class  market         stop  cost/R
+close/1630-1815         1621   0.733    1620      -       -  n/a  E1     xauduka          L1     n/m
+close/fri-1630-1815      336   0.827       0    336   0.827  YES  G1     xauduka          L1     n/m
+m15/vwap-allday         3392   0.917    2557   3392   0.917  YES  P1     btc          1.000A   2.18%
+vwap/allday             5828   0.951    5700   5828   0.951  YES  P1     btc          1.000A   4.41%
+vwap/us-hours           1392   0.917    1435   1392   0.918  YES  P1     btc          1.000A   2.91%
+vwap/wide               5828   0.951    4966   5828   0.951  YES  P1     btc          1.000A   4.41%
+fix/am-after             578   0.811    3078    578   0.811  YES  W1     xauduka          L1     n/m
+fix/pm-after             578   0.904    3078    578   0.904  YES  W1     xauduka          L1     n/m
+fix/pm-into              578   0.961    3076    578   0.961  YES  W1     xauduka          L1     n/m
+hivol/london             341   0.950    1712    341   0.950  YES  W1     xauduka      6.534A   1.93%
+hivol/orb60              457   1.004    2115    457   1.004  YES  W1     xauduka      4.437A   2.69%
+london/early             458   0.947    2177    458   0.947  YES  W1     xauduka      6.973A   2.32%
+london/expansion         338   0.945    2046    338   0.945  YES  W1     xauduka      6.410A   2.12%
+london/nyam              525   0.953    2607    525   0.953  YES  W1     xauduka      6.857A   2.25%
+lowvol/london            212   0.962     894    212   0.962  YES  W1     xauduka      7.424A   2.94%
+lowvol/orb60              73   1.074     478     73   1.074  YES  W1     xauduka      3.957A   5.26%
+m15/london               501   0.886    2477    501   0.886  YES  W1     xauduka      4.710A   2.14%
+m15/orb-60m              505   0.996    2483    505   0.996  YES  W1     xauduka      3.135A   2.69%
+m15/pdhl-break           163   0.770     792    163   0.770  YES  W1     xauduka      0.677A  13.46%
+m15/pdhl-fade            531   0.726    2655    531   0.728  YES  W1     xauduka      1.072A  11.81%
+pdhl/break-nyam          172   0.758     815    172   0.758  YES  W1     xauduka      0.778A  17.13%
+pdhl/fade-allday         555   0.739    2672    555   0.739  YES  W1     xauduka      1.241A  15.69%
+orb/30m                  394   1.088    1612    394   1.092  YES  W1+C1  xauduka      2.969A   3.80%
+orb/60m                  189   0.945     737    189   0.966  YES  W1+C1  xauduka      3.179A   3.45%
+orb/60m-expansion        153   1.115     598    137   1.102  -16  W1+C1  xauduka      3.200A   3.66%
+close/1400-1630          289   0.955     291    288   0.889   -1  W2     xauusd           L1     n/m
+close/1630-1815          282   1.299     284    281   1.275   -1  W2     xauusd           L1     n/m
+close/1630-2000          282   1.637     284    281   1.702   -1  W2     xauusd           L1     n/m
+close/1630-2200          282   1.355     284    281   1.359   -1  W2     xauusd           L1     n/m
+close/1815-2200          289   1.195     292    289   1.209  YES  W2     xauusd           L1     n/m
+london/early             203   1.309     204    203   1.292  YES  W2     xauusd       6.957A   0.85%
+london/expansion         131   1.209     132    131   1.207  YES  W2     xauusd       6.453A   0.77%
+london/nyam              257   1.317     258    257   1.323  YES  W2     xauusd       6.836A   0.84%
+orb/30m                  164   0.897     165    164   0.874  YES  W2     xauusd       2.851A   1.99%
+
+  pubN/pubPF  the published row.   argvN  the trade count the VERBATIM published argv prints today.
+  ctlN/ctlPF  the POSITIVE CONTROL: the same argv with the moved thing pinned back.
+  stop        '<x>A' = x ATR of the run's bar size, from the engine's own cost-matched-null line;
+              'L1' = a self-managed DENOMINATOR stop (session-hold), never enforced - addendum 7 B.
+  cost/R      from the engine's own 'cost X% of R' line. 'n/m' = NOT MEASURED, not 0.
+================================================================================================================
+W1      store BACKFILLED under an omitted --from                       rows 16  exact return 16
+W1+C1   W1 + the Dukascopy flat-bar cleaning inside the window         rows  3  exact return  2
+W2      store GREW AT THE LIVE END under an omitted --to               rows  9  exact return  5
+P1      a preset that did not pin a swept grid axis                    rows  4  exact return  4
+G1      the weekend guard cut-off moved, 1655 -> 1640 (config, 2026-09-19) rows  1  exact return  1
+E1      one trade at a pinned window edge                              rows  1  exact return  0
+================================================================================================================

@@ -179,3 +179,39 @@ is the Sunday 18:15 fill against the method's 18:30 — fifteen minutes. The
 91st percentile of the sized null and the 92nd of the direction null agree
 with each other; the direction null is unaffected and decided the row.
 Fixed at `4eaef94`.
+
+---
+
+## Note added 2026-10-11 - these rows and the window their argv did not state (appended by `agent/receipt-reconcile`; nothing above is rewritten)
+
+`agent/pfr-audit` (`76c0b57`) listed 1 row of this record among the 34 published decision-record rows that no longer print a cell at their published trade count when their own echoed argv is re-run. Re-measured today with the shared patched binary (`/e/rust/fd-stop-width/target-sw/release/search.exe`, `29c8635`):
+
+```
+row               published            verbatim argv today
+close/1630-1815   1621  PF_usd 0.733   1620
+```
+
+**Both window ends are pinned** (`--from=2010-06-01 --to=2018-06-15`), the bar
+input is identical (**191,809 of 378,749 bars**, same first and last bar), there
+are no guards and the batch file overrides no gridded parameter. The drift is
+**one trade in 1,621** - the same signature the five `xauusd` `session-hold`
+rows of `2026-09-13-close-reopen-drift.md` show at a pinned window edge, and
+that record's own 2026-09-15 amendment already prints the bounded count there.
+Which engine change owns the single trade is **not** resolved: naming it needs
+a bisect across four weeks of history, and that is recorded as OPEN rather than
+guessed (`docs/decisions/2026-10-11-receipt-reconcile-result.md`).
+
+**Which conclusion this touches: none.** The Outcome reads this row as *"nets
+-$1,459 on 1,621 sessions"*; one trade in 1,621 does not move a -$1,459
+verdict, and the decision itself rests on the 400 weekend holds, not on this
+row.
+
+One provenance note for the cost this record charged: 0.28 on `xauduka` is
+**ASSUMED BY TRANSFER** - no `XAUDUKA` spread log exists on disk, and 0.28 is
+the Vantage `XAUUSD.sc` terminal read applied to a Dukascopy BID series. And
+`session-hold` is a self-managed **L1 denominator** stop (`riskDailyRanges = 1`,
+`rangeDays = 20`), never enforced by the engine (addendum 7 B), so there is no
+enforced stop to divide a spread by: cost/R for this row is **NOT MEASURED**,
+which is not a small number.
+
+Full table, every control run and the per-row spread provenance: `docs/decisions/2026-10-11-receipt-reconcile-result.md`, `receipts/receipt-reconcile/`.

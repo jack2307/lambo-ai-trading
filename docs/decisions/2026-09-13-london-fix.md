@@ -68,3 +68,32 @@ fail on profit factor), `fix/am-into` 0.536 (0th), `fix/am-after` 0.683
 (52nd). No row passes the gate on the longer window either; the verdict
 stands. The 2022–25 receipts are kept under
 `docs/research/runs/2026-09-13-london-fix/before-fold-close/`.
+
+---
+
+## Note added 2026-10-11 - these rows and the window their argv did not state (appended by `agent/receipt-reconcile`; nothing above is rewritten)
+
+`agent/pfr-audit` (`76c0b57`) listed 3 rows of this record among the 34 published decision-record rows that no longer print a cell at their published trade count when their own echoed argv is re-run. Re-measured today with the shared patched binary (`/e/rust/fd-stop-width/target-sw/release/search.exe`, `29c8635`):
+
+```
+row            published      verbatim argv today   with --from=2022-06-16 pinned
+fix/pm-into    578  PF 0.961  3076                  578  PF 0.961   EXACT
+fix/pm-after   578  PF 0.904  3078                  578  PF 0.904   EXACT
+fix/am-after   578  PF 0.811  3078                  578  PF 0.811   EXACT
+```
+
+**Cause: the data store, not this measurement.** The published command omits
+`--from=`, and `XAUDUKA-5m` has since been backfilled from 2022-06-16 to
+2010-06-01 - 198,716 bars became 1,135,389. The Outcome above already states
+the window in prose ("Dukascopy 5m, 2022-06 -> 2025-04-10"); the prose was
+right and the argv was under-specified. **All three rows return exactly,
+profit factor included, and nothing in this decision moves.**
+
+Two things this record did not state, measured today on the same runs: its
+spread of 0.28 is **ASSUMED BY TRANSFER** - there is no `XAUDUKA` spread log on
+disk; 0.28 is the Vantage `XAUUSD.sc` terminal read applied to a Dukascopy BID
+series. And `session-hold` is a self-managed **L1 denominator** stop
+(`Exits::Strategy`), so these rows have **no enforced stop** to divide a spread
+by: cost/R here is NOT MEASURED, which is not the same as small.
+
+Full table, every control run and the per-row spread provenance: `docs/decisions/2026-10-11-receipt-reconcile-result.md`, `receipts/receipt-reconcile/`.

@@ -353,3 +353,94 @@ If it does not, the $0.28 column is the right one and this amendment is void.
 Nothing is promoted here. Re-pricing a closed record is not a registration, and
 turning the drift into a book needs one — with the rebate written into the
 market's cost before the window is opened, not after.
+
+---
+
+## Note added 2026-10-11 - these rows and the window their argv did not state (appended by `agent/receipt-reconcile`; nothing above is rewritten)
+
+`agent/pfr-audit` (`76c0b57`) listed 6 rows of this record among the 34 published decision-record rows that no longer print a cell at their published trade count when their own echoed argv is re-run. Re-measured today with the shared patched binary (`/e/rust/fd-stop-width/target-sw/release/search.exe`, `29c8635`):
+
+```
+row                   published   verbatim argv   with --to=2026-09-12 pinned   note
+close/1815-2200       289  1.195  292             289  PF 1.209                 EXACT
+close/1630-1815       282  1.299  284             281  PF 1.275                 -1
+close/1630-2000       282  1.637  284             281  PF 1.702                 -1
+close/1630-2200       282  1.355  284             281  PF 1.359                 -1
+close/1400-1630       289  0.955  291             288  PF 0.889                 -1
+close/fri-1630-1815   336  0.827  0 trades        336  PF 0.827  -0.004 R       EXACT, see below
+     (the guarded addendum's row)
+```
+
+**The five `xauusd` rows: the store grew at the live end under an omitted
+`--to`.** The confirmation command carries `--from=2025-04-11` and no `--to`,
+so it ran to whatever the store ended at - 33,589 of 100,249 bars, last bar
+2026-09-11 20:45. The store now holds 100,586 bars ending 2026-09-17 13:00, so
+the same argv takes 2-3 more trades. Pin `--to=2026-09-12` and the bar input is
+**byte-matched** (33,589 bars, identical first and last bar).
+
+**And this record already carries the one-trade difference.** The Amendment of
+2026-09-15 above says: *"Second window, `xauusd` (Vantage) 2025-04-11 ->
+2026-09-12, **281 holds**"* - the same bound, the same number measured today.
+So this record prints 282 for the unbounded confirmation and 281 for the
+bounded re-pricing of "the same trades", and the difference is the trade at the
+window edge that an explicit `--to` drops. It is internal to the record, it is
+already written down one section apart, and **it cannot reach the ground these
+rows were closed on**: the expectancy leg, at 0.012R / 0.039R / 0.038R against
++0.050R. One trade in 282 does not cross that.
+
+**`close/fri-1630-1815` (336, PF 0.827): a recorded config amendment, and the
+control is exact.** The guarded addendum's row takes **0 trades** under today's
+config. Both window ends are pinned, the bar input is identical (160,368 bars),
+and the sibling row in the same run reproduces exactly (1,355 -> 1,355) - only
+the Friday row went to zero. The cause is `config/default.toml:204`:
+`flat_before_weekend_hhmm` moved **1655 -> 1640** on 2026-09-19
+(`docs/decisions/2026-09-19-weekend-flat-never-fires.md`). The entry fills on
+the 16:30 NY bar, which closes at minute 1005; `Guards::calendar_refusal`
+refuses an entry whose signal **or fill** bar closes past the cut-off, so at
+1655 (minute 1015) it was taken and then flattened - which is exactly what the
+published receipt says, *"refused none; closed WEEKEND_FLAT 336"* - and at 1640
+(minute 1000) it is **refused before it opens**. Restoring 1655 in a scratchpad
+copy of `config/` returns the row byte-identical: **336 trades, PF_usd 0.827,
+expectancy -0.004 R** (and the patched binary adds PF_r 0.8308, Lbar 0.0241 R,
+max drawdown 242.29 USD = 2.42% of peak, net -137.92 USD).
+
+**Which conclusion this touches: none, and the addendum's sentence gets
+stronger.** It read *"the row this record could not confirm on 68 Fridays is one
+the paper bot is not allowed to hold."* The guard now forbids it one step
+earlier, at the entry rather than at the exit.
+
+**One number this record's own Amendment asked for and could not have.** The
+Amendment reprices the cost downward for the IB rebate. Measured today,
+read-only, on `E:/rust/flowdesk/data/spreads/XAUUSD_sc.csv` - **8,967 samples
+over 49.8 hours, all 24 hours covered**:
+
+    min 0.210   p50 0.220   p95 0.260   p99 = max 0.290     (range = 38% of p50)
+    samples ABOVE the 0.28 this record charged: 251 = 2.80%, every one at 0.290
+    and 100% of those sit in hours 20-22 UTC:
+        hour 20 UTC  p50 0.260   13.6% above 0.28
+        hour 21 UTC  p50 0.290   50.1% above 0.28   <- 17:00 NY, the CME rollover
+        hour 22 UTC  p50 0.260    6.1% above 0.28
+    outside 20-22 UTC the maximum observed anywhere is 0.260.
+
+`config/default.toml:313-317` says *"the configured 0.28 is above every spread
+ever observed"* on a 2,315-sample / 12.8-hour read. **On the larger sample that
+is false**, and the config's own note says why it could not know: *"the 21:00
+UTC rollover hour and a weekend, neither of which the 12.8-hour sample
+covers."* The rollover hour is now in the log, and it is the one hour where
+0.28 is too LOW.
+
+**This record is the one that cares**, because its rows are *defined* as a hold
+across 17:00 New York = 21:00 UTC: signal on the 16:15 NY bar, fill on 16:30,
+held through the rollover. They are the only rows of the 34 audited whose entry
+and hold sit inside hours 20-22 UTC. **Direction of the error: they were charged
+less than the hour's measured spread, so the published FAIL is optimistic and
+repricing upward makes it more conservative.** The one reading repricing would
+weaken is the Friday leg's guards-off `PF 2.064 / 100th / SURVIVES`, which
+addendum 5 D already rules an arm the owner has forbidden.
+
+**Not repriced here.** `config/default.toml:319-323` reserves that to an
+explicit recorded amendment, and the round-trip convention has to be settled
+first: the log records a one-way bid-ask while the engine charges 0.28 "per
+round trip". **OPEN FOR THE OWNER.**
+
+Full table, every control run and the per-row spread provenance: `docs/decisions/2026-10-11-receipt-reconcile-result.md`, `receipts/receipt-reconcile/`.

@@ -124,3 +124,44 @@ Data-integrity noted the out-of-sample receipt was a walk-forward re-fit on
 the new window. Replayed with the registered parameters and no selection
 (`--fixed`, 200 fixed nulls): nyam 0.957 (648 trades, 87th), early 0.956
 (557, 84th), expansion 0.955 (430, 78th). Same answer, stricter test.
+
+---
+
+## Note added 2026-10-11 - these rows and the window their argv did not state (appended by `agent/receipt-reconcile`; nothing above is rewritten)
+
+`agent/pfr-audit` (`76c0b57`) listed 6 rows of this record among the 34 published decision-record rows that no longer print a cell at their published trade count when their own echoed argv is re-run. Re-measured today with the shared patched binary (`/e/rust/fd-stop-width/target-sw/release/search.exe`, `29c8635`):
+
+```
+row                published      verbatim argv   pinned window        result
+london/nyam        525  PF 0.953  2607            --from=2022-06-16    525  PF 0.953  EXACT
+london/early       458  PF 0.947  2177            --from=2022-06-16    458  PF 0.947  EXACT
+london/expansion   338  PF 0.945  2046            --from=2022-06-16    338  PF 0.945  EXACT
+london/nyam        257  PF 1.317   258            --to=2026-09-12      257  PF 1.323  EXACT count
+london/early       203  PF 1.309   204            --to=2026-09-12      203  PF 1.292  EXACT count
+london/expansion   131  PF 1.209   132            --to=2026-09-12      131  PF 1.207  EXACT count
+```
+
+**Cause: the data store at BOTH ends, not this measurement.** The out-of-sample
+command omits `--from=` and `XAUDUKA-5m` was backfilled to 2010-06-01
+(198,716 -> 1,135,389 bars); the in-sample command omits `--to=` and
+`XAUUSD-5m` grew from 100,749 bars ending 2026-09-11 20:55 to 101,242 ending
+2026-09-15 16:00. Pinning each published span returns **all six trade counts
+exactly**; the in-sample profit factors move by at most 0.025 on a byte-matched
+bar input (100,749 bars, same first and last bar), which is an open residual
+recorded in the result doc and far too small to touch the Outcome.
+
+**Nothing in this decision moves.** The in-sample passes and the out-of-sample
+fails are the same numbers.
+
+Cost/R with the stop that sets it, measured on those controls - note the same
+mechanism costs **2.7x more per R on the Dukascopy feed**, because the stop is
+smaller in points there:
+
+    london/nyam       xauusd  stop 6.836 ATR(5m) = 33.44 pts   cost 0.84% of R
+    london/early      xauusd  stop 6.957 ATR(5m) = 33.04 pts   cost 0.85% of R
+    london/expansion  xauusd  stop 6.453 ATR(5m) = 36.45 pts   cost 0.77% of R
+    london/nyam       xauduka stop 6.857 ATR(5m) = 12.47 pts   cost 2.25% of R
+    london/early      xauduka stop 6.973 ATR(5m) = 12.09 pts   cost 2.32% of R
+    london/expansion  xauduka stop 6.410 ATR(5m) = 13.18 pts   cost 2.12% of R
+
+Full table, every control run and the per-row spread provenance: `docs/decisions/2026-10-11-receipt-reconcile-result.md`, `receipts/receipt-reconcile/`.

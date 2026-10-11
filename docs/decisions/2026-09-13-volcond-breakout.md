@@ -73,3 +73,39 @@ threshold or session on a break.
   at this cost are not distinguishable from noise over 2022–25.
 - It does not say the 2025–26 in-sample results were bugs: they replicate,
   they simply do not generalise.
+
+---
+
+## Note added 2026-10-11 - these rows and the window their argv did not state (appended by `agent/receipt-reconcile`; nothing above is rewritten)
+
+`agent/pfr-audit` (`76c0b57`) listed 4 rows of this record among the 34 published decision-record rows that no longer print a cell at their published trade count when their own echoed argv is re-run. Re-measured today with the shared patched binary (`/e/rust/fd-stop-width/target-sw/release/search.exe`, `29c8635`):
+
+```
+row            published      verbatim argv today   with --from=2022-06-16 pinned
+hivol/london   341  PF 0.950  1712                  341  PF 0.950   EXACT
+hivol/orb60    457  PF 1.004  2115                  457  PF 1.004   EXACT
+lowvol/london  212  PF 0.962   894                  212  PF 0.962   EXACT
+lowvol/orb60    73  PF 1.074   478                   73  PF 1.074   EXACT
+```
+
+**Cause: the data store, not this measurement.** The published command omits
+`--from=`, and `XAUDUKA-5m` has since been backfilled from 2022-06-16 to
+2010-06-01 (198,716 bars -> 1,135,389). The "What was measured" section above
+already states the window ("Primary `xauduka:5m` 2022-06-16 -> 2025-04-10");
+the prose was right and the argv was under-specified. **All four rows return
+exactly, profit factor included. Nothing in this decision moves.**
+
+Cost/R per row, from the engine's own cost-matched-null line on those control
+runs, with the stop size that sets it - on ONE instrument, one feed, one
+spread:
+
+    hivol/london   stop 6.534 ATR(5m) = 14.51 pts   cost  1.93% of R
+    hivol/orb60    stop 4.437 ATR(5m) = 10.42 pts   cost  2.69% of R
+    lowvol/london  stop 7.424 ATR(5m) =  9.53 pts   cost  2.94% of R
+    lowvol/orb60   stop 3.957 ATR(5m) =  5.32 pts   cost  5.26% of R
+
+The spread charged, 0.28, is **ASSUMED BY TRANSFER**: no `XAUDUKA` spread log
+exists on disk and 0.28 is the Vantage `XAUUSD.sc` read applied to a Dukascopy
+BID series.
+
+Full table, every control run and the per-row spread provenance: `docs/decisions/2026-10-11-receipt-reconcile-result.md`, `receipts/receipt-reconcile/`.
