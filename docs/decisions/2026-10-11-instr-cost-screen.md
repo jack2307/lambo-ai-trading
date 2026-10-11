@@ -191,3 +191,19 @@ sổ bên cạnh:
    Một dòng: **F1 BẮN** — 0/8 hàng có spread **ĐO** đạt 4,577× trên W1+W2, trên
    cả ba thước; hàng duy nhất vượt vạch là `markets.btc` ở 6,25× (W2) và nó trượt
    F2 (spread GIẢ ĐỊNH), F3 (không phủ W1) và F4 (`swap` là key vắng mặt).
+6. **Ghi chú thứ sáu, 2026-10-11 muộn hơn — bề rộng lớp đối chứng của F5 là một
+   trục không khai trước, và nó ĐỔI KẾT LUẬN.** Lần chạy đầu lấy `ny18` là **cả
+   giờ 18:00 NY** (bốn nến 15m, chỉ nến đầu là nến mở lại) ⇒ lift bị pha loãng
+   ~4 lần, và eurduka/audnzd/eurusd đọc ×1,98 / ×1,74 / ×2,28. Thu lớp về **đúng
+   nến 18:00** thì chúng thành **×2,66 / ×2,26 / ×4,24**. ⇒ kết luận lật từ "dấu
+   in là hiện vật kim loại, FX của cùng nhà cung cấp không mang nó" sang
+   **"6/8 instrument mang dấu in, và feed SÀN eurusd mang nó mạnh thứ ba cả
+   bảng"**. Hai bản đều ở lịch sử git; receipt công bố là bản thu lớp. Đây là
+   trục không-khai-trước thứ ba của job và là trục duy nhất đổi một kết luận.
+7. **Test: `cargo test --release -p fd-backtest` xanh** — 106 unit test ở `--lib`,
+   6 integration test ở `tests/trading_rules.rs` (trong đó
+   `four_hours_is_the_default_on_every_market_the_config_declares` và
+   `an_absent_override_is_none_and_not_zero` **lặp qua mọi market config khai**,
+   nên chúng là phép kiểm rằng block `audnzd` cherry-pick không làm hỏng gì),
+   0 fail. Build ở `target-is/` riêng của worktree, toolchain
+   `+stable-x86_64-pc-windows-gnu`, không bao giờ `--workspace` ở debug.

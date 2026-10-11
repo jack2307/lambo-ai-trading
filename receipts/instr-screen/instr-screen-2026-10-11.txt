@@ -567,66 +567,68 @@ of `the bar that reopens`, because a definition is a choice:
 
   gap  = the first bar after a hole in the series longer than one interval and shorter than
          a day, i.e. the session break, whatever the clock says
-  ny18 = the bar whose open stamps 18:00 New York local — the CME reopen, which still
-         exists when the feed fills the break with bars
+  ny18 = the bar whose open stamps EXACTLY 18:00 New York local — the CME reopen, which
+         still exists when the feed fills the break with bars. Exactly 18:00, not the
+         18:00 hour: the hour holds four 15m bars and only the first reopens, so an
+         hour-wide class dilutes the lift ~4x toward the baseline.
   ord  = every other bar
 
 F5 fires on a row when a reopen share is >= 2x the ordinary share.
 
 audnzd (AUDNZD, 371148 bars 15m, dukascopy)
    gap  o==l  25.33%  c==l  17.33%  o==h  17.33%  c==h  29.33%  (n 75)
-   ny18 o==l   5.54%  c==l   2.94%  o==h   3.69%  c==h   2.56%  (n 15517)
-   ord  o==l   3.18%  c==l   2.75%  o==h   2.98%  c==h   2.06%  (n 355564)
-   lift vs ord: gap o==l x7.97  gap c==l x6.30  ny18 o==l x1.74  ny18 c==l x1.07   => F5 FIRES — this instrument carries a provider print
+   ny18 o==l   7.32%  c==l   1.57%  o==h   3.38%  c==h   2.45%  (n 3879)
+   ord  o==l   3.23%  c==l   2.77%  o==h   3.01%  c==h   2.07%  (n 367199)
+   lift vs ord: gap o==l x7.83  gap c==l x6.25  ny18 o==l x2.26  ny18 c==l x0.57   => F5 FIRES — this instrument carries a provider print
    NY-local hour of the gap-reopens: 00h:1 01h:4 04h:1 07h:1 09h:2 10h:1 11h:1 13h:2 15h:3 16h:3 17h:31 18h:8 19h:4 20h:3 21h:5 22h:2 23h:3
 
 btc (BTCUSDT, 70080 bars 15m, binance)
    gap  null (0 bars)
-   ny18 o==l   5.79%  c==l   2.98%  o==h   6.47%  c==h   2.50%  (n 2920)
-   ord  o==l   4.49%  c==l   2.58%  o==h   5.14%  c==h   2.71%  (n 67160)
-   lift vs ord: gap o==l xNaN  gap c==l xNaN  ny18 o==l x1.29  ny18 c==l x1.15   => F5 does not fire
+   ny18 o==l   8.22%  c==l   1.92%  o==h   6.30%  c==h   2.74%  (n 730)
+   ord  o==l   4.50%  c==l   2.61%  o==h   5.18%  c==h   2.70%  (n 69350)
+   lift vs ord: gap o==l xNaN  gap c==l xNaN  ny18 o==l x1.82  ny18 c==l x0.74   => F5 does not fire
    NY-local hour of the gap-reopens: none (no intraday gaps)
 
 btcusd (BTCUSD, 100798 bars 15m, mt5)
    gap  o==l   8.11%  c==l   4.05%  o==h   8.11%  c==h   5.41%  (n 74)
-   ny18 o==l   4.24%  c==l   1.07%  o==h   4.46%  c==h   1.52%  (n 4014)
-   ord  o==l   3.36%  c==l   1.24%  o==h   3.31%  c==h   1.66%  (n 96710)
-   lift vs ord: gap o==l x2.41  gap c==l x3.26  ny18 o==l x1.26  ny18 c==l x0.86   => F5 FIRES — this instrument carries a provider print
+   ny18 o==l   6.57%  c==l   1.10%  o==h   5.88%  c==h   1.89%  (n 1004)
+   ord  o==l   3.36%  c==l   1.24%  o==h   3.33%  c==h   1.66%  (n 99720)
+   lift vs ord: gap o==l x2.41  gap c==l x3.27  ny18 o==l x1.96  ny18 c==l x0.88   => F5 FIRES — this instrument carries a provider print
    NY-local hour of the gap-reopens: 00h:1 01h:2 03h:2 04h:1 05h:4 06h:5 07h:2 08h:3 09h:1 10h:1 14h:1 19h:32 20h:7 21h:4 22h:4 23h:4
 
 eurduka (EURDUKA, 398220 bars 15m, dukascopy)
    gap  o==l  27.96%  c==l  12.90%  o==h  17.20%  c==h  16.13%  (n 93)
-   ny18 o==l   8.51%  c==l   4.43%  o==h   6.56%  c==h   4.01%  (n 16620)
-   ord  o==l   4.29%  c==l   2.76%  o==h   4.64%  c==h   2.36%  (n 381517)
-   lift vs ord: gap o==l x6.51  gap c==l x4.68  ny18 o==l x1.98  ny18 c==l x1.61   => F5 FIRES — this instrument carries a provider print
+   ny18 o==l  11.69%  c==l   2.91%  o==h   5.56%  c==h   3.18%  (n 4157)
+   ord  o==l   4.39%  c==l   2.83%  o==h   4.71%  c==h   2.42%  (n 393975)
+   lift vs ord: gap o==l x6.37  gap c==l x4.57  ny18 o==l x2.66  ny18 c==l x1.03   => F5 FIRES — this instrument carries a provider print
    NY-local hour of the gap-reopens: 00h:4 01h:1 02h:1 09h:2 12h:1 13h:1 14h:1 17h:59 18h:10 19h:3 21h:1 22h:6 23h:3
 
 eurusd (EURUSD, 61247 bars 15m, mt5)
    gap  null (0 bars)
-   ny18 o==l  10.27%  c==l   3.68%  o==h   7.05%  c==h   5.25%  (n 2552)
-   ord  o==l   4.50%  c==l   2.31%  o==h   4.45%  c==h   2.66%  (n 58695)
-   lift vs ord: gap o==l xNaN  gap c==l xNaN  ny18 o==l x2.28  ny18 c==l x1.60   => F5 FIRES — this instrument carries a provider print
+   ny18 o==l  19.44%  c==l   2.66%  o==h   3.92%  c==h   3.29%  (n 638)
+   ord  o==l   4.58%  c==l   2.36%  o==h   4.56%  c==h   2.76%  (n 60609)
+   lift vs ord: gap o==l xNaN  gap c==l xNaN  ny18 o==l x4.24  ny18 c==l x1.13   => F5 FIRES — this instrument carries a provider print
    NY-local hour of the gap-reopens: none (no intraday gaps)
 
 xagduka (XAGDUKA, 374188 bars 15m, dukascopy)
    gap  o==l  23.92%  c==l   3.48%  o==h   3.90%  c==h   7.72%  (n 2901)
-   ny18 o==l  11.62%  c==l   5.38%  o==h   6.83%  c==h   7.15%  (n 16058)
-   ord  o==l   4.72%  c==l   3.18%  o==h   5.17%  c==h   3.52%  (n 357944)
-   lift vs ord: gap o==l x5.07  gap c==l x1.09  ny18 o==l x2.46  ny18 c==l x1.69   => F5 FIRES — this instrument carries a provider print
+   ny18 o==l  20.77%  c==l   2.09%  o==h   3.21%  c==h   6.25%  (n 4016)
+   ord  o==l   4.84%  c==l   3.29%  o==h   5.27%  c==h   3.64%  (n 369966)
+   lift vs ord: gap o==l x4.94  gap c==l x1.06  ny18 o==l x4.29  ny18 c==l x0.64   => F5 FIRES — this instrument carries a provider print
    NY-local hour of the gap-reopens: 00h:12 01h:12 03h:2 05h:1 06h:1 07h:1 08h:1 09h:3 10h:2 11h:4 13h:2 14h:6 15h:5 16h:18 17h:49 18h:2715 19h:43 20h:4 21h:5 22h:5 23h:10
 
 xauduka (XAUDUKA, 378749 bars 15m, dukascopy)
    gap  o==l  18.79%  c==l   1.68%  o==h   3.11%  c==h   3.00%  (n 2799)
-   ny18 o==l   8.82%  c==l   2.92%  o==h   5.08%  c==h   3.09%  (n 16293)
-   ord  o==l   3.08%  c==l   1.83%  o==h   3.50%  c==h   1.60%  (n 362382)
-   lift vs ord: gap o==l x6.10  gap c==l x0.92  ny18 o==l x2.86  ny18 c==l x1.59   => F5 FIRES — this instrument carries a provider print
+   ny18 o==l  20.53%  c==l   1.40%  o==h   3.16%  c==h   3.02%  (n 4076)
+   ord  o==l   3.14%  c==l   1.88%  o==h   3.57%  c==h   1.65%  (n 374598)
+   lift vs ord: gap o==l x5.98  gap c==l x0.89  ny18 o==l x6.54  ny18 c==l x0.74   => F5 FIRES — this instrument carries a provider print
    NY-local hour of the gap-reopens: 06h:1 09h:3 10h:1 11h:2 12h:1 13h:2 14h:2 15h:2 16h:5 17h:23 18h:2725 19h:27 20h:3 22h:2
 
 xauusd (XAUUSD, 100586 bars 15m, mt5)
    gap  o==l   6.75%  c==l   2.17%  o==h   4.12%  c==h   2.17%  (n 874)
-   ny18 o==l   4.74%  c==l   2.03%  o==h   4.67%  c==h   2.28%  (n 4392)
-   ord  o==l   2.73%  c==l   1.15%  o==h   2.70%  c==h   1.20%  (n 96192)
-   lift vs ord: gap o==l x2.48  gap c==l x1.89  ny18 o==l x1.74  ny18 c==l x1.77   => F5 FIRES — this instrument carries a provider print
+   ny18 o==l   6.74%  c==l   1.82%  o==h   4.55%  c==h   2.00%  (n 1098)
+   ord  o==l   2.77%  c==l   1.18%  o==h   2.77%  c==h   1.24%  (n 99486)
+   lift vs ord: gap o==l x2.44  gap c==l x1.84  ny18 o==l x2.43  ny18 c==l x1.54   => F5 FIRES — this instrument carries a provider print
    NY-local hour of the gap-reopens: 06h:1 10h:1 18h:872
 
 
@@ -646,7 +648,7 @@ control 2 — the provider-print test, on two synthetic series:
 
 control 3 — a probe that deliberately prints (open = low ONLY on the reopen bar):
   reopen bars o==l 100.00%  c==l   0.00%  o==h   0.00%  c==h   0.00%  (n 20)
-  ordinary    o==l   0.00%  c==l   0.00%  o==h   0.00%  c==h   0.00%  (n 1896)
+  ordinary    o==l   0.00%  c==l   0.00%  o==h   0.00%  c==h   0.00%  (n 1959)
   lift xinf => F5 FIRES, as it must (it MUST fire; if it does not, every `does not fire` above is blind)
 
 

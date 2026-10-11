@@ -289,53 +289,85 @@ trên một cửa sổ.** Đúng như brief dự đoán, và tôi không chạy 
 ## 5. Dấu in nhà cung cấp — chạy cho MỌI instrument
 
 Hai định nghĩa "nến mở lại", vì **một định nghĩa là một lựa chọn**:
-`gap` = nến đầu sau một lỗ trong chuỗi dài hơn một nến và ngắn hơn một ngày;
-`ny18` = nến đóng dấu **18:00 giờ New York** (mốc mở lại CME), còn tồn tại khi
-feed lấp kín chỗ nghỉ.
+
+- `gap` = nến đầu sau một **lỗ trong chuỗi** dài hơn một nến và ngắn hơn một
+  ngày. Nó tìm mốc nghỉ **bất kể đồng hồ nói gì**, nhưng nó chỉ tồn tại ở feed
+  nào **thực sự để trống** chỗ nghỉ.
+- `ny18` = nến đóng dấu **đúng 18:00 giờ New York** (mốc mở lại CME). Nó tồn tại
+  **kể cả khi feed lấp kín** chỗ nghỉ. ⚠️ **Đúng 18:00, không phải GIỜ 18:00** —
+  giờ đó chứa **bốn** nến 15m và chỉ nến đầu là nến mở lại, nên một lớp rộng cả
+  giờ **pha loãng lift ~4 lần** về phía nền. (Lần chạy đầu của tôi dùng cả giờ và
+  nó **đổi kết luận**; xem §5.3.)
 
 **Histogram giờ NY của các `gap` xác nhận mốc bằng dữ liệu, không bằng giả định:**
 XAUDUKA **2 725/2 799** lỗ nằm ở **18h NY**, XAGDUKA **2 715/2 901**, XAUUSD
-**872/874**. Mốc nghỉ là 17:00 NY và nến mở lại đóng dấu 18:00 NY — **đo được,
-không suy**.
+**872/874**. Mốc nghỉ là 17:00 NY và nến mở lại đóng dấu 18:00 NY — **đo được**.
 
-| market | `gap` o==l | `ny18` o==l | nến thường o==l | lift gap | lift ny18 | F5 |
+### 5.1 Bảng — `open == low`, nến mở lại ĐÚNG 18:00 NY so với nến thường
+
+| market | feed | `ny18` o==l | n | nền o==l | **lift** | F5 |
 |---|---|---|---|---|---|---|
-| xauduka | **18,79%** (n 2 799) | 8,82% (n 16 293) | 3,08% | **×6,10** | **×2,86** | **BẮN** |
-| xagduka | **23,92%** (n 2 901) | 11,62% (n 16 058) | 4,72% | **×5,07** | **×2,46** | **BẮN** |
-| xauusd | **6,75%** (n 874) | 4,74% (n 4 392) | 2,73% | **×2,48** | ×1,74 | **BẮN** |
-| btcusd | 8,11% (**n 74**) | 4,24% (n 4 014) | 3,36% | ×2,41 | ×1,26 | **BẮN** (nhưng n 74) |
-| eurduka | 27,96% (**n 93**) | 8,51% (n 16 620) | 4,29% | ×6,51 | ×1,98 | **BẮN** (nhưng n 93) |
-| audnzd | 25,33% (**n 75**) | 5,54% (n 15 517) | 3,18% | ×7,97 | ×1,74 | **BẮN** (nhưng n 75) |
-| eurusd | **null** (0 lỗ) | 10,27% (n 2 552) | 4,50% | null | **×2,28** | **BẮN** |
-| btc | **null** (0 lỗ trong 70 080 nến) | 5,79% (n 2 920) | 4,49% | null | ×1,29 | **không bắn** |
+| xauduka | duka (vàng) | **20,53%** | 4 076 | 3,14% | **×6,54** | **BẮN** |
+| xagduka | duka (bạc) | **20,77%** | 4 016 | 4,84% | **×4,29** | **BẮN** |
+| **eurusd** | **mt5 (SÀN)** | **19,44%** | 638 | 4,58% | **×4,24** | **BẮN** |
+| eurduka | duka (FX) | **11,69%** | 4 157 | 4,39% | **×2,66** | **BẮN** |
+| xauusd | mt5 (sàn) | **6,74%** | 1 098 | 2,77% | **×2,43** | **BẮN** |
+| audnzd | duka (FX) | **7,32%** | 3 879 | 3,23% | **×2,26** | **BẮN** |
+| btcusd | mt5 (sàn) | 6,57% | 1 004 | 3,36% | ×1,96 | không bắn |
+| btc | binance | 8,22% | 730 | 4,50% | ×1,82 | không bắn |
 
-**Tái tạo hai phép đo độc lập tới hai chữ số:** XAUDUKA 18,79% vs nền 3,08%
-(họ báo 19,02% / 3,20%), XAGDUKA 23,92% vs 4,72% (họ: 24,16% / 4,86%), XAUUSD
-**6,75%** vs 2,73% (họ: 6,75% / 2,77%). Dụng cụ đồng ý với hai agent trước.
+Và bằng định nghĩa `gap`, ở ba feed thực sự để trống chỗ nghỉ:
+**xauduka 18,79% vs 3,14% (×5,98, n 2 799)** · **xagduka 23,92% vs 4,84%
+(×4,94, n 2 901)** · **xauusd 6,75% vs 2,77% (×2,44, n 874)**. Hai định nghĩa
+**đồng ý** ở ba feed này (×5,98 vs ×6,54 · ×4,94 vs ×4,29 · ×2,44 vs ×2,43) — đó
+là chỗ kết quả đáng tin nhất.
 
-**Và đây là phần mới, có lẽ là phần dùng được lâu nhất của job:**
+**Tái tạo hai phép đo độc lập tới hai chữ số:** XAUDUKA 18,79% vs nền 3,14%
+(họ báo 19,02% / 3,20%), XAGDUKA 23,92% vs 4,84% (họ: 24,16% / 4,86%), XAUUSD
+**6,75%** vs 2,77% (họ: **6,75% / 2,77%** — khớp hoàn toàn). Dụng cụ đồng ý với
+hai agent trước.
 
-1. **Dấu in là hiện vật của MỐC NGHỈ CME, không phải của Dukascopy.** Hai feed
-   FX Dukascopy **gần như không có lỗ** ở mốc nghỉ: AUDNZD **75** lỗ và EURDUKA
-   **93** lỗ trong **16 năm** (so với 2 799 và 2 901 của vàng/bạc Duka). Trên
-   định nghĩa đồng hồ — nơi n là 15 517 và 16 620 — chúng đọc **×1,74** và
-   **×1,98**, **dưới vạch 2×**. ⇒ feed FX của cùng nhà cung cấp **không** mang
-   dấu in; kim loại thì có. Con số ×7,97 của AUDNZD là trên **75 lỗ dữ liệu lẻ**,
-   không phải trên mốc nghỉ hằng ngày, và đọc nó như một dấu in hằng ngày là đọc
-   sai.
-2. **`markets.btc` (Binance) KHÔNG đo được bằng định nghĩa `gap`: 0 lỗ trong
-   70 080 nến.** Đó là `null`, **không phải** "sạch" — thị trường 24/7 không có
-   mốc nghỉ để in dấu. Trên định nghĩa đồng hồ nó đọc ×1,29, hàng thấp nhất bảng.
-3. **`eurusd` của sàn BẮN ở ×2,28** trên 2 552 nến 18:00 NY — một feed MT5, không
-   phải Duka. ⇒ dấu in **không riêng của Dukascopy**, nó có ở cả feed sàn.
-4. **`close == low` là một phép thử khác hẳn `open == low`**, và nó **không** đi
-   cùng: XAUDUKA `close==low` ở nến mở lại là **1,68%** so với nền **1,83%** —
-   lift **×0,92**, tức **THẤP HƠN** nền. Dấu in nằm ở **`open`**, không ở `close`.
-   Ai thử bằng `close` sẽ không thấy gì.
+### 5.2 Bốn điều mới, và ba cái trong số đó đổi cách đọc
 
-⇒ **Trước khi tiêu một ô nào trên vàng/bạc Duka hay XAUUSD/EURUSD của sàn, kiểm
-xem cơ chế có đọc `open` của nến 18:00 NY không.** Và nhắc lại phụ lục 10 §IV:
-**0/153 dòng của `mould-target` có filter `flat 16:30-18:15`**.
+1. **Dấu in KHÔNG riêng của Dukascopy, và KHÔNG riêng của kim loại.** `eurusd`
+   của **feed sàn MT5** đọc **×4,24** — lift **cao thứ ba cả bảng**, cao hơn cả
+   vàng Duka đo bằng định nghĩa `gap`. Và cả hai FX Dukascopy cũng bắn (×2,66,
+   ×2,26). ⇒ **6/8 instrument trong kho mang dấu in ở nến 18:00 NY.**
+2. **Hai hàng duy nhất KHÔNG bắn đều là BTC** (×1,96 và ×1,82). Đó là nghĩa lý:
+   BTC chạy **24/7** nên 17:00 NY **không phải một mốc đóng cửa thị trường** —
+   `markets.btc` có **0 lỗ trong 70 080 nến** và `eurusd` cũng **0 lỗ**, nên với
+   chúng định nghĩa `gap` là **`null`, không phải "sạch"**.
+3. **`close == low` KHÔNG đi cùng `open == low`, và đây là chỗ dễ đo sai nhất.**
+   Ở nến 18:00 NY: xauduka **1,40%** so với nền 1,88% = **×0,74**; xagduka ×0,64;
+   audnzd ×0,57; btc ×0,74. **Sáu trong tám hàng có `close==low` THẤP HƠN nền.**
+   ⇒ Dấu in nằm ở **`open`** và **chỉ** ở `open`. Ai thử bằng `close` sẽ kết luận
+   "không có dấu in" trên đúng những instrument mang nó nặng nhất.
+4. **`open == high` không bắn ở đâu cả** (xauduka ×0,89 ở nến 18:00; cao nhất là
+   btcusd ×1,77). ⇒ dấu in có **CHIỀU**: nó đặt `open` ở **đáy** nến, không ở
+   đỉnh. Một cơ chế long đọc `open` nến đó đang mua ở mức thấp nhất của nến theo
+   một hiện vật đường ống, không theo một giao dịch.
+
+### 5.3 Và một chỗ TÔI ĐÃ SAI, bắt được bằng chính phép đo này
+
+Lần chạy đầu tôi định nghĩa `ny18` là **cả giờ 18:00 NY** (bốn nến 15m). Lớp đó
+pha loãng lift ~4 lần và nó dẫn tôi tới một kết luận **sai**: rằng *"dấu in là
+hiện vật của mốc nghỉ CME trên KIM LOẠI, feed FX của cùng nhà cung cấp không
+mang nó"* (eurduka đọc ×1,98 và audnzd ×1,74, cả hai **dưới** vạch 2×).
+
+Thu lớp về **đúng nến 18:00** thì eurduka thành **×2,66**, audnzd **×2,26**, và
+eurusd của sàn **×4,24** — kết luận lật: **FX cũng mang dấu in, và feed sàn mang
+nó mạnh nhất trong nhóm FX.**
+
+⇒ **Bề rộng của lớp đối chứng là một lựa chọn chưa khai, và ở đây nó quyết định
+dấu của kết luận.** Nếu bản đầu được công bố thì nó sẽ nói sai về ba instrument.
+Cả hai bản đều ở lịch sử git; receipt công bố là bản đã sửa.
+
+### 5.4 Việc phải làm trước khi tiêu một ô nào
+
+**Trước khi tiêu một ô trên BẤT KỲ instrument nào trừ hai hàng BTC, kiểm xem cơ
+chế có đọc `open` của nến 18:00 NY không.** Và nhắc lại phụ lục 10 §IV:
+**0/153 dòng của `mould-target` có filter `flat 16:30-18:15`** (`filters = []`)
+⇒ **đừng cho rằng dòng của bạn miễn nhiễm.**
 
 ## 6. Khuyết điểm 17, đo lại đúng cách: nó là thuộc tính của CỠ STOP
 
@@ -377,7 +409,7 @@ lý do nữa để đọc `PF_r`/`E`, không `PF_usd`.
 | **F2** (hàng rẻ nhất có provenance GIẢ ĐỊNH) | **BẮN** | `markets.btc`, spread 5,00, config tự ghi là giả định. |
 | **F3** (hàng chỉ phủ một cửa sổ) | **BẮN, 4 hàng** | btc (2024-09), btcusd (2023-10), eurusd (2024-03), xauusd (2022-06). |
 | **F4** (`swap` là `null` đóng vai 0) | **BẮN, 7/9 hàng** | Vắng key: gold, btc. Khai 0,0 mà phép đo không trên symbol đó: xagduka, eurduka, eurusd, audnzd, btcusd. Chỉ `xauusd` có phép đo thật; `xauduka` borrow. |
-| **F5** (dấu in nhà cung cấp) | **BẮN, 7/8 hàng** | Xem §5. Không bắn: `btc`. Không đo được bằng `gap`: btc, eurusd. |
+| **F5** (dấu in nhà cung cấp) | **BẮN, 6/8 hàng** | §5.1. Ở nến **đúng 18:00 NY**: xauduka ×6,54 · xagduka ×4,29 · **eurusd (sàn) ×4,24** · eurduka ×2,66 · xauusd ×2,43 · audnzd ×2,26. Không bắn: **btcusd ×1,96 và btc ×1,82 — cả hai là BTC, thị trường 24/7 không có mốc đóng**. Không đo được bằng `gap` (0 lỗ): btc, eurusd. |
 | **F6** (`raw_lots < min_lot`) | **KHÔNG BẮN, 0/8** | §6. Nhưng thay vào đó đo được ngưỡng và tìm ra chỗ méo là `lot_step`. |
 
 ## 8. Sổ đa phép thử — khai vs xem
@@ -387,7 +419,7 @@ lý do nữa để đọc `PF_r`/`E`, không `PF_usd`.
 | chi phí/R | 9 × 3 thước × 4 cửa sổ = **108** | **108** (36 là `null` vì không phủ cửa sổ / không có file 15m) | đúng khai |
 | kiểm kho nến | 24 file | **24** đọc hết + 4 `.bak` liệt kê + 2 store khai-mà-vắng | đúng khai |
 | cột volume | 24 file × 4 trạng thái | **24** + **một trục KHÔNG khai trước: per-year** (8 market × 2 cỡ nến × số năm = 118 dòng) | **thêm một trục**, xem dưới |
-| dấu in | 9 × 4 phép thử × 2 lớp = **72** | **64** (8 hàng có nến 15m) × 4 phép thử × 2 lớp = **64**; + 1 lớp thứ ba (`ord`) đã khai | ít hơn khai, vì `gold` không có nến 15m |
+| dấu in | 9 × 4 phép thử × 2 lớp = **72** | **64** (8 hàng × 4 phép thử × 2 lớp) + lớp nền `ord` đã khai | ít hơn khai, vì `gold` không có nến 15m. **Lớp `ny18` chạy HAI bề rộng** (cả giờ, rồi đúng nến) ⇒ **thêm 32 tỉ lệ không khai trước**; bản đầu bị bỏ, lý do ở §5.3 |
 | lot kẹp | 9 × 1 | **8 × 3 thước = 24** + 8 ngưỡng tới hạn | **thêm 2 thước**, xem dưới |
 | đối chứng dương | 4 | **4** | đúng khai |
 
@@ -401,6 +433,9 @@ lý do nữa để đọc `PF_r`/`E`, không `PF_usd`.
 2. **Lot kẹp ở cả ba thước thay vì một** (24 thay vì 9). Lý do: ở một thước duy
    nhất, 0/8 kẹp đọc như "khuyết điểm 17 không tồn tại", mà sự thật là ngưỡng
    nằm giữa các thước. Cùng loại: mô tả, không có vạch.
+
+**Và chỗ bề rộng lớp đối chứng đổi dấu kết luận** — xem §5.3. Nó là trục thứ ba
+không khai trước, và là trục duy nhất trong ba cái **đổi một kết luận**.
 
 **Và một sai của chính dụng cụ, tự bắt được, báo ra:** lần chạy đầu
 `fd_core::clock::new_york_local` bị đọc như `(hour, minute)` trong khi nó trả

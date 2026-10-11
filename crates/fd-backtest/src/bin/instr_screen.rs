@@ -274,7 +274,11 @@ fn print_census(bars: &[Bar], interval_ms: i64) -> (PrintCensus, PrintCensus, Pr
         // nonsense in that histogram is how the mistake was caught.
         let (_weekday, minute_of_day) = fd_core::clock::new_york_local(b.time);
         let hour = minute_of_day / 60;
-        let is_ny18 = hour == 18;
+        // EXACTLY the 18:00 New York bar, not the 18:00 hour. Taking the hour
+        // puts four 15m bars in the class and only the first is the reopen, so
+        // the lift is diluted roughly fourfold toward the baseline — which on a
+        // 2x line is the difference between firing and not.
+        let is_ny18 = minute_of_day == 18 * 60;
         if is_gap {
             gap.add(b);
             *hours.entry(hour).or_default() += 1;
@@ -853,8 +857,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("of `the bar that reopens`, because a definition is a choice:\n");
     println!("  gap  = the first bar after a hole in the series longer than one interval and shorter than");
     println!("         a day, i.e. the session break, whatever the clock says");
-    println!("  ny18 = the bar whose open stamps 18:00 New York local — the CME reopen, which still");
-    println!("         exists when the feed fills the break with bars");
+    println!("  ny18 = the bar whose open stamps EXACTLY 18:00 New York local — the CME reopen, which");
+    println!("         still exists when the feed fills the break with bars. Exactly 18:00, not the");
+    println!("         18:00 hour: the hour holds four 15m bars and only the first reopens, so an");
+    println!("         hour-wide class dilutes the lift ~4x toward the baseline.");
     println!("  ord  = every other bar\n");
     println!("F5 fires on a row when a reopen share is >= 2x the ordinary share.\n");
     for r in &rows {
