@@ -248,3 +248,57 @@ drawdown **USD**, tỉ lệ `sized_down_by_guard`, exit mix, và `k`/`R²` của
 * **`spread*` trong `[0,0700 ; 0,1680)`** — khoảng xám. In số, không khuyến nghị.
 * **`spread*` >= 0,1680** — F1b: con số đầu tiên của hồ sơ chỉ vào một việc làm
   được. In kèm cả ba mốc spread của mục 5 và mọi cảnh báo của mục 7.
+
+---
+
+## Ghi chú thêm — 11/10/2026, sau khi chạy (không viết lại dòng nào ở trên)
+
+1. **Nguồn mục 5 đọc được trên đĩa, và nó lớn hơn con số config ghi.** Đăng ký
+   nói sẽ in ba mốc `0,28 / 0,220 / 0,260` lấy từ chú thích config. Tôi đọc
+   **chính file log** (chỉ đọc): `E:/rust/flowdesk/data/spreads/XAUUSD_sc.csv`
+   — **8.967 mẫu / 49,8 giờ** (config ghi 2.315 / 12,8 giờ), p50 **0,220**,
+   p95 0,260, **p99 = max 0,290**. ⇒ ba mốc công bố thành
+   **0,280 (config) / 0,220 (p50) / 0,290 (max đã quan sát)**. Và câu config tự
+   viết *"0,28 nằm trên mọi spread từng quan sát"* **không còn đúng**: 2,80% mẫu
+   ở 0,290, tập trung ở **giờ rollover 21:00 UTC** (p50 giờ đó 0,290) — đúng
+   một trong hai điều kiện config nói còn thiếu để viết amendment. Điều kiện còn
+   lại (một ngày cuối tuần) **vẫn thiếu**. Việc đọc file này không phải một ô
+   backtest và không đổi thiết kế.
+
+2. **Phép khớp thực nghiệm của F5 KHÔNG phân giải được `delta`, nên tôi dẫn số
+   bằng đọc mã.** Ruler suy `risk(s)` từ
+   `(net_usd/total_r) × n × s / spread_paid` calibrate được (đọc `px-1s` IS
+   27,05 điểm so với `agent/stop-width` công bố 25,69; đọc `ovn1900/long`
+   cost/R 1,80% đúng đầu dải `hour-screen`), nhưng nó **thô hơn 2–5 lần** đại
+   lượng cần đo (`delta` đổi `risk` 0,28 điểm trên toàn lưới = ~1% của một R)
+   và lệch **ngược chiều** `delta` vì `net_usd/total_r` tự lên khi sổ lãi hơn.
+   `k` tự do ra −0,25 … −5,14 (sai dấu), và `k = 0,5` cho SSR **xấu hơn**
+   `k = 0` ở 28/28 dòng-cửa-sổ. ⇒ `delta` được dẫn bằng **đọc mã**
+   (`apply_costs` `engine.rs:902-912` + `sizing_stop` `tsmom.rs:122-127` +
+   `risk` `engine.rs:717-719` ⇒ `d risk/d s = +1/2` **chính xác**, cả hai
+   chiều) và `R²` của cả ba biến thể khớp vẫn được in trong receipt. Đây là
+   giới hạn của phép đo của tôi, **không** phải bằng chứng chống khuyết điểm 16.
+
+3. **Hai ứng viên là CÙNG MỘT SỔ ở cửa sổ IS.** `qs-h15` và `qs-h30` in y hệt
+   trên IS (393 lệnh, `PF_r` 1,2713, `E` +0,0659, `Lbar` 0,2428, exit mix giống
+   từng con số) vì `NEWS_FLAT`/`WEEKEND_FLAT` đóng lệnh trước khi hold 15 hay 30
+   phiên hết hạn; OOS mới tách (1,0741 vs 1,0672). ⇒ **số ứng viên phân biệt
+   được là 10, không phải 11.** Bộ lọc không bị sửa; đây là một dữ kiện về
+   registry, khai ra chứ không giấu.
+
+4. **`spread*` được báo như "spread RỘNG NHẤT còn qua", không phải "nhỏ nhất".**
+   Brief viết "`spread*` nhỏ nhất sao cho...". Tập các spread qua cổng là
+   **đóng xuống dưới** (spread thấp hơn luôn tốt hơn — đo được: `E` đơn điệu
+   theo `s` ở 28/28 dòng-cửa-sổ, 14/14 điểm), nên "nhỏ nhất" sẽ luôn là biên
+   dưới của lưới và không mang thông tin. Điểm **hoà vốn** là **biên trên**, và
+   đó là con số được in. Nói ra ở đây để không ai đọc lệch dấu.
+
+5. **Kết quả, một dòng:** `spread* = null` trên cả 11 ứng viên ở toàn bộ dải
+   không âm. **F1 bắn** ở dạng mạnh nhất (dưới 0%, không chỉ dưới 25%).
+   **F1b không bắn.** F2 (parity, đối chứng dương) **không bắn** — 13/13 dòng
+   tái tạo tới chữ số in ra. F3 (hai probe cố ý nhìn trước) **không bắn** — cả
+   hai trượt mọi điểm. F4 **không bắn trên một ô ứng viên nào** (`n` bất biến
+   trên 308 ô). F5 bắn ở **đúng một ô** (`qs-lb3` IS `s = 0`: biên +0,0002 R,
+   `delta` đáng 0,0003 R). F6 không bắn trên ứng viên (dd lớn nhất 15,10%).
+   **F7 BẮN** — năm dòng qua cả hai chân ở đúng 0,28 trên một cửa sổ và trượt ở
+   cửa sổ kia ở mọi spread: **hiện vật cửa sổ thứ 13**.

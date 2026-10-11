@@ -1,0 +1,94 @@
+WIDEST SPREAD AT WHICH EACH LEG PASSES ON ITS OWN (n>=40 enforced), guards ON
+  "pos" = over the 8 non-negative points only; "cf" = including the 6 COUNTERFACTUAL credit points
+
+row            win  | PFleg pos  PFleg cf |  Eleg pos   Eleg cf |  both pos   both cf
+qs-lb3         IS   |     +0.20     +0.20 |     +0.00     +0.00 |     +0.00     +0.00
+qs-lb3         OOS  |     +0.08     +0.08 |      null     -0.20 |      null     -0.20
+ts-l5          IS   |      null     -0.04 |      null      null |      null      null
+ts-l5          OOS  |      null      null |      null      null |      null      null
+ts-l20         IS   |      null     -0.04 |      null      null |      null      null
+ts-l20         OOS  |      null      null |      null      null |      null      null
+ts-l10         IS   |     +0.28     +0.28 |     +0.28     +0.28 |     +0.28     +0.28
+ts-l10         OOS  |      null      null |      null      null |      null      null
+qs-lb30        IS   |      null      null |      null     -0.28 |      null      null
+qs-lb30        OOS  |     +0.28     +0.28 |     +0.28     +0.28 |     +0.28     +0.28
+tsmom          IS   |      null      null |      null      null |      null      null
+tsmom          OOS  |     +0.16     +0.16 |      null     -0.20 |      null     -0.20
+qs-h15         IS   |     +0.28     +0.28 |     +0.28     +0.28 |     +0.28     +0.28
+qs-h15         OOS  |      null      null |      null      null |      null      null
+qs-qp020       IS   |     +0.28     +0.28 |     +0.28     +0.28 |     +0.28     +0.28
+qs-qp020       OOS  |      null      null |      null      null |      null      null
+qs-h30         IS   |     +0.28     +0.28 |     +0.28     +0.28 |     +0.28     +0.28
+qs-h30         OOS  |      null      null |      null      null |      null      null
+qs-h2          IS   |     +0.24     +0.24 |      null     -0.04 |      null     -0.04
+qs-h2          OOS  |      null      null |      null      null |      null      null
+ovn1900/long   IS   |     +0.12     +0.12 |      null      null |      null      null
+ovn1900/long   OOS  |     +0.00     +0.00 |      null      null |      null      null
+px-1s          IS   |      null      null |      null      null |      null      null
+px-1s          OOS  |      null      null |      null      null |      null      null
+ovn1900/short  IS   |      null      null |      null      null |      null      null
+ovn1900/short  OOS  |      null      null |      null      null |      null      null
+ema-cross      IS   |      null     -0.28 |      null     -0.20 |      null     -0.28
+ema-cross      OOS  |      null      null |      null     -0.28 |      null      null
+
+DEFICIT AT ZERO SPREAD (free execution), and what the counterfactual grid says it costs to close
+row            win  |      E(0)    need E |   PF_r(0)   need PF |   E-gap in R
+qs-lb3         IS   |   +0.0502     0.050 |    1.2469     1.200 |      -0.0002
+qs-lb3         OOS  |   +0.0446     0.050 |    1.2177     1.200 |      +0.0054
+ts-l5          IS   |   +0.0329     0.050 |    1.1988     1.200 |      +0.0171
+ts-l5          OOS  |   +0.0253     0.050 |    1.1407     1.200 |      +0.0247
+ts-l20         IS   |   +0.0371     0.050 |    1.1936     1.200 |      +0.0129
+ts-l20         OOS  |   +0.0269     0.050 |    1.1312     1.200 |      +0.0231
+ts-l10         IS   |   +0.0651     0.050 |    1.3640     1.200 |      -0.0151
+ts-l10         OOS  |   +0.0251     0.050 |    1.1243     1.200 |      +0.0249
+qs-lb30        IS   |   +0.0384     0.050 |    1.1348     1.200 |      +0.0116
+qs-lb30        OOS  |   +0.0804     0.050 |    1.3188     1.200 |      -0.0304
+tsmom          IS   |   +0.0276     0.050 |    1.1287     1.200 |      +0.0224
+tsmom          OOS  |   +0.0465     0.050 |    1.2177     1.200 |      +0.0035
+qs-h15         IS   |   +0.0779     0.050 |    1.3268     1.200 |      -0.0279
+qs-h15         OOS  |   +0.0285     0.050 |    1.1089     1.200 |      +0.0215
+qs-qp020       IS   |   +0.0832     0.050 |    1.3522     1.200 |      -0.0332
+qs-qp020       OOS  |   +0.0281     0.050 |    1.1080     1.200 |      +0.0219
+qs-h30         IS   |   +0.0779     0.050 |    1.3268     1.200 |      -0.0279
+qs-h30         OOS  |   +0.0266     0.050 |    1.1017     1.200 |      +0.0234
+qs-h2          IS   |   +0.0493     0.050 |    1.2645     1.200 |      +0.0007
+qs-h2          OOS  |   +0.0201     0.050 |    1.0945     1.200 |      +0.0299
+ovn1900/long   IS   |   +0.0242     0.050 |    1.3046     1.200 |      +0.0258
+ovn1900/long   OOS  |   +0.0197     0.050 |    1.2133     1.200 |      +0.0303
+px-1s          IS   |   -0.0095     0.050 |    0.9409     1.200 |      +0.0595
+px-1s          OOS  |   +0.0159     0.050 |    1.1014     1.200 |      +0.0341
+ovn1900/short  IS   |   -0.0232     0.050 |    0.7744     1.200 |      +0.0732
+ovn1900/short  OOS  |   -0.0193     0.050 |    0.8280     1.200 |      +0.0693
+ema-cross      IS   |   -0.0349     0.050 |    0.9357     1.200 |      +0.0849
+ema-cross      OOS  |   -0.0276     0.050 |    0.9493     1.200 |      +0.0776
+
+SPREAD PAID IN R PER TRADE, measured as E(0) - E(s) over the grid (the sweep, not a division)
+row            win  |    dE@0.28    dE@0.24    dE@0.20    dE@0.12    dE@0.08    dE@0.04   per 0.01
+qs-lb3         IS   |    0.01150    0.00990    0.00820    0.00490    0.00330    0.00170   0.000411
+qs-lb3         OOS  |    0.00850    0.00730    0.00610    0.00370    0.00240    0.00120   0.000304
+ts-l5          IS   |    0.00830    0.00720    0.00600    0.00360    0.00250    0.00130   0.000296
+ts-l5          OOS  |    0.00620    0.00530    0.00440    0.00260    0.00180    0.00090   0.000221
+ts-l20         IS   |    0.00830    0.00710    0.00590    0.00360    0.00230    0.00120   0.000296
+ts-l20         OOS  |    0.00600    0.00520    0.00430    0.00260    0.00170    0.00080   0.000214
+ts-l10         IS   |    0.00840    0.00720    0.00600    0.00360    0.00240    0.00120   0.000300
+ts-l10         OOS  |    0.00620    0.00530    0.00440    0.00270    0.00180    0.00090   0.000221
+qs-lb30        IS   |    0.01210    0.01040    0.00870    0.00520    0.00340    0.00170   0.000432
+qs-lb30        OOS  |    0.00890    0.00760    0.00640    0.00390    0.00260    0.00130   0.000318
+tsmom          IS   |    0.00830    0.00720    0.00600    0.00360    0.00240    0.00120   0.000296
+tsmom          OOS  |    0.00560    0.00480    0.00400    0.00240    0.00160    0.00080   0.000200
+qs-h15         IS   |    0.01200    0.01030    0.00860    0.00520    0.00340    0.00170   0.000429
+qs-h15         OOS  |    0.00890    0.00760    0.00640    0.00390    0.00250    0.00130   0.000318
+qs-qp020       IS   |    0.01220    0.01050    0.00870    0.00520    0.00350    0.00180   0.000436
+qs-qp020       OOS  |    0.00930    0.00790    0.00660    0.00390    0.00260    0.00130   0.000332
+qs-h30         IS   |    0.01200    0.01030    0.00860    0.00520    0.00340    0.00170   0.000429
+qs-h30         OOS  |    0.00880    0.00760    0.00630    0.00380    0.00250    0.00130   0.000314
+qs-h2          IS   |    0.01180    0.01010    0.00840    0.00500    0.00340    0.00170   0.000421
+qs-h2          OOS  |    0.00880    0.00750    0.00630    0.00370    0.00260    0.00130   0.000314
+ovn1900/long   IS   |    0.01640    0.01410    0.01180    0.00710    0.00470    0.00230   0.000586
+ovn1900/long   OOS  |    0.01240    0.01070    0.00890    0.00530    0.00360    0.00180   0.000443
+px-1s          IS   |    0.01090    0.00930    0.00780    0.00470    0.00310    0.00160   0.000389
+px-1s          OOS  |    0.00840    0.00720    0.00600    0.00360    0.00240    0.00130   0.000300
+ovn1900/short  IS   |    0.01610    0.01380    0.01150    0.00690    0.00460    0.00230   0.000575
+ovn1900/short  OOS  |    0.01210    0.01040    0.00870    0.00520    0.00340    0.00170   0.000432
+ema-cross      IS   |    0.11850    0.10090    0.08480    0.05110    0.03270    0.01410   0.004232
+ema-cross      OOS  |    0.09370    0.07910    0.06660    0.03990    0.02660    0.01560   0.003346

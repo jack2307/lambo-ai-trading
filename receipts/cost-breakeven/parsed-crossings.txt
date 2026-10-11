@@ -1,0 +1,97 @@
+LINEARITY of E and PF_r in s over the 14 measured points, and the INTERPOLATED crossings
+(grid step 0.04 USD per round trip; crossings between grid points are interpolation, labelled as such)
+
+row            win  |   R2 E~s  R2 PF~s |   dE/ds(R) cost/R@.28 | s: E=0.050 s: PFr=1.2 |   s*both
+qs-lb3         IS   |  0.99997  0.99976 |   -0.04122     0.0115 |   +0.0047   +0.2159 |  +0.0047
+qs-lb3         OOS  |  0.99995  0.99982 |   -0.03058     0.0085 |   -0.1754   +0.1102 |  -0.1754
+ts-l5          IS   |  0.99994  0.99976 |   -0.02970     0.0083 |      null   -0.0061 |     null
+ts-l5          OOS  |  0.99993  0.99985 |   -0.02209     0.0062 |      null      null |     null
+ts-l20         IS   |  0.99996  0.99984 |   -0.02977     0.0083 |      null   -0.0371 |     null
+ts-l20         OOS  |  0.99992  0.99987 |   -0.02183     0.0060 |      null      null |     null
+ts-l10         IS   |  0.99995  0.99980 |   -0.03029     0.0084 |      null      null |     null
+ts-l10         OOS  |  0.99994  0.99990 |   -0.02211     0.0062 |      null      null |     null
+qs-lb30        IS   |  0.99998  0.99987 |   -0.04344     0.0121 |   -0.2663      null |     null
+qs-lb30        OOS  |  0.99995  0.99987 |   -0.03195     0.0089 |      null      null |     null
+tsmom          IS   |  0.99995  0.99987 |   -0.02983     0.0083 |      null      null |     null
+tsmom          OOS  |  0.99993  0.99993 |   -0.02013     0.0056 |   -0.1733   +0.1750 |  -0.1733
+qs-h15         IS   |  0.99998  0.99986 |   -0.04325     0.0120 |      null      null |     null
+qs-h15         OOS  |  0.99994  0.99982 |   -0.03172     0.0089 |      null      null |     null
+qs-qp020       IS   |  0.99995  0.99983 |   -0.04380     0.0122 |      null      null |     null
+qs-qp020       OOS  |  0.99994  0.99988 |   -0.03336     0.0093 |      null      null |     null
+qs-h30         IS   |  0.99998  0.99986 |   -0.04325     0.0120 |      null      null |     null
+qs-h30         OOS  |  0.99996  0.99983 |   -0.03165     0.0088 |      null      null |     null
+qs-h2          IS   |  0.99995  0.99978 |   -0.04247     0.0118 |   -0.0165   +0.2651 |  -0.0165
+qs-h2          OOS  |  0.99994  0.99985 |   -0.03139     0.0088 |      null      null |     null
+ovn1900/long   IS   |  0.99995  0.99729 |   -0.05941     0.0164 |      null   +0.1298 |     null
+ovn1900/long   OOS  |  0.99998  0.99867 |   -0.04470     0.0124 |      null   +0.0251 |     null
+px-1s          IS   |  0.99996  0.99955 |   -0.03901     0.0109 |      null      null |     null
+px-1s          OOS  |  0.99702  0.99555 |   -0.03203     0.0084 |      null      null |     null
+ovn1900/short  IS   |  0.99997  0.99727 |   -0.05795     0.0161 |      null      null |     null
+ovn1900/short  OOS  |  0.99997  0.99873 |   -0.04374     0.0121 |      null      null |     null
+ema-cross      IS   |  0.99796  0.98958 |   -0.46262     0.1185 |   -0.1696   -0.2601 |  -0.2601
+ema-cross      OOS  |  0.99253  0.98274 |   -0.35658     0.0937 |   -0.2074      null |     null
+
+BOTH-WINDOW INTERPOLATED spread* = min over the two windows of the both-leg crossing
+row                   s*_IS       s*_OOS         s*   as % of 0.28
+qs-lb3              +0.0047      -0.1754    -0.1754         -62.6%
+ts-l5                  null         null       null           null
+ts-l20                 null         null       null           null
+ts-l10                 null         null       null           null
+qs-lb30                null         null       null           null
+tsmom                  null      -0.1733       null           null
+qs-h15                 null         null       null           null
+qs-qp020               null         null       null           null
+qs-h30                 null         null       null           null
+qs-h2               -0.0165         null       null           null
+ovn1900/long           null         null       null           null
+px-1s                  null         null       null           null
+ovn1900/short          null         null       null           null
+ema-cross           -0.2601         null       null           null
+
+THREE-CASE spread* PER LEG AND PER WINDOW (>= +0.28 means the leg already passes at the config spread)
+row            win  |      E leg     PF leg  both legs
+qs-lb3         IS   |    +0.0047    +0.2159    +0.0047
+qs-lb3         OOS  |    -0.1754    +0.1102    -0.1754
+ts-l5          IS   |   <  -0.28    -0.0061   <  -0.28
+ts-l5          OOS  |   <  -0.28   <  -0.28   <  -0.28
+ts-l20         IS   |   <  -0.28    -0.0371   <  -0.28
+ts-l20         OOS  |   <  -0.28   <  -0.28   <  -0.28
+ts-l10         IS   |   >= +0.28   >= +0.28   >= +0.28
+ts-l10         OOS  |   <  -0.28   <  -0.28   <  -0.28
+qs-lb30        IS   |    -0.2663   <  -0.28   <  -0.28
+qs-lb30        OOS  |   >= +0.28   >= +0.28   >= +0.28
+tsmom          IS   |   <  -0.28   <  -0.28   <  -0.28
+tsmom          OOS  |    -0.1733    +0.1750    -0.1733
+qs-h15         IS   |   >= +0.28   >= +0.28   >= +0.28
+qs-h15         OOS  |   <  -0.28   <  -0.28   <  -0.28
+qs-qp020       IS   |   >= +0.28   >= +0.28   >= +0.28
+qs-qp020       OOS  |   <  -0.28   <  -0.28   <  -0.28
+qs-h30         IS   |   >= +0.28   >= +0.28   >= +0.28
+qs-h30         OOS  |   <  -0.28   <  -0.28   <  -0.28
+qs-h2          IS   |    -0.0165    +0.2651    -0.0165
+qs-h2          OOS  |   <  -0.28   <  -0.28   <  -0.28
+ovn1900/long   IS   |   <  -0.28    +0.1298   <  -0.28
+ovn1900/long   OOS  |   <  -0.28    +0.0251   <  -0.28
+px-1s          IS   |   <  -0.28   <  -0.28   <  -0.28
+px-1s          OOS  |   <  -0.28   <  -0.28   <  -0.28
+ovn1900/short  IS   |   <  -0.28   <  -0.28   <  -0.28
+ovn1900/short  OOS  |   <  -0.28   <  -0.28   <  -0.28
+ema-cross      IS   |    -0.1696    -0.2601    -0.2601
+ema-cross      OOS  |    -0.2074   <  -0.28   <  -0.28
+
+ANSWER: spread* on BOTH windows = the tighter of the two windows
+row                   s*_IS       s*_OOS             s* as share of 0.28
+qs-lb3              +0.0047      -0.1754        -0.1754           -62.6%
+ts-l5              <  -0.28     <  -0.28       <  -0.28          < -100%
+ts-l20             <  -0.28     <  -0.28       <  -0.28          < -100%
+ts-l10             >= +0.28     <  -0.28       <  -0.28          < -100%
+qs-lb30            <  -0.28     >= +0.28       <  -0.28          < -100%
+tsmom              <  -0.28      -0.1733       <  -0.28          < -100%
+qs-h15             >= +0.28     <  -0.28       <  -0.28          < -100%
+qs-qp020           >= +0.28     <  -0.28       <  -0.28          < -100%
+qs-h30             >= +0.28     <  -0.28       <  -0.28          < -100%
+qs-h2               -0.0165     <  -0.28       <  -0.28          < -100%
+ovn1900/long       <  -0.28     <  -0.28       <  -0.28          < -100%
+px-1s              <  -0.28     <  -0.28       <  -0.28          < -100%
+ovn1900/short      <  -0.28     <  -0.28       <  -0.28          < -100%
+ema-cross           -0.2601     <  -0.28       <  -0.28          < -100%
