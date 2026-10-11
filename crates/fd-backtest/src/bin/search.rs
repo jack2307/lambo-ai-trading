@@ -48,8 +48,18 @@ fn arg(name: &str, fallback: &str) -> String {
 
 /// The flags every mode reads: the market, the window, the cost model and the
 /// run header. Passing one of these changes the numbers whatever `--mode=` is.
-const ALWAYS: &[&str] =
-    &["market", "mode", "data", "config", "interval", "from", "to", "spread", "trail", "companion", "guards"];
+///
+/// `max-hold` is here rather than in [`BY_MODE`] because it mutates the shared
+/// `TradingRules` before any mode is dispatched, exactly as `--spread=` does:
+/// there is no mode that is handed a different horizon than the one the header
+/// printed. Added 2026-10-11 — and added only AFTER the test below was watched
+/// to FAIL on it, because a declaration made before the scanner has been seen
+/// to catch the flag proves nothing about the scanner.
+/// `docs/decisions/2026-10-11-hold-cap.md`.
+const ALWAYS: &[&str] = &[
+    "market", "mode", "data", "config", "interval", "from", "to", "spread", "trail", "companion", "guards",
+    "max-hold",
+];
 
 /// Every other flag, with the `--mode=` values that actually read it.
 ///
@@ -196,6 +206,46 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         rules.spread = s;
     }
     println!("spread:   {} per round trip", rules.spread);
+    // `--max-hold=<milliseconds>` sets the horizon for THIS RUN only.
+    //
+    // WHY A FLAG AT ALL. `max_hold_ms` force-closes an `Exits::Engine` position
+    // whatever its signal intended. It has been statable per market since
+    // 2026-09-24 (`[markets.<id>.trading] max_hold_ms`) but never sweepable:
+    // stating it meant editing a config table shared with the funded books, so
+    // the record twice wrote the long-horizon band down as "not measurable"
+    // instead of measuring it (`flowdesk-crt-measured`, `agent/mould-target`).
+    // Screened 2026-10-11 on ten registered `Exits::Engine` bases, the clock is
+    // the exit on **58-86%** of the trades of three of them — the cap is not a
+    // bound on those rows, it IS their exit rule.
+    //
+    // MILLISECONDS, deliberately: the same unit and the same name as the two
+    // config keys it overrides, so a receipt's `max hold:` line and a config
+    // table read against each other with no conversion in between.
+    //
+    // THREE MEANINGS, and `0` is not the absent one. `check_exit` guards on
+    // `rules.max_hold_ms > 0`, so `--max-hold=0` is **no cap at all** — the
+    // position runs to a stop, a target or the end of data. Not passing the
+    // flag is the third meaning and resolves the config exactly as before,
+    // which is what lets every receipt in `docs/decisions/` reproduce byte for
+    // byte; `tests/max_hold_flag_default.rs` holds that against captured output.
+    //
+    // WHERE IT CAN BE SET FROM: here and nowhere else. `[run]` in a batch file
+    // does NOT set it — the same inertness `[run] null_sides` has — so a batch
+    // file naming it would be ignored in silence, and the registered one says
+    // so in a comment at its top.
+    //
+    // It lands BEFORE `max_hold_line` so the header reports the horizon the run
+    // actually used and says the flag is where it came from, and it is in
+    // `ALWAYS` because it mutates the shared `rules` every mode is handed.
+    // `docs/decisions/2026-10-11-hold-cap.md`.
+    let max_hold_flag = std::env::args().find_map(|a| a.strip_prefix("--max-hold=").map(str::to_string));
+    if let Some(v) = &max_hold_flag {
+        let ms: i64 = v
+            .trim()
+            .parse()
+            .map_err(|_| format!("--max-hold wants whole milliseconds, 0 meaning no cap at all, got `{v}`"))?;
+        rules.max_hold_ms = ms;
+    }
     println!(
         "trail:    {}",
         if rules.trail.enabled {
@@ -211,7 +261,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // one of them was four hours. It is stated now, together with where the
     // number came from, because a receipt at 168 h and a receipt at 4 h are not
     // comparable and must not look alike.
-    println!("{}", max_hold_line(&rules, spec.trading.max_hold_ms));
+    println!("{}", max_hold_line(&rules, spec.trading.max_hold_ms, max_hold_flag.as_deref()));
     let rules = rules;
     let gate = PromisingGate {
         min_trades: config.backtest.promising.min_trades,
@@ -418,10 +468,20 @@ fn news_scope_line(rules: &TradingRules) -> String {
 ///
 /// `0` is not four hours and is not absent: `engine::check_exit` treats a
 /// non-positive `max_hold_ms` as no timeout at all, so it is spelled out.
-fn max_hold_line(rules: &TradingRules, override_ms: Option<i64>) -> String {
-    let source = match override_ms {
-        Some(ms) => format!("[markets.<id>.trading] max_hold_ms = {ms}"),
-        None => "[trading] max_hold_ms, no per-market override".to_string(),
+///
+/// Three sources, and the line names which one won. `--max-hold=` beats both
+/// config keys and says so, because a 72 h receipt and a 4 h receipt differ by
+/// nothing else in their header and must not look alike. With no flag the
+/// string is byte-identical to the one every receipt before 2026-10-11 carries
+/// — `tests/max_hold_flag_default.rs` is what holds that true.
+fn max_hold_line(rules: &TradingRules, override_ms: Option<i64>, flag_ms: Option<&str>) -> String {
+    let source = match (flag_ms, override_ms) {
+        (Some(raw), Some(ms)) => {
+            format!("--max-hold={raw} (CLI, overriding [markets.<id>.trading] max_hold_ms = {ms})")
+        }
+        (Some(raw), None) => format!("--max-hold={raw} (CLI, overriding [trading] max_hold_ms)"),
+        (None, Some(ms)) => format!("[markets.<id>.trading] max_hold_ms = {ms}"),
+        (None, None) => "[trading] max_hold_ms, no per-market override".to_string(),
     };
     if rules.max_hold_ms <= 0 {
         return format!("max hold: none — positions run to a stop, a target or the end of data ({source})");
@@ -1968,6 +2028,22 @@ mod flag_tests {
         assert!(typo[0].contains("not a flag this binary has"), "{typo:?}");
         let bare = flag_audit("hypotheses", &["exit-mix".to_string()]);
         assert_eq!(bare.len(), 1, "an argument with no leading dashes is ignored and must say so: {bare:?}");
+
+        // `--max-hold=` mutates the shared rules before dispatch, so there is
+        // no mode that silently ignores it — and the two spellings that LOOK
+        // like it must still be denounced, because a run at `--maxhold=` would
+        // otherwise be a four-hour run claiming to be a 72-hour one.
+        for mode in ["hypotheses", "rescore", "null", "null-dir", "costs", "all", "wf", "compare", "sweep", "volume"] {
+            assert!(
+                one(mode, "--max-hold=259200000").is_empty(),
+                "--max-hold= reprices the horizon of every mode, including --mode={mode}",
+            );
+        }
+        for near_miss in ["--maxhold=259200000", "--max_hold=259200000", "--max-hold-ms=259200000"] {
+            let lines = one("hypotheses", near_miss);
+            assert_eq!(lines.len(), 1, "`{near_miss}` is not the flag and must not be silent: {lines:?}");
+            assert!(lines[0].contains("not a flag this binary has"), "{lines:?}");
+        }
     }
 
     /// `--mode=all` runs compare, sweep and walk-forward and reads none of the
@@ -2118,5 +2194,66 @@ mod drawdown_printer_tests {
         let m = Metrics { trades: 60, win_rate: 0.4, avg_win_r: 1.8, avg_loss_r: -0.8333, expectancy: 0.22, profit_factor: 1.44, ..Metrics::empty() };
         let line = lbar_line(&m);
         assert!(line.contains("expectancy leg REDUNDANT (Lbar >= 0.250R)"), "{line}");
+    }
+}
+
+/// THE HEADER LINE FOR THE HORIZON, under all three of its sources.
+///
+/// The first thing this job had to protect is that a run which passes no flag
+/// prints the string every receipt in `docs/decisions/` already carries. The
+/// whole-output proof is `tests/max_hold_flag_default.rs`, against captured
+/// pre-change output; this module pins the one line that changed shape, so a
+/// reader can see what each source reads like without running the binary.
+#[cfg(test)]
+mod max_hold_line_tests {
+    use super::max_hold_line;
+    use fd_backtest::engine::TradingRules;
+
+    const FOUR_HOURS: i64 = 14_400_000;
+    const SEVENTY_TWO_HOURS: i64 = 259_200_000;
+
+    fn rules(ms: i64) -> TradingRules {
+        TradingRules { max_hold_ms: ms, ..TradingRules::default() }
+    }
+
+    /// NO FLAG, NO OVERRIDE — the exact string every published receipt holds.
+    /// Written as a whole literal rather than a `contains`, because a lost
+    /// space is a diff in a thousand receipts.
+    #[test]
+    fn with_no_flag_the_line_is_the_one_the_record_already_carries() {
+        assert_eq!(
+            max_hold_line(&rules(FOUR_HOURS), None, None),
+            "max hold: 4 h (14400000 ms) from [trading] max_hold_ms, no per-market override",
+        );
+        assert_eq!(
+            max_hold_line(&rules(FOUR_HOURS), Some(FOUR_HOURS), None),
+            "max hold: 4 h (14400000 ms) from [markets.<id>.trading] max_hold_ms = 14400000",
+        );
+    }
+
+    /// WITH THE FLAG the line says the flag won, and says what it beat. A 72 h
+    /// receipt and a 4 h receipt differ in nothing else in their header.
+    #[test]
+    fn the_flag_names_itself_and_what_it_overrode() {
+        let line = max_hold_line(&rules(SEVENTY_TWO_HOURS), None, Some("259200000"));
+        assert_eq!(
+            line,
+            "max hold: 72 h (259200000 ms) from --max-hold=259200000 (CLI, overriding [trading] max_hold_ms)",
+        );
+        let over = max_hold_line(&rules(SEVENTY_TWO_HOURS), Some(FOUR_HOURS), Some("259200000"));
+        assert!(over.contains("--max-hold=259200000 (CLI, overriding"), "{over}");
+        assert!(over.contains("max_hold_ms = 14400000"), "the number it beat must still be legible: {over}");
+    }
+
+    /// `0` IS NOT ABSENT AND IS NOT FOUR HOURS. `check_exit` guards on
+    /// `max_hold_ms > 0`, so this is the third meaning and the line spells it
+    /// out in words rather than printing `max hold: 0 h`.
+    #[test]
+    fn a_flagged_zero_reads_as_no_cap_and_still_names_the_flag() {
+        let line = max_hold_line(&rules(0), None, Some("0"));
+        assert!(line.contains("max hold: none"), "{line}");
+        assert!(line.contains("run to a stop, a target or the end of data"), "{line}");
+        assert!(line.contains("--max-hold=0"), "a zero must still say where it came from: {line}");
+        assert!(!line.contains("0 h"), "`0 h` would read as a horizon of zero length: {line}");
     }
 }

@@ -1,0 +1,36 @@
+# agent/hold-cap (2026-10-11), CONTROL ONLY — never a gate cell.
+#
+# Four registered `Exits::Strategy` mechanisms. `check_exit` returns `None` for
+# a self-managed position BEFORE it reads `max_hold_ms` (engine.rs), so
+# `--max-hold=` must change NOTHING here at any value. Run at 4 h and at 72 h
+# and diffed; the paired positive control is the `Exits::Engine` family in
+# 2026-10-11-hold-cap.toml, which the same two values move a great deal.
+[run]
+in_sample = "xauduka:15m"
+out_of_sample = "xauduka:15m"
+seeds = 20
+direction_samples = 20
+
+[[hypothesis]]
+label = "sm/tsmom"
+base = "tsmom"
+filters = ["weekdays"]
+why = "control: the clock is not its exit at any flag value"
+
+[[hypothesis]]
+label = "sm/quiet-swing"
+base = "quiet-swing"
+filters = ["weekdays"]
+why = "control"
+
+[[hypothesis]]
+label = "sm/session-hold"
+base = "session-hold"
+filters = ["weekdays"]
+why = "control"
+
+[[hypothesis]]
+label = "sm/intraday-momentum"
+base = "intraday-momentum"
+filters = ["weekdays"]
+why = "control"

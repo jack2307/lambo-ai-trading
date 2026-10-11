@@ -1,0 +1,32 @@
+# agent/hold-cap (2026-10-11). The three `Exits::Engine` rows where the
+# four-hour cap is actually BINDING, screened in docs/decisions/2026-10-11-hold-cap.md
+# §2: TIMEOUT >= 20% of exits at 4h AND max_drawdown_pct < 100%.
+#
+# The cap itself is NOT in this file. `[run]` cannot set it — the flag is
+# `--max-hold=<ms>` on the command line only, exactly as `--null-sides=` is.
+# Defaults (no flag) resolve `[trading] max_hold_ms = 14_400_000` and every
+# number in docs/decisions/ reproduces.
+[run]
+in_sample = "xauduka:15m"
+out_of_sample = "xauduka:15m"
+seeds = 200
+direction_samples = 1000
+
+[[hypothesis]]
+label = "hc/orb60"
+base = "orb"
+filters = ["weekdays"]
+overrides = { rangeMinutes = 60 }
+why = "cut on the clock on 66.3% of its trades at 4h, and the only family row whose book never blew (drawdown 21.07% of peak)"
+
+[[hypothesis]]
+label = "hc/keltner"
+base = "keltner-break"
+filters = ["weekdays"]
+why = "58.3% TIMEOUT, mean hold 247.7 min against a 255-min cut: it is sitting on the cap"
+
+[[hypothesis]]
+label = "hc/far-stop"
+base = "far-stop-break"
+filters = ["weekdays"]
+why = "86.2% TIMEOUT — the row where the clock, not the price, is the exit"
