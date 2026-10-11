@@ -1,0 +1,182 @@
+BANG 1 — 32 O CONG + 8 O TRUNG LAP (nhan `atr/*` xuat hien 3 lan moi (cua so, arm))
+Moi so cat tu receipt. `dd%` > 100% => DONG DA CHAY, dung doc PF_usd cua no.
+
+cs  arm  nguon nhan          n    PF_r  PF_usd      khe         E    Lbar      ddUSD     dd%  STOP% stop(ATR) cost/R%
+W1  off  fc15  atr/f1.0  10430  0.7221  0.7399  -0.0178   -0.2000  0.7205   10013.22  100.13   65.0     1.092   18.42
+W1  off  fc15  atr/f2.0   7759  0.8254  0.8554  -0.0300   -0.0950  0.5422   10081.68   99.94   46.6     2.093    9.30
+W1  off  fc15  fc/f1.0   10320  0.7139  0.7437  -0.0298   -0.2060  0.7211   10081.55  100.12   64.7     1.110   18.49
+W1  off  fc15  fc/f2.0    7743  0.7965  0.8390  -0.0425   -0.1110  0.5447    9998.37   99.98   46.6     2.104    9.35
+W1  on   fc15  atr/f1.0   9677  0.7115  0.7683  -0.0568   -0.2080  0.7203    9991.46   99.91   64.7     1.093   18.78
+W1  on   fc15  atr/f2.0   7522  0.8133  0.8372  -0.0239   -0.1000  0.5359    9963.37   99.63   45.7     2.094    9.40
+W1  on   fc15  fc/f1.0    9675  0.6992  0.7702  -0.0710   -0.2180  0.7248    9987.72   99.88   64.8     1.088   18.69
+W1  on   fc15  fc/f2.0    7541  0.7926  0.8380  -0.0454   -0.1120  0.5395    9958.90   99.59   45.7     2.085    9.38
+W2  off  fc15  atr/f1.0  12560  0.7853  0.6822  +0.1031   -0.1500  0.6974   10457.88  100.24   64.6     1.061   12.23
+W2  off  fc15  atr/f2.0   9089  0.8579  0.7866  +0.0713   -0.0760  0.5345   10347.71   99.97   46.7     2.062    6.24
+W2  off  fc15  fc/f1.0   12366  0.7708  0.6273  +0.1435   -0.1600  0.6978   10449.19  100.24   64.4     1.080   12.34
+W2  off  fc15  fc/f2.0    9021  0.8455  0.7302  +0.1153   -0.0820  0.5279   10174.67   99.99   45.7     2.079    6.23
+W2  on   fc15  atr/f1.0  11818  0.7873  0.7232  +0.0641   -0.1470  0.6912   10033.68   99.72   63.9     1.063   12.40
+W2  on   fc15  atr/f2.0   8857  0.8542  0.7960  +0.0582   -0.0760  0.5248    9959.61   98.98   45.5     2.063    6.28
+W2  on   fc15  fc/f1.0   11818  0.7644  0.7154  +0.0490   -0.1640  0.6962   10052.23   99.74   64.1     1.065   12.37
+W2  on   fc15  fc/f2.0    8835  0.8441  0.7917  +0.0524   -0.0810  0.5200    9919.27   98.58   44.7     2.071    6.27
+W1  off  fc1m  atr/f1.0  10430  0.7221  0.7399  -0.0178   -0.2000  0.7205   10013.22  100.13   65.0     1.092   18.42
+W1  off  fc1m  atr/f2.0   7759  0.8254  0.8554  -0.0300   -0.0950  0.5422   10081.68   99.94   46.6     2.093    9.30
+W1  off  fc1m  fc/f1.0   10328  0.7211  0.7440  -0.0229   -0.2000  0.7174   10081.25  100.12   64.6     1.104   18.51
+W1  off  fc1m  fc/f2.0    7735  0.7877  0.8366  -0.0489   -0.1160  0.5469    9999.04   99.99   46.7     2.098    9.32
+W1  on   fc1m  atr/f1.0   9677  0.7115  0.7683  -0.0568   -0.2080  0.7203    9991.46   99.91   64.7     1.093   18.78
+W1  on   fc1m  atr/f2.0   7522  0.8133  0.8372  -0.0239   -0.1000  0.5359    9963.37   99.63   45.7     2.094    9.40
+W1  on   fc1m  fc/f1.0    9691  0.7030  0.7684  -0.0654   -0.2140  0.7220    9987.60   99.88   64.8     1.084   18.62
+W1  on   fc1m  fc/f2.0    7534  0.7849  0.8331  -0.0482   -0.1170  0.5419    9966.72   99.67   45.9     2.082    9.37
+W2  off  fc1m  atr/f1.0  12560  0.7853  0.6822  +0.1031   -0.1500  0.6974   10457.88  100.24   64.6     1.061   12.23
+W2  off  fc1m  atr/f2.0   9089  0.8579  0.7866  +0.0713   -0.0760  0.5345   10347.71   99.97   46.7     2.062    6.24
+W2  off  fc1m  fc/f1.0   12407  0.7713  0.6449  +0.1264   -0.1600  0.6989   10374.63  100.23   64.6     1.074   12.33
+W2  off  fc1m  fc/f2.0    9046  0.8470  0.7238  +0.1232   -0.0810  0.5287   10175.29  100.00   45.8     2.067    6.25
+W2  on   fc1m  atr/f1.0  11818  0.7873  0.7232  +0.0641   -0.1470  0.6912   10033.68   99.72   63.9     1.063   12.40
+W2  on   fc1m  atr/f2.0   8857  0.8542  0.7960  +0.0582   -0.0760  0.5248    9959.61   98.98   45.5     2.063    6.28
+W2  on   fc1m  fc/f1.0   11856  0.7667  0.7147  +0.0520   -0.1630  0.6968   10050.29   99.73   64.2     1.059   12.41
+W2  on   fc1m  fc/f2.0    8864  0.8451  0.7917  +0.0534   -0.0810  0.5208    9918.67   98.57   44.8     2.056    6.27
+W1  off  shuf  atr/f1.0  10430  0.7221  0.7399  -0.0178   -0.2000  0.7205   10013.22  100.13   65.0     1.092   18.42
+W1  off  shuf  atr/f2.0   7759  0.8254  0.8554  -0.0300   -0.0950  0.5422   10081.68   99.94   46.6     2.093    9.30
+W1  off  shuf  fc/f1.0   10421  0.7110  0.7487  -0.0377   -0.2080  0.7203   10014.25  100.14   64.9     1.067   18.22
+W1  off  shuf  fc/f2.0    7816  0.8203  0.8454  -0.0251   -0.0980  0.5454   10067.79   99.96   46.9     2.034    9.13
+W1  on   shuf  atr/f1.0   9677  0.7115  0.7683  -0.0568   -0.2080  0.7203    9991.46   99.91   64.7     1.093   18.78
+W1  on   shuf  atr/f2.0   7522  0.8133  0.8372  -0.0239   -0.1000  0.5359    9963.37   99.63   45.7     2.094    9.40
+W1  on   shuf  fc/f1.0    9646  0.7040  0.7676  -0.0636   -0.2130  0.7185    9990.87   99.91   64.6     1.067   18.45
+W1  on   shuf  fc/f2.0    7565  0.8108  0.8335  -0.0227   -0.1020  0.5392    9951.85   99.52   46.0     2.033    9.18
+W2  off  shuf  atr/f1.0  12560  0.7853  0.6822  +0.1031   -0.1500  0.6974   10457.88  100.24   64.6     1.061   12.23
+W2  off  shuf  atr/f2.0   9089  0.8579  0.7866  +0.0713   -0.0760  0.5345   10347.71   99.97   46.7     2.062    6.24
+W2  off  shuf  fc/f1.0   12598  0.7791  0.6064  +0.1727   -0.1540  0.6967   10362.80  100.24   64.3     1.033   12.05
+W2  off  shuf  fc/f2.0    9214  0.8644  0.7680  +0.0964   -0.0730  0.5355   10345.38   99.96   46.9     1.995    6.08
+W2  on   shuf  atr/f1.0  11818  0.7873  0.7232  +0.0641   -0.1470  0.6912   10033.68   99.72   63.9     1.063   12.40
+W2  on   shuf  atr/f2.0   8857  0.8542  0.7960  +0.0582   -0.0760  0.5248    9959.61   98.98   45.5     2.063    6.28
+W2  on   shuf  fc/f1.0   11833  0.7803  0.7045  +0.0758   -0.1520  0.6912   10009.37   99.70   63.7     1.034   12.21
+W2  on   shuf  fc/f2.0    8961  0.8580  0.7883  +0.0697   -0.0750  0.5272    9953.49   98.79   45.9     1.997    6.13
+
+BANG 2 — DOI CHUNG DUONG 2: nhan `atr/*` KHONG doc gia tri companion,
+nen no phai in SO Y HET o ca ba lan chay companion. Neu no doi, viec nap
+companion dang ro vao mot nhan khong doc no.
+  W1 guards-off atr/f1.0  Y HET  fc15:n10430/PF_r0.7221  fc1m:n10430/PF_r0.7221  shuf:n10430/PF_r0.7221
+  W1 guards-off atr/f2.0  Y HET  fc15:n7759/PF_r0.8254  fc1m:n7759/PF_r0.8254  shuf:n7759/PF_r0.8254
+  W1 guards-on atr/f1.0  Y HET  fc15:n9677/PF_r0.7115  fc1m:n9677/PF_r0.7115  shuf:n9677/PF_r0.7115
+  W1 guards-on atr/f2.0  Y HET  fc15:n7522/PF_r0.8133  fc1m:n7522/PF_r0.8133  shuf:n7522/PF_r0.8133
+  W2 guards-off atr/f1.0  Y HET  fc15:n12560/PF_r0.7853  fc1m:n12560/PF_r0.7853  shuf:n12560/PF_r0.7853
+  W2 guards-off atr/f2.0  Y HET  fc15:n9089/PF_r0.8579  fc1m:n9089/PF_r0.8579  shuf:n9089/PF_r0.8579
+  W2 guards-on atr/f1.0  Y HET  fc15:n11818/PF_r0.7873  fc1m:n11818/PF_r0.7873  shuf:n11818/PF_r0.7873
+  W2 guards-on atr/f2.0  Y HET  fc15:n8857/PF_r0.8542  fc1m:n8857/PF_r0.8542  shuf:n8857/PF_r0.8542
+  => PASS: 8/8 nhom y het
+
+BANG 3 — CON SO QUYET DINH: dPF_r = PF_r(nguon) - PF_r(atr), cung `stopAtr`,
+cung tap lenh, cung co stop trung binh. Vach F1: duong o CA HAI cua so,
+arm CO guards. Vach F2: `shuf` tai tao >= 50% cua dPF_r thi truc dong.
+
+cs  arm  f     PF_r(atr)      fc15      fc1m      shuf   d.fc15   d.fc1m   d.shuf shuf/fc1m
+W1  off  1.0      0.7221    0.7139    0.7211    0.7110  -0.0082  -0.0010  -0.0111     11.10
+W1  off  2.0      0.8254    0.7965    0.7877    0.8203  -0.0289  -0.0377  -0.0051      0.14
+W1  on   1.0      0.7115    0.6992    0.7030    0.7040  -0.0123  -0.0085  -0.0075      0.88
+W1  on   2.0      0.8133    0.7926    0.7849    0.8108  -0.0207  -0.0284  -0.0025      0.09
+W2  off  1.0      0.7853    0.7708    0.7713    0.7791  -0.0145  -0.0140  -0.0062      0.44
+W2  off  2.0      0.8579    0.8455    0.8470    0.8644  -0.0124  -0.0109  +0.0065     -0.60
+W2  on   1.0      0.7873    0.7644    0.7667    0.7803  -0.0229  -0.0206  -0.0070      0.34
+W2  on   2.0      0.8542    0.8441    0.8451    0.8580  -0.0101  -0.0091  +0.0038     -0.42
+
+BANG 3b — F3 (co lap phan 1m): `fc1m` so voi `fc15` tren DUNG CUNG TAP NEN
+(mot mat na NULL chung cho ca ba file companion). Duong = 8 dac trung 1m
+lam cai stop du bao DO HON, du ca hai van duoi doi chung ATR.
+  W1 guards-off f1.0: fc15 -0.0082  fc1m -0.0010  => 1m THEM +0.0072 PF_r  (do hon)
+  W1 guards-off f2.0: fc15 -0.0289  fc1m -0.0377  => 1m THEM -0.0088 PF_r  (te hon)
+  W1 guards-on f1.0: fc15 -0.0123  fc1m -0.0085  => 1m THEM +0.0038 PF_r  (do hon)
+  W1 guards-on f2.0: fc15 -0.0207  fc1m -0.0284  => 1m THEM -0.0077 PF_r  (te hon)
+  W2 guards-off f1.0: fc15 -0.0145  fc1m -0.0140  => 1m THEM +0.0005 PF_r  (do hon)
+  W2 guards-off f2.0: fc15 -0.0124  fc1m -0.0109  => 1m THEM +0.0015 PF_r  (do hon)
+  W2 guards-on f1.0: fc15 -0.0229  fc1m -0.0206  => 1m THEM +0.0023 PF_r  (do hon)
+  W2 guards-on f2.0: fc15 -0.0101  fc1m -0.0091  => 1m THEM +0.0010 PF_r  (do hon)
+  => 1m lam do hon o 6/8 phep so; nhung ca hai deu AM so voi ATR o 8/8.
+
+BANG 4 — `sized_down_by_guard` DOC TU FIELD (dong `guards:` cua chinh o do,
+`hypotheses.rs:752`; `nothing acted` = sized_down == 0, KHONG phai thieu chuoi).
+Ca hai chan cong mu voi no. Va no la thuoc tinh cua ho `Exits::Engine` CUOI
+TRAN NOTIONAL, khong phai cua arm guards: stop hep => risk_usd nho => nhieu
+lot => dung `notional 300%`.
+  W1 fc15  atr/f1.0  n= 9677  sized_down  9490 =  98.07%  | refused COOLDOWN 610, DAILY_LOSS_LIMIT 7, NEWS_FLAT 262, WEEKEND_FLAT 34; closed NEWS_FLAT 26, WEEKEND_FLAT 76; sized down 9490
+  W1 fc15  atr/f2.0  n= 7522  sized_down  5888 =  78.28%  | refused COOLDOWN 80, DAILY_LOSS_LIMIT 24, NEWS_FLAT 255, WEEKEND_FLAT 34; closed NEWS_FLAT 85, WEEKEND_FLAT 119; sized down 5888
+  W1 fc15  fc/f1.0   n= 9675  sized_down  9375 =  96.90%  | refused COOLDOWN 561, DAILY_LOSS_LIMIT 23, NEWS_FLAT 261, WEEKEND_FLAT 34; closed NEWS_FLAT 24, WEEKEND_FLAT 64; sized down 9375
+  W1 fc15  fc/f2.0   n= 7541  sized_down  5491 =  72.82%  | refused COOLDOWN 72, DAILY_LOSS_LIMIT 31, NEWS_FLAT 255, WEEKEND_FLAT 34; closed NEWS_FLAT 84, WEEKEND_FLAT 110; sized down 5491
+  W2 fc15  atr/f1.0  n=11818  sized_down 11382 =  96.31%  | refused COOLDOWN 594, NEWS_FLAT 287, WEEKEND_FLAT 66; closed NEWS_FLAT 42, WEEKEND_FLAT 88; sized down 11382
+  W2 fc15  atr/f2.0  n= 8857  sized_down  6646 =  75.04%  | refused COOLDOWN 58, DAILY_LOSS_LIMIT 4, NEWS_FLAT 281, WEEKEND_FLAT 66; closed NEWS_FLAT 106, WEEKEND_FLAT 136; sized down 6646
+  W2 fc15  fc/f1.0   n=11818  sized_down 11196 =  94.74%  | refused COOLDOWN 485, NEWS_FLAT 289, WEEKEND_FLAT 67; closed NEWS_FLAT 38, WEEKEND_FLAT 74; sized down 11196
+  W2 fc15  fc/f2.0   n= 8835  sized_down  6322 =  71.56%  | refused COOLDOWN 44, DAILY_LOSS_LIMIT 5, NEWS_FLAT 282, WEEKEND_FLAT 66; closed NEWS_FLAT 107, WEEKEND_FLAT 117; sized down 6322
+  W1 fc1m  atr/f1.0  n= 9677  sized_down  9490 =  98.07%  | refused COOLDOWN 610, DAILY_LOSS_LIMIT 7, NEWS_FLAT 262, WEEKEND_FLAT 34; closed NEWS_FLAT 26, WEEKEND_FLAT 76; sized down 9490
+  W1 fc1m  atr/f2.0  n= 7522  sized_down  5888 =  78.28%  | refused COOLDOWN 80, DAILY_LOSS_LIMIT 24, NEWS_FLAT 255, WEEKEND_FLAT 34; closed NEWS_FLAT 85, WEEKEND_FLAT 119; sized down 5888
+  W1 fc1m  fc/f1.0   n= 9691  sized_down  9396 =  96.96%  | refused COOLDOWN 562, DAILY_LOSS_LIMIT 14, NEWS_FLAT 261, WEEKEND_FLAT 34; closed NEWS_FLAT 26, WEEKEND_FLAT 63; sized down 9396
+  W1 fc1m  fc/f2.0   n= 7534  sized_down  5496 =  72.95%  | refused COOLDOWN 69, DAILY_LOSS_LIMIT 34, NEWS_FLAT 254, WEEKEND_FLAT 34; closed NEWS_FLAT 85, WEEKEND_FLAT 112; sized down 5496
+  W2 fc1m  atr/f1.0  n=11818  sized_down 11382 =  96.31%  | refused COOLDOWN 594, NEWS_FLAT 287, WEEKEND_FLAT 66; closed NEWS_FLAT 42, WEEKEND_FLAT 88; sized down 11382
+  W2 fc1m  atr/f2.0  n= 8857  sized_down  6646 =  75.04%  | refused COOLDOWN 58, DAILY_LOSS_LIMIT 4, NEWS_FLAT 281, WEEKEND_FLAT 66; closed NEWS_FLAT 106, WEEKEND_FLAT 136; sized down 6646
+  W2 fc1m  fc/f1.0   n=11856  sized_down 11231 =  94.73%  | refused COOLDOWN 486, NEWS_FLAT 289, WEEKEND_FLAT 66; closed NEWS_FLAT 37, WEEKEND_FLAT 72; sized down 11231
+  W2 fc1m  fc/f2.0   n= 8864  sized_down  6365 =  71.81%  | refused COOLDOWN 46, DAILY_LOSS_LIMIT 5, NEWS_FLAT 282, WEEKEND_FLAT 66; closed NEWS_FLAT 108, WEEKEND_FLAT 121; sized down 6365
+  W1 shuf  atr/f1.0  n= 9677  sized_down  9490 =  98.07%  | refused COOLDOWN 610, DAILY_LOSS_LIMIT 7, NEWS_FLAT 262, WEEKEND_FLAT 34; closed NEWS_FLAT 26, WEEKEND_FLAT 76; sized down 9490
+  W1 shuf  atr/f2.0  n= 7522  sized_down  5888 =  78.28%  | refused COOLDOWN 80, DAILY_LOSS_LIMIT 24, NEWS_FLAT 255, WEEKEND_FLAT 34; closed NEWS_FLAT 85, WEEKEND_FLAT 119; sized down 5888
+  W1 shuf  fc/f1.0   n= 9646  sized_down  9418 =  97.64%  | refused COOLDOWN 618, DAILY_LOSS_LIMIT 12, NEWS_FLAT 262, WEEKEND_FLAT 34; closed NEWS_FLAT 24, WEEKEND_FLAT 76; sized down 9418
+  W1 shuf  fc/f2.0   n= 7565  sized_down  5826 =  77.01%  | refused COOLDOWN 103, DAILY_LOSS_LIMIT 13, NEWS_FLAT 255, WEEKEND_FLAT 34; closed NEWS_FLAT 88, WEEKEND_FLAT 114; sized down 5826
+  W2 shuf  atr/f1.0  n=11818  sized_down 11382 =  96.31%  | refused COOLDOWN 594, NEWS_FLAT 287, WEEKEND_FLAT 66; closed NEWS_FLAT 42, WEEKEND_FLAT 88; sized down 11382
+  W2 shuf  atr/f2.0  n= 8857  sized_down  6646 =  75.04%  | refused COOLDOWN 58, DAILY_LOSS_LIMIT 4, NEWS_FLAT 281, WEEKEND_FLAT 66; closed NEWS_FLAT 106, WEEKEND_FLAT 136; sized down 6646
+  W2 shuf  fc/f1.0   n=11833  sized_down 11359 =  95.99%  | refused COOLDOWN 662, NEWS_FLAT 287, WEEKEND_FLAT 66; closed NEWS_FLAT 44, WEEKEND_FLAT 81; sized down 11359
+  W2 shuf  fc/f2.0   n= 8961  sized_down  6708 =  74.86%  | refused COOLDOWN 78, DAILY_LOSS_LIMIT 4, NEWS_FLAT 282, WEEKEND_FLAT 66; closed NEWS_FLAT 102, WEEKEND_FLAT 128; sized down 6708
+
+  Ti le bit DOI theo nguon stop — nen moi so quyet dinh phai la PF_r/E:
+  W1 f1.0:   atr 98.07%   fc15 96.90%   fc1m 96.96%   shuf 97.64%
+  W1 f2.0:   atr 78.28%   fc15 72.82%   fc1m 72.95%   shuf 77.01%
+  W2 f1.0:   atr 96.31%   fc15 94.74%   fc1m 94.73%   shuf 95.99%
+  W2 f2.0:   atr 75.04%   fc15 71.56%   fc1m 71.81%   shuf 74.86%
+
+BANG 5 — exit-mix day du: luat cua co che co NO khong
+  W1 guards-off fc15  atr/f1.0  hold   79.8 min  STOP 6778, TARGET 3065, TIMEOUT 587
+  W1 guards-off fc15  atr/f2.0  hold  201.0 min  END_OF_DATA 1, STOP 3615, TARGET 1530, TIMEOUT 2613
+  W1 guards-off fc15  fc/f1.0   hold   80.4 min  STOP 6679, TARGET 2986, TIMEOUT 655
+  W1 guards-off fc15  fc/f2.0   hold  197.8 min  END_OF_DATA 1, STOP 3611, TARGET 1448, TIMEOUT 2683
+  W1 guards-on fc15  atr/f1.0  hold   58.8 min  NEWS_FLAT 26, STOP 6263, TARGET 2792, TIMEOUT 520, WEEKEND_FLAT 76
+  W1 guards-on fc15  atr/f2.0  hold  155.6 min  END_OF_DATA 1, NEWS_FLAT 85, STOP 3434, TARGET 1416, TIMEOUT 2467, WEEKEND_FLAT 119
+  W1 guards-on fc15  fc/f1.0   hold   60.2 min  NEWS_FLAT 24, STOP 6267, TARGET 2750, TIMEOUT 570, WEEKEND_FLAT 64
+  W1 guards-on fc15  fc/f2.0   hold  155.3 min  END_OF_DATA 1, NEWS_FLAT 84, STOP 3448, TARGET 1387, TIMEOUT 2511, WEEKEND_FLAT 110
+  W2 guards-off fc15  atr/f1.0  hold   81.4 min  STOP 8115, TARGET 3803, TIMEOUT 642
+  W2 guards-off fc15  atr/f2.0  hold  202.9 min  END_OF_DATA 1, STOP 4244, TARGET 1726, TIMEOUT 3118
+  W2 guards-off fc15  fc/f1.0   hold   81.9 min  STOP 7965, TARGET 3635, TIMEOUT 766
+  W2 guards-off fc15  fc/f2.0   hold  202.3 min  END_OF_DATA 1, STOP 4127, TARGET 1641, TIMEOUT 3252
+  W2 guards-on fc15  atr/f1.0  hold   60.6 min  NEWS_FLAT 42, STOP 7550, TARGET 3551, TIMEOUT 587, WEEKEND_FLAT 88
+  W2 guards-on fc15  atr/f2.0  hold  157.8 min  END_OF_DATA 1, NEWS_FLAT 106, STOP 4028, TARGET 1622, TIMEOUT 2964, WEEKEND_FLAT 136
+  W2 guards-on fc15  fc/f1.0   hold   62.9 min  NEWS_FLAT 38, STOP 7579, TARGET 3450, TIMEOUT 677, WEEKEND_FLAT 74
+  W2 guards-on fc15  fc/f2.0   hold  160.4 min  END_OF_DATA 1, NEWS_FLAT 107, STOP 3948, TARGET 1567, TIMEOUT 3095, WEEKEND_FLAT 117
+  W1 guards-off fc1m  atr/f1.0  hold   79.8 min  STOP 6778, TARGET 3065, TIMEOUT 587
+  W1 guards-off fc1m  atr/f2.0  hold  201.0 min  END_OF_DATA 1, STOP 3615, TARGET 1530, TIMEOUT 2613
+  W1 guards-off fc1m  fc/f1.0   hold   79.4 min  STOP 6677, TARGET 3004, TIMEOUT 647
+  W1 guards-off fc1m  fc/f2.0   hold  198.5 min  END_OF_DATA 1, STOP 3616, TARGET 1432, TIMEOUT 2686
+  W1 guards-on fc1m  atr/f1.0  hold   58.8 min  NEWS_FLAT 26, STOP 6263, TARGET 2792, TIMEOUT 520, WEEKEND_FLAT 76
+  W1 guards-on fc1m  atr/f2.0  hold  155.6 min  END_OF_DATA 1, NEWS_FLAT 85, STOP 3434, TARGET 1416, TIMEOUT 2467, WEEKEND_FLAT 119
+  W1 guards-on fc1m  fc/f1.0   hold   59.7 min  NEWS_FLAT 26, STOP 6280, TARGET 2762, TIMEOUT 560, WEEKEND_FLAT 63
+  W1 guards-on fc1m  fc/f2.0   hold  155.1 min  END_OF_DATA 1, NEWS_FLAT 85, STOP 3455, TARGET 1371, TIMEOUT 2510, WEEKEND_FLAT 112
+  W2 guards-off fc1m  atr/f1.0  hold   81.4 min  STOP 8115, TARGET 3803, TIMEOUT 642
+  W2 guards-off fc1m  atr/f2.0  hold  202.9 min  END_OF_DATA 1, STOP 4244, TARGET 1726, TIMEOUT 3118
+  W2 guards-off fc1m  fc/f1.0   hold   81.2 min  STOP 8010, TARGET 3664, TIMEOUT 733
+  W2 guards-off fc1m  fc/f2.0   hold  202.8 min  END_OF_DATA 1, STOP 4146, TARGET 1667, TIMEOUT 3232
+  W2 guards-on fc1m  atr/f1.0  hold   60.6 min  NEWS_FLAT 42, STOP 7550, TARGET 3551, TIMEOUT 587, WEEKEND_FLAT 88
+  W2 guards-on fc1m  atr/f2.0  hold  157.8 min  END_OF_DATA 1, NEWS_FLAT 106, STOP 4028, TARGET 1622, TIMEOUT 2964, WEEKEND_FLAT 136
+  W2 guards-on fc1m  fc/f1.0   hold   62.0 min  NEWS_FLAT 37, STOP 7616, TARGET 3483, TIMEOUT 648, WEEKEND_FLAT 72
+  W2 guards-on fc1m  fc/f2.0   hold  160.0 min  END_OF_DATA 1, NEWS_FLAT 108, STOP 3967, TARGET 1589, TIMEOUT 3078, WEEKEND_FLAT 121
+  W1 guards-off shuf  atr/f1.0  hold   79.8 min  STOP 6778, TARGET 3065, TIMEOUT 587
+  W1 guards-off shuf  atr/f2.0  hold  201.0 min  END_OF_DATA 1, STOP 3615, TARGET 1530, TIMEOUT 2613
+  W1 guards-off shuf  fc/f1.0   hold   80.1 min  END_OF_DATA 1, STOP 6768, TARGET 3005, TIMEOUT 647
+  W1 guards-off shuf  fc/f2.0   hold  194.9 min  END_OF_DATA 1, STOP 3664, TARGET 1559, TIMEOUT 2592
+  W1 guards-on shuf  atr/f1.0  hold   58.8 min  NEWS_FLAT 26, STOP 6263, TARGET 2792, TIMEOUT 520, WEEKEND_FLAT 76
+  W1 guards-on shuf  atr/f2.0  hold  155.6 min  END_OF_DATA 1, NEWS_FLAT 85, STOP 3434, TARGET 1416, TIMEOUT 2467, WEEKEND_FLAT 119
+  W1 guards-on shuf  fc/f1.0   hold   59.3 min  END_OF_DATA 1, NEWS_FLAT 24, STOP 6229, TARGET 2735, TIMEOUT 581, WEEKEND_FLAT 76
+  W1 guards-on shuf  fc/f2.0   hold  150.9 min  END_OF_DATA 1, NEWS_FLAT 88, STOP 3478, TARGET 1453, TIMEOUT 2431, WEEKEND_FLAT 114
+  W2 guards-off shuf  atr/f1.0  hold   81.4 min  STOP 8115, TARGET 3803, TIMEOUT 642
+  W2 guards-off shuf  atr/f2.0  hold  202.9 min  END_OF_DATA 1, STOP 4244, TARGET 1726, TIMEOUT 3118
+  W2 guards-off shuf  fc/f1.0   hold   81.3 min  STOP 8102, TARGET 3772, TIMEOUT 724
+  W2 guards-off shuf  fc/f2.0   hold  196.8 min  END_OF_DATA 1, STOP 4325, TARGET 1793, TIMEOUT 3095
+  W2 guards-on shuf  atr/f1.0  hold   60.6 min  NEWS_FLAT 42, STOP 7550, TARGET 3551, TIMEOUT 587, WEEKEND_FLAT 88
+  W2 guards-on shuf  atr/f2.0  hold  157.8 min  END_OF_DATA 1, NEWS_FLAT 106, STOP 4028, TARGET 1622, TIMEOUT 2964, WEEKEND_FLAT 136
+  W2 guards-on shuf  fc/f1.0   hold   60.7 min  NEWS_FLAT 44, STOP 7532, TARGET 3522, TIMEOUT 654, WEEKEND_FLAT 81
+  W2 guards-on shuf  fc/f2.0   hold  153.9 min  END_OF_DATA 1, NEWS_FLAT 102, STOP 4109, TARGET 1683, TIMEOUT 2938, WEEKEND_FLAT 128
+
+BANG 6 — DEM TAY chan >= 40 lenh va ca hai chan cong, tung o
+(tool kiem san 30 lenh; cong desk la 40)
+  => 0 / 48 o qua ca ba chan (ke ca 8 o trung lap)

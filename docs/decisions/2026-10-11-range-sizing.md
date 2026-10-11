@@ -261,3 +261,31 @@ ai phải suy chúng từ số:
 `agent/intrabar-shape`** (không sửa một dòng) và import vào, nên `grid_1m`,
 `intrabar_features`, `control_features`, `atr14_15m`, `outcome` là **đúng** hàm
 đã qua C1/C2 đêm 10/10 — không phải một bản viết lại.
+
+---
+
+## Ghi chú thêm — 2026-10-11, SAU khi chạy, trước khi viết kết quả
+
+Ba chỗ phải ghi lại vì chúng đổi cách đọc, và chúng được ghi **thêm vào cuối**
+chứ không viết lại dòng cũ:
+
+1. **`δ` lấy TỪ MÃ, không từ phép khớp.** `apply_costs` (`engine.rs:902-912`)
+   + `sizing_stop` + `risk` (`engine.rs:717-719`) cho `d risk/d s = +1/2`
+   **chính xác**, nên `δ = spread/2 = 0,1400` điểm giá. Con số 0,138 của phụ
+   lục 7 là một phép khớp và lệch 1,4%; phép khớp **không phân giải được** đại
+   lượng này (ruler thô hơn 2–5 lần thứ cần đo). `DELTA_USD` của dụng cụ đã
+   đổi sang `0.28 / 2.0`.
+
+2. **MỘT MẶT NẠ NULL CHUNG cho ba file companion.** Lần chạy đầu **TRƯỢT** đối
+   chứng dương số 2: nhãn `atr/*` in `n = 10.888` ở lần chạy `fc15` so với
+   `10.430` ở `fc1m` (lệch 4,4%), vì `fc15` không cần nến 1m nên file của nó có
+   357.794 dòng có số so với 338.423. Điều khoản "cùng tập nến" của §1 được thi
+   hành **trong** một lần chạy nhưng **không giữa** các lần chạy. `fc15` bị bịt
+   về đúng mặt nạ của `fc1m` (338.423 nến = 89,3528%) và **cả 12 lần chạy được
+   chạy lại**. Không dòng nào của lần chạy đầu được báo.
+
+3. **`sized_down_by_guard` là thuộc tính của họ `Exits::Engine` cưỡi trần
+   notional, không phải của arm guards.** Đo được ở đây: tỉ lệ bịt **đổi theo
+   nguồn stop** (−1,1 đến −5,5 điểm% so với ATR) trong khi `n` ở arm guards-ON
+   đổi vì **stop** đổi, không vì bật guards. Nên mọi `ΔPF_usd` có một phần là
+   phân bố cỡ lot dịch, và con số quyết định **vẫn là** `ΔPF_r` như §7 khai.

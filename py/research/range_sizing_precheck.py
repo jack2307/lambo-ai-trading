@@ -36,7 +36,7 @@ file dang ky):
     NORM_MIN      200 du bao trong cua so, duoi do => NaN
     CLAMP       [0,50 ; 2,00]
     SEED        20261011 (xao tron trong thoi gian)
-    DELTA_USD   0,138 = dung nua spread 0,28 vong (khuyet diem 16)
+    DELTA_USD   0,1400 diem gia = spread/2 CHINH XAC, doc tu MA
 """
 
 from __future__ import annotations
@@ -75,7 +75,7 @@ NORM_WIN = 2_000
 NORM_MIN = 200
 CLAMP_LO, CLAMP_HI = 0.50, 2.00
 SEED = 20_261_011
-DELTA_USD = 0.138  # nua spread 0,28 vong, khuyet diem 16
+DELTA_USD = 0.28 / 2.0  # = 0,1400 diem gia. TU MA, khong tu phep khop.
 DONCHIAN = 20
 ATR_PERIOD = 14
 STOP_ATRS = (1.0, 2.0)
@@ -391,6 +391,22 @@ def main() -> int:
     print(f"  khop lai: fc15 {n15fit} lan, fc1m {n1mfit} lan (moc dau thang, tap khop EXPANDING)")
     m = {"fc15": multiplier(pred15), "fc1m": multiplier(pred1m)}
     m["shuf"] = shuffled(m["fc1m"])
+    # MOT MAT NA NULL CHUNG cho ca ba file companion.
+    #
+    # Lan chay dau TRUOT doi chung duong 2: nhan `atr/*` — nhan KHONG doc gia
+    # tri companion, chi doc su TON TAI cua no — in n = 10.888 o lan chay
+    # `fc15` so voi 10.430 o `fc1m` (lech 4,4%), vi `fc15` khong can nen 1m nen
+    # file cua no co 357.794 dong co so so voi 338.423. `range-stop` tu choi
+    # nen `cmp.close` NaN, nen moi file companion dinh nghia mot TAP NEN khac.
+    # Dieu khoan "cung tap nen" cua dang ky duoc thi hanh TRONG mot lan chay
+    # nhung khong GIUA cac lan chay. Bit `fc15` ve dung mat na cua `fc1m` lam
+    # ca 12 lan chay giao dich dung cung nhung nen — va do la dieu kien de F3
+    # (`fc1m` so voi `fc15`) doc duoc.
+    both = np.isfinite(m["fc1m"]) & np.isfinite(m["fc15"])
+    for nm in SOURCES:
+        m[nm] = np.where(both, m[nm], np.nan)
+    print(f"  mat na NULL chung cho ca ba nguon: {int(both.sum())} / {t15.shape[0]} nen 15m "
+          f"= {100.0 * both.sum() / t15.shape[0]:.4f}%")
     sig = signal_bars(b15)
     print(f"  nen tin hieu (donchian {DONCHIAN}, nen hien tai LOAI): {int(sig.sum())}")
 
@@ -444,7 +460,8 @@ def main() -> int:
             print("   ".join(row))
             dv = f * base * np.where(np.isfinite(m["fc1m"]), m["fc1m"], np.nan)
             print(
-                f"       khuyet diem 16: delta {DELTA_USD} USD = {100.0 * DELTA_USD / pct(dv, 10):.2f}% cua R o p10(d), "
+                f"       khuyet diem 16: delta = spread/2 = {DELTA_USD:.4f} diem gia (TU MA: d risk/d s = +1/2 chinh xac,"
+                f" apply_costs engine.rs:902-912 + risk engine.rs:717-719) = {100.0 * DELTA_USD / pct(dv, 10):.2f}% cua R o p10(d), "
                 f"{100.0 * DELTA_USD / pct(dv, 90):.2f}% o p90(d)"
             )
             print(
@@ -498,7 +515,7 @@ def main() -> int:
                 }
             )
             path = out / f"{COMPANION[nm]}-15m.parquet"
-            pq.write_table(tb, path)
+            pq.write_table(tb, path, compression="zstd")  # KHONG snappy: ban Rust build khong co feature `snap`
             print(f"  {path} — {v.shape[0]} dong, {int(np.isfinite(v).sum())} co so, volume NULL het")
         print(f"  (nen 15m co m: {int(np.isfinite(matched['fc1m']).sum())} / {t15.shape[0]} = "
               f"{100.0 * np.isfinite(matched['fc1m']).sum() / t15.shape[0]:.4f}%)")

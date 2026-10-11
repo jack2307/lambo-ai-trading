@@ -1,0 +1,57 @@
+## agent/range-sizing - STOP WIDTH taken from a forecast of the NEXT bar's
+## range.  Registered in docs/decisions/2026-10-11-range-sizing.md (32 declared
+## gate cells); the pre-check that had to survive first is
+## receipts/range-sizing/precheck-xauduka-2026-10-11.txt.
+##
+## Four labels here x 2 windows x 2 guard arms x 3 companion files = the 32
+## distinct cells plus 8 deliberate duplicates: the two `atr/*` labels do not
+## read the companion's VALUE, so they must print IDENTICAL numbers in all
+## three companion runs.  That is positive control #2 of the registration - if
+## they move, installing a companion is leaking into a label that does not
+## read it.
+##
+## The window is set by CLI --from/--to, because `[run]` cannot set it under
+## --fixed (addendum 8 section VI).  Every parameter below is fixed; there is
+## no grid and `range-stop` declares an empty one on purpose.
+##
+## `stopSource`: 0 = m(i) is 1.000 (a flat ATR stop), 1 = m(i) is the
+## companion's number.  BOTH refuse a bar whose companion value is NaN, so all
+## four labels trade exactly the same bars - 4.9209% of this feed's 15m bars do
+## not carry all fifteen 1m bars and a control that traded them would be a
+## different sample.
+##
+## The mean stop size is matched INSIDE the companion files (each window's m
+## divided by a declared constant: 1.289088 for W1, 1.209946 for W2 on fc1m),
+## so the same `stopAtr` means the same mean stop distance in every label.
+## Without that step this axis is a size change, which agent/stop-width already
+## measured over 200 cells.
+[run]
+in_sample = "xauduka:15m"
+out_of_sample = "xauduka:15m"
+seeds = 20
+direction_samples = 200
+fixed = true
+
+[[hypothesis]]
+label = "atr/f1.0"
+base = "range-stop"
+overrides = { period = 20, atrPeriod = 14, stopAtr = 1.0, stopSource = 0 }
+why = "CONTROL (a): flat stop at 1.0 ATR14(15m), same bars as the forecast arms"
+
+[[hypothesis]]
+label = "atr/f2.0"
+base = "range-stop"
+overrides = { period = 20, atrPeriod = 14, stopAtr = 2.0, stopSource = 0 }
+why = "CONTROL (a): flat stop at 2.0 ATR14(15m), same bars as the forecast arms"
+
+[[hypothesis]]
+label = "fc/f1.0"
+base = "range-stop"
+overrides = { period = 20, atrPeriod = 14, stopAtr = 1.0, stopSource = 1 }
+why = "stop at 1.0 ATR14(15m) x the companion's range forecast, mean size matched"
+
+[[hypothesis]]
+label = "fc/f2.0"
+base = "range-stop"
+overrides = { period = 20, atrPeriod = 14, stopAtr = 2.0, stopSource = 1 }
+why = "stop at 2.0 ATR14(15m) x the companion's range forecast, mean size matched"
