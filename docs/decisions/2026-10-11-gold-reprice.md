@@ -85,3 +85,39 @@ quy mô, có ngày, thuần THÊM**. **0 dòng bị xoá**, **0 chỉnh
 Lý do không tạo lớp thứ hai: `agent/receipt-reconcile` đã đo hồ sơ nhiễm ở
 **tầng đặc tả** (25/34 dòng hỏng vì cửa sổ bỏ trống), nên một lớp đính chính
 thứ hai sẽ nhân chỗ nhiễm lên.
+
+---
+
+## Ghi chú thêm — 2026-10-11, SAU khi chạy. Không một dòng nào ở trên bị sửa.
+
+**F1 (falsifier của brief) KHÔNG BẮN.** Sáu chỗ trong mã, độc lập, cùng nói một
+thứ: `rules.spread` bị trừ **đúng một lần cho cả vòng**
+(`apply_costs` `half = spread/2` ở **cả** entry **và** exit;
+`Trade::spread` tự khai *"round turn"*; `cost_table.rs` `cost_money = spread × 1`
+với test ghim *"0.28 / 2.00 = 14.0% of R"*; `rebate.rs` *"the two halves are one
+spread; crediting a share of each side would be twice the truth"*;
+`search.rs:932` spread **một** lần cạnh commission **hai** lần;
+`spread_log.py:116` `spread = t.ask - t.bid`). Và `config/default.toml` nói
+**"spread 28 pts"**, **không bao giờ** nói "round trip". ⇒ **0,440 là sai; con
+số đúng là 0,220, RẺ HƠN.** Chi tiết: `receipts/gold-reprice/RESULT.md` §1.
+
+**F2 không bắn** (mọi đường đóng lệnh gọi `apply_costs(entering=false)`).
+**F3 không bắn** (logger ghi `ask − bid`).
+**F4 BẮN DƯƠNG, mức mạnh nhất có thể**: hai lần chạy ở 0,28 giống **từng byte**
+receipt `s0.28` của `agent/cost-breakeven`, cả hai cửa sổ, 28/28 ô.
+**F5 đúng như phải đúng**: probe `ovn1900/short` **trượt** cả hai chân, cả hai
+cửa sổ, cả hai spread ⇒ phép đo không mù.
+**F6 BẮN**: câu config *"0,28 nằm trên MỌI spread từng quan sát"* **đã sai** —
+251/8.967 mẫu (**2,80%**) vượt 0,28, max 0,2900, **toàn bộ** trong UTC 20/21/22.
+
+**Hai thứ đưa vào SAU khi thấy số** (dán nhãn ở RESULT.md §5): bảng spread theo
+**giờ New York** (một lần đọc CSV, không phải ô backtest), và phép định giá theo
+dòng `(s[vào] + s[ra])/2` suy thẳng từ `apply_costs`. Không hiệu chỉnh, không
+khớp tham số.
+
+**Một thứ tôi KHÔNG hứa ở trên và vẫn tìm thấy**, nên nó được khai ở đây chứ
+không trong bảng: **0,220 phẳng THU ÍT 15,4–24,1%** ở **NY 16:00/17:00/18:00**,
+và đó **chính xác** là dải mà `ADDENDUM-10 §IV` đo được *toàn bộ* tiền của hồ sơ
+(`16:00-18:00` G 6,061 vs `14:00-16:00` G 0,101). ⇒ **cần chủ quyết: một số
+phẳng, hay một trục spread theo giờ?** Tôi **không** đổi `config/default.toml`
+và **không** chọn thay.
