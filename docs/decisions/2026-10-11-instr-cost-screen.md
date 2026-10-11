@@ -159,3 +159,35 @@ sổ bên cạnh:
    để **chủ quyết** có mở một chương trình trên nó hay không (phụ lục 9 §IX).
 6. **Chi phí/R là SÀN, không phải tổng chi phí**, ở mọi hàng F4 bắn: nó là
    `spread/stop` và không chứa swap, commission, slippage hay phí mỗi lệnh.
+
+---
+
+## Ghi chú thêm — 2026-10-11, sau lần chạy đầu, trước khi viết kết luận
+
+1. **`markets.gold` không sinh ra được một hàng.** Trên đĩa chỉ có `GC-1m.parquet`;
+   `GC-15m.parquet` không tồn tại. Nên thước P (và S1, S2, đều dựng từ 15m) cho
+   `gold` là **null**, không phải 0 và không phải con số của vàng Duka. Bảng có
+   **9 market khai, 8 hàng**. Sổ đa phép thử ở mục 6 sửa thành **96** con số chi
+   phí/R có thể tính (8 × 3 × 4), trong đó **36 là `null`** vì không phủ cửa sổ.
+2. **Hai trục KHÔNG có trong đăng ký, thêm SAU khi thấy số — khai thẳng:**
+   (a) **cột volume theo NĂM** (118 dòng), thêm sau khi thấy `BTCUSD-15m` mang
+   55,9% dòng bằng 0 trong khi 1m/5m không có dòng nào; (b) **kiểm lot kẹp ở cả
+   ba thước** thay vì chỉ thước P, vì ở một thước duy nhất "0/8 kẹp" đọc như
+   "khuyết điểm 17 không tồn tại" trong khi ngưỡng nằm giữa các thước. Cả hai là
+   **mô tả cột dữ liệu / mô tả ngưỡng**, không có cổng và không có vạch, nên
+   chúng không mua được một kết quả dương nào — **nhưng chúng vẫn là trục chọn
+   sau khi thấy số** và phải đọc như thế.
+3. **Một sai của chính dụng cụ, tự bắt được.** Lần chạy đầu đọc
+   `fd_core::clock::new_york_local` như `(hour, minute)` trong khi nó trả
+   **`(weekday, minute-of-day)`**. Hậu quả: lớp `ny18` của phép kiểm dấu in
+   **rỗng về cấu trúc trên mọi instrument**, và histogram in nhãn "giờ" thật ra
+   là **thứ trong tuần**. Chính sự vô nghĩa của histogram đó là cách phát hiện.
+   Đã sửa và chạy lại; receipt công bố là bản đã sửa.
+4. **Luật `null != 0` bị chính dụng cụ vi phạm một lần, đã sửa:** lần đầu phép
+   kiểm F5 in `does not fire` cho `btc` và `eurusd` trong khi chúng có **0 nến
+   mở-lại** theo định nghĩa `gap` (BTC 24/7 không có mốc nghỉ). Giờ nó in
+   **`NOT MEASURABLE — null`** kèm số nến, không phải một "không bắn".
+5. **Kết quả đọc ở** `docs/decisions/2026-10-11-instr-cost-screen-result.md`.
+   Một dòng: **F1 BẮN** — 0/8 hàng có spread **ĐO** đạt 4,577× trên W1+W2, trên
+   cả ba thước; hàng duy nhất vượt vạch là `markets.btc` ở 6,25× (W2) và nó trượt
+   F2 (spread GIẢ ĐỊNH), F3 (không phủ W1) và F4 (`swap` là key vắng mặt).

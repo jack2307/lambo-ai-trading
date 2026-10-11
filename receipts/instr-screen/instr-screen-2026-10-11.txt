@@ -1,0 +1,655 @@
+instr_screen — every instrument in the store, ranked by cost/R at matched horizons.
+registration: docs/decisions/2026-10-11-instr-cost-screen.md
+A MEASUREMENT. No strategy runs, no trade opens, no gate cell is consumed.
+
+data:    E:/rust/flowdesk/data
+config:  config
+ruler P  (PRIMARY, printed on every table): stop = 1.5 x ATR14 on 15m bars, instrument's own price units
+ruler S1 (second):  stop = 1.5 x ATR20 on session-daily bars, day boundary 21:00Z = 17:00 New York
+ruler S2 (third):   stop = 1.5 x ATR14 on 4h bars = [trading] max_hold_ms
+k = 1.5 REORDERS NOTHING: spread/(k x ATR) rescales every row by the same factor.
+   What reorders instruments is the ATR's own timeframe and period. Hence three rulers.
+ratio:   spread/stop. cost = spread x lots x contract; R = stop x lots x contract; lots and contract CANCEL.
+stat:    median (nearest-rank, index round(q x (n-1))), with p10/p90 and n beside it.
+windows: W1 2010-06-01..2018-06-01, W2 2018-06-01..2026-06-01 (the record's two real windows),
+         CM the common window every surviving instrument covers (computed, not chosen),
+         PL pooled over the whole store — PRINTED FOR CONTRAST ONLY, it mixes decades
+         and must NOT be used to compare instruments.
+
+================ STEP 1 — INVENTORY: every markets.* in the config ================
+
+market   symbol      bar_sym   bar_source      spread  contract  min_lot lot_step  equity USD eq.src   
+audnzd   AUDNZD.sc   AUDNZD    dukascopy    0.0003000   1000.00    0.010    0.010     10000.0 inherit  
+btc      BTCUSD      BTCUSDT   binance          5.000      1.00    0.001    0.001     10000.0 inherit  
+btcusd   BTCUSD.sc   BTCUSD    mt5             17.050      0.01    0.010    0.010       100.0 STATED   
+eurduka  EURUSD.sc   EURDUKA   dukascopy    0.0001400   1000.00    0.010    0.010     10000.0 inherit  
+eurusd   EURUSD.sc   EURUSD    mt5          0.0001400   1000.00    0.010    0.010       100.0 STATED   
+xagduka  XAGUSD.sc   XAGDUKA   dukascopy      0.02100     50.00    0.010    0.010     10000.0 inherit  
+xauduka  XAUUSD.sc   XAUDUKA   dukascopy      0.28000      1.00    0.010    0.010     10000.0 inherit  
+xauusd   XAUUSD.sc   XAUUSD    mt5            0.28000      1.00    0.010    0.010       100.0 STATED   
+
+eq.src `inherit` = the market states no starting_equity_usd and takes [trading] 10,000.0
+(engine.rs:354). `STATED` = the market's own block declares it. Defect 17 is NOT universal.
+
+--- spread provenance (HAND-TRANSCRIBED from config comments; THERE IS NO KEY FOR IT) ---
+
+market      charged   measured verdict    the config's own words
+audnzd    0.0003000       null ASSUMED    config states `# NOT MEASURED`: a QUOTE for a retail cross, no AUDNZD tick log exists
+btc           5.000       null ASSUMED    config states 17.05 is `3.4x the 5.00 assumed`; 5.00 is the assumption, and Binance spot is not tradable here
+btcusd       17.050       null ONE READ   config: ONE read of the terminal, `17.05 has never been checked over time at all`
+eurduka   0.0001400  0.0001400 MEASURED   119k ticks over 3 days: p50/p90 0.00014; charged = measured
+eurusd    0.0001400  0.0001400 MEASURED   same EURUSD.sc reading: 119k ticks/3 days, p50/p90 0.00014
+xagduka     0.02100    0.02100 MEASURED   205k ticks over 3 days: p50/p90 $0.021 an ounce; charged = measured
+xauduka     0.28000    0.22000 MEASURED   same XAUUSD.sc spread applied to Dukascopy bars; p50 0.220 measured, 0.28 charged
+xauusd      0.28000    0.22000 MEASURED   logger sampled XAUUSD.sc 2,315x/12.8h: p50 0.220; charged 0.28 is ABOVE every observed
+
+Nothing in this codebase can distinguish a measured spread from an assumed one:
+provenance lives only in comments. That is a defect in its own right.
+
+--- swap: a stated 0.00 and an ABSENT key are the same thing to serde, and they are NOT ---
+
+market    swap_long swap_short key in config?           reading
+audnzd         0.00       0.00 stated                   stated 0.0 but config says the measurement is NOT on this symbol: account terms, not a reading
+btc            0.00       0.00 ABSENT (serde default)   ABSENT -> serde default 0.0. This is `null` wearing a 0: no overnight cost is known.
+btcusd         0.00       0.00 stated                   stated 0.0 but config says the measurement is NOT on this symbol: account terms, not a reading
+eurduka        0.00       0.00 stated                   stated 0.0 but config says the measurement is NOT on this symbol: account terms, not a reading
+eurusd         0.00       0.00 stated                   stated 0.0 but config says the measurement is NOT on this symbol: account terms, not a reading
+xagduka        0.00       0.00 stated                   stated 0.0 but config says the measurement is NOT on this symbol: account terms, not a reading
+xauduka        0.00       0.00 stated                   stated 0.0, measurement BORROWED from xauusd's 5 months and applied to 16 years — a FLOOR
+xauusd         0.00       0.00 stated                   stated 0.0, and MEASURED on this symbol (340 closed, 87 overnight, swap 0.00, 2026-04..09)
+
+Every cost/R in this report is spread/stop ONLY. It contains NO swap, NO commission,
+NO slippage. Where swap is null it is a FLOOR on the true cost, not the cost.
+
+--- the bar store: what is actually on disk, per instrument and per candle size ---
+
+market   bar_sym   size        bars        first         last   flat%  file MB
+audnzd   AUDNZD    1m       5507472   2010-06-02   2026-05-29    0.0%     67.7
+audnzd   AUDNZD    5m       1111927   2010-06-02   2026-05-29    0.0%     16.5
+audnzd   AUDNZD    15m       371148   2010-06-02   2026-05-29    0.0%      6.1
+btc      BTCUSDT   1m         10683   2026-09-05   2026-09-12    0.0%      0.3
+btc      BTCUSDT   5m        218880   2024-08-13   2026-09-12    0.0%      6.6
+btc      BTCUSDT   15m        70080   2024-09-12   2026-09-12    0.0%      2.2
+btcusd   BTCUSD    1m         99823   2026-07-05   2026-09-12    0.0%      2.5
+btcusd   BTCUSD    5m        100860   2025-09-26   2026-09-15    0.0%      2.7
+btcusd   BTCUSD    15m       100798   2023-10-05   2026-09-15    0.0%      2.6
+eurduka  EURDUKA   1m       5881397   2010-06-01   2026-05-31    0.0%     77.1
+eurduka  EURDUKA   5m       1193417   2010-06-01   2026-05-31    0.0%     18.8
+eurduka  EURDUKA   15m       398220   2010-06-01   2026-05-31    0.0%      7.2
+eurusd   EURUSD    1m        absent            -            -    null        -
+eurusd   EURUSD    5m         61054   2025-11-19   2026-09-15    0.1%      1.0
+eurusd   EURUSD    15m        61247   2024-03-29   2026-09-15    0.0%      1.1
+xagduka  XAGDUKA   1m       5285287   2010-06-01   2026-05-31    0.0%     58.7
+xagduka  XAGDUKA   5m       1117119   2010-06-01   2026-05-31    0.0%     14.1
+xagduka  XAGDUKA   15m       374188   2010-06-01   2026-05-31    0.0%      5.3
+xauduka  XAUDUKA   1m       5635777   2010-06-01   2026-05-31    0.0%     95.8
+xauduka  XAUDUKA   5m       1135389   2010-06-01   2026-05-31    0.0%     22.3
+xauduka  XAUDUKA   15m       378749   2010-06-01   2026-05-31    0.0%      8.0
+xauusd   XAUUSD    1m        100000   2026-06-02   2026-09-11    0.0%      2.0
+xauusd   XAUUSD    5m        101242   2025-04-11   2026-09-15    0.0%      2.3
+xauusd   XAUUSD    15m       100586   2022-06-16   2026-09-17    0.0%      2.2
+
+--- bar stores ON DISK that the config does NOT declare ---
+
+XAUDUKA-15m.parquet.bak: not a .parquet bar file (kept out of every count below)
+XAUDUKA-1m.parquet.bak: not a .parquet bar file (kept out of every count below)
+XAUDUKA-5m.parquet.bak: not a .parquet bar file (kept out of every count below)
+XAUUSD-15m.parquet.bak: not a .parquet bar file (kept out of every count below)
+none: every .parquet under data/bars is claimed by a markets.* block
+
+--- STEP 1b — the volume column, per instrument and per candle size ---
+
+Column states: null (provider publishes nothing) / MANUFACTURED 0 (a null->0 step) /
+tick (mt5_export.py:33-34: `CFD real volume is always zero`) / real (an exchange's own).
+
+market   bar_sym   size       rows      null      zero        >0 distinct verdict                           
+audnzd   AUDNZD    1m      5507472   5507472         0         0       0 null (provider publishes nothing) 
+audnzd   AUDNZD    5m      1111927         0   1111927         0       1 MANUFACTURED 0 (1 distinct value(s), none > 0)
+audnzd   AUDNZD    15m      371148         0    371148         0       1 MANUFACTURED 0 (1 distinct value(s), none > 0)
+btc      BTCUSDT   1m        10683         0         0     10683    >=64 real                              
+btc      BTCUSDT   5m       218880         0         0    218880    >=64 real                              
+btc      BTCUSDT   15m       70080         0         0     70080    >=64 real                              
+btcusd   BTCUSD    1m        99823         0         0     99823    >=64 tick                              
+btcusd   BTCUSD    5m       100860         0         0    100860    >=64 tick                              
+btcusd   BTCUSD    15m      100798         0     56300     44498    >=64 tick, BUT 55.9% of rows are exactly 0
+eurduka  EURDUKA   1m      5881397   5881397         0         0       0 null (provider publishes nothing) 
+eurduka  EURDUKA   5m      1193417         0   1193417         0       1 MANUFACTURED 0 (1 distinct value(s), none > 0)
+eurduka  EURDUKA   15m      398220         0    398220         0       1 MANUFACTURED 0 (1 distinct value(s), none > 0)
+eurusd   EURUSD    1m       absent         -         -         -       - null (no file)                    
+eurusd   EURUSD    5m        61054         0         0     61054    >=64 tick                              
+eurusd   EURUSD    15m       61247         0         0     61247    >=64 tick                              
+xagduka  XAGDUKA   1m      5285287   5285287         0         0       0 null (provider publishes nothing) 
+xagduka  XAGDUKA   5m      1117119         0   1117119         0       1 MANUFACTURED 0 (1 distinct value(s), none > 0)
+xagduka  XAGDUKA   15m      374188         0    374188         0       1 MANUFACTURED 0 (1 distinct value(s), none > 0)
+xauduka  XAUDUKA   1m      5635777   5635777         0         0       0 null (provider publishes nothing) 
+xauduka  XAUDUKA   5m      1135389         0   1135389         0       1 MANUFACTURED 0 (1 distinct value(s), none > 0)
+xauduka  XAUDUKA   15m      378749         0    378749         0       1 MANUFACTURED 0 (1 distinct value(s), none > 0)
+xauusd   XAUUSD    1m       100000         0         0    100000    >=64 tick                              
+xauusd   XAUUSD    5m       101242         0         0    101242    >=64 tick                              
+xauusd   XAUUSD    15m      100586         0         0    100586    >=64 tick                              
+  bar_source mt5        -> stated `tick`: py/ingest/mt5_export.py:33-34 — `CFD real volume is always zero`, so tick_volume is stored
+  bar_source binance    -> stated `real`: Binance spot/futures publish traded base volume
+  bar_source dukascopy  -> stated `null-or-manufactured`: the Dukascopy bid feed publishes no volume; any 0.0 is the pipeline's
+  bar_source reference  -> stated `unknown`: OTL tape bars; no provenance comment in config
+
+--- the volume column PER YEAR: a column can change state inside one file ---
+
+market   size    year       rows    null%    zero%   median of >0
+audnzd   1m      2010     136181   100.0%     0.0%           null
+audnzd   1m      2011     267419   100.0%     0.0%           null
+audnzd   1m      2012     316175   100.0%     0.0%           null
+audnzd   1m      2013     342845   100.0%     0.0%           null
+audnzd   1m      2014     335202   100.0%     0.0%           null
+audnzd   1m      2015     371197   100.0%     0.0%           null
+audnzd   1m      2016     372102   100.0%     0.0%           null
+audnzd   1m      2017     371291   100.0%     0.0%           null
+audnzd   1m      2018     352959   100.0%     0.0%           null
+audnzd   1m      2019     343461   100.0%     0.0%           null
+audnzd   1m      2020     347156   100.0%     0.0%           null
+audnzd   1m      2021     341425   100.0%     0.0%           null
+audnzd   1m      2022     353238   100.0%     0.0%           null
+audnzd   1m      2023     369135   100.0%     0.0%           null
+audnzd   1m      2024     368112   100.0%     0.0%           null
+audnzd   1m      2025     368186   100.0%     0.0%           null
+audnzd   1m      2026     151388   100.0%     0.0%           null
+audnzd   15m     2010       9368     0.0%   100.0%           null
+audnzd   15m     2011      18052     0.0%   100.0%           null
+audnzd   15m     2012      21340     0.0%   100.0%           null
+audnzd   15m     2013      23057     0.0%   100.0%           null
+audnzd   15m     2014      22556     0.0%   100.0%           null
+audnzd   15m     2015      24897     0.0%   100.0%           null
+audnzd   15m     2016      24960     0.0%   100.0%           null
+audnzd   15m     2017      24897     0.0%   100.0%           null
+audnzd   15m     2018      23652     0.0%   100.0%           null
+audnzd   15m     2019      23145     0.0%   100.0%           null
+audnzd   15m     2020      23447     0.0%   100.0%           null
+audnzd   15m     2021      23138     0.0%   100.0%           null
+audnzd   15m     2022      23854     0.0%   100.0%           null
+audnzd   15m     2023      24852     0.0%   100.0%           null
+audnzd   15m     2024      24883     0.0%   100.0%           null
+audnzd   15m     2025      24875     0.0%   100.0%           null
+audnzd   15m     2026      10175     0.0%   100.0%           null
+btc      1m      2026      10683     0.0%     0.0%            4.9
+btc      15m     2024      10615     0.0%     0.0%          215.4
+btc      15m     2025      35040     0.0%     0.0%          137.2
+btc      15m     2026      24425     0.0%     0.0%          123.5
+btcusd   1m      2026      99823     0.0%     0.0%           65.0
+btcusd   15m     2023       7848     0.0%   100.0%           null
+btcusd   15m     2024      33984     0.0%   100.0%           null
+btcusd   15m     2025      34335     0.0%    42.1%         1560.0
+btcusd   15m     2026      24631     0.0%     0.0%         1308.0
+eurduka  1m      2010     220690   100.0%     0.0%           null
+eurduka  1m      2011     371482   100.0%     0.0%           null
+eurduka  1m      2012     371977   100.0%     0.0%           null
+eurduka  1m      2013     366460   100.0%     0.0%           null
+eurduka  1m      2014     360215   100.0%     0.0%           null
+eurduka  1m      2015     369383   100.0%     0.0%           null
+eurduka  1m      2016     371172   100.0%     0.0%           null
+eurduka  1m      2017     368499   100.0%     0.0%           null
+eurduka  1m      2018     371752   100.0%     0.0%           null
+eurduka  1m      2019     369838   100.0%     0.0%           null
+eurduka  1m      2020     368227   100.0%     0.0%           null
+eurduka  1m      2021     361209   100.0%     0.0%           null
+eurduka  1m      2022     368322   100.0%     0.0%           null
+eurduka  1m      2023     364396   100.0%     0.0%           null
+eurduka  1m      2024     358415   100.0%     0.0%           null
+eurduka  1m      2025     368475   100.0%     0.0%           null
+eurduka  1m      2026     150885   100.0%     0.0%           null
+eurduka  15m     2010      14772     0.0%   100.0%           null
+eurduka  15m     2011      24960     0.0%   100.0%           null
+eurduka  15m     2012      25039     0.0%   100.0%           null
+eurduka  15m     2013      24901     0.0%   100.0%           null
+eurduka  15m     2014      24904     0.0%   100.0%           null
+eurduka  15m     2015      24901     0.0%   100.0%           null
+eurduka  15m     2016      24958     0.0%   100.0%           null
+eurduka  15m     2017      24801     0.0%   100.0%           null
+eurduka  15m     2018      24904     0.0%   100.0%           null
+eurduka  15m     2019      24892     0.0%   100.0%           null
+eurduka  15m     2020      24914     0.0%   100.0%           null
+eurduka  15m     2021      24868     0.0%   100.0%           null
+eurduka  15m     2022      24944     0.0%   100.0%           null
+eurduka  15m     2023      24863     0.0%   100.0%           null
+eurduka  15m     2024      24518     0.0%   100.0%           null
+eurduka  15m     2025      24893     0.0%   100.0%           null
+eurduka  15m     2026      10188     0.0%   100.0%           null
+eurusd   15m     2024      18835     0.0%     0.0%          279.0
+eurusd   15m     2025      24864     0.0%     0.0%          592.0
+eurusd   15m     2026      17548     0.0%     0.0%          625.0
+xagduka  1m      2010     208160   100.0%     0.0%           null
+xagduka  1m      2011     352687   100.0%     0.0%           null
+xagduka  1m      2012     348654   100.0%     0.0%           null
+xagduka  1m      2013     333505   100.0%     0.0%           null
+xagduka  1m      2014     330583   100.0%     0.0%           null
+xagduka  1m      2015     333686   100.0%     0.0%           null
+xagduka  1m      2016     324919   100.0%     0.0%           null
+xagduka  1m      2017     282607   100.0%     0.0%           null
+xagduka  1m      2018     298088   100.0%     0.0%           null
+xagduka  1m      2019     310028   100.0%     0.0%           null
+xagduka  1m      2020     345800   100.0%     0.0%           null
+xagduka  1m      2021     328768   100.0%     0.0%           null
+xagduka  1m      2022     325094   100.0%     0.0%           null
+xagduka  1m      2023     330540   100.0%     0.0%           null
+xagduka  1m      2024     337137   100.0%     0.0%           null
+xagduka  1m      2025     351167   100.0%     0.0%           null
+xagduka  1m      2026     143864   100.0%     0.0%           null
+xagduka  15m     2010      14649     0.0%   100.0%           null
+xagduka  15m     2011      24606     0.0%   100.0%           null
+xagduka  15m     2012      24556     0.0%   100.0%           null
+xagduka  15m     2013      23562     0.0%   100.0%           null
+xagduka  15m     2014      23430     0.0%   100.0%           null
+xagduka  15m     2015      23208     0.0%   100.0%           null
+xagduka  15m     2016      22969     0.0%   100.0%           null
+xagduka  15m     2017      23209     0.0%   100.0%           null
+xagduka  15m     2018      23481     0.0%   100.0%           null
+xagduka  15m     2019      23491     0.0%   100.0%           null
+xagduka  15m     2020      23698     0.0%   100.0%           null
+xagduka  15m     2021      22410     0.0%   100.0%           null
+xagduka  15m     2022      22280     0.0%   100.0%           null
+xagduka  15m     2023      22715     0.0%   100.0%           null
+xagduka  15m     2024      22747     0.0%   100.0%           null
+xagduka  15m     2025      23542     0.0%   100.0%           null
+xagduka  15m     2026       9635     0.0%   100.0%           null
+xauduka  1m      2010     214240   100.0%     0.0%           null
+xauduka  1m      2011     357001   100.0%     0.0%           null
+xauduka  1m      2012     352597   100.0%     0.0%           null
+xauduka  1m      2013     349274   100.0%     0.0%           null
+xauduka  1m      2014     348764   100.0%     0.0%           null
+xauduka  1m      2015     352395   100.0%     0.0%           null
+xauduka  1m      2016     353924   100.0%     0.0%           null
+xauduka  1m      2017     352070   100.0%     0.0%           null
+xauduka  1m      2018     351475   100.0%     0.0%           null
+xauduka  1m      2019     350017   100.0%     0.0%           null
+xauduka  1m      2020     352757   100.0%     0.0%           null
+xauduka  1m      2021     353841   100.0%     0.0%           null
+xauduka  1m      2022     348601   100.0%     0.0%           null
+xauduka  1m      2023     351028   100.0%     0.0%           null
+xauduka  1m      2024     354296   100.0%     0.0%           null
+xauduka  1m      2025     350347   100.0%     0.0%           null
+xauduka  1m      2026     143150   100.0%     0.0%           null
+xauduka  15m     2010      14652     0.0%   100.0%           null
+xauduka  15m     2011      24456     0.0%   100.0%           null
+xauduka  15m     2012      24200     0.0%   100.0%           null
+xauduka  15m     2013      23568     0.0%   100.0%           null
+xauduka  15m     2014      23459     0.0%   100.0%           null
+xauduka  15m     2015      23593     0.0%   100.0%           null
+xauduka  15m     2016      23629     0.0%   100.0%           null
+xauduka  15m     2017      23526     0.0%   100.0%           null
+xauduka  15m     2018      23532     0.0%   100.0%           null
+xauduka  15m     2019      23615     0.0%   100.0%           null
+xauduka  15m     2020      23614     0.0%   100.0%           null
+xauduka  15m     2021      23626     0.0%   100.0%           null
+xauduka  15m     2022      23267     0.0%   100.0%           null
+xauduka  15m     2023      23455     0.0%   100.0%           null
+xauduka  15m     2024      23641     0.0%   100.0%           null
+xauduka  15m     2025      23370     0.0%   100.0%           null
+xauduka  15m     2026       9546     0.0%   100.0%           null
+xauusd   1m      2026     100000     0.0%     0.0%          337.0
+xauusd   15m     2022      12865     0.0%     0.0%          950.0
+xauusd   15m     2023      23560     0.0%     0.0%         1177.0
+xauusd   15m     2024      23716     0.0%     0.0%          512.0
+xauusd   15m     2025      23619     0.0%     0.0%         2300.0
+xauusd   15m     2026      16826     0.0%     0.0%         5130.0
+
+  XAUUSD tick-volume LEVEL across 2023-12: mean before 1404.6 / after 2502.2 = x1.78
+
+
+================ STEP 2 — cost/R = spread/stop, matched horizons ================
+
+Every figure carries FOUR things: window, statistic, stop size (in the instrument's own
+price units), and whether the spread behind it is MEASURED or ASSUMED.
+
+--- ruler P  1.5xATR14(15m) ---
+
+market   spread    
+  window W1 2010-06..2018-06:
+    market       med stop  med cost/R        p10        p90         n spread?  
+    audnzd        0.00124     24.210%    14.906%    34.969%    178758 ASSUMED  
+    btc                 -        null       null       null         0 ASSUMED  
+    btcusd              -        null       null       null         0 ONE READ 
+    eurduka       0.00127     11.037%     5.836%    20.441%    199603 MEASURED 
+    eurusd              -        null       null       null         0 MEASURED 
+    xagduka       0.06936     30.277%     8.954%    60.803%    189953 MEASURED 
+    xauduka         2.226     12.578%     6.665%    20.813%    190876 MEASURED 
+    xauusd              -        null       null       null         0 MEASURED 
+
+  window W2 2018-06..2026-06:
+    market       med stop  med cost/R        p10        p90         n spread?  
+    audnzd      0.0008060     37.222%    25.624%    51.714%    192377 ASSUMED  
+    btc           374.086      1.337%     0.717%     2.619%     60138 ASSUMED  
+    btcusd        343.904      4.958%     2.604%    10.937%     90546 ONE READ 
+    eurduka     0.0009025     15.512%     8.682%    27.461%    198604 MEASURED 
+    eurusd      0.0008812     15.888%     8.980%    27.177%     53874 MEASURED 
+    xagduka       0.08642     24.300%     9.679%    60.491%    184222 MEASURED 
+    xauduka         3.352      8.354%     3.001%    18.258%    187860 MEASURED 
+    xauusd          4.255      6.581%     2.056%    12.706%     93386 MEASURED 
+
+  window CM common:
+    market       med stop  med cost/R        p10        p90         n spread?  
+    audnzd      0.0007203     41.650%    28.155%    56.057%     42492 ASSUMED  
+    btc           374.891      1.334%     0.716%     2.592%     59934 ASSUMED  
+    btcusd        383.413      4.447%     2.421%     8.430%     58925 ONE READ 
+    eurduka     0.0009470     14.783%     8.560%    24.110%     42063 MEASURED 
+    eurusd      0.0009538     14.679%     8.549%    23.684%     42475 MEASURED 
+    xagduka       0.15887     13.218%     2.748%    23.749%     40077 MEASURED 
+    xauduka         8.021      3.491%     1.435%     7.069%     39908 MEASURED 
+    xauusd          7.898      3.545%     1.448%     7.221%     40345 MEASURED 
+
+  window PL pooled:
+    market       med stop  med cost/R        p10        p90         n spread?  
+    audnzd      0.0009844     30.477%    17.368%    46.978%    371135 ASSUMED  
+    btc           353.944      1.413%     0.743%     2.934%     70067 ASSUMED  
+    btcusd        331.955      5.136%     2.672%    11.404%    100785 ONE READ 
+    eurduka       0.00106     13.192%     6.757%    24.513%    398207 MEASURED 
+    eurusd      0.0008457     16.555%     9.239%    28.223%     61234 MEASURED 
+    xagduka       0.07809     26.891%     9.281%    60.686%    374175 MEASURED 
+    xauduka         2.650     10.566%     4.389%    19.942%    378736 MEASURED 
+    xauusd          4.540      6.168%     1.928%    12.483%    100573 MEASURED 
+
+--- ruler S1 1.5xATR20(session-day) ---
+
+market   spread    
+  window W1 2010-06..2018-06:
+    market       med stop  med cost/R        p10        p90         n spread?  
+    audnzd        0.01107      2.712%     2.009%     3.445%      2148 ASSUMED  
+    btc                 -        null       null       null         0 ASSUMED  
+    btcusd              -        null       null       null         0 ONE READ 
+    eurduka       0.01397      1.002%     0.627%     1.388%      2213 MEASURED 
+    eurusd              -        null       null       null         0 MEASURED 
+    xagduka       0.67714      3.101%     1.390%     5.131%      2191 MEASURED 
+    xauduka        24.867      1.126%     0.682%     1.507%      2192 MEASURED 
+    xauusd              -        null       null       null         0 MEASURED 
+
+  window W2 2018-06..2026-06:
+    market       med stop  med cost/R        p10        p90         n spread?  
+    audnzd        0.00776      3.866%     2.994%     4.875%      2221 ASSUMED  
+    btc          4579.076      0.109%     0.082%     0.151%       609 ASSUMED  
+    btcusd       4239.444      0.402%     0.286%     0.725%       947 ONE READ 
+    eurduka       0.01014      1.381%     0.951%     1.860%      2227 MEASURED 
+    eurusd        0.00999      1.403%     0.996%     1.829%       584 MEASURED 
+    xagduka       0.86327      2.433%     1.200%     5.854%      2202 MEASURED 
+    xauduka        36.050      0.777%     0.302%     1.624%      2202 MEASURED 
+    xauusd         46.637      0.601%     0.210%     0.927%      1072 MEASURED 
+
+  window CM common:
+    market       med stop  med cost/R        p10        p90         n spread?  
+    audnzd        0.00741      4.050%     3.181%     5.282%       482 ASSUMED  
+    btc          4594.371      0.109%     0.082%     0.151%       606 ASSUMED  
+    btcusd       4537.232      0.377%     0.278%     0.515%       622 ONE READ 
+    eurduka       0.01051      1.332%     0.957%     1.820%       481 MEASURED 
+    eurusd        0.01063      1.317%     0.954%     1.818%       482 MEASURED 
+    xagduka         1.390      1.515%     0.246%     2.183%       476 MEASURED 
+    xauduka        83.176      0.337%     0.133%     0.597%       475 MEASURED 
+    xauusd         83.698      0.336%     0.134%     0.601%       476 MEASURED 
+
+  window PL pooled:
+    market       med stop  med cost/R        p10        p90         n spread?  
+    audnzd        0.00918      3.266%     2.219%     4.610%      4369 ASSUMED  
+    btc          4377.251      0.114%     0.083%     0.164%       712 ASSUMED  
+    btcusd       4091.392      0.417%     0.288%     0.728%      1053 ONE READ 
+    eurduka       0.01197      1.170%     0.726%     1.714%      4440 MEASURED 
+    eurusd        0.00971      1.444%     1.018%     1.851%       660 MEASURED 
+    xagduka       0.81087      2.590%     1.336%     5.411%      4393 MEASURED 
+    xauduka        29.916      0.936%     0.494%     1.545%      4394 MEASURED 
+    xauusd         49.055      0.572%     0.170%     0.922%      1150 MEASURED 
+
+--- ruler S2 1.5xATR14(4h) ---
+
+market   spread    
+  window W1 2010-06..2018-06:
+    market       med stop  med cost/R        p10        p90         n spread?  
+    audnzd        0.00477      6.294%     4.282%     8.426%     11532 ASSUMED  
+    btc                 -        null       null       null         0 ASSUMED  
+    btcusd              -        null       null       null         0 ONE READ 
+    eurduka       0.00547      2.562%     1.578%     3.857%     12886 MEASURED 
+    eurusd              -        null       null       null         0 MEASURED 
+    xagduka       0.28056      7.485%     3.111%    13.444%     12714 MEASURED 
+    xauduka         9.473      2.956%     1.773%     4.226%     12766 MEASURED 
+    xauusd              -        null       null       null         0 MEASURED 
+
+  window W2 2018-06..2026-06:
+    market       med stop  med cost/R        p10        p90         n spread?  
+    audnzd        0.00322      9.331%     7.070%    12.018%     12446 ASSUMED  
+    btc          1687.476      0.296%     0.188%     0.434%      3747 ASSUMED  
+    btcusd       1535.374      1.110%     0.673%     1.900%      5709 ONE READ 
+    eurduka       0.00391      3.581%     2.391%     5.226%     12845 MEASURED 
+    eurusd        0.00380      3.687%     2.442%     5.199%      3473 MEASURED 
+    xagduka       0.34483      6.090%     2.600%    15.574%     12474 MEASURED 
+    xauduka        13.968      2.005%     0.766%     4.283%     12714 MEASURED 
+    xauusd         16.981      1.649%     0.504%     2.616%      6309 MEASURED 
+
+  window CM common:
+    market       med stop  med cost/R        p10        p90         n spread?  
+    audnzd        0.00297     10.105%     7.671%    12.646%      2752 ASSUMED  
+    btc          1690.918      0.296%     0.188%     0.433%      3735 ASSUMED  
+    btcusd       1709.621      0.997%     0.637%     1.471%      3707 ONE READ 
+    eurduka       0.00410      3.417%     2.358%     4.793%      2727 MEASURED 
+    eurusd        0.00416      3.368%     2.357%     4.736%      2748 MEASURED 
+    xagduka       0.55432      3.788%     0.670%     5.296%      2713 MEASURED 
+    xauduka        32.175      0.872%     0.366%     1.598%      2700 MEASURED 
+    xauusd         32.104      0.872%     0.372%     1.612%      2731 MEASURED 
+
+  window PL pooled:
+    market       med stop  med cost/R        p10        p90         n spread?  
+    audnzd        0.00385      7.798%     4.814%    11.134%     23978 ASSUMED  
+    btc          1606.810      0.311%     0.195%     0.473%      4368 ASSUMED  
+    btcusd       1491.839      1.143%     0.687%     1.980%      6349 ONE READ 
+    eurduka       0.00453      3.088%     1.792%     4.794%     25731 MEASURED 
+    eurusd        0.00361      3.881%     2.483%     5.418%      3948 MEASURED 
+    xagduka       0.31939      6.576%     2.986%    14.257%     25188 MEASURED 
+    xauduka        11.281      2.482%     1.193%     4.244%     25480 MEASURED 
+    xauusd         17.857      1.568%     0.484%     2.582%      6794 MEASURED 
+
+--- the same three rulers, one line per instrument, medians only ---
+
+market                    P /W1                  P /W2                  P /CM                  P /PL                  S1/W1                  S1/W2                  S1/CM                  S1/PL                  S2/W1                  S2/W2                  S2/CM                  S2/PL
+audnzd         24.210% (178758)       37.222% (192377)        41.650% (42492)       30.477% (371135)          2.712% (2148)          3.866% (2221)           4.050% (482)          3.266% (4369)         6.294% (11532)         9.331% (12446)         10.105% (2752)         7.798% (23978)
+btc                        null         1.337% (60138)         1.334% (59934)         1.413% (70067)                   null           0.109% (609)           0.109% (606)           0.114% (712)                   null          0.296% (3747)          0.296% (3735)          0.311% (4368)
+btcusd                     null         4.958% (90546)         4.447% (58925)        5.136% (100785)                   null           0.402% (947)           0.377% (622)          0.417% (1053)                   null          1.110% (5709)          0.997% (3707)          1.143% (6349)
+eurduka        11.037% (199603)       15.512% (198604)        14.783% (42063)       13.192% (398207)          1.002% (2213)          1.381% (2227)           1.332% (481)          1.170% (4440)         2.562% (12886)         3.581% (12845)          3.417% (2727)         3.088% (25731)
+eurusd                     null        15.888% (53874)        14.679% (42475)        16.555% (61234)                   null           1.403% (584)           1.317% (482)           1.444% (660)                   null          3.687% (3473)          3.368% (2748)          3.881% (3948)
+xagduka        30.277% (189953)       24.300% (184222)        13.218% (40077)       26.891% (374175)          3.101% (2191)          2.433% (2202)           1.515% (476)          2.590% (4393)         7.485% (12714)         6.090% (12474)          3.788% (2713)         6.576% (25188)
+xauduka        12.578% (190876)        8.354% (187860)         3.491% (39908)       10.566% (378736)          1.126% (2192)          0.777% (2202)           0.337% (475)          0.936% (4394)         2.956% (12766)         2.005% (12714)          0.872% (2700)         2.482% (25480)
+xauusd                     null         6.581% (93386)         3.545% (40345)        6.168% (100573)                   null          0.601% (1072)           0.336% (476)          0.572% (1150)                   null          1.649% (6309)          0.872% (2731)          1.568% (6794)
+
+common window CM = 2024-09-12 .. 2026-05-29 (computed from the surviving instruments, not chosen)
+PL (pooled) mixes decades and must NOT be used to compare instruments.
+
+--- ruler P at the MEASURED spread (exact rescale: the ratio is linear in the spread) ---
+
+market      charged   measured     W1 at measured     W2 at measured verdict   
+audnzd    0.0003000       null               null               null ASSUMED   
+btc           5.000       null               null               null ASSUMED   
+btcusd       17.050       null               null               null ONE READ  
+eurduka   0.0001400  0.0001400            11.037%            15.512% MEASURED  
+eurusd    0.0001400  0.0001400               null            15.888% MEASURED  
+xagduka     0.02100    0.02100            30.277%            24.300% MEASURED  
+xauduka     0.28000    0.22000             9.883%             6.564% MEASURED  
+xauusd      0.28000    0.22000               null             5.171% MEASURED  
+
+A spread whose provenance is an assumption or a single read has NO measured figure.
+That is null. Null is not the charged number wearing a different label.
+
+
+================ STEP 3 — the two comparison marks, beside every row ================
+
+mark 1: cost/R of GOLD 15m (market `xauduka`, ruler P), same window, same ruler.
+mark 2: the mould's threshold. `agent/mould-target` requires gross/spread >= 8.7x per
+        exposed session; the MEASURED ceiling on gold is 1.901x. So the factor another
+        market must beat gold's cost by, to carry the SAME signal into the mould, is
+        8.7 / 1.901 = 4.577x.
+
+  !! THIS CONVERSION DECLARES AN ASSUMPTION, and the assumption is NOT measured:
+     it assumes the SAME signal transplants — same gross in R units — so that gross/spread
+     scales exactly as cost_gold / cost_instrument. Nothing in this record has measured
+     a gold signal's gross on another instrument. The factor column is therefore a
+     NECESSARY condition, not a sufficient one.
+
+--- window W1 2010-06..2018-06, ruler P ---
+
+  gold mark: 12.578% of R (median, n 190876)
+  market        cost/R gold cost/R     x cheaper spread?    spread needed screen (needs >= 4.576x)    
+  audnzd       24.210%     12.578%         0.52x ASSUMED        0.0000341 NO  (8.81x short of 4.576x) 
+  btc             null     12.578%          null ASSUMED             null NOT COVERED in this window  
+  btcusd          null     12.578%          null ONE READ            null NOT COVERED in this window  
+  eurduka      11.037%     12.578%         1.14x MEASURED       0.0000349 NO  (4.02x short of 4.576x) 
+  eurusd          null     12.578%          null MEASURED            null NOT COVERED in this window  
+  xagduka      30.277%     12.578%         0.42x MEASURED         0.00191 NO  (11.02x short of 4.576x)
+  xauduka      12.578%     12.578%         1.00x MEASURED         0.06118 -- the benchmark itself     
+  xauusd          null     12.578%          null MEASURED            null NOT COVERED in this window  
+
+--- window W2 2018-06..2026-06, ruler P ---
+
+  gold mark: 8.354% of R (median, n 187860)
+  market        cost/R gold cost/R     x cheaper spread?    spread needed screen (needs >= 4.576x)    
+  audnzd       37.222%      8.354%         0.22x ASSUMED        0.0000147 NO  (20.39x short of 4.576x)
+  btc           1.337%      8.354%         6.25x ASSUMED            6.828 passes BUT spread is ASSUMED
+  btcusd        4.958%      8.354%         1.68x ONE READ           6.277 NO  (2.72x short of 4.576x) 
+  eurduka      15.512%      8.354%         0.54x MEASURED       0.0000165 NO  (8.50x short of 4.576x) 
+  eurusd       15.888%      8.354%         0.53x MEASURED       0.0000161 NO  (8.70x short of 4.576x) 
+  xagduka      24.300%      8.354%         0.34x MEASURED         0.00158 NO  (13.31x short of 4.576x)
+  xauduka       8.354%      8.354%         1.00x MEASURED         0.06118 -- the benchmark itself     
+  xauusd        6.581%      8.354%         1.27x MEASURED         0.07766 NO  (3.61x short of 4.576x) 
+
+--- window CM common, ruler P ---
+
+  gold mark: 3.491% of R (median, n 39908)
+  market        cost/R gold cost/R     x cheaper spread?    spread needed screen (needs >= 4.576x)    
+  audnzd       41.650%      3.491%         0.08x ASSUMED        0.0000055 NO  (54.60x short of 4.576x)
+  btc           1.334%      3.491%         2.62x ASSUMED            2.860 NO  (1.75x short of 4.576x) 
+  btcusd        4.447%      3.491%         0.79x ONE READ           2.925 NO  (5.83x short of 4.576x) 
+  eurduka      14.783%      3.491%         0.24x MEASURED       0.0000072 NO  (19.38x short of 4.576x)
+  eurusd       14.679%      3.491%         0.24x MEASURED       0.0000073 NO  (19.24x short of 4.576x)
+  xagduka      13.218%      3.491%         0.26x MEASURED         0.00121 NO  (17.33x short of 4.576x)
+  xauduka       3.491%      3.491%         1.00x MEASURED         0.06118 -- the benchmark itself     
+  xauusd        3.545%      3.491%         0.98x MEASURED         0.06025 NO  (4.65x short of 4.576x) 
+
+--- window PL pooled, ruler P ---
+
+  gold mark: 10.566% of R (median, n 378736)
+  market        cost/R gold cost/R     x cheaper spread?    spread needed screen (needs >= 4.576x)    
+  audnzd       30.477%     10.566%         0.35x ASSUMED        0.0000227 NO  (13.20x short of 4.576x)
+  btc           1.413%     10.566%         7.48x ASSUMED            8.172 passes BUT spread is ASSUMED
+  btcusd        5.136%     10.566%         2.06x ONE READ           7.664 NO  (2.22x short of 4.576x) 
+  eurduka      13.192%     10.566%         0.80x MEASURED       0.0000245 NO  (5.71x short of 4.576x) 
+  eurusd       16.555%     10.566%         0.64x MEASURED       0.0000195 NO  (7.17x short of 4.576x) 
+  xagduka      26.891%     10.566%         0.39x MEASURED         0.00180 NO  (11.65x short of 4.576x)
+  xauduka      10.566%     10.566%         1.00x MEASURED         0.06118 -- the benchmark itself     
+  xauusd        6.168%     10.566%         1.71x MEASURED         0.10481 NO  (2.67x short of 4.576x) 
+
+--- defect 17, checked PER MARKET: does the risk sizing survive min_lot? ---
+
+raw_lots = (equity x 0.01) / (median stop x contract_size); lots = max(floor(raw/lot_step)*lot_step, min_lot)
+(engine.rs:729-730). A clamped market's PF_usd is the PF of a min_lot book, not of a 1%-risk book.
+
+The CRITICAL STOP is the stop above which raw_lots falls below min_lot and the clamp bites:
+  critical stop = (equity x 0.01) / (min_lot x contract_size), in the instrument's price units.
+A market is not clamped or unclamped: it is clamped ABOVE A STOP SIZE, and that is the number.
+
+market    equity USD  critical stop  med stop P  P clamp? med stop S1 S1 clamp? med stop S2 S2 clamp?
+audnzd       10000.0         10.000   0.0009844 no (101.589)     0.00918 no (10.888)     0.00385 no (25.991)
+btc          10000.0     100000.000     353.944 no (0.283)    4377.251 no (0.023)    1606.810 no (0.062)
+btcusd         100.0      10000.000     331.955 no (0.301)    4091.392 no (0.024)    1491.839 no (0.067)
+eurduka      10000.0         10.000     0.00106 no (94.230)     0.01197 no (8.353)     0.00453 no (22.055)
+eurusd         100.0        0.10000   0.0008457 no (1.183)     0.00971 no (0.103)     0.00361 no (0.277)
+xagduka      10000.0        200.000     0.07809 no (25.611)     0.81087 no (2.466)     0.31939 no (6.262)
+xauduka      10000.0      10000.000       2.650 no (37.736)      29.916 no (3.343)      11.281 no (8.864)
+xauusd         100.0        100.000       4.540 no (0.220)      49.055 no (0.020)      17.857 no (0.056)
+
+`no (x)` prints raw_lots. Defect 17 as stated (`every xauusd line runs at min_lot`) was
+measured at a WIDE stop: the clamp is a property of the stop size, not of the market alone.
+
+
+================ PROVIDER PRINT — open==low / close==low, EVERY instrument ================
+
+Two independent agents measured this around the 17:00 New York CME break on XAUDUKA and
+XAGDUKA. Here it runs on every instrument in the store, on 15m bars, under TWO definitions
+of `the bar that reopens`, because a definition is a choice:
+
+  gap  = the first bar after a hole in the series longer than one interval and shorter than
+         a day, i.e. the session break, whatever the clock says
+  ny18 = the bar whose open stamps 18:00 New York local — the CME reopen, which still
+         exists when the feed fills the break with bars
+  ord  = every other bar
+
+F5 fires on a row when a reopen share is >= 2x the ordinary share.
+
+audnzd (AUDNZD, 371148 bars 15m, dukascopy)
+   gap  o==l  25.33%  c==l  17.33%  o==h  17.33%  c==h  29.33%  (n 75)
+   ny18 o==l   5.54%  c==l   2.94%  o==h   3.69%  c==h   2.56%  (n 15517)
+   ord  o==l   3.18%  c==l   2.75%  o==h   2.98%  c==h   2.06%  (n 355564)
+   lift vs ord: gap o==l x7.97  gap c==l x6.30  ny18 o==l x1.74  ny18 c==l x1.07   => F5 FIRES — this instrument carries a provider print
+   NY-local hour of the gap-reopens: 00h:1 01h:4 04h:1 07h:1 09h:2 10h:1 11h:1 13h:2 15h:3 16h:3 17h:31 18h:8 19h:4 20h:3 21h:5 22h:2 23h:3
+
+btc (BTCUSDT, 70080 bars 15m, binance)
+   gap  null (0 bars)
+   ny18 o==l   5.79%  c==l   2.98%  o==h   6.47%  c==h   2.50%  (n 2920)
+   ord  o==l   4.49%  c==l   2.58%  o==h   5.14%  c==h   2.71%  (n 67160)
+   lift vs ord: gap o==l xNaN  gap c==l xNaN  ny18 o==l x1.29  ny18 c==l x1.15   => F5 does not fire
+   NY-local hour of the gap-reopens: none (no intraday gaps)
+
+btcusd (BTCUSD, 100798 bars 15m, mt5)
+   gap  o==l   8.11%  c==l   4.05%  o==h   8.11%  c==h   5.41%  (n 74)
+   ny18 o==l   4.24%  c==l   1.07%  o==h   4.46%  c==h   1.52%  (n 4014)
+   ord  o==l   3.36%  c==l   1.24%  o==h   3.31%  c==h   1.66%  (n 96710)
+   lift vs ord: gap o==l x2.41  gap c==l x3.26  ny18 o==l x1.26  ny18 c==l x0.86   => F5 FIRES — this instrument carries a provider print
+   NY-local hour of the gap-reopens: 00h:1 01h:2 03h:2 04h:1 05h:4 06h:5 07h:2 08h:3 09h:1 10h:1 14h:1 19h:32 20h:7 21h:4 22h:4 23h:4
+
+eurduka (EURDUKA, 398220 bars 15m, dukascopy)
+   gap  o==l  27.96%  c==l  12.90%  o==h  17.20%  c==h  16.13%  (n 93)
+   ny18 o==l   8.51%  c==l   4.43%  o==h   6.56%  c==h   4.01%  (n 16620)
+   ord  o==l   4.29%  c==l   2.76%  o==h   4.64%  c==h   2.36%  (n 381517)
+   lift vs ord: gap o==l x6.51  gap c==l x4.68  ny18 o==l x1.98  ny18 c==l x1.61   => F5 FIRES — this instrument carries a provider print
+   NY-local hour of the gap-reopens: 00h:4 01h:1 02h:1 09h:2 12h:1 13h:1 14h:1 17h:59 18h:10 19h:3 21h:1 22h:6 23h:3
+
+eurusd (EURUSD, 61247 bars 15m, mt5)
+   gap  null (0 bars)
+   ny18 o==l  10.27%  c==l   3.68%  o==h   7.05%  c==h   5.25%  (n 2552)
+   ord  o==l   4.50%  c==l   2.31%  o==h   4.45%  c==h   2.66%  (n 58695)
+   lift vs ord: gap o==l xNaN  gap c==l xNaN  ny18 o==l x2.28  ny18 c==l x1.60   => F5 FIRES — this instrument carries a provider print
+   NY-local hour of the gap-reopens: none (no intraday gaps)
+
+xagduka (XAGDUKA, 374188 bars 15m, dukascopy)
+   gap  o==l  23.92%  c==l   3.48%  o==h   3.90%  c==h   7.72%  (n 2901)
+   ny18 o==l  11.62%  c==l   5.38%  o==h   6.83%  c==h   7.15%  (n 16058)
+   ord  o==l   4.72%  c==l   3.18%  o==h   5.17%  c==h   3.52%  (n 357944)
+   lift vs ord: gap o==l x5.07  gap c==l x1.09  ny18 o==l x2.46  ny18 c==l x1.69   => F5 FIRES — this instrument carries a provider print
+   NY-local hour of the gap-reopens: 00h:12 01h:12 03h:2 05h:1 06h:1 07h:1 08h:1 09h:3 10h:2 11h:4 13h:2 14h:6 15h:5 16h:18 17h:49 18h:2715 19h:43 20h:4 21h:5 22h:5 23h:10
+
+xauduka (XAUDUKA, 378749 bars 15m, dukascopy)
+   gap  o==l  18.79%  c==l   1.68%  o==h   3.11%  c==h   3.00%  (n 2799)
+   ny18 o==l   8.82%  c==l   2.92%  o==h   5.08%  c==h   3.09%  (n 16293)
+   ord  o==l   3.08%  c==l   1.83%  o==h   3.50%  c==h   1.60%  (n 362382)
+   lift vs ord: gap o==l x6.10  gap c==l x0.92  ny18 o==l x2.86  ny18 c==l x1.59   => F5 FIRES — this instrument carries a provider print
+   NY-local hour of the gap-reopens: 06h:1 09h:3 10h:1 11h:2 12h:1 13h:2 14h:2 15h:2 16h:5 17h:23 18h:2725 19h:27 20h:3 22h:2
+
+xauusd (XAUUSD, 100586 bars 15m, mt5)
+   gap  o==l   6.75%  c==l   2.17%  o==h   4.12%  c==h   2.17%  (n 874)
+   ny18 o==l   4.74%  c==l   2.03%  o==h   4.67%  c==h   2.28%  (n 4392)
+   ord  o==l   2.73%  c==l   1.15%  o==h   2.70%  c==h   1.20%  (n 96192)
+   lift vs ord: gap o==l x2.48  gap c==l x1.89  ny18 o==l x1.74  ny18 c==l x1.77   => F5 FIRES — this instrument carries a provider print
+   NY-local hour of the gap-reopens: 06h:1 10h:1 18h:872
+
+
+================ POSITIVE CONTROLS — the instrument must be shown to SEE ================
+
+Addendum 10 VII: prove the tool sees before reporting any negative. And write a probe that
+deliberately looks, then confirm the probe FIRES — without that, a non-firing test may be blind.
+
+control 1 — cost ruler, on gold's OWN bars at 1/10 of gold's spread:
+  gold spread 0.2800 -> 10.566% of R ; spread/10 0.0280 -> 1.057% of R ; factor x10.000
+  the 4.576x screen on this synthetic instrument: PASSES (it MUST pass, or the screen is blind)
+
+control 2 — the provider-print test, on two synthetic series:
+  every bar built with open = low : o==l 100.00%  c==l   0.00%  o==h   0.00%  c==h   0.00%  (n 1000)
+  continuous prices, open inside  : o==l   0.00%  c==l   0.00%  o==h   0.00%  c==h   0.00%  (n 1000)
+  reads 100% / ~0% as it must: YES
+
+control 3 — a probe that deliberately prints (open = low ONLY on the reopen bar):
+  reopen bars o==l 100.00%  c==l   0.00%  o==h   0.00%  c==h   0.00%  (n 20)
+  ordinary    o==l   0.00%  c==l   0.00%  o==h   0.00%  c==h   0.00%  (n 1896)
+  lift xinf => F5 FIRES, as it must (it MUST fire; if it does not, every `does not fire` above is blind)
+
+
+--- excluded, and why ---
+
+gold: no 15m bar file at E:/rust/flowdesk/data\bars\GC-15m.parquet (io: The system cannot find the file specified. (os error 2))
