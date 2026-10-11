@@ -1,0 +1,69 @@
+market:   xauduka 15m
+data:     E:/rust/flowdesk/data (bars from E:/rust/flowdesk/data\bars\XAUDUKA-15m.parquet)
+bounds:   --from=2018-06-01 --to=2026-06-01 kept 187860 of 378749 bars
+spread:   0.28 per round trip
+trail:    off
+max hold: 4 h (14400000 ms) from --max-hold=14400000 (CLI, overriding [trading] max_hold_ms)
+bars:     187860 from 2018-06-01 00:00 to 2026-05-31 23:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+companion: none loaded — every cmp series is NaN
+guards: off (every number unguarded)
+null sides: coin - 50/50, carries no drift; the null every published percentile was read against
+flags:    10 passed, every one of them read by --mode=hypotheses
+
+== hypotheses `docs/hypotheses/2026-10-11-hold-cap.toml`: 3 declared, walk-forward (4 folds), each against 200 matched null runs ==
+null sides: coin (50/50, carries no drift; the null every published percentile was read against)
+swap: long -0.83 / short -0.83 USD per lot per night; spread 0.28
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+guards: off (every number unguarded)
+
+hypothesis   base               trades  OOS PF  expect null p50 null p95    swap$   pct  verdict
+hc/orb60     orb                  1072   1.008   0.010    0.835    0.936     -432  100%  fail: profit factor 1.008 < 1.2; expectancy 0.010R < 0.05R
+                                MoTuWeThFr  — cut on the clock on the majority of its trades at 4h, and the only family row whose book never blew; figures are in the decision record, not here
+                                max drawdown 2713.67 USD = 22.73% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.596 R is); net +329.00 USD over 1072 trades
+                                Lbar 0.3551 R = |avg_loss_r| 0.6678 x loss share 0.5317 over 1072 trades; PF_r 1.0272 (R) vs PF_usd 1.0085 (USD, gap +0.0187); identity E = Lbar(PF_r-1) = +0.0097 R vs expectancy +0.0096 R, residual -0.00007 R; expectancy leg REDUNDANT (Lbar >= 0.250R)
+                                expectancy_net +0.006 R and total_r_net +6.02 R (pnl_usd / risk_usd: commission and swap IN) vs expectancy +0.010 R and total_r +10.32 R (points / risk: spread only) — the gap is -0.004 R per trade of financing and commission
+                                matched null 1176 trades median vs the method's 1072 — count match 1.10
+                                long share: method 0.491 vs the null's median 0.498
+                                spread paid: method 3319.64 USD vs the null's median 3425.56 USD — cost match 1.03
+                                exposure: signed share of time method -0.015 vs the null's -0.007; time in market method 229320 min vs the null's median 398708 min — ratio 1.74  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.835 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 2.730 ATR = 8.51 points, cost 3.29% of R (realised median, structural)
+                                the method's own realised stop: median 2.730 ATR = 8.51 points over 1340 trades
+                                exits: STOP 277, TARGET 84, TIMEOUT 711; mean hold 213.9 min
+hc/keltner   keltner-break        2082   0.907  -0.028    0.833    0.890    -2508   98%  fail: profit factor 0.907 < 1.2; expectancy -0.028R < 0.05R
+                                MoTuWeThFr  — majority TIMEOUT at 4h and a mean hold sitting on the cut itself; no figure is written here, because a number in this prose is printed into the receipt above the measurement and a parser read it back as the measurement once already
+                                max drawdown 9368.73 USD = 90.38% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.638 R is); net -7542.05 USD over 2082 trades
+                                Lbar 0.4104 R = |avg_loss_r| 0.7279 x loss share 0.5639 over 2082 trades; PF_r 0.9329 (R) vs PF_usd 0.9066 (USD, gap +0.0263); identity E = Lbar(PF_r-1) = -0.0275 R vs expectancy -0.0275 R, residual +0.00004 R; expectancy leg REDUNDANT (Lbar >= 0.250R)
+                                expectancy_net -0.041 R and total_r_net -84.54 R (pnl_usd / risk_usd: commission and swap IN) vs expectancy -0.028 R and total_r -57.34 R (points / risk: spread only) — the gap is -0.013 R per trade of financing and commission
+                                matched null 4506 trades median vs the method's 2082 — count match 2.16  ** outside the band: this percentile is unmatched **
+                                long share: method 0.551 vs the null's median 0.499
+                                spread paid: method 6930.56 USD vs the null's median 13166.81 USD — cost match 1.90  ** outside the band: the control did not pay what the method paid **
+                                exposure: signed share of time method +0.077 vs the null's +0.002; time in market method 515790 min vs the null's median 1324042 min — ratio 2.57  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.833 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 1.877 ATR = 4.27 points, cost 6.56% of R (realised median, structural)
+                                the method's own realised stop: median 1.877 ATR = 4.27 points over 7753 trades
+                                exits: STOP 668, TARGET 201, TIMEOUT 1213; mean hold 247.7 min
+hc/far-stop  far-stop-break       3052   0.881  -0.020    0.833    0.891    -2343   88%  fail: profit factor 0.881 < 1.2; expectancy -0.020R < 0.05R
+                                MoTuWeThFr  — the row where the clock, not the price, is the exit on the great majority of trades
+                                max drawdown 8433.60 USD = 82.01% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.342 R is); net -6260.73 USD over 3052 trades
+                                Lbar 0.1879 R = |avg_loss_r| 0.3499 x loss share 0.5370 over 3052 trades; PF_r 0.8949 (R) vs PF_usd 0.8810 (USD, gap +0.0139); identity E = Lbar(PF_r-1) = -0.0198 R vs expectancy -0.0198 R, residual -0.00005 R; expectancy leg BINDS (Lbar < 0.250R)
+                                expectancy_net -0.028 R and total_r_net -85.81 R (pnl_usd / risk_usd: commission and swap IN) vs expectancy -0.020 R and total_r -60.30 R (points / risk: spread only) — the gap is -0.008 R per trade of financing and commission
+                                matched null 4310 trades median vs the method's 3052 — count match 1.41  ** outside the band: this percentile is unmatched **
+                                long share: method 0.561 vs the null's median 0.499
+                                spread paid: method 4133.68 USD vs the null's median 7159.90 USD — cost match 1.73  ** outside the band: the control did not pay what the method paid **
+                                exposure: signed share of time method +0.125 vs the null's -0.002; time in market method 957690 min vs the null's median 1537928 min — ratio 1.61  ** the control did not collect the drift the method did **
+                                the null's own median LOSES money (p50 0.833 < 1.000): a high percentile here means "loses less than random entry at the same cost, count and side ratio", NOT "makes money" - the gate leg is what says that
+                                cost-matched null: control stop 4.187 ATR = 9.33 points, cost 3.00% of R (realised median, structural); the method DECLARES stopAtr 1.20 and does not use it
+                                the method's own realised stop: median 4.187 ATR = 9.33 points over 7919 trades
+                                exits: STOP 214, TARGET 208, TIMEOUT 2630; mean hold 313.8 min
+
+Nothing survived: no hypothesis is both past the gate and outside its own null.
+That is the result. The list is closed; add a hypothesis only with a new reason.
+

@@ -17,16 +17,16 @@ label = "hc/orb60"
 base = "orb"
 filters = ["weekdays"]
 overrides = { rangeMinutes = 60 }
-why = "cut on the clock on 66.3% of its trades at 4h, and the only family row whose book never blew (drawdown 21.07% of peak)"
+why = "cut on the clock on the majority of its trades at 4h, and the only family row whose book never blew; figures are in the decision record, not here"
 
 [[hypothesis]]
 label = "hc/keltner"
 base = "keltner-break"
 filters = ["weekdays"]
-why = "58.3% TIMEOUT, mean hold 247.7 min against a 255-min cut: it is sitting on the cap"
+why = "majority TIMEOUT at 4h and a mean hold sitting on the cut itself; no figure is written here, because a number in this prose is printed into the receipt above the measurement and a parser read it back as the measurement once already"
 
 [[hypothesis]]
 label = "hc/far-stop"
 base = "far-stop-break"
 filters = ["weekdays"]
-why = "86.2% TIMEOUT — the row where the clock, not the price, is the exit"
+why = "the row where the clock, not the price, is the exit on the great majority of trades"

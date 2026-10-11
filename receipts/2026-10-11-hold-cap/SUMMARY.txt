@@ -1,0 +1,269 @@
+=== PART A. trips/exposed session and G_session by hold, swap=0 (config) ===
+row           win arm           4h        12h        24h        72h
+-- trips_sess
+hc/orb60      W1  off       6.6759     1.7996     1.3822     1.0973
+hc/orb60      W1  on        6.7102     3.0144     1.9775     1.6698
+hc/orb60      W2  off       6.7321     2.0484     1.4619     1.0821
+hc/orb60      W2  on        6.7765     3.3962     2.2828     1.6468
+hc/keltner    W1  off       6.0991     2.8352     2.2496     1.3274
+hc/keltner    W1  on        7.8947     4.1379     2.9605     2.1068
+hc/keltner    W2  off       5.8135     2.7880     2.2181     1.9444
+hc/keltner    W2  on        7.1041     4.1522     3.1524     2.7751
+hc/far-stop   W1  off       4.3916     1.4413     1.0730     0.5289
+hc/far-stop   W1  on        5.8465     2.2430     1.5256     0.7431
+hc/far-stop   W2  off       4.5889     1.5984     1.1052     0.7042
+hc/far-stop   W2  on        5.9504     2.2294     1.6233     1.1599
+-- G_trip
+hc/orb60      W1  off      -0.1016    -0.4666    -0.5785    -0.2861
+hc/orb60      W1  on       -0.2079    -0.5301    -0.6410    -0.6042
+hc/orb60      W2  off       1.2336     1.1374     2.6318     3.0410
+hc/orb60      W2  on        1.4389     1.0697     1.7840     2.5729
+hc/keltner    W1  off      -0.3461    -0.2026    -0.1262     0.4562
+hc/keltner    W1  on       -0.3817    -0.1223     0.1083     0.5404
+hc/keltner    W2  off       0.2558     0.4259     0.4229     0.2391
+hc/keltner    W2  on        0.2843     0.6777     0.7286     0.7046
+hc/far-stop   W1  off       0.2020     1.1926     0.8839     2.0003
+hc/far-stop   W1  on        0.1919     1.0317     0.7304     1.8625
+hc/far-stop   W2  off       0.0109     1.3554     0.7436     1.1589
+hc/far-stop   W2  on        0.2705     2.5078     0.8571     2.4005
+-- G_sess
+hc/orb60      W1  off      -0.6785    -0.8396    -0.7996    -0.3140
+hc/orb60      W1  on       -1.3948    -1.5979    -1.2675    -1.0089
+hc/orb60      W2  off       8.3046     2.3299     3.8475     3.2906
+hc/orb60      W2  on        9.7509     3.6331     4.0727     4.2371
+hc/keltner    W1  off      -2.1108    -0.5744    -0.2840     0.6056
+hc/keltner    W1  on       -3.0133    -0.5059     0.3207     1.1386
+hc/keltner    W2  off       1.4868     1.1874     0.9380     0.4648
+hc/keltner    W2  on        2.0198     2.8139     2.2967     1.9553
+hc/far-stop   W1  off       0.8873     1.7190     0.9485     1.0580
+hc/far-stop   W1  on        1.1218     2.3142     1.1143     1.3841
+hc/far-stop   W2  off       0.0498     2.1665     0.8219     0.8162
+hc/far-stop   W2  on        1.6093     5.5910     1.3913     2.7844
+-- n
+hc/orb60      W1  off          980        955        876        861
+hc/orb60      W1  on           980        955        883        858
+hc/orb60      W2  off         1072       1072        961        897
+hc/orb60      W2  on          1070       1070        986        924
+hc/keltner    W1  off         2351       2178       2016       1638
+hc/keltner    W1  on          2286       2082       1879       1643
+hc/keltner    W2  off         2082       1997       1871       1845
+hc/keltner    W2  on          2033       1952       1834       1772
+hc/far-stop   W1  off         2597       1831       1770       1058
+hc/far-stop   W1  on          2516       1802       1753        962
+hc/far-stop   W2  off         3052       2289       1950       1461
+hc/far-stop   W2  on          2980       1833       1974       1662
+-- mean_hold
+hc/orb60      W1  off     215.7000   800.2000  1041.8000  1312.3000
+hc/orb60      W1  on      214.6000   477.7000   728.2000   862.4000
+hc/orb60      W2  off     213.9000   703.0000   985.0000  1330.8000
+hc/orb60      W2  on      212.5000   424.0000   630.8000   874.4000
+hc/keltner    W1  off     236.1000   507.9000   640.1000  1084.8000
+hc/keltner    W1  on      182.4000   348.0000   486.4000   683.5000
+hc/keltner    W2  off     247.7000   516.5000   649.2000   740.6000
+hc/keltner    W2  on      202.7000   346.8000   456.8000   518.9000
+hc/far-stop   W1  off     327.9000   999.1000  1342.0000  2722.4000
+hc/far-stop   W1  on      246.3000   642.0000   943.9000  1937.7000
+hc/far-stop   W2  off     313.8000   900.9000  1302.9000  2044.8000
+hc/far-stop   W2  on      242.0000   645.9000   887.1000  1241.5000
+
+=== PART B. F1: G_session change 4h -> 72h, swap=0 ===
+hc/orb60      guards off W1 -0.6785 -> -0.3140 (+53.7%) | W2 +8.3046 -> +3.2906 (-60.4%)
+hc/orb60      guards on  W1 -1.3948 -> -1.0089 (+27.7%) | W2 +9.7509 -> +4.2371 (-56.5%)
+hc/keltner    guards off W1 -2.1108 -> +0.6056 (+128.7%) | W2 +1.4868 -> +0.4648 (-68.7%)
+hc/keltner    guards on  W1 -3.0133 -> +1.1386 (+137.8%) | W2 +2.0198 -> +1.9553 (-3.2%)
+hc/far-stop   guards off W1 +0.8873 -> +1.0580 (+19.2%) | W2 +0.0498 -> +0.8162 (+1539.0%)
+hc/far-stop   guards on  W1 +1.1218 -> +1.3841 (+23.4%) | W2 +1.6093 -> +2.7844 (+73.0%)
+
+=== PART C. what TIMEOUT turns into (the sharpest discriminator) ===
+-- hc/orb60 W1 guards off
+       4h  n=  980  hold=   215.7 min  STOP 272 (27.8%), TARGET 85 (8.7%), TIMEOUT 623 (63.6%)
+      12h  n=  955  hold=   800.2 min  STOP 338 (35.4%), TARGET 111 (11.6%), TIMEOUT 506 (53.0%)
+      24h  n=  876  hold=  1041.8 min  STOP 454 (51.8%), TARGET 184 (21.0%), TIMEOUT 238 (27.2%)
+      72h  n=  861  hold=  1312.3 min  END_OF_DATA 1 (0.1%), STOP 529 (61.4%), TARGET 249 (28.9%), TIMEOUT 82 (9.5%)
+-- hc/orb60 W1 guards on
+       4h  n=  980  hold=   214.6 min  NEWS_FLAT 19 (1.9%), STOP 262 (26.7%), TARGET 80 (8.2%), TIMEOUT 619 (63.2%)
+      12h  n=  955  hold=   477.7 min  NEWS_FLAT 20 (2.1%), STOP 319 (33.4%), TARGET 104 (10.9%), TIMEOUT 410 (42.9%), WEEKEND_FLAT 102 (10.7%)
+      24h  n=  883  hold=   728.2 min  NEWS_FLAT 51 (5.8%), STOP 432 (48.9%), TARGET 173 (19.6%), TIMEOUT 137 (15.5%), WEEKEND_FLAT 90 (10.2%)
+      72h  n=  858  hold=   862.4 min  END_OF_DATA 1 (0.1%), NEWS_FLAT 65 (7.6%), STOP 462 (53.8%), TARGET 202 (23.5%), TIMEOUT 14 (1.6%), WEEKEND_FLAT 114 (13.3%)
+-- hc/orb60 W2 guards off
+       4h  n= 1072  hold=   213.9 min  STOP 277 (25.8%), TARGET 84 (7.8%), TIMEOUT 711 (66.3%)
+      12h  n= 1072  hold=   703.0 min  END_OF_DATA 1 (0.1%), STOP 377 (35.2%), TARGET 227 (21.2%), TIMEOUT 467 (43.6%)
+      24h  n=  961  hold=   985.0 min  END_OF_DATA 2 (0.2%), STOP 459 (47.8%), TARGET 272 (28.3%), TIMEOUT 228 (23.7%)
+      72h  n=  897  hold=  1330.8 min  END_OF_DATA 2 (0.2%), STOP 525 (58.5%), TARGET 284 (31.7%), TIMEOUT 86 (9.6%)
+-- hc/orb60 W2 guards on
+       4h  n= 1070  hold=   212.5 min  NEWS_FLAT 29 (2.7%), STOP 265 (24.8%), TARGET 77 (7.2%), TIMEOUT 699 (65.3%)
+      12h  n= 1070  hold=   424.0 min  END_OF_DATA 1 (0.1%), NEWS_FLAT 28 (2.6%), STOP 339 (31.7%), TARGET 251 (23.5%), TIMEOUT 366 (34.2%), WEEKEND_FLAT 85 (7.9%)
+      24h  n=  986  hold=   630.8 min  END_OF_DATA 1 (0.1%), NEWS_FLAT 50 (5.1%), STOP 422 (42.8%), TARGET 316 (32.0%), TIMEOUT 111 (11.3%), WEEKEND_FLAT 86 (8.7%)
+      72h  n=  924  hold=   874.4 min  END_OF_DATA 2 (0.2%), NEWS_FLAT 73 (7.9%), STOP 484 (52.4%), TARGET 244 (26.4%), TIMEOUT 15 (1.6%), WEEKEND_FLAT 106 (11.5%)
+-- hc/keltner W1 guards off
+       4h  n= 2351  hold=   236.1 min  END_OF_DATA 1 (0.0%), STOP 717 (30.5%), TARGET 494 (21.0%), TIMEOUT 1139 (48.4%)
+      12h  n= 2178  hold=   507.9 min  END_OF_DATA 1 (0.0%), STOP 975 (44.8%), TARGET 653 (30.0%), TIMEOUT 549 (25.2%)
+      24h  n= 2016  hold=   640.1 min  END_OF_DATA 1 (0.0%), STOP 1031 (51.1%), TARGET 705 (35.0%), TIMEOUT 279 (13.8%)
+      72h  n= 1638  hold=  1084.8 min  END_OF_DATA 1 (0.1%), STOP 1001 (61.1%), TARGET 499 (30.5%), TIMEOUT 137 (8.4%)
+-- hc/keltner W1 guards on
+       4h  n= 2286  hold=   182.4 min  END_OF_DATA 1 (0.0%), NEWS_FLAT 39 (1.7%), STOP 674 (29.5%), TARGET 471 (20.6%), TIMEOUT 1060 (46.4%), WEEKEND_FLAT 41 (1.8%)
+      12h  n= 2082  hold=   348.0 min  END_OF_DATA 1 (0.0%), NEWS_FLAT 61 (2.9%), STOP 902 (43.3%), TARGET 566 (27.2%), TIMEOUT 439 (21.1%), WEEKEND_FLAT 113 (5.4%)
+      24h  n= 1879  hold=   486.4 min  END_OF_DATA 1 (0.1%), NEWS_FLAT 81 (4.3%), STOP 936 (49.8%), TARGET 562 (29.9%), TIMEOUT 183 (9.7%), WEEKEND_FLAT 116 (6.2%)
+      72h  n= 1643  hold=   683.5 min  END_OF_DATA 1 (0.1%), NEWS_FLAT 94 (5.7%), STOP 921 (56.1%), TARGET 453 (27.6%), TIMEOUT 13 (0.8%), WEEKEND_FLAT 161 (9.8%)
+-- hc/keltner W2 guards off
+       4h  n= 2082  hold=   247.7 min  STOP 668 (32.1%), TARGET 201 (9.7%), TIMEOUT 1213 (58.3%)
+      12h  n= 1997  hold=   516.5 min  STOP 911 (45.6%), TARGET 582 (29.1%), TIMEOUT 504 (25.2%)
+      24h  n= 1871  hold=   649.2 min  STOP 976 (52.2%), TARGET 643 (34.4%), TIMEOUT 252 (13.5%)
+      72h  n= 1845  hold=   740.6 min  STOP 1018 (55.2%), TARGET 762 (41.3%), TIMEOUT 65 (3.5%)
+-- hc/keltner W2 guards on
+       4h  n= 2033  hold=   202.7 min  NEWS_FLAT 26 (1.3%), STOP 628 (30.9%), TARGET 191 (9.4%), TIMEOUT 1158 (57.0%), WEEKEND_FLAT 30 (1.5%)
+      12h  n= 1952  hold=   346.8 min  NEWS_FLAT 48 (2.5%), STOP 849 (43.5%), TARGET 553 (28.3%), TIMEOUT 397 (20.3%), WEEKEND_FLAT 105 (5.4%)
+      24h  n= 1834  hold=   456.8 min  NEWS_FLAT 70 (3.8%), STOP 909 (49.6%), TARGET 614 (33.5%), TIMEOUT 132 (7.2%), WEEKEND_FLAT 109 (5.9%)
+      72h  n= 1772  hold=   518.9 min  NEWS_FLAT 91 (5.1%), STOP 922 (52.0%), TARGET 630 (35.6%), TIMEOUT 7 (0.4%), WEEKEND_FLAT 122 (6.9%)
+-- hc/far-stop W1 guards off
+       4h  n= 2597  hold=   327.9 min  END_OF_DATA 2 (0.1%), STOP 141 (5.4%), TARGET 142 (5.5%), TIMEOUT 2312 (89.0%)
+      12h  n= 1831  hold=   999.1 min  END_OF_DATA 2 (0.1%), STOP 233 (12.7%), TARGET 81 (4.4%), TIMEOUT 1515 (82.7%)
+      24h  n= 1770  hold=  1342.0 min  END_OF_DATA 3 (0.2%), STOP 483 (27.3%), TARGET 313 (17.7%), TIMEOUT 971 (54.9%)
+      72h  n= 1058  hold=  2722.4 min  END_OF_DATA 3 (0.3%), STOP 431 (40.7%), TARGET 213 (20.1%), TIMEOUT 411 (38.8%)
+-- hc/far-stop W1 guards on
+       4h  n= 2516  hold=   246.3 min  END_OF_DATA 1 (0.0%), NEWS_FLAT 52 (2.1%), STOP 110 (4.4%), TARGET 119 (4.7%), TIMEOUT 2162 (85.9%), WEEKEND_FLAT 72 (2.9%)
+      12h  n= 1802  hold=   642.0 min  END_OF_DATA 2 (0.1%), NEWS_FLAT 104 (5.8%), STOP 187 (10.4%), TARGET 64 (3.6%), TIMEOUT 1241 (68.9%), WEEKEND_FLAT 204 (11.3%)
+      24h  n= 1753  hold=   943.9 min  END_OF_DATA 3 (0.2%), NEWS_FLAT 138 (7.9%), STOP 427 (24.4%), TARGET 279 (15.9%), TIMEOUT 691 (39.4%), WEEKEND_FLAT 215 (12.3%)
+      72h  n=  962  hold=  1937.7 min  END_OF_DATA 2 (0.2%), NEWS_FLAT 182 (18.9%), STOP 263 (27.3%), TARGET 119 (12.4%), TIMEOUT 138 (14.3%), WEEKEND_FLAT 258 (26.8%)
+-- hc/far-stop W2 guards off
+       4h  n= 3052  hold=   313.8 min  STOP 214 (7.0%), TARGET 208 (6.8%), TIMEOUT 2630 (86.2%)
+      12h  n= 2289  hold=   900.9 min  END_OF_DATA 2 (0.1%), STOP 458 (20.0%), TARGET 177 (7.7%), TIMEOUT 1652 (72.2%)
+      24h  n= 1950  hold=  1302.9 min  END_OF_DATA 2 (0.1%), STOP 688 (35.3%), TARGET 285 (14.6%), TIMEOUT 975 (50.0%)
+      72h  n= 1461  hold=  2044.8 min  END_OF_DATA 4 (0.3%), STOP 624 (42.7%), TARGET 494 (33.8%), TIMEOUT 339 (23.2%)
+-- hc/far-stop W2 guards on
+       4h  n= 2980  hold=   242.0 min  NEWS_FLAT 60 (2.0%), STOP 172 (5.8%), TARGET 187 (6.3%), TIMEOUT 2492 (83.6%), WEEKEND_FLAT 69 (2.3%)
+      12h  n= 1833  hold=   645.9 min  NEWS_FLAT 105 (5.7%), STOP 154 (8.4%), TARGET 85 (4.6%), TIMEOUT 1278 (69.7%), WEEKEND_FLAT 211 (11.5%)
+      24h  n= 1974  hold=   887.1 min  END_OF_DATA 2 (0.1%), NEWS_FLAT 160 (8.1%), STOP 593 (30.0%), TARGET 313 (15.9%), TIMEOUT 658 (33.3%), WEEKEND_FLAT 248 (12.6%)
+      72h  n= 1662  hold=  1241.5 min  END_OF_DATA 3 (0.2%), NEWS_FLAT 185 (11.1%), STOP 675 (40.6%), TARGET 433 (26.1%), TIMEOUT 77 (4.6%), WEEKEND_FLAT 289 (17.4%)
+
+=== PART D. gate legs, units named, both PF, per window ===
+cfg         row           win arm    hold      n   PF_usd     PF_r      gap      E(R)    Lbar     dd_usd   dd_pct  sized     Enet
+config      hc/far-stop   W1  off      4h   2597   0.8980   0.9002  -0.0022   -0.0170  0.1706    4733.74    45.01   null        -
+config      hc/far-stop   W1  off     12h   1831   1.0180   1.0180  +0.0000   +0.0046  0.2545    2683.92    19.90   null        -
+config      hc/far-stop   W1  off     24h   1770   0.9910   0.9993  -0.0083   -0.0003  0.3602    3585.37    31.45   null        -
+config      hc/far-stop   W1  off     72h   1058   1.0580   1.0683  -0.0103   +0.0318  0.4660    2386.27    16.08   null        -
+config      hc/far-stop   W1  on       4h   2516   0.8910   0.8937  -0.0027   -0.0171  0.1609    4611.23    44.01      6        -
+config      hc/far-stop   W1  on      12h   1802   1.0030   1.0057  -0.0027   +0.0013  0.2327    2903.91    22.28      6        -
+config      hc/far-stop   W1  on      24h   1753   0.9780   0.9786  -0.0006   -0.0072  0.3369    3010.38    25.58     51        -
+config      hc/far-stop   W1  on      72h    962   1.0520   1.0652  -0.0132   +0.0236  0.3615    1883.47    13.75      6        -
+config      hc/far-stop   W2  off      4h   3052   0.9200   0.8953  +0.0247   -0.0197  0.1885    6808.19    65.98   null        -
+config      hc/far-stop   W2  off     12h   2289   1.0210   1.0255  -0.0045   +0.0079  0.3101    4866.99    39.90   null        -
+config      hc/far-stop   W2  off     24h   1950   0.9860   0.9783  +0.0077   -0.0092  0.4255    8706.14    62.60   null        -
+config      hc/far-stop   W2  off     72h   1461   1.0060   1.0037  +0.0023   +0.0017  0.4714    6082.38    51.14   null        -
+config      hc/far-stop   W2  on       4h   2980   0.9380   0.9172  +0.0208   -0.0146  0.1765    5988.97    57.88     25        -
+config      hc/far-stop   W2  on      12h   1833   1.0920   1.0923  -0.0003   +0.0195  0.2116    1634.96    11.62      3        -
+config      hc/far-stop   W2  on      24h   1974   0.9920   0.9839  +0.0081   -0.0062  0.3849    6417.35    49.94    222        -
+config      hc/far-stop   W2  on      72h   1662   1.0600   1.0552  +0.0048   +0.0253  0.4583    5224.89    33.10    140        -
+config      hc/keltner    W1  off      4h   2351   0.8000   0.8046  -0.0046   -0.0789  0.4037   15460.77   148.81   null        -
+config      hc/keltner    W1  off     12h   2178   0.8570   0.8583  -0.0013   -0.0714  0.5036   12908.08   127.13   null        -
+config      hc/keltner    W1  off     24h   2016   0.8790   0.8821  -0.0031   -0.0647  0.5485   11753.22   112.80   null        -
+config      hc/keltner    W1  off     72h   1638   0.9490   0.9492  -0.0002   -0.0325  0.6406    8952.63    65.24   null        -
+config      hc/keltner    W1  on       4h   2286   0.8010   0.8023  -0.0013   -0.0785  0.3972   13582.97   130.53    937        -
+config      hc/keltner    W1  on      12h   2082   0.8700   0.8711  -0.0011   -0.0639  0.4957   10191.95   100.40    863        -
+config      hc/keltner    W1  on      24h   1879   0.9080   0.9068  +0.0012   -0.0507  0.5441    8684.69    78.97    738        -
+config      hc/keltner    W1  on      72h   1643   0.9570   0.9494  +0.0076   -0.0305  0.6027    8536.44    57.92    644        -
+config      hc/keltner    W2  off      4h   2082   0.9350   0.9331  +0.0019   -0.0275  0.4113    7396.55    70.45   null        -
+config      hc/keltner    W2  off     12h   1997   0.9610   0.9565  +0.0045   -0.0220  0.5063    7382.67    68.56   null        -
+config      hc/keltner    W2  off     24h   1871   0.9640   0.9613  +0.0027   -0.0214  0.5535    7135.45    62.21   null        -
+config      hc/keltner    W2  off     72h   1845   0.9540   0.9526  +0.0014   -0.0270  0.5694    6951.29    65.90   null        -
+config      hc/keltner    W2  on       4h   2033   0.9390   0.9335  +0.0055   -0.0268  0.4026    6242.88    57.14    734        -
+config      hc/keltner    W2  on      12h   1952   0.9780   0.9694  +0.0086   -0.0150  0.4898    5738.40    50.31    678        -
+config      hc/keltner    W2  on      24h   1834   0.9830   0.9754  +0.0076   -0.0131  0.5340    5252.56    44.28    618        -
+config      hc/keltner    W2  on      72h   1772   0.9830   0.9774  +0.0056   -0.0125  0.5522    5002.45    41.33    586        -
+config      hc/orb60      W1  off      4h    980   0.8480   0.8455  +0.0025   -0.0599  0.3875    6787.89    61.33   null        -
+config      hc/orb60      W1  off     12h    955   0.8330   0.8380  -0.0050   -0.0730  0.4503    6926.25    67.53   null        -
+config      hc/orb60      W1  off     24h    876   0.8590   0.8655  -0.0065   -0.0779  0.5791    6723.05    67.23   null        -
+config      hc/orb60      W1  off     72h    861   0.8890   0.8921  -0.0031   -0.0704  0.6527    6002.29    58.94   null        -
+config      hc/orb60      W1  on       4h    980   0.8370   0.8352  +0.0018   -0.0628  0.3814    6600.67    59.97    285        -
+config      hc/orb60      W1  on      12h    955   0.8240   0.8196  +0.0044   -0.0786  0.4357    6673.93    64.98    235        -
+config      hc/orb60      W1  on      24h    883   0.8530   0.8570  -0.0040   -0.0800  0.5593    6434.27    64.34    220        -
+config      hc/orb60      W1  on      72h    858   0.8620   0.8674  -0.0054   -0.0790  0.5958    6348.08    62.79    230        -
+config      hc/orb60      W2  off      4h   1072   1.0200   1.0271  -0.0071   +0.0096  0.3557    2575.36    21.07   null        -
+config      hc/orb60      W2  off     12h   1072   1.0100   1.0071  +0.0029   +0.0031  0.4336    4012.95    30.02   null        -
+config      hc/orb60      W2  off     24h    961   1.0910   1.0870  +0.0040   +0.0450  0.5174    3504.96    19.53   null        -
+config      hc/orb60      W2  off     72h    897   1.1000   1.0707  +0.0293   +0.0433  0.6127    5144.70    25.54   null        -
+config      hc/orb60      W2  on       4h   1070   1.0380   1.0221  +0.0159   +0.0077  0.3481    2323.48    18.52    218        -
+config      hc/orb60      W2  on      12h   1070   1.0050   0.9882  +0.0168   -0.0048  0.4040    2978.88    23.50    218        -
+config      hc/orb60      W2  on      24h    986   1.0460   1.0424  +0.0036   +0.0202  0.4756    1793.55    13.07    154        -
+config      hc/orb60      W2  on      72h    924   1.0810   1.0522  +0.0288   +0.0293  0.5610    4052.18    23.15    165        -
+config-swap hc/far-stop   W1  off      4h   2597   0.8210   0.8995  -0.0785   -0.0170  0.1691    7497.55    74.98   null   -0.032
+config-swap hc/far-stop   W1  off     12h   1831   0.7770   1.0185  -0.2415   +0.0046  0.2491   10241.78   100.71   null   -0.065
+config-swap hc/far-stop   W1  off     24h   1770   0.7720   0.9992  -0.2272   -0.0003  0.3554   14079.99   130.54   null   -0.090
+config-swap hc/far-stop   W1  off     72h   1058   0.7750   1.0695  -0.2945   +0.0318  0.4575   12569.16   111.13   null   -0.123
+config-swap hc/far-stop   W1  on       4h   2516   0.8340   0.8930  -0.0590   -0.0171  0.1599    6411.16    63.85      6   -0.028
+config-swap hc/far-stop   W1  on      12h   1802   0.8280   1.0058  -0.1778   +0.0013  0.2290    7333.92    71.63      6   -0.044
+config-swap hc/far-stop   W1  on      24h   1754   0.8190   0.9796  -0.1606   -0.0068  0.3342   11488.17   100.62     51   -0.068
+config-swap hc/far-stop   W1  on      72h    962   0.7920   1.0666  -0.2746   +0.0238  0.3577    7870.37    76.17      6   -0.084
+config-swap hc/far-stop   W2  off      4h   3052   0.8810   0.8949  -0.0139   -0.0198  0.1879    8433.60    82.01   null   -0.028
+config-swap hc/far-stop   W2  off     12h   2289   0.9080   1.0257  -0.1177   +0.0079  0.3078    9598.18    85.06   null   -0.030
+config-swap hc/far-stop   W2  off     24h   1950   0.8730   0.9782  -0.1052   -0.0092  0.4233   12544.25   118.78   null   -0.067
+config-swap hc/far-stop   W2  off     72h   1461   0.8720   1.0037  -0.1317   +0.0017  0.4689   10741.71   107.42   null   -0.074
+config-swap hc/far-stop   W2  on       4h   2980   0.9080   0.9171  -0.0091   -0.0146  0.1762    7087.55    68.94     25   -0.021
+config-swap hc/far-stop   W2  on      12h   1833   0.9750   1.0930  -0.1180   +0.0195  0.2102    3990.99    39.42      3   -0.007
+config-swap hc/far-stop   W2  on      24h   1973   0.9070   0.9915  -0.0845   -0.0032  0.3829    9369.93    87.22    221   -0.042
+config-swap hc/far-stop   W2  on      72h   1658   0.9720   1.0691  -0.0971   +0.0314  0.4539    8227.47    77.33    136   -0.021
+config-swap hc/keltner    W1  off      4h   2351   0.7520   0.8038  -0.0518   -0.0789  0.4020   18592.26   178.96   null   -0.103
+config-swap hc/keltner    W1  off     12h   2178   0.7560   0.8569  -0.1009   -0.0713  0.4983   20293.96   200.70   null   -0.133
+config-swap hc/keltner    W1  off     24h   2016   0.7750   0.8810  -0.1060   -0.0647  0.5437   19681.02   192.69   null   -0.134
+config-swap hc/keltner    W1  off     72h   1638   0.8060   0.9488  -0.1428   -0.0326  0.6359   18609.00   170.00   null   -0.144
+config-swap hc/keltner    W1  on       4h   2286   0.7650   0.8019  -0.0369   -0.0785  0.3964   15779.83   151.64    938   -0.095
+config-swap hc/keltner    W1  on      12h   2082   0.7900   0.8705  -0.0805   -0.0639  0.4937   15758.61   155.88    863   -0.108
+config-swap hc/keltner    W1  on      24h   1880   0.8230   0.9081  -0.0851   -0.0497  0.5413   14457.97   139.50    738   -0.102
+config-swap hc/keltner    W1  on      72h   1643   0.8460   0.9493  -0.1033   -0.0305  0.6012   13780.71   124.70    644   -0.105
+config-swap hc/keltner    W2  off      4h   2082   0.9070   0.9329  -0.0259   -0.0275  0.4104    9368.73    90.38   null   -0.041
+config-swap hc/keltner    W2  off     12h   1997   0.8970   0.9564  -0.0594   -0.0220  0.5043   12272.32   114.87   null   -0.059
+config-swap hc/keltner    W2  off     24h   1871   0.8970   0.9611  -0.0641   -0.0215  0.5524   12443.50   115.01   null   -0.064
+config-swap hc/keltner    W2  off     72h   1845   0.8860   0.9527  -0.0667   -0.0269  0.5682   12646.32   122.89   null   -0.072
+config-swap hc/keltner    W2  on       4h   2033   0.9170   0.9335  -0.0165   -0.0267  0.4020    7566.85    70.20    735   -0.036
+config-swap hc/keltner    W2  on      12h   1952   0.9280   0.9692  -0.0412   -0.0150  0.4883    8881.76    79.46    678   -0.041
+config-swap hc/keltner    W2  on      24h   1834   0.9320   0.9753  -0.0433   -0.0132  0.5333    9101.79    78.83    618   -0.043
+config-swap hc/keltner    W2  on      72h   1772   0.9240   0.9774  -0.0534   -0.0125  0.5515    9234.79    80.27    586   -0.047
+config-swap hc/orb60      W1  off      4h    980   0.8260   0.8450  -0.0190   -0.0599  0.3863    7558.20    68.73   null   -0.070
+config-swap hc/orb60      W1  off     12h    955   0.5850   0.8330  -0.2480   -0.0730  0.4370   16469.29   164.69   null   -0.220
+config-swap hc/orb60      W1  off     24h    876   0.6580   0.8640  -0.2060   -0.0778  0.5722   16022.89   160.23   null   -0.228
+config-swap hc/orb60      W1  off     72h    861   0.6680   0.8911  -0.2231   -0.0704  0.6464   16653.36   166.53   null   -0.251
+config-swap hc/orb60      W1  on       4h    980   0.8210   0.8347  -0.0137   -0.0629  0.3802    7102.01    64.82    285   -0.073
+config-swap hc/orb60      W1  on      12h    955   0.6350   0.8155  -0.1805   -0.0786  0.4261   13417.71   133.53    236   -0.184
+config-swap hc/orb60      W1  on      24h    881   0.7020   0.8598  -0.1578   -0.0779  0.5554   13036.60   130.37    220   -0.188
+config-swap hc/orb60      W1  on      72h    857   0.6930   0.8681  -0.1751   -0.0779  0.5904   13688.73   136.89    229   -0.206
+config-swap hc/orb60      W2  off      4h   1072   1.0080   1.0272  -0.0192   +0.0097  0.3551    2713.67    22.73   null   +0.006
+config-swap hc/orb60      W2  off     12h   1072   0.8400   1.0071  -0.1671   +0.0030  0.4291   10375.62    85.26   null   -0.079
+config-swap hc/orb60      W2  off     24h    961   0.9360   1.0875  -0.1515   +0.0451  0.5151    8461.59    57.47   null   -0.041
+config-swap hc/orb60      W2  off     72h    897   0.9220   1.0709  -0.1489   +0.0433  0.6109   10641.63    67.55   null   -0.066
+config-swap hc/orb60      W2  on       4h   1070   1.0290   1.0221  +0.0069   +0.0077  0.3475    2349.57    19.13    218   +0.004
+config-swap hc/orb60      W2  on      12h   1070   0.8720   0.9881  -0.1161   -0.0048  0.4008    7324.54    62.73    218   -0.064
+config-swap hc/orb60      W2  on      24h    986   0.9330   1.0416  -0.1086   +0.0198  0.4747    5170.34    43.65    154   -0.039
+config-swap hc/orb60      W2  on      72h    924   0.9440   1.0522  -0.1082   +0.0293  0.5605    8100.80    54.73    165   -0.049
+
+=== PART E. gate: anything with n>=40 AND PF_r>=1.2 AND E>=+0.050R ===
+  total cells passing both legs with n>=40: 0
+
+=== PART F. carry: arm B (-0.83 USD/lot/night) vs arm A ===
+  hc/orb60 W1 guards-off 4h: E(A) -0.0599 | E(B) -0.0599 Enet(B) -0.070 swap$ -884 PF_r 0.8455 -> 0.8450
+  hc/orb60 W1 guards-off 72h: E(A) -0.0704 | E(B) -0.0704 Enet(B) -0.251 swap$ -11657 PF_r 0.8921 -> 0.8911
+  hc/orb60 W1 guards-on 4h: E(A) -0.0628 | E(B) -0.0629 Enet(B) -0.073 swap$ -581 PF_r 0.8352 -> 0.8347
+  hc/orb60 W1 guards-on 72h: E(A) -0.0790 | E(B) -0.0779 Enet(B) -0.206 swap$ -8205 PF_r 0.8674 -> 0.8681
+  hc/orb60 W2 guards-off 4h: E(A) +0.0096 | E(B) +0.0097 Enet(B) +0.006 swap$ -432 PF_r 1.0271 -> 1.0272
+  hc/orb60 W2 guards-off 72h: E(A) +0.0433 | E(B) +0.0433 Enet(B) -0.066 swap$ -9732 PF_r 1.0707 -> 1.0709
+  hc/orb60 W2 guards-on 4h: E(A) +0.0077 | E(B) +0.0077 Enet(B) +0.004 swap$ -297 PF_r 1.0221 -> 1.0221
+  hc/orb60 W2 guards-on 72h: E(A) +0.0293 | E(B) +0.0293 Enet(B) -0.049 swap$ -6887 PF_r 1.0522 -> 1.0522
+  hc/keltner W1 guards-off 4h: E(A) -0.0789 | E(B) -0.0789 Enet(B) -0.103 swap$ -4050 PF_r 0.8046 -> 0.8038
+  hc/keltner W1 guards-off 72h: E(A) -0.0325 | E(B) -0.0326 Enet(B) -0.144 swap$ -14177 PF_r 0.9492 -> 0.9488
+  hc/keltner W1 guards-on 4h: E(A) -0.0785 | E(B) -0.0785 Enet(B) -0.095 swap$ -2751 PF_r 0.8023 -> 0.8019
+  hc/keltner W1 guards-on 72h: E(A) -0.0305 | E(B) -0.0305 Enet(B) -0.105 swap$ -9906 PF_r 0.9494 -> 0.9493
+  hc/keltner W2 guards-off 4h: E(A) -0.0275 | E(B) -0.0275 Enet(B) -0.041 swap$ -2508 PF_r 0.9331 -> 0.9329
+  hc/keltner W2 guards-off 72h: E(A) -0.0270 | E(B) -0.0269 Enet(B) -0.072 swap$ -7110 PF_r 0.9526 -> 0.9527
+  hc/keltner W2 guards-on 4h: E(A) -0.0268 | E(B) -0.0267 Enet(B) -0.036 swap$ -1702 PF_r 0.9335 -> 0.9335
+  hc/keltner W2 guards-on 72h: E(A) -0.0125 | E(B) -0.0125 Enet(B) -0.047 swap$ -5495 PF_r 0.9774 -> 0.9774
+  hc/far-stop W1 guards-off 4h: E(A) -0.0170 | E(B) -0.0170 Enet(B) -0.032 swap$ -3488 PF_r 0.9002 -> 0.8995
+  hc/far-stop W1 guards-off 72h: E(A) +0.0318 | E(B) +0.0318 Enet(B) -0.123 swap$ -14134 PF_r 1.0683 -> 1.0695
+  hc/far-stop W1 guards-on 4h: E(A) -0.0171 | E(B) -0.0171 Enet(B) -0.028 swap$ -2382 PF_r 0.8937 -> 0.8930
+  hc/far-stop W1 guards-on 72h: E(A) +0.0236 | E(B) +0.0238 Enet(B) -0.084 swap$ -9388 PF_r 1.0652 -> 1.0666
+  hc/far-stop W2 guards-off 4h: E(A) -0.0197 | E(B) -0.0198 Enet(B) -0.028 swap$ -2343 PF_r 0.8953 -> 0.8949
+  hc/far-stop W2 guards-off 72h: E(A) +0.0017 | E(B) +0.0017 Enet(B) -0.074 swap$ -9629 PF_r 1.0037 -> 1.0037
+  hc/far-stop W2 guards-on 4h: E(A) -0.0146 | E(B) -0.0146 Enet(B) -0.021 swap$ -1635 PF_r 0.9172 -> 0.9171
+  hc/far-stop W2 guards-on 72h: E(A) +0.0253 | E(B) +0.0314 Enet(B) -0.021 swap$ -8180 PF_r 1.0552 -> 1.0691
+
+=== PART G. PF_usd - PF_r sign, by window (my own data, nobody's ratio) ===
+  W1: PF_usd higher 5, PF_r higher 42, equal 1 (of 48 cells)
+  W2: PF_usd higher 22, PF_r higher 26, equal 0 (of 48 cells)
