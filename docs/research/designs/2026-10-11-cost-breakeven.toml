@@ -1,0 +1,136 @@
+# agent/cost-breakeven — 14 rows, FROZEN. Registered in
+# docs/decisions/2026-10-11-cost-breakeven.md, committed ALONE at 35e3283
+# before this file and before the first search.exe call of this branch.
+#
+# 11 CANDIDATES: the output of the numeric screen declared in section 2 of the
+# registration - min(PF_r over the two windows) in [1.050, 1.200), n >= 40 on
+# BOTH windows, guards ON, spread 0.28, read from receipts that PRINT lbar_line.
+#   10 of them from agent/mould-target's C-{is,oos}-s28.txt (153 declared rows)
+#    1 of them from agent/hour-screen's gate-W{1,2}-guardson.txt (8 rows)
+#
+# 3 CONTROLS, declared at the same time and NOT candidates:
+#   px-1s          parity/ruler anchor (must reproduce the record)
+#   ovn1900/short  SIGHTED PROBE: same hours, same exposure, same sizing as
+#                  ovn1900/long, only the side flipped; PF_r 0.6459. It MUST
+#                  fail at every non-negative spread.
+#   ema-cross      second probe, a deeply losing default on this arm (G -3.091)
+#
+# riskDailyRanges / lookback / hold / quietPct are held at each row's OWN
+# published value and are NOT axes. Only --spread= moves (addendum 10 trap 2:
+# in the guards-ON arm a self-managed stop is NOT a denominator - it shifts G by
+# up to 81% and changes the trade count).
+#
+# No filters on the 12 mould-target-derived rows (filters = [] throughout, as
+# in the source design); the two hour-screen rows carry their own two filters.
+
+[run]
+# INERT under --fixed (addendum 8 section VI): the windows come from the CLI.
+in_sample = "xauduka:15m"
+in_sample_from = "2010-06-01"
+in_sample_to = "2018-06-01"
+out_of_sample = "xauduka:15m"
+out_of_sample_from = "2018-06-01"
+seeds = 2
+fixed = true
+
+# ---------------- CONTROLS ----------------
+
+[[hypothesis]]
+label = "px-1s"
+base = "session-hold"
+filters = []
+overrides = { from = 1800, to = 1600, side = 1, riskDailyRanges = 1.5, rangeDays = 20 }
+why = "CONTROL: parity/ruler anchor; must reproduce agent/mould-target to the printed digit"
+
+[[hypothesis]]
+label = "ovn1900/short"
+base = "session-hold"
+filters = ["weekdays:MoTuWeTh", "hours:1900-1905"]
+overrides = { from = 1900, to = 200, side = -1, riskDailyRanges = 1.000, rangeDays = 20 }
+why = "CONTROL: SIGHTED PROBE, PF_r 0.6459; must have NO spread* at any s >= 0"
+
+[[hypothesis]]
+label = "ema-cross"
+base = "ema-cross"
+filters = []
+overrides = { }
+why = "CONTROL: second probe, deeply losing default; must have NO spread* at any s >= 0"
+
+# ---------------- 11 CANDIDATES, in screen order ----------------
+
+[[hypothesis]]
+label = "qs-lb3"
+base = "quiet-swing"
+filters = []
+overrides = { lookbackSessions = 3 }
+why = "CANDIDATE 1: min PF_r 1.1730, the nearest row to the gate in the record"
+
+[[hypothesis]]
+label = "ts-l5"
+base = "tsmom"
+filters = []
+overrides = { lookbackDays = 5 }
+why = "CANDIDATE 2: min PF_r 1.1048"
+
+[[hypothesis]]
+label = "ts-l20"
+base = "tsmom"
+filters = []
+overrides = { lookbackDays = 20 }
+why = "CANDIDATE 3: min PF_r 1.1005"
+
+[[hypothesis]]
+label = "ts-l10"
+base = "tsmom"
+filters = []
+overrides = { lookbackDays = 10 }
+why = "CANDIDATE 4: min PF_r 1.0926"
+
+[[hypothesis]]
+label = "qs-lb30"
+base = "quiet-swing"
+filters = []
+overrides = { lookbackSessions = 30 }
+why = "CANDIDATE 5: min PF_r 1.0913, and the only candidate whose PF leg binds (Lbar 0.288 >= 0.250)"
+
+[[hypothesis]]
+label = "tsmom"
+base = "tsmom"
+filters = []
+overrides = { }
+why = "CANDIDATE 6: min PF_r 1.0886, default lookbackDays 60"
+
+[[hypothesis]]
+label = "qs-h15"
+base = "quiet-swing"
+filters = []
+overrides = { holdSessions = 15 }
+why = "CANDIDATE 7: min PF_r 1.0741"
+
+[[hypothesis]]
+label = "qs-qp020"
+base = "quiet-swing"
+filters = []
+overrides = { quietPct = 0.20 }
+why = "CANDIDATE 8: min PF_r 1.0712"
+
+[[hypothesis]]
+label = "qs-h30"
+base = "quiet-swing"
+filters = []
+overrides = { holdSessions = 30 }
+why = "CANDIDATE 9: min PF_r 1.0672"
+
+[[hypothesis]]
+label = "qs-h2"
+base = "quiet-swing"
+filters = []
+overrides = { holdSessions = 2 }
+why = "CANDIDATE 10: min PF_r 1.0523"
+
+[[hypothesis]]
+label = "ovn1900/long"
+base = "session-hold"
+filters = ["weekdays:MoTuWeTh", "hours:1900-1905"]
+overrides = { from = 1900, to = 200, side = 1, riskDailyRanges = 1.000, rangeDays = 20 }
+why = "CANDIDATE 11: min PF_r 1.0703, the smallest Lbar of the set (0.087) so the expectancy leg binds hardest"
