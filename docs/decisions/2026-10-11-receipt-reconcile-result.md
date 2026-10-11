@@ -437,3 +437,173 @@ pins back one thing and asks whether a published number returns.
 - Making `search` echo the **resolved** window (first and last bar) into the
   argv line of every receipt would make this whole class impossible to create
   again. That is the one-line infrastructure change this axis argues for.
+
+
+---
+
+## Note added 2026-10-11, later — three things the coordinator sent after this result was written, each measured against MY OWN control runs (appended; nothing above is rewritten)
+
+All three land on the cost/unit table above. Two of them correct it. The first
+one does **not** replicate on this set, and under brief §8 the measurement is
+reported rather than the claim.
+
+### A. The sign of `PF_usd - PF_r` is NOT a window constant on this set
+
+Measured on the **43 cells** my own 13 control runs printed a
+`Lbar ... PF_r ... PF_usd ... gap` line for — no new engine run, the lines were
+already in the receipts:
+
+    window                market   tf   cells  USD higher  share   |gap| min  |gap| max
+    W1 (2018-06-17 ->)    xauduka  15m      2           1   50.0%     0.0037     0.0049
+    W1 (2022-06-16 ->)    xauduka  15m      4           3   75.0%     0.0051     0.0095
+    W1 (2022-06-16 ->)    xauduka   5m     20          11   55.0%     0.0020     0.0122
+    W1 (2024-08-13 ->)    btc       5m      3           2   66.7%     0.0091     0.0096
+    W1 (2024-09-12 ->)    btc      15m      2           2  100.0%     0.0045     0.0115
+    W2 (2025-04-11 ->)    xauusd   15m      6           2   33.3%     0.0114     0.2188
+    W2 (2025-04-11 ->)    xauusd    5m      6           4   66.7%     0.0014     0.0483
+
+    pooled by window:  W1 2022-06-16  14/24 = 58.3%      W2 2025-04-11  6/12 = 50.0%
+    pooled across all: 25/43 = 58.1%   <- the number a pooled ratio would print
+
+**The coordinator measured W1 USD-higher 24/24 (100%) and W2 0/24 (0%) on 48
+cells of ONE mechanism, one parameterisation, one arm. This set reads 55% and
+33–67%, mixed inside BOTH windows.** The two are not in conflict and the
+reconciliation is the useful part: the coordinator's set held the mechanism
+fixed and varied the window; this set holds the window fixed and varies the
+mechanism across nine of them. So the sign is **not** determined by the window
+alone — on one window with nine mechanisms it splits almost evenly. If it is
+determined by anything it is **mechanism × window**, which is a two-factor
+statement neither set can settle on its own.
+
+**The operational rule is therefore the one addendum 9 §I and 10 §V already
+give, and this is now the eighth measurement of it: measure the gap on your own
+cells, print both PFs on every row, and do not quote anyone's ratio — including
+a per-window one.** The honest caveat on my own table: the per-bucket counts are
+2–20 cells, so this set cannot *refute* a 100%/0% split, it can only show that
+the split is not reproduced when the mechanism is allowed to vary.
+
+**And it found one flip the result above did not report.** Two of the 43 cells
+have `PF_usd` and `PF_r` on **opposite sides of the gate's 1.200**:
+
+    m15/eq-open-60m   n=316  btc     PF_usd 1.1919  PF_r 1.2034   reads TOO LOW
+    close/1815-2200   n=289  xauusd  PF_usd 1.2088  PF_r 1.1960   reads TOO HIGH
+
+The first independently reproduces `agent/pfr-audit`'s only decision-record
+flip, from a different run and a different batch file — worth having as a second
+sighting. **The second is new.** It is the pinned W2 control for
+`close/1815-2200` in `2026-09-13-close-reopen-drift.md`: read in USD that
+control clears the PF leg (1.2088), read in R it misses it (1.1960). The
+**published** row was PF 1.195 and already below, so no published verdict moves
+— but anyone re-running that row with a pinned `--to` and reading `PF_usd` would
+now see it clear a leg it does not clear in R. Recorded here so the next reader
+does not have to find it twice.
+
+Two more free reads off the same 43 cells, both confirming the record's own
+arithmetic: the identity `E = Lbar x (PF_r - 1)` holds on every cell printed
+(largest residual seen in any line of my runs, 0.00002 R), and **35 of 43 cells
+have `Lbar >= 0.250 R`**, i.e. the expectancy leg is REDUNDANT on them and
+binds on the other 8 — the split addendum 6 §I predicted.
+
+### B. CORRECTION to the cost/R column above: it names ONE ruler, and there are two
+
+Every `cost/R` figure in this result and in the nine appended notes is read off
+the engine's own line
+
+    cost-matched null: control stop X ATR = Y points, cost Z% of R
+
+which uses the **control's NOMINAL stop size**. `agent/range-sizing` measures
+the same quantity from the **p50 of the per-trade distance `d` on the signal
+bar**, and the two rulers disagree by roughly 1.25x on the same cells (its
+15.03% / 7.52% against the engine line's 18.42–18.79% / 9.30–9.41%).
+
+**Both are correct and they answer different questions.** Nothing above is
+withdrawn, but every number in that column must be read as
+*engine-nominal-stop ruler*, and it is **not comparable** to a
+`range-sizing`-style number without converting. The table's claim that survives
+either ruler is the **ratio**, because a constant factor cancels: cost/R spans
+**22.2x across the 34 rows and 8.9x within `xauduka` alone**, driven by stop
+size on one instrument, one feed, one spread.
+
+And the coordinator is right that a single cost/R per instrument is an
+undeclared choice. This result already refuses to print one: the column is
+per-row, with the stop size on the row. The further variation *within* a row —
+`range-sizing` measures f=1.0 -> 15.03% against f=2.0 -> 7.52% on one window,
+and 10.68% / 5.34% on the other — is **not measured here and is not claimed**;
+these 34 rows each ran at one stop, so this table reads one point of that curve
+per row. **OPEN**, and the clean method is the `--spread=` scan of addendum
+10 §III.
+
+### C. The component of the R denominator nobody declares: `delta = spread/2`
+
+Defect 16 (addendum 7 §C): `risk = f x range + delta`, because `sizing_stop`
+reads the signal bar's `close` while `entry` has already been through
+`apply_costs`, so `d risk / d s = +1/2` **exactly, from the code** — not from a
+fit. Expressed against each row's own printed stop:
+
+    row                 mkt      stop(pts)  spread   delta   delta/R   cost/R
+    pdhl/break-nyam     xauduka       1.63    0.28  0.1400    8.59%   17.13%
+    pdhl/fade-allday    xauduka       1.79    0.28  0.1400    7.82%   15.69%
+    m15/pdhl-break      xauduka       2.08    0.28  0.1400    6.73%   13.46%
+    m15/pdhl-fade       xauduka       2.37    0.28  0.1400    5.91%   11.81%
+    lowvol/orb60        xauduka       5.32    0.28  0.1400    2.63%    5.26%
+    ...
+    london/expansion    xauusd       36.45    0.28  0.1400    0.38%    0.77%
+    vwap/allday         btc         113.39    5.00  2.5000    2.20%    4.41%
+    m15/vwap-allday     btc         228.91    5.00  2.5000    1.09%    2.18%
+
+    delta/R across the 23 rows carrying an enforced stop: 0.38% -> 8.59% = 22.4x
+
+**An identity worth writing down, because it makes defect 16 free to read off
+any receipt.** `delta` is `spread/2` by construction and the engine's cost line
+is `spread/stop`, so
+
+    delta/R  =  (the printed cost/R)  /  2      exactly
+
+and it holds on **24 of 24** rows measured here at 49.8%–50.1% (rounding only).
+So **any receipt that prints `cost Z% of R` is also telling you that defect 16
+is worth `Z/2`% of that row's R**, with no extra run.
+
+**Why it matters on this set specifically:** the four `pdhl` rows are the
+narrowest stops in the 34 and the highest cost/R, and on them `delta` alone is
+**5.91% to 8.59% of R** — i.e. the half-spread that leaked into the denominator
+is on its own **larger than the gate's entire expectancy leg of +0.050 R**, by
+up to 1.7x. Those rows were closed at the 1st–6th percentile of their nulls
+(`2026-09-13-pdhl.md`), so the direction of the verdict is not in doubt; but the
+*size* of their failure is partly a mis-measured denominator rather than money
+paid to a venue, and the record nowhere says so.
+
+Note this is a different quantity from the coordinator's 14.34% -> 3.38%
+(4.2x): that is `delta` varying **per trade inside one cell** (p10 to p90 of
+`d`); mine is `delta` varying **across rows** at each row's median stop. Both
+are real, they are not the same number, and neither should be quoted for the
+other.
+
+### D. The spread log, restated because it is half this job's value
+
+Unchanged from the section above and re-measured, read-only, today:
+`data/spreads/XAUUSD_sc.csv` holds **8,967 samples over 49.8 hours covering all
+24 hours** against the **2,315 samples / 12.8 hours** `config/default.toml`
+describes. p50 **0.220**, p95 **0.260**, p99 = max **0.290**, range
+0.210 -> 0.290 = **38% of the p50**. **2.80% of samples exceed the 0.28
+charged**, and **100% of those sit in hours 20-22 UTC** (hour 21 = 17:00 NY, the
+rollover, p50 0.290; outside 20-22 UTC the maximum observed anywhere is 0.260).
+The config sentence *"the configured 0.28 is above every spread ever observed"*
+is **false on the larger sample**, and the config's own note names the gap it
+could not close: *"the 21:00 UTC rollover hour and a weekend."* The rollover
+hour is now in the log.
+
+`XAGUSD_sc.csv` (n=3,434) and `BTCUSD_sc.csv` (n=6,650) are the only other logs
+on disk, so of the eight `markets.*` entries in the config exactly **three** have
+a spread log and **five do not** — including `xauduka`, which carries 21 of
+these 34 rows on a number transferred from a different venue's instrument.
+
+**Still not repriced here, and still the owner's call** for the reason
+`config/default.toml:319-323` gives, with the round-trip convention to be
+settled first (the log records a one-way bid-ask; the engine charges 0.28 "per
+round trip"). **OPEN FOR THE OWNER.**
+
+Receipt for this note: `receipts/receipt-reconcile/TABLE-gap-delta.txt`,
+produced by `py/research/receipt_reconcile_gap.py` and
+`py/research/receipt_reconcile_delta.py` over the control runs already in
+`receipts/receipt-reconcile/controls/`. No engine run was added; the ledger
+stays at 13.
