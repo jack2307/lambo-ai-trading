@@ -232,3 +232,32 @@ phải đi ngang giữa bốn nhãn — và **không** dùng thước `risk_usd 
   (iii) chạy lại trên một thước nến khác.
 - **Không chạy lại một dòng đã công bố rồi trích số của nó.** Phụ lục 8 §II:
   chỉ 295/452 ô khớp `PF_usd` đã công bố. Mọi con số trong báo cáo là số tôi chạy ra.
+
+---
+
+## Ghi chú thêm — 2026-10-11, TRƯỚC khi chạy tiền kiểm
+
+Hằng số của dụng cụ `py/research/range_sizing_precheck.py`, khai ra để không
+ai phải suy chúng từ số:
+
+    REFIT       moc dau moi thang lich (UTC) — khong phu thuoc du lieu
+    MIN_TRAIN   20.000 dong truoc du bao dau tien
+    TAP KHOP    dong `i` chi vao tap khop o moc `B` khi `t15[i] + 2 x 900_000 <= B`
+                (ket cuoc cua no DA quan sat xong truoc `B`) — dieu khoan nay la
+                cai lam C1 doc duoc
+    NORM_WIN    2.000 du bao huu han gan nhat, TINH CA i
+    NORM_MIN      200 du bao trong cua so, duoi do => NaN (khong phai 1,0)
+    CLAMP       m kep [0,50 ; 2,00]
+    SEED        20261011
+    DELTA_USD   0,138 (nua spread 0,28 vong, khuyet diem 16)
+    DONCHIAN    20 nen, nen HIEN TAI bi loai (`bars[i-period..i]`)
+
+**Probe thứ ba, thêm vào C2 trước khi chạy:** ngoài `PROBE_peek_m16` (đặc trưng
+đọc close phút 16) và `PROBE_y` (đưa `y(i)` vào làm biến hồi quy), thêm
+`PROBE_fullfit` — **khớp OLS một lần trên CẢ chuỗi** thay vì đi bộ tiến. Nó test
+đúng cái tầng mà hai probe kia không chạm: **tầng KHỚP**. Cả ba phải TRƯỢT C1.
+
+**`py/research/intrabar_shape_precheck.py` được mang nguyên từ
+`agent/intrabar-shape`** (không sửa một dòng) và import vào, nên `grid_1m`,
+`intrabar_features`, `control_features`, `atr14_15m`, `outcome` là **đúng** hàm
+đã qua C1/C2 đêm 10/10 — không phải một bản viết lại.
