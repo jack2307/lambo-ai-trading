@@ -18,6 +18,10 @@ serde = { workspace = true }
 thiserror = { workspace = true }
 # Hypothesis batches are declared in TOML so they can be written before a run.
 toml = { workspace = true }
+# The argv sidecar's digests. `ring` is already the tree's crypto (fd-api's
+# auth), so this is the copy already in Cargo.lock rather than a second stack
+# arriving behind it. SHA-256 only: see src/argv_sidecar.rs.
+ring = { workspace = true }
 
 [dev-dependencies]
 fd-indicators = { workspace = true }

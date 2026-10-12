@@ -48,8 +48,28 @@ fn arg(name: &str, fallback: &str) -> String {
 
 /// The flags every mode reads: the market, the window, the cost model and the
 /// run header. Passing one of these changes the numbers whatever `--mode=` is.
-const ALWAYS: &[&str] =
-    &["market", "mode", "data", "config", "interval", "from", "to", "spread", "trail", "companion", "guards"];
+///
+/// `argv-sidecar` is declared here rather than in [`BY_MODE`] because the
+/// sidecar is written in `main` before the mode is dispatched, out of values
+/// every mode resolves — so every mode reads it, and a receipt from any of them
+/// has its spec beside it. The source-scanning test below FIRED on this flag
+/// before it was added to this line (`["argv-sidecar"]`), which is the order
+/// the mechanism depends on: write the code that reads the flag, run the suite,
+/// read the failure, then declare.
+const ALWAYS: &[&str] = &[
+    "market",
+    "mode",
+    "data",
+    "config",
+    "interval",
+    "from",
+    "to",
+    "spread",
+    "trail",
+    "companion",
+    "guards",
+    "argv-sidecar",
+];
 
 /// Every other flag, with the `--mode=` values that actually read it.
 ///
@@ -115,6 +135,25 @@ fn flag_audit(mode: &str, args: &[String]) -> Vec<String> {
     out
 }
 
+/// argv as the `flags:` line counts it: everything except `--argv-sidecar=`.
+///
+/// MEASURED, and it is the reason this function exists. Wired the obvious way,
+/// `--mode=costs` printed `flags:    7 passed` without the flag and
+/// `flags:    8 passed` with it - **one byte of difference in the receipt**,
+/// which is the exact byte the owner's decision to write a sidecar instead of a
+/// header line was made to protect. The standard does not get relaxed to
+/// "approximately identical"; the instrument gets fixed.
+///
+/// This is not a flag going quiet. `--argv-sidecar=` asks for a file, not for a
+/// measurement: nothing downstream of it reads anything it set, a failed write
+/// aborts the process loudly before a number is measured, and the sidecar
+/// records the run's WHOLE argv including itself. So the receipt is unchanged
+/// and the argv is still written down, which is the whole point of putting it
+/// in a separate file.
+fn flags_counted(args: impl Iterator<Item = String>) -> Vec<String> {
+    args.filter(|a| !a.starts_with("--argv-sidecar=")).collect()
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let market = arg("market", "btc");
     let mode = arg("mode", "all");
@@ -137,6 +176,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("market:   {market} {interval}");
     println!("data:     {} (bars from {})", data.display(), bars_path.display());
     let mut bars = read_bars(&bars_path)?;
+    // How many bars the file held BEFORE the bounds cut it, for the argv
+    // sidecar. The `bounds:` line below prints the same pair but only when a
+    // bound was passed, and the 25-row defect class is exactly the runs where
+    // none was.
+    let bars_in_file = bars.len();
     // `--from=YYYY-MM-DD --to=YYYY-MM-DD` (UTC, `to` exclusive) cut the series
     // before anything runs: an out-of-sample feed that overlaps the in-sample
     // one is only out of sample on the dates the in-sample feed never saw.
@@ -260,7 +304,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // WHICH OF THE FLAGS PASSED THIS MODE ACTUALLY READS, in the header,
     // before a single number. A flag a mode ignores has been found five times
     // and was silent every time; from here a receipt says it itself.
-    let passed: Vec<String> = std::env::args().skip(1).collect();
+    let passed: Vec<String> = flags_counted(std::env::args().skip(1));
     let ignored = flag_audit(&mode, &passed);
     if ignored.is_empty() {
         println!("flags:    {} passed, every one of them read by --mode={mode}", passed.len());
@@ -270,6 +314,51 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
     println!();
+
+    // `--argv-sidecar=<path>`: THE ARGV OF THIS RUN, in a file BESIDE the
+    // receipt.
+    //
+    // A receipt prints the window it resolved and not the argv that asked for
+    // it, and `agent/receipt-reconcile` measured that 25 of the record's 34
+    // unreproducible rows come from an argv recorded with an empty
+    // `--from`/`--to` over a store that later grew at one end. Printing the
+    // argv into the receipt is what the bit-for-bit standard forbids, so the
+    // two requirements conflict directly; the owner decided it on 2026-10-11
+    // in favour of a separate file. See `crates/fd-backtest/src/argv_sidecar.rs`
+    // and `docs/decisions/2026-10-11-argv-sidecar.md`.
+    //
+    // NOTHING IS PRINTED HERE. On success this writes to stdout and to stderr
+    // exactly zero bytes, which is what keeps every receipt byte-identical. On
+    // failure it is FATAL and the process exits non-zero before a single number
+    // is measured — a sidecar that failed in silence would be the `null_sides`
+    // defect class with a new name.
+    let sidecar = arg("argv-sidecar", "");
+    if !sidecar.is_empty() {
+        let path = PathBuf::from(&sidecar);
+        let stem = path.file_stem().map_or_else(|| sidecar.clone(), |s| s.to_string_lossy().to_string());
+        let argv: Vec<String> = std::env::args().collect();
+        let reads_batch =
+            BY_MODE.iter().find(|(flag, _)| *flag == "batch-file").is_some_and(|(_, m)| m.contains(&mode.as_str()));
+        let text = fd_backtest::argv_sidecar::render(
+            &fd_backtest::argv_sidecar::RunSpec {
+                argv: &argv,
+                bars: &bars,
+                bars_before_bounds: bars_in_file,
+                bars_path: &bars_path,
+                from_arg: &arg("from", ""),
+                to_arg: &arg("to", ""),
+                config_dir: &PathBuf::from(arg("config", "config")),
+                batch_file: &arg("batch-file", ""),
+                batch_name: &arg("batch", "gold-intraday"),
+                mode_reads_batch: reads_batch,
+                rules: &rules,
+                guards,
+            },
+            &stem,
+        );
+        fd_backtest::argv_sidecar::write(&path, &text)
+            .map_err(|e| format!("--argv-sidecar={sidecar}: {e} - refusing to measure anything without the spec beside it"))?;
+    }
 
     let registry = Registry::with_builtins();
     if mode == "all" || mode == "compare" {
@@ -2118,5 +2207,132 @@ mod drawdown_printer_tests {
         let m = Metrics { trades: 60, win_rate: 0.4, avg_win_r: 1.8, avg_loss_r: -0.8333, expectancy: 0.22, profit_factor: 1.44, ..Metrics::empty() };
         let line = lbar_line(&m);
         assert!(line.contains("expectancy leg REDUNDANT (Lbar >= 0.250R)"), "{line}");
+    }
+}
+
+/// The sidecar's own guards, held against this binary's source.
+///
+/// The owner chose a sidecar over a receipt header line for exactly one
+/// reason — the bit-for-bit standard — so the thing that must never regress is
+/// that the feature is SILENT on success. A future edit adding
+/// `println!("sidecar: written to …")` would break every receipt comparison in
+/// `docs/` and would look helpful while doing it. These tests read the source,
+/// the same mechanism the flag table uses, because a property of the code is
+/// what needs holding, not a property of one run.
+#[cfg(test)]
+mod sidecar_tests {
+    use super::{ALWAYS, flag_audit, flags_counted};
+
+    const SRC: &str = include_str!("search.rs");
+
+    /// The block of `main` that writes the sidecar, source text only.
+    fn sidecar_block() -> &'static str {
+        let at = SRC.find("    let sidecar = arg(\"argv-sidecar\", \"\");").expect("the sidecar block must be findable");
+        let rest = &SRC[at..];
+        let end = rest.find("
+    let registry =").expect("the block must end before the registry is built");
+        &rest[..end]
+    }
+
+    /// NOTHING IS PRINTED. This is the whole reason the sidecar is a file.
+    #[test]
+    fn the_sidecar_block_writes_to_no_stream() {
+        let block = sidecar_block();
+        assert!(block.len() > 200, "the scanner found {} bytes and would pass vacuously", block.len());
+        for banned in ["println!", "print!", "eprintln!", "eprint!"] {
+            assert!(
+                !block.contains(banned),
+                "`{banned}` inside the sidecar block would change the receipt beside it, which is the one thing                  the owner chose a sidecar to avoid",
+            );
+        }
+    }
+
+    /// A FAILED write is fatal, not a warning.
+    ///
+    /// A sidecar that failed in silence is the `null_sides` defect class with a
+    /// new name: a flag accepted, a header unchanged, and nothing to say the
+    /// setting never applied. The write is the last thing before the registry
+    /// is built, so a failure costs no measurement.
+    #[test]
+    fn a_failed_write_aborts_before_anything_is_measured() {
+        let block = sidecar_block();
+        assert!(block.contains("refusing to measure anything"), "the error must say what it refused: {block}");
+        assert!(block.trim_end().ends_with("?;
+    }") || block.contains(")?;"), "the error must propagate: {block}");
+    }
+
+    /// Every mode writes it, so no mode can accept the flag and ignore it.
+    ///
+    /// The seven known cases of a silently-ignored flag are what `ALWAYS` /
+    /// `BY_MODE` and the header's `flags:` line exist for. This one is in
+    /// `ALWAYS` because the write happens before the mode is dispatched, and
+    /// the test holds that claim against `flag_audit` for every mode the
+    /// binary has.
+    #[test]
+    fn no_mode_accepts_the_sidecar_flag_and_ignores_it() {
+        assert!(ALWAYS.contains(&"argv-sidecar"), "the sidecar flag must be declared as read by every mode");
+        for mode in ["all", "compare", "sweep", "wf", "hypotheses", "rescore", "null", "null-dir", "volume", "costs"] {
+            let said = flag_audit(mode, &["--argv-sidecar=x.md".to_string()]);
+            assert!(said.is_empty(), "--mode={mode} must not denounce a flag it does read: {said:?}");
+        }
+    }
+
+    /// ASKING FOR A SIDECAR CHANGES NO BYTE OF THE RECEIPT.
+    ///
+    /// Wired the obvious way it changed one: `--mode=costs` read
+    /// `flags:    7 passed` without the flag and `8 passed` with it, because
+    /// the header counts argv. That is the byte the owner chose a sidecar to
+    /// protect, so the count excludes this one flag and only this one.
+    #[test]
+    fn asking_for_a_sidecar_does_not_change_the_flags_line() {
+        let base = ["--market=xauduka", "--mode=costs", "--from=2025-01-01"];
+        let plain: Vec<String> = base.iter().map(|s| (*s).to_string()).collect();
+        let mut asked = plain.clone();
+        asked.push("--argv-sidecar=anywhere/at/all.md".to_string());
+        assert_eq!(
+            flags_counted(plain.clone().into_iter()),
+            flags_counted(asked.clone().into_iter()),
+            "the flags: line must count the same argv either way",
+        );
+        assert_eq!(flags_counted(asked.into_iter()).len(), 3, "and the count itself must not move");
+        // And every OTHER flag still reaches the audit, or this filter would be
+        // a place for a flag to go quiet - the defect class this binary already
+        // carries a source-scanning test for.
+        let kept = flags_counted(["--direction-samples=1000".to_string()].into_iter());
+        assert_eq!(flag_audit("hypotheses", &kept).len(), 1, "nothing else may be filtered out: {kept:?}");
+    }
+
+    /// AND THE SECOND PATH IS INERT, stated here because it was MEASURED.
+    ///
+    /// `[run] <key>` in a batch file is dropped by `BatchFile`'s deserialiser
+    /// (`hypotheses.rs`: the struct carries `hypothesis` and nothing else), so
+    /// `[run] argv_sidecar = "…"` is accepted without a complaint and writes
+    /// no file — the same class as `[run] null_sides` and `[run] max_hold_ms`.
+    /// There is exactly ONE way to ask for a sidecar, and this test is where a
+    /// reader finds that out.
+    #[test]
+    fn the_batch_file_run_table_cannot_ask_for_a_sidecar() {
+        let toml_text = concat!(
+            "[run]
+argv_sidecar = \"would-be-written-here.md\"
+
+",
+            "[[hypothesis]]
+label = \"x/y\"
+base = \"ema-cross\"
+why = \"a fixture\"
+"
+        );
+        let dir = std::env::temp_dir().join("argvsc-inert-path-probe");
+        std::fs::create_dir_all(&dir).expect("temp dir");
+        let path = dir.join("probe.toml");
+        std::fs::write(&path, toml_text).expect("write the probe");
+        let batch = fd_backtest::hypotheses::batch_from_file(&path).expect("the file must parse");
+        assert_eq!(batch.len(), 1, "the [[hypothesis]] table is read");
+        assert!(
+            !dir.join("would-be-written-here.md").exists(),
+            "`[run] argv_sidecar` is INERT - only --argv-sidecar= works",
+        );
+        let _ = std::fs::remove_file(&path);
     }
 }

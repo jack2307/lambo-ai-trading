@@ -1,0 +1,57 @@
+================================================================================
+F2 - IS THE BIT-FOR-BIT STANDARD UNTOUCHED?   5 argv x 4 binaries = 20 runs
+================================================================================
+a  the shared binary                 /e/rust/fd-stop-width/target-sw/release/search.exe  (= 29c8635)
+b  an INDEPENDENT --release build of 29c8635, in this worktree's own target-as/
+c  the post-change binary, NO --argv-sidecar passed
+d  the post-change binary, WITH --argv-sidecar passed on every run
+
+The five argv are in ARGV.md section 2.
+
+diff -r (the sidecar directory excluded, since sets a-c have none):
+  base-indep     vs a : BYTE-CLEAN, 5 of 5
+  post-noflag    vs a : BYTE-CLEAN, 5 of 5
+  post-flag      vs a : BYTE-CLEAN, 5 of 5
+
+md5 of every one of the 20 receipts:
+  base-shared  f1  b910552eab77511e4afb9c36e9494ffa
+  base-shared  f2  9dcecb0f6477644125b326d4e90e1278
+  base-shared  f3  820a07e37f94ee8823213fc8346946dd
+  base-shared  f4  4ca45c47dccc08685f3a18c857b012c5
+  base-shared  f5  34eba2a826cde8625d4934db0ce98080
+  base-indep   f1  b910552eab77511e4afb9c36e9494ffa
+  base-indep   f2  9dcecb0f6477644125b326d4e90e1278
+  base-indep   f3  820a07e37f94ee8823213fc8346946dd
+  base-indep   f4  4ca45c47dccc08685f3a18c857b012c5
+  base-indep   f5  34eba2a826cde8625d4934db0ce98080
+  post-noflag  f1  b910552eab77511e4afb9c36e9494ffa
+  post-noflag  f2  9dcecb0f6477644125b326d4e90e1278
+  post-noflag  f3  820a07e37f94ee8823213fc8346946dd
+  post-noflag  f4  4ca45c47dccc08685f3a18c857b012c5
+  post-noflag  f5  34eba2a826cde8625d4934db0ce98080
+  post-flag    f1  b910552eab77511e4afb9c36e9494ffa
+  post-flag    f2  9dcecb0f6477644125b326d4e90e1278
+  post-flag    f3  820a07e37f94ee8823213fc8346946dd
+  post-flag    f4  4ca45c47dccc08685f3a18c857b012c5
+  post-flag    f5  34eba2a826cde8625d4934db0ce98080
+
+================================================================================
+F2 DOES NOT FIRE. One md5 per fixture across all four binaries, 5 of 5.
+
+The control worth keeping, borrowed from agent/hold-cap: a == b, so the
+reproduction base is the COMMIT and not a particular search.exe on a
+particular disk. That is why the sidecar records a commit, not a path.
+================================================================================
+
+AND THE ONE BYTE IT DID MOVE, BEFORE THE FIX - measured, not hypothetical.
+
+Wired the obvious way (--argv-sidecar= left in the argv the header counts),
+--mode=costs over 2025-01-01..2025-02-01 printed:
+
+    < flags:    7 passed, every one of them read by --mode=costs
+    > flags:    8 passed, every one of them read by --mode=costs
+
+One line, one byte. It is the exact byte the owner's decision was made to
+protect, so the instrument was fixed (flags_counted(), search.rs) and the
+standard was not relaxed to 'approximately identical'. After the fix the
+same pair of runs is byte-clean, and so is set d above.

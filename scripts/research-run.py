@@ -15,6 +15,10 @@ Reads the `[run]` table of the hypothesis file:
 
 and writes to docs/research/runs/<id>/:
 
+    <name>.argv.md       the argv sidecar beside every receipt below: the argv
+                         verbatim, the RESOLVED window (first bar, last bar, bar
+                         count), a digest of the bars fed to the engine, the
+                         batch file's and config's hashes, and the commit
     in-sample.txt        search --mode=hypotheses --batch-file=... on the in-sample market
     in-sample-fixed.txt  the registered parameters replayed there, when `[run] fixed = true`
     direction-<slug>.txt search --mode=null-dir per hypothesis row (in-sample; --stage dir re-runs only these)
@@ -72,6 +76,26 @@ def bounds(run_cfg: dict, stage: str) -> list[str]:
 
 
 def run(args: list[str], out_path: str) -> None:
+    # EVERY receipt this pipeline writes gets its argv sidecar beside it, named
+    # <receipt>.argv.md.
+    #
+    # This is the generator of the defect, not a bystander. `bounds()` emits
+    # nothing at all when a stage has no `*_from` in its `[run]` table, so the
+    # command this pipeline echoed for `2026-09-13-pdhl` was
+    # `--mode=hypotheses --batch-file=... --seeds=200 --to=2025-04-10` with NO
+    # `--from=` - and `agent/receipt-reconcile` measured that 25 of the
+    # record's 34 unreproducible rows are exactly that shape, the store having
+    # grown a twelve-year tail at the open end underneath them
+    # (`XAUDUKA-5m` 198,716 -> 1,135,389 bars, x5.31, trade counts moving by
+    # that factor).
+    #
+    # The echoed `$ ...` line records what was ASKED FOR; the sidecar records
+    # what was RESOLVED - both window ends, the bar count, a digest of the bars
+    # actually fed to the engine, the batch file's hash, the config's, and the
+    # commit. The receipt's own body is untouched: the flag writes no byte to
+    # stdout. `docs/decisions/2026-10-11-argv-sidecar.md`.
+    sidecar = os.path.splitext(out_path)[0] + ".argv.md"
+    args = [*args, f"--argv-sidecar={sidecar}"]
     env = dict(os.environ)
     started = time.time()
     with open(out_path, "w", encoding="utf-8") as out:

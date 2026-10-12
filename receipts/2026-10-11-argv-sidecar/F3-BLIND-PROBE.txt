@@ -1,0 +1,56 @@
+================================================================================
+F3 - THE BLIND PROBE.   A build that DELIBERATELY looks, and must be caught.
+================================================================================
+
+Addendum 11 VIII: without a probe meant to be caught, a passing byte-identity
+test can be a blind harness. The probe is the single most plausible
+'helpful' regression - one line, inserted into the sidecar block:
+
+    println!("argv-sidecar: wrote {}", arg("argv-sidecar", "<none>"));
+
+--------------------------------------------------------------------------------
+GUARD 1  the in-tree source test, before anything is built
+--------------------------------------------------------------------------------
+
+    cargo test --release -p fd-backtest --bin search
+
+    test sidecar_tests::the_sidecar_block_writes_to_no_stream ... FAILED
+
+    panicked at crates\fd-backtest\src\bin\search.rs:2244:13:
+    `println!` inside the sidecar block would change the receipt beside it,
+    which is the one thing the owner chose a sidecar to avoid
+
+    test result: FAILED. 17 passed; 1 failed.
+
+--------------------------------------------------------------------------------
+GUARD 2  diff -r of the five fixtures against set a (the shared 29c8635)
+--------------------------------------------------------------------------------
+
+    DIFFERS on:
+      diff -r -x sidecar C:/Users/Admin/AppData/Local/Temp/claude/e--nodejs-backcom-vantage/a5c7fd65-9276-457f-850d-25cb44e74c74/scratchpad/argvsc/base-shared/f1.txt C:/Users/Admin/AppData/Local/Temp/claude/e--nodejs-backcom-vantage/a5c7fd65-9276-457f-850d-25cb44e74c74/scratchpad/argvsc/probe-run/f1.txt
+      18a19
+      diff -r -x sidecar C:/Users/Admin/AppData/Local/Temp/claude/e--nodejs-backcom-vantage/a5c7fd65-9276-457f-850d-25cb44e74c74/scratchpad/argvsc/base-shared/f2.txt C:/Users/Admin/AppData/Local/Temp/claude/e--nodejs-backcom-vantage/a5c7fd65-9276-457f-850d-25cb44e74c74/scratchpad/argvsc/probe-run/f2.txt
+      18a19
+      diff -r -x sidecar C:/Users/Admin/AppData/Local/Temp/claude/e--nodejs-backcom-vantage/a5c7fd65-9276-457f-850d-25cb44e74c74/scratchpad/argvsc/base-shared/f3.txt C:/Users/Admin/AppData/Local/Temp/claude/e--nodejs-backcom-vantage/a5c7fd65-9276-457f-850d-25cb44e74c74/scratchpad/argvsc/probe-run/f3.txt
+      18a19
+      diff -r -x sidecar C:/Users/Admin/AppData/Local/Temp/claude/e--nodejs-backcom-vantage/a5c7fd65-9276-457f-850d-25cb44e74c74/scratchpad/argvsc/base-shared/f4.txt C:/Users/Admin/AppData/Local/Temp/claude/e--nodejs-backcom-vantage/a5c7fd65-9276-457f-850d-25cb44e74c74/scratchpad/argvsc/probe-run/f4.txt
+      18a19
+      diff -r -x sidecar C:/Users/Admin/AppData/Local/Temp/claude/e--nodejs-backcom-vantage/a5c7fd65-9276-457f-850d-25cb44e74c74/scratchpad/argvsc/base-shared/f5.txt C:/Users/Admin/AppData/Local/Temp/claude/e--nodejs-backcom-vantage/a5c7fd65-9276-457f-850d-25cb44e74c74/scratchpad/argvsc/probe-run/f5.txt
+      18a19
+
+    per fixture:
+      f1  DIFFERS
+      f2  DIFFERS
+      f3  DIFFERS
+      f4  DIFFERS
+      f5  DIFFERS
+
+    the difference itself, on f4:
+      18a19
+      > argv-sidecar: wrote C:/Users/Admin/AppData/Local/Temp/claude/e--nodejs-backcom-vantage/a5c7fd65-9276-457f-850d-25cb44e74c74/scratchpad/argvsc/probe-run/sidecar/f4.md
+
+================================================================================
+F3 FIRES, on both guards, on 5 of 5 fixtures. The harness is not blind, and
+the regression is caught at compile-test time as well as at diff time.
+The probe was reverted; the committed source contains no copy of it.
+================================================================================

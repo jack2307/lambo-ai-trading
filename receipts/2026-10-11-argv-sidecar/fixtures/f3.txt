@@ -1,0 +1,70 @@
+market:   xauduka 15m
+data:     E:/rust/flowdesk/data (bars from E:/rust/flowdesk/data\bars\XAUDUKA-15m.parquet)
+bounds:   --from=2018-06-01 --to=2026-06-01 kept 187860 of 378749 bars
+spread:   0.28 per round trip
+trail:    off
+max hold: 4 h (14400000 ms) from [trading] max_hold_ms, no per-market override
+bars:     187860 from 2018-06-01 00:00 to 2026-05-31 23:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+companion: none loaded — every cmp series is NaN
+guards: off (every number unguarded)
+null sides: coin - 50/50, carries no drift; the null every published percentile was read against
+flags:    9 passed, every one of them read by --mode=rescore
+
+== rebate rescore `E:/rust/fd-argv-sidecar/docs/hypotheses/2026-09-13-pdhl.toml`: 3 constructs, walk-forward (4 folds) ==
+rebate:   0.45 of the round-turn spread, credited BESIDE the book
+          gross columns are unchanged; the cost model is untouched
+nulls:    matched null 200 runs and direction null 1000 draws, BOTH carrying the same credit
+swap:     long 0.00 / short 0.00 USD per lot per night; spread 0.28
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+guards: off (every number unguarded)
+
+construct              trades PF gross   PF net  rebate$   reb/R  mnullG  mnullN    dirN  verdict
+pdhl/fade-asia            403    0.618    0.703  2519.52   7.12%      0%      0%     20%  fail: profit factor 0.703 < 1.2; expectancy -0.184R < 0.05R
+                       whole window 495 trades, PF 0.592 gross / 0.701 net; direction null p95 0.761 gross / 0.893 net
+                       walk-forward max drawdown 9532.29 USD = 93.58% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.790 R is); net -9118.80 USD over 403 trades
+                       whole window max drawdown 7381.36 USD = 72.27% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.816 R is); net -6976.08 USD over 495 trades
+                       walk-forward Lbar 0.6665 R = |avg_loss_r| 1.0616 x loss share 0.6278 over 403 trades; PF_r 0.6173 (R) vs PF_usd 0.6176 (USD, gap -0.0003); identity E = Lbar(PF_r-1) = -0.2551 R vs expectancy -0.2551 R, residual -0.00004 R; expectancy leg REDUNDANT (Lbar >= 0.250R)
+                       whole window Lbar 0.6768 R = |avg_loss_r| 1.0772 x loss share 0.6283 over 495 trades; PF_r 0.6536 (R) vs PF_usd 0.5915 (USD, gap +0.0621); identity E = Lbar(PF_r-1) = -0.2344 R vs expectancy -0.2344 R, residual +0.00001 R; expectancy leg REDUNDANT (Lbar >= 0.250R)
+                       matched null p50 0.842 / p95 0.982 gross, p50 0.908 / p95 1.072 net over 200 runs
+                       matched null 387 trades median vs the method's 403 — count match 0.96
+                       cost-matched null: control stop 0.981 ATR = 1.72 points, cost 16.28% of R (realised median, structural)
+                       the method's own realised stop: median 0.981 ATR = 1.72 points over 495 trades
+                       exits (walk-forward, out of sample): STOP 245, TARGET 144, TIMEOUT 14; mean hold 45.2 min
+                       exits (whole window, what the direction null is a percentile OF): STOP 303, TARGET 175, TIMEOUT 17; mean hold 45.4 min
+pdhl/fade-allday         1464    0.787    0.850  5116.68   4.69%     10%     14%     14%  fail: profit factor 0.850 < 1.2; expectancy -0.095R < 0.05R
+                       whole window 1826 trades, PF 0.667 gross / 0.771 net; direction null p95 0.773 gross / 0.888 net
+                       walk-forward max drawdown 16407.05 USD = 161.08% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.816 R is); net -15622.24 USD over 1464 trades
+                       whole window max drawdown 9989.84 USD = 95.48% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.776 R is); net -9489.75 USD over 1826 trades
+                       walk-forward Lbar 0.6563 R = |avg_loss_r| 1.0082 x loss share 0.6510 over 1464 trades; PF_r 0.7837 (R) vs PF_usd 0.7869 (USD, gap -0.0032); identity E = Lbar(PF_r-1) = -0.1420 R vs expectancy -0.1419 R, residual +0.00008 R; expectancy leg REDUNDANT (Lbar >= 0.250R)
+                       whole window Lbar 0.6228 R = |avg_loss_r| 1.0358 x loss share 0.6013 over 1826 trades; PF_r 0.7488 (R) vs PF_usd 0.6670 (USD, gap +0.0818); identity E = Lbar(PF_r-1) = -0.1565 R vs expectancy -0.1564 R, residual +0.00006 R; expectancy leg REDUNDANT (Lbar >= 0.250R)
+                       matched null p50 0.861 / p95 0.946 gross, p50 0.920 / p95 1.009 net over 200 runs
+                       matched null 1459 trades median vs the method's 1464 — count match 1.00
+                       cost-matched null: control stop 1.128 ATR = 2.36 points, cost 11.86% of R (realised median, structural)
+                       the method's own realised stop: median 1.128 ATR = 2.36 points over 1826 trades
+                       exits (walk-forward, out of sample): STOP 884, TARGET 363, TIMEOUT 185, flat window 32; mean hold 82.0 min
+                       exits (whole window, what the direction null is a percentile OF): STOP 1035, TARGET 633, TIMEOUT 130, flat window 28; mean hold 57.5 min
+pdhl/break-nyam           425    0.736    0.810  2415.64   6.08%     13%     16%     66%  fail: profit factor 0.810 < 1.2; expectancy -0.127R < 0.05R
+                       whole window 525 trades, PF 0.567 gross / 0.667 net; direction null p95 0.625 gross / 0.734 net
+                       walk-forward max drawdown 9301.34 USD = 79.19% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.808 R is); net -7466.11 USD over 425 trades
+                       whole window max drawdown 8065.14 USD = 80.65% of the book's peak equity, on the CLOSED-TRADE curve only (an open position's excursion is not in it; avg_mae -0.789 R is); net -8028.05 USD over 525 trades
+                       walk-forward Lbar 0.7105 R = |avg_loss_r| 1.0633 x loss share 0.6682 over 425 trades; PF_r 0.7354 (R) vs PF_usd 0.7356 (USD, gap -0.0002); identity E = Lbar(PF_r-1) = -0.1880 R vs expectancy -0.1880 R, residual -0.00003 R; expectancy leg REDUNDANT (Lbar >= 0.250R)
+                       whole window Lbar 0.7110 R = |avg_loss_r| 1.0914 x loss share 0.6514 over 525 trades; PF_r 0.5740 (R) vs PF_usd 0.5668 (USD, gap +0.0072); identity E = Lbar(PF_r-1) = -0.3029 R vs expectancy -0.3029 R, residual -0.00004 R; expectancy leg REDUNDANT (Lbar >= 0.250R)
+                       matched null p50 0.853 / p95 0.989 gross, p50 0.910 / p95 1.062 net over 200 runs
+                       matched null 425 trades median vs the method's 425 — count match 1.00
+                       cost-matched null: control stop 0.738 ATR = 1.97 points, cost 14.21% of R (realised median, structural)
+                       the method's own realised stop: median 0.738 ATR = 1.97 points over 525 trades
+                       exits (walk-forward, out of sample): STOP 281, TARGET 120, TIMEOUT 24; mean hold 33.7 min
+                       exits (whole window, what the direction null is a percentile OF): STOP 335, TARGET 174, TIMEOUT 16; mean hold 21.5 min
+
+ran 3 of 3 constructs in the batch; 0 not run
+
+0 of 3 passed all three legs; noise at the 95th percentile yields about 0.1 of 3 by luck.
+Nothing crossed. The rebate lowers the bar and the bar was not the binding constraint.
+

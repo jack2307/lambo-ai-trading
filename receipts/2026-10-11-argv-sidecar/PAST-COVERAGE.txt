@@ -1,0 +1,11 @@
+A FILE-LEVEL CENSUS OF THE RECORD AS IT STANDS (my own grep, 2026-10-12)
+"has argv" = the file echoes a `--market=` command anywhere in its text.
+
+tree                       files  has argv  both ends  one end  no bound
+receipts                      42         1          1        0         0
+docs/research/runs           715       563        455       58        50
+docs/decisions                67         2          0        0         2
+TOTAL                        824       566        456       58        52
+
+files with NO argv at all: 258 of 824 = 31.3%
+of the files that DO echo an argv, both window ends pinned: 456/566 = 80.6%

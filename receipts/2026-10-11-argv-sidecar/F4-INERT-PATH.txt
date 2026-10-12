@@ -1,0 +1,46 @@
+================================================================================
+F4 - WHICH PATHS CAN ASK FOR A SIDECAR, AND WHICH ONE IS INERT
+================================================================================
+
+Two paths were tried, because addendum 11 VI says a [run] key can be
+accepted without a complaint and stay inert - measured there on
+[run] max_hold_ms, and before that on [run] null_sides.
+
+PATH 1  --argv-sidecar=<path> on the command line        WORKS.
+        Declared in ALWAYS, so no mode denounces it, and every mode
+        writes the file (the write is in main before the mode is
+        dispatched). Held by sidecar_tests::no_mode_accepts_the_sidecar_flag_and_ignores_it.
+
+PATH 2  [run] argv_sidecar = "..." inside a batch file   INERT.
+        Accepted in silence and writes nothing. The probe batch file:
+
+            [run]
+            argv_sidecar = "C:/Users/Admin/AppData/Local/Temp/claude/e--nodejs-backcom-vantage/a5c7fd65-9276-457f-850d-25cb44e74c74/scratchpad/argvsc/f4probe/WOULD-BE-HERE.md"
+            
+            [[hypothesis]]
+            label = "probe/inert"
+            base = "ema-cross"
+            filters = ["weekdays"]
+            why = "a fixture for the inert-path probe, no number in this prose"
+
+        Run with --mode=hypotheses and NO --argv-sidecar= on the command
+        line. The batch parsed and the hypothesis ran:
+
+            == hypotheses `C:/Users/Admin/AppData/Local/Temp/claude/e--nodejs-backcom-vantage/a5c7fd65-9276-457f-850d-25cb44e74c74/scratchpad/argvsc/f4probe/inert.toml`: 1 declared, walk-forward (4 folds), each against 2 matched null runs ==
+            probe/inert  ema-cross              12   1.463   0.202    1.214    1.214        0  100%  fail: only 12 trades (need 30)
+
+        And the file the [run] key named:
+            ls: cannot access 'C:/Users/Admin/AppData/Local/Temp/claude/e--nodejs-backcom-vantage/a5c7fd65-9276-457f-850d-25cb44e74c74/scratchpad/argvsc/f4probe/WOULD-BE-HERE.md': No such file or directory
+
+        CAUSE, from the code and not from the behaviour: BatchFile in
+        crates/fd-backtest/src/hypotheses.rs carries one field,
+        #[serde(default)] hypothesis: Vec<HypothesisFile>, so every other
+        table in the file is dropped by the deserialiser. That is the
+        same mechanism as [run] null_sides and [run] max_hold_ms.
+
+        NOT CHANGED HERE. Making unknown [run] keys an error would be a
+        change to how every existing batch file parses, and that is the
+        owner's call, not this job's. What this job owes the reader is the
+        statement that THERE IS EXACTLY ONE WAY to ask for a sidecar - and
+        the in-tree test that keeps the statement true.
+================================================================================

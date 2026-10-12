@@ -1,0 +1,54 @@
+market:   xauduka 15m
+data:     E:/rust/flowdesk/data (bars from E:/rust/flowdesk/data\bars\XAUDUKA-15m.parquet)
+bounds:   --from=2018-06-01 --to=2026-06-01 kept 187860 of 378749 bars
+spread:   0.28 per round trip
+trail:    off
+max hold: 4 h (14400000 ms) from [trading] max_hold_ms, no per-market override
+bars:     187860 from 2018-06-01 00:00 to 2026-05-31 23:45
+timeline: none — options strategies will be skipped
+
+tape:     0 prints, 0 frames  <- a result is only comparable to another run over the same tape
+
+news: 747 events (2010-01-08 → 2027-12-08) from E:/rust/flowdesk/data\news\events.parquet
+news scope: USD (news_currencies)
+companion: none loaded — every cmp series is NaN
+guards: off (every number unguarded)
+null sides: coin - 50/50, carries no drift; the null every published percentile was read against
+flags:    7 passed, every one of them read by --mode=costs
+
+== cost sensitivity: walk-forward profit factor at N x the configured cost ==
+configured spread 0.28, commission 0.00/lot
+
+strategy                    0x     0.25x      0.5x        1x        2x      trades
+ema-cross                0.923     0.925     0.853     0.791     0.732        1717
+rsi-reversion            0.963     0.909     0.877     0.841     0.691        3033
+donchian-breakout        0.956     0.914     0.887     0.833     0.737        8922
+bb-fade                  0.997     0.944     0.896     0.809     0.692       13452
+buy-and-hold               NaN       NaN       NaN       NaN       NaN           0
+ict-sweep-mss-fvg        0.855     0.830     0.805     0.759     0.675         353
+orb                      1.111     1.087     1.065     1.020     0.938        1072
+pdhl                     1.012     0.945     0.861     0.801     0.689        1610
+crt                      1.003     0.964     0.926     0.858     0.740        1905
+external                   NaN       NaN       NaN       NaN       NaN           0
+session-hold             1.044     1.029     1.013     0.982     0.924        1641
+intraday-momentum        1.143     1.060     0.982     0.845     0.629        1588
+vwap-fade                1.012     0.982     0.950     0.870     0.770        5236
+tsmom                    1.763     1.757     1.750     1.739     1.721          86
+doji-reversal            0.813     0.797     0.720     0.621     0.468        1273
+gap-fade                 0.575     0.386     0.391     0.044     0.213         102
+trend-pullback           0.904     0.807     0.733     0.617     0.388        7272
+volume-thrust              NaN       NaN       NaN       NaN       NaN           0
+keltner-break            1.004     0.983     0.963     0.923     0.850        2208
+macd-cross               0.981     0.949     0.919     0.862     0.758        7788
+rsi2-pullback            1.060     1.015     0.973     0.895     0.759        5579
+squeeze-break            0.984     0.937     0.893     0.810     0.681        1502
+stoch-reversal           0.979     0.944     0.910     0.847     0.735       10683
+volman-box               0.928     0.885     0.844     0.769     0.639         185
+far-stop-break           0.964     0.944     0.951     0.915     0.888        3207
+companion-unconfirmed       NaN       NaN       NaN       NaN       NaN           0
+quiet-swing              1.259     1.251     1.244     1.229     1.202         239
+rsi-reversal-vol           NaN       NaN       NaN       NaN       NaN           0
+
+Read the gap, not the left column. A method whose profit factor only
+clears the gate at a cost nobody pays has not been shown to work.
+

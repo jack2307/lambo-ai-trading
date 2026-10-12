@@ -228,6 +228,7 @@ fd-backtest --bin search --market=btc    # compare / sweep / wf / costs / null
 fd-backtest --bin search --market=xauusd # same, on the broker's own gold bars
 fd-backtest --bin search --market=xauusd --mode=hypotheses  # declared batch vs matched nulls (--batch=gold-intraday|ict-m1|ict-m5|ict-oos)
 python scripts/research-run.py docs/hypotheses/<id>.toml --stage in|oos   # the /research pipeline's runner; receipts in docs/research/runs/
+fd-backtest --bin search ... --argv-sidecar=<path>.argv.md  # the run's REPRODUCTION SPEC beside the receipt: argv, the RESOLVED window (first/last bar + bar count), a digest of the bars fed to the engine, batch-file and config hashes, the commit. Writes NO byte to stdout, so the receipt stays bit-identical; research-run.py passes it for every receipt automatically
 python py/ingest/dukascopy_to_parquet.py <csv> data/bars/XAUDUKA-1m.parquet  # four years of gold minutes, out-of-sample structure
 scripts/api-parity.py                    # prove the browser cannot tell backends apart
 ```

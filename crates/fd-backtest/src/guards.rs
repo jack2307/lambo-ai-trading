@@ -84,7 +84,10 @@ use crate::engine::{ExitKind, TradingRules, apply_costs};
 const DAY_MS: i64 = 86_400_000;
 const MINUTE_MS: i64 = 60_000;
 
-#[derive(Debug, Clone, PartialEq)]
+// `Serialize` is for the argv sidecar, which prints the guards THE ENGINE WILL
+// USE rather than a list of the keys it reads - a list is free to drift away
+// from the struct in silence. Nothing about the run's arithmetic reads it.
+#[derive(Debug, Clone, PartialEq, serde::Serialize)]
 pub struct Guards {
     pub max_concurrent_positions: usize,
     pub max_trades_per_day: usize,

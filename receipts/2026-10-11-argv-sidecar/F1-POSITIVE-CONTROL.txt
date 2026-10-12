@@ -1,0 +1,92 @@
+============================================================================================================
+F1 - DOES A SIDECAR MAKE A WINDOW-CLASS ROW REPRODUCIBLE?  14 published rows, 4 commands, 3 phases
+A = published argv VERBATIM (--to=2025-04-10, NO --from).  B = both ends pinned.
+C = argv rebuilt FROM B'S SIDECAR ALONE by replay.py, reading nothing else in the file.
+============================================================================================================
+
+### london-fix
+    A  window (1055936, '2010-06-01 00:00', '2025-04-09 23:55')   kept 1055936 of 1135389
+    B  window (198716, '2022-06-16 00:00', '2025-04-09 23:55')   kept 198716 of 1135389
+    C  window (198716, '2022-06-16 00:00', '2025-04-09 23:55')   kept 198716 of 1135389
+    bar digest  B f09dc35a81f681b8917bd4697a76419354ba9f8454d6d135d6874c3e2405ce6b
+    B sidecar section 3: 10 tokens, window pins ['--from=2022-06-16', '--to=2025-04-10']
+    receipt md5  B 2f65f37abda2e205711733dd13a43e72   C 2f65f37abda2e205711733dd13a43e72   B==C True
+    label                  pubN   pubPF    A n    B n    C n    C PF  C==pub
+    fix/pm-into             578   0.961   3076    578    578   0.961  YES
+    fix/pm-after            578   0.904   3078    578    578   0.904  YES
+    fix/am-into             578   0.491   3078    578    578   0.491  YES
+    fix/am-after            578   0.811   3078    578    578   0.811  YES
+
+### volcond
+    A  window (1055936, '2010-06-01 00:00', '2025-04-09 23:55')   kept 1055936 of 1135389
+    B  window (198716, '2022-06-16 00:00', '2025-04-09 23:55')   kept 198716 of 1135389
+    C  window (198716, '2022-06-16 00:00', '2025-04-09 23:55')   kept 198716 of 1135389
+    bar digest  B f09dc35a81f681b8917bd4697a76419354ba9f8454d6d135d6874c3e2405ce6b
+    B sidecar section 3: 10 tokens, window pins ['--from=2022-06-16', '--to=2025-04-10']
+    receipt md5  B 2a02e40c50d63f83f5c2e852f73ed91a   C 2a02e40c50d63f83f5c2e852f73ed91a   B==C True
+    label                  pubN   pubPF    A n    B n    C n    C PF  C==pub
+    hivol/london            341   0.950   1712    341    341   0.950  YES
+    lowvol/london           212   0.962    894    212    212   0.962  YES
+    hivol/orb60             457   1.004   2115    457    457   1.004  YES
+    lowvol/orb60             73   1.074    478     73     73   1.074  YES
+
+### london-range
+    A  window (1055936, '2010-06-01 00:00', '2025-04-09 23:55')   kept 1055936 of 1135389
+    B  window (198716, '2022-06-16 00:00', '2025-04-09 23:55')   kept 198716 of 1135389
+    C  window (198716, '2022-06-16 00:00', '2025-04-09 23:55')   kept 198716 of 1135389
+    bar digest  B f09dc35a81f681b8917bd4697a76419354ba9f8454d6d135d6874c3e2405ce6b
+    B sidecar section 3: 10 tokens, window pins ['--from=2022-06-16', '--to=2025-04-10']
+    receipt md5  B d0197859c0e35619648ab61a62aa7724   C d0197859c0e35619648ab61a62aa7724   B==C True
+    label                  pubN   pubPF    A n    B n    C n    C PF  C==pub
+    london/nyam             525   0.953   2607    525    525   0.953  YES
+    london/early            458   0.947   2177    458    458   0.947  YES
+    london/expansion        338   0.945   2046    338    338   0.945  YES
+
+### pdhl
+    A  window (1055936, '2010-06-01 00:00', '2025-04-09 23:55')   kept 1055936 of 1135389
+    B  window (198716, '2022-06-16 00:00', '2025-04-09 23:55')   kept 198716 of 1135389
+    C  window (198716, '2022-06-16 00:00', '2025-04-09 23:55')   kept 198716 of 1135389
+    bar digest  B f09dc35a81f681b8917bd4697a76419354ba9f8454d6d135d6874c3e2405ce6b
+    B sidecar section 3: 10 tokens, window pins ['--from=2022-06-16', '--to=2025-04-10']
+    receipt md5  B e7f6822a347515dc6f361b7264735ac8   C e7f6822a347515dc6f361b7264735ac8   B==C True
+    label                  pubN   pubPF    A n    B n    C n    C PF  C==pub
+    pdhl/fade-asia          147   0.645    635    147    147   0.645  YES
+    pdhl/fade-allday        555   0.739   2672    555    555   0.739  YES
+    pdhl/break-nyam         172   0.758    815    172    172   0.758  YES
+
+============================================================================================================
+published rows checked                                  14
+phase A (verbatim published argv) returns published n    0 / 14
+phase B (both ends pinned) returns published n            14 / 14
+phase C (rebuilt FROM THE SIDECAR ALONE) returns it       14 / 14   <- F1
+   and returns the published PF to printed width         14 / 14
+============================================================================================================
+
+READING
+
+  Phase A is the defect, in the open: the published command carried
+  --to=2025-04-10 and no --from, and today that selects 1,055,936 bars
+  where the published receipt printed 'kept 198716 of 278169'. Every one
+  of the 14 rows is wrong by roughly the bar factor (x5.31): 578 -> 3,078,
+  172 -> 815, 73 -> 478. 0 of 14 return.
+
+  Phase B is receipt-reconcile's finding, reproduced independently: pin
+  --from=2022-06-16 - a date the published receipt states in its own prose
+  and its argv does not carry - and 14 of 14 return the published trade
+  count exactly, 14 of 14 the published PF to printed width.
+
+  Phase C IS THE TEST OF THE SIDECAR. The argv is rebuilt from section 3
+  of phase B's sidecar by replay.py, which reads nothing else in the file
+  and knows nothing about this record. 14 of 14 return, and the receipt is
+  BYTE-IDENTICAL to phase B's on all four commands (md5 above).
+
+  F1 DOES NOT FIRE. The sidecar is a sufficient reproduction spec for the
+  defect class it was built for, demonstrated on 14 rows where the answer
+  was known in advance - which is what makes it a positive control and not
+  a hope.
+
+  One number worth keeping that nobody asked for: the bar digest is the
+  SAME on all four commands (f09dc35a...), because all four read xauduka
+  5m over the same window. That is the digest doing its job - it
+  fingerprints the INPUT, so four runs over one tape agree and a fifth over
+  a re-cleaned tape would not.
