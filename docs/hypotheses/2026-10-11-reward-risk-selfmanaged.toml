@@ -1,0 +1,43 @@
+# agent/reward-risk (2026-10-11), CONTROL ONLY — never a gate cell.
+#
+# Four registered `Exits::Strategy` mechanisms. The entry builder refuses to
+# derive a target for a self-managed position before it ever reads
+# `reward_risk` (engine.rs:740, `None if self_managed || ...`), and `check_exit`
+# returns `None` for one before it reads anything at all (engine.rs:772-777), so
+# `--reward-risk=` must change NOTHING here at any value.
+#
+# AND the thing this file is really for. The matched null enters with
+# `target: None` (control.rs:150) and takes `Exits::Engine` by default
+# (registry.rs:256), so the flag RE-SPECIFIES THE CONTROL at every value — on
+# these rows the method changes zero trades while its null changes. That is the
+# measurement, and it is why no percentile in this job is published across
+# `reward_risk` values.
+[run]
+in_sample = "xauduka:15m"
+out_of_sample = "xauduka:15m"
+seeds = 20
+direction_samples = 20
+
+[[hypothesis]]
+label = "sm/tsmom"
+base = "tsmom"
+filters = ["weekdays"]
+why = "control: the engine never places its target, so the flag may not reach the method"
+
+[[hypothesis]]
+label = "sm/quiet-swing"
+base = "quiet-swing"
+filters = ["weekdays"]
+why = "control"
+
+[[hypothesis]]
+label = "sm/session-hold"
+base = "session-hold"
+filters = ["weekdays"]
+why = "control"
+
+[[hypothesis]]
+label = "sm/intraday-momentum"
+base = "intraday-momentum"
+filters = ["weekdays"]
+why = "control"

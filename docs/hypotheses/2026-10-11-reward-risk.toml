@@ -1,0 +1,40 @@
+# agent/reward-risk (2026-10-11). The rows `--reward-risk=` can reach AT ALL:
+# `exits() == Exits::Engine` AND `Intent::Enter { target: None }`, so the engine
+# derives the target from `[trading] reward_risk`. A code fact with no threshold
+# in it; see docs/decisions/2026-10-11-reward-risk.md §0.2 and §3.
+#
+# The reward/risk ratio is NOT in this file and cannot be. `[run]` is ignored by
+# `batch_from_file` (hypotheses.rs:103-105) for every table that is not
+# `[[hypothesis]]`, so a key named here would be obeyed in silence by nobody —
+# the same inertness `[run] null_sides` and `[run] max_hold_ms` have. The flag
+# is `--reward-risk=<ratio>` on the command line only, and
+# 2026-10-11-reward-risk-runinert.toml measures that claim rather than asserting
+# it. Passing no flag resolves `[trading] reward_risk` and every receipt in
+# docs/decisions/ reproduces byte for byte.
+#
+# No figure appears in any `why =` below. A number in this prose is printed into
+# the receipt above the measurement and a regex read one back as the measurement
+# once already (addendum 11 §VI).
+[run]
+in_sample = "xauduka:15m"
+out_of_sample = "xauduka:15m"
+seeds = 200
+direction_samples = 1000
+
+[[hypothesis]]
+label = "rr/ema-cross"
+base = "ema-cross"
+filters = ["weekdays"]
+why = "the derived target is the exit on about a fifth of its trades in every window and guard arm, and it is the only row of this family whose book survived anywhere"
+
+[[hypothesis]]
+label = "rr/donchian"
+base = "donchian-breakout"
+filters = ["weekdays"]
+why = "the derived target is the exit on a material minority of its trades, with the clock taking the largest single share"
+
+[[hypothesis]]
+label = "rr/rsi-reversion"
+base = "rsi-reversion"
+filters = ["weekdays"]
+why = "in the family by the code rule but its own midline rule is what closes most of its trades, so a flat reading here is not evidence about targets"

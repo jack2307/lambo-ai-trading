@@ -48,8 +48,20 @@ fn arg(name: &str, fallback: &str) -> String {
 
 /// The flags every mode reads: the market, the window, the cost model and the
 /// run header. Passing one of these changes the numbers whatever `--mode=` is.
-const ALWAYS: &[&str] =
-    &["market", "mode", "data", "config", "interval", "from", "to", "spread", "trail", "companion", "guards"];
+///
+/// `reward-risk` is here rather than in [`BY_MODE`] because it mutates the
+/// shared `TradingRules` before any mode is dispatched, exactly as `--spread=`
+/// does: there is no mode that is handed a different target than the one the
+/// header printed, and the matched null inside every mode derives its target
+/// from the same field (`control.rs:150`). Added 2026-10-11 — and added only
+/// AFTER the scanner below was watched to FAIL on it with
+/// `["reward-risk"]`, because a declaration made before the scanner has been
+/// seen to catch the flag proves nothing about the scanner.
+/// `docs/decisions/2026-10-11-reward-risk.md`.
+const ALWAYS: &[&str] = &[
+    "market", "mode", "data", "config", "interval", "from", "to", "spread", "trail", "companion", "guards",
+    "reward-risk",
+];
 
 /// Every other flag, with the `--mode=` values that actually read it.
 ///
@@ -212,6 +224,65 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // number came from, because a receipt at 168 h and a receipt at 4 h are not
     // comparable and must not look alike.
     println!("{}", max_hold_line(&rules, spec.trading.max_hold_ms));
+    // `--reward-risk=<ratio>` places the engine's derived target for THIS RUN.
+    //
+    // WHY A FLAG AT ALL. Under `Exits::Engine`, an `Intent::Enter` carrying
+    // `target: None` does not mean "no target" — `engine.rs:738-744` derives
+    // one at `risk x rules.reward_risk`. So the ratio is a hard ceiling on
+    // every such row, and unlike `max_hold_ms` it has NO per-market override
+    // (`MarketTradingOverride`, `config.rs:338-386`, does not carry the key;
+    // `tests/trading_rules.rs:48` asserts the two markets share it). It lives
+    // once, in `[trading]`, in a table the two funded books on 33708517 read.
+    // That is why the record twice wrote the band down as bounded by 1.8 R
+    // instead of measuring it: moving it meant moving them.
+    //
+    // ZERO IS THE VALUE THAT MATTERS, and it is not the absent one.
+    // `engine.rs:740` reads `rules.reward_risk == 0.0 => None`, so
+    // `--reward-risk=0` is "a stop and the clock, NO target" — the expression
+    // `2026-09-24-designed-methods` defect 5 and
+    // `max_hold_horizon.rs::a_no_target_entry_is_given_one` both describe as
+    // unavailable. It is available per run now. Not passing the flag is the
+    // third meaning and resolves `[trading] reward_risk` exactly as before.
+    //
+    // A NEGATIVE RATIO IS REFUSED rather than clamped: it would place the
+    // target on the losing side of entry, and `check_exit` tests a long's
+    // target with `bar.high >= target`, so the position would close as a
+    // TARGET at a price below its own entry on its first bar. That is not a
+    // ratio anybody means, and accepting it in silence would put a book of
+    // guaranteed losses into a receipt labelled TARGET.
+    //
+    // WHERE IT CAN BE SET FROM: here and nowhere else. `[run]` in a batch file
+    // does NOT set it — `batch_from_file` (`hypotheses.rs:103-105`) reads only
+    // `[[hypothesis]]` — so a batch file naming it is obeyed by nobody, and
+    // `docs/hypotheses/2026-10-11-reward-risk-runinert.toml` names it on
+    // purpose so that claim is measured instead of asserted.
+    //
+    // THE HEADER LINE IS PRINTED ONLY WHEN THE FLAG IS PASSED. A default run's
+    // output therefore stays byte-identical to every receipt in
+    // `docs/decisions/`, which is the owner's decision of 2026-10-11 (argv
+    // belongs in a file beside the receipt, not in it); and a flagged run can
+    // still never be read as a default one, because the line names itself and
+    // the number it overrode. `tests/reward_risk_flag.rs` holds both halves.
+    // `docs/decisions/2026-10-11-reward-risk.md`.
+    let reward_risk_flag = std::env::args().find_map(|a| a.strip_prefix("--reward-risk=").map(str::to_string));
+    if let Some(v) = &reward_risk_flag {
+        let rr: f64 = v
+            .trim()
+            .parse()
+            .map_err(|_| format!("--reward-risk wants a number, 0 meaning no target at all, got `{v}`"))?;
+        if !rr.is_finite() {
+            return Err(format!("--reward-risk wants a finite number, 0 meaning no target at all, got `{v}`").into());
+        }
+        if rr < 0.0 {
+            return Err(format!(
+                "--reward-risk cannot be negative: {rr} would put the target on the losing side of entry. 0 is how you say no target at all."
+            )
+            .into());
+        }
+        let was = rules.reward_risk;
+        rules.reward_risk = rr;
+        println!("{}", reward_risk_line(rr, was));
+    }
     let rules = rules;
     let gate = PromisingGate {
         min_trades: config.backtest.promising.min_trades,
@@ -429,6 +500,27 @@ fn max_hold_line(rules: &TradingRules, override_ms: Option<i64>) -> String {
     let hours = rules.max_hold_ms as f64 / 3_600_000.0;
     let shown = if (hours.fract()).abs() < 1e-9 { format!("{hours:.0}") } else { format!("{hours:.3}") };
     format!("max hold: {shown} h ({} ms) from {source}", rules.max_hold_ms)
+}
+
+/// The header line for a run whose derived target was repriced by the flag.
+///
+/// Printed ONLY when `--reward-risk=` was passed. A run without the flag must
+/// produce the output every receipt in `docs/decisions/` already carries, and
+/// adding an unconditional line would restate all of them at once; the owner's
+/// 2026-10-11 decision puts the argv in a file beside the receipt for exactly
+/// this reason. What the line has to do, then, is make a FLAGGED run
+/// unmistakable: it names itself, names the shipped number it beat, and spells
+/// `0` out in words rather than printing `reward/risk: 0.0`, because
+/// `engine.rs:740` turns a zero into *no target at all* and a reader must not
+/// have to know that to read the receipt.
+fn reward_risk_line(flagged: f64, was: f64) -> String {
+    let source = format!("--reward-risk={flagged} (CLI, overriding [trading] reward_risk = {was})");
+    if flagged == 0.0 {
+        return format!(
+            "reward/risk: none — an engine-managed position runs to its stop, the clock or the end of data ({source})"
+        );
+    }
+    format!("reward/risk: {flagged} R per 1 R of risk, target placed from {source}")
 }
 
 /// The header line that says whether the run was bounded, and by what.
@@ -1968,6 +2060,23 @@ mod flag_tests {
         assert!(typo[0].contains("not a flag this binary has"), "{typo:?}");
         let bare = flag_audit("hypotheses", &["exit-mix".to_string()]);
         assert_eq!(bare.len(), 1, "an argument with no leading dashes is ignored and must say so: {bare:?}");
+
+        // `--reward-risk=` mutates the shared rules before dispatch, and the
+        // matched null every mode runs derives its target from the same field,
+        // so there is no mode that silently ignores it. The spellings that LOOK
+        // like it must still be denounced: a run at `--reward_risk=0` would
+        // otherwise be a 1.8 R run claiming in its argv to have had no target.
+        for mode in ["hypotheses", "rescore", "null", "null-dir", "costs", "all", "wf", "compare", "sweep", "volume"] {
+            assert!(
+                one(mode, "--reward-risk=0").is_empty(),
+                "--reward-risk= reprices the derived target of every mode, including --mode={mode}",
+            );
+        }
+        for near_miss in ["--rewardrisk=0", "--reward_risk=0", "--reward-risk-ratio=0", "--rewardRisk=0"] {
+            let lines = one("hypotheses", near_miss);
+            assert_eq!(lines.len(), 1, "`{near_miss}` is not the flag and must not be silent: {lines:?}");
+            assert!(lines[0].contains("not a flag this binary has"), "{lines:?}");
+        }
     }
 
     /// `--mode=all` runs compare, sweep and walk-forward and reads none of the
@@ -2118,5 +2227,57 @@ mod drawdown_printer_tests {
         let m = Metrics { trades: 60, win_rate: 0.4, avg_win_r: 1.8, avg_loss_r: -0.8333, expectancy: 0.22, profit_factor: 1.44, ..Metrics::empty() };
         let line = lbar_line(&m);
         assert!(line.contains("expectancy leg REDUNDANT (Lbar >= 0.250R)"), "{line}");
+    }
+}
+
+/// THE HEADER LINE FOR THE DERIVED TARGET, and the thing it must NOT do.
+///
+/// The first thing this job had to protect is that a run which passes no flag
+/// prints exactly what every receipt in `docs/decisions/` already carries — so
+/// this line is emitted ONLY when the flag is passed, and there is no
+/// "no flag" variant of it to test. What is tested is the other half: that a
+/// FLAGGED receipt can never be mistaken for a default one, and that a zero
+/// reads as "no target" in words rather than as a horizon of zero length.
+///
+/// The whole-output proof of the default is the five captured fixtures in
+/// `receipts/2026-10-11-reward-risk/`; the trade-level proof is
+/// `tests/reward_risk_flag.rs`.
+#[cfg(test)]
+mod reward_risk_line_tests {
+    use super::reward_risk_line;
+
+    /// WITH THE FLAG the line says the flag won, and says what it beat.
+    #[test]
+    fn the_flag_names_itself_and_the_shipped_ratio_it_overrode() {
+        assert_eq!(
+            reward_risk_line(7.2, 1.8),
+            "reward/risk: 7.2 R per 1 R of risk, target placed from --reward-risk=7.2 (CLI, overriding [trading] reward_risk = 1.8)",
+        );
+        let same = reward_risk_line(1.8, 1.8);
+        assert!(
+            same.contains("--reward-risk=1.8 (CLI, overriding"),
+            "passing the shipped value is still a flagged run and must say so: {same}",
+        );
+    }
+
+    /// `0` IS NOT A TARGET AT THE ENTRY AND IS NOT ABSENT. `engine.rs:740`
+    /// turns it into no target at all, and a reader must not have to know that
+    /// to read the receipt.
+    #[test]
+    fn a_flagged_zero_reads_as_no_target_and_still_names_the_flag() {
+        let line = reward_risk_line(0.0, 1.8);
+        assert!(line.contains("reward/risk: none"), "{line}");
+        assert!(line.contains("runs to its stop, the clock or the end of data"), "{line}");
+        assert!(line.contains("--reward-risk=0"), "a zero must still say where it came from: {line}");
+        assert!(!line.contains("0 R per 1 R"), "`0 R per 1 R` would read as a target at the entry: {line}");
+    }
+
+    /// A ratio just above zero is a DIFFERENT thing from zero, and the line has
+    /// to make that visible rather than rounding them together.
+    #[test]
+    fn a_ratio_just_above_zero_is_not_the_zero_case() {
+        let tiny = reward_risk_line(0.001, 1.8);
+        assert!(tiny.contains("0.001 R per 1 R of risk"), "{tiny}");
+        assert!(!tiny.contains("none"), "a target one thousandth of an R away is still a target: {tiny}");
     }
 }

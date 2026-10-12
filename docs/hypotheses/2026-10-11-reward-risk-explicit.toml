@@ -1,0 +1,39 @@
+# agent/reward-risk (2026-10-11), CONTROL ONLY — never a gate cell.
+#
+# The three rows `agent/hold-cap` used as its family. Each supplies its OWN
+# target out of its own `riskReward` parameter (orb.rs:150-156,
+# screen.rs:35-42, far_stop_break.rs:136-142), and the entry builder takes an
+# explicit target first (engine.rs:737), so `rules.reward_risk` is never read on
+# them. `--reward-risk=` must therefore change NOTHING here at any value.
+#
+# This file exists because addendum 11 §IV.B attributes `hold-cap`'s ceiling to
+# `reward_risk = 1.8` and that attribution is wrong — these rows were bounded by
+# their own parameter, which a batch `overrides` could already set. The claim is
+# measured here rather than left as a source reading.
+#
+# Its paired POSITIVE control is 2026-10-11-reward-risk.toml, which the same two
+# flag values move a great deal. A negative from a blind instrument is worthless.
+[run]
+in_sample = "xauduka:15m"
+out_of_sample = "xauduka:15m"
+seeds = 20
+direction_samples = 20
+
+[[hypothesis]]
+label = "ex/orb60"
+base = "orb"
+filters = ["weekdays"]
+overrides = { rangeMinutes = 60 }
+why = "control: it carries its own target, so the flag may not reach it"
+
+[[hypothesis]]
+label = "ex/keltner"
+base = "keltner-break"
+filters = ["weekdays"]
+why = "control: it carries its own target"
+
+[[hypothesis]]
+label = "ex/far-stop"
+base = "far-stop-break"
+filters = ["weekdays"]
+why = "control: it carries its own target"

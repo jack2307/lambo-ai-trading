@@ -1,0 +1,36 @@
+# agent/reward-risk (2026-10-11), INSTRUMENT PROBE ONLY — never a gate cell.
+#
+# Byte-identical to 2026-10-11-reward-risk.toml except for the `reward_risk` key
+# in `[run]` below, which is a lie this file tells on purpose.
+#
+# `batch_from_file` (hypotheses.rs:103-105) deserialises only `[[hypothesis]]`
+# and says so in its own doc comment, so this key is accepted without a
+# complaint and obeyed by nobody — the same inert layer `[run] null_sides` and
+# `[run] max_hold_ms` sit in. A run against this file must print the shipped
+# ratio in its header and must be BYTE-IDENTICAL to a run against the real file
+# with no flag. Measured, not assumed: "it was accepted without complaining" is
+# exactly what inert looks like from the outside.
+[run]
+in_sample = "xauduka:15m"
+out_of_sample = "xauduka:15m"
+seeds = 200
+direction_samples = 1000
+reward_risk = 9.0
+
+[[hypothesis]]
+label = "rr/ema-cross"
+base = "ema-cross"
+filters = ["weekdays"]
+why = "the derived target is the exit on about a fifth of its trades in every window and guard arm, and it is the only row of this family whose book survived anywhere"
+
+[[hypothesis]]
+label = "rr/donchian"
+base = "donchian-breakout"
+filters = ["weekdays"]
+why = "the derived target is the exit on a material minority of its trades, with the clock taking the largest single share"
+
+[[hypothesis]]
+label = "rr/rsi-reversion"
+base = "rsi-reversion"
+filters = ["weekdays"]
+why = "in the family by the code rule but its own midline rule is what closes most of its trades, so a flat reading here is not evidence about targets"
