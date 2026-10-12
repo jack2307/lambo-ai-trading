@@ -1,10 +1,28 @@
-"""Export OHLC history from a running MetaTrader 5 terminal into the fd-store bar format.
+r"""Export OHLC history from a running MetaTrader 5 terminal into the fd-store bar format.
 
-READ-ONLY. This script calls `initialize`, `symbol_select`, `symbol_info`,
-`copy_rates_range` and `shutdown` — nothing else. It never places, modifies or
-closes an order, and it does not need AutoTrading. The terminal it talks to is
-whichever one is running; on this machine that is a live Vantage account, which
-is exactly why the surface is kept this small.
+(The `r` matters: the Usage block below contains Windows paths. Without it
+`--terminal C:\MT5-demo\terminal64.exe` renders as `C:\MT5-demo<TAB>erminal64.exe`
+because `\t` is a valid escape, and `\M` raises a DeprecationWarning on every
+import. The one line in this file a person copies by hand was the one line that
+was wrong.)
+
+READ-ONLY. This script calls `initialize`, `symbol_info`, `copy_rates_range`,
+`shutdown` and — only when `--allow-symbol-select` is passed AND the symbol
+reads back `visible == False` — `symbol_select`. Nothing else. It never places,
+modifies or closes an order, and it does not need AutoTrading. The terminal it
+talks to is whichever one is running; on this machine that is a live Vantage
+account, which is exactly why the surface is kept this small.
+
+`symbol_select` sits behind a flag because `py/live/spread_log.py` states the
+standing rule for this account in its own doc comment: *"`symbol_select` is
+deliberately NOT called. Adding a symbol to Market Watch would make an
+unreadable symbol readable, and it is not on the approved read-only list for
+this account."* Until 2026-10-11 this script called it UNCONDITIONALLY on every
+symbol, so two scripts in one tree contradicted each other about one MT5 call.
+The rule wins, and the default is now not to call it: a symbol already in Market
+Watch never needs it, and one that is not is REPORTED and SKIPPED rather than
+quietly added. The decision is `symbol_select_plan`, which is a pure function so
+that it can be tested without a terminal.
 
 Why this exists
 ---------------
@@ -67,6 +85,20 @@ try:
 except ImportError:  # pragma: no cover
     sys.exit("MetaTrader5 package not installed: pip install MetaTrader5")
 
+# Output is UTF-8, and undisplayable characters are replaced rather than fatal.
+# Lifted verbatim in intent from `py/live/spread_log.py`, which carries the
+# incident: Windows hands a redirected stdout the cp1252 codec, and on
+# 2026-09-17 a single arrow in a model's text raised UnicodeEncodeError out of a
+# print, out of main(), and killed the trader for five bars. Several log lines
+# in this file hold an em dash, so without this an export piped to a file dies
+# on its own progress message. `errors="replace"` is the important half:
+# encoding can then never be the thing that stops a run, whatever arrives.
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8", errors="replace")
+    except (AttributeError, ValueError):  # not a TextIOWrapper; nothing to do
+        pass
+
 UTC = dt.timezone.utc
 NEW_YORK = ZoneInfo("America/New_York")
 
@@ -104,6 +136,160 @@ SCHEMA = pa.schema(
         pa.field("volume", pa.float64(), nullable=True),
     ]
 )
+
+
+def symbol_select_plan(info, allow_select: bool):
+    """What to do about Market Watch for one symbol. Pure; no MT5 call in here.
+
+    Returns `(action, reason)` with `action` one of:
+
+    * `"proceed"` — the symbol is already in Market Watch. **`symbol_select` is
+      not called at all**, which is the whole point: the hazard the standing
+      rule guards against is turning an UNREADABLE symbol readable, and a
+      symbol that already reads back `visible == True` cannot be turned into
+      anything. This is the path a logged-in Live 21 terminal is expected to
+      take for `XAUUSD.sc` — `data/spreads/XAUUSD_sc.csv` holds 8,968 rows
+      written by `spread_log.py`, which never calls `symbol_select`, so the
+      symbol was in Market Watch on that account. That is evidence, not a
+      licence: `visible` is checked here every run rather than inferred.
+    * `"select"` — the symbol is not visible (or not known at all) and
+      `--allow-symbol-select` was passed, so the caller has taken the decision.
+    * `"skip"` — the symbol is not visible and the flag was not passed. The pair
+      goes on the `skipped` list, which moves the exit code off 0. **Refusing is
+      reported, never silent**: a run that exported nothing must not look like a
+      run that worked, which is the failure this script's exit codes exist for.
+
+    `info is None` means the terminal does not know the symbol at all, which is
+    a different state from "knows it, not shown" — and it is the state where
+    `symbol_select` does the thing the rule forbids. It is therefore treated the
+    same as not-visible, and named differently in the reason so a log reader can
+    tell the two apart.
+    """
+    if info is None:
+        if allow_select:
+            return "select", ("symbol_info returned None (terminal does not know this symbol); "
+                              "--allow-symbol-select was passed, so calling symbol_select")
+        return "skip", ("symbol_info returned None (terminal does not know this symbol, or no "
+                        "account is logged in). symbol_select NOT called: pass "
+                        "--allow-symbol-select to permit adding it to Market Watch")
+    if getattr(info, "visible", False):
+        return "proceed", "already visible in Market Watch — symbol_select NOT called"
+    if allow_select:
+        return "select", ("visible == False; --allow-symbol-select was passed, so calling "
+                          "symbol_select to add it to Market Watch")
+    return "skip", ("visible == False and --allow-symbol-select was NOT passed. symbol_select "
+                    "NOT called (see py/live/spread_log.py for the rule). Add the symbol by hand "
+                    "in the terminal, or pass the flag")
+
+
+def rewrite_plan(stored_count: int, since_stored: bool, rewrite_existing: bool):
+    """Whether this run may overwrite bars that are ALREADY on disk.
+
+    Returns `(ok, message)`.
+
+    `write_bars` replaces the whole file, and its content is a read-modify-write
+    merge: `read_existing` loads every stored bar and a freshly pulled bar
+    REPLACES the stored one at the same timestamp. No bar is lost — but every
+    stored bar the pull covers has its values rewritten, and the file's bytes
+    and metadata block are replaced wholesale.
+
+    That is the exact shape that cost this dossier 25 of 34 published rows
+    (`AGENT-BRIEF-ADDENDUM-11` section VII): a store GREW under receipts that
+    had pinned neither end of their window, and the trade counts moved by the
+    growth factor. So the dangerous default is not `--out` pointing somewhere in
+    particular — it is `--days` being `None`, which walks ALL of history the
+    terminal holds, while `--since-stored` is off. One mistyped command then
+    rewrites every bar back to the start of the store.
+
+    The latch is keyed on **an existing store being present**, not on a
+    hardcoded path. A path list would protect one directory and leave a copy of
+    the same store unprotected, and the hazard belongs to the file, not the
+    folder. Three ways through, and nothing else:
+
+    * nothing stored yet — there is no value to rewrite, so a backfill is free;
+    * `--since-stored` — the pull is bounded to newer than the newest stored
+      bar, less one bar of deliberate, documented overlap;
+    * `--rewrite-existing` — the caller said so in as many words.
+
+    `--days` is deliberately NOT a way through. A bounded walk still rewrites
+    every stored bar inside its bound; `--days 400` on this store would rewrite
+    400 days of it. Bounding how far back the walk goes is not the same as
+    leaving stored values alone, and conflating the two is what makes the trap
+    cheap to fall into.
+    """
+    if stored_count == 0:
+        return True, "nothing stored yet — a backfill rewrites nothing"
+    if since_stored:
+        return True, (f"{stored_count} bars stored; --since-stored bounds the pull to the tail "
+                      f"(one bar of overlap by design)")
+    if rewrite_existing:
+        return True, (f"{stored_count} bars stored and --rewrite-existing was passed: this run "
+                      f"MAY rewrite the value of every one of them")
+    return False, (f"REFUSED: {stored_count} bars are already stored and this run would re-pull "
+                   f"and rewrite them (--days is None, so the walk covers all of history). Pass "
+                   f"--since-stored to pull only the tail, or --rewrite-existing to say you mean "
+                   f"it. Note that --days does NOT make this safe: a bounded walk still rewrites "
+                   f"every stored bar inside its bound")
+
+
+def ensure_market_watch(symbol: str, allow_select: bool, mt5_mod, log):
+    """Resolve `symbol` against Market Watch. **The only `symbol_select` call site.**
+
+    Returns `(ok, info, action)`. `mt5_mod` is injected rather than taken from
+    the module global so that a test can hand in a stub whose `symbol_select`
+    trips an assertion — which is the only way to show that the "already
+    visible" path does not call it. A test that only checks what
+    `symbol_select_plan` RETURNS would pass just as happily if the call site
+    ignored the plan, and this dossier has already paid for the difference
+    between a flag's declaration and a flag's behaviour (`--null-sides=` was
+    printed by every mode and read by one).
+
+    Keeping the call in exactly one function is also what makes the source scan
+    in `test_mt5_export_guards.py` meaningful: one occurrence, in here, and the
+    test fails if a second one appears anywhere in the file.
+    """
+    info = mt5_mod.symbol_info(symbol)
+    action, reason = symbol_select_plan(info, allow_select)
+    log(f"{symbol}: {reason}")
+    if action == "skip":
+        return False, None, action
+    if action == "select":
+        if not mt5_mod.symbol_select(symbol, True):
+            log(f"{symbol}: symbol_select failed {mt5_mod.last_error()} — skipped")
+            return False, None, action
+        info = mt5_mod.symbol_info(symbol)  # re-read: the metadata below comes from it
+        if info is None:
+            log(f"{symbol}: still unreadable after symbol_select — skipped")
+            return False, None, action
+    return True, info, action
+
+
+def flag_table(parser, args, argv) -> list:
+    """Every flag, its EFFECTIVE value, and whether the command line set it.
+
+    Printed every run. A flag that is read but ignored, or spelled in a way the
+    parser quietly turned into something else, has been this dossier's most
+    expensive class of defect: `--null-sides=` was printed in the header of
+    every mode and consumed by exactly one, and `max_hold_ms` under `[run]` in a
+    batch file was accepted without complaint while the cap stayed at four
+    hours. There is no way for a caller to tell either of those from the outside
+    except by changing the value and watching the numbers, so the least this can
+    do is state what it actually ended up with, next to where it came from.
+
+    Abbreviation is off at the parser (`allow_abbrev=False`), so `--allow-sym`
+    is an error rather than a silent match for `--allow-symbol-select`, and an
+    unknown flag is an error rather than a flag that does nothing.
+    """
+    rows = []
+    for action in parser._actions:  # noqa: SLF001 - argparse exposes no public view of this
+        if not action.option_strings or isinstance(action, argparse._HelpAction):  # noqa: SLF001
+            continue
+        name = max(action.option_strings, key=len)
+        value = getattr(args, action.dest, None)
+        on_cli = any(tok == name or tok.startswith(name + "=") or tok in action.option_strings
+                     for tok in argv)
+        rows.append((name, value, "command line" if on_cli else "default"))
+    return rows
 
 
 def server_offset_seconds(server_epoch: int) -> int:
@@ -250,8 +436,18 @@ def write_bars(path: str, rows: list[tuple], metadata: dict[str, str]) -> None:
     os.replace(tmp, path)
 
 
-def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
+def build_parser() -> argparse.ArgumentParser:
+    """The parser, built outside `main` so a test can exercise the REAL one.
+
+    A test that rebuilt an equivalent parser would be testing its own copy, and
+    the defect class it is here to catch — a flag that is accepted and does
+    nothing — lives in the difference between the two.
+    """
+    # allow_abbrev=False: an abbreviation is the one way argparse will silently
+    # turn a flag the caller did not write into one it did not mean. With it off,
+    # `--allow-sym` is an error. Unknown flags are already an error, and
+    # `parse_args` (not `parse_known_args`) is what keeps them one.
+    ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0], allow_abbrev=False)
     ap.add_argument("--symbols", default="XAUUSD.sc,BTCUSD.sc", help="broker symbols, comma-separated")
     # The help listed M1,M5,M15,H1 and the table has carried H4 and D1 since
     # 2026-09-18. A help string that omits an option is the same defect as a
@@ -289,8 +485,38 @@ def main() -> int:
     ap.add_argument("--terminal", default=None,
                     help="path to terminal64.exe when more than one is running "
                          "(on the VPS: the DEMO terminal, not the one holding the funded account)")
-    args = ap.parse_args()
+    # Permission to touch Market Watch. OFF by default — see `symbol_select_plan`
+    # and the rule quoted in this module's doc comment.
+    ap.add_argument("--allow-symbol-select", action="store_true",
+                    help="permit symbol_select() for a symbol that reads visible == False "
+                         "(default: report it and skip the symbol, never call symbol_select)")
+    # Permission to rewrite bars already on disk. OFF by default — see
+    # `rewrite_plan` for why the latch is keyed on the file and not on a path.
+    ap.add_argument("--rewrite-existing", action="store_true",
+                    help="permit this run to re-pull and overwrite bars already stored "
+                         "(default: refuse, because --days is None means ALL of history)")
+    return ap
+
+
+def parse_args(argv=None):
+    """Parse and VALIDATE. Garbage is a hard error, not a value that travels."""
+    ap = build_parser()
+    args = ap.parse_args(argv)
+    # `--days 0` would set `floor = now_server`, so the walk breaks on its first
+    # test and the run exports nothing — a silent no-op wearing the clothes of a
+    # bounded pull. A negative value is the same thing with a worse log line.
+    if args.days is not None and args.days < 1:
+        ap.error(f"--days must be >= 1 (got {args.days}); omit it to pull all of history")
+    return ap, args
+
+
+def main() -> int:
+    ap, args = parse_args()
     log = (lambda *_: None) if args.quiet else (lambda *a: print(*a, flush=True))
+
+    log("flags in effect (value, and whether the command line set it):")
+    for name, value, origin in flag_table(ap, args, sys.argv[1:]):
+        log(f"  {name:<24} = {value!r:<30} [{origin}]")
 
     if not (mt5.initialize(path=args.terminal) if args.terminal else mt5.initialize()):
         sys.exit(f"MT5 initialize failed: {mt5.last_error()}")
@@ -308,11 +534,14 @@ def main() -> int:
         skipped: list[str] = []
 
         for symbol in [s.strip() for s in args.symbols.split(",") if s.strip()]:
-            if not mt5.symbol_select(symbol, True):
-                log(f"{symbol}: symbol_select failed {mt5.last_error()} — skipped")
-                skipped += [f"{symbol} {tf} (symbol_select failed)" for tf in timeframes]
+            # READ `visible` FIRST, decide SECOND, and only then maybe call.
+            # The old order was `symbol_select` then `symbol_info`, which meant
+            # the call the standing rule forbids happened before anything had
+            # looked at whether it was needed.
+            ok, info, action = ensure_market_watch(symbol, args.allow_symbol_select, mt5, log)
+            if not ok:
+                skipped += [f"{symbol} {tf} (Market Watch: {action})" for tf in timeframes]
                 continue
-            info = mt5.symbol_info(symbol)
             file_symbol = symbol if args.keep_suffix else symbol.split(".")[0]
             for tf_name in timeframes:
                 if tf_name not in TIMEFRAMES:
@@ -326,6 +555,14 @@ def main() -> int:
                 # it. It was read after, for the merge alone.
                 merged = read_existing(path)
                 before = len(merged)
+                # The latch. Checked HERE, after the store is read and before
+                # one bar is asked of the terminal, so a refusal costs nothing
+                # and a permitted run has already said how much it may rewrite.
+                may_write, why = rewrite_plan(before, args.since_stored, args.rewrite_existing)
+                log(f"  {symbol} {tf_name}: {why}")
+                if not may_write:
+                    skipped.append(f"{symbol} {tf_name} (refused: would rewrite {before} stored bars)")
+                    continue
                 since = max(merged) if (merged and args.since_stored) else None
                 if since is not None:
                     log(f"  {symbol} {tf_name}: resuming from {dt.datetime.fromtimestamp(since / 1000, tz=UTC)}")

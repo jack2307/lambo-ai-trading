@@ -293,3 +293,281 @@ Ba viec cho chu quyet, khong agent nao duoc tu chon:
 Khi ba cho do duoc go, phep do la **mot lenh**: chay export vao thu muc rieng,
 roi `bar_seam_check.py --old --new`. Ca nam vach da ghim o tren, va trang thai
 TRUOC da in.
+
+---
+
+## Ghi chu 2026-10-12 — chu da quyet ba cho chan; lam phan KHONG can dang nhap
+
+Khong viet lai dong nao o tren (luat §5: them ghi chu co ngay vao CUOI).
+
+### Quyet dinh cua chu (11/10/2026)
+
+1. **Export tu `C:\MT5-cent` = TK 33705331 (Live 21)** — cung server voi 100.586
+   bar dang co ⇒ **khong sinh duong may** — va khong phai TK cam tien that.
+2. **`symbol_select`: them CO TAT, va chi goi khi symbol chua `visible`.** Doc
+   `symbol_info().visible` truoc; da visible thi **bo qua hoan toan**. Kiem
+   `visible` tai cho, dung dua vao suy luan tu `XAUUSD_sc.csv`.
+3. **Ghi vao thu muc RIENG, kiem duong may truoc.** Kho song khong duoc cham mot
+   byte. Hop nhat la mot quyet dinh RIENG cua chu, khong phai phan tiep.
+
+### A) Da va `symbol_select` — `mt5_export.py`
+
+- **`symbol_select_plan(info, allow_select)`** — ham thuan, quyet dinh
+  `proceed` / `select` / `skip`. `visible == True` ⇒ **`proceed`, khong goi**,
+  **ke ca khi co bat**: co la **giay phep, khong phai menh lenh**. `info is None`
+  (trang thai cua terminal chua dang nhap) ⇒ cung nhanh voi not-visible, nhung
+  **ly do in ra khac nhau** de doc log phan biet duoc.
+- **`ensure_market_watch(symbol, allow_select, mt5_mod, log)`** — **cho goi
+  `symbol_select` DUY NHAT trong ca file**, va `mt5_mod` duoc **tiem vao** chu
+  khong lay tu global, de test cam vao mot stub co `symbol_select` **nem
+  AssertionError neu bi goi**. Mot test chi kiem gia tri TRA VE cua `_plan` se
+  pass y nhu the ca khi cho goi **bo qua** ke hoach — va ho so da tra gia cho
+  dung khe giua **khai bao** va **hanh vi** cua mot co (`--null-sides=` in o moi
+  mode, mot mode doc).
+- Co: **`--allow-symbol-select`**, **TAT MAC DINH**. Thieu co + chua visible ⇒
+  **bao va dung**, vao `skipped`, **ma exit code khoi 0** (1 neu khong export gi,
+  2 neu mot phan) — dung co che exit code san co cua script.
+- **Chong co bi nuot im lang** (luat §VI): `allow_abbrev=False` nen
+  `--allow-sym` la **loi cung**, khong con la mot ket noi am tham; cac cach viet
+  sai (`--no-select`, `--allow_symbol_select`, ...) **deu la loi cung**;
+  `--days 0 / -1 / abc` la **loi cung** (truoc day `--days 0` dat `floor = now`
+  nen vong lap vo ngay tu vong dau — mot no-op im lang deo ao mot pull co bien);
+  va **bang co** in moi lan chay voi **gia tri hieu luc + no den tu dong lenh hay
+  tu mac dinh**.
+
+### B) Chot an toan cho bay `--days=None`
+
+**`rewrite_plan(stored_count, since_stored, rewrite_existing)`**. Chot khoa vao
+**FILE da ton tai**, khong khoa vao mot duong dan bam cung: danh sach duong dan
+se bao ve mot thu muc va bo ho mot ban copy cua cung kho do, ma hiem hoa thuoc
+ve **file**, khong thuoc ve **thu muc**. Ba duong qua, khong co duong thu tu:
+
+- chua luu gi ⇒ backfill khong ghi de gi;
+- `--since-stored` ⇒ pull bi chan vao phan duoi (mot bar trung lap co y);
+- **`--rewrite-existing`** (co moi, tat mac dinh) ⇒ nguoi goi noi ra bang chu.
+
+**`--days` CO Y khong phai mot duong qua, va no khong phai tham so cua ham** — co
+mot test ghim dung dieu do (`inspect.signature`). Ly do: mot walk co bien **van
+ghi de moi bar da luu nam trong bien do**; `--days 400` tren kho nay se ghi lai
+400 ngay cua no. Chan "di bo nguoc bao xa" **khong phai** chan "de yen gia tri da
+luu", va gop hai cai do lai chinh la cai lam cai bay re.
+
+Loi tu choi **neu ro so bar dang bi de doa** va **ten hai co** de go.
+
+### C1) `py/ingest/test_mt5_export_guards.py` — **33/33 PASS**, stdlib `unittest`
+
+Khong co pytest trong cay nay, nen test khong duoc doi mot test runner moi.
+Sau lop:
+
+- `TestSymbolSelectPlan` (7) — bon trang thai x hai gia tri co, cong
+  `getattr(info,"visible",False)`: mot object khong co `visible` **khong duoc**
+  doc la visible.
+- `TestCallSiteObeysThePlan` (5) — **hanh vi**: stub tripwire khang dinh duong
+  "da visible" **khong goi** `symbol_select` (ke ca khi co bat), duong "co tat +
+  chua visible" **bao va dung ma khong goi** va **loi nhac ten co**, va — **doi
+  chung DUONG** — duong "co bat + chua visible" **CO goi**. Khong co doi chung
+  duong nay thi moi khang dinh kia cung pass tren mot ban da **xoa han**
+  `symbol_select`, va mot chot hoat dong bang cach bo nang luc di **khong phai**
+  cai chot da duoc yeu cau.
+- `TestRewritePlan` (5) + `TestFlagsCannotBeSwallowed` (7) — dung **parser THAT**
+  (`build_parser` duoc tach ra khoi `main`), khong phai mot ban copy: khe giua
+  hai cai do chinh la cho khuyet diem song.
+- `TestLatchEndToEnd` (7) — **chay ca `main()`** voi mot stub `MetaTrader5` va
+  mot kho parquet that trong temp. Day moi la cho **do co dat duoc tu DAU**
+  (§VI: `[run] max_hold_ms` parse duoc, doc lai dung, va khong bao gio den duoc
+  cai no goi ten). Do duoc:
+  - lan chay thu hai tren cung kho **bi TU CHOI**, exit **1**,
+    **`ranges_asked == 0`** (tu choi **khong ton mot lan hoi terminal**), va **so
+    bar trong file khong doi**;
+  - `--since-stored` qua chot va **noi them that** (so bar tang);
+  - `--rewrite-existing` qua chot;
+  - chua visible + khong co ⇒ exit **1**, **khong goi** select, **khong tao file**;
+  - chua visible + co co ⇒ **co goi**, co file (doi chung duong);
+  - bang co in ra co **ca `[default]` lan `[command line]`**.
+- `TestSourceHoldsOneCallSite` (2) — doi ung Python cua test quet ma nguon ben
+  Rust: **dung `ast`, khong dung `in`**. Ban quet bang chuoi **doc 2 cho** va chi
+  mot la loi goi — cho kia la chu `symbol_select()` **trong help string** cua
+  `--allow-symbol-select`. Mot test dem **lan nhac** se **truot khi tai lieu tot
+  len** va **pass khi them mot loi goi** trong mot dong khong co comment: nguoc.
+  Parser biet cai nao la cai nao. Nay: **dung MOT Call node, trong
+  `ensure_market_watch`**.
+
+**Mot khuyet diem nua, va no o dong duy nhat nguoi ta copy bang tay.** Docstring
+module khong phai raw string, nen dong Usage
+`--terminal C:\MT5-demo\terminal64.exe` **render ra
+`C:\MT5-demo<TAB>erminal64.exe`** (`\t` la escape hop le) va `\M` nem
+**DeprecationWarning moi lan import**. Va: `r"""`. Da kiem:
+`python -W error::DeprecationWarning -c "import mt5_export"` sach, va
+`chr(9) in __doc__` doc **False**.
+
+### C2) Terminal: **VAN CHUA DANG NHAP. DUNG.**
+
+**Toi KHONG goi `mt5.initialize(path=r"C:\MT5-cent\terminal64.exe")`**, va day la
+ly do — do duoc, khong phai doan:
+
+- `C:\MT5-cent\terminal64.exe` **KHONG chay**. Danh sach process chi co mot
+  `terminal64.exe`: pid **71572** = `C:\MT5-demo\terminal64.exe /portable`.
+- ⇒ `initialize(path=...)` se **KHOI DONG** no. Va `C:\MT5-cent\config\start.ini`
+  doc (chi doc TEN KHOA va ba gia tri khong phai bi mat):
+
+      Account=33705331    AllowLiveTrading=1    Enabled=1
+
+  cong `config/accounts.dat` **8.042 byte** (kho thong tin dang nhap da luu) va
+  `common.ini` co khoa `Login` + `Server` (**khong doc gia tri**).
+
+⇒ Khoi dong no = **tu dong dang nhap mot TK Live 21 voi `AllowLiveTrading=1` va
+mot expert `Enabled=1`**. Do la **THUC HIEN** viec dang nhap, khong phai **do**
+no — va la dung cai bi cam. Loi goi do khong them mot thong tin nao: danh sach
+process **da** tra loi cau hoi. **Mat khau va viec khoi dong la viec cua chu.**
+
+### Cai do duoc them, va no ung ho quyet dinh 1 cua chu
+
+Do do sau cache lich su, chi doc:
+
+    C:\MT5-cent   \bases\VantageMarkets-Live 21\history\XAUUSD.sc -> 2026 chi, **15 KB**
+    C:\Program Files\MetaTrader 5
+                  \bases\VantageMarkets-Live 21\history\XAUUSD.sc -> **2022,2023,2024,2025,2026, 91.305 KB**
+    C:\MT5-cent + C:\MT5-demo
+                  \bases\VantageMarkets-Demo\history\**XAUUSD**    -> 2026, 4.419 KB
+
+Ba dieu doc ra:
+
+1. **Terminal da dung nen kho 100.586 bar la `C:\Program Files\MetaTrader 5`** —
+   do sau cache **2022..2026** trung **dung** span cua kho
+   (2022-06-16 .. 2026-09-17). Nhung do la terminal cua TK 35911458 (cam tien
+   that) ma chu co y tranh.
+2. **`C:\MT5-cent` gan nhu khong co cache** cho `XAUUSD.sc` (15 KB = co bap cua
+   mot muc rong; nhieu symbol khac doc dung 15 KB). Nhung **ca hai deu la
+   `VantageMarkets-Live 21`** ⇒ **cung server, cung feed, khong duong may**:
+   quyet dinh 1 cua chu dung ve danh tinh. Va vi lenh se chay voi
+   **`--since-stored`** / `--days` nho, phan can keo la **duoi 2026**, dung phan
+   ma MT5-cent **CO** ⇒ cache mong **khong phai cho chan**. (Mot backfill day
+   thi se phai tai 2022-2025 tu server.)
+3. **Tren server Demo, vang ten la `XAUUSD`, khong phai `XAUUSD.sc`.** Nen neu lo
+   chay vao terminal demo voi `--symbols XAUUSD.sc` thi `symbol_info` tra `None`
+   ⇒ **chot moi se bao va dung**, khong goi `symbol_select`. Bay do **da duoc
+   bit**, khong con dua vao viec nho.
+
+Them: **`MaxBars=100000`** trong `common.ini` cua **ca** MT5-cent **va** MT5-demo
+⇒ tran "Max bars in chart" la **100.000**, dung con so docstring khai, nen mot
+pull M15 "ca lich su" chi duoc ~100k bar (~2022-07 tro lai). Kho hien co
+**100.586** bar la vi no **gop qua nhieu lan chay**, khong phai mot lan.
+
+### DUNG MOT LENH, chay sau khi chu dang nhap `C:\MT5-cent` (TK 33705331)
+
+Buoc 1 — keo vao **thu muc RIENG**, kho song khong cham mot byte. Thu muc rong
+nen `read_existing` khong thay gi va chot `rewrite_plan` doc "nothing stored yet":
+
+    cd /e/rust/fd-mt5-export && python py/ingest/mt5_export.py \
+      --terminal "C:\MT5-cent\terminal64.exe" \
+      --symbols XAUUSD.sc --timeframes M15 \
+      --out /e/rust/fd-mt5-export/data/bars-mt5export-20261012 \
+      --days 40
+
+`--days 40` phu tu ~2026-09-02, tuc **trum ca bar cuoi cua kho song
+(2026-09-17 13:00)** nen co phan trung lap de phep kiem B co cai ma so; va no
+giu pull nho. **Khong** truyen `--allow-symbol-select`: neu `XAUUSD.sc` da
+visible — nhu mong doi tren Live 21 — thi no **khong can**, va neu chua visible
+thi lenh **phai** bao va dung de chu quyet.
+
+Buoc 2 — phep kiem duong may, **truoc khi ban den chuyen hop nhat**:
+
+    cd /e/rust/fd-mt5-export && python py/ingest/bar_seam_check.py \
+      --old /e/rust/flowdesk/data/bars/XAUUSD-15m.parquet \
+      --new /e/rust/fd-mt5-export/data/bars-mt5export-20261012/XAUUSD-15m.parquet \
+      --step-min 15 \
+      --tape "E:/rust/flowdesk/data/gold/tape/date=*/*.parquet"
+
+Doc ket qua theo **nam vach da ghim o tren**, va bon so **do duoc o day**, dung
+trich lai cua ai:
+
+- cu doi hinh dang volume la **HAI** cu, o **2024->2025** (`D` 0,8237, x4,906) va
+  **2025->2026** (`D` 0,5547, x1,949) — **khong phai mot cu 2023-12**;
+- **x10,02** la day-len-dinh theo **median** (512 -> 5.130), **x9,56** theo mean;
+  **«x15,4» khong tai tao duoc**;
+- `open == low` o **dung nen 18:00 NY** **6,74%** vs nen **2,73%**, lift
+  **x2,47**; lay ca gio lam loang **1,42x** (**khong phai ~4x**);
+- tape het o **2026-10-09 20:59 UTC** (khong phai 10-10), **55.131 print**,
+  **21.803 (39,55%)** nam sau nen cuoi, va tape **tu no** co **ba block** tach
+  theo thoi gian: 15.307 / 18.478 / **21.346** print, block 3 (10-04..10-09) dang
+  **0,00%** trong nen.
+
+Chi khi buoc 2 doc **0 bar OHLC khac nhau** tren phan trung lap thi moi ban den
+hop nhat — va **hop nhat la quyet dinh rieng cua chu**, khong phai phan tiep cua
+job nay. Neu hop nhat: lenh la **cung buoc 1** nhung `--out` tro vao kho song
+**va** bat buoc co **`--since-stored`** (khong co no, chot se tu choi — do la
+viec cua chot).
+
+### Ket luan cua ghi chu nay
+
+**Van 0 bar da keo. 0 o cong tieu. 0 byte ghi vao bat ky kho nao.** Hai chot da
+vao cay voi **33/33 test**, va cho chan con lai la **mot viec cua chu**: khoi
+dong + dang nhap `C:\MT5-cent`.
+
+### Ghi chu 2026-10-12, muon hon — MOT LAN DANG NHAP DA THU VA DA TRUOT, va no xac nhan phan tich server
+
+Doc tu journal cua terminal (chi doc). **Khong phai toi**: toi khong co mat khau,
+khong goi `initialize` kem thong tin dang nhap, va khong khoi dong terminal nao.
+
+`C:\MT5-demo\logs\20261012.log`:
+
+    08:46:19.958  Network  '33705331': authorization on VantageMarkets-Demo failed (Invalid account)
+    08:46:24.743  Terminal exit with code 0
+    08:46:25.687  Terminal shutdown with 0
+
+Ba dieu doc ra, va dieu thu hai la cai dang nhat:
+
+1. **Hien gio KHONG CO terminal MT5 nao chay.** Terminal demo pid **71572** (len
+   11/10 20:28) da **thoat 08:46:24 hom nay**. Ket luan cua muc C **khong doi**,
+   chi ro hon: truoc la "dang chay nhung chua dang nhap", nay la "khong chay".
+2. **Da co nguoi thu dang nhap TK 33705331 — TK chu chon — vao server
+   `VantageMarkets-Demo`, va server TRA VE "Invalid account".** Day la **doi
+   chung doc lap** cho phan tich danh tinh feed o tren: TK 33705331 thuoc
+   **`VantageMarkets-Live 21`**, va server Demo **khong he biet** no. Tuc la
+   terminal demo **khong bao gio** export duoc du lieu nay — khong phai "feed
+   khac" ma la **khong xac thuc duoc**. (Trung voi phat hien ten symbol: tren
+   Demo vang la `XAUUSD`, tren Live 21 la `XAUUSD.sc`.)
+3. ⚠️ **Dang nhap phai vao `C:\MT5-cent`, khong phai `C:\MT5-demo`.** TK
+   33705331 song o `C:\MT5-cent` (`start.ini: Account=33705331`, va
+   `bases\VantageMarkets-Live 21\` ton tai o do). Mot lan thu nua vao terminal
+   demo se truot y nhu lan 08:46.
+
+### Mot khuyet diem TOI tu gay ra trong lan va nay, va test bat duoc
+
+Khi viet lai khoi chan doan `if defined MISSING ( ... )` trong
+`deploy/run-bars-export.cmd`, toi dat mot cap **ngoac don** trong mot dong
+`echo`. Trong cmd.exe mot `)` tran trong khoi `if (...)` **dong khoi ngay tai
+cho**, nen `set "RC=10"` thanh **VO DIEU KIEN** va wrapper tra **10 tren mot lan
+chay sach**. `deploy/bars-export-selftest.py` bat dung no o ca duy nhat ma
+khong file nao thieu:
+
+    FAIL exporter rc=2, 6/6 present -> 10 (want 2)
+
+Da va (bo ngoac, them `rem` canh bao tai cho). Dang ghi lai vi no la mot vi du
+dung cho luat cua ho so: **mot test "pass" truoc khi sua khong noi len dieu gi
+neu khong co ca ca bat duoc** — va o day cai bat duoc la mot dong tu choi *gia*
+tren mot lan chay dung, tuc dung loai loi lam nguoi van hanh di sai huong luc
+3 gio sang.
+
+### Mot bien phai biet truoc: CHAY LAI BUOC 1 SE BI TU CHOI
+
+Lenh buoc 1 chay vao mot thu muc rong nen chot doc "nothing stored yet" va cho
+qua. **Lan chay thu hai vao CUNG thu muc do se bi TU CHOI** (gio da co bar), va
+do la dung y do. Hai cach di tiep, chon theo viec:
+
+- **noi them phan duoi** (binh thuong): them `--since-stored`;
+- **lam lai tu dau**: xoa thu muc `data/bars-mt5export-20261012` roi chay lai —
+  **dung** `--rewrite-existing` cho viec nay, vi co do cho phep ghi lai gia tri
+  cua bar cu ma khong de lai dau vet nao rang da ghi lai.
+
+Va nhac lai cho khong duoc lam: `--out` **khong bao gio** tro vao
+`/e/rust/flowdesk/data/bars` trong job nay. Neu sau nay chu quyet hop nhat thi
+lenh do **bat buoc** co `--since-stored`; thieu no, chot se tu choi — va tu choi
+**khong ton mot lan hoi terminal** (test `ranges_asked == 0` ghim dieu do).
+
+### `deploy/install-tasks.ps1` — da kiem, khong bi anh huong
+
+No tu choi cai mot checkout ma `mt5_export.py --help` khong co `--since-stored`.
+Ban va giu nguyen co do trong help, nen check do **van pass** (selftest cung doc
+`install-tasks.ps1 emits cmd.exe /c ...` la `ok`). Doan trich `mt5_export.py` o
+dong ~220 cua no ("The terminal cannot be launched from SSH at all") **van dung**.

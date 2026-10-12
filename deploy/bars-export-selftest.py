@@ -182,6 +182,29 @@ def main() -> int:
     check('install-tasks.ps1 emits cmd.exe /c ""<script>" ..."', '/c ""' in line, line.strip()[:160])
     check("  with the timeframe list inside it intact", TFS in line, line.strip()[:160])
 
+    # THE WRAPPER AND THE EXPORTER'S LATCH ARE NOW COUPLED, so the coupling is
+    # pinned here rather than left to be rediscovered at 3am.
+    #
+    # `mt5_export.py` gained a latch on 2026-10-11: with bars already stored and
+    # neither `--since-stored` nor `--rewrite-existing`, it REFUSES, because
+    # `--days` defaults to None and a full walk rewrites the value of every bar
+    # in the file. This wrapper passes `--since-stored`, so it goes straight
+    # through. But that is now a REQUIREMENT and not an optimisation: drop the
+    # flag and every scheduled run after the first refuses and exits 1 - which
+    # this wrapper then reports as rc=1, correctly and very confusingly.
+    #
+    # `install-tasks.ps1` already refuses to install a checkout whose exporter
+    # has no `--since-stored` in it. Nothing until now checked the flag was
+    # still on the line that actually runs.
+    print()
+    print("=== the exporter line against the exporter's own latch ===")
+    check("the exporter line still passes --since-stored (the latch refuses without it)",
+          "--since-stored" in PY_LINE, PY_LINE.strip()[:200])
+    check("  and still does NOT pass --rewrite-existing (a scheduled job must never need it)",
+          "--rewrite-existing" not in PY_LINE, PY_LINE.strip()[:200])
+    check("  and still does NOT pass --allow-symbol-select (Market Watch is hands-off here)",
+          "--allow-symbol-select" not in PY_LINE, PY_LINE.strip()[:200])
+
     print()
     print("all checks passed" if not fails else f"{len(fails)} FAILED")
     return 1 if fails else 0

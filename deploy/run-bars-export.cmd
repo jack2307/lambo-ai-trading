@@ -43,15 +43,33 @@ rem  registered wrong or a hand-run with no arguments, and guessing a
 rem  terminal on a machine with two is how the desk ends up exporting one
 rem  account's contract into the other account's file.
 rem
-rem  READ-ONLY, AND IT MERGES. mt5_export calls initialize, symbol_select,
-rem  symbol_info, copy_rates_from_pos and shutdown. No order, none closed, no
-rem  AutoTrading - the same access the pollers have had against this terminal
-rem  since day one. `--since-stored` resumes from the newest bar already in
-rem  each file with one bar of overlap, so a routine run asks for minutes of
-rem  data and a missing file still backfills. `--days` is deliberately NOT
-rem  passed with it: both bound the pull and the tighter one would win
-rem  silently. `--days` stays for hand runs, where a person means "give me
-rem  this much".
+rem  READ-ONLY, AND IT MERGES. mt5_export calls initialize, symbol_info,
+rem  copy_rates_range and shutdown. No order, none closed, no AutoTrading -
+rem  the same access the pollers have had against this terminal since day one.
+rem
+rem  It does NOT call symbol_select. That changed on 2026-10-11: the call now
+rem  sits behind `--allow-symbol-select`, which this file does not pass, and
+rem  is skipped entirely for a symbol already in Market Watch. A symbol that
+rem  is NOT visible is reported and skipped instead of being added, because
+rem  py\live\spread_log.py states the rule for this account - adding a symbol
+rem  to Market Watch makes an unreadable symbol readable and it is not on the
+rem  approved read-only list. (This comment also said copy_rates_from_pos for
+rem  months; the function is copy_rates_range. Two wrong facts in one comment
+rem  about which MT5 calls touch a live account.)
+rem
+rem  `--since-stored` resumes from the newest bar already in each file with
+rem  one bar of overlap, so a routine run asks for minutes of data and a
+rem  missing file still backfills. IT IS NOW REQUIRED, not an optimisation:
+rem  since 2026-10-11 the exporter REFUSES to run against a file that already
+rem  has bars unless it is given `--since-stored` or `--rewrite-existing`,
+rem  because `--days` defaults to "all of history" and a full walk rewrites
+rem  the value of every bar in the file. Drop the flag here and every run
+rem  after the first exits 1. deploy\bars-export-selftest.py pins this.
+rem
+rem  `--days` is deliberately NOT passed with it: both bound the pull and the
+rem  tighter one would win silently. `--days` stays for hand runs, where a
+rem  person means "give me this much". It does NOT satisfy the latch - a
+rem  bounded walk still rewrites every stored bar inside its bound.
 setlocal
 set "ROOT=%~dp0.."
 set "LOGDIR=%ROOT%\data\paper\logs"
@@ -147,8 +165,19 @@ for %%T in (1m 5m 15m 1h 4h 1d) do (
 )
 if defined MISSING (
   >>"%LOG%" echo ==== At least one expected file is absent. Most likely the symbol is
-  >>"%LOG%" echo ==== not right for this terminal - mt5_export logs "symbol_select failed
-  >>"%LOG%" echo ==== - skipped" and now exits 1 for that, but read the lines above.
+  >>"%LOG%" echo ==== not right for this terminal, or it is not in Market Watch. Since
+  >>"%LOG%" echo ==== 2026-10-11 mt5_export logs one of these and exits 1 for it:
+  >>"%LOG%" echo ====   "visible == False and --allow-symbol-select was NOT passed"
+rem  NO LITERAL PARENTHESES IN THESE ECHOES. A bare `)` inside a parenthesised
+rem  `if` block closes the block where it stands, so `set "RC=10"` below ran
+rem  UNCONDITIONALLY and the wrapper returned 10 over a clean run. Caught by
+rem  bars-export-selftest.py on the "rc=2, 6/6 present" case, which is the one
+rem  case where nothing is missing and RC must survive untouched.
+  >>"%LOG%" echo ====   "symbol_info returned None" - wrong symbol, or nobody logged in
+  >>"%LOG%" echo ==== Add the symbol by hand in the terminal rather than passing the
+  >>"%LOG%" echo ==== flag here. It used to log "symbol_select failed - skipped", which
+  >>"%LOG%" echo ==== it no longer does, because it no longer calls it. Read the lines
+  >>"%LOG%" echo ==== above either way.
   set "RC=10"
 )
 >>"%LOG%" echo ==== bars export end %DATE% %TIME% rc=%RC%
