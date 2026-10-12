@@ -1,0 +1,24 @@
+== receipts/l3-target/W1-XAUL3TRU-guards-off.txt
+   exit 0 8 label lines
+== receipts/l3-target/W1-XAUL3TRU-guards-on.txt
+   exit 0 8 label lines
+== receipts/l3-target/W2-XAUL3TRU-guards-off.txt
+   exit 0 8 label lines
+== receipts/l3-target/W2-XAUL3TRU-guards-on.txt
+   exit 0 8 label lines
+== receipts/l3-target/W1-XAUL3SHF-guards-off.txt
+   exit 0 8 label lines
+== receipts/l3-target/W1-XAUL3SHF-guards-on.txt
+   exit 0 8 label lines
+== receipts/l3-target/W2-XAUL3SHF-guards-off.txt
+   exit 0 8 label lines
+== receipts/l3-target/W2-XAUL3SHF-guards-on.txt
+   exit 0 8 label lines
+== receipts/l3-target/W1-XAUL3CON-guards-off.txt
+   exit 0 8 label lines
+== receipts/l3-target/W1-XAUL3CON-guards-on.txt
+   exit 0 8 label lines
+== receipts/l3-target/W2-XAUL3CON-guards-off.txt
+   exit 0 8 label lines
+== receipts/l3-target/W2-XAUL3CON-guards-on.txt
+   exit 0 8 label lines
