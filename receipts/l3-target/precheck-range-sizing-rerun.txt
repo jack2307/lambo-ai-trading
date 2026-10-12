@@ -1,0 +1,84 @@
+=== KHO ===
+  XAUDUKA-1m.parquet: 5635777 dong — doc 5 cot, `volume` KHONG trong `columns=`
+  XAUDUKA-15m.parquet: 378749 dong — doc 5 cot, `volume` KHONG trong `columns=`
+  1m  5635777 nen 2010-06-01T00:00:00.000 -> 2026-05-31T23:59:00.000
+  15m 378749 nen 2010-06-01T00:00:00.000 -> 2026-05-31T23:45:00.000
+  doc xong sau 8.92 s
+
+=== TEST NHAN QUA (dang ky muc 2) ===
+  C1 PASS: 14 dac trung + pred + m, x 5 moc cat,
+           0 gia tri doi (so sanh TUNG BIT, NaN==NaN)
+  C2 PASS: PROBE_m16 truot C1 o 5/5 moc — dac trung doc close PHUT 16 (phut dau cua nen i+1)
+  C2 PASS: PROBE_y truot C1 o 5/5 moc — y(i) lam BIEN HOI QUY (tang du bao doc ket cuoc)
+  C2 PASS: PROBE_fullfit truot C1 o 5/5 moc — khop MOT lan tren CA chuoi (tang khop nhin truoc)
+  C3 PASS: 12 khe tren lat nay, y co so o 0
+  NULL-KHONG-PHAI-0 PASS: 587 nen thieu nen 1m, 0 mang mot so m
+  XAO-TRON PASS: vi tri NaN y het (True), phan phoi y het (True)
+
+=== DUNG DAC TRUNG + DU BAO (toan chuoi, 1 lan) ===
+  khop lai: fc15 182 lan, fc1m 180 lan (moc dau thang, tap khop EXPANDING)
+  mat na NULL chung cho ca ba nguon: 338423 / 378749 nen 15m = 89.3528%
+  nen tin hieu (donchian 20, nen hien tai LOAI): 37779
+
+=== DOI CHUNG DUONG 1: du bao co doc duoc khong (ngoai mau) ===
+  Hai nguon doc tren DUNG CUNG TAP DONG. `fc15` khong can nen 1m nen no co
+  nhieu dong hon (4,9209% nen 15m thieu nen 1m); so hai R2 tren hai mau
+  khac nhau KHONG phai mot phep so — `intrabar-shape` muc 6 noi dung the.
+  cua so  nguon   R2_oos      corr    n(chung)
+  W1      fc15   +0.093926  +0.3072  154959
+  W1      fc1m   +0.100104  +0.3168  154959
+     => DELTA R2_oos (1m THEM vao, cung tap dong) = +0.006178
+  W2      fc15   +0.130678  +0.3624  180975
+  W2      fc1m   +0.139860  +0.3758  180975
+     => DELTA R2_oos (1m THEM vao, cung tap dong) = +0.009181
+
+=== PHAN PHOI CO SO NHAN STOP m ===
+  cua so  nguon   p10     p50     p90    mean   p90/p10   n
+  W1      fc15  0.7910 0.9631 1.2718 1.0076  1.6078  155750
+  W1      fc1m  0.7872 0.9545 1.2506 0.9975  1.5887  155750
+  W1      shuf  0.7904 0.9573 1.2451 0.9974  1.5753  155750
+     => corr(m_fc1m, m_fc15) = +0.955482   (F5b: >= 0,995 thi hai nguon la CUNG mot stop)
+  W2      fc15  0.7954 0.9614 1.2550 1.0026  1.5778  182673
+  W2      fc1m  0.7938 0.9594 1.2425 0.9983  1.5653  182673
+  W2      shuf  0.7909 0.9570 1.2469 0.9984  1.5767  182673
+     => corr(m_fc1m, m_fc15) = +0.962092   (F5b: >= 0,995 thi hai nguon la CUNG mot stop)
+
+=== DOI CHUNG (a): CO STOP TRUNG BINH tren DUNG nen tin hieu ===
+  d(i) = stopAtr x ATR14(i) x m(i), USD; `atr` la m = 1,000
+  W1 stopAtr 1.0:   atr  1.7882   fc15  2.3289 (+30.24%)   fc1m  2.3051 (+28.91%)   shuf  1.7782 (-0.56%)
+       khuyet diem 16: delta = spread/2 = 0.1400 diem gia (TU MA: d risk/d s = +1/2 chinh xac, apply_costs engine.rs:902-912 + risk engine.rs:717-719) = 14.34% cua R o p10(d), 3.38% o p90(d)
+       chi phi/R (spread 0,28 cau hinh, KHONG do): 15.03% cua R o p50(d) = 1.862 USD
+  W1 stopAtr 2.0:   atr  3.5763   fc15  4.6577 (+30.24%)   fc1m  4.6102 (+28.91%)   shuf  3.5564 (-0.56%)
+       khuyet diem 16: delta = spread/2 = 0.1400 diem gia (TU MA: d risk/d s = +1/2 chinh xac, apply_costs engine.rs:902-912 + risk engine.rs:717-719) = 7.17% cua R o p10(d), 1.69% o p90(d)
+       chi phi/R (spread 0,28 cau hinh, KHONG do): 7.52% cua R o p50(d) = 3.725 USD
+  W2 stopAtr 1.0:   atr  3.2484   fc15  3.9419 (+21.35%)   fc1m  3.9304 (+20.99%)   shuf  3.2539 (+0.17%)
+       khuyet diem 16: delta = spread/2 = 0.1400 diem gia (TU MA: d risk/d s = +1/2 chinh xac, apply_costs engine.rs:902-912 + risk engine.rs:717-719) = 12.26% cua R o p10(d), 1.85% o p90(d)
+       chi phi/R (spread 0,28 cau hinh, KHONG do): 10.68% cua R o p50(d) = 2.621 USD
+  W2 stopAtr 2.0:   atr  6.4968   fc15  7.8838 (+21.35%)   fc1m  7.8608 (+20.99%)   shuf  6.5079 (+0.17%)
+       khuyet diem 16: delta = spread/2 = 0.1400 diem gia (TU MA: d risk/d s = +1/2 chinh xac, apply_costs engine.rs:902-912 + risk engine.rs:717-719) = 6.13% cua R o p10(d), 0.93% o p90(d)
+       chi phi/R (spread 0,28 cau hinh, KHONG do): 5.34% cua R o p50(d) = 5.243 USD
+
+=== HANG SO KHOP CO: mot so moi (cua so, nguon), KHAI RA ===
+  m_khop(i) = m(i) / ti so o tren, nen co stop trung binh tren nen tin hieu
+  BANG stop ATR o cung `stopAtr`. Day la mot hang so TRONG MAU va no la
+  gia phai tra de doi chung (a) la mot doi chung chu khong phai mot phep
+  doi co — lop ma `agent/stop-width` da do tren 200 o.
+  W1 fc15  ti so co = 1.302374  => m chia cho no
+  W1 fc1m  ti so co = 1.289088  => m chia cho no
+  W1 shuf  ti so co = 0.994411  => m chia cho no
+  W2 fc15  ti so co = 1.213487  => m chia cho no
+  W2 fc1m  ti so co = 1.209946  => m chia cho no
+  W2 shuf  ti so co = 1.001699  => m chia cho no
+  kiem lai sau khi chia (phai doc 0,0000%):
+  W1:   fc15 +0.0000%   fc1m +0.0000%   shuf -0.0000%
+       m_khop(fc1m) tren nen tin hieu: p10 0.7121 p50 0.9417 p90 1.3682
+  W2:   fc15 +0.0000%   fc1m +0.0000%   shuf +0.0000%
+       m_khop(fc1m) tren nen tin hieu: p10 0.7340 p50 0.9371 p90 1.3201
+
+=== GHI PARQUET COMPANION (m DA KHOP CO) ===
+  data-l3\bars\XAURFC15-15m.parquet — 378749 dong, 338423 co so, volume NULL het
+  data-l3\bars\XAURFC1M-15m.parquet — 378749 dong, 338423 co so, volume NULL het
+  data-l3\bars\XAURFCSH-15m.parquet — 378749 dong, 338423 co so, volume NULL het
+  (nen 15m co m: 338423 / 378749 = 89.3528%)
+
+tong 42049.8 s · dinh bo nho 2460 MB

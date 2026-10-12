@@ -1,0 +1,96 @@
+=== KHO ===
+  XAUDUKA-1m.parquet: 5635777 dong — doc 5 cot, `volume` KHONG trong `columns=`
+  XAUDUKA-15m.parquet: 378749 dong — doc 5 cot, `volume` KHONG trong `columns=`
+  1m  5635777 nen 2010-06-01T00:00:00.000 -> 2026-05-31T23:59:00.000
+  15m 378749 nen 2010-06-01T00:00:00.000 -> 2026-05-31T23:45:00.000
+  doc xong sau 15.80 s
+
+=== DOI CHUNG (e): PARITY SO HOC VOI BAN RUST ===
+  fixture: 600 nen LCG tat dinh, bucket 0.625 (= bucket_size_price(2.5, 4.0))
+  high[0] np.float64(1014.51)  low[0] np.float64(1012.96)  high[599] np.float64(1033.91)  low[599] np.float64(1033.3600000000001)
+  Python: POC 1030.8474999999999  VAH 1035.5349999999999  VAL 1008.66
+  (crates/fd-engine/tests/profile_parity.rs assert DUNG ba so nay tu ham Rust)
+
+=== TEST NHAN QUA — TANG MUC (dang ky muc 6 + ghi chu 12/10) ===
+  moc cat: 5 cho, moi cho NGAY SAU mot nen tin hieu CO MUC (2010-07-12T21:15:00.000, 2010-07-23T13:45:00.000, 2010-07-30T10:00:00.000, 2010-08-09T23:45:00.000, 2010-08-18T07:00:00.000)
+  C1 PASS: chuoi d (muc time-profile), x 5 moc cat, 0 gia tri doi
+           (so sanh TUNG BIT, NaN==NaN)
+  C2 PASS: PROBE_profile_i1 truot C1 o 5/5 moc — cua so profile GOM nen i+1 (end_offset = 2)
+  C2 PASS: PROBE_profile_ahead truot C1 o 5/5 moc — cua so profile ket thuc 48 nen SAU i (end_offset = 48)
+  NULL-KHONG-PHAI-0 PASS: 203 nen tin hieu khong co muc nao thoa => NaN, 291 co so, 0 mang mot so 0
+  XAO-TRON PASS: vi tri NaN y het (True), phan phoi khoang cach y het (True)
+
+=== CO SO NHAN STOP m: DOC TU FILE agent/range-sizing DA GHI ===
+  data-l3/bars/XAURFC1M-15m.parquet
+  `close` cua file companion `XAURFC1M` = m DA KHOP CO cua range-sizing,
+  dung chuoi ma doi chung (a) chay tren. Doc lai thay vi khop lai OLS vi:
+   (1) nhan qua cua chinh chuoi do da duoc ghim boi lan chay LAI nguyen ban
+       `range_sizing_precheck.py --selftest` (C1 PASS + ba probe TRUOT 5/5 moc),
+       va file nay LA hien vat cua dung duong ong do;
+   (2) khop lai no duoi tai cua may dem nay ton 42.049,8 s = 11,7 gio.
+  Mat na cua file CHINH LA mat na chung cua range-sizing (fc1m & fc15 co so).
+  m co so: 338423 / 378749 = 89.3528%
+  nen tin hieu (donchian 20, nen hien tai LOAI, >= 480 nen warm): 37745
+
+=== MUC TIME-PROFILE tren 37745 nen tin hieu ===
+  cua so 480 nen truoc i · bucket ATR14(i)/4.0 · value area 70% · min 0.28 USD
+  xong sau 12.3 s
+  muc nao duoc chon: khong co muc 15508 (41.1%)  POC 6556 (17.4%)  VAH 8210 (21.8%)  VAL 7471 (19.8%)
+  mat na CHUNG (m co so & d co so) tren nen tin hieu: 20340 / 37779 nen tin hieu = 53.8394%
+
+=== PHAN PHOI KHOANG CACH TARGET d(i) tren nen GIAO DICH DUOC ===
+  cua so  p10     p50     p90    mean    n      d/ATR(p50)
+  W1     1.224  5.640 19.978  8.904    8811    3.995
+  W2     1.433  7.471 30.875 13.919   11529    3.536
+
+=== TARGET CO NAM SAU ENTRY KHONG (phien ban 'wrong_side' cua target) ===
+  entry = open(i+1) + spread/2; target = close(i) + d(i). Neu nen i+1 GAP
+  qua target thi `check_exit` dong ngay o bar.open va in TARGET tren mot
+  lenh chua di dau ca. Day la mot so DEM DUOC, khong phai mot gia dinh.
+  W1: 1 / 8811 = 0.0113% nen tin hieu co target SAU entry
+  W2: 5 / 11529 = 0.0434% nen tin hieu co target SAU entry
+
+=== HANG SO KHOP CO STOP: mot so moi cua so, tren DUNG tap giao dich duoc ===
+  m_khop(i) = m(i) / [mean(ATR x m) / mean(ATR)] tren nen tin hieu co ca m va d,
+  nen cung `stopAtr` nghia la cung co stop trung binh o ca hai nhanh stop.
+  W1 ti so co = 0.977958  => m chia cho no   (ATR trung binh 1.6897 USD)
+  W2 ti so co = 0.996598  => m chia cho no   (ATR trung binh 3.0894 USD)
+  kiem lai sau khi chia (phai doc 0,0000%):
+  W1: +0.0000%   m_khop: p10 0.7197 p50 0.9461 p90 1.3530
+  W2: -0.0000%   m_khop: p10 0.7359 p50 0.9335 p90 1.2999
+
+=== CO STOP, CHI PHI/R VA KHUYET DIEM 16 (stop BIEN THIEN) ===
+  W1 stopAtr 1.0: atr  1.6897 USD   fc  1.6897 USD (+0.00%)
+       khuyet diem 16: delta = spread/2 = 0.1400 diem gia (TU MA: d risk/d s = +1/2 chinh xac, apply_costs engine.rs:902-912 + risk engine.rs:717-719) = 18.75% cua R o p10(d), 4.66% o p90(d)
+       chi phi/R (spread 0,28 CAU HINH, khong do): 20.53% cua R o p50(d) = 1.364 USD
+       target/stop (= reward_risk THUC TE cua L3, KHONG phai hang so): p10 0.825 p50 4.058 p90 13.607  (L2 dung 1,800 o moi lenh)
+  W1 stopAtr 2.0: atr  3.3794 USD   fc  3.3794 USD (+0.00%)
+       khuyet diem 16: delta = spread/2 = 0.1400 diem gia (TU MA: d risk/d s = +1/2 chinh xac, apply_costs engine.rs:902-912 + risk engine.rs:717-719) = 9.38% cua R o p10(d), 2.33% o p90(d)
+       chi phi/R (spread 0,28 CAU HINH, khong do): 10.27% cua R o p50(d) = 2.728 USD
+       target/stop (= reward_risk THUC TE cua L3, KHONG phai hang so): p10 0.412 p50 2.029 p90 6.804  (L2 dung 1,800 o moi lenh)
+  W2 stopAtr 1.0: atr  3.0894 USD   fc  3.0894 USD (-0.00%)
+       khuyet diem 16: delta = spread/2 = 0.1400 diem gia (TU MA: d risk/d s = +1/2 chinh xac, apply_costs engine.rs:902-912 + risk engine.rs:717-719) = 15.26% cua R o p10(d), 2.36% o p90(d)
+       chi phi/R (spread 0,28 CAU HINH, khong do): 13.95% cua R o p50(d) = 2.007 USD
+       target/stop (= reward_risk THUC TE cua L3, KHONG phai hang so): p10 0.718 p50 3.663 p90 11.670  (L2 dung 1,800 o moi lenh)
+  W2 stopAtr 2.0: atr  6.1788 USD   fc  6.1788 USD (-0.00%)
+       khuyet diem 16: delta = spread/2 = 0.1400 diem gia (TU MA: d risk/d s = +1/2 chinh xac, apply_costs engine.rs:902-912 + risk engine.rs:717-719) = 7.63% cua R o p10(d), 1.18% o p90(d)
+       chi phi/R (spread 0,28 CAU HINH, khong do): 6.97% cua R o p50(d) = 4.014 USD
+       target/stop (= reward_risk THUC TE cua L3, KHONG phai hang so): p10 0.359 p50 1.832 p90 5.835  (L2 dung 1,800 o moi lenh)
+
+=== BA NGUON TARGET ===
+  doi chung (b): hoan vi TRONG TUNG CUA SO (2 khoi), seed 20261011
+  W1 doi chung (c) hang so khoang cach = 8.904077 USD (trung binh d tren nen giao dich duoc)
+  W2 doi chung (c) hang so khoang cach = 13.919213 USD (trung binh d tren nen giao dich duoc)
+  tru  W1: p10  1.224 p50  5.640 p90 19.978 mean  8.904 USD  n 8811
+  tru  W2: p10  1.433 p50  7.471 p90 30.875 mean 13.919 USD  n 11529
+  shuf W1: p10  1.224 p50  5.640 p90 19.978 mean  8.904 USD  n 8811
+  shuf W2: p10  1.433 p50  7.471 p90 30.875 mean 13.919 USD  n 11529
+  con  W1: p10  8.904 p50  8.904 p90  8.904 mean  8.904 USD  n 8811
+  con  W2: p10 13.919 p50 13.919 p90 13.919 mean 13.919 USD  n 11529
+
+=== GHI PARQUET COMPANION (close = m DA KHOP CO, high = d) ===
+  data-l3\bars\XAUL3TRU-15m.parquet — 378749 dong, m co so 20340, d co so 20340, volume NULL het
+  data-l3\bars\XAUL3SHF-15m.parquet — 378749 dong, m co so 20340, d co so 20340, volume NULL het
+  data-l3\bars\XAUL3CON-15m.parquet — 378749 dong, m co so 20340, d co so 20340, volume NULL het
+
+tong 33.1 s · dinh bo nho 726 MB

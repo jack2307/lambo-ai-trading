@@ -1,0 +1,78 @@
+## agent/l3-target - layer L3: the stop width comes from a range forecast and
+## the TARGET IS A PRICE, not `reward_risk` x the risk.  Registered in
+## docs/decisions/2026-10-11-l3-target.md, which counted sixty-four gate cells
+## before any code existed.
+##
+## Eight labels here x two windows x two guard arms x three companion files.
+## The four `L2/*` labels do NOT read the companion's distance column, so they
+## must print IDENTICAL numbers in all three companion runs - positive control
+## (d) of the registration.  Those thirty-two duplicate lines are deliberate.
+##
+## Both `stopSource` arms and both `targetSource` arms refuse a bar unless the
+## companion carries BOTH numbers for it, so every label trades exactly the
+## same bars.  Without that clause the arms would differ partly by sample, which
+## is the defect agent/range-sizing caught in its own first pass.
+##
+## The window is set by CLI --from/--to, because `[run]` cannot set it under
+## --fixed (addendum 8 section VI) and a `[run]` key can be silently inert
+## (addendum 11 section VI).  Every parameter below is fixed; there is no grid
+## and `range-stop-l3` declares an empty one on purpose.
+##
+## NOTE ON PROSE: addendum 11 section VI records a parser reading a number out
+## of a `why =` string as if it were a measurement.  There is deliberately not
+## one digit in any `why` below; every number lives in the receipt the engine
+## printed.
+[run]
+in_sample = "xauduka:15m"
+out_of_sample = "xauduka:15m"
+seeds = 20
+direction_samples = 200
+fixed = true
+
+[[hypothesis]]
+label = "L2/atr/f1.0"
+base = "range-stop-l3"
+overrides = { period = 20, atrPeriod = 14, stopAtr = 1.0, stopSource = 0, targetSource = 0 }
+why = "L2, flat ATR stop: the engine derives the target from reward_risk, so it moves with the stop"
+
+[[hypothesis]]
+label = "L2/atr/f2.0"
+base = "range-stop-l3"
+overrides = { period = 20, atrPeriod = 14, stopAtr = 2.0, stopSource = 0, targetSource = 0 }
+why = "L2, flat ATR stop, the wider nominal stop"
+
+[[hypothesis]]
+label = "L2/fc/f1.0"
+base = "range-stop-l3"
+overrides = { period = 20, atrPeriod = 14, stopAtr = 1.0, stopSource = 1, targetSource = 0 }
+why = "L2, forecast stop width, mean size matched: the configuration agent/range-sizing closed"
+
+[[hypothesis]]
+label = "L2/fc/f2.0"
+base = "range-stop-l3"
+overrides = { period = 20, atrPeriod = 14, stopAtr = 2.0, stopSource = 1, targetSource = 0 }
+why = "L2, forecast stop width, the wider nominal stop"
+
+[[hypothesis]]
+label = "L3/atr/f1.0"
+base = "range-stop-l3"
+overrides = { period = 20, atrPeriod = 14, stopAtr = 1.0, stopSource = 0, targetSource = 1 }
+why = "L3, flat ATR stop, target a price from the companion's distance column"
+
+[[hypothesis]]
+label = "L3/atr/f2.0"
+base = "range-stop-l3"
+overrides = { period = 20, atrPeriod = 14, stopAtr = 2.0, stopSource = 0, targetSource = 1 }
+why = "L3, flat ATR stop, price target, the wider nominal stop"
+
+[[hypothesis]]
+label = "L3/fc/f1.0"
+base = "range-stop-l3"
+overrides = { period = 20, atrPeriod = 14, stopAtr = 1.0, stopSource = 1, targetSource = 1 }
+why = "L3, forecast stop AND a price target: the cell the whole registration is about"
+
+[[hypothesis]]
+label = "L3/fc/f2.0"
+base = "range-stop-l3"
+overrides = { period = 20, atrPeriod = 14, stopAtr = 2.0, stopSource = 1, targetSource = 1 }
+why = "L3, forecast stop and a price target, the wider nominal stop"

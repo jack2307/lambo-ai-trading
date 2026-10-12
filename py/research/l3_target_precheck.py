@@ -97,6 +97,9 @@ MIN_TARGET_USD = 0.28
 MAX_BUCKETS = 5_000  # price_levels.rs:429
 SEED_LEVEL = 20_261_011
 PARITY_BUCKET = 0.625
+# Bash tool an mot dau gach cheo nguoc trong heredoc, nen moi dong trong file
+# nay dung hang so nay thay cho mot ky tu xuong dong trong chuoi dinh dang.
+NL = chr(10)
 
 TARGETS = ("tru", "shuf", "con")
 COMPANION = {"tru": "XAUL3TRU", "shuf": "XAUL3SHF", "con": "XAUL3CON"}
@@ -271,16 +274,31 @@ def entry_side_up(b15: dict, period: int = DONCHIAN) -> np.ndarray:
     return up
 
 
-def shuffled_in_time(d: np.ndarray, seed: int = SEED_LEVEL) -> np.ndarray:
+def shuffled_in_time(d: np.ndarray, seed: int = SEED_LEVEL, blocks: list | None = None) -> np.ndarray:
     """Hoan vi cac gia tri huu han TRONG THOI GIAN, giu nguyen vi tri NaN.
 
     => cung tap nen, cung PHAN PHOI KHOANG CACH TARGET, mat het thong tin
     thoi diem. Dung dieu khoan doi chung (b) cua dang ky.
+
+    ⚠️ HOAN VI TRONG TUNG CUA SO, khong tren ca chuoi — ghi chu ngay 2026-10-12.
+    Lan dung dau hoan vi tren ca chuoi (dung nhu `range-sizing` lam voi `m`) va
+    do duoc rang no KHONG giu phan phoi trong tung cua so:
+
+        tru  W1 mean  8,904 USD   ->   shuf (ca chuoi) W1 mean 11,936  (+34%)
+        tru  W2 mean 13,919 USD   ->   shuf (ca chuoi) W2 mean 11,602  (-17%)
+
+    Vi `d` la mot khoang cach GIA, no lon theo gia vang, con `m` cua
+    `range-sizing` la mot ti so chuan hoa quanh 1,0 nen hoan vi ca chuoi khong
+    lam gi no (ti so co 0,994 / 1,002). Mot doi chung (b) hoan vi ca chuoi se
+    tron "thoi diem cua muc vo nghia" voi "target to hon/nho hon 17-34%" —
+    dung thu lam phep so khong doc duoc. `blocks` la danh sach mat na cua so.
     """
     out = d.copy()
-    i = np.flatnonzero(np.isfinite(d))
-    if i.size:
-        out[i] = np.random.default_rng(seed).permutation(d[i])
+    rng = np.random.default_rng(seed)
+    for mask in blocks or [np.ones(d.shape[0], dtype=bool)]:
+        i = np.flatnonzero(np.isfinite(d) & mask)
+        if i.size:
+            out[i] = rng.permutation(d[i])
     return out
 
 
@@ -288,63 +306,100 @@ def shuffled_in_time(d: np.ndarray, seed: int = SEED_LEVEL) -> np.ndarray:
 
 
 def selftest_levels(b15: dict, t15: np.ndarray) -> bool:
-    """C1 tung bit tren chuoi MUC + PROBE_profile_i1 phai truot no."""
-    print("\n=== TEST NHAN QUA — TANG MUC (dang ky muc 6) ===")
+    """C1 tung bit tren chuoi MUC, va HAI probe nhin truoc phai TRUOT no.
+
+    ⚠️ VE CHO DAT MOC CAT — ghi chu ngay 2026-10-12 cua dang ky.
+
+    Lan do dau dat moc cat o nam phan vi tron cua lat (0,55 ... 0,93) va
+    `PROBE_profile_i1` chi TRUOT C1 o **2/5 moc**. Nguyen nhan khong phai probe
+    sai ma **MOC CAT KHONG CO LUC**: mot cai ro MOT NEN (cua so ket thuc o i+1)
+    chi hien ra o nen `i = moc - 1`, va chi khi dung nen do la mot **nen tin
+    hieu** — moi nen `i <= moc - 2` co cua so `[i-480+2, i+2)` nam tron trong
+    lat da cat nen hai chuoi bang nhau mot cach HOP PHAP. Nen tin hieu chiem
+    ~10% nen, nen moc tron cho ky vong ~0,5/5.
+
+    Vi vay moc cat duoc dat NGAY SAU mot nen tin hieu (`moc = i_tin_hieu + 1`).
+    Day la mot ban va DUNG CU, khong phai mot cai ha chuan: vach giu nguyen
+    **5/5**, va cat o mot nen tin hieu la mot cho cat hop le y nhu moi cho khac
+    — C1 phai pass o day va no pass.
+
+    Cong mot probe thu hai, MANH hon va khong phu thuoc cho cat:
+    `PROBE_profile_ahead` cho cua so ket thuc **48 nen (12 gio) sau i**, nen moi
+    nen trong 48 nen cuoi truoc moc doi gia tri.
+    """
+    print(NL + "=== TEST NHAN QUA — TANG MUC (dang ky muc 6 + ghi chu 12/10) ===")
     ok_all = True
-    n = 4000
+    n = 6000
+    AHEAD = 48
     s15 = {k: v[:n].copy() for k, v in b15.items()}
     st15 = t15[:n].copy()
-    atr = atr14_15m(s15, ATR_PERIOD)
     sig = np.flatnonzero(signal_bars(s15, DONCHIAN))
     sig = sig[sig >= PROFILE_BARS]
     if sig.size < 50:
         print(f"  KHONG DO DUOC: chi {sig.size} nen tin hieu tren lat nay")
         return False
-    up = entry_side_up(s15, DONCHIAN)
 
     def chain(bb15, end_offset: int):
         aa = atr14_15m(bb15, ATR_PERIOD)
         ss = np.flatnonzero(signal_bars(bb15, DONCHIAN))
         ss = ss[ss >= PROFILE_BARS]
         uu = entry_side_up(bb15, DONCHIAN)
-        return level_distance(bb15, aa, ss, uu, end_offset=end_offset)[0]
+        return level_distance(bb15, aa, ss, uu, end_offset=end_offset)
 
-    full_ok = chain(s15, 0)
-    full_probe = chain(s15, 2)
+    probes = {"profile_i1": 2, "profile_ahead": AHEAD}
+    full_ok, full_kind = chain(s15, 0)
+    full_probe = {nm: chain(s15, off)[0] for nm, off in probes.items()}
 
-    cuts = [int(n * q) for q in (0.55, 0.65, 0.75, 0.85, 0.93)]
+    # Moc cat = NGAY SAU mot nen tin hieu CO MOT MUC, nam phan vi deu cua danh
+    # sach do. Dieu kien thu hai la phan con lai cua cung ban va: ~41% nen tin
+    # hieu khong co muc nao thoa nen `d` cua chung la NaN o CA HAI chuoi, va mot
+    # cho nhu the khong the phat hien ro mot nen du cat dung o do. Dat moc o
+    # mot nen co muc la dat moc o CHO DUY NHAT phep cat co luc.
+    pool = np.array([i for i in sig if np.isfinite(full_probe["profile_i1"][i]) and np.isfinite(full_ok[i])])
+    if pool.size < 10:
+        print(f"  KHONG DO DUOC: chi {pool.size} nen tin hieu co muc tren lat nay")
+        return False
+    picks = [pool[int((pool.size - 1) * q)] for q in (0.45, 0.58, 0.70, 0.82, 0.93)]
+    cuts = sorted({int(i) + 1 for i in picks})
+    print(f"  moc cat: {len(cuts)} cho, moi cho NGAY SAU mot nen tin hieu CO MUC "
+          f"({', '.join(iso(int(st15[c - 1])) for c in cuts)})")
     c1_bad = 0
-    probe_moved = 0
+    moved = {nm: 0 for nm in probes}
     for cut in cuts:
-        T = int(st15[cut])
         c15 = {k: v[:cut].copy() for k, v in s15.items()}
-        ct15 = st15[:cut]
-        aa, bb = full_ok[:cut], chain(c15, 0)
+        aa, bb = full_ok[:cut], chain(c15, 0)[0]
         bad = int((~((np.isnan(aa) & np.isnan(bb)) | (aa == bb))).sum())
         if bad:
             c1_bad += 1
-            print(f"  C1 TRUOT: d doi {bad} gia tri khi cat o {iso(T)}")
-        pa_, pb = full_probe[:cut], chain(c15, 2)
-        if int((~((np.isnan(pa_) & np.isnan(pb)) | (pa_ == pb))).sum()):
-            probe_moved += 1
+            print(f"  C1 TRUOT: d doi {bad} gia tri khi cat o {iso(int(st15[cut]))}")
+        for nm, off in probes.items():
+            pa_, pb = full_probe[nm][:cut], chain(c15, off)[0]
+            if int((~((np.isnan(pa_) & np.isnan(pb)) | (pa_ == pb))).sum()):
+                moved[nm] += 1
 
     if c1_bad == 0:
         print(f"  C1 PASS: chuoi d (muc time-profile), x {len(cuts)} moc cat, 0 gia tri doi")
         print("           (so sanh TUNG BIT, NaN==NaN)")
     else:
         ok_all = False
-    tag = "PASS" if probe_moved == len(cuts) else "TRUOT"
-    print(f"  C2 {tag}: PROBE_profile_i1 truot C1 o {probe_moved}/{len(cuts)} moc")
-    print("           — cua so profile GOM nen i+1 (end_offset = 2)")
-    ok_all &= probe_moved == len(cuts)
+    for nm, why in (
+        ("profile_i1", f"cua so profile GOM nen i+1 (end_offset = 2)"),
+        ("profile_ahead", f"cua so profile ket thuc {AHEAD} nen SAU i (end_offset = {AHEAD})"),
+    ):
+        hit = moved[nm]
+        tag = "PASS" if hit == len(cuts) else "TRUOT"
+        print(f"  C2 {tag}: PROBE_{nm} truot C1 o {hit}/{len(cuts)} moc — {why}")
+        ok_all &= hit == len(cuts)
 
-    d = full_ok
-    fin = np.isfinite(d)
-    print(f"  NULL-KHONG-PHAI-0 {'PASS' if (d[~fin] != d[~fin]).all() else 'TRUOT'}: "
-          f"{int((~fin).sum())} nen khong co muc thoa => NaN, 0 nen mang mot so 0")
-    sh = shuffled_in_time(d)
-    same_null = bool(np.array_equal(np.isnan(sh), np.isnan(d)))
-    kept = bool(np.allclose(np.sort(sh[np.isfinite(sh)]), np.sort(d[np.isfinite(d)])))
+    no_level = int((full_kind == 0.0).sum())
+    have = int(np.isfinite(full_ok).sum())
+    zeros = int((full_ok == 0.0).sum())
+    print(f"  NULL-KHONG-PHAI-0 {'PASS' if zeros == 0 else 'TRUOT'}: {no_level} nen tin hieu khong co "
+          f"muc nao thoa => NaN, {have} co so, {zeros} mang mot so 0")
+    ok_all &= zeros == 0
+    sh = shuffled_in_time(full_ok)
+    same_null = bool(np.array_equal(np.isnan(sh), np.isnan(full_ok)))
+    kept = bool(np.allclose(np.sort(sh[np.isfinite(sh)]), np.sort(full_ok[np.isfinite(full_ok)])))
     print(f"  XAO-TRON {'PASS' if (same_null and kept) else 'TRUOT'}: vi tri NaN y het ({same_null}), "
           f"phan phoi khoang cach y het ({kept})")
     ok_all &= same_null and kept
@@ -355,7 +410,7 @@ def parity_report() -> None:
     """In POC/VAH/VAL cua bo fixture, de test Rust assert DUNG ba so nay."""
     f = parity_fixture()
     poc, vah, val = activity_profile(f["high"], f["low"], PARITY_BUCKET, VALUE_AREA_PCT)
-    print("\n=== DOI CHUNG (e): PARITY SO HOC VOI BAN RUST ===")
+    print(NL + "=== DOI CHUNG (e): PARITY SO HOC VOI BAN RUST ===")
     print(f"  fixture: 600 nen LCG tat dinh, bucket {PARITY_BUCKET} (= bucket_size_price(2.5, 4.0))")
     print(f"  high[0] {f['high'][0]!r}  low[0] {f['low'][0]!r}  high[599] {f['high'][599]!r}  low[599] {f['low'][599]!r}")
     print(f"  Python: POC {poc!r}  VAH {vah!r}  VAL {val!r}")
@@ -375,6 +430,8 @@ def main() -> int:
     ap.add_argument("--data", default="E:/rust/flowdesk/data")
     ap.add_argument("--symbol", default="XAUDUKA")
     ap.add_argument("--out", default="data-l3/bars")
+    ap.add_argument("--m-from", default="data-l3/bars/XAURFC1M-15m.parquet")
+    ap.add_argument("--levels-limit", type=int, default=0, help="chi N nen tin hieu dau (DO GIO)")
     ap.add_argument("--selftest", action="store_true")
     ap.add_argument("--write", action="store_true")
     a = ap.parse_args()
@@ -395,35 +452,41 @@ def main() -> int:
     parity_report()
 
     if a.selftest:
-        if not forecast_selftest(b1, b15, t15):
-            print("\nSELFTEST (tang du bao) TRUOT => F8 BAN. Khong cong bo so nao, tieu 0 o cong.")
-            return 1
+        # Tang DU BAO (ba probe cua range-sizing) duoc kiem o mot lan chay RIENG,
+        # nguyen ban, khong sua mot chu:
+        # receipts/l3-target/precheck-range-sizing-rerun.txt
         if not selftest_levels(b15, t15):
             print("\nSELFTEST (tang muc) TRUOT => F8 BAN. Khong cong bo so nao, tieu 0 o cong.")
             return 1
 
-    print("\n=== DUNG DAC TRUNG + DU BAO (toan chuoi, 1 lan) ===")
-    d = design(b1, b15, t15)
-    pred15, n15 = walkforward(stack(d, CONTROL), d["y"], t15)
-    pred1m, n1m = walkforward(stack(d, CONTROL + INTRABAR), d["y"], t15)
-    print(f"  khop lai: fc15 {n15} lan, fc1m {n1m} lan (moc dau thang, tap khop EXPANDING)")
-    m_fc15 = multiplier(pred15)
-    m_raw = multiplier(pred1m)
-    # MAT NA cua `agent/range-sizing`, giu nguyen: m hop le khi CA HAI nguon co
-    # so, de tap nen cua job nay LONG trong tap nen cua ket qua da cong bo.
-    both = np.isfinite(m_raw) & np.isfinite(m_fc15)
-    m_raw = np.where(both, m_raw, np.nan)
-    print(f"  mat na cua range-sizing (fc1m & fc15 co so): {int(both.sum())} / {t15.shape[0]} "
-          f"= {100.0 * both.sum() / t15.shape[0]:.4f}%")
+    print(NL + "=== CO SO NHAN STOP m: DOC TU FILE agent/range-sizing DA GHI ===")
+    print(f"  {a.m_from}")
+    print("  `close` cua file companion `XAURFC1M` = m DA KHOP CO cua range-sizing,")
+    print("  dung chuoi ma doi chung (a) chay tren. Doc lai thay vi khop lai OLS vi:")
+    print("   (1) nhan qua cua chinh chuoi do da duoc ghim boi lan chay LAI nguyen ban")
+    print("       `range_sizing_precheck.py --selftest` (C1 PASS + ba probe TRUOT 5/5 moc),")
+    print("       va file nay LA hien vat cua dung duong ong do;")
+    print("   (2) khop lai no duoi tai cua may dem nay ton 42.049,8 s = 11,7 gio.")
+    print("  Mat na cua file CHINH LA mat na chung cua range-sizing (fc1m & fc15 co so).")
+    mb = read_bars(Path(a.m_from))
+    if mb["time"].shape[0] != t15.shape[0] or not np.array_equal(mb["time"], t15):
+        print("  TRUOT: file m KHONG tren cung luoi thoi gian voi XAUDUKA-15m")
+        return 1
+    m_raw = mb["close"]
+    print(f"  m co so: {int(np.isfinite(m_raw).sum())} / {t15.shape[0]} "
+          f"= {100.0 * np.isfinite(m_raw).sum() / t15.shape[0]:.4f}%")
 
-    atr = d["atr"]
+    atr = atr14_15m(b15, ATR_PERIOD)
     sig_mask = signal_bars(b15, DONCHIAN)
     up = entry_side_up(b15, DONCHIAN)
     sig = np.flatnonzero(sig_mask)
     sig = sig[sig >= PROFILE_BARS]
     print(f"  nen tin hieu (donchian {DONCHIAN}, nen hien tai LOAI, >= {PROFILE_BARS} nen warm): {sig.size}")
+    if a.levels_limit:
+        sig = sig[: a.levels_limit]
+        print(f"  --levels-limit: chi {sig.size} nen dau (DO GIO, KHONG phai mot phep do)")
 
-    print(f"\n=== MUC TIME-PROFILE tren {sig.size} nen tin hieu ===")
+    print(NL + f"=== MUC TIME-PROFILE tren {sig.size} nen tin hieu ===")
     print(f"  cua so {PROFILE_BARS} nen truoc i · bucket ATR14(i)/{BUCKETS_PER_ATR} · "
           f"value area {VALUE_AREA_PCT:.0%} · min {MIN_TARGET_USD} USD")
     tl = time.perf_counter()
@@ -443,7 +506,7 @@ def main() -> int:
           f"= {100.0 * (mask & sig_mask).sum() / max(int(sig_mask.sum()), 1):.4f}%")
     dist = np.where(mask, dist, np.nan)
 
-    print("\n=== PHAN PHOI KHOANG CACH TARGET d(i) tren nen GIAO DICH DUOC ===")
+    print(NL + "=== PHAN PHOI KHOANG CACH TARGET d(i) tren nen GIAO DICH DUOC ===")
     print("  cua so  p10     p50     p90    mean    n      d/ATR(p50)")
     for wl, (fr, to) in WINDOWS.items():
         w = (t15 >= ms_of(fr)) & (t15 < ms_of(to)) & mask & sig_mask
@@ -453,7 +516,7 @@ def main() -> int:
         print(f"  {wl[:2]}    {pct_of(v, 10):6.3f} {pct_of(v, 50):6.3f} {pct_of(v, 90):6.3f} "
               f"{float(np.mean(vv)) if vv.size else float('nan'):6.3f} {vv.size:7d}   {pct_of(ratio, 50):6.3f}")
 
-    print("\n=== TARGET CO NAM SAU ENTRY KHONG (phien ban 'wrong_side' cua target) ===")
+    print(NL + "=== TARGET CO NAM SAU ENTRY KHONG (phien ban 'wrong_side' cua target) ===")
     print("  entry = open(i+1) + spread/2; target = close(i) + d(i). Neu nen i+1 GAP")
     print("  qua target thi `check_exit` dong ngay o bar.open va in TARGET tren mot")
     print("  lenh chua di dau ca. Day la mot so DEM DUOC, khong phai mot gia dinh.")
@@ -468,7 +531,7 @@ def main() -> int:
         bad = int((w & behind).sum())
         print(f"  {wl[:2]}: {bad} / {k} = {100.0 * bad / max(k, 1):.4f}% nen tin hieu co target SAU entry")
 
-    print("\n=== HANG SO KHOP CO STOP: mot so moi cua so, tren DUNG tap giao dich duoc ===")
+    print(NL + "=== HANG SO KHOP CO STOP: mot so moi cua so, tren DUNG tap giao dich duoc ===")
     print("  m_khop(i) = m(i) / [mean(ATR x m) / mean(ATR)] tren nen tin hieu co ca m va d,")
     print("  nen cung `stopAtr` nghia la cung co stop trung binh o ca hai nhanh stop.")
     m = np.full(t15.shape[0], np.nan)
@@ -491,7 +554,7 @@ def main() -> int:
         print(f"  {wl[:2]}: {100.0 * (mu / ref - 1.0):+.4f}%   m_khop: p10 {pct_of(mk, 10):.4f} "
               f"p50 {pct_of(mk, 50):.4f} p90 {pct_of(mk, 90):.4f}")
 
-    print("\n=== CO STOP, CHI PHI/R VA KHUYET DIEM 16 (stop BIEN THIEN) ===")
+    print(NL + "=== CO STOP, CHI PHI/R VA KHUYET DIEM 16 (stop BIEN THIEN) ===")
     for wl, (fr, to) in WINDOWS.items():
         w = (t15 >= ms_of(fr)) & (t15 < ms_of(to)) & mask & sig_mask
         base = np.where(w, atr, np.nan)
@@ -511,8 +574,10 @@ def main() -> int:
                   f"p10 {pct_of(tr, 10):.3f} p50 {pct_of(tr, 50):.3f} p90 {pct_of(tr, 90):.3f}  "
                   f"(L2 dung 1,800 o moi lenh)")
 
-    print("\n=== BA NGUON TARGET ===")
-    out = {"tru": dist, "shuf": shuffled_in_time(dist)}
+    print(NL + "=== BA NGUON TARGET ===")
+    wins = [(t15 >= ms_of(fr)) & (t15 < ms_of(to)) for fr, to in WINDOWS.values()]
+    print(f"  doi chung (b): hoan vi TRONG TUNG CUA SO ({len(wins)} khoi), seed {SEED_LEVEL}")
+    out = {"tru": dist, "shuf": shuffled_in_time(dist, blocks=wins)}
     con = np.full(t15.shape[0], np.nan)
     for wl, (fr, to) in WINDOWS.items():
         inw = (t15 >= ms_of(fr)) & (t15 < ms_of(to))
@@ -533,7 +598,7 @@ def main() -> int:
     if a.write:
         od = Path(a.out)
         od.mkdir(parents=True, exist_ok=True)
-        print("\n=== GHI PARQUET COMPANION (close = m DA KHOP CO, high = d) ===")
+        print(NL + "=== GHI PARQUET COMPANION (close = m DA KHOP CO, high = d) ===")
         for nm in TARGETS:
             dd = np.where(mask, out[nm], np.nan)
             mm = np.where(mask, m, np.nan)
@@ -556,7 +621,7 @@ def main() -> int:
             print(f"  {path} — {t15.shape[0]} dong, m co so {int(np.isfinite(mm).sum())}, "
                   f"d co so {int(np.isfinite(dd).sum())}, volume NULL het")
 
-    print(f"\ntong {time.perf_counter() - t0:.1f} s · dinh bo nho {peak_mem_mb():.0f} MB")
+    print(NL + f"tong {time.perf_counter() - t0:.1f} s · dinh bo nho {peak_mem_mb():.0f} MB")
     return 0
 
 
