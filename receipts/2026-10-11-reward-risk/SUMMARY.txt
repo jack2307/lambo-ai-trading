@@ -1,0 +1,530 @@
+==============================================================================================================
+TABLE 1 — PF_r by reward_risk, and the SPAN each row covers (gate decisions are taken on PF_r and E)
+==============================================================================================================
+cfg         win g   row                    0.0      0.9      1.8      3.6      7.2   span  verdict
+config      W1  off rr/donchian         0.8783   0.8435   0.8734   0.8782   0.8789  0.0354  flat
+config      W1  off rr/ema-cross        0.8776   0.7879   0.8236   0.8465   0.8836  0.0957  MOVES
+config      W1  off rr/rsi-reversion    0.7172   0.6951   0.7148   0.7191   0.7169  0.0240  flat
+config      W1  on  rr/donchian         0.8596   0.8384   0.8665   0.8588   0.8609  0.0281  flat
+config      W1  on  rr/ema-cross        0.8534   0.7591   0.7945   0.8264   0.8406  0.0943  MOVES
+config      W1  on  rr/rsi-reversion    0.7170   0.6920   0.7176   0.7195   0.7170  0.0275  flat
+config      W2  off rr/donchian         0.8159   0.8388   0.8414   0.8492   0.8287  0.0333  flat
+config      W2  off rr/ema-cross        0.9181   0.8119   0.7773   0.8885   0.9380  0.1607  MOVES
+config      W2  off rr/rsi-reversion    0.8162   0.8421   0.8640   0.8174   0.8161  0.0479  flat
+config      W2  on  rr/donchian         0.8134   0.8389   0.8435   0.8308   0.8139  0.0301  flat
+config      W2  on  rr/ema-cross        0.8761   0.7887   0.7522   0.8611   0.8929  0.1407  MOVES
+config      W2  on  rr/rsi-reversion    0.8109   0.8328   0.8106   0.8129   0.8109  0.0222  flat
+config-swap W1  off rr/donchian         0.8776   0.8428   0.8725   0.8774   0.8782  0.0354  flat
+config-swap W1  off rr/ema-cross        0.8762   0.7856   0.8216   0.8447   0.8820  0.0964  MOVES
+config-swap W1  off rr/rsi-reversion    0.7143   0.6919   0.7117   0.7161   0.7140  0.0242  flat
+config-swap W1  on  rr/donchian         0.8584   0.8379   0.8664   0.8578   0.8598  0.0285  flat
+config-swap W1  on  rr/ema-cross        0.8520   0.7574   0.7926   0.8270   0.8392  0.0946  MOVES
+config-swap W1  on  rr/rsi-reversion    0.7153   0.6901   0.7090   0.7177   0.7150  0.0276  flat
+config-swap W2  off rr/donchian         0.8152   0.8383   0.8408   0.8486   0.8280  0.0334  flat
+config-swap W2  off rr/ema-cross        0.9176   0.8106   0.7756   0.8878   0.9376  0.1620  MOVES
+config-swap W2  off rr/rsi-reversion    0.8148   0.8413   0.8630   0.8160   0.8147  0.0483  flat
+config-swap W2  on  rr/donchian         0.8131   0.8389   0.8424   0.8287   0.8137  0.0293  flat
+config-swap W2  on  rr/ema-cross        0.8697   0.7875   0.7481   0.8614   0.8237  0.1216  MOVES
+config-swap W2  on  rr/rsi-reversion    0.8115   0.8313   0.8110   0.8135   0.8115  0.0203  flat
+
+==============================================================================================================
+TABLE 2 — WHERE THE VACATED TARGET SHARE GOES (exit mix, % of each row's own exits)
+==============================================================================================================
+cfg         win g   row                  rr      n  TARGET%   STOP%  TIMEOUT%  other%  hold_min
+config      W1  off rr/donchian         0.0   3934      0.0   18.96     56.86   24.17     256.4
+config      W1  off rr/donchian         0.9   5124    32.88   19.32     31.09   16.71     197.5
+config      W1  off rr/donchian         1.8   4242    11.39   19.09     47.52   21.99     239.0
+config      W1  off rr/donchian         3.6   3984     1.93    19.0     55.22   23.85     252.9
+config      W1  off rr/donchian         7.2   3936      0.1   18.95     56.78   24.16     256.4
+
+config      W1  off rr/ema-cross        0.0   1612      0.0   51.55     45.78    2.67     237.4
+config      W1  off rr/ema-cross        0.9   1676    44.33   40.45     12.05    3.16     125.6
+config      W1  off rr/ema-cross        1.8   1868    22.97   47.91     25.11    4.01     184.0
+config      W1  off rr/ema-cross        3.6   1962     7.24   50.87     38.02    3.87     207.1
+config      W1  off rr/ema-cross        7.2   1713     1.05   51.66     44.66    2.63     227.8
+
+config      W1  off rr/rsi-reversion    0.0   9269      0.0    35.6       1.7   62.69      93.2
+config      W1  off rr/rsi-reversion    0.9   9302    15.73   35.16      1.52   47.59      88.8
+config      W1  off rr/rsi-reversion    1.8   9273     1.97   35.57      1.68   60.78      92.9
+config      W1  off rr/rsi-reversion    3.6   9270     0.24   35.59      1.69   62.48      93.2
+config      W1  off rr/rsi-reversion    7.2   9269     0.01    35.6      1.69   62.69      93.2
+
+config      W1  on  rr/donchian         0.0   3846      0.0   17.97      55.1   26.94     201.6
+config      W1  on  rr/donchian         0.9   4860    31.89   18.33     30.16   19.61     155.2
+config      W1  on  rr/donchian         1.8   4117    10.74   17.97     46.27   25.02     189.8
+config      W1  on  rr/donchian         3.6   3887     1.62   18.03     53.72   26.63     199.9
+config      W1  on  rr/donchian         7.2   3847     0.08   17.96     55.03   26.93     201.6
+
+config      W1  on  rr/ema-cross        0.0   1668      0.0   49.22     42.33    8.45     162.1
+config      W1  on  rr/ema-cross        0.9   1787    43.37   41.13     11.14    4.36      91.6
+config      W1  on  rr/ema-cross        1.8   1691    21.94   46.72     24.01    7.33     130.1
+config      W1  on  rr/ema-cross        3.6   1886     6.79   49.58     36.27    7.37     154.3
+config      W1  on  rr/ema-cross        7.2   1668     1.02   49.22     41.31    8.45     160.9
+
+config      W1  on  rr/rsi-reversion    0.0   9398      0.0   34.66      1.05   64.29      62.8
+config      W1  on  rr/rsi-reversion    0.9   9097    15.28   34.67      1.04   49.01      60.5
+config      W1  on  rr/rsi-reversion    1.8   9404     1.75   34.61      1.04   62.59      62.5
+config      W1  on  rr/rsi-reversion    3.6   9401     0.18   34.63      1.04   64.14      62.8
+config      W1  on  rr/rsi-reversion    7.2   9400     0.01   34.65      1.04    64.3      62.8
+
+config      W2  off rr/donchian         0.0   8069      0.0    5.23     17.59   77.18     184.8
+config      W2  off rr/donchian         0.9   6735    27.66   12.43     19.73   40.18     174.2
+config      W2  off rr/donchian         1.8   6287     8.27    9.54      27.6   54.59     205.1
+config      W2  off rr/donchian         3.6   6479     0.91    7.27     30.19   61.63     208.6
+config      W2  off rr/donchian         7.2   7273     0.04    5.98     23.33   70.64     195.4
+
+config      W2  off rr/ema-cross        0.0   1496      0.0   52.27     44.72    3.01     212.8
+config      W2  off rr/ema-cross        0.9   1253    41.34   42.22     14.29    2.15     149.6
+config      W2  off rr/ema-cross        1.8   1619    21.12   52.13     23.47    3.27     168.3
+config      W2  off rr/ema-cross        3.6   1496     6.68   52.14     38.17    3.01     204.8
+config      W2  off rr/ema-cross        7.2   1496     1.34   52.21     43.45    3.01     211.6
+
+config      W2  off rr/rsi-reversion    0.0   4936      0.0   42.89      7.56   49.55     121.0
+config      W2  off rr/rsi-reversion    0.9   1739    41.35    42.9     11.67    4.08     140.2
+config      W2  off rr/rsi-reversion    1.8   3468     6.57   48.39     12.86   32.18     161.3
+config      W2  off rr/rsi-reversion    3.6   4937     0.24   42.88      7.53   49.34     120.9
+config      W2  off rr/rsi-reversion    7.2   4936     0.02   42.89      7.56   49.53     121.0
+
+config      W2  on  rr/donchian         0.0   7878      0.0    4.53     16.21   79.26     137.2
+config      W2  on  rr/donchian         0.9   6493    26.97   11.57     18.79   42.68     134.0
+config      W2  on  rr/donchian         1.8   6103     7.75    8.77     26.71   56.78     156.2
+config      W2  on  rr/donchian         3.6   7112     0.72    5.37     21.58   72.33     146.3
+config      W2  on  rr/donchian         7.2   7879     0.04    4.53     16.17   79.26     137.2
+
+config      W2  on  rr/ema-cross        0.0   1554      0.0   49.29     43.31     7.4     157.4
+config      W2  on  rr/ema-cross        0.9   1209    40.61   41.52     13.15    4.71      98.6
+config      W2  on  rr/ema-cross        1.8   1768    20.53   49.94     20.53    8.99     126.8
+config      W2  on  rr/ema-cross        3.6   1435     5.99   51.01     36.93    6.06     150.6
+config      W2  on  rr/ema-cross        7.2   1554      0.9   49.29     42.41     7.4     156.7
+
+config      W2  on  rr/rsi-reversion    0.0   4832      0.0   42.03      6.62   51.35      85.5
+config      W2  on  rr/rsi-reversion    0.9   1098    42.17   41.99      12.2    3.64      89.4
+config      W2  on  rr/rsi-reversion    1.8   4833     3.72   41.96      6.54   47.78      84.7
+config      W2  on  rr/rsi-reversion    3.6   4830     0.19   42.03       6.6   51.18      85.4
+config      W2  on  rr/rsi-reversion    7.2   4832      0.0   42.03      6.62   51.35      85.5
+
+config-swap W1  off rr/donchian         0.0   3934      0.0   18.96     56.86   24.17     256.4
+config-swap W1  off rr/donchian         0.9   5124    32.88   19.32     31.09   16.71     197.5
+config-swap W1  off rr/donchian         1.8   4242    11.39   19.09     47.52   21.99     239.0
+config-swap W1  off rr/donchian         3.6   3984     1.93    19.0     55.22   23.85     252.9
+config-swap W1  off rr/donchian         7.2   3936      0.1   18.95     56.78   24.16     256.4
+
+config-swap W1  off rr/ema-cross        0.0   1612      0.0   51.55     45.78    2.67     237.4
+config-swap W1  off rr/ema-cross        0.9   1676    44.33   40.45     12.05    3.16     125.6
+config-swap W1  off rr/ema-cross        1.8   1868    22.97   47.91     25.11    4.01     184.0
+config-swap W1  off rr/ema-cross        3.6   1962     7.24   50.87     38.02    3.87     207.1
+config-swap W1  off rr/ema-cross        7.2   1713     1.05   51.66     44.66    2.63     227.8
+
+config-swap W1  off rr/rsi-reversion    0.0   9269      0.0    35.6       1.7   62.69      93.2
+config-swap W1  off rr/rsi-reversion    0.9   9302    15.73   35.16      1.52   47.59      88.8
+config-swap W1  off rr/rsi-reversion    1.8   9273     1.97   35.57      1.68   60.78      92.9
+config-swap W1  off rr/rsi-reversion    3.6   9270     0.24   35.59      1.69   62.48      93.2
+config-swap W1  off rr/rsi-reversion    7.2   9269     0.01    35.6      1.69   62.69      93.2
+
+config-swap W1  on  rr/donchian         0.0   3846      0.0   17.97     55.07   26.96     201.6
+config-swap W1  on  rr/donchian         0.9   4859     31.9   18.34     30.15   19.61     155.2
+config-swap W1  on  rr/donchian         1.8   4117    10.74   17.97     46.27   25.02     189.8
+config-swap W1  on  rr/donchian         3.6   3887     1.62   18.03     53.69   26.65     199.9
+config-swap W1  on  rr/donchian         7.2   3847     0.08   17.96      55.0   26.96     201.6
+
+config-swap W1  on  rr/ema-cross        0.0   1667      0.0   49.25     42.29    8.46     162.0
+config-swap W1  on  rr/ema-cross        0.9   1787    43.37   41.13     11.14    4.36      91.6
+config-swap W1  on  rr/ema-cross        1.8   1691    21.94   46.72     24.01    7.33     130.1
+config-swap W1  on  rr/ema-cross        3.6   1883      6.8    49.5     36.33    7.38     154.5
+config-swap W1  on  rr/ema-cross        7.2   1667     1.02   49.25     41.27    8.46     160.7
+
+config-swap W1  on  rr/rsi-reversion    0.0   9404      0.0   34.63      1.05   64.31      62.8
+config-swap W1  on  rr/rsi-reversion    0.9   9099    15.29   34.65      1.04   49.02      60.5
+config-swap W1  on  rr/rsi-reversion    1.8   9063     1.82   35.04      1.11   62.02      63.5
+config-swap W1  on  rr/rsi-reversion    3.6   9405     0.18   34.62      1.04   64.16      62.8
+config-swap W1  on  rr/rsi-reversion    7.2   9404     0.01   34.63      1.04   64.31      62.8
+
+config-swap W2  off rr/donchian         0.0   8069      0.0    5.23     17.59   77.18     184.8
+config-swap W2  off rr/donchian         0.9   6735    27.66   12.43     19.73   40.18     174.2
+config-swap W2  off rr/donchian         1.8   6287     8.27    9.54      27.6   54.59     205.1
+config-swap W2  off rr/donchian         3.6   6479     0.91    7.27     30.19   61.63     208.6
+config-swap W2  off rr/donchian         7.2   7273     0.04    5.98     23.33   70.64     195.4
+
+config-swap W2  off rr/ema-cross        0.0   1496      0.0   52.27     44.72    3.01     212.8
+config-swap W2  off rr/ema-cross        0.9   1253    41.34   42.22     14.29    2.15     149.6
+config-swap W2  off rr/ema-cross        1.8   1619    21.12   52.13     23.47    3.27     168.3
+config-swap W2  off rr/ema-cross        3.6   1496     6.68   52.14     38.17    3.01     204.8
+config-swap W2  off rr/ema-cross        7.2   1496     1.34   52.21     43.45    3.01     211.6
+
+config-swap W2  off rr/rsi-reversion    0.0   4936      0.0   42.89      7.56   49.55     121.0
+config-swap W2  off rr/rsi-reversion    0.9   1739    41.35    42.9     11.67    4.08     140.2
+config-swap W2  off rr/rsi-reversion    1.8   3468     6.57   48.39     12.86   32.18     161.3
+config-swap W2  off rr/rsi-reversion    3.6   4937     0.24   42.88      7.53   49.34     120.9
+config-swap W2  off rr/rsi-reversion    7.2   4936     0.02   42.89      7.56   49.53     121.0
+
+config-swap W2  on  rr/donchian         0.0   7883      0.0    4.53      16.2   79.27     137.2
+config-swap W2  on  rr/donchian         0.9   6493    26.97   11.58      18.8   42.65     134.0
+config-swap W2  on  rr/donchian         1.8   6109     7.74    8.76     26.71   56.79     156.2
+config-swap W2  on  rr/donchian         3.6   7116     0.72    5.37     21.57   72.34     146.2
+config-swap W2  on  rr/donchian         7.2   7884     0.04    4.53     16.16   79.27     137.2
+
+config-swap W2  on  rr/ema-cross        0.0   1555      0.0   49.32     43.22    7.46     157.3
+config-swap W2  on  rr/ema-cross        0.9   1209    40.61   41.52     13.15    4.71      98.6
+config-swap W2  on  rr/ema-cross        1.8   1841    20.53   50.08     20.64    8.75     126.6
+config-swap W2  on  rr/ema-cross        3.6   1437     5.98   50.94     36.95    6.12     150.6
+config-swap W2  on  rr/ema-cross        7.2   1713     0.58   50.55     39.64    9.22     155.9
+
+config-swap W2  on  rr/rsi-reversion    0.0   4836      0.0    42.0      6.66   51.34      85.5
+config-swap W2  on  rr/rsi-reversion    0.9   1098    42.17   42.08     12.11    3.64      89.2
+config-swap W2  on  rr/rsi-reversion    1.8   4837     3.76   41.93      6.57   47.74      84.7
+config-swap W2  on  rr/rsi-reversion    3.6   4836     0.19    42.0      6.64   51.18      85.5
+config-swap W2  on  rr/rsi-reversion    7.2   4836      0.0    42.0      6.66   51.34      85.5
+
+==============================================================================================================
+TABLE 3 — Lbar BESIDE PF_r, the identity residual, and whether the book blew
+==============================================================================================================
+cfg         win g   row                  rr     PF_r   PF_usd      gap    Lbar         E     resid   dd_pct  blown  sized_down
+config      W1  off rr/donchian         0.0   0.8783   0.8707  +0.0076  0.4037   -0.0491  +0.00002   155.37  BLOWN null (guards off)
+config      W1  off rr/donchian         0.9   0.8435   0.8401  +0.0034  0.3772   -0.0590  +0.00002   208.34  BLOWN null (guards off)
+config      W1  off rr/donchian         1.8   0.8734   0.8643  +0.0091  0.3989   -0.0505  +0.00002   168.93  BLOWN null (guards off)
+config      W1  off rr/donchian         3.6   0.8782   0.8716  +0.0066  0.4028   -0.0490  -0.00006   157.94  BLOWN null (guards off)
+config      W1  off rr/donchian         7.2   0.8789   0.8710  +0.0079  0.4035   -0.0489  +0.00007   155.37  BLOWN null (guards off)
+config      W1  off rr/ema-cross        0.0   0.8776   0.8550  +0.0226  0.6144   -0.0752  -0.00003   119.17  BLOWN null (guards off)
+config      W1  off rr/ema-cross        0.9   0.7879   0.7778  +0.0101  0.4855   -0.1030  +0.00005   145.87  BLOWN null (guards off)
+config      W1  off rr/ema-cross        1.8   0.8236   0.8122  +0.0114  0.5774   -0.1019  -0.00003   161.40  BLOWN null (guards off)
+config      W1  off rr/ema-cross        3.6   0.8465   0.8456  +0.0009  0.6088   -0.0934  +0.00004   154.35  BLOWN null (guards off)
+config      W1  off rr/ema-cross        7.2   0.8836   0.8717  +0.0119  0.6096   -0.0710  -0.00003   117.60  BLOWN null (guards off)
+config      W1  off rr/rsi-reversion    0.0   0.7172   0.7779  -0.0607  0.3975   -0.1124  +0.00001   331.26  BLOWN null (guards off)
+config      W1  off rr/rsi-reversion    0.9   0.6951   0.7454  -0.0503  0.3929   -0.1198  -0.00000   347.44  BLOWN null (guards off)
+config      W1  off rr/rsi-reversion    1.8   0.7148   0.7739  -0.0591  0.3972   -0.1133  +0.00001   333.12  BLOWN null (guards off)
+config      W1  off rr/rsi-reversion    3.6   0.7191   0.7787  -0.0596  0.3975   -0.1116  -0.00006   331.10  BLOWN null (guards off)
+config      W1  off rr/rsi-reversion    7.2   0.7169   0.7771  -0.0602  0.3975   -0.1125  +0.00002   331.66  BLOWN null (guards off)
+config      W1  on  rr/donchian         0.0   0.8596   0.8411  +0.0185  0.3949   -0.0555  -0.00004   159.96  BLOWN        1880
+config      W1  on  rr/donchian         0.9   0.8384   0.8333  +0.0051  0.3713   -0.0600  +0.00002   189.70  BLOWN        2193
+config      W1  on  rr/donchian         1.8   0.8665   0.8543  +0.0122  0.3902   -0.0521  -0.00002   155.26  BLOWN        1938
+config      W1  on  rr/donchian         3.6   0.8588   0.8441  +0.0147  0.3943   -0.0557  -0.00002   159.81  BLOWN        1882
+config      W1  on  rr/donchian         7.2   0.8609   0.8417  +0.0192  0.3948   -0.0549  +0.00001   159.58  BLOWN        1881
+config      W1  on  rr/ema-cross        0.0   0.8534   0.8494  +0.0040  0.6038   -0.0885  +0.00003    75.59     ok        1541
+config      W1  on  rr/ema-cross        0.9   0.7591   0.7532  +0.0059  0.4919   -0.1185  -0.00003   107.67  BLOWN        1651
+config      W1  on  rr/ema-cross        1.8   0.7945   0.8269  -0.0324  0.5717   -0.1175  -0.00002    83.31     ok        1569
+config      W1  on  rr/ema-cross        3.6   0.8264   0.8571  -0.0307  0.5985   -0.1039  -0.00000    82.43     ok        1761
+config      W1  on  rr/ema-cross        7.2   0.8406   0.8418  -0.0012  0.6038   -0.0962  +0.00004    77.91     ok        1542
+config      W1  on  rr/rsi-reversion    0.0   0.7170   0.8104  -0.0934  0.3890   -0.1101  +0.00008   221.33  BLOWN        8808
+config      W1  on  rr/rsi-reversion    0.9   0.6920   0.7724  -0.0804  0.3892   -0.1199  -0.00001   259.08  BLOWN        8518
+config      W1  on  rr/rsi-reversion    1.8   0.7176   0.8091  -0.0915  0.3886   -0.1097  -0.00006   224.98  BLOWN        8812
+config      W1  on  rr/rsi-reversion    3.6   0.7195   0.8121  -0.0926  0.3888   -0.1091  -0.00004   220.42  BLOWN        8809
+config      W1  on  rr/rsi-reversion    7.2   0.7170   0.8100  -0.0930  0.3889   -0.1101  -0.00003   222.21  BLOWN        8809
+config      W2  off rr/donchian         0.0   0.8159   0.8259  -0.0100  0.2957   -0.0544  -0.00006   251.24  BLOWN null (guards off)
+config      W2  off rr/donchian         0.9   0.8388   0.8658  -0.0270  0.3360   -0.0542  +0.00005   221.43  BLOWN null (guards off)
+config      W2  off rr/donchian         1.8   0.8414   0.8684  -0.0270  0.3380   -0.0536  +0.00001   207.65  BLOWN null (guards off)
+config      W2  off rr/donchian         3.6   0.8492   0.8775  -0.0283  0.3293   -0.0496  -0.00006   202.73  BLOWN null (guards off)
+config      W2  off rr/donchian         7.2   0.8287   0.8609  -0.0322  0.3098   -0.0530  -0.00005   222.81  BLOWN null (guards off)
+config      W2  off rr/ema-cross        0.0   0.9181   0.9085  +0.0096  0.5938   -0.0486  +0.00001    82.82     ok null (guards off)
+config      W2  off rr/ema-cross        0.9   0.8119   0.8126  -0.0007  0.4797   -0.0902  -0.00007   104.80  BLOWN null (guards off)
+config      W2  off rr/ema-cross        1.8   0.7773   0.7776  -0.0003  0.5851   -0.1303  +0.00002   161.47  BLOWN null (guards off)
+config      W2  off rr/ema-cross        3.6   0.8885   0.8812  +0.0073  0.5917   -0.0660  -0.00001    98.17     ok null (guards off)
+config      W2  off rr/ema-cross        7.2   0.9380   0.9315  +0.0065  0.5931   -0.0367  +0.00005    69.66     ok null (guards off)
+config      W2  off rr/rsi-reversion    0.0   0.8162   0.8173  -0.0011  0.4632   -0.0852  -0.00004   235.30  BLOWN null (guards off)
+config      W2  off rr/rsi-reversion    0.9   0.8421   0.8349  +0.0072  0.4700   -0.0742  -0.00001   116.49  BLOWN null (guards off)
+config      W2  off rr/rsi-reversion    1.8   0.8640   0.8510  +0.0130  0.5222   -0.0710  -0.00005   190.76  BLOWN null (guards off)
+config      W2  off rr/rsi-reversion    3.6   0.8174   0.8198  -0.0024  0.4632   -0.0846  -0.00001   232.37  BLOWN null (guards off)
+config      W2  off rr/rsi-reversion    7.2   0.8161   0.8172  -0.0011  0.4632   -0.0852  +0.00001   235.41  BLOWN null (guards off)
+config      W2  on  rr/donchian         0.0   0.8134   0.8321  -0.0187  0.2879   -0.0537  +0.00003   228.18  BLOWN        3344
+config      W2  on  rr/donchian         0.9   0.8389   0.8759  -0.0370  0.3286   -0.0529  +0.00004   196.56  BLOWN        2556
+config      W2  on  rr/donchian         1.8   0.8435   0.8739  -0.0304  0.3293   -0.0515  +0.00005   178.51  BLOWN        2387
+config      W2  on  rr/donchian         3.6   0.8308   0.8707  -0.0399  0.3016   -0.0510  +0.00003   190.11  BLOWN        3191
+config      W2  on  rr/donchian         7.2   0.8139   0.8327  -0.0188  0.2879   -0.0536  +0.00008   227.88  BLOWN        3344
+config      W2  on  rr/ema-cross        0.0   0.8761   0.8639  +0.0122  0.5752   -0.0713  -0.00005    74.70     ok        1354
+config      W2  on  rr/ema-cross        0.9   0.7887   0.7844  +0.0043  0.4764   -0.1007  -0.00002    71.68     ok        1040
+config      W2  on  rr/ema-cross        1.8   0.7522   0.7340  +0.0182  0.5811   -0.1440  -0.00001   138.57  BLOWN        1521
+config      W2  on  rr/ema-cross        3.6   0.8611   0.8637  -0.0026  0.5840   -0.0811  +0.00000    73.02     ok        1255
+config      W2  on  rr/ema-cross        7.2   0.8929   0.8833  +0.0096  0.5752   -0.0616  +0.00003    67.70     ok        1354
+config      W2  on  rr/rsi-reversion    0.0   0.8109   0.8323  -0.0214  0.4569   -0.0864  +0.00000   169.88  BLOWN        4249
+config      W2  on  rr/rsi-reversion    0.9   0.8328   0.8419  -0.0091  0.4661   -0.0779  +0.00004    60.52     ok         887
+config      W2  on  rr/rsi-reversion    1.8   0.8106   0.8332  -0.0226  0.4562   -0.0864  +0.00002   169.21  BLOWN        4250
+config      W2  on  rr/rsi-reversion    3.6   0.8129   0.8347  -0.0218  0.4569   -0.0855  -0.00000   167.33  BLOWN        4250
+config      W2  on  rr/rsi-reversion    7.2   0.8109   0.8323  -0.0214  0.4569   -0.0864  +0.00000   169.88  BLOWN        4249
+config-swap W1  off rr/donchian         0.0   0.8776   0.8144  +0.0632  0.4012   -0.0491  +0.00002   206.32  BLOWN null (guards off)
+config-swap W1  off rr/donchian         0.9   0.8428   0.7975  +0.0453  0.3753   -0.0590  +0.00002   248.18  BLOWN null (guards off)
+config-swap W1  off rr/donchian         1.8   0.8725   0.8121  +0.0604  0.3966   -0.0505  +0.00005   215.00  BLOWN null (guards off)
+config-swap W1  off rr/donchian         3.6   0.8774   0.8172  +0.0602  0.4004   -0.0491  -0.00002   207.22  BLOWN null (guards off)
+config-swap W1  off rr/donchian         7.2   0.8782   0.8146  +0.0636  0.4010   -0.0488  +0.00004   206.40  BLOWN null (guards off)
+config-swap W1  off rr/ema-cross        0.0   0.8762   0.7533  +0.1229  0.6069   -0.0752  -0.00003   184.86  BLOWN null (guards off)
+config-swap W1  off rr/ema-cross        0.9   0.7856   0.7103  +0.0753  0.4800   -0.1029  +0.00002   185.19  BLOWN null (guards off)
+config-swap W1  off rr/ema-cross        1.8   0.8216   0.7337  +0.0879  0.5709   -0.1019  -0.00003   216.19  BLOWN null (guards off)
+config-swap W1  off rr/ema-cross        3.6   0.8447   0.7601  +0.0846  0.6016   -0.0934  +0.00005   216.92  BLOWN null (guards off)
+config-swap W1  off rr/ema-cross        7.2   0.8820   0.7828  +0.0992  0.6015   -0.0710  -0.00004   183.96  BLOWN null (guards off)
+config-swap W1  off rr/rsi-reversion    0.0   0.7143   0.7315  -0.0172  0.3935   -0.1124  +0.00002   352.55  BLOWN null (guards off)
+config-swap W1  off rr/rsi-reversion    0.9   0.6919   0.6996  -0.0077  0.3887   -0.1198  -0.00001   363.06  BLOWN null (guards off)
+config-swap W1  off rr/rsi-reversion    1.8   0.7117   0.7277  -0.0160  0.3932   -0.1134  +0.00006   353.75  BLOWN null (guards off)
+config-swap W1  off rr/rsi-reversion    3.6   0.7161   0.7322  -0.0161  0.3934   -0.1117  -0.00004   352.53  BLOWN null (guards off)
+config-swap W1  off rr/rsi-reversion    7.2   0.7140   0.7307  -0.0167  0.3935   -0.1125  +0.00003   352.83  BLOWN null (guards off)
+config-swap W1  on  rr/donchian         0.0   0.8584   0.7974  +0.0610  0.3938   -0.0558  -0.00003   195.58  BLOWN        1879
+config-swap W1  on  rr/donchian         0.9   0.8379   0.7996  +0.0383  0.3704   -0.0600  -0.00006   219.09  BLOWN        2192
+config-swap W1  on  rr/donchian         1.8   0.8664   0.8131  +0.0533  0.3889   -0.0520  +0.00007   190.01  BLOWN        1937
+config-swap W1  on  rr/donchian         3.6   0.8578   0.8010  +0.0568  0.3931   -0.0559  -0.00000   195.46  BLOWN        1883
+config-swap W1  on  rr/donchian         7.2   0.8598   0.7979  +0.0619  0.3937   -0.0552  +0.00002   195.27  BLOWN        1879
+config-swap W1  on  rr/ema-cross        0.0   0.8520   0.7716  +0.0804  0.5997   -0.0887  +0.00003   111.24  BLOWN        1541
+config-swap W1  on  rr/ema-cross        0.9   0.7574   0.6986  +0.0588  0.4882   -0.1185  -0.00005   132.79  BLOWN        1651
+config-swap W1  on  rr/ema-cross        1.8   0.7926   0.7552  +0.0374  0.5667   -0.1175  +0.00003   117.56  BLOWN        1568
+config-swap W1  on  rr/ema-cross        3.6   0.8270   0.7880  +0.0390  0.5920   -0.1024  +0.00001   119.57  BLOWN        1760
+config-swap W1  on  rr/ema-cross        7.2   0.8392   0.7640  +0.0752  0.5997   -0.0964  +0.00004   114.34  BLOWN        1541
+config-swap W1  on  rr/rsi-reversion    0.0   0.7153   0.7707  -0.0554  0.3856   -0.1098  -0.00001   257.95  BLOWN        8812
+config-swap W1  on  rr/rsi-reversion    0.9   0.6901   0.7338  -0.0437  0.3858   -0.1196  -0.00004   286.48  BLOWN        8521
+config-swap W1  on  rr/rsi-reversion    1.8   0.7090   0.7580  -0.0490  0.3899   -0.1135  -0.00003   269.56  BLOWN        8487
+config-swap W1  on  rr/rsi-reversion    3.6   0.7177   0.7719  -0.0542  0.3856   -0.1089  -0.00004   257.56  BLOWN        8814
+config-swap W1  on  rr/rsi-reversion    7.2   0.7150   0.7700  -0.0550  0.3856   -0.1099  +0.00000   259.27  BLOWN        8813
+config-swap W2  off rr/donchian         0.0   0.8152   0.7858  +0.0294  0.2946   -0.0544  -0.00005   282.30  BLOWN null (guards off)
+config-swap W2  off rr/donchian         0.9   0.8383   0.8376  +0.0007  0.3348   -0.0541  +0.00004   240.68  BLOWN null (guards off)
+config-swap W2  off rr/donchian         1.8   0.8408   0.8344  +0.0064  0.3369   -0.0536  +0.00004   232.18  BLOWN null (guards off)
+config-swap W2  off rr/donchian         3.6   0.8486   0.8402  +0.0084  0.3281   -0.0497  -0.00002   230.85  BLOWN null (guards off)
+config-swap W2  off rr/donchian         7.2   0.8280   0.8233  +0.0047  0.3086   -0.0531  -0.00002   249.16  BLOWN null (guards off)
+config-swap W2  off rr/ema-cross        0.0   0.9176   0.8441  +0.0735  0.5896   -0.0486  -0.00002   121.20  BLOWN null (guards off)
+config-swap W2  off rr/ema-cross        0.9   0.8106   0.7542  +0.0564  0.4766   -0.0902  -0.00005   129.34  BLOWN null (guards off)
+config-swap W2  off rr/ema-cross        1.8   0.7756   0.7261  +0.0495  0.5808   -0.1303  +0.00004   192.85  BLOWN null (guards off)
+config-swap W2  off rr/ema-cross        3.6   0.8878   0.8208  +0.0670  0.5874   -0.0659  -0.00008   137.23  BLOWN null (guards off)
+config-swap W2  off rr/ema-cross        7.2   0.9376   0.8662  +0.0714  0.5889   -0.0368  +0.00007   109.98  BLOWN null (guards off)
+config-swap W2  off rr/rsi-reversion    0.0   0.8148   0.7814  +0.0334  0.4600   -0.0852  -0.00002   263.23  BLOWN null (guards off)
+config-swap W2  off rr/rsi-reversion    0.9   0.8413   0.7910  +0.0503  0.4672   -0.0741  -0.00006   142.56  BLOWN null (guards off)
+config-swap W2  off rr/rsi-reversion    1.8   0.8630   0.8080  +0.0550  0.5187   -0.0711  -0.00004   229.21  BLOWN null (guards off)
+config-swap W2  off rr/rsi-reversion    3.6   0.8160   0.7840  +0.0320  0.4599   -0.0846  +0.00002   260.41  BLOWN null (guards off)
+config-swap W2  off rr/rsi-reversion    7.2   0.8147   0.7813  +0.0334  0.4600   -0.0852  +0.00003   263.31  BLOWN null (guards off)
+config-swap W2  on  rr/donchian         0.0   0.8131   0.8018  +0.0113  0.2873   -0.0537  -0.00002   252.72  BLOWN        3346
+config-swap W2  on  rr/donchian         0.9   0.8389   0.8542  -0.0153  0.3280   -0.0528  +0.00004   212.27  BLOWN        2554
+config-swap W2  on  rr/donchian         1.8   0.8424   0.8472  -0.0048  0.3288   -0.0518  -0.00007   202.33  BLOWN        2387
+config-swap W2  on  rr/donchian         3.6   0.8287   0.8401  -0.0114  0.3012   -0.0516  -0.00000   213.59  BLOWN        3189
+config-swap W2  on  rr/donchian         7.2   0.8137   0.8024  +0.0113  0.2873   -0.0535  +0.00003   252.48  BLOWN        3346
+config-swap W2  on  rr/ema-cross        0.0   0.8697   0.8106  +0.0591  0.5731   -0.0747  -0.00005    99.84     ok        1353
+config-swap W2  on  rr/ema-cross        0.9   0.7875   0.7392  +0.0483  0.4738   -0.1007  -0.00002    87.54     ok        1040
+config-swap W2  on  rr/ema-cross        1.8   0.7481   0.7011  +0.0470  0.5804   -0.1462  +0.00003   160.07  BLOWN        1596
+config-swap W2  on  rr/ema-cross        3.6   0.8614   0.8174  +0.0440  0.5802   -0.0804  +0.00003    93.63     ok        1256
+config-swap W2  on  rr/ema-cross        7.2   0.8237   0.7793  +0.0444  0.5936   -0.1047  +0.00008   124.70  BLOWN        1503
+config-swap W2  on  rr/rsi-reversion    0.0   0.8115   0.8060  +0.0055  0.4544   -0.0856  -0.00006   190.71  BLOWN        4250
+config-swap W2  on  rr/rsi-reversion    0.9   0.8313   0.8067  +0.0246  0.4637   -0.0782  +0.00004    72.31     ok         886
+config-swap W2  on  rr/rsi-reversion    1.8   0.8110   0.8068  +0.0042  0.4536   -0.0857  +0.00005   190.12  BLOWN        4252
+config-swap W2  on  rr/rsi-reversion    3.6   0.8135   0.8084  +0.0051  0.4544   -0.0848  -0.00005   188.55  BLOWN        4251
+config-swap W2  on  rr/rsi-reversion    7.2   0.8115   0.8060  +0.0055  0.4544   -0.0856  -0.00006   190.71  BLOWN        4250
+
+==============================================================================================================
+TABLE 4 — expectancy_net (arm B only; contaminated wherever the book blew)
+==============================================================================================================
+W1 off rr/donchian       rr=0.0  E=  -0.0491 exp_net=   -0.076 dd%=  206.32  <- BLOWN BOOK: lots clamped, this number is contaminated
+W1 off rr/donchian       rr=0.9  E=  -0.0590 exp_net=   -0.080 dd%=  248.18  <- BLOWN BOOK: lots clamped, this number is contaminated
+W1 off rr/donchian       rr=1.8  E=  -0.0505 exp_net=   -0.076 dd%=  215.00  <- BLOWN BOOK: lots clamped, this number is contaminated
+W1 off rr/donchian       rr=3.6  E=  -0.0491 exp_net=   -0.076 dd%=  207.22  <- BLOWN BOOK: lots clamped, this number is contaminated
+W1 off rr/donchian       rr=7.2  E=  -0.0488 exp_net=   -0.076 dd%=  206.40  <- BLOWN BOOK: lots clamped, this number is contaminated
+W1 off rr/ema-cross      rr=0.0  E=  -0.0752 exp_net=   -0.148 dd%=  184.86  <- BLOWN BOOK: lots clamped, this number is contaminated
+W1 off rr/ema-cross      rr=0.9  E=  -0.1029 exp_net=   -0.144 dd%=  185.19  <- BLOWN BOOK: lots clamped, this number is contaminated
+W1 off rr/ema-cross      rr=1.8  E=  -0.1019 exp_net=   -0.159 dd%=  216.19  <- BLOWN BOOK: lots clamped, this number is contaminated
+W1 off rr/ema-cross      rr=3.6  E=  -0.0934 exp_net=   -0.156 dd%=  216.92  <- BLOWN BOOK: lots clamped, this number is contaminated
+W1 off rr/ema-cross      rr=7.2  E=  -0.0710 exp_net=   -0.139 dd%=  183.96  <- BLOWN BOOK: lots clamped, this number is contaminated
+W1 off rr/rsi-reversion  rr=0.0  E=  -0.1124 exp_net=   -0.141 dd%=  352.55  <- BLOWN BOOK: lots clamped, this number is contaminated
+W1 off rr/rsi-reversion  rr=0.9  E=  -0.1198 exp_net=   -0.147 dd%=  363.06  <- BLOWN BOOK: lots clamped, this number is contaminated
+W1 off rr/rsi-reversion  rr=1.8  E=  -0.1134 exp_net=   -0.142 dd%=  353.75  <- BLOWN BOOK: lots clamped, this number is contaminated
+W1 off rr/rsi-reversion  rr=3.6  E=  -0.1117 exp_net=   -0.140 dd%=  352.53  <- BLOWN BOOK: lots clamped, this number is contaminated
+W1 off rr/rsi-reversion  rr=7.2  E=  -0.1125 exp_net=   -0.141 dd%=  352.83  <- BLOWN BOOK: lots clamped, this number is contaminated
+W1 on  rr/donchian       rr=0.0  E=  -0.0558 exp_net=   -0.075 dd%=  195.58  <- BLOWN BOOK: lots clamped, this number is contaminated
+W1 on  rr/donchian       rr=0.9  E=  -0.0600 exp_net=   -0.074 dd%=  219.09  <- BLOWN BOOK: lots clamped, this number is contaminated
+W1 on  rr/donchian       rr=1.8  E=  -0.0520 exp_net=   -0.070 dd%=  190.01  <- BLOWN BOOK: lots clamped, this number is contaminated
+W1 on  rr/donchian       rr=3.6  E=  -0.0559 exp_net=   -0.075 dd%=  195.46  <- BLOWN BOOK: lots clamped, this number is contaminated
+W1 on  rr/donchian       rr=7.2  E=  -0.0552 exp_net=   -0.074 dd%=  195.27  <- BLOWN BOOK: lots clamped, this number is contaminated
+W1 on  rr/ema-cross      rr=0.0  E=  -0.0887 exp_net=   -0.138 dd%=  111.24  <- BLOWN BOOK: lots clamped, this number is contaminated
+W1 on  rr/ema-cross      rr=0.9  E=  -0.1185 exp_net=   -0.153 dd%=  132.79  <- BLOWN BOOK: lots clamped, this number is contaminated
+W1 on  rr/ema-cross      rr=1.8  E=  -0.1175 exp_net=   -0.162 dd%=  117.56  <- BLOWN BOOK: lots clamped, this number is contaminated
+W1 on  rr/ema-cross      rr=3.6  E=  -0.1024 exp_net=   -0.148 dd%=  119.57  <- BLOWN BOOK: lots clamped, this number is contaminated
+W1 on  rr/ema-cross      rr=7.2  E=  -0.0964 exp_net=   -0.146 dd%=  114.34  <- BLOWN BOOK: lots clamped, this number is contaminated
+W1 on  rr/rsi-reversion  rr=0.0  E=  -0.1098 exp_net=   -0.129 dd%=  257.95  <- BLOWN BOOK: lots clamped, this number is contaminated
+W1 on  rr/rsi-reversion  rr=0.9  E=  -0.1196 exp_net=   -0.139 dd%=  286.48  <- BLOWN BOOK: lots clamped, this number is contaminated
+W1 on  rr/rsi-reversion  rr=1.8  E=  -0.1135 exp_net=   -0.133 dd%=  269.56  <- BLOWN BOOK: lots clamped, this number is contaminated
+W1 on  rr/rsi-reversion  rr=3.6  E=  -0.1089 exp_net=   -0.128 dd%=  257.56  <- BLOWN BOOK: lots clamped, this number is contaminated
+W1 on  rr/rsi-reversion  rr=7.2  E=  -0.1099 exp_net=   -0.129 dd%=  259.27  <- BLOWN BOOK: lots clamped, this number is contaminated
+W2 off rr/donchian       rr=0.0  E=  -0.0544 exp_net=   -0.069 dd%=  282.30  <- BLOWN BOOK: lots clamped, this number is contaminated
+W2 off rr/donchian       rr=0.9  E=  -0.0541 exp_net=   -0.067 dd%=  240.68  <- BLOWN BOOK: lots clamped, this number is contaminated
+W2 off rr/donchian       rr=1.8  E=  -0.0536 exp_net=   -0.068 dd%=  232.18  <- BLOWN BOOK: lots clamped, this number is contaminated
+W2 off rr/donchian       rr=3.6  E=  -0.0497 exp_net=   -0.065 dd%=  230.85  <- BLOWN BOOK: lots clamped, this number is contaminated
+W2 off rr/donchian       rr=7.2  E=  -0.0531 exp_net=   -0.069 dd%=  249.16  <- BLOWN BOOK: lots clamped, this number is contaminated
+W2 off rr/ema-cross      rr=0.0  E=  -0.0486 exp_net=   -0.089 dd%=  121.20  <- BLOWN BOOK: lots clamped, this number is contaminated
+W2 off rr/ema-cross      rr=0.9  E=  -0.0902 exp_net=   -0.124 dd%=  129.34  <- BLOWN BOOK: lots clamped, this number is contaminated
+W2 off rr/ema-cross      rr=1.8  E=  -0.1303 exp_net=   -0.164 dd%=  192.85  <- BLOWN BOOK: lots clamped, this number is contaminated
+W2 off rr/ema-cross      rr=3.6  E=  -0.0659 exp_net=   -0.105 dd%=  137.23  <- BLOWN BOOK: lots clamped, this number is contaminated
+W2 off rr/ema-cross      rr=7.2  E=  -0.0368 exp_net=   -0.077 dd%=  109.98  <- BLOWN BOOK: lots clamped, this number is contaminated
+W2 off rr/rsi-reversion  rr=0.0  E=  -0.0852 exp_net=   -0.105 dd%=  263.23  <- BLOWN BOOK: lots clamped, this number is contaminated
+W2 off rr/rsi-reversion  rr=0.9  E=  -0.0741 exp_net=   -0.099 dd%=  142.56  <- BLOWN BOOK: lots clamped, this number is contaminated
+W2 off rr/rsi-reversion  rr=1.8  E=  -0.0711 exp_net=   -0.097 dd%=  229.21  <- BLOWN BOOK: lots clamped, this number is contaminated
+W2 off rr/rsi-reversion  rr=3.6  E=  -0.0846 exp_net=   -0.104 dd%=  260.41  <- BLOWN BOOK: lots clamped, this number is contaminated
+W2 off rr/rsi-reversion  rr=7.2  E=  -0.0852 exp_net=   -0.105 dd%=  263.31  <- BLOWN BOOK: lots clamped, this number is contaminated
+W2 on  rr/donchian       rr=0.0  E=  -0.0537 exp_net=   -0.064 dd%=  252.72  <- BLOWN BOOK: lots clamped, this number is contaminated
+W2 on  rr/donchian       rr=0.9  E=  -0.0528 exp_net=   -0.062 dd%=  212.27  <- BLOWN BOOK: lots clamped, this number is contaminated
+W2 on  rr/donchian       rr=1.8  E=  -0.0518 exp_net=   -0.062 dd%=  202.33  <- BLOWN BOOK: lots clamped, this number is contaminated
+W2 on  rr/donchian       rr=3.6  E=  -0.0516 exp_net=   -0.062 dd%=  213.59  <- BLOWN BOOK: lots clamped, this number is contaminated
+W2 on  rr/donchian       rr=7.2  E=  -0.0535 exp_net=   -0.064 dd%=  252.48  <- BLOWN BOOK: lots clamped, this number is contaminated
+W2 on  rr/ema-cross      rr=0.0  E=  -0.0747 exp_net=   -0.104 dd%=   99.84
+W2 on  rr/ema-cross      rr=0.9  E=  -0.1007 exp_net=   -0.126 dd%=   87.54
+W2 on  rr/ema-cross      rr=1.8  E=  -0.1462 exp_net=   -0.170 dd%=  160.07  <- BLOWN BOOK: lots clamped, this number is contaminated
+W2 on  rr/ema-cross      rr=3.6  E=  -0.0804 exp_net=   -0.110 dd%=   93.63
+W2 on  rr/ema-cross      rr=7.2  E=  -0.1047 exp_net=   -0.131 dd%=  124.70  <- BLOWN BOOK: lots clamped, this number is contaminated
+W2 on  rr/rsi-reversion  rr=0.0  E=  -0.0856 exp_net=   -0.100 dd%=  190.71  <- BLOWN BOOK: lots clamped, this number is contaminated
+W2 on  rr/rsi-reversion  rr=0.9  E=  -0.0782 exp_net=   -0.097 dd%=   72.31
+W2 on  rr/rsi-reversion  rr=1.8  E=  -0.0857 exp_net=   -0.100 dd%=  190.12  <- BLOWN BOOK: lots clamped, this number is contaminated
+W2 on  rr/rsi-reversion  rr=3.6  E=  -0.0848 exp_net=   -0.099 dd%=  188.55  <- BLOWN BOOK: lots clamped, this number is contaminated
+W2 on  rr/rsi-reversion  rr=7.2  E=  -0.0856 exp_net=   -0.100 dd%=  190.71  <- BLOWN BOOK: lots clamped, this number is contaminated
+
+==============================================================================================================
+TABLE 5 — THE NULL MOVES WITH THE FLAG (so no percentile is published)
+==============================================================================================================
+cfg         win g   row                  rr  null_p50  null_p95  null_n  cnt_match
+config      W1  off rr/donchian         0.0     0.843     0.906    4522       1.15
+config      W1  off rr/donchian         0.9     0.805     0.850    5982       1.17
+config      W1  off rr/donchian         1.8     0.823     0.876    4979       1.17
+config      W1  off rr/donchian         3.6     0.838     0.902    4598       1.15
+config      W1  off rr/donchian         7.2     0.841     0.900    4531       1.15
+
+config      W1  off rr/ema-cross        0.0     0.829     0.913    2480       1.54
+config      W1  off rr/ema-cross        0.9     0.777     0.831    2464       1.47
+config      W1  off rr/ema-cross        1.8     0.805     0.866    2464       1.32
+config      W1  off rr/ema-cross        3.6     0.819     0.894    2473       1.26
+config      W1  off rr/ema-cross        7.2     0.824     0.904    2478       1.45
+
+config      W1  off rr/rsi-reversion    0.0     0.835     0.902    3271       0.35
+config      W1  off rr/rsi-reversion    0.9     0.775     0.831    3346       0.36
+config      W1  off rr/rsi-reversion    1.8     0.808     0.864    3280       0.35
+config      W1  off rr/rsi-reversion    3.6     0.824     0.883    3266       0.35
+config      W1  off rr/rsi-reversion    7.2     0.831     0.897    3271       0.35
+
+config      W1  on  rr/donchian         0.0     0.837     0.893    4420       1.15
+config      W1  on  rr/donchian         0.9     0.811     0.859    5396       1.11
+config      W1  on  rr/donchian         1.8     0.828     0.876    4841       1.18
+config      W1  on  rr/donchian         3.6     0.834     0.895    4494       1.16
+config      W1  on  rr/donchian         7.2     0.836     0.893    4425       1.15
+
+config      W1  on  rr/ema-cross        0.0     0.823     0.896    2390       1.43
+config      W1  on  rr/ema-cross        0.9     0.790     0.854    2380       1.33
+config      W1  on  rr/ema-cross        1.8     0.813     0.878    2378       1.41
+config      W1  on  rr/ema-cross        3.6     0.822     0.896    2384       1.26
+config      W1  on  rr/ema-cross        7.2     0.820     0.896    2390       1.43
+
+config      W1  on  rr/rsi-reversion    0.0     0.832     0.895    3196       0.34
+config      W1  on  rr/rsi-reversion    0.9     0.794     0.849    3274       0.36
+config      W1  on  rr/rsi-reversion    1.8     0.816     0.878    3208       0.34
+config      W1  on  rr/rsi-reversion    3.6     0.828     0.893    3193       0.34
+config      W1  on  rr/rsi-reversion    7.2     0.829     0.895    3193       0.34
+
+config      W2  off rr/donchian         0.0     0.906     0.970    4414       0.55
+config      W2  off rr/donchian         0.9     0.883     0.926    5820       0.86
+config      W2  off rr/donchian         1.8     0.901     0.962    4820       0.77
+config      W2  off rr/donchian         3.6     0.906     0.972    4486       0.69
+config      W2  off rr/donchian         7.2     0.907     0.970    4418       0.61
+
+config      W2  off rr/ema-cross        0.0     0.896     0.972    2328       1.56
+config      W2  off rr/ema-cross        0.9     0.871     0.941    2308       1.84
+config      W2  off rr/ema-cross        1.8     0.886     0.959    2312       1.43
+config      W2  off rr/ema-cross        3.6     0.894     0.968    2324       1.55
+config      W2  off rr/ema-cross        7.2     0.897     0.967    2328       1.56
+
+config      W2  off rr/rsi-reversion    0.0     0.890     0.973    3064       0.62
+config      W2  off rr/rsi-reversion    0.9     0.866     0.927    3120       1.79
+config      W2  off rr/rsi-reversion    1.8     0.885     0.945    3066       0.88
+config      W2  off rr/rsi-reversion    3.6     0.892     0.974    3059       0.62
+config      W2  off rr/rsi-reversion    7.2     0.891     0.972    3061       0.62
+
+config      W2  on  rr/donchian         0.0     0.905     0.967    4328       0.55
+config      W2  on  rr/donchian         0.9     0.890     0.933    5561       0.86
+config      W2  on  rr/donchian         1.8     0.905     0.961    4695       0.77
+config      W2  on  rr/donchian         3.6     0.907     0.975    4387       0.62
+config      W2  on  rr/donchian         7.2     0.905     0.960    4330       0.55
+
+config      W2  on  rr/ema-cross        0.0     0.898     0.984    2255       1.45
+config      W2  on  rr/ema-cross        0.9     0.885     0.960    2236       1.85
+config      W2  on  rr/ema-cross        1.8     0.899     0.972    2240       1.27
+config      W2  on  rr/ema-cross        3.6     0.905     0.977    2250       1.57
+config      W2  on  rr/ema-cross        7.2     0.901     0.984    2254       1.45
+
+config      W2  on  rr/rsi-reversion    0.0     0.896     0.975    3009       0.62
+config      W2  on  rr/rsi-reversion    0.9     0.881     0.945    3064       2.79
+config      W2  on  rr/rsi-reversion    1.8     0.897     0.964    3010       0.62
+config      W2  on  rr/rsi-reversion    3.6     0.896     0.978    3002       0.62
+config      W2  on  rr/rsi-reversion    7.2     0.895     0.974    3008       0.62
+
+config-swap W1  off rr/donchian         0.0     0.742     0.801    4522       1.15
+config-swap W1  off rr/donchian         0.9     0.715     0.756    5982       1.17
+config-swap W1  off rr/donchian         1.8     0.729     0.777    4979       1.17
+config-swap W1  off rr/donchian         3.6     0.737     0.794    4598       1.15
+config-swap W1  off rr/donchian         7.2     0.741     0.797    4531       1.15
+
+config-swap W1  off rr/ema-cross        0.0     0.721     0.793    2480       1.54
+config-swap W1  off rr/ema-cross        0.9     0.671     0.721    2464       1.47
+config-swap W1  off rr/ema-cross        1.8     0.701     0.756    2464       1.32
+config-swap W1  off rr/ema-cross        3.6     0.714     0.788    2473       1.26
+config-swap W1  off rr/ema-cross        7.2     0.715     0.789    2478       1.45
+
+config-swap W1  off rr/rsi-reversion    0.0     0.729     0.789    3271       0.35
+config-swap W1  off rr/rsi-reversion    0.9     0.677     0.722    3346       0.36
+config-swap W1  off rr/rsi-reversion    1.8     0.706     0.762    3280       0.35
+config-swap W1  off rr/rsi-reversion    3.6     0.721     0.776    3266       0.35
+config-swap W1  off rr/rsi-reversion    7.2     0.726     0.787    3271       0.35
+
+config-swap W1  on  rr/donchian         0.0     0.755     0.804    4422       1.15
+config-swap W1  on  rr/donchian         0.9     0.736     0.783    4942       1.02
+config-swap W1  on  rr/donchian         1.8     0.748     0.796    4784       1.16
+config-swap W1  on  rr/donchian         3.6     0.753     0.812    4494       1.16
+config-swap W1  on  rr/donchian         7.2     0.754     0.804    4426       1.15
+
+config-swap W1  on  rr/ema-cross        0.0     0.735     0.804    2390       1.43
+config-swap W1  on  rr/ema-cross        0.9     0.708     0.765    2380       1.33
+config-swap W1  on  rr/ema-cross        1.8     0.727     0.785    2378       1.41
+config-swap W1  on  rr/ema-cross        3.6     0.735     0.796    2384       1.27
+config-swap W1  on  rr/ema-cross        7.2     0.735     0.805    2390       1.43
+
+config-swap W1  on  rr/rsi-reversion    0.0     0.746     0.804    3198       0.34
+config-swap W1  on  rr/rsi-reversion    0.9     0.712     0.764    3274       0.36
+config-swap W1  on  rr/rsi-reversion    1.8     0.734     0.785    3208       0.35
+config-swap W1  on  rr/rsi-reversion    3.6     0.742     0.800    3196       0.34
+config-swap W1  on  rr/rsi-reversion    7.2     0.742     0.803    3195       0.34
+
+config-swap W2  off rr/donchian         0.0     0.839     0.899    4414       0.55
+config-swap W2  off rr/donchian         0.9     0.819     0.859    5820       0.86
+config-swap W2  off rr/donchian         1.8     0.835     0.897    4820       0.77
+config-swap W2  off rr/donchian         3.6     0.840     0.897    4486       0.69
+config-swap W2  off rr/donchian         7.2     0.838     0.898    4418       0.61
+
+config-swap W2  off rr/ema-cross        0.0     0.823     0.895    2328       1.56
+config-swap W2  off rr/ema-cross        0.9     0.795     0.856    2308       1.84
+config-swap W2  off rr/ema-cross        1.8     0.816     0.878    2312       1.43
+config-swap W2  off rr/ema-cross        3.6     0.821     0.887    2324       1.55
+config-swap W2  off rr/ema-cross        7.2     0.823     0.890    2328       1.56
+
+config-swap W2  off rr/rsi-reversion    0.0     0.823     0.900    3064       0.62
+config-swap W2  off rr/rsi-reversion    0.9     0.792     0.849    3120       1.79
+config-swap W2  off rr/rsi-reversion    1.8     0.815     0.872    3066       0.88
+config-swap W2  off rr/rsi-reversion    3.6     0.821     0.897    3059       0.62
+config-swap W2  off rr/rsi-reversion    7.2     0.821     0.899    3061       0.62
+
+config-swap W2  on  rr/donchian         0.0     0.855     0.908    4333       0.55
+config-swap W2  on  rr/donchian         0.9     0.841     0.885    5567       0.86
+config-swap W2  on  rr/donchian         1.8     0.853     0.910    4701       0.77
+config-swap W2  on  rr/donchian         3.6     0.854     0.919    4393       0.62
+config-swap W2  on  rr/donchian         7.2     0.854     0.911    4336       0.55
+
+config-swap W2  on  rr/ema-cross        0.0     0.842     0.919    2256       1.45
+config-swap W2  on  rr/ema-cross        0.9     0.829     0.901    2236       1.85
+config-swap W2  on  rr/ema-cross        1.8     0.843     0.910    2241       1.22
+config-swap W2  on  rr/ema-cross        3.6     0.848     0.921    2250       1.57
+config-swap W2  on  rr/ema-cross        7.2     0.844     0.920    2255       1.32
+
+config-swap W2  on  rr/rsi-reversion    0.0     0.840     0.917    3012       0.62
+config-swap W2  on  rr/rsi-reversion    0.9     0.826     0.888    3066       2.79
+config-swap W2  on  rr/rsi-reversion    1.8     0.841     0.905    3015       0.62
+config-swap W2  on  rr/rsi-reversion    3.6     0.840     0.919    3008       0.62
+config-swap W2  on  rr/rsi-reversion    7.2     0.840     0.917    3011       0.62
+
+==============================================================================================================
+CHECKS
+==============================================================================================================
+identity E = Lbar(PF_r-1): 120/120 rows within 0.00009 R; worst 0.00008 R
+bar counts per window: [('W1', '190889'), ('W2', '187860')]
+cells under the desk gate of 40 trades: 0
+cells with max_drawdown_pct > 100% (blown, PF_usd not read): 104/120
+row-arms whose PF_r span over reward_risk reaches 0.050: 8 of 24
+   ('config-swap', 'W2', 'off', 'rr/ema-cross') span 0.1620
+   ('config', 'W2', 'off', 'rr/ema-cross') span 0.1607
+   ('config', 'W2', 'on', 'rr/ema-cross') span 0.1407
+   ('config-swap', 'W2', 'on', 'rr/ema-cross') span 0.1216
+   ('config-swap', 'W1', 'off', 'rr/ema-cross') span 0.0964
+   ('config', 'W1', 'off', 'rr/ema-cross') span 0.0957
+   ('config-swap', 'W1', 'on', 'rr/ema-cross') span 0.0946
+   ('config', 'W1', 'on', 'rr/ema-cross') span 0.0943

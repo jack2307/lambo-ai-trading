@@ -1,0 +1,335 @@
+    Finished `release` profile [optimized] target(s) in 6m 33s
+     Running unittests src\lib.rs (target-rr\release\deps\fd_backtest-0a51e025897952e3.exe)
+
+running 106 tests
+test context::tests::frames_are_sorted_however_they_arrive ... ok
+test context::tests::the_timeline_never_looks_forward ... ok
+test control::tests::the_realised_long_share_lands_near_the_share_asked_for ... ok
+test control::tests::the_two_streams_are_independent ... ok
+test control::tests::a_seed_reproduces_its_own_sequence ... ok
+test control::tests::different_seeds_are_different_worlds ... ok
+test control_hold::tests::a_zero_log_sd_is_the_fixed_hold_exactly ... ok
+test control_hold::tests::different_seeds_are_different_worlds_and_the_same_seed_replays ... ok
+test control::tests::a_half_long_share_is_the_old_coin_flip_bit_for_bit ... ok
+test control::tests::a_long_share_of_one_is_long_only_and_zero_is_short_only ... ok
+test control_hold::tests::a_hold_ends_when_its_minutes_have_passed_and_not_before ... ok
+test control_hold::tests::a_positive_log_sd_draws_a_log_normal_hold_pinned_by_entry_time_and_seed ... ok
+test context::tests::an_empty_timeline_answers_nothing_rather_than_panicking ... ok
+test control::tests::draws_stay_inside_the_unit_interval ... ok
+test control::tests::the_entry_rate_is_roughly_honoured ... ok
+test control_hold::tests::the_exit_honours_the_drawn_hold_on_every_bar ... ok
+test cost_table::tests::a_day_missing_bars_is_a_smaller_range_not_a_missing_day ... ok
+test cost_table::tests::a_market_block_without_a_spread_is_refused_not_given_golds ... ok
+test cost_table::tests::an_absent_spread_has_no_ratio_rather_than_a_ratio_of_zero ... ok
+test cost_table::tests::an_empty_sample_summarises_to_nothing ... ok
+test direction::tests::the_control_carries_the_rebate ... ok
+test cost_table::tests::a_session_that_straddles_midnight_is_one_day_not_two ... ok
+test cost_table::tests::a_zero_or_absent_stop_is_unmeasurable_not_infinite ... ok
+test direction::tests::a_book_that_never_lost_has_an_infinite_profit_factor_not_a_nan ... ok
+test cost_table::tests::warmup_bars_contribute_no_ratio ... ok
+test cost_table::tests::four_hour_buckets_sit_on_the_utc_grid ... ok
+test cost_table::tests::quantiles_are_nearest_rank_on_the_sorted_sample ... ok
+test cost_table::tests::the_ratio_is_dimensionless_so_lots_and_contract_size_cancel ... ok
+test control_hold::tests::the_window_null_fills_its_exit_on_the_same_bar_as_a_session_hold ... ok
+test control_hold::tests::the_hold_null_takes_the_long_share_it_is_given ... ok
+test direction::tests::the_gross_permuted_control_is_what_it_always_was ... ok
+test cost_table::tests::each_market_carries_its_own_spread_and_none_of_them_is_golds ... ok
+test engine::net_r_tests::a_set_with_one_unknown_risk_unit_reports_nan_not_zero ... ok
+test engine::net_r_tests::r_net_falls_when_financing_is_charged_and_r_does_not ... ok
+test engine::net_r_tests::r_net_is_r_when_nothing_but_the_spread_was_paid ... ok
+test engine::trail_tests::off_by_default_changes_nothing ... ok
+test engine::trail_tests::ratchets_and_never_gives_ground_back ... ok
+test engine::trail_tests::a_stop_is_never_tested_against_a_level_set_by_the_same_bar ... ok
+test engine::net_r_tests::r_net_sees_commission ... ok
+test engine::trail_tests::does_nothing_until_the_trade_has_gone_far_enough ... ok
+test engine::trail_tests::never_invents_a_stop_the_strategy_did_not_set ... ok
+test engine::trail_tests::a_short_trails_the_other_way ... ok
+test guards::tests::the_configured_guards_are_the_ones_in_the_toml ... ok
+test guards::tests::the_cooldown_also_sees_a_position_that_is_still_open ... ok
+test engine::trail_tests::refuses_a_position_it_was_told_not_to_manage ... ok
+test guards::tests::a_config_without_the_new_keys_still_loads_with_them_off ... ok
+test guards::tests::a_days_loss_at_the_limit_stops_new_entries ... ok
+test guards::tests::an_open_position_blocks_another_when_the_cap_is_one ... ok
+test guards::tests::the_bar_interval_is_the_smallest_gap ... ok
+test guards::tests::nothing_is_refused_on_a_clean_slate ... ok
+test guards::tests::the_cooldown_runs_from_the_previous_entry ... ok
+test guards::tests::the_daily_cap_counts_trades_closed_in_the_last_24_hours ... ok
+test guards::tests::the_describe_line_names_every_guard ... ok
+test guards::tests::the_loss_check_runs_before_the_cap_check ... ok
+test guards::tests::the_weekend_cutoff_is_read_on_the_new_york_clock ... ok
+test guards::tests::unbounded_refuses_nothing ... ok
+test guards::tests::the_loss_limit_is_read_as_a_magnitude ... ok
+test guards::tests::the_news_currencies_are_the_markets_own ... ok
+test guards::tests::the_notional_cap_rounds_down_to_the_step_and_refuses_below_the_minimum ... ok
+test guards::tests::the_open_loss_cap_fills_at_the_level_or_the_open_through_it ... ok
+test hypotheses::tests::a_batch_file_parses_filters_and_refuses_a_reasonless_hypothesis ... ok
+test hypotheses::tests::a_measured_long_share_is_named_as_calibrated_and_the_coin_is_not ... ok
+test hypotheses::tests::the_control_takes_the_measured_long_share_and_refuses_an_impossible_one ... ok
+test hypotheses::tests::the_cost_match_is_the_spread_the_control_actually_paid ... ok
+test hypotheses::tests::a_report_reads_its_null_by_quantile_and_survives_only_on_both_counts ... ok
+test hypotheses::tests::the_achieved_count_match_is_the_controls_median_over_the_methods_count ... ok
+test hypotheses::tests::the_batches_name_only_registered_methods_and_give_every_entry_a_reason ... ok
+test hypotheses::tests::the_control_is_drawn_at_the_share_that_reproduces_the_signed_time ... ok
+test hypotheses::tests::a_null_whose_seeds_all_agree_is_not_a_distribution ... ok
+test hypotheses::tests::a_preset_on_a_gridded_parameter_pins_it ... ok
+test hypotheses::tests::the_hold_distribution_is_the_geometric_mean_and_the_sd_of_the_logs ... ok
+test hypotheses::tests::the_hold_null_takes_the_realised_hold_over_the_lookback_guess ... ok
+test hypotheses::tests::the_null_sides_flag_round_trips_and_refuses_a_misspelling ... ok
+test paper::advice_tests::a_cut_halves_the_lots_and_touches_nothing_else ... ok
+test paper::advice_tests::a_verdict_is_clamped_on_construction_so_nothing_downstream_trusts_the_wire ... ok
+test paper::order_tests::a_stop_order_fill_bar_does_not_stop_out_on_prices_from_before_the_fill ... ok
+test paper::order_tests::an_order_cannot_fill_over_a_position_and_a_stopped_book_rests_nothing ... ok
+test hypotheses::tests::the_signed_exposure_is_long_minutes_minus_short_minutes ... ok
+test paper::advice_tests::a_cut_below_the_minimum_lot_is_a_veto_and_not_a_trade_the_broker_would_bounce ... ok
+test paper::order_tests::a_book_with_an_order_round_trips_and_an_old_state_file_loads_without_one ... ok
+test paper::order_tests::a_limit_fill_and_a_market_fill_at_the_same_price_are_the_same_trade ... ok
+test hypotheses::tests::the_scope_band_is_forty_to_sixty_inclusive_and_no_book_is_not_one_sided ... ok
+test paper::advice_tests::a_veto_refuses_the_entry_and_says_who_refused_it ... ok
+test paper::advice_tests::an_advisor_can_never_make_a_position_larger ... ok
+test paper::order_tests::an_order_expires_after_its_valid_bars_and_a_closed_bar_never_fills_it ... ok
+test hypotheses::tests::the_side_and_exposure_matches_are_read_from_the_controls_own_runs ... ok
+test hypotheses::tests::the_side_ratio_is_the_long_share_of_the_realised_trades ... ok
+test paper::advice_tests::an_advisor_cannot_open_a_trade_the_strategy_did_not_ask_for ... ok
+test paper::advice_tests::no_advice_is_the_trade_the_strategy_asked_for ... ok
+test paper::tests::the_book_round_trips_through_json ... ok
+test rebate::tests::a_rate_that_is_not_a_number_is_refused_rather_than_propagated ... ok
+test sweep::tests::median_handles_both_parities_and_emptiness ... ok
+test sweep::tests::ranking_discounts_a_tiny_sample_instead_of_crowning_it ... ok
+test paper::tests::a_signal_fills_at_the_next_open_and_a_stop_closes_it ... ok
+test paper::tests::stop_closes_at_the_last_close_as_a_signal_exit ... ok
+test rebate::tests::the_risk_unit_of_a_stopless_trade_comes_from_the_pnl_identity ... ok
+test rebate::tests::the_worked_example_from_the_account_registry ... ok
+test paper::order_tests::the_fill_bar_is_managed_from_the_fill_and_not_from_its_open ... ok
+test paper::order_tests::the_touched_side_is_the_fill_rule_and_a_stop_fills_at_the_side_that_traded_through ... ok
+test rebate::tests::the_credit_as_a_fraction_of_r_grows_as_the_stop_tightens ... ok
+test rebate::tests::the_net_profit_factor_is_never_below_the_gross_one ... ok
+test rebate::tests::gross_is_untouched_by_the_credit ... ok
+test sweep::tests::the_gate_passes_only_when_everything_clears ... ok
+test paper::order_tests::placing_an_order_replaces_the_one_resting_and_drops_a_market_intent ... ok
+test rebate::tests::nothing_is_priced_where_there_is_no_spread_or_no_size ... ok
+test sweep::tests::the_gate_refuses_a_thin_sample_however_good_it_looks ... ok
+
+test result: ok. 106 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.79s
+
+     Running unittests src\bin\cost_table.rs (target-rr\release\deps\cost_table-c87dc0ef42c62246.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\bin\designed_3.rs (target-rr\release\deps\designed_3-9755119050e03cac.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\bin\search.rs (target-rr\release\deps\search-edd243cb54caa73e.exe)
+
+running 16 tests
+test drawdown_printer_tests::a_measured_zero_is_printed_as_zero ... ok
+test drawdown_printer_tests::an_empty_cell_gets_no_drawdown_number ... ok
+test flag_tests::a_mode_that_does_not_read_a_flag_says_so_in_the_header ... ok
+test flag_tests::mode_all_admits_it_reads_none_of_the_scoring_flags ... ok
+test drawdown_printer_tests::the_lbar_line_reproduces_the_gate_identity_from_measured_parts ... ok
+test drawdown_printer_tests::the_lbar_line_prints_the_usd_versus_r_gap_instead_of_hiding_it ... ok
+test drawdown_printer_tests::an_lbar_at_or_above_the_threshold_says_the_expectancy_leg_is_redundant ... ok
+test drawdown_printer_tests::an_lbar_with_no_losing_trade_is_absent_not_zero ... ok
+test reward_risk_line_tests::a_flagged_zero_reads_as_no_target_and_still_names_the_flag ... ok
+test drawdown_printer_tests::the_drawdown_line_states_its_unit_and_which_drawdown_it_is ... ok
+test reward_risk_line_tests::a_ratio_just_above_zero_is_not_the_zero_case ... ok
+test flag_tests::every_flag_the_source_reads_is_declared_in_the_table ... ok
+test reward_risk_line_tests::the_flag_names_itself_and_the_shipped_ratio_it_overrode ... ok
+test flag_tests::nothing_in_the_table_is_a_flag_the_source_never_reads ... ok
+test drawdown_printer_tests::a_published_row_reformats_byte_identically ... ok
+test drawdown_printer_tests::the_table_header_is_byte_identical_to_the_published_record ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running unittests src\bin\slice_three_month.rs (target-rr\release\deps\slice_three_month-efae0e6f488e0e28.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\bin\three_month.rs (target-rr\release\deps\three_month-6982355f1829fcbb.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\bin\three_month_2.rs (target-rr\release\deps\three_month_2-fa61193ac48f6269.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\bin\three_month_slice3.rs (target-rr\release\deps\three_month_slice3-4edeb576649455bb.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\bin\why_no_trade.rs (target-rr\release\deps\why_no_trade-693d3a6dadec96fe.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\contract_size.rs (target-rr\release\deps\contract_size-ec6d286ec1f9225e.exe)
+
+running 3 tests
+test the_euro_and_silver_contract_sizes_stay_as_measured ... ok
+test a_position_with_no_recorded_basis_falls_back_and_says_it_did ... ok
+test a_trade_is_booked_at_the_contract_size_it_was_sized_under ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+
+     Running tests\cost_matched_null.rs (target-rr\release\deps\cost_matched_null-76337b37066754d6.exe)
+
+running 5 tests
+test a_structural_stop_is_matched_from_the_methods_realised_distance_not_its_declared_one ... ok
+test a_wider_named_stop_is_copied_onto_the_control_and_changes_its_distribution ... ok
+test a_method_already_at_the_controls_stop_is_read_against_a_bit_identical_null ... ok
+test the_cost_match_cannot_move_a_gate_figure ... ok
+test the_count_match_survives_the_cost_match ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.44s
+
+     Running tests\drawdown.rs (target-rr\release\deps\drawdown-cda4d0503e823c27.exe)
+
+running 8 tests
+test an_empty_cell_reports_a_nan_percent_and_must_be_gated_on_the_trade_count ... ok
+test it_is_a_closed_equity_drawdown_and_not_an_intrabar_one ... ok
+test a_later_smaller_fall_does_not_replace_the_worst_one ... ok
+test the_usd_figure_never_depends_on_the_denominator ... ok
+test a_single_trade_reports_its_own_loss_and_nothing_for_a_win ... ok
+test an_all_winning_curve_has_a_zero_drawdown_and_not_a_nan ... ok
+test the_known_drawdown_is_the_worst_peak_to_trough_fall ... ok
+test the_percent_is_against_the_curves_highest_peak_not_the_peak_it_fell_from ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.25s
+
+     Running tests\drift_null.rs (target-rr\release\deps\drift_null-d4d3d2a3b4d48718.exe)
+
+running 5 tests
+test an_even_method_is_read_against_the_same_null_it_always_was ... ok
+test the_drift_null_takes_the_methods_own_trade_count ... ok
+test a_fully_invested_one_sided_method_has_no_null_with_a_spread ... ok
+test the_drift_null_carries_the_methods_own_signed_exposure ... ok
+test the_drift_null_pays_the_methods_own_cost_share ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.86s
+
+     Running tests\guards.rs (target-rr\release\deps\guards-3fd2973e1549d005.exe)
+
+running 5 tests
+test the_cooldown_spaces_entries_apart ... ok
+test the_daily_loss_limit_stops_a_losing_day ... ok
+test the_daily_trade_cap_bounds_the_run ... ok
+test without_guards_the_impatient_strategy_trades_constantly ... ok
+test guards_off_and_guards_none_are_the_same_run ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.19s
+
+     Running tests\guards_news.rs (target-rr\release\deps\guards_news-d74341b1957e801a.exe)
+
+running 4 tests
+test the_news_guard_closes_on_the_first_bar_inside_the_window_and_reopens_after_it ... ok
+test the_currency_list_scopes_the_guard_to_the_markets_releases ... ok
+test the_impact_threshold_selects_which_releases_count ... ok
+test a_zero_window_is_inert_even_with_a_calendar_installed ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+     Running tests\guards_positions.rs (target-rr\release\deps\guards_positions-dbd3b962ded52a49.exe)
+
+running 10 tests
+test the_open_loss_cap_fills_at_the_open_when_the_bar_gaps_through_it ... ok
+test the_notional_cap_refuses_an_entry_the_minimum_lot_already_exceeds ... ok
+test the_open_loss_cap_charges_the_exit_costs ... ok
+test the_open_loss_cap_closes_a_self_managed_hold_at_the_level ... ok
+test the_weekend_guard_at_zero_changes_nothing ... ok
+test the_weekend_guard_flattens_on_friday_and_lets_monday_in ... ok
+test a_cap_of_zero_closes_nothing ... ok
+test every_guard_at_zero_is_the_unguarded_run ... ok
+test the_notional_cap_reduces_the_lots_to_the_cap ... ok
+test the_engine_stop_is_taken_before_a_tighter_cap_when_one_bar_covers_both ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests\matched_null.rs (target-rr\release\deps\matched_null-cf7cffddac776442.exe)
+
+running 3 tests
+test a_calibrated_control_loses_the_calibrated_axis_and_keeps_the_others ... ok
+test the_matched_null_takes_about_as_many_trades_as_the_method ... ok
+test repairing_the_null_cannot_move_a_gate_figure ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.79s
+
+     Running tests\max_hold_horizon.rs (target-rr\release\deps\max_hold_horizon-b214f628ac4997eb.exe)
+
+running 4 tests
+test a_cap_of_zero_is_no_cap_at_all ... ok
+test a_no_target_entry_is_given_one ... ok
+test four_hours_cuts_the_first_hold_at_255_minutes ... ok
+test the_same_strategy_holds_for_a_week_when_the_cap_says_a_week ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.16s
+
+     Running tests\paper_parity.rs (target-rr\release\deps\paper_parity-f4257a66a392c447.exe)
+
+running 4 tests
+test a_self_managed_method_is_the_same_trade_for_trade ... ok
+test an_engine_managed_method_is_the_same_trade_for_trade ... ok
+test filters_wrap_the_book_as_they_wrap_the_engine ... ok
+test the_guards_bite_in_the_fixture ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
+
+     Running tests\parity.rs (target-rr\release\deps\parity-ca9ee359eca36bb9.exe)
+
+running 7 tests
+test trading_rules_come_from_the_manifest ... ok
+test side_labels_match_the_oracle_spelling ... ok
+test every_oracle_strategy_exists_in_the_registry ... ok
+test backtests_match_the_oracle_on_btc ... ok
+test backtests_match_the_oracle_on_gold ... ok
+test the_golden_timeline_loads_with_frames_and_clusters ... ok
+test a_trade_never_ends_better_than_its_best_moment ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.23s
+
+     Running tests\rebate_gross.rs (target-rr\release\deps\rebate_gross-f9018f2b9baa4f10.exe)
+
+running 2 tests
+test the_credit_is_forty_five_percent_of_the_spread_the_book_actually_paid ... ok
+test the_gross_book_is_bit_identical_either_side_of_the_credit ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
+
+     Running tests\reward_risk_flag.rs (target-rr\release\deps\reward_risk_flag-dfd7a992cc4585d5.exe)
+
+running 5 tests
+test a_zero_ratio_removes_the_target_rather_than_placing_one_at_the_entry ... ok
+test the_default_ratio_is_bit_identical_to_a_literal ... ok
+test the_flag_moves_a_derived_target_and_leaves_an_explicit_one_and_a_self_managed_one_alone ... ok
+test the_null_is_a_different_control_at_every_ratio ... ok
+test a_probe_that_is_invariant_for_the_wrong_reason_is_not_evidence ... FAILED
+
+failures:
+
+---- a_probe_that_is_invariant_for_the_wrong_reason_is_not_evidence stdout ----
+
+thread 'a_probe_that_is_invariant_for_the_wrong_reason_is_not_evidence' (90728) panicked at crates\fd-backtest\tests\reward_risk_flag.rs:407:9:
+assertion `left == right` failed: the blind probe is expected to read invariant at reward_risk 0; that is what makes it blind
+  left: ["Long|15300000|40af400000000000|30600000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|31500000|40af400000000000|46800000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|47700000|40af400000000000|63000000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|63900000|40af400000000000|79200000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|80100000|40af400000000000|95400000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|96300000|40af400000000000|111600000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|112500000|40af400000000000|127800000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|128700000|40af400000000000|144000000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|144900000|40af400000000000|160200000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|161100000|40af400000000000|176400000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|177300000|40af400000000000|192600000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|193500000|40af400000000000|208800000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|209700000|40af400000000000|225000000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|225900000|40af400000000000|241200000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|242100000|40af400000000000|257400000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|258300000|40af400000000000|273600000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|274500000|40af400000000000|289800000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|290700000|40af400000000000|306000000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|306900000|40af400000000000|322200000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|323100000|40af400000000000|338400000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|339300000|40af400000000000|354600000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|355500000|40af400000000000|370800000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|371700000|40af400000000000|387000000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|387900000|40af400000000000|403200000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|404100000|40af400000000000|419400000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|420300000|40af400000000000|435600000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|436500000|40af400000000000|451800000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|452700000|40af400000000000|468000000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|468900000|40af400000000000|484200000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|485100000|40af400000000000|500400000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|501300000|40af400000000000|516600000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|517500000|40af400000000000|532800000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|533700000|40af400000000000|549000000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|549900000|40af400000000000|565200000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|566100000|40af400000000000|581400000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|582300000|40af400000000000|597600000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|598500000|40af400000000000|613800000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|614700000|40af400000000000|630000000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|630900000|40af400000000000|646200000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|647100000|40af400000000000|662400000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|663300000|40af400000000000|678600000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|679500000|40af400000000000|694800000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|695700000|40af400000000000|711000000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|711900000|40af400000000000|727200000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|728100000|40af400000000000|743400000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|744300000|40af400000000000|759600000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|760500000|40af400000000000|775800000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|776700000|40af400000000000|792000000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|792900000|40af400000000000|808200000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|809100000|40af400000000000|824400000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|825300000|40af400000000000|840600000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|841500000|40af400000000000|856800000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|857700000|40af400000000000|873000000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|873900000|40af400000000000|889200000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|890100000|40af400000000000|905400000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|906300000|40af400000000000|921600000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|922500000|40af400000000000|937800000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|938700000|40af400000000000|954000000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|954900000|40af400000000000|970200000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|971100000|40af400000000000|986400000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|987300000|40af400000000000|1002600000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|1003500000|40af400000000000|1018800000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|1019700000|40af400000000000|1035000000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|1035900000|40af400000000000|1051200000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|1052100000|40af400000000000|1067400000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|1068300000|40af400000000000|1083600000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|1084500000|40af400000000000|1099800000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|1100700000|40af400000000000|1116000000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|1116900000|40af400000000000|1132200000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|1133100000|40af400000000000|1148400000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|1149300000|40af400000000000|1164600000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|1165500000|40af400000000000|1180800000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|1181700000|40af400000000000|1197000000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|1197900000|40af400000000000|1213200000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|1214100000|40af400000000000|1229400000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|1230300000|40af400000000000|1245600000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|1246500000|40af400000000000|1261800000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|1262700000|40af400000000000|1278000000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|1278900000|40af400000000000|1294200000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|1295100000|40af400000000000|1310400000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|1311300000|40af400000000000|1326600000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|1327500000|40af400000000000|1342800000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|1343700000|40af400000000000|1359000000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|1359900000|40af400000000000|1375200000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|1376100000|40af400000000000|1391400000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|1392300000|40af400000000000|1407600000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|1408500000|40af400000000000|1423800000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|1424700000|40af400000000000|1439100000|40af400000000000|40af2c0000000000|None|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|14400000|END_OF_DATA"]
+ right: ["Long|15300000|40af400000000000|30600000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|31500000|40af400000000000|46800000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|47700000|40af400000000000|63000000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|63900000|40af400000000000|79200000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|80100000|40af400000000000|95400000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|96300000|40af400000000000|111600000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|112500000|40af400000000000|127800000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|128700000|40af400000000000|144000000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|144900000|40af400000000000|160200000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|161100000|40af400000000000|176400000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|177300000|40af400000000000|192600000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|193500000|40af400000000000|208800000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|209700000|40af400000000000|225000000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|225900000|40af400000000000|241200000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|242100000|40af400000000000|257400000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|258300000|40af400000000000|273600000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|274500000|40af400000000000|289800000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|290700000|40af400000000000|306000000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|306900000|40af400000000000|322200000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|323100000|40af400000000000|338400000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|339300000|40af400000000000|354600000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|355500000|40af400000000000|370800000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|371700000|40af400000000000|387000000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|387900000|40af400000000000|403200000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|404100000|40af400000000000|419400000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|420300000|40af400000000000|435600000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|436500000|40af400000000000|451800000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|452700000|40af400000000000|468000000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|468900000|40af400000000000|484200000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|485100000|40af400000000000|500400000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|501300000|40af400000000000|516600000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|517500000|40af400000000000|532800000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|533700000|40af400000000000|549000000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|549900000|40af400000000000|565200000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|566100000|40af400000000000|581400000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|582300000|40af400000000000|597600000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|598500000|40af400000000000|613800000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|614700000|40af400000000000|630000000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|630900000|40af400000000000|646200000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|647100000|40af400000000000|662400000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|663300000|40af400000000000|678600000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|679500000|40af400000000000|694800000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|695700000|40af400000000000|711000000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|711900000|40af400000000000|727200000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|728100000|40af400000000000|743400000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|744300000|40af400000000000|759600000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|760500000|40af400000000000|775800000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|776700000|40af400000000000|792000000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|792900000|40af400000000000|808200000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|809100000|40af400000000000|824400000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|825300000|40af400000000000|840600000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|841500000|40af400000000000|856800000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|857700000|40af400000000000|873000000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|873900000|40af400000000000|889200000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|890100000|40af400000000000|905400000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|906300000|40af400000000000|921600000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|922500000|40af400000000000|937800000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|938700000|40af400000000000|954000000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|954900000|40af400000000000|970200000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|971100000|40af400000000000|986400000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|987300000|40af400000000000|1002600000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|1003500000|40af400000000000|1018800000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|1019700000|40af400000000000|1035000000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|1035900000|40af400000000000|1051200000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|1052100000|40af400000000000|1067400000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|1068300000|40af400000000000|1083600000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|1084500000|40af400000000000|1099800000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|1100700000|40af400000000000|1116000000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|1116900000|40af400000000000|1132200000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|1133100000|40af400000000000|1148400000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|1149300000|40af400000000000|1164600000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|1165500000|40af400000000000|1180800000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|1181700000|40af400000000000|1197000000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|1197900000|40af400000000000|1213200000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|1214100000|40af400000000000|1229400000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|1230300000|40af400000000000|1245600000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|1246500000|40af400000000000|1261800000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|1262700000|40af400000000000|1278000000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|1278900000|40af400000000000|1294200000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|1295100000|40af400000000000|1310400000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|1311300000|40af400000000000|1326600000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|1327500000|40af400000000000|1342800000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|1343700000|40af400000000000|1359000000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|1359900000|40af400000000000|1375200000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|1376100000|40af400000000000|1391400000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|1392300000|40af400000000000|1407600000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|1408500000|40af400000000000|1423800000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|15300000|TIMEOUT", "Long|1424700000|40af400000000000|1439100000|40af400000000000|40af2c0000000000|Some(4661054090514530304)|4024000000000000|0000000000000000|0000000000000000|0000000000000000|bf947ae147ae147b|14400000|END_OF_DATA"]
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    a_probe_that_is_invariant_for_the_wrong_reason_is_not_evidence
+
+test result: FAILED. 4 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.49s
+
+error: test failed, to rerun pass `-p fd-backtest --test reward_risk_flag`
